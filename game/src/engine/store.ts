@@ -24,6 +24,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startGame: (gender, parents) => {
     const initial = createInitialState(gender, parents);
     set({ state: initial, history: [] });
+    localStorage.removeItem('lifetrack_tutorial_done');
   },
 
   setRoutine: (slot2, slot3) => {
@@ -91,12 +92,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.money += choice.moneyEffect;
     }
 
-    // NPC 친밀도 효과
+    // NPC 친밀도 효과 + 만남 처리
     if (choice.npcEffects) {
       for (const ne of choice.npcEffects) {
         const npc = newState.npcs.find(n => n.id === ne.npcId);
         if (npc) {
           npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + ne.intimacyChange));
+          npc.met = true;
+        }
+      }
+    }
+    // 이벤트에 등장한 모든 NPC도 met 처리 (선택지 관계없이)
+    for (const c of newState.currentEvent!.choices) {
+      if (c.npcEffects) {
+        for (const ne of c.npcEffects) {
+          const npc = newState.npcs.find(n => n.id === ne.npcId);
+          if (npc) npc.met = true;
         }
       }
     }

@@ -1,10 +1,6 @@
 import { useState } from 'react';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 
-const STAT_ICONS: Record<StatKey, string> = {
-  academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
-};
-
 const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = {
   study:    { emoji: '📚', name: '공부',     desc: '학업 성적을 올린다' },
   exercise: { emoji: '💪', name: '운동',     desc: '체력과 멘탈을 키운다' },
@@ -15,6 +11,31 @@ const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = 
   work:     { emoji: '💼', name: '알바',     desc: '돈을 벌며 경험을 쌓는다' },
 };
 
+// 수치 → 서술형 변환
+function describeEffect(stat: StatKey, value: number): string {
+  const name = STAT_LABELS[stat];
+  const abs = Math.abs(value);
+  if (value > 0) {
+    if (abs >= 4) return `${name} 크게 상승`;
+    if (abs >= 2) return `${name}에 좋음`;
+    return `${name} 소폭 상승`;
+  } else {
+    if (abs >= 3) return `${name} 크게 하락`;
+    if (abs >= 2) return `${name} 하락`;
+    return `${name} 소폭 하락`;
+  }
+}
+
+function describeFatigue(fatigue: number): string {
+  if (fatigue >= 10) return '매우 피곤함';
+  if (fatigue >= 7) return '꽤 피곤함';
+  if (fatigue >= 4) return '피로 있음';
+  if (fatigue > 0) return '약간 피곤함';
+  if (fatigue <= -12) return '완전 회복';
+  if (fatigue <= -5) return '많이 쉴 수 있음';
+  return '피로 회복';
+}
+
 interface Props {
   activities: Activity[];
   selected: string[];
@@ -24,11 +45,12 @@ interface Props {
   state: GameState;
   npcChoices?: Record<string, string>;
   compact?: boolean;
-  availableMoney?: number; // 이미 쓴 돈을 뺀 실제 사용 가능한 금액
+  availableMoney?: number;
 }
 
 export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney }: Props) {
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
 
   const categories = ['study', 'exercise', 'social', 'talent', 'rest', 'parent', 'work'];
 
@@ -49,7 +71,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
             overflow: 'hidden',
             border: selectedInCat.length > 0 ? '1px solid rgba(233,69,96,0.3)' : '1px solid rgba(255,255,255,0.1)',
           }}>
-            {/* 카테고리 헤더 — 클릭하면 펼침/접기 */}
+            {/* 카테고리 헤더 */}
             <div
               onClick={() => setExpandedCat(isExpanded ? null : cat)}
               style={{
@@ -66,10 +88,9 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {/* 선택된 활동 표시 */}
                 {selectedInCat.length > 0 && (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)', fontWeight: 600 }}>
-                    {selectedInCat.map(a => a.name).join(', ')}
+                  <span style={{ fontSize: '0.72rem', color: 'var(--blue, #5b8def)', fontWeight: 600 }}>
+                    ✓ {selectedInCat.map(a => a.name).join(', ')}
                   </span>
                 )}
                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
@@ -81,6 +102,20 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
             {/* 펼쳐진 활동 목록 */}
             {isExpanded && (
               <div style={{ padding: '0 10px 10px' }}>
+                {/* 수치 보기 토글 */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
+                  <span
+                    onClick={(e) => { e.stopPropagation(); setShowDetail(!showDetail); }}
+                    style={{
+                      fontSize: '0.65rem', color: showDetail ? 'var(--blue)' : 'var(--text-muted)',
+                      cursor: 'pointer', padding: '1px 6px', borderRadius: 4,
+                      background: showDetail ? 'rgba(91,141,239,0.15)' : 'transparent',
+                    }}
+                  >
+                    {showDetail ? '수치 ON' : '수치 보기'}
+                  </span>
+                </div>
+
                 {catActivities.map(a => {
                   const isSel = selected.includes(a.id);
                   const money = availableMoney !== undefined ? availableMoney : state.money;
@@ -88,11 +123,26 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots;
                   const disabled = !canSelect || !canAfford;
 
+                  // 서술형 태그 생성
+                  const hintTags: { text: string; color: string }[] = [];
+                  if (!showDetail) {
+                    for (const [k, v] of Object.entries(a.effects)) {
+                      const val = v as number;
+                      hintTags.push({
+                        text: describeEffect(k as StatKey, val),
+                        color: val > 0 ? 'var(--green)' : 'var(--red)',
+                      });
+                    }
+                    hintTags.push({
+                      text: describeFatigue(a.fatigue),
+                      color: a.fatigue > 0 ? 'var(--red)' : 'var(--green)',
+                    });
+                  }
+
                   return (
                     <div key={a.id}
                       onClick={() => !disabled && onToggle(a.id)}
                       style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: compact ? '8px 10px' : '10px 12px',
                         marginTop: 4, borderRadius: 10, cursor: disabled ? 'not-allowed' : 'pointer',
                         background: isSel ? 'rgba(233,69,96,0.25)' : 'rgba(255,255,255,0.06)',
@@ -101,11 +151,10 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                         transition: 'all 0.15s',
                       }}
                     >
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>
-                            {a.name}
-                          </span>
+                      {/* 상단: 이름 + 비용 + 체크 */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{a.name}</span>
                           {a.moneyCost > 0 && (
                             <span style={{ fontSize: '0.72rem', color: canAfford ? 'var(--yellow)' : 'var(--red)' }}>
                               ({a.moneyCost}만{compact ? '/주' : ''})
@@ -122,16 +171,40 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                             </span>
                           )}
                         </div>
-                        {!compact && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>
-                            {a.flavor}
-                          </div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {a.slots > 1 && <span style={{ fontSize: '0.65rem', color: 'var(--purple)' }}>{a.slots}칸 사용</span>}
+                          {a.moneyCost > 0 && money < a.moneyCost && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--red)', fontWeight: 600 }}>💰부족</span>
+                          )}
+                          {isSel && <span style={{ fontSize: '0.9rem' }}>✓</span>}
+                        </div>
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
-                        {/* 스탯 효과 */}
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {/* flavor 텍스트 */}
+                      {!compact && (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>
+                          {a.flavor}
+                        </div>
+                      )}
+
+                      {/* 서술형 힌트 태그 (기본 모드) */}
+                      {!showDetail && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: compact ? 4 : 6 }}>
+                          {hintTags.map((tag, i) => (
+                            <span key={i} style={{
+                              fontSize: '0.68rem', color: tag.color,
+                              background: tag.color.includes('green') ? 'rgba(76,175,80,0.1)' : 'rgba(255,87,34,0.1)',
+                              padding: '2px 7px', borderRadius: 4,
+                            }}>
+                              {tag.text}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* 상세 수치 (토글 ON) */}
+                      {showDetail && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: compact ? 4 : 6 }}>
                           {Object.entries(a.effects).map(([k, v]) => (
                             <span key={k} style={{
                               fontSize: '0.7rem', color: (v as number) > 0 ? 'var(--green)' : 'var(--red)',
@@ -150,15 +223,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                             피로{a.fatigue > 0 ? '+' : ''}{a.fatigue}
                           </span>
                         </div>
-                        {/* 슬롯 */}
-                        {a.slots > 1 && <span style={{ fontSize: '0.65rem', color: 'var(--purple)' }}>{a.slots}슬롯</span>}
-                        {/* 돈 부족 */}
-                        {a.moneyCost > 0 && money < a.moneyCost && (
-                          <span style={{ fontSize: '0.65rem', color: 'var(--red)', fontWeight: 600 }}>💰부족</span>
-                        )}
-                        {/* 선택 체크 */}
-                        {isSel && <span style={{ fontSize: '0.9rem' }}>✓</span>}
-                      </div>
+                      )}
                     </div>
                   );
                 })}

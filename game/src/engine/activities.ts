@@ -182,6 +182,8 @@ export function getAvailableActivities(state: GameState, forVacation = false): A
   return ACTIVITIES.filter(a => {
     // 부모 전용 활동은 조건 미충족 시 숨김 (돈 문제가 아닌 부모 조건)
     if (a.category === 'parent' && a.requires && !a.requires(state)) return false;
+    // 알바는 고등학생(Y4=고1)부터 가능
+    if (a.category === 'work' && state.year < 4) return false;
     if (a.id === 'deep-rest' && !forVacation) return true;
     return true;
   });
