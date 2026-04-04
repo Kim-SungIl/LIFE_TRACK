@@ -358,7 +358,7 @@ export function GameScreen() {
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.72rem' }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)}</div>
-          <div>💰 {state.money}만원 <span style={{ color: 'var(--text-muted)', fontSize: '0.6rem' }}>+{state.parents.includes('wealth') ? 8 : 3}/주</span></div>
+          <div>💰 {state.money}만원 <span style={{ color: 'var(--yellow)', fontSize: '0.65rem' }}>+{state.parents.includes('wealth') ? 8 : 3}/주</span></div>
         </div>
       </div>
 
@@ -481,7 +481,9 @@ export function GameScreen() {
                     >
                       <div className="activity-name">
                         {a.name}
-                        {npcChoices[a.id] && <span style={{ fontSize: '0.68rem', color: 'var(--accent-soft)', marginLeft: 4 }}>({state.npcs.find(n => n.id === npcChoices[a.id])?.name})</span>}
+                        {a.moneyCost > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--yellow)', marginLeft: 3 }}>({a.moneyCost}만)</span>}
+                        {a.moneyCost < 0 && <span style={{ fontSize: '0.72rem', color: 'var(--green)', marginLeft: 3 }}>(+{-a.moneyCost}만)</span>}
+                        {npcChoices[a.id] && <span style={{ fontSize: '0.68rem', color: 'var(--accent-soft)', marginLeft: 3 }}>({state.npcs.find(n => n.id === npcChoices[a.id])?.name})</span>}
                       </div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.4 }}>{a.flavor.slice(0, 40)}...</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', marginBottom: 3 }}>
@@ -498,8 +500,6 @@ export function GameScreen() {
                       </div>
                       <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'flex', gap: 4, justifyContent: 'center' }}>
                         {a.fatigue !== 0 && <span style={{ color: a.fatigue > 0 ? 'var(--red)' : 'var(--green)' }}>피로{a.fatigue > 0 ? '+' : ''}{a.fatigue}</span>}
-                        {a.moneyCost > 0 && <span style={{ color: state.money >= a.moneyCost ? 'var(--yellow)' : 'var(--red)' }}>💰{a.moneyCost}만</span>}
-                        {a.moneyCost < 0 && <span style={{ color: 'var(--green)' }}>💰+{-a.moneyCost}만</span>}
                         {a.slots > 1 && <span style={{ color: 'var(--purple)' }}>{a.slots}슬롯</span>}
                       </div>
                     </div>
@@ -511,30 +511,34 @@ export function GameScreen() {
         })}
       </div>
 
-      {/* NPC 간략 */}
-      <div style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 10, padding: '8px 12px', marginBottom: 10, cursor: 'pointer' }} onClick={() => setShowNpc(!showNpc)}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-          <span>👥 관계</span>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{showNpc ? '▲' : '▼'}</span>
+      {/* NPC 관계 */}
+      <div style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 관계</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {state.npcs.map(n => {
+            const intimacyColor = n.intimacy >= 70 ? 'var(--accent-soft)' : n.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
+            const intimacyLabel = n.intimacy >= 70 ? '친함' : n.intimacy >= 40 ? '보통' : '어색';
+            return (
+              <div key={n.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
+              }}>
+                <Portrait characterId={n.id} size={36} expression="neutral" />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{n.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                    <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${n.intimacy}%`, background: intimacyColor, borderRadius: 3, transition: 'width 0.3s' }} />
+                    </div>
+                    <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap' }}>
+                      {Math.round(n.intimacy)} {intimacyLabel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        {!showNpc && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: '0.7rem' }}>
-            {state.npcs.map(n => <span key={n.id} style={{ color: n.intimacy >= 50 ? 'var(--green)' : 'var(--text-muted)' }}>{n.emoji}{Math.round(n.intimacy)}</span>)}
-          </div>
-        )}
-        {showNpc && state.npcs.map(n => (
-          <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-            <Portrait characterId={n.id} size={32} expression="neutral" />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>{n.name}</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>{n.description}</div>
-            </div>
-            <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${n.intimacy}%`, background: 'var(--accent-soft)', borderRadius: 2 }} />
-            </div>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', width: 20, textAlign: 'right' }}>{Math.round(n.intimacy)}</span>
-          </div>
-        ))}
       </div>
 
       {/* NPC 선택 모달 */}
