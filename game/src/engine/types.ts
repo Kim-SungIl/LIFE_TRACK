@@ -67,6 +67,9 @@ export interface NpcState {
   intimacy: number;       // 0~100
   description: string;
   emoji: string;
+  met: boolean;           // 만남 여부
+  greeting?: string;      // 클릭 시 인사말
+  personality?: string;   // 성격/관계 설명
 }
 
 export interface GameEvent {

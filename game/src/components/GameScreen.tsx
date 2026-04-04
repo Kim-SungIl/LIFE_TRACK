@@ -9,25 +9,12 @@ import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
 import { getBackground } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction } from '../engine/dialogues';
+import { Tutorial } from './Tutorial';
 
 const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
 };
 
-// 예상 효과 계산
-function predictEffects(activityIds: string[]) {
-  const effects: Partial<Record<StatKey, number>> = {};
-  let fatigue = 0, money = 0;
-  for (const id of activityIds) {
-    const a = ACTIVITIES.find(x => x.id === id);
-    if (!a) continue;
-    for (const [k, v] of Object.entries(a.effects))
-      effects[k as StatKey] = (effects[k as StatKey] || 0) + (v as number);
-    fatigue += a.fatigue;
-    money -= a.moneyCost;
-  }
-  return { effects, fatigue, money };
-}
 
 export function GameScreen() {
   const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap } = useGameStore();
@@ -40,9 +27,14 @@ export function GameScreen() {
   const [routineStep, setRoutineStep] = useState<1 | 2>(1); // 슬롯 1 먼저, 그 다음 슬롯 2
   const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[] } | null>(null);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
+  const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>({});
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
+  const [showStats, setShowStats] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return !localStorage.getItem('lifetrack_tutorial_done');
+  });
 
   if (!state) return null;
 
@@ -178,14 +170,7 @@ export function GameScreen() {
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'rgba(233,69,96,0.12)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(15,52,96,0.8)'; }}
               >
-                <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: 6 }}>{choice.text}</div>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {Object.entries(choice.effects).map(([k, v]) => (
-                    <span key={k} style={{ color: (v as number) > 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {STAT_ICONS[k as StatKey]}{(v as number) > 0 ? '↑' : '↓'}
-                    </span>
-                  ))}
-                </div>
+                <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{choice.text}</div>
               </div>
             ))}
           </div>
@@ -233,7 +218,6 @@ export function GameScreen() {
   const maxSlots = state.isVacation ? (state.parents.includes('freedom') ? 6 : 5) : 2;
   const activities = getAvailableActivities(state, state.isVacation);
   const routineIds = !state.isVacation ? [state.routineSlot2, state.routineSlot3].filter(Boolean) as string[] : [];
-  const prediction = predictEffects([...selectedActivities, ...routineIds]);
   const currentSlots = selectedActivities.reduce((s, aid) => s + (activities.find(x => x.id === aid)?.slots || 0), 0);
   const dialogue = getCharacterDialogue(state);
   const fatigueLabel = state.fatigue < 20 ? '좋음' : state.fatigue < 35 ? '경미' : state.fatigue < 50 ? '주의' : state.fatigue < 70 ? '위험' : '극한!';
@@ -303,7 +287,7 @@ export function GameScreen() {
             <div key={i} className="message-box">{msg}</div>
           ))}
 
-          {/* 스탯 변화 */}
+          {/* 스탯 변화 — 정확한 수치 */}
           <div style={{ background: 'rgba(15,52,96,0.88)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
             {(Object.keys(state.stats) as StatKey[]).map(key => {
               const change = state.weekLog?.statChanges[key] || 0;
@@ -345,9 +329,10 @@ export function GameScreen() {
 
   // ===== 메인 게임 화면 =====
   return (
+    <>
     <BgWrapper>
       {/* HUD 상단 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+      <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '1rem', fontWeight: 700 }}>{bg.mood} {weekInfo}</div>
@@ -358,9 +343,10 @@ export function GameScreen() {
             </div>
           )}
         </div>
-        <div style={{ textAlign: 'right', fontSize: '0.72rem' }}>
-          <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)}</div>
-          <div>💰 {state.money}만원 <span style={{ color: 'var(--yellow)', fontSize: '0.65rem' }}>+{state.parents.includes('wealth') ? 8 : 3}/주</span></div>
+        <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
+          <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
+          <div>현재 돈 {state.money}만원</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 8 : 3}만원</div>
         </div>
       </div>
 
@@ -380,45 +366,64 @@ export function GameScreen() {
         {lastReaction ? `"${lastReaction}"` : `"${dialogue}"`}
       </div>
 
-      {/* 스탯 (컴팩트, 터치 확장) */}
-      <div style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '8px 12px', marginBottom: 10 }}>
-        {(Object.keys(state.stats) as StatKey[]).map(key => {
-          const grade = getGrade(state.stats[key]);
-          const pred = prediction.effects[key] || 0;
-          const isExp = expandedStat === key;
-          const desc = STAT_DESCRIPTIONS[key];
-          return (
-            <div key={key}>
-              <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', cursor: 'pointer' }} onClick={() => setExpandedStat(isExp ? null : key)}>
-                <span style={{ width: 20, fontSize: '0.75rem' }}>{STAT_ICONS[key]}</span>
-                <span style={{ width: 28, fontSize: '0.72rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
-                <div style={{ flex: 1, height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 5, margin: '0 6px', position: 'relative', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.round(state.stats[key])}%`, background: grade.color, borderRadius: 5, transition: 'width 0.3s' }} />
-                  {pred > 0 && <div style={{ position: 'absolute', top: 0, left: `${Math.round(state.stats[key])}%`, height: '100%', width: `${Math.min(pred * 2, 100 - state.stats[key])}%`, background: 'rgba(76,175,80,0.4)', borderRadius: '0 5px 5px 0' }} />}
-                </div>
-                <span style={{ width: 16, fontSize: '0.68rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
-                <span style={{ width: 22, fontSize: '0.62rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(state.stats[key])}</span>
-                {pred !== 0 && <span style={{ width: 32, fontSize: '0.6rem', fontWeight: 600, textAlign: 'right', color: pred > 0 ? 'var(--green)' : 'var(--red)' }}>{pred > 0 ? '+' : ''}{Math.round(pred * 10) / 10}</span>}
+      {/* 스탯 (접기/펼치기) */}
+      <div data-tutorial="stats" style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: showStats ? '8px 12px' : '8px 12px', marginBottom: 10 }}>
+        <div
+          onClick={() => setShowStats(!showStats)}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '2px 0' }}
+        >
+          <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>📊 능력치</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {/* 접혀있을 때 미니 요약 — 텍스트로 표시 */}
+            {!showStats && (
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {(Object.keys(state.stats) as StatKey[]).map(key => {
+                  const grade = getGrade(state.stats[key]);
+                  return (
+                    <span key={key} style={{ fontSize: '0.62rem', fontWeight: 600, color: grade.color }}>
+                      {STAT_LABELS[key]}{grade.grade}
+                    </span>
+                  );
+                })}
               </div>
-              {isExp && (
-                <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '6px 10px', margin: '2px 0 4px 20px', fontSize: '0.68rem', lineHeight: 1.5 }}>
-                  <div style={{ color: 'var(--text-primary)' }}>{desc.what}</div>
-                  <div style={{ color: 'var(--green)', marginTop: 2 }}>▲ {desc.high}</div>
-                  <div style={{ color: 'var(--red)' }}>▼ {desc.low}</div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: '0.68rem' }}>
-          <span style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} {prediction.fatigue !== 0 && <span style={{ color: prediction.fatigue > 0 ? 'var(--red)' : 'var(--green)' }}>{prediction.fatigue > 0 ? '+' : ''}{prediction.fatigue}</span>}</span>
-          <span>💰 {state.money}만 {prediction.money !== 0 && <span style={{ color: prediction.money > 0 ? 'var(--green)' : 'var(--red)' }}>{prediction.money > 0 ? '+' : ''}{prediction.money}만</span>}</span>
+            )}
+            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{showStats ? '▲' : '▼'}</span>
+          </div>
         </div>
+        {showStats && (
+          <div style={{ marginTop: 6 }}>
+            {(Object.keys(state.stats) as StatKey[]).map(key => {
+              const grade = getGrade(state.stats[key]);
+              const isExp = expandedStat === key;
+              const desc = STAT_DESCRIPTIONS[key];
+              return (
+                <div key={key}>
+                  <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', cursor: 'pointer' }} onClick={() => setExpandedStat(isExp ? null : key)}>
+                    <span style={{ width: 20, fontSize: '0.75rem' }}>{STAT_ICONS[key]}</span>
+                    <span style={{ width: 28, fontSize: '0.72rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
+                    <div style={{ flex: 1, height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 5, margin: '0 6px', position: 'relative', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${Math.round(state.stats[key])}%`, background: grade.color, borderRadius: 5, transition: 'width 0.3s' }} />
+                    </div>
+                    <span style={{ width: 16, fontSize: '0.68rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
+                    <span style={{ width: 22, fontSize: '0.62rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(state.stats[key])}</span>
+                  </div>
+                  {isExp && (
+                    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '6px 10px', margin: '2px 0 4px 20px', fontSize: '0.68rem', lineHeight: 1.5 }}>
+                      <div style={{ color: 'var(--text-primary)' }}>{desc.what}</div>
+                      <div style={{ color: 'var(--green)', marginTop: 2 }}>▲ {desc.high}</div>
+                      <div style={{ color: 'var(--red)' }}>▼ {desc.low}</div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 루틴 (학기 중) */}
       {!state.isVacation && (
-        <div style={{
+        <div data-tutorial="routine" style={{
           background: 'rgba(15,52,96,0.85)',
           backdropFilter: 'blur(6px)', borderRadius: 12, padding: '14px 16px', marginBottom: 12,
           border: !state.routineSlot2 ? '1px solid var(--yellow)' : '1px solid rgba(255,255,255,0.05)',
@@ -438,11 +443,14 @@ export function GameScreen() {
           {/* 루틴 미설정 시 */}
           {!state.routineSlot2 && !routineConfirmed && (
             <div style={{ textAlign: 'center', padding: '10px 0' }}>
-              <div style={{ fontSize: '0.88rem', marginBottom: 10, color: 'var(--yellow)' }}>
-                ⚠ 방과후에 뭘 할지 아직 안 정했어요
+              <div style={{ fontSize: '0.85rem', marginBottom: 6, color: 'var(--text-secondary)' }}>
+                아직 평일 방과후 계획이 없어요
               </div>
-              <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => { setRoutineConfirmed(true); setRoutineStep(1); }}>
-                방과후 활동 정하기
+              <div style={{ fontSize: '0.72rem', marginBottom: 12, color: 'var(--text-muted)' }}>
+                루틴을 정하면 매주 자동으로 진행돼요
+              </div>
+              <button className="btn btn-primary" style={{ maxWidth: 280, margin: '0 auto', display: 'block' }} onClick={() => { setRoutineConfirmed(true); setRoutineStep(1); }}>
+                방과후 활동 정해보기
               </button>
             </div>
           )}
@@ -541,7 +549,7 @@ export function GameScreen() {
       )}
 
       {/* 활동 선택 */}
-      <div style={{ marginBottom: 8 }}>
+      <div data-tutorial="weekend" style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{state.isVacation ? '🏖️ 이번 주 활동' : '🗓️ 주말 활동'}</span>
           <span style={{
@@ -549,7 +557,7 @@ export function GameScreen() {
             background: currentSlots >= maxSlots ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.08)',
             color: currentSlots >= maxSlots ? 'var(--green)' : 'var(--text-muted)',
           }}>
-            {currentSlots}/{maxSlots} 슬롯
+            {currentSlots}/{maxSlots} 선택
           </span>
         </div>
 
@@ -569,35 +577,41 @@ export function GameScreen() {
         />
       </div>
 
-      {/* NPC 관계 */}
-      <div style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
-        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 관계</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {state.npcs.map(n => {
-            const intimacyColor = n.intimacy >= 70 ? 'var(--accent-soft)' : n.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
-            const intimacyLabel = n.intimacy >= 70 ? '친함' : n.intimacy >= 40 ? '보통' : '어색';
-            return (
-              <div key={n.id} style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
-              }}>
-                <Portrait characterId={n.id} size={36} expression="neutral" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{n.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                    <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${n.intimacy}%`, background: intimacyColor, borderRadius: 3, transition: 'width 0.3s' }} />
+      {/* NPC 관계 — 만난 친구만 표시 */}
+      {state.npcs.some(n => n.met) && (
+        <div data-tutorial="npc" style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 친구</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            {state.npcs.filter(n => n.met).map(n => {
+              const intimacyColor = n.intimacy >= 70 ? 'var(--accent-soft)' : n.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
+              const intimacyLabel = n.intimacy >= 70 ? '친함' : n.intimacy >= 40 ? '보통' : '어색';
+              return (
+                <div key={n.id}
+                  onClick={() => setNpcDetailFor(n.id)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                    background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
+                    transition: 'background 0.15s',
+                  }}
+                >
+                  <Portrait characterId={n.id} size={36} expression="neutral" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{n.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                      <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${n.intimacy}%`, background: intimacyColor, borderRadius: 3, transition: 'width 0.3s' }} />
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap' }}>
+                        {intimacyLabel}
+                      </span>
                     </div>
-                    <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap' }}>
-                      {Math.round(n.intimacy)} {intimacyLabel}
-                    </span>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* NPC 선택 모달 */}
       {npcSelectFor && (
@@ -605,7 +619,7 @@ export function GameScreen() {
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
             <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 4 }}>누구와 {npcSelectFor === 'hang-out' ? '놀까' : npcSelectFor === 'study-group' ? '공부할까' : '활동할까'}?</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 16 }}>함께하는 친구에 따라 친밀도가 올라갑니다</div>
-            {state.npcs.map(npc => (
+            {state.npcs.filter(n => n.met).map(npc => (
               <div key={npc.id} onClick={() => { setNpcChoices({ ...npcChoices, [npcSelectFor]: npc.id }); setSelectedActivities([...selectedActivities, npcSelectFor]); setLastReaction(getActivityReaction(npcSelectFor)); setNpcSelectFor(null); }}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--bg-card)', borderRadius: 10, marginBottom: 6, cursor: 'pointer', border: '1px solid transparent', transition: 'all 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
@@ -624,8 +638,60 @@ export function GameScreen() {
         </div>
       )}
 
+      {/* NPC 상세 모달 */}
+      {npcDetailFor && (() => {
+        const npc = state.npcs.find(n => n.id === npcDetailFor);
+        if (!npc) return null;
+        const intimacyColor = npc.intimacy >= 70 ? 'var(--accent-soft)' : npc.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
+        const intimacyLabel = npc.intimacy >= 70 ? '절친' : npc.intimacy >= 40 ? '친구' : '아는 사이';
+        return (
+          <div onClick={() => setNpcDetailFor(null)} style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
+          }}>
+            <div onClick={e => e.stopPropagation()} style={{
+              background: 'linear-gradient(135deg, rgba(15,52,96,0.98), rgba(26,26,46,0.98))',
+              borderRadius: 16, padding: 24, width: '85%', maxWidth: 340, textAlign: 'center',
+              border: '1px solid rgba(255,255,255,0.1)',
+            }}>
+              <Portrait characterId={npc.id} size={72} expression="neutral" />
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>{npc.description}</div>
+
+              {/* 인사말 */}
+              <div style={{
+                background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 14px',
+                marginTop: 14, fontStyle: 'italic', fontSize: '0.85rem', lineHeight: 1.6,
+              }}>
+                "{npc.greeting || '...'}"
+              </div>
+
+              {/* 성격 설명 */}
+              {npc.personality && (
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.5 }}>
+                  {npc.personality}
+                </div>
+              )}
+
+              {/* 친밀도 */}
+              <div style={{ marginTop: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                  <span style={{ fontSize: '0.78rem', fontWeight: 600, color: intimacyColor }}>{intimacyLabel}</span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>친밀도 {Math.round(npc.intimacy)}</span>
+                </div>
+                <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${npc.intimacy}%`, background: intimacyColor, borderRadius: 3 }} />
+                </div>
+              </div>
+
+              <button className="btn btn-secondary" style={{ marginTop: 16 }} onClick={() => setNpcDetailFor(null)}>닫기</button>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 확정 버튼 */}
-      <div style={{ paddingBottom: 20 }}>
+      <div data-tutorial="confirm" style={{ paddingBottom: 20 }}>
         <button className="btn btn-primary"
           disabled={!state.isVacation && !state.routineSlot2}
           onClick={handleConfirm}
@@ -637,6 +703,27 @@ export function GameScreen() {
               : '이번 주 확정 →'}
         </button>
       </div>
+
     </BgWrapper>
+    {/* 튜토리얼 — BgWrapper 밖에서 렌더 (리렌더 시 언마운트 방지) */}
+    {showTutorial && (
+      <Tutorial
+        routineSet={!!state.routineSlot2}
+        onComplete={() => {
+          setShowTutorial(false);
+          localStorage.setItem('lifetrack_tutorial_done', '1');
+          // 튜토리얼 중 선택한 것 전부 리셋 — 진짜 게임 시작
+          setRoutine(null, null);
+          setRoutineSlot2Pick(null);
+          setRoutineSlot3Pick(null);
+          setSelectedActivities([]);
+          setNpcChoices({});
+          setRoutineConfirmed(false);
+          setRoutineStep(1);
+          setLastReaction(null);
+        }}
+      />
+    )}
+    </>
   );
 }
