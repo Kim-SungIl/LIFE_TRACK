@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES } from '../engine/activities';
-import { StatKey, STAT_LABELS, getGrade } from '../engine/types';
+import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, ExamResult } from '../engine/types';
 import { Portrait } from './Portrait';
 import { NPC_APPEARANCES } from './CharacterAvatar';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
@@ -318,6 +318,69 @@ export function GameScreen() {
               <span>💰 {state.money}만원</span>
             </div>
           </div>
+
+          {/* 시험 결과 */}
+          {state.currentExamResult && (() => {
+            const exam = state.currentExamResult!;
+            const gradeColors: Record<string, string> = { S: '#FFD700', A: '#4CAF50', B: '#2196F3', C: '#FF9800', D: '#F44336' };
+            return (
+              <div style={{
+                background: 'rgba(15,52,96,0.92)', backdropFilter: 'blur(6px)', borderRadius: 14,
+                padding: '16px 16px', marginBottom: 16, border: '1px solid rgba(233,69,96,0.2)',
+              }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, textAlign: 'center', marginBottom: 12 }}>
+                  📝 {exam.examType === 'midterm' ? '중간고사' : '기말고사'} 성적표
+                </div>
+
+                {/* 과목별 등급 */}
+                {(Object.keys(exam.subjects) as SubjectKey[]).map(key => {
+                  const s = exam.subjects[key];
+                  return (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <span style={{ width: 70, fontSize: '0.8rem', fontWeight: 600 }}>{SUBJECT_LABELS[key]}</span>
+                      <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, margin: '0 8px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${s.score}%`, background: gradeColors[s.grade], borderRadius: 4, transition: 'width 0.5s' }} />
+                      </div>
+                      <span style={{ width: 22, fontSize: '0.82rem', fontWeight: 700, color: gradeColors[s.grade], textAlign: 'center' }}>{s.grade}</span>
+                      {s.delta !== 0 && (
+                        <span style={{ width: 36, fontSize: '0.65rem', fontWeight: 600, textAlign: 'right', color: s.delta > 0 ? 'var(--green)' : 'var(--red)' }}>
+                          {s.delta > 0 ? '▲' : '▼'}{Math.abs(Math.round(s.delta))}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* 석차 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>반 석차</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700 }}>{exam.rank}등</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>/ 30명</span>
+                    {exam.prevRank && (
+                      <span style={{
+                        fontSize: '0.72rem', fontWeight: 600,
+                        color: exam.rank < exam.prevRank ? 'var(--green)' : exam.rank > exam.prevRank ? 'var(--red)' : 'var(--text-muted)',
+                      }}>
+                        {exam.rank < exam.prevRank ? `▲${exam.prevRank - exam.rank}` : exam.rank > exam.prevRank ? `▼${exam.rank - exam.prevRank}` : '→'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 총평 */}
+                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '10px 12px', marginTop: 8, fontSize: '0.8rem', fontStyle: 'italic', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+                  "{exam.comment}"
+                </div>
+
+                {/* 반응 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8, fontSize: '0.75rem' }}>
+                  <div><span style={{ color: 'var(--accent-soft)' }}>부모님:</span> {exam.parentReaction}</div>
+                  <div><span style={{ color: 'var(--blue)' }}>선생님:</span> {exam.teacherReaction}</div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* 다음 주 예고 */}
           {upcomingEvents.length > 0 && (

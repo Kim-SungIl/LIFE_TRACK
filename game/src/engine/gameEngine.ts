@@ -1,6 +1,7 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
 import { ACTIVITIES } from './activities';
 import { getEventForWeek } from './events';
+import { generateExamResult } from './examSystem';
 
 // ===== 초기 상태 생성 =====
 export function createInitialState(gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]): GameState {
@@ -55,6 +56,8 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     milestones: [],
     burnoutCount: 0,
     totalWeeksPlayed: 0,
+    examResults: [],
+    currentExamResult: null,
   };
 }
 
@@ -433,7 +436,18 @@ export function processWeek(state: GameState): GameState {
   newState.weekLog = log;
   newState.totalWeeksPlayed++;
 
-  // 10. 이벤트 체크
+  // 10. 시험 체크 (W8 1학기 중간, W17 1학기 기말, W30 2학기 중간, W38 2학기 기말)
+  const examWeeks: Record<number, 'midterm' | 'final'> = { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
+  if (examWeeks[newState.week]) {
+    const examResult = generateExamResult(newState, examWeeks[newState.week]);
+    newState.examResults.push(examResult);
+    newState.currentExamResult = examResult;
+    log.messages.push(`📝 ${examWeeks[newState.week] === 'midterm' ? '중간고사' : '기말고사'} 결과 발표!`);
+  } else {
+    newState.currentExamResult = null;
+  }
+
+  // 11. 이벤트 체크
   const event = getEventForWeek(newState);
   if (event) {
     newState.currentEvent = { ...event, week: newState.week };

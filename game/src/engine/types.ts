@@ -37,6 +37,8 @@ export interface GameState {
   milestones: string[];         // 달성한 마일스톤 ID
   burnoutCount: number;
   totalWeeksPlayed: number;
+  examResults: ExamResult[];       // 역대 시험 결과
+  currentExamResult: ExamResult | null;  // 이번 시험 결과 (표시용)
 }
 
 export interface WeekLog {
@@ -45,6 +47,31 @@ export interface WeekLog {
   moneyChange: number;
   messages: string[];
   milestone: string | null;
+}
+
+// 시험 시스템
+export type SubjectKey = 'korean' | 'english' | 'math' | 'socialScience' | 'artsPhysical';
+export const SUBJECT_LABELS: Record<SubjectKey, string> = {
+  korean: '국어', english: '영어', math: '수학',
+  socialScience: '사회/과학', artsPhysical: '예체능',
+};
+export type ExamGrade = 'S' | 'A' | 'B' | 'C' | 'D';
+export interface SubjectResult {
+  score: number;        // 0~100 원점수
+  grade: ExamGrade;
+  delta: number;        // 전 시험 대비 변화
+}
+export interface ExamResult {
+  subjects: Record<SubjectKey, SubjectResult>;
+  average: number;
+  rank: number;         // 반 석차 (1~30)
+  prevRank: number | null;
+  comment: string;      // 한 줄 총평
+  parentReaction: string;
+  teacherReaction: string;
+  examType: 'midterm' | 'final';
+  year: number;
+  semester: number;
 }
 
 export interface Activity {
