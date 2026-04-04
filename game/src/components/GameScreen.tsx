@@ -511,30 +511,34 @@ export function GameScreen() {
         })}
       </div>
 
-      {/* NPC 간략 */}
-      <div style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 10, padding: '8px 12px', marginBottom: 10, cursor: 'pointer' }} onClick={() => setShowNpc(!showNpc)}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
-          <span>👥 관계</span>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{showNpc ? '▲' : '▼'}</span>
+      {/* NPC 관계 */}
+      <div style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 관계</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {state.npcs.map(n => {
+            const intimacyColor = n.intimacy >= 70 ? 'var(--accent-soft)' : n.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
+            const intimacyLabel = n.intimacy >= 70 ? '친함' : n.intimacy >= 40 ? '보통' : '어색';
+            return (
+              <div key={n.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
+              }}>
+                <Portrait characterId={n.id} size={36} expression="neutral" />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{n.name}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                    <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${n.intimacy}%`, background: intimacyColor, borderRadius: 3, transition: 'width 0.3s' }} />
+                    </div>
+                    <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap' }}>
+                      {Math.round(n.intimacy)} {intimacyLabel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        {!showNpc && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 4, fontSize: '0.7rem' }}>
-            {state.npcs.map(n => <span key={n.id} style={{ color: n.intimacy >= 50 ? 'var(--green)' : 'var(--text-muted)' }}>{n.emoji}{Math.round(n.intimacy)}</span>)}
-          </div>
-        )}
-        {showNpc && state.npcs.map(n => (
-          <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0' }}>
-            <Portrait characterId={n.id} size={32} expression="neutral" />
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 600 }}>{n.name}</div>
-              <div style={{ fontSize: '0.62rem', color: 'var(--text-secondary)' }}>{n.description}</div>
-            </div>
-            <div style={{ width: 40, height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${n.intimacy}%`, background: 'var(--accent-soft)', borderRadius: 2 }} />
-            </div>
-            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', width: 20, textAlign: 'right' }}>{Math.round(n.intimacy)}</span>
-          </div>
-        ))}
       </div>
 
       {/* NPC 선택 모달 */}
