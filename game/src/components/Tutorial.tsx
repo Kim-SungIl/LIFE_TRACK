@@ -20,7 +20,7 @@ const STEPS: TutorialStep[] = [
   {
     target: 'stats',
     title: '능력치',
-    desc: '학업, 인기, 재능, 멘탈, 체력 5가지 능력치예요.\n눌러서 펼치면 상세 내용을 볼 수 있어요!\n활동에 따라 올라가거나 내려갈 수 있답니다.',
+    desc: '학업, 인기, 특기, 멘탈, 체력 5가지 능력치예요.\n눌러서 펼치면 상세 내용을 볼 수 있어요!\n활동에 따라 올라가거나 내려갈 수 있답니다.',
     position: 'bottom',
     interactive: true,
   },

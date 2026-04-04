@@ -123,6 +123,8 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog): void
   if (!activity) return;
 
   const fatiguemod = getFatigueModifier(state.fatigue);
+  // v5.1: tired/burnout 상태 성장 패널티
+  const mentalPenalty = state.mentalState === 'burnout' ? 0.3 : state.mentalState === 'tired' ? 0.8 : 1.0;
 
   // 각 스탯 성장 적용
   for (const [key, baseValue] of Object.entries(activity.effects)) {
@@ -133,8 +135,13 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog): void
       // 멘탈은 전용 감쇠
       value *= getMentalRecoveryRate(state.stats.mental);
     } else if (value > 0) {
-      // 양수 성장에만 감쇠 적용
-      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod;
+      // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티
+      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty;
+
+      // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감
+      if (activity.moneyCost <= 0 && state.stats[statKey] >= 80) {
+        value *= 0.1; // 무료 활동으로는 80 이상 거의 못 올림
+      }
     }
 
     // 최저 보장 (양수 성장의 경우)
@@ -147,29 +154,48 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog): void
     log.statChanges[statKey]! += value;
   }
 
-  // 피로 적용
-  const fatigueDelta = activity.fatigue;
+  // 피로 적용 (v5.2: 체력 < 20이면 피로 증가량 1.5배)
+  let fatigueDelta = activity.fatigue;
+  if (fatigueDelta > 0 && state.stats.health < 20) {
+    fatigueDelta = Math.round(fatigueDelta * 1.5);
+  }
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
   log.fatigueChange += fatigueDelta;
 
-  // 용돈 적용
+  // 용돈 적용 (음수 방지)
   state.money -= activity.moneyCost;
+  if (state.money < 0) state.money = 0;
   log.moneyChange -= activity.moneyCost;
 
   log.messages.push(`${activity.name} 완료`);
 }
 
 // ===== 자연 감소 =====
+// v5.1: 학년별 학업 감소 + 고학업 추가 감소 + 피로→멘탈 침식
 function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean): void {
-  // 학업: -0.5/주 (학기 중 학교수업이 상쇄)
-  if (isVacation) {
-    state.stats.academic = Math.max(0, state.stats.academic - 0.5);
-    log.statChanges.academic = (log.statChanges.academic || 0) - 0.5;
+  // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가)
+  // 초등(Y1): 학기 0 / 방학 -0.3
+  // 중등(Y2~4): 학기 -0.2 / 방학 -0.6
+  // 고등(Y5~7): 학기 -0.4 / 방학 -1.0
+  let academicDecay = 0;
+  if (state.year <= 1) {
+    academicDecay = isVacation ? -0.3 : 0;
+  } else if (state.year <= 4) {
+    academicDecay = isVacation ? -0.6 : -0.2;
+  } else {
+    academicDecay = isVacation ? -1.0 : -0.4;
   }
+  // 고학업 추가 감소: 90+ → -0.5 추가, 95+ → -1.0 추가
+  if (state.stats.academic >= 95) academicDecay -= 1.0;
+  else if (state.stats.academic >= 90) academicDecay -= 0.5;
 
-  // 인기: -1.0/주
-  const socialDecay = -1.0;
-  state.stats.social = Math.max(0, state.stats.social + socialDecay);
+  state.stats.academic = Math.max(0, state.stats.academic + academicDecay);
+  log.statChanges.academic = (log.statChanges.academic || 0) + academicDecay;
+
+  // 인기: -1.0/주 (soft floor 10 — 학교 다니면 최소한의 존재감)
+  let socialDecay = -1.0;
+  if (state.stats.social <= 12) socialDecay = -0.2; // 바닥 근처에서 감소 완화
+  state.stats.social = Math.max(10, state.stats.social + socialDecay);
   log.statChanges.social = (log.statChanges.social || 0) + socialDecay;
 
   // 인기 50 미만: +0.3 (학기 중만)
@@ -178,14 +204,25 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
     log.statChanges.social = (log.statChanges.social || 0) + 0.3;
   }
 
-  // 재능: -0.3/주
+  // v5.2: 인기 < 20 패널티 — 사회적 고립 → 멘탈 추가 감소
+  if (state.stats.social < 20) {
+    const isolationDrain = -1.5;
+    state.stats.mental = Math.max(0, state.stats.mental + isolationDrain);
+    log.statChanges.mental = (log.statChanges.mental || 0) + isolationDrain;
+  }
+
+  // 특기: -0.3/주
   state.stats.talent = Math.max(0, state.stats.talent - 0.3);
   log.statChanges.talent = (log.statChanges.talent || 0) - 0.3;
 
-  // 체력: -0.8/주 (학기 중 학교가 50% 상쇄)
-  const healthDecay = isVacation ? -0.8 : -0.4;
-  state.stats.health = Math.max(0, state.stats.health + healthDecay);
+  // 체력: -0.8/주 (학기 중 학교가 50% 상쇄, soft floor 10)
+  let healthDecay = isVacation ? -0.8 : -0.4;
+  if (state.stats.health <= 12) healthDecay = -0.1; // 바닥 근처 완화
+  state.stats.health = Math.max(10, state.stats.health + healthDecay);
   log.statChanges.health = (log.statChanges.health || 0) + healthDecay;
+
+  // v5.2: 체력 < 20 패널티 — 허약 → 피로 증가량 1.5배 (applyActivity에서 적용)
+  // (체력 패널티는 getFatigueModifier 계열에서 처리)
 
   // 멘탈 자연감소 (v4: 80+ 감소)
   if (state.stats.mental >= 90) {
@@ -194,6 +231,16 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   } else if (state.stats.mental >= 80) {
     state.stats.mental -= 1;
     log.statChanges.mental = (log.statChanges.mental || 0) - 1;
+  }
+
+  // v5.1: 고피로 → 멘탈 침식 (피로가 높으면 멘탈이 추가 감소)
+  let fatigueMentalDrain = 0;
+  if (state.fatigue >= 80) fatigueMentalDrain = -4;
+  else if (state.fatigue >= 60) fatigueMentalDrain = -2;
+  else if (state.fatigue >= 40) fatigueMentalDrain = -1;
+  if (fatigueMentalDrain < 0) {
+    state.stats.mental = Math.max(0, state.stats.mental + fatigueMentalDrain);
+    log.statChanges.mental = (log.statChanges.mental || 0) + fatigueMentalDrain;
   }
 }
 
@@ -215,8 +262,11 @@ function applyFatigueRecovery(state: GameState, log: WeekLog): void {
 }
 
 // ===== 학교 수업 효과 (평일 자동) =====
+// v5.1: 자동 학업 +1 → +0.3, 학년별 학업 유지 비용 도입
 function applySchoolClass(state: GameState, log: WeekLog): void {
-  const academicGain = 1 * getDiminishingReturn(state.stats.academic) * getFatigueModifier(state.fatigue);
+  // 학교 수업 기본 효과: +0.3 (기존 +1에서 대폭 하향)
+  const baseGain = 0.3;
+  const academicGain = baseGain * getDiminishingReturn(state.stats.academic) * getFatigueModifier(state.fatigue);
   state.stats.academic = Math.min(100, state.stats.academic + academicGain);
   log.statChanges.academic = (log.statChanges.academic || 0) + academicGain;
   state.fatigue = Math.min(100, state.fatigue + 2);
@@ -251,20 +301,26 @@ function checkMilestones(state: GameState, log: WeekLog): void {
 }
 
 // ===== 멘탈 상태 전환 =====
+// v5.1: tired/burnout 조건 완화 + tired 효과 추가
 function checkMentalStateTransition(state: GameState, log: WeekLog): void {
-  const prev = state.mentalState;
-
-  if (state.mentalState === 'normal' && state.stats.mental < 30 && state.fatigue > 50) {
+  // tired 진입: 멘탈 < 40 AND 피로 > 45 (기존: 멘탈 < 30, 피로 > 50)
+  if (state.mentalState === 'normal' && state.stats.mental < 40 && state.fatigue > 45) {
     state.mentalState = 'tired';
     log.messages.push('⚠️ 피로 상태 진입 — "요즘 뭘 해도 재미없다..."');
-  } else if (state.mentalState === 'tired' && state.stats.mental < 15) {
+  }
+  // burnout 진입: tired + 멘탈 < 20 (기존: < 15), 또는 멘탈 < 25 + 피로 > 70
+  else if (state.mentalState === 'tired' && (state.stats.mental < 20 || (state.stats.mental < 25 && state.fatigue > 70))) {
     state.mentalState = 'burnout';
     state.burnoutCount++;
     log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
-  } else if (state.mentalState === 'tired' && state.stats.mental >= 50 && state.fatigue < 30) {
+  }
+  // 회복: tired → normal (멘탈 50+ AND 피로 < 30)
+  else if (state.mentalState === 'tired' && state.stats.mental >= 50 && state.fatigue < 30) {
     state.mentalState = 'normal';
     log.messages.push('✨ 회복! — 다시 일상으로 돌아왔다.');
-  } else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 30) {
+  }
+  // burnout → tired (멘탈 25+ AND 피로 < 25)
+  else if (state.mentalState === 'burnout' && state.stats.mental >= 25 && state.fatigue < 25) {
     state.mentalState = 'tired';
     log.messages.push('💪 번아웃에서 벗어나는 중...');
   }
@@ -311,21 +367,37 @@ export function processWeek(state: GameState): GameState {
     applySchoolClass(newState, log);
   }
 
-  // 3. 루틴 활동 (학기 중, 방과후)
+  // 3. 루틴 활동 (학기 중, 방과후) — 돈 부족하면 스킵
   if (!newState.isVacation) {
     if (newState.routineSlot2) {
-      applyActivity(newState, newState.routineSlot2, log);
-      newState.routineWeeks++;
+      const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
+      if (r2 && (r2.moneyCost <= 0 || newState.money >= r2.moneyCost)) {
+        applyActivity(newState, newState.routineSlot2, log);
+        newState.routineWeeks++;
+      } else {
+        log.messages.push(`💰 돈이 부족해서 ${r2?.name || '활동'}을 못 했다...`);
+        newState.routineWeeks = 0;
+      }
     }
     if (newState.routineSlot3) {
-      applyActivity(newState, newState.routineSlot3, log);
+      const r3 = ACTIVITIES.find(a => a.id === newState.routineSlot3);
+      if (r3 && (r3.moneyCost <= 0 || newState.money >= r3.moneyCost)) {
+        applyActivity(newState, newState.routineSlot3, log);
+      } else {
+        log.messages.push(`💰 돈이 부족해서 ${r3?.name || '활동'}을 못 했다...`);
+      }
     }
   }
 
-  // 4. 주말/방학 선택 활동
+  // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵
   const choices = newState.isVacation ? newState.vacationChoices : newState.weekendChoices;
   const allActivities = [...choices];
   for (const choice of choices) {
+    const act = ACTIVITIES.find(a => a.id === choice);
+    if (act && act.moneyCost > 0 && newState.money < act.moneyCost) {
+      log.messages.push(`💰 돈이 부족해서 ${act.name}을 못 했다...`);
+      continue;
+    }
     applyActivity(newState, choice, log);
   }
 
@@ -395,13 +467,30 @@ export function calculateEnding(state: GameState) {
   const { academic, social, talent, mental, health } = state.stats;
   const total = academic + social + talent + mental + health;
 
-  // 성취 지수
+  // v5.2: 성취 3축 평가 — 학업/특기/생활 중 최고축 기반 + 결함 체크
+  // 학업 성취: 학업 중심
+  const academicScore = academic;
+  // 특기 성취: 특기 중심
+  const talentScore = talent;
+  // 생활 성취: 멘탈+체력+인기 평균
+  const lifeScore = (mental + health + social) / 3;
+
+  // 최고 축으로 기본 등급 결정
+  const bestAxis = Math.max(academicScore, talentScore, lifeScore);
   let achievement = 'C';
-  if (academic >= 85 || talent >= 85) achievement = 'S';
-  else if (academic >= 70 || talent >= 70) achievement = 'A';
-  else if (academic >= 50 || talent >= 50) achievement = 'B';
-  else if (academic >= 30) achievement = 'C';
+  if (bestAxis >= 85) achievement = 'S';
+  else if (bestAxis >= 70) achievement = 'A';
+  else if (bestAxis >= 50) achievement = 'B';
+  else if (bestAxis >= 30) achievement = 'C';
   else achievement = 'D';
+
+  // 결함 체크: 핵심 스탯 중 20 미만이 있으면 S 불가, 10 미만이면 A도 불가
+  const allStats = [academic, social, talent, mental, health];
+  const hasCollapse = allStats.some(v => v < 10);      // 붕괴
+  const hasWeakness = allStats.some(v => v < 20);       // 결함
+  if (hasCollapse && achievement === 'A') achievement = 'B';
+  if (hasWeakness && achievement === 'S') achievement = 'A';
+  if (hasCollapse && achievement === 'S') achievement = 'B';
 
   // 행복 지수
   let happiness = 'C';

@@ -89,7 +89,7 @@ export const ACTIVITIES: Activity[] = [
     effects: { social: 2, talent: 2, mental: 1 }, moneyCost: 0, category: 'social',
     description: '동아리에서 활동한다.',
     flavor: '같은 취미를 가진 사람들과 함께하는 시간. 학교에서 가장 좋아하는 시간.',
-    tags: ['취미', '친구', '재능 성장'],
+    tags: ['취미', '친구', '특기 성장'],
   },
   // === 자기계발 계열 ===
   {
@@ -97,7 +97,7 @@ export const ACTIVITIES: Activity[] = [
     effects: { talent: 3 }, moneyCost: 2, category: 'talent',
     description: '음악/미술/체육 레슨을 받는다.',
     flavor: '선생님의 지도를 받으며 실력을 갈고닦는다. 느리지만 확실히 늘고 있다.',
-    tags: ['전문적', '비용 있음', '재능 집중'],
+    tags: ['전문적', '비용 있음', '특기 집중'],
     requires: (s) => s.money >= 2,
   },
   {

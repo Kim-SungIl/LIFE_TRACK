@@ -5,7 +5,7 @@ const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = 
   study:    { emoji: '📚', name: '공부',     desc: '학업 성적을 올린다' },
   exercise: { emoji: '💪', name: '운동',     desc: '체력과 멘탈을 키운다' },
   social:   { emoji: '👥', name: '관계',     desc: '친구를 만나고 인기를 올린다' },
-  talent:   { emoji: '🎨', name: '자기계발', desc: '재능과 특기를 키운다' },
+  talent:   { emoji: '🎨', name: '자기계발', desc: '특기와 실력을 키운다' },
   rest:     { emoji: '😴', name: '휴식',     desc: '피로를 풀고 쉰다' },
   parent:   { emoji: '💝', name: '가족',     desc: '가족과 함께하는 시간' },
   work:     { emoji: '💼', name: '알바',     desc: '돈을 벌며 경험을 쌓는다' },

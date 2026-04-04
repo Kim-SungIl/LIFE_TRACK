@@ -24,9 +24,9 @@ export const STAT_DESCRIPTIONS: Record<StatKey, StatDescription> = {
     low: '투명인간 → 점심 혼밥, 관계 이벤트 감소',
   },
   talent: {
-    name: '재능',
-    what: '예체능, 특기 분야의 숙련도',
-    why: '대회 출전, 특기자 전형, 생활기록부에 영향',
+    name: '특기',
+    what: '예체능, 창작, 실기 분야의 숙련도',
+    why: '대회 출전, 특기자 전형, 수행평가, 생활기록부에 영향',
     high: '학교 대표 → 대회 입상, 특기자 진학, 인기 상승',
     low: '특기 없음 → 진로가 학업 일변도, 자기표현 수단 부족',
   },
