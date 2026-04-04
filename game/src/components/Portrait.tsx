@@ -16,8 +16,9 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
     : 'neutral');
 
   // 먼저 정확한 표정 파일을 시도, 실패하면 neutral, 그것도 실패하면 CSS 폴백
-  const exactPath = `/images/characters/${characterId}_${expr}.png`;
-  const neutralPath = `/images/characters/${characterId}_neutral.png`;
+  const base = import.meta.env.BASE_URL;
+  const exactPath = `${base}images/characters/${characterId}_${expr}.png`;
+  const neutralPath = `${base}images/characters/${characterId}_neutral.png`;
 
   const [src, setSrc] = useState(exactPath);
   const [useFallback, setUseFallback] = useState(false);

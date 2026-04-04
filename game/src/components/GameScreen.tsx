@@ -57,7 +57,7 @@ export function GameScreen() {
       {/* 배경 이미지 (있으면) */}
       {bg.image && !bgImgError && (
         <img
-          src={bg.image} alt=""
+          src={`${import.meta.env.BASE_URL}${bg.image.replace(/^\//, '')}`} alt=""
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, pointerEvents: 'none' }}
           onError={() => setBgImgError(true)}
         />
