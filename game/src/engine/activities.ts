@@ -180,7 +180,8 @@ export const ACTIVITIES: Activity[] = [
 
 export function getAvailableActivities(state: GameState, forVacation = false): Activity[] {
   return ACTIVITIES.filter(a => {
-    if (a.requires && !a.requires(state)) return false;
+    // 부모 전용 활동은 조건 미충족 시 숨김 (돈 문제가 아닌 부모 조건)
+    if (a.category === 'parent' && a.requires && !a.requires(state)) return false;
     if (a.id === 'deep-rest' && !forVacation) return true;
     return true;
   });

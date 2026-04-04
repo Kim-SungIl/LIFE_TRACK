@@ -6,6 +6,7 @@ import { StatKey, STAT_LABELS, getGrade } from '../engine/types';
 import { Portrait } from './Portrait';
 import { NPC_APPEARANCES } from './CharacterAvatar';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
+import { ActivityPicker } from './ActivityPicker';
 import { getBackground } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction } from '../engine/dialogues';
 
@@ -36,6 +37,7 @@ export function GameScreen() {
   const [routineSlot2Pick, setRoutineSlot2Pick] = useState<string | null>(null);
   const [routineSlot3Pick, setRoutineSlot3Pick] = useState<string | null>(null);
   const [routineConfirmed, setRoutineConfirmed] = useState(false);
+  const [routineStep, setRoutineStep] = useState<1 | 2>(1); // 슬롯 1 먼저, 그 다음 슬롯 2
   const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[] } | null>(null);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>({});
@@ -349,7 +351,7 @@ export function GameScreen() {
         <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '1rem', fontWeight: 700 }}>{bg.mood} {weekInfo}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{month} {state.isVacation ? '· 방학' : ''}</div>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{month} {state.isVacation ? '· 방학' : ''}</div>
           {state.mentalState !== 'normal' && (
             <div style={{ fontSize: '0.68rem', fontWeight: 600, color: state.mentalState === 'burnout' ? 'var(--red)' : 'var(--yellow)' }}>
               {state.mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}
@@ -416,40 +418,123 @@ export function GameScreen() {
 
       {/* 루틴 (학기 중) */}
       {!state.isVacation && (
-        <div style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.75rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--text-muted)' }}>
-              📋 평일 루틴
-              {state.routineWeeks >= 3 && <span style={{ color: 'var(--blue)', marginLeft: 6 }}>{state.routineWeeks}주 연속 {state.routineWeeks >= 8 ? '🔥+2.0' : state.routineWeeks >= 6 ? '⭐+1.5' : '✨+1.0'}</span>}
+        <div style={{
+          background: 'rgba(15,52,96,0.85)',
+          backdropFilter: 'blur(6px)', borderRadius: 12, padding: '14px 16px', marginBottom: 12,
+          border: !state.routineSlot2 ? '1px solid var(--yellow)' : '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
+              📋 평일 방과후 루틴
+              {state.routineWeeks >= 3 && <span style={{ color: 'var(--blue)', marginLeft: 8, fontSize: '0.78rem' }}>{state.routineWeeks}주 연속 {state.routineWeeks >= 8 ? '🔥+2.0' : state.routineWeeks >= 6 ? '⭐+1.5' : '✨+1.0'}</span>}
             </span>
-            <span style={{ color: 'var(--accent)', cursor: 'pointer', fontSize: '0.68rem' }} onClick={() => setRoutineConfirmed(!routineConfirmed)}>
-              {routineConfirmed ? '닫기' : '변경'}
-            </span>
+            {state.routineSlot2 && (
+              <span style={{ color: 'var(--blue)', cursor: 'pointer', fontSize: '0.75rem' }} onClick={() => { setRoutineConfirmed(!routineConfirmed); setRoutineStep(1); }}>
+                {routineConfirmed ? '닫기' : '변경'}
+              </span>
+            )}
           </div>
-          <div style={{ marginTop: 2 }}>
-            🏫 학교수업 + {state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name : <span style={{ color: 'var(--accent)', cursor: 'pointer' }} onClick={() => setRoutineConfirmed(true)}>비어있음 (설정하기)</span>}
-            {' + '}{state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name : '자유시간'}
-          </div>
-          {routineConfirmed && (
-            <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 4 }}>슬롯 1</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
-                {activities.filter(a => a.slots === 1 && a.category !== 'rest').map(a => {
-                  const ok = !a.requires || a.requires(state);
-                  const sel = (routineSlot2Pick ?? state.routineSlot2) === a.id;
-                  return <div key={a.id} onClick={() => ok && setRoutineSlot2Pick(a.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: '0.68rem', cursor: ok ? 'pointer' : 'not-allowed', background: sel ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.05)', border: sel ? '1px solid var(--accent)' : '1px solid transparent', opacity: ok ? 1 : 0.4 }}>{a.name}</div>;
-                })}
+
+          {/* 루틴 미설정 시 */}
+          {!state.routineSlot2 && !routineConfirmed && (
+            <div style={{ textAlign: 'center', padding: '10px 0' }}>
+              <div style={{ fontSize: '0.88rem', marginBottom: 10, color: 'var(--yellow)' }}>
+                ⚠ 방과후에 뭘 할지 아직 안 정했어요
               </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginBottom: 4 }}>슬롯 2</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
-                <div onClick={() => setRoutineSlot3Pick('__none__')} style={{ padding: '4px 8px', borderRadius: 6, fontSize: '0.68rem', cursor: 'pointer', background: (routineSlot3Pick === '__none__' || (!routineSlot3Pick && !state.routineSlot3)) ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.05)', border: (routineSlot3Pick === '__none__' || (!routineSlot3Pick && !state.routineSlot3)) ? '1px solid var(--accent)' : '1px solid transparent' }}>자유시간 🕊️</div>
-                {activities.filter(a => a.slots === 1 && a.category !== 'rest').map(a => {
-                  const ok = !a.requires || a.requires(state);
-                  const sel = (routineSlot3Pick ?? state.routineSlot3) === a.id;
-                  return <div key={a.id} onClick={() => ok && setRoutineSlot3Pick(a.id)} style={{ padding: '4px 8px', borderRadius: 6, fontSize: '0.68rem', cursor: ok ? 'pointer' : 'not-allowed', background: sel ? 'rgba(233,69,96,0.2)' : 'rgba(255,255,255,0.05)', border: sel ? '1px solid var(--accent)' : '1px solid transparent', opacity: ok ? 1 : 0.4 }}>{a.name}</div>;
-                })}
+              <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => { setRoutineConfirmed(true); setRoutineStep(1); }}>
+                방과후 활동 정하기
+              </button>
+            </div>
+          )}
+
+          {/* 루틴 설정됨: 요약 */}
+          {state.routineSlot2 && !routineConfirmed && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: '0.85rem' }}>
+              <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 12px' }}>
+                🏫 학교수업
               </div>
-              <button className="btn btn-small btn-primary" onClick={() => { setRoutine(routineSlot2Pick ?? state.routineSlot2, (routineSlot3Pick ?? state.routineSlot3) === '__none__' ? null : (routineSlot3Pick ?? state.routineSlot3)); setRoutineConfirmed(false); }}>확정</button>
+              <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
+                {ACTIVITIES.find(a => a.id === state.routineSlot2)?.name}
+                {(() => { const a = ACTIVITIES.find(x => x.id === state.routineSlot2); return a && a.moneyCost > 0 ? ` (${a.moneyCost}만/주)` : ''; })()}
+              </div>
+              <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
+                {state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name : '🕊️ 자유시간'}
+              </div>
+            </div>
+          )}
+
+          {/* 루틴 설정 — 단계별 */}
+          {routineConfirmed && routineStep === 1 && (
+            <div>
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: 8, color: 'var(--blue)' }}>
+                STEP 1 — 방과후 첫 번째 활동을 골라주세요
+              </div>
+              <ActivityPicker
+                activities={activities.filter(a => a.slots === 1 && a.category !== 'rest')}
+                selected={routineSlot2Pick ? [routineSlot2Pick] : state.routineSlot2 ? [state.routineSlot2] : []}
+                onToggle={(id) => {
+                  setRoutineSlot2Pick(id);
+                  // 선택하면 자동으로 슬롯 2로
+                  setTimeout(() => setRoutineStep(2), 200);
+                }}
+                maxSlots={1} currentSlots={0} state={state} compact
+              />
+            </div>
+          )}
+
+          {routineConfirmed && routineStep === 2 && (
+            <div>
+              {/* 슬롯 1 요약 (클릭하면 다시 열림) */}
+              <div
+                onClick={() => setRoutineStep(1)}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '8px 12px', borderRadius: 8, marginBottom: 10, cursor: 'pointer',
+                  background: 'rgba(91,141,239,0.1)', border: '1px solid rgba(91,141,239,0.2)',
+                }}
+              >
+                <span style={{ fontSize: '0.82rem' }}>
+                  슬롯 1: <strong>{ACTIVITIES.find(a => a.id === (routineSlot2Pick ?? state.routineSlot2))?.name}</strong>
+                </span>
+                <span style={{ fontSize: '0.7rem', color: 'var(--blue)' }}>변경</span>
+              </div>
+
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: 8, color: 'var(--blue)' }}>
+                STEP 2 — 두 번째 활동을 골라주세요
+              </div>
+
+              {/* 자유시간 옵션 */}
+              <div onClick={() => setRoutineSlot3Pick('__none__')} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
+                borderRadius: 10, cursor: 'pointer',
+                background: routineSlot3Pick === '__none__' ? 'rgba(91,141,239,0.15)' : 'rgba(255,255,255,0.04)',
+                border: routineSlot3Pick === '__none__' ? '1px solid var(--blue)' : '1px solid rgba(255,255,255,0.06)',
+              }}>
+                <span style={{ fontSize: '1.1rem' }}>🕊️</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>자유시간</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>쉬면서 멘탈 회복 + 피로 감소</div>
+                </div>
+                {routineSlot3Pick === '__none__' && <span>✓</span>}
+              </div>
+
+              <ActivityPicker
+                activities={activities.filter(a => a.slots === 1 && a.category !== 'rest' && a.id !== (routineSlot2Pick ?? state.routineSlot2))}
+                selected={routineSlot3Pick && routineSlot3Pick !== '__none__' ? [routineSlot3Pick] : state.routineSlot3 ? [state.routineSlot3] : []}
+                onToggle={(id) => setRoutineSlot3Pick(id)}
+                maxSlots={1} currentSlots={0} state={state} compact
+              />
+
+              <button className="btn btn-primary" style={{ marginTop: 12 }}
+                disabled={!(routineSlot2Pick ?? state.routineSlot2)}
+                onClick={() => {
+                  const s3 = routineSlot3Pick ?? state.routineSlot3;
+                  setRoutine(routineSlot2Pick ?? state.routineSlot2, s3 === '__none__' ? null : s3);
+                  setRoutineConfirmed(false);
+                  setRoutineStep(1);
+                }}>
+                루틴 확정하기
+              </button>
             </div>
           )}
         </div>
@@ -458,57 +543,30 @@ export function GameScreen() {
       {/* 활동 선택 */}
       <div style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{state.isVacation ? '🏖️ 이번 주 활동' : '🗓️ 주말 활동'}</span>
-          <span style={{ fontSize: '0.72rem', color: currentSlots >= maxSlots ? 'var(--green)' : 'var(--text-muted)' }}>{currentSlots}/{maxSlots}</span>
+          <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{state.isVacation ? '🏖️ 이번 주 활동' : '🗓️ 주말 활동'}</span>
+          <span style={{
+            fontSize: '0.78rem', fontWeight: 600, padding: '2px 10px', borderRadius: 10,
+            background: currentSlots >= maxSlots ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.08)',
+            color: currentSlots >= maxSlots ? 'var(--green)' : 'var(--text-muted)',
+          }}>
+            {currentSlots}/{maxSlots} 슬롯
+          </span>
         </div>
 
-        {(['study', 'exercise', 'social', 'talent', 'rest', 'parent', 'work'] as const).map(cat => {
-          const ca = activities.filter(a => a.category === cat);
-          if (ca.length === 0) return null;
-          const catNames: Record<string, string> = { study: '📚 공부', exercise: '💪 운동', social: '👥 관계', talent: '🎨 자기계발', rest: '😴 휴식', parent: '💝 가족', work: '💼 알바' };
-          return (
-            <div key={cat} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, paddingBottom: 4, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{catNames[cat]}</div>
-              <div className="activity-grid">
-                {ca.map(a => {
-                  const sel = selectedActivities.includes(a.id);
-                  const canSel = sel || currentSlots + a.slots <= maxSlots;
-                  const canAfford = !a.requires || a.requires(state);
-                  return (
-                    <div key={a.id}
-                      className={`activity-card ${sel ? 'selected' : ''} ${(!canSel || !canAfford) ? 'disabled' : ''}`}
-                      onClick={() => canSel && canAfford && toggleActivity(a.id)}
-                    >
-                      <div className="activity-name">
-                        {a.name}
-                        {a.moneyCost > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--yellow)', marginLeft: 3 }}>({a.moneyCost}만)</span>}
-                        {a.moneyCost < 0 && <span style={{ fontSize: '0.72rem', color: 'var(--green)', marginLeft: 3 }}>(+{-a.moneyCost}만)</span>}
-                        {npcChoices[a.id] && <span style={{ fontSize: '0.68rem', color: 'var(--accent-soft)', marginLeft: 3 }}>({state.npcs.find(n => n.id === npcChoices[a.id])?.name})</span>}
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.4 }}>{a.flavor.slice(0, 40)}...</div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', marginBottom: 3 }}>
-                        {a.tags.slice(0, 3).map(t => (
-                          <span key={t} style={{ fontSize: '0.58rem', background: 'rgba(255,255,255,0.08)', borderRadius: 4, padding: '1px 5px', color: 'var(--text-muted)' }}>{t}</span>
-                        ))}
-                      </div>
-                      <div className="activity-effects">
-                        {Object.entries(a.effects).map(([k, v]) => (
-                          <span key={k} style={{ color: (v as number) > 0 ? 'var(--green)' : 'var(--red)', marginRight: 3 }}>
-                            {STAT_ICONS[k as StatKey]}{(v as number) > 0 ? '↑' : '↓'}
-                          </span>
-                        ))}
-                      </div>
-                      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'flex', gap: 4, justifyContent: 'center' }}>
-                        {a.fatigue !== 0 && <span style={{ color: a.fatigue > 0 ? 'var(--red)' : 'var(--green)' }}>피로{a.fatigue > 0 ? '+' : ''}{a.fatigue}</span>}
-                        {a.slots > 1 && <span style={{ color: 'var(--purple)' }}>{a.slots}슬롯</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        <ActivityPicker
+          activities={activities}
+          selected={selectedActivities}
+          onToggle={toggleActivity}
+          maxSlots={maxSlots}
+          currentSlots={currentSlots}
+          state={state}
+          npcChoices={npcChoices}
+          availableMoney={state.money - (
+            (state.routineSlot2 ? (ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost || 0) : 0) +
+            (state.routineSlot3 ? (ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost || 0) : 0) +
+            selectedActivities.reduce((sum, id) => sum + (ACTIVITIES.find(a => a.id === id)?.moneyCost || 0), 0)
+          )}
+        />
       </div>
 
       {/* NPC 관계 */}
@@ -568,14 +626,16 @@ export function GameScreen() {
 
       {/* 확정 버튼 */}
       <div style={{ paddingBottom: 20 }}>
-        <button className="btn btn-primary" onClick={handleConfirm}>
-          {currentSlots === 0 ? (state.isVacation ? '이번 주는 쉰다' : '주말 그냥 보내기') : '이번 주 확정 →'}
+        <button className="btn btn-primary"
+          disabled={!state.isVacation && !state.routineSlot2}
+          onClick={handleConfirm}
+        >
+          {!state.isVacation && !state.routineSlot2
+            ? '⬆ 먼저 방과후 루틴을 설정하세요'
+            : currentSlots === 0
+              ? (state.isVacation ? '이번 주는 쉰다' : '주말 그냥 보내기')
+              : '이번 주 확정 →'}
         </button>
-        {!state.routineSlot2 && !state.isVacation && (
-          <div style={{ textAlign: 'center', fontSize: '0.7rem', color: 'var(--accent)', marginTop: 4 }}>
-            평일 루틴이 비어있어요 — 위에서 설정해보세요
-          </div>
-        )}
       </div>
     </BgWrapper>
   );
