@@ -358,7 +358,7 @@ export function GameScreen() {
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.72rem' }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)}</div>
-          <div>💰 {state.money}만원 <span style={{ color: 'var(--text-muted)', fontSize: '0.6rem' }}>+{state.parents.includes('wealth') ? 8 : 3}/주</span></div>
+          <div>💰 {state.money}만원 <span style={{ color: 'var(--yellow)', fontSize: '0.65rem' }}>+{state.parents.includes('wealth') ? 8 : 3}/주</span></div>
         </div>
       </div>
 
@@ -481,7 +481,9 @@ export function GameScreen() {
                     >
                       <div className="activity-name">
                         {a.name}
-                        {npcChoices[a.id] && <span style={{ fontSize: '0.68rem', color: 'var(--accent-soft)', marginLeft: 4 }}>({state.npcs.find(n => n.id === npcChoices[a.id])?.name})</span>}
+                        {a.moneyCost > 0 && <span style={{ fontSize: '0.72rem', color: 'var(--yellow)', marginLeft: 3 }}>({a.moneyCost}만)</span>}
+                        {a.moneyCost < 0 && <span style={{ fontSize: '0.72rem', color: 'var(--green)', marginLeft: 3 }}>(+{-a.moneyCost}만)</span>}
+                        {npcChoices[a.id] && <span style={{ fontSize: '0.68rem', color: 'var(--accent-soft)', marginLeft: 3 }}>({state.npcs.find(n => n.id === npcChoices[a.id])?.name})</span>}
                       </div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.4 }}>{a.flavor.slice(0, 40)}...</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, justifyContent: 'center', marginBottom: 3 }}>
@@ -498,8 +500,6 @@ export function GameScreen() {
                       </div>
                       <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'flex', gap: 4, justifyContent: 'center' }}>
                         {a.fatigue !== 0 && <span style={{ color: a.fatigue > 0 ? 'var(--red)' : 'var(--green)' }}>피로{a.fatigue > 0 ? '+' : ''}{a.fatigue}</span>}
-                        {a.moneyCost > 0 && <span style={{ color: state.money >= a.moneyCost ? 'var(--yellow)' : 'var(--red)' }}>💰{a.moneyCost}만</span>}
-                        {a.moneyCost < 0 && <span style={{ color: 'var(--green)' }}>💰+{-a.moneyCost}만</span>}
                         {a.slots > 1 && <span style={{ color: 'var(--purple)' }}>{a.slots}슬롯</span>}
                       </div>
                     </div>
