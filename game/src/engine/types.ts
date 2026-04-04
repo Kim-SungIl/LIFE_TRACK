@@ -1,0 +1,109 @@
+// ===== LIFE TRACK: 선택의 결과 — Core Types =====
+
+export type Gender = 'male' | 'female';
+export type ParentStrength = 'wealth' | 'info' | 'gene' | 'emotional' | 'freedom' | 'strict';
+
+export interface Stats {
+  academic: number;   // 학업 0~100
+  social: number;     // 인기 0~100
+  talent: number;     // 재능 0~100
+  mental: number;     // 멘탈 0~100
+  health: number;     // 체력 0~100
+}
+
+export type StatKey = keyof Stats;
+
+export interface GameState {
+  week: number;             // 1~48 (1년)
+  year: number;             // 1~7 (Y1=초6, Y7=고3)
+  phase: 'setup' | 'weekday' | 'weekend' | 'vacation' | 'result' | 'event' | 'semester-end' | 'year-end' | 'ending';
+  gender: Gender;
+  stats: Stats;
+  fatigue: number;          // 피로 0~100
+  money: number;            // 용돈 (만원 단위)
+  parents: [ParentStrength, ParentStrength];
+  mentalState: 'normal' | 'tired' | 'burnout';
+  routineSlot2: string | null;  // 방과후 루틴 1
+  routineSlot3: string | null;  // 방과후 루틴 2
+  routineWeeks: number;         // 루틴 연속 주수
+  weekendChoices: string[];     // 이번 주 주말 선택
+  vacationChoices: string[];    // 방학 슬롯 선택
+  semester: 1 | 2;
+  isVacation: boolean;
+  weekLog: WeekLog | null;
+  npcs: NpcState[];
+  events: GameEvent[];
+  currentEvent: GameEvent | null;
+  milestones: string[];         // 달성한 마일스톤 ID
+  burnoutCount: number;
+  totalWeeksPlayed: number;
+}
+
+export interface WeekLog {
+  statChanges: Partial<Stats>;
+  fatigueChange: number;
+  moneyChange: number;
+  messages: string[];
+  milestone: string | null;
+}
+
+export interface Activity {
+  id: string;
+  name: string;
+  slots: number;
+  fatigue: number;
+  effects: Partial<Stats>;
+  moneyCost: number;
+  description: string;
+  flavor: string;           // 서사적 설명 한 줄
+  tags: string[];           // 분위기 태그
+  requires?: (state: GameState) => boolean;
+  category: 'study' | 'exercise' | 'social' | 'talent' | 'rest' | 'work' | 'parent';
+}
+
+export interface NpcState {
+  id: string;
+  name: string;
+  intimacy: number;       // 0~100
+  description: string;
+  emoji: string;
+}
+
+export interface GameEvent {
+  id: string;
+  title: string;
+  description: string;
+  choices: EventChoice[];
+  week?: number;          // 특정 주에만 발생
+  condition?: (state: GameState) => boolean;
+}
+
+export interface EventChoice {
+  text: string;
+  effects: Partial<Stats>;
+  fatigueEffect?: number;
+  mentalEffect?: number;
+  moneyEffect?: number;
+  npcEffects?: { npcId: string; intimacyChange: number }[];
+  message: string;
+}
+
+export const STAT_LABELS: Record<StatKey, string> = {
+  academic: '학업',
+  social: '인기',
+  talent: '재능',
+  mental: '멘탈',
+  health: '체력',
+};
+
+export const STAT_GRADES = [
+  { min: 80, grade: 'A', label: '최상', color: '#FFD700' },
+  { min: 60, grade: 'B', label: '우수', color: '#4CAF50' },
+  { min: 40, grade: 'C', label: '보통', color: '#FFC107' },
+  { min: 20, grade: 'D', label: '부족', color: '#FF5722' },
+  { min: 0,  grade: 'E', label: '매우 부족', color: '#9E9E9E' },
+];
+
+export function getGrade(value: number) {
+  return STAT_GRADES.find(g => value >= g.min) || STAT_GRADES[STAT_GRADES.length - 1];
+}
