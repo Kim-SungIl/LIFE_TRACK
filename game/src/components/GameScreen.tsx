@@ -223,6 +223,11 @@ export function GameScreen() {
   const fatigueLabel = state.fatigue < 20 ? '좋음' : state.fatigue < 35 ? '경미' : state.fatigue < 50 ? '주의' : state.fatigue < 70 ? '위험' : '극한!';
   const fatigueColor = state.fatigue < 20 ? 'var(--green)' : state.fatigue < 35 ? 'var(--yellow)' : state.fatigue < 50 ? 'orange' : 'var(--red)';
 
+  // 루틴 비용 체크 — 돈이 부족하면 루틴 변경 강제
+  const routineCost = (state.routineSlot2 ? (ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost || 0) : 0)
+    + (state.routineSlot3 ? (ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost || 0) : 0);
+  const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
+
   // 다가오는 이벤트 계산
   const upcomingEvents: string[] = [];
   const examWeeks = [8, 17, 34, 38];
@@ -426,7 +431,7 @@ export function GameScreen() {
         <div data-tutorial="routine" style={{
           background: 'rgba(15,52,96,0.85)',
           backdropFilter: 'blur(6px)', borderRadius: 12, padding: '14px 16px', marginBottom: 12,
-          border: !state.routineSlot2 ? '1px solid var(--yellow)' : '1px solid rgba(255,255,255,0.05)',
+          border: routineTooExpensive ? '1px solid var(--red)' : !state.routineSlot2 ? '1px solid var(--yellow)' : '1px solid rgba(255,255,255,0.05)',
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
@@ -457,16 +462,37 @@ export function GameScreen() {
 
           {/* 루틴 설정됨: 요약 */}
           {state.routineSlot2 && !routineConfirmed && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: '0.85rem' }}>
-              <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 12px' }}>
-                🏫 학교수업
-              </div>
-              <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
-                {ACTIVITIES.find(a => a.id === state.routineSlot2)?.name}
-                {(() => { const a = ACTIVITIES.find(x => x.id === state.routineSlot2); return a && a.moneyCost > 0 ? ` (${a.moneyCost}만/주)` : ''; })()}
-              </div>
-              <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
-                {state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name : '🕊️ 자유시간'}
+            <div>
+              {/* 돈 부족 경고 */}
+              {routineTooExpensive && (
+                <div style={{
+                  background: 'rgba(255,87,34,0.15)', border: '1px solid rgba(255,87,34,0.3)',
+                  borderRadius: 10, padding: '10px 14px', marginBottom: 10, textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--red)', marginBottom: 4 }}>
+                    💰 돈이 부족해요!
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
+                    현재 {state.money}만원인데 루틴 비용이 매주 {routineCost}만원이에요.
+                    <br />루틴을 바꾸지 않으면 이번 주 활동을 할 수 없어요.
+                  </div>
+                  <button className="btn btn-primary" style={{ maxWidth: 240, margin: '0 auto', display: 'block', fontSize: '0.85rem' }}
+                    onClick={() => { setRoutineConfirmed(true); setRoutineStep(1); }}>
+                    루틴 변경하기
+                  </button>
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: '0.85rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 12px' }}>
+                  🏫 학교수업
+                </div>
+                <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
+                  {ACTIVITIES.find(a => a.id === state.routineSlot2)?.name}
+                  {(() => { const a = ACTIVITIES.find(x => x.id === state.routineSlot2); return a && a.moneyCost > 0 ? ` (${a.moneyCost}만/주)` : ''; })()}
+                </div>
+                <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
+                  {state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name : '🕊️ 자유시간'}
+                </div>
               </div>
             </div>
           )}
@@ -693,14 +719,16 @@ export function GameScreen() {
       {/* 확정 버튼 */}
       <div data-tutorial="confirm" style={{ paddingBottom: 20 }}>
         <button className="btn btn-primary"
-          disabled={!state.isVacation && !state.routineSlot2}
+          disabled={(!state.isVacation && !state.routineSlot2) || !!routineTooExpensive}
           onClick={handleConfirm}
         >
-          {!state.isVacation && !state.routineSlot2
-            ? '⬆ 먼저 방과후 루틴을 설정하세요'
-            : currentSlots === 0
-              ? (state.isVacation ? '이번 주는 쉰다' : '주말 그냥 보내기')
-              : '이번 주 확정 →'}
+          {routineTooExpensive
+            ? '⬆ 돈이 부족해요 — 루틴을 변경하세요'
+            : !state.isVacation && !state.routineSlot2
+              ? '⬆ 먼저 방과후 루틴을 설정하세요'
+              : currentSlots === 0
+                ? (state.isVacation ? '이번 주는 쉰다' : '주말 그냥 보내기')
+                : '이번 주 확정 →'}
         </button>
       </div>
 

@@ -6,7 +6,7 @@ export type ParentStrength = 'wealth' | 'info' | 'gene' | 'emotional' | 'freedom
 export interface Stats {
   academic: number;   // 학업 0~100
   social: number;     // 인기 0~100
-  talent: number;     // 재능 0~100
+  talent: number;     // 특기 0~100
   mental: number;     // 멘탈 0~100
   health: number;     // 체력 0~100
 }
@@ -94,7 +94,7 @@ export interface EventChoice {
 export const STAT_LABELS: Record<StatKey, string> = {
   academic: '학업',
   social: '인기',
-  talent: '재능',
+  talent: '특기',
   mental: '멘탈',
   health: '체력',
 };
