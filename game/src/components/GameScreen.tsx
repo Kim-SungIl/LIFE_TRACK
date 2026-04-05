@@ -658,13 +658,14 @@ export function GameScreen() {
       {editingSlot && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column',
+          background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
           zIndex: 250,
-        }}>
-          <div style={{
-            background: 'linear-gradient(180deg, rgba(15,52,96,0.98), rgba(26,26,46,0.99))',
-            width: '100%', maxWidth: 600, margin: '0 auto',
-            flex: 1, display: 'flex', flexDirection: 'column',
+        }} onClick={() => setEditingSlot(null)}>
+          <div onClick={e => e.stopPropagation()} style={{
+            background: 'linear-gradient(180deg, rgba(15,52,96,0.99), rgba(26,26,46,0.99))',
+            borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
+            maxHeight: '65vh', display: 'flex', flexDirection: 'column',
+            boxShadow: '0 -4px 30px rgba(0,0,0,0.5)',
           }}>
             {/* 헤더 — 크고 명확하게 */}
             <div style={{
