@@ -472,13 +472,24 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'class-president', title: '반장 선거',
     description: '반장 선거 시즌이다.\n선생님이 "자, 반장 후보 나올 사람?" 하고 물으신다.',
+    week: 2,
     choices: [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 5, mental: 2 }, fatigueEffect: 3,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
         message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시 너야!" 했다.' },
       { text: '가만히 있는다...', effects: { mental: 1 }, message: '다른 아이가 반장이 됐다. 뭔가 살짝 아쉽다.' },
     ],
-    condition: (s) => s.week === 2 || s.week === 25,
+  },
+  {
+    id: 'class-president-2', title: '2학기 반장 선거',
+    description: '2학기 반장 선거다.\n선생님이 "이번 학기 반장, 나올 사람?" 하고 물으신다.',
+    week: 25,
+    choices: [
+      { text: '"제가 할게요!" — 손을 든다', effects: { social: 5, mental: 2 }, fatigueEffect: 3,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시 너야!" 했다.' },
+      { text: '가만히 있는다...', effects: { mental: 1 }, message: '다른 아이가 반장이 됐다. 뭔가 살짝 아쉽다.' },
+    ],
   },
   {
     id: 'class-president-nudge', title: '민재의 추천',
@@ -492,9 +503,9 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
         message: '"알겠어, 근데 너 진짜 잘할 수 있었을 텐데." 민재 말에 기분이 나쁘진 않았다.' },
     ],
     condition: (s) => {
-      // 반장 선거에서 "안 한다"(choiceIndex 1)를 골랐고, social >= 40일 때만
+      // 반장 선거(1학기 or 2학기)에서 "안 한다"(choiceIndex 1)를 골랐고, social >= 40일 때만
       const electionEvent = s.events.find(e =>
-        e.id === 'class-president' &&
+        (e.id === 'class-president' || e.id === 'class-president-2') &&
         e.resolvedChoice === 1 &&
         s.week - (e.week || 0) <= 4
       );
