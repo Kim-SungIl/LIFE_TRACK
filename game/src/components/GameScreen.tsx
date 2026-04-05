@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES } from '../engine/activities';
-import { StatKey, STAT_LABELS, getGrade } from '../engine/types';
+import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, ExamResult } from '../engine/types';
 import { Portrait } from './Portrait';
 import { NPC_APPEARANCES } from './CharacterAvatar';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
@@ -10,6 +10,8 @@ import { ActivityPicker } from './ActivityPicker';
 import { getBackground } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
+import { Shop } from './Shop';
+import { ShopItem } from '../engine/shopSystem';
 
 const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
@@ -17,7 +19,7 @@ const STAT_ICONS: Record<StatKey, string> = {
 
 
 export function GameScreen() {
-  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap } = useGameStore();
+  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem } = useGameStore();
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
@@ -32,6 +34,7 @@ export function GameScreen() {
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
@@ -319,6 +322,69 @@ export function GameScreen() {
             </div>
           </div>
 
+          {/* 시험 결과 */}
+          {state.currentExamResult && (() => {
+            const exam = state.currentExamResult!;
+            const gradeColors: Record<string, string> = { S: '#FFD700', A: '#4CAF50', B: '#2196F3', C: '#FF9800', D: '#F44336' };
+            return (
+              <div style={{
+                background: 'rgba(15,52,96,0.92)', backdropFilter: 'blur(6px)', borderRadius: 14,
+                padding: '16px 16px', marginBottom: 16, border: '1px solid rgba(233,69,96,0.2)',
+              }}>
+                <div style={{ fontSize: '1rem', fontWeight: 700, textAlign: 'center', marginBottom: 12 }}>
+                  📝 {exam.examType === 'midterm' ? '중간고사' : '기말고사'} 성적표
+                </div>
+
+                {/* 과목별 등급 */}
+                {(Object.keys(exam.subjects) as SubjectKey[]).map(key => {
+                  const s = exam.subjects[key];
+                  return (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                      <span style={{ width: 70, fontSize: '0.8rem', fontWeight: 600 }}>{SUBJECT_LABELS[key]}</span>
+                      <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, margin: '0 8px', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', width: `${s.score}%`, background: gradeColors[s.grade], borderRadius: 4, transition: 'width 0.5s' }} />
+                      </div>
+                      <span style={{ width: 22, fontSize: '0.82rem', fontWeight: 700, color: gradeColors[s.grade], textAlign: 'center' }}>{s.grade}</span>
+                      {s.delta !== 0 && (
+                        <span style={{ width: 36, fontSize: '0.65rem', fontWeight: 600, textAlign: 'right', color: s.delta > 0 ? 'var(--green)' : 'var(--red)' }}>
+                          {s.delta > 0 ? '▲' : '▼'}{Math.abs(Math.round(s.delta))}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* 석차 */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>반 석차</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: '1rem', fontWeight: 700 }}>{exam.rank}등</span>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>/ 30명</span>
+                    {exam.prevRank && (
+                      <span style={{
+                        fontSize: '0.72rem', fontWeight: 600,
+                        color: exam.rank < exam.prevRank ? 'var(--green)' : exam.rank > exam.prevRank ? 'var(--red)' : 'var(--text-muted)',
+                      }}>
+                        {exam.rank < exam.prevRank ? `▲${exam.prevRank - exam.rank}` : exam.rank > exam.prevRank ? `▼${exam.rank - exam.prevRank}` : '→'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* 총평 */}
+                <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '10px 12px', marginTop: 8, fontSize: '0.8rem', fontStyle: 'italic', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
+                  "{exam.comment}"
+                </div>
+
+                {/* 반응 */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8, fontSize: '0.75rem' }}>
+                  <div><span style={{ color: 'var(--accent-soft)' }}>부모님:</span> {exam.parentReaction}</div>
+                  <div><span style={{ color: 'var(--blue)' }}>선생님:</span> {exam.teacherReaction}</div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* 다음 주 예고 */}
           {upcomingEvents.length > 0 && (
             <div style={{ background: 'rgba(233,69,96,0.1)', borderRadius: 10, padding: '8px 12px', marginBottom: 16, fontSize: '0.78rem', textAlign: 'center' }}>
@@ -350,7 +416,9 @@ export function GameScreen() {
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
-          <div>현재 돈 {state.money}만원</div>
+          <div onClick={() => setShowShop(true)} style={{ cursor: 'pointer' }}>
+            💰 {state.money}만원 <span style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>🛒</span>
+          </div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 8 : 3}만원</div>
         </div>
       </div>
@@ -733,6 +801,14 @@ export function GameScreen() {
       </div>
 
     </BgWrapper>
+    {/* 상점 */}
+    {showShop && state && (
+      <Shop
+        state={state}
+        onBuy={(item: ShopItem, npcId?: string) => buyItem(item, npcId)}
+        onClose={() => setShowShop(false)}
+      />
+    )}
     {/* 튜토리얼 — BgWrapper 밖에서 렌더 (리렌더 시 언마운트 방지) */}
     {showTutorial && (
       <Tutorial

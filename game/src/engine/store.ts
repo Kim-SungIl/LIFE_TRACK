@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { GameState, ParentStrength } from './types';
 import { createInitialState, processWeek } from './gameEngine';
+import { ShopItem, applyItemEffects } from './shopSystem';
 
 interface GameStore {
   state: GameState | null;
@@ -14,6 +15,7 @@ interface GameStore {
   advanceWeek: () => void;
   resolveEvent: (choiceIndex: number) => void;
   setPhase: (phase: GameState['phase']) => void;
+  buyItem: (item: ShopItem, targetNpcId?: string) => string[];
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -129,5 +131,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     if (!s) return;
     set({ state: { ...s, phase } });
+  },
+
+  buyItem: (item, targetNpcId) => {
+    const s = get().state;
+    if (!s) return [];
+    const { newState, messages } = applyItemEffects(item, s, targetNpcId);
+    // 구매 횟수 추적
+    newState.weekPurchases = { ...newState.weekPurchases };
+    newState.weekPurchases[item.id] = (newState.weekPurchases[item.id] || 0) + 1;
+    set({ state: newState });
+    return messages;
   },
 }));
