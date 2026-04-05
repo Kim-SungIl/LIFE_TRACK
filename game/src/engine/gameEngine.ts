@@ -118,11 +118,12 @@ function getFatigueModifier(fatigue: number): number {
   return 0.2;   // v6: 90+ 극한 피로시 효율 대폭 하락
 }
 
-// ===== 루틴 보너스 (v6.1: 대폭 하향 — 기존 +200%가 감쇠/번아웃 무력화) =====
+// ===== 루틴 보너스 (v6.2: 12주 캡 — 영원히 쌓이는 문제 해결) =====
 function getRoutineBonus(weeks: number): number {
-  if (weeks >= 8) return 0.5;   // v5: 2.0 → 0.5 (+50%)
-  if (weeks >= 6) return 0.35;  // v5: 1.5 → 0.35
-  if (weeks >= 3) return 0.2;   // v5: 1.0 → 0.2
+  const capped = Math.min(weeks, 12); // 12주 이후 추가 보너스 없음
+  if (capped >= 8) return 0.3;   // v6.1: 0.5 → 0.3 (+30%)
+  if (capped >= 6) return 0.2;
+  if (capped >= 3) return 0.1;
   return 0;
 }
 
@@ -180,10 +181,10 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       value = baseValue * 0.1;
     }
 
-    // v6.2: 주당 스탯 성장 상한 (+3/주) — 활동 몰빵으로 감쇠 돌파 방지
+    // v6.2: 주당 스탯 성장 상한 (+2/주) — 활동값 하향과 함께 조정
     const weeklyGainSoFar = log.statChanges[statKey] || 0;
-    if (statKey !== 'mental' && value > 0 && weeklyGainSoFar + value > 3) {
-      value = Math.max(0, 3 - weeklyGainSoFar);
+    if (statKey !== 'mental' && value > 0 && weeklyGainSoFar + value > 2) {
+      value = Math.max(0, 2 - weeklyGainSoFar);
     }
 
     state.stats[statKey] = Math.max(0, Math.min(100, state.stats[statKey] + value));
@@ -249,8 +250,8 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
     log.statChanges.mental = (log.statChanges.mental || 0) + isolationDrain;
   }
 
-  // 특기: -0.3/주
-  state.stats.talent = Math.max(0, state.stats.talent - 0.3);
+  // 특기: -0.3/주 (v6.2: floor 5 — 초보도 바닥 안 뚫림)
+  state.stats.talent = Math.max(5, state.stats.talent - 0.3);
   log.statChanges.talent = (log.statChanges.talent || 0) - 0.3;
 
   // 체력: -0.8/주 (학기 중 학교가 50% 상쇄, soft floor 10)
@@ -262,13 +263,13 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   // v5.2: 체력 < 20 패널티 — 허약 → 피로 증가량 1.5배 (applyActivity에서 적용)
   // (체력 패널티는 getFatigueModifier 계열에서 처리)
 
-  // 멘탈 자연감소 (v4: 80+ 감소)
+  // v6.2: 멘탈 자연감소 강화 (멘탈이 자원이 되도록)
   if (state.stats.mental >= 90) {
+    state.stats.mental -= 4;
+    log.statChanges.mental = (log.statChanges.mental || 0) - 4;
+  } else if (state.stats.mental >= 80) {
     state.stats.mental -= 2;
     log.statChanges.mental = (log.statChanges.mental || 0) - 2;
-  } else if (state.stats.mental >= 80) {
-    state.stats.mental -= 1;
-    log.statChanges.mental = (log.statChanges.mental || 0) - 1;
   }
 
   // v5.1: 고피로 → 멘탈 침식 (피로가 높으면 멘탈이 추가 감소)
@@ -352,8 +353,10 @@ function checkMilestones(state: GameState, log: WeekLog): void {
 // ===== 멘탈 상태 전환 =====
 // v5.1: tired/burnout 조건 완화 + tired 효과 추가
 function checkMentalStateTransition(state: GameState, log: WeekLog): void {
-  // tired 진입: 멘탈 < 40 AND 피로 > 45 (기존: 멘탈 < 30, 피로 > 50)
-  if (state.mentalState === 'normal' && state.stats.mental < 40 && state.fatigue > 45) {
+  // v6.2: tired 진입 — 기존 조건 OR 피로 85+ 단독 (피로 100인데 안 지치는 문제 해결)
+  if (state.mentalState === 'normal' && (
+    (state.stats.mental < 40 && state.fatigue > 45) || state.fatigue >= 85
+  )) {
     state.mentalState = 'tired';
     log.messages.push('⚠️ 피로 상태 진입 — "요즘 뭘 해도 재미없다..."');
   }
