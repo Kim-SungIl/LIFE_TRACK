@@ -424,9 +424,11 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
   {
     id: 'friend-snack', title: '간식 나눠먹기',
-    description: '쉬는 시간에 누군가가 과자를 까서 돌린다.\n"야, 너도 먹어!"',
+    description: '쉬는 시간에 민재가 과자를 까서 돌린다.\n"야, 너도 먹어!"',
     choices: [
-      { text: '고맙게 받아 먹는다', effects: { social: 1, mental: 2 }, message: '맛있다. 이런 순간이 학교생활의 소소한 행복이다.' },
+      { text: '고맙게 받아 먹는다', effects: { social: 1, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '맛있다. 민재 덕분에 소소한 행복.' },
       { text: '다이어트 중이라 거절한다', effects: { health: 1 }, message: '"아 나 괜찮아~" 했지만 좀 아쉽다.' },
     ],
     condition: (s) => !s.isVacation,
@@ -469,12 +471,35 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
   {
     id: 'class-president', title: '반장 선거',
-    description: '반장 선거 시즌이다.\n친구가 "야, 너 나가봐!" 한다.',
+    description: '반장 선거 시즌이다.\n선생님이 "자, 반장 후보 나올 사람?" 하고 물으신다.',
     choices: [
-      { text: '출마한다!', effects: { social: 4, mental: -1 }, fatigueEffect: 3, message: '반장이 됐든 안 됐든, 용기를 낸 게 대단하다.' },
-      { text: '조용히 투표만 한다', effects: { mental: 1 }, message: '남이 하는 걸 보는 것도 나름 재밌다.' },
+      { text: '"제가 할게요!" — 손을 든다', effects: { social: 5, mental: 2 }, fatigueEffect: 3,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시 너야!" 했다.' },
+      { text: '가만히 있는다...', effects: { mental: 1 }, message: '다른 아이가 반장이 됐다. 뭔가 살짝 아쉽다.' },
     ],
     condition: (s) => s.week === 2 || s.week === 25,
+  },
+  {
+    id: 'class-president-nudge', title: '민재의 추천',
+    description: '쉬는 시간에 민재가 다가온다.\n"야, 부반장 자리 아직 비었는데, 너가 하면 딱인데? 내가 추천할까?"',
+    choices: [
+      { text: '"...해볼까?" — 민재 말에 용기를 낸다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '부반장이 됐다! 민재가 "내 눈은 틀리지 않지" 하며 웃었다.' },
+      { text: '"아니야, 난 괜찮아" — 정중하게 거절한다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '"알겠어, 근데 너 진짜 잘할 수 있었을 텐데." 민재 말에 기분이 나쁘진 않았다.' },
+    ],
+    condition: (s) => {
+      // 반장 선거에서 "안 한다"(choiceIndex 1)를 골랐고, social >= 40일 때만
+      const electionEvent = s.events.find(e =>
+        e.id === 'class-president' &&
+        e.resolvedChoice === 1 &&
+        s.week - (e.week || 0) <= 2
+      );
+      return !!electionEvent && s.stats.social >= 40;
+    },
   },
   {
     id: 'new-student', title: '전학생',
@@ -513,11 +538,15 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'birthday-friend', title: '친구 생일',
-    description: '오늘이 친구 생일이다.\n단톡방에 생일 축하 메시지가 쏟아진다.',
+    id: 'birthday-friend', title: '지훈이 생일',
+    description: '오늘이 지훈이 생일이다.\n단톡방에 생일 축하 메시지가 쏟아진다.',
     choices: [
-      { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2, message: '친구가 진짜 좋아했다. 돈 아깝지 않다.' },
-      { text: '카톡으로 축하만 한다', effects: { social: 1 }, message: '"ㅊㅋ~" 보냈다. 좀 성의없나?' },
+      { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        message: '지훈이가 진짜 좋아했다. "야 너 최고다!" 돈 아깝지 않다.' },
+      { text: '카톡으로 축하만 한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
+        message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
     ],
     condition: (s) => !s.isVacation,
   },
@@ -532,10 +561,12 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
   {
     id: 'study-cafe', title: '스터디 카페',
-    description: '시험 기간이라 스터디 카페가 만석이다.\n겨우 자리를 잡았는데 옆에 아는 얼굴이!',
+    description: '시험 기간이라 스터디 카페가 만석이다.\n겨우 자리를 잡았는데 옆에 수빈이가 앉아 있다!',
     choices: [
-      { text: '같이 공부한다', effects: { academic: 2, social: 1 }, moneyEffect: -1, message: '같이 하니까 집중이 잘 됐다.' },
-      { text: '이어폰 끼고 혼자 집중한다', effects: { academic: 2, mental: 1 }, moneyEffect: -1, message: '나만의 시간. 효율적이었다.' },
+      { text: '수빈이랑 같이 공부한다', effects: { academic: 2, social: 1 }, moneyEffect: -1,
+        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        message: '수빈이랑 같이 하니까 집중이 잘 됐다. 모르는 거 서로 알려주면서.' },
+      { text: '이어폰 끼고 혼자 집중한다', effects: { academic: 2, mental: 1 }, moneyEffect: -1, message: '나만의 시간. 효율적이었다. 수빈이가 살짝 아쉬운 표정을 지었다.' },
     ],
   },
   {

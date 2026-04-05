@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES } from '../engine/activities';
@@ -8,7 +8,7 @@ import { NPC_APPEARANCES } from './CharacterAvatar';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
 import { getBackground } from '../engine/backgrounds';
-import { getCharacterDialogue, getActivityReaction } from '../engine/dialogues';
+import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
 import { ShopItem } from '../engine/shopSystem';
@@ -20,6 +20,24 @@ const STAT_ICONS: Record<StatKey, string> = {
 
 export function GameScreen() {
   const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem } = useGameStore();
+
+  // 뒤로가기/새로고침 방지
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    // 브라우저 뒤로가기 방지: history에 더미 항목 추가
+    window.history.pushState(null, '', window.location.href);
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.href);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
@@ -236,6 +254,12 @@ export function GameScreen() {
     + (state.routineSlot3 ? (ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost || 0) : 0);
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
 
+  // 루틴 콤보 표시
+  const routineComboLabel = !state.isVacation && state.routineWeeks >= 3
+    ? (state.routineWeeks >= 8 ? '🔥 ' : state.routineWeeks >= 6 ? '⭐ ' : '✨ ')
+    : '';
+  const routineComboWeeks = !state.isVacation && state.routineWeeks >= 3 ? state.routineWeeks : 0;
+
   // 슬롯 렌더 헬퍼
   const renderSlot = (
     emoji: string, timeLabel: string, activityName: string | null,
@@ -257,9 +281,11 @@ export function GameScreen() {
                       isEmpty ? (shouldPulse ? 'rgba(255,193,7,0.08)' : 'rgba(255,255,255,0.02)') :
                       isRoutine ? 'rgba(91,141,239,0.12)' : 'rgba(233,69,96,0.12)',
           border: isEmpty && !isFixed ? (shouldPulse ? '1px dashed rgba(255,193,7,0.5)' : '1px dashed rgba(255,255,255,0.15)') :
+                  isRoutine && routineComboWeeks >= 3 ? '1px solid rgba(255,193,7,0.4)' :
                   isRoutine ? '1px solid rgba(91,141,239,0.2)' :
                   !isEmpty && !isFixed ? '1px solid rgba(233,69,96,0.2)' :
                   '1px solid rgba(255,255,255,0.04)',
+          boxShadow: isRoutine && routineComboWeeks >= 6 ? '0 0 8px rgba(255,193,7,0.2)' : 'none',
           transition: 'all 0.15s',
           opacity: isFixed ? 0.6 : 1,
           animation: shouldPulse ? 'slotPulse 1.5s ease-in-out infinite' : 'none',
@@ -275,6 +301,7 @@ export function GameScreen() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activityName}</span>
                 {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(91,141,239,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
+                {isRoutine && routineComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(255,193,7,0.15)', padding: '1px 4px', borderRadius: 3 }}>{routineComboLabel}{routineComboWeeks}주 연속</span>}
               </div>
               {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
@@ -347,13 +374,15 @@ export function GameScreen() {
               flex: 1, background: 'rgba(15,52,96,0.9)', backdropFilter: 'blur(6px)',
               borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
             }}>
-              {state.weekLog.milestone ? `"${state.weekLog.milestone}"` :
-               state.weekLog.messages.find(m => m.startsWith('📖')) || `"${dialogue}"`}
+              {state.weekLog.messages.find(m => m.startsWith('📖')) || `"${dialogue}"`}
             </div>
           </div>
 
-          {state.weekLog.milestone && <div className="milestone-box">⭐ 마일스톤 달성!</div>}
-          {state.weekLog.messages.filter(m => m.includes('⚠') || m.includes('🔥') || m.includes('✨') || m.includes('💪')).map((msg, i) => (
+          {/* 성장 달성 — 여러 개 동시 지원 */}
+          {(state.weekLog.milestoneMessages || []).map((msg, i) => (
+            <div key={i} className="milestone-box">⭐ 성장! — {msg}</div>
+          ))}
+          {state.weekLog.messages.filter(m => m.includes('⚠') || m.includes('🔥') || m.includes('💪')).map((msg, i) => (
             <div key={i} className="message-box">{msg}</div>
           ))}
 
@@ -560,8 +589,8 @@ export function GameScreen() {
         <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: 10 }}>
           📅 이번 주 일과
           {!state.isVacation && state.routineWeeks >= 3 && (
-            <span style={{ color: 'var(--blue)', marginLeft: 8, fontSize: '0.72rem' }}>
-              루틴 {state.routineWeeks}주째 {state.routineWeeks >= 8 ? '🔥' : state.routineWeeks >= 6 ? '⭐' : '✨'}
+            <span style={{ color: 'var(--yellow)', marginLeft: 8, fontSize: '0.68rem' }}>
+              {routineComboLabel}루틴 보너스 활성
             </span>
           )}
         </div>
@@ -839,12 +868,12 @@ export function GameScreen() {
               <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>{npc.description}</div>
 
-              {/* 인사말 */}
+              {/* 인사말 — 친밀도/상황에 따라 다양한 대사 */}
               <div style={{
                 background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 14px',
                 marginTop: 14, fontStyle: 'italic', fontSize: '0.85rem', lineHeight: 1.6,
               }}>
-                "{npc.greeting || '...'}"
+                "{getNpcDialogue(npc.id, npc.intimacy, state)}"
               </div>
 
               {/* 성격 설명 */}

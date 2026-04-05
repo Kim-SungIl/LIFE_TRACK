@@ -287,11 +287,13 @@ function applySchoolClass(state: GameState, log: WeekLog): void {
 // ===== 마일스톤 체크 =====
 function checkMilestones(state: GameState, log: WeekLog): void {
   const milestoneChecks: { id: string; stat: StatKey; threshold: number; message: string }[] = [
-    { id: 'academic-30', stat: 'academic', threshold: 30, message: '"수업 내용이 들리기 시작했다"' },
-    { id: 'academic-50', stat: 'academic', threshold: 50, message: '"중간권 진입 — 선생님이 이름을 기억하기 시작한다"' },
+    // 초기값: academic 30, social 25, talent 15, mental 50, health 40
+    // 마일스톤은 초기값보다 충분히 높은 곳에서 시작
+    { id: 'academic-40', stat: 'academic', threshold: 40, message: '"수업 내용이 들리기 시작했다"' },
+    { id: 'academic-55', stat: 'academic', threshold: 55, message: '"중간권 진입 — 선생님이 이름을 기억하기 시작한다"' },
     { id: 'academic-70', stat: 'academic', threshold: 70, message: '"상위권 — 반에서 공부 잘하는 애로 인식된다"' },
     { id: 'academic-85', stat: 'academic', threshold: 85, message: '"전교 상위 5% — 부모님이 감동하신다"' },
-    { id: 'social-30', stat: 'social', threshold: 30, message: '"아는 사람이 생겼다 — 급식 시간에 혼자 먹지 않게 됐다"' },
+    { id: 'social-35', stat: 'social', threshold: 35, message: '"아는 사람이 생겼다 — 급식 시간에 혼자 먹지 않게 됐다"' },
     { id: 'social-50', stat: 'social', threshold: 50, message: '"쉬는 시간의 인기인 — 누군가 항상 말을 건다"' },
     { id: 'social-70', stat: 'social', threshold: 70, message: '"반 대표급 — 학교 행사에서 이름이 불린다"' },
     { id: 'talent-30', stat: 'talent', threshold: 30, message: '"취미가 생겼다 — 좋아하는 걸 찾은 느낌"' },
@@ -305,8 +307,8 @@ function checkMilestones(state: GameState, log: WeekLog): void {
   for (const m of milestoneChecks) {
     if (!state.milestones.includes(m.id) && state.stats[m.stat] >= m.threshold) {
       state.milestones.push(m.id);
-      log.milestone = m.message;
-      log.messages.push(`마일스톤 달성! ${m.message}`);
+      log.milestone = m.message; // 하위호환
+      log.milestoneMessages.push(m.message);
     }
   }
 }
@@ -380,6 +382,7 @@ export function processWeek(state: GameState): GameState {
     moneyChange: 0,
     messages: [],
     milestone: null,
+    milestoneMessages: [],
   };
 
   // 1. 피로 자연 회복

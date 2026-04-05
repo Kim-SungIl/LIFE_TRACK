@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ParentStrength } from '../engine/types';
 import { useGameStore } from '../engine/store';
+import { loadFromStorage } from '../engine/store';
 import { Portrait } from './Portrait';
 
 // 부모 선택 = 어린 시절 기억 장면
@@ -51,6 +52,8 @@ export function TitleScreen() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [selected, setSelected] = useState<ParentStrength[]>([]);
   const startGame = useGameStore(s => s.startGame);
+  const loadSavedGame = useGameStore(s => s.loadSavedGame);
+  const savedData = loadFromStorage();
 
   const toggle = (id: ParentStrength) => {
     if (selected.includes(id)) {
@@ -82,8 +85,26 @@ export function TitleScreen() {
           초등학교 6학년부터 고등학교 3학년까지.<br />
           7년간의 선택이 인생을 만든다.
         </div>
-        <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => setPhase('gender')}>
-          시작하기
+        {savedData && (
+          <>
+            <button
+              className="btn btn-primary"
+              style={{ maxWidth: 280, marginBottom: 10 }}
+              onClick={() => loadSavedGame()}
+            >
+              이어하기 — {savedData.state.year}년차 {savedData.state.week}주차
+            </button>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+              {new Date(savedData.savedAt).toLocaleString('ko-KR')} 저장됨
+            </div>
+          </>
+        )}
+        <button
+          className="btn btn-primary"
+          style={{ maxWidth: 280, ...(savedData ? { background: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)' } : {}) }}
+          onClick={() => setPhase('gender')}
+        >
+          새 게임
         </button>
       </div>
     );
