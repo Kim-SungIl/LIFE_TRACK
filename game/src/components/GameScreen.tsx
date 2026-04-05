@@ -942,6 +942,34 @@ export function GameScreen() {
         );
       })()}
 
+      {/* 상점 버튼 */}
+      <div
+        onClick={() => { setShowShop(true); setNpcDetailFor(null); setNpcSelectFor(null); }}
+        style={{
+          background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)',
+          borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', border: '1px solid rgba(255,193,7,0.15)',
+          transition: 'all 0.15s',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: '1.1rem' }}>🛒</span>
+          <div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>상점</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>간식, 참고서, 선물, 장비</div>
+          </div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--yellow)' }}>💰 {state.money}만원</div>
+          {(state.activeBuffs || []).length > 0 && (
+            <div style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>
+              버프 {state.activeBuffs.length}개 활성
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* 확정 버튼 */}
       <div data-tutorial="confirm" style={{ paddingBottom: 20 }}>
         <button className="btn btn-primary"
