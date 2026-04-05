@@ -258,25 +258,30 @@ export function GameScreen() {
           opacity: isFixed ? 0.6 : 1,
         }}
       >
-        <span style={{ fontSize: '1.1rem', width: 28, textAlign: 'center' }}>{emoji}</span>
-        <span style={{ width: 48, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{timeLabel}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
+          <span style={{ fontSize: '1rem' }}>{emoji}</span>
+          <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>{timeLabel}</span>
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           {activityName ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{activityName}</span>
-              {isRoutine && <span style={{ fontSize: '0.6rem', color: 'var(--blue)', background: 'rgba(91,141,239,0.15)', padding: '1px 5px', borderRadius: 3 }}>매주</span>}
-              {moneyCost !== undefined && moneyCost > 0 && <span style={{ fontSize: '0.65rem', color: 'var(--yellow)' }}>({moneyCost}만)</span>}
-              {withNpc && <span style={{ fontSize: '0.65rem', color: 'var(--accent-soft)' }}>({withNpc})</span>}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activityName}</span>
+                {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(91,141,239,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
+              </div>
+              {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
+                  {moneyCost !== undefined && moneyCost > 0 && <span style={{ color: 'var(--yellow)' }}>{moneyCost}만원 </span>}
+                  {withNpc && <span style={{ color: 'var(--accent-soft)' }}>with {withNpc}</span>}
+                </div>
+              )}
             </div>
           ) : isFixed ? (
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>수업</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>수업</span>
           ) : (
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>+ 활동 선택</span>
+            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>+ 선택</span>
           )}
         </div>
-        {!isFixed && !isEmpty && (
-          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>변경</span>
-        )}
       </div>
     );
   };
@@ -473,12 +478,7 @@ export function GameScreen() {
         </div>
       </div>
 
-      {/* 다가오는 이벤트 배너 */}
-      {upcomingEvents.length > 0 && (
-        <div style={{ background: 'rgba(233,69,96,0.12)', borderRadius: 8, padding: '6px 10px', marginBottom: 8, fontSize: '0.72rem', textAlign: 'center', color: 'var(--accent-soft)' }}>
-          📅 {upcomingEvents.join(' · ')}
-        </div>
-      )}
+      {/* 이벤트 배너는 주간 플래너 안으로 이동 */}
 
       {/* 독백 말풍선 */}
       <div style={{
@@ -570,61 +570,68 @@ export function GameScreen() {
           </div>
         )}
 
-        {/* 학기 중: 평일 + 주말 */}
+        {/* 학기 중: 주중 | 주말 가로 2단 */}
         {!state.isVacation && (
-          <>
-            {/* 평일 섹션 */}
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>평일</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {/* 왼쪽: 주중 */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>주중 (월~금)</div>
+              {renderSlot('🏫', '오전', '학교', null, true)}
+              {renderSlot('🏫', '오후', '학교', null, true)}
+              {renderSlot(
+                state.routineSlot2 ? '📚' : '❓',
+                '방과후',
+                state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name || null : null,
+                () => setEditingSlot('routine1'),
+                false, true,
+                state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost : undefined,
+              )}
+              {renderSlot(
+                state.routineSlot3 ? '🌙' : '🕊️',
+                '저녁',
+                state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name || null : (state.routineSlot2 ? '자유시간' : null),
+                () => setEditingSlot('routine2'),
+                false, !!state.routineSlot2,
+                state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost : undefined,
+              )}
+            </div>
 
-            {/* 오전 — 학교 (고정) */}
-            {renderSlot('🏫', '오전', '학교수업', null, true)}
-            {/* 오후 — 학교 (고정) */}
-            {renderSlot('🏫', '오후', '학교수업', null, true)}
-            {/* 방과후 — 루틴 슬롯 1 */}
-            {renderSlot(
-              ACTIVITIES.find(a => a.id === state.routineSlot2)?.category === 'study' ? '📚' : '🎯',
-              '방과후',
-              state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name || null : null,
-              () => setEditingSlot('routine1'),
-              false,
-              true,
-              state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost : undefined,
-            )}
-            {/* 저녁 — 루틴 슬롯 2 */}
-            {renderSlot(
-              state.routineSlot3 ? '🌙' : '🕊️',
-              '저녁',
-              state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name || null : (state.routineSlot2 ? '자유시간' : null),
-              () => setEditingSlot('routine2'),
-              false,
-              !!state.routineSlot2,
-              state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost : undefined,
-            )}
+            {/* 오른쪽: 주말 */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>주말 (토~일)</div>
+              {renderSlot(
+                selectedActivities[0] ? '🌟' : '☀️',
+                '토요일',
+                selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
+                () => setEditingSlot('weekend1'),
+                false, false,
+                selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
+                npcChoices[selectedActivities[0]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[0]])?.name : undefined,
+              )}
+              {renderSlot(
+                selectedActivities[1] ? '🌟' : '☀️',
+                '일요일',
+                selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.name || null : null,
+                () => setEditingSlot('weekend2'),
+                false, false,
+                selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.moneyCost : undefined,
+                npcChoices[selectedActivities[1]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[1]])?.name : undefined,
+              )}
 
-            {/* 주말 섹션 */}
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 12, marginBottom: 6, fontWeight: 600 }}>주말</div>
-
-            {/* 토요일 */}
-            {renderSlot(
-              selectedActivities[0] ? (ACTIVITIES.find(a => a.id === selectedActivities[0])?.category === 'rest' ? '😴' : '🌟') : '🌟',
-              '토요일',
-              selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
-              () => setEditingSlot('weekend1'),
-              false, false,
-              selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
-              npcChoices[selectedActivities[0]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[0]])?.name : undefined,
-            )}
-            {/* 일요일 */}
-            {renderSlot(
-              selectedActivities[1] ? (ACTIVITIES.find(a => a.id === selectedActivities[1])?.category === 'rest' ? '😴' : '🌟') : '🌟',
-              '일요일',
-              selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.name || null : null,
-              () => setEditingSlot('weekend2'),
-              false, false,
-              selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.moneyCost : undefined,
-              npcChoices[selectedActivities[1]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[1]])?.name : undefined,
-            )}
-          </>
+              {/* 이번 주 이벤트 표시 */}
+              {upcomingEvents.length > 0 && (
+                <div style={{
+                  marginTop: 8, padding: '6px 8px', borderRadius: 8,
+                  background: 'rgba(233,69,96,0.1)', fontSize: '0.68rem',
+                  color: 'var(--accent-soft)', lineHeight: 1.5,
+                }}>
+                  {upcomingEvents.map((e, i) => (
+                    <div key={i}>📌 {e}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* 방학: 자유 슬롯 */}
