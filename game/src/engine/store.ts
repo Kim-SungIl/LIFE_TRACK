@@ -73,7 +73,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   resolveEvent: (choiceIndex) => {
     const s = get().state;
     if (!s || !s.currentEvent) return;
-    const choice = s.currentEvent.choices[choiceIndex];
+    // 성별 분기 적용
+    const isFemale = s.gender === 'female';
+    const choices = (isFemale && s.currentEvent.femaleChoices) ? s.currentEvent.femaleChoices : s.currentEvent.choices;
+    const choice = choices[choiceIndex];
     if (!choice) return;
 
     const newState = JSON.parse(JSON.stringify(s)) as typeof s;

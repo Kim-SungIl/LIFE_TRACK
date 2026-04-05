@@ -117,6 +117,9 @@ export interface GameEvent {
   choices: EventChoice[];
   week?: number;          // 특정 주에만 발생
   condition?: (state: GameState) => boolean;
+  // 성별 분기: 있으면 해당 성별에서 기본값 대신 사용
+  femaleDescription?: string;
+  femaleChoices?: EventChoice[];
 }
 
 export interface EventChoice {

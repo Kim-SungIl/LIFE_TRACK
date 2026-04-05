@@ -118,8 +118,12 @@ export function GameScreen() {
   // ===== 이벤트 화면 =====
   if (state.currentEvent && state.phase === 'event') {
     const event = state.currentEvent;
+    // 성별 분기: 여자 버전이 있으면 사용
+    const isFemale = state.gender === 'female';
+    const eventDesc = (isFemale && event.femaleDescription) ? event.femaleDescription : event.description;
+    const eventChoices = (isFemale && event.femaleChoices) ? event.femaleChoices : event.choices;
     const npcIds = new Set<string>();
-    event.choices.forEach(c => c.npcEffects?.forEach(ne => npcIds.add(ne.npcId)));
+    eventChoices.forEach(c => c.npcEffects?.forEach(ne => npcIds.add(ne.npcId)));
     const eventNpcs = state.npcs.filter(n => npcIds.has(n.id));
 
     return (
@@ -146,12 +150,12 @@ export function GameScreen() {
               {event.title}
             </div>
             <div style={{ fontSize: '0.9rem', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
-              {event.description}
+              {eventDesc}
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {event.choices.map((choice, i) => (
+            {eventChoices.map((choice, i) => (
               <div key={i} onClick={() => {
                 const effects: Record<string, string>[] = [];
                 for (const [k, v] of Object.entries(choice.effects)) {
