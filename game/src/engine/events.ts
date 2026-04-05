@@ -715,7 +715,60 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     ],
     condition: (s) => s.fatigue >= 30 && !s.isVacation,
   },
+  // ===== 반장 전용 이벤트 =====
+  {
+    id: 'president-errand', title: '반장의 심부름',
+    description: '선생님이 부르신다.\n"반장, 교무실에서 유인물 좀 가져다줄래? 아, 그리고 다음 주 현장학습 인원 확인도 부탁해."',
+    choices: [
+      { text: '"네, 알겠습니다!" — 성실하게 처리한다', effects: { social: 2, academic: 1 }, fatigueEffect: 3,
+        message: '바쁘지만 선생님이 "역시 믿음직하다" 하셨다. 뿌듯하다.' },
+      { text: '"아... 네..." — 좀 귀찮지만 한다', effects: { social: 1 }, fatigueEffect: 2,
+        message: '시킨 건 했지만 의욕은 없었다. 반장이 이렇게 피곤한 거였나.' },
+    ],
+    condition: (s) => isClassPresident(s) && !s.isVacation && s.week > 4,
+  },
+  {
+    id: 'president-mediate', title: '반장의 중재',
+    description: '반 친구 둘이 크게 싸우고 있다.\n선생님이 자리를 비운 사이, 다들 반장인 나를 쳐다본다.\n"야, 너가 좀 말려봐..."',
+    choices: [
+      { text: '중간에서 양쪽 이야기를 듣는다', effects: { social: 4, mental: -2 }, fatigueEffect: 3,
+        message: '쉽지 않았지만 결국 둘 다 진정시켰다. "고마워, 반장." 피곤하지만 보람 있다.' },
+      { text: '"선생님 오실 때까지 기다리자" — 넘긴다', effects: { social: -1, mental: 1 },
+        message: '결국 담임이 와서 해결했다. "반장이 좀 나섰어야지..." 누군가가 작게 말했다.' },
+    ],
+    condition: (s) => isClassPresident(s) && !s.isVacation && s.stats.social >= 30,
+  },
+  {
+    id: 'president-speech', title: '조회 시간 발표',
+    description: '월요일 조회. 담임이 "반장, 이번 주 공지사항 전달해" 한다.\n반 전체가 나를 본다. 긴장된다.',
+    choices: [
+      { text: '당당하게 발표한다', effects: { social: 3, mental: 2 }, fatigueEffect: 2,
+        message: '떨렸지만 잘 해냈다! 끝나고 지훈이가 "야, 반장 제법인데?" 했다.' },
+      { text: '후다닥 빨리 끝낸다', effects: { social: 1, mental: -1 },
+        message: '우물우물 빨리 끝냈다. 아무도 뭐라 안 했지만... 좀 창피하다.' },
+    ],
+    condition: (s) => isClassPresident(s) && !s.isVacation,
+  },
+  // ===== 비반장: 반장을 지켜보는 이벤트 =====
+  {
+    id: 'watching-president', title: '반장이 힘들어 보인다',
+    description: '요즘 반장이 바빠 보인다. 선생님 심부름, 싸움 중재, 발표...\n쉬는 시간에 반장이 책상에 엎드려 있다.',
+    choices: [
+      { text: '"괜찮아? 뭐 도와줄까?" — 다가간다', effects: { social: 3, mental: 2 },
+        message: '"진짜? 고마워..." 반장이 웃었다. 작은 도움이었지만 의미 있었다.' },
+      { text: '조용히 지나간다', effects: { mental: 1 },
+        message: '반장도 힘든 거구나. 안 했길 잘한 건가, 아니면...' },
+    ],
+    condition: (s) => !isClassPresident(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
+  },
 ];
+
+// 반장/부반장 당선 여부 체크
+function isClassPresident(s: GameState): boolean {
+  return s.events.some(e =>
+    (e.id === 'class-president' || e.id === 'class-president-2') && e.resolvedChoice === 0
+  ) || s.events.some(e => e.id === 'class-president-nudge' && e.resolvedChoice === 0);
+}
 
 // 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
 const FOLLOWUP_EVENT_IDS = new Set([
