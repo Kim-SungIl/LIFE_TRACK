@@ -41,6 +41,7 @@ export interface GameState {
   currentExamResult: ExamResult | null;  // 이번 시험 결과 (표시용)
   activeBuffs: ActiveBuff[];       // 활성 버프
   weekPurchases: Record<string, number>; // 이번 주 구매 횟수
+  idleWeeks: number;                // v6: 연속 비생산적 주 카운트
 }
 
 // 활성 버프 (shopSystem에서도 사용)
