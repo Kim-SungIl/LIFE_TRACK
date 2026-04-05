@@ -887,8 +887,9 @@ export function GameScreen() {
         onClose={() => setShowShop(false)}
       />
     )}
-    {/* 튜토리얼 — 슬롯 편집 팝업이 열려있으면 숨김 */}
-    {showTutorial && !editingSlot && (
+    {/* 튜토리얼 — 슬롯 편집 중엔 CSS로만 숨김 (언마운트하면 step 리셋됨) */}
+    {showTutorial && (
+      <div style={{ display: editingSlot ? 'none' : 'contents' }}>
       <Tutorial
         routineSet={!!state.routineSlot2}
         onComplete={() => {
@@ -905,6 +906,7 @@ export function GameScreen() {
           setLastReaction(null);
         }}
       />
+      </div>
     )}
     </>
   );
