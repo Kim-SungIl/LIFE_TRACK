@@ -10,6 +10,8 @@ import { ActivityPicker } from './ActivityPicker';
 import { getBackground } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
+import { Shop } from './Shop';
+import { ShopItem } from '../engine/shopSystem';
 
 const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
@@ -17,7 +19,7 @@ const STAT_ICONS: Record<StatKey, string> = {
 
 
 export function GameScreen() {
-  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap } = useGameStore();
+  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem } = useGameStore();
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
@@ -32,6 +34,7 @@ export function GameScreen() {
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [showShop, setShowShop] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
@@ -413,7 +416,9 @@ export function GameScreen() {
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
-          <div>현재 돈 {state.money}만원</div>
+          <div onClick={() => setShowShop(true)} style={{ cursor: 'pointer' }}>
+            💰 {state.money}만원 <span style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>🛒</span>
+          </div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 8 : 3}만원</div>
         </div>
       </div>
@@ -796,6 +801,14 @@ export function GameScreen() {
       </div>
 
     </BgWrapper>
+    {/* 상점 */}
+    {showShop && state && (
+      <Shop
+        state={state}
+        onBuy={(item: ShopItem, npcId?: string) => buyItem(item, npcId)}
+        onClose={() => setShowShop(false)}
+      />
+    )}
     {/* 튜토리얼 — BgWrapper 밖에서 렌더 (리렌더 시 언마운트 방지) */}
     {showTutorial && (
       <Tutorial

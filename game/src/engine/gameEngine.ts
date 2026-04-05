@@ -58,6 +58,8 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     totalWeeksPlayed: 0,
     examResults: [],
     currentExamResult: null,
+    activeBuffs: [],
+    weekPurchases: {},
   };
 }
 
@@ -129,6 +131,16 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog): void
   // v5.1: tired/burnout 상태 성장 패널티
   const mentalPenalty = state.mentalState === 'burnout' ? 0.3 : state.mentalState === 'tired' ? 0.8 : 1.0;
 
+  // v5.3: 상점 버프 보너스 계산
+  let buffBonus = 0;
+  if (state.activeBuffs) {
+    for (const buff of state.activeBuffs) {
+      if (buff.target === 'all' || buff.target === activity.category) {
+        buffBonus += buff.amount;
+      }
+    }
+  }
+
   // 각 스탯 성장 적용
   for (const [key, baseValue] of Object.entries(activity.effects)) {
     const statKey = key as StatKey;
@@ -138,8 +150,8 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog): void
       // 멘탈은 전용 감쇠
       value *= getMentalRecoveryRate(state.stats.mental);
     } else if (value > 0) {
-      // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티
-      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty;
+      // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프 보너스
+      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus);
 
       // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감
       if (activity.moneyCost <= 0 && state.stats[statKey] >= 80) {
@@ -453,6 +465,14 @@ export function processWeek(state: GameState): GameState {
     newState.currentEvent = { ...event, week: newState.week };
     newState.phase = 'event';
   }
+
+  // 12. 버프 틱다운 + 주간 구매 리셋
+  if (newState.activeBuffs) {
+    newState.activeBuffs = newState.activeBuffs
+      .map(b => ({ ...b, remainingWeeks: b.remainingWeeks - 1 }))
+      .filter(b => b.remainingWeeks > 0);
+  }
+  newState.weekPurchases = {};
 
   // 주 진행
   newState.week++;

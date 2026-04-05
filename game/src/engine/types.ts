@@ -39,6 +39,17 @@ export interface GameState {
   totalWeeksPlayed: number;
   examResults: ExamResult[];       // 역대 시험 결과
   currentExamResult: ExamResult | null;  // 이번 시험 결과 (표시용)
+  activeBuffs: ActiveBuff[];       // 활성 버프
+  weekPurchases: Record<string, number>; // 이번 주 구매 횟수
+}
+
+// 활성 버프 (shopSystem에서도 사용)
+export interface ActiveBuff {
+  id: string;
+  name: string;
+  target: string;       // 활동 카테고리 or 'exam' or 'all' or stat key
+  amount: number;        // 효율 증가 비율
+  remainingWeeks: number;
 }
 
 export interface WeekLog {
