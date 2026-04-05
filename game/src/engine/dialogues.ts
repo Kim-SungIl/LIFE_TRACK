@@ -286,6 +286,48 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '혹시 방학에 도서관 같이 갈래?',
     ]},
   ],
+  haeun: [
+    { priority: 100, condition: (int) => int >= 80, lines: [
+      '너한테 보여주고 싶은 게 있어. 같이 가자!',
+      '너는 나한테 이 동네 처음 알려준 사람이야. 특별해.',
+      '같이 만든 거 보면 진짜 뿌듯하지 않아?',
+      '너랑 있으면 아이디어가 막 떠올라!',
+      '부산 돌아가면... 너가 제일 보고 싶을 것 같아.',
+    ]},
+    { priority: 80, condition: (int) => int >= 50, lines: [
+      '아, 왔네! 오늘은 좀 덜 어색한데?',
+      '여긴 아직도 신기한 게 많아. 너는 익숙해서 모르지?',
+      '같이 있으면 덜 심심해서 좋아.',
+      '나 오늘 좋은 거 발견했는데, 보여줄까?',
+      '이거 그려봤는데 어때? 솔직하게 말해!',
+    ]},
+    { priority: 60, condition: (int) => int >= 30, lines: [
+      '안녕! 오늘 뭐 하기로 했더라?',
+      '여기 분식집은 부산이랑 맛이 좀 다르더라.',
+      '아, 이 노래 알아? 요즘 빠졌어.',
+      '나 아직 길 잘 헷갈려... 학교 앞 골목 왜 이렇게 많아?',
+    ]},
+    { priority: 40, condition: (int) => int >= 10, lines: [
+      '안녕... 나 아직 이름 다 못 외웠어.',
+      '여기 급식은 부산이랑 다른 게 뭐야?',
+      '전학 오니까 다 처음부터야... 좀 힘들다.',
+    ]},
+    { priority: 0, condition: () => true, lines: [
+      '......',
+      '(살짝 고개를 끄덕인다)',
+      '아... 안녕.',
+    ]},
+    { priority: 90, condition: (_, s) => [33,34,37,38].includes(s.week), lines: [
+      '시험 범위가 부산이랑 달라서 멘붕이야...',
+      '여기 시험 문제 스타일이 다른 것 같아. 도와줄 수 있어?',
+      '아 시험... 전학생한테 너무 가혹하다...',
+    ]},
+    { priority: 85, condition: (_, s) => s.isVacation, lines: [
+      '방학에 부산 갈 건데, 같이 갈래? 맛있는 거 많아!',
+      '방학이다! 뭔가 만들어 볼까? 아이디어 있어!',
+      '이번 방학엔 그림 연습 많이 할 거야.',
+    ]},
+  ],
 };
 
 export function getNpcDialogue(npcId: string, intimacy: number, state: GameState): string {
