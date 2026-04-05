@@ -53,7 +53,7 @@ export function GameScreen() {
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showShop, setShowShop] = useState(false);
-  const [editingSlot, setEditingSlot] = useState<'routine1' | 'routine2' | 'weekend1' | 'weekend2' | null>(null);
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
@@ -351,6 +351,7 @@ export function GameScreen() {
   const handleConfirm = () => {
     if (state.isVacation) setVacationChoices(selectedActivities);
     else setWeekendChoices(selectedActivities);
+    // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
     setNpcActivityMap(npcChoices);
     advanceWeek();
     setSelectedActivities([]); setNpcChoices({}); setShowResult(true); setRoutineConfirmed(false); setLastReaction(null);
@@ -642,7 +643,8 @@ export function GameScreen() {
                 () => setEditingSlot('weekend1'),
                 false, false,
                 selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
-                npcChoices[selectedActivities[0]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[0]])?.name : undefined,
+                (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]])
+                  ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]]))?.name : undefined,
               )}
               {renderSlot(
                 selectedActivities[1] ? '🌟' : '☀️',
@@ -651,7 +653,8 @@ export function GameScreen() {
                 () => setEditingSlot('weekend2'),
                 false, false,
                 selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.moneyCost : undefined,
-                npcChoices[selectedActivities[1]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[1]])?.name : undefined,
+                (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]])
+                  ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]]))?.name : undefined,
               )}
 
               {/* 이번 주 이벤트 표시 */}
@@ -753,7 +756,13 @@ export function GameScreen() {
                 selected={
                   editingSlot === 'routine1' ? (state.routineSlot2 ? [state.routineSlot2] : []) :
                   editingSlot === 'routine2' ? (state.routineSlot3 ? [state.routineSlot3] : []) :
-                  selectedActivities
+                  (() => {
+                    // 주말/방학: 현재 편집 중인 슬롯의 활동만 하이라이트
+                    const idx = editingSlot === 'weekend1' ? 0 :
+                                editingSlot === 'weekend2' ? 1 :
+                                parseInt((editingSlot || '').replace('weekend', '')) - 1;
+                    return selectedActivities[idx] ? [selectedActivities[idx]] : [];
+                  })()
                 }
                 onToggle={(id) => {
                   if (editingSlot === 'routine1') {
@@ -768,8 +777,20 @@ export function GameScreen() {
                     setRoutine(state.routineSlot2, id);
                     setEditingSlot(null);
                   } else {
-                    // 주말 슬롯
-                    toggleActivity(id);
+                    // 주말/방학 슬롯 — 인덱스 기반 할당 (같은 활동 중복 가능)
+                    const slotIdx = editingSlot === 'weekend1' ? 0 :
+                                    editingSlot === 'weekend2' ? 1 :
+                                    parseInt(editingSlot.replace('weekend', '')) - 1;
+                    const SOCIAL_IDS = ['hang-out', 'club', 'study-group'];
+                    if (SOCIAL_IDS.includes(id)) {
+                      // NPC 선택 필요 — slotKey 저장 후 NPC 모달 열기
+                      setNpcSelectFor(`slot:${slotIdx}:${id}`);
+                    } else {
+                      const newArr = [...selectedActivities];
+                      newArr[slotIdx] = id;
+                      setSelectedActivities(newArr);
+                      setLastReaction(getActivityReaction(id));
+                    }
                     setEditingSlot(null);
                   }
                 }}
@@ -824,13 +845,33 @@ export function GameScreen() {
       )}
 
       {/* NPC 선택 모달 */}
-      {npcSelectFor && (
+      {npcSelectFor && (() => {
+        // slot:idx:activityId 형태 파싱
+        const isSlotBased = npcSelectFor.startsWith('slot:');
+        const slotIdx = isSlotBased ? parseInt(npcSelectFor.split(':')[1]) : -1;
+        const activityId = isSlotBased ? npcSelectFor.split(':')[2] : npcSelectFor;
+        const modalLabel = activityId === 'hang-out' ? '놀까' : activityId === 'study-group' ? '공부할까' : '활동할까';
+        return (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
-            <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 4 }}>누구와 {npcSelectFor === 'hang-out' ? '놀까' : npcSelectFor === 'study-group' ? '공부할까' : '활동할까'}?</div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 4 }}>누구와 {modalLabel}?</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 16 }}>함께하는 친구에 따라 친밀도가 올라갑니다</div>
             {state.npcs.filter(n => n.met).map(npc => (
-              <div key={npc.id} onClick={() => { setNpcChoices({ ...npcChoices, [npcSelectFor]: npc.id }); setSelectedActivities([...selectedActivities, npcSelectFor]); setLastReaction(getActivityReaction(npcSelectFor)); setNpcSelectFor(null); }}
+              <div key={npc.id} onClick={() => {
+                if (isSlotBased) {
+                  // 슬롯 기반: 해당 인덱스에 활동 할당 + NPC 기록
+                  const newArr = [...selectedActivities];
+                  newArr[slotIdx] = activityId;
+                  setSelectedActivities(newArr);
+                  setNpcChoices({ ...npcChoices, [`${activityId}:${slotIdx}`]: npc.id });
+                } else {
+                  // 레거시: 기존 방식
+                  setNpcChoices({ ...npcChoices, [npcSelectFor]: npc.id });
+                  setSelectedActivities([...selectedActivities, npcSelectFor]);
+                }
+                setLastReaction(getActivityReaction(activityId));
+                setNpcSelectFor(null);
+              }}
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--bg-card)', borderRadius: 10, marginBottom: 6, cursor: 'pointer', border: '1px solid transparent', transition: 'all 0.2s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; }}
@@ -846,7 +887,8 @@ export function GameScreen() {
             <button className="btn btn-secondary" style={{ marginTop: 8 }} onClick={() => setNpcSelectFor(null)}>취소</button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* NPC 상세 모달 */}
       {npcDetailFor && (() => {
