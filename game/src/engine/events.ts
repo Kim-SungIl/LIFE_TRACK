@@ -514,10 +514,10 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
   {
     id: 'new-student', title: '전학생',
-    description: '오늘 반에 전학생이 왔다.\n낯설어하는 표정이 보인다.',
+    description: '오늘 반에 전학생이 왔다.\n"김하은이라고 합니다. 잘 부탁해요..." 낯설어하는 표정이 보인다.',
     choices: [
-      { text: '먼저 다가가 말을 건다', effects: { social: 3, mental: 2 }, message: '"안녕! 여기 처음이지?" 전학생이 환하게 웃었다.' },
-      { text: '누군가 말 걸겠지... 지켜본다', effects: {}, message: '다른 아이가 먼저 다가갔다. 살짝 아쉽다.' },
+      { text: '먼저 다가가 말을 건다', effects: { social: 3, mental: 2 }, message: '"안녕, 하은아! 여기 처음이지? 뭐 모르는 거 있으면 물어봐!" 하은이가 환하게 웃었다.' },
+      { text: '누군가 말 걸겠지... 지켜본다', effects: {}, message: '민재가 먼저 다가갔다. "야, 어디서 왔어?" 살짝 아쉽다.' },
     ],
     condition: (s) => !s.isVacation && s.week > 3,
   },
