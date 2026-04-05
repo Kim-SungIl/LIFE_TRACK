@@ -62,6 +62,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     currentExamResult: null,
     activeBuffs: [],
     weekPurchases: {},
+    idleWeeks: 0,
   };
 }
 
@@ -89,14 +90,14 @@ export function getMonthLabel(week: number): string {
   return `${months[week - 1] || 3}월`;
 }
 
-// ===== 구간 감쇠 =====
+// ===== 구간 감쇠 (v6: 대폭 강화) =====
 function getDiminishingReturn(value: number): number {
   if (value < 30) return 1.0;
   if (value < 50) return 1.0;
-  if (value < 70) return 0.8;
-  if (value < 85) return 0.5;
-  if (value < 95) return 0.3;
-  return 0.1;
+  if (value < 70) return 0.7;
+  if (value < 85) return 0.35;   // v5: 0.5 → 0.35
+  if (value < 95) return 0.18;   // v5: 0.3 → 0.18
+  return 0.05;                    // v5: 0.1 → 0.05 (95+는 사실상 특수 영역)
 }
 
 // ===== 멘탈 회복 감쇠 =====
@@ -107,13 +108,14 @@ function getMentalRecoveryRate(mental: number): number {
   return 0.3;
 }
 
-// ===== 피로 보정 =====
+// ===== 피로 보정 (v6: 60+/80+ 구간 강화) =====
 function getFatigueModifier(fatigue: number): number {
   if (fatigue < 20) return 1.0;
   if (fatigue < 40) return 0.9;
   if (fatigue < 60) return 0.75;
   if (fatigue < 80) return 0.5;
-  return 0.3;
+  if (fatigue < 90) return 0.3;
+  return 0.2;   // v6: 90+ 극한 피로시 효율 대폭 하락
 }
 
 // ===== 루틴 보너스 =====
@@ -130,8 +132,8 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   if (!activity) return;
 
   const fatiguemod = getFatigueModifier(state.fatigue);
-  // v5.1: tired/burnout 상태 성장 패널티
-  const mentalPenalty = state.mentalState === 'burnout' ? 0.3 : state.mentalState === 'tired' ? 0.8 : 1.0;
+  // v6: tired/burnout 상태 성장 패널티 (번아웃 강화)
+  const mentalPenalty = state.mentalState === 'burnout' ? 0.2 : state.mentalState === 'tired' ? 0.7 : 1.0;
 
   // v5.3: 상점 버프 보너스 계산
   let buffBonus = 0;
@@ -142,6 +144,9 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       }
     }
   }
+
+  // v6: 동일 축 중복 스택 효율 감소 (같은 주에 같은 스탯을 여러 번 올리면 효율 하락)
+  const statHitCount: Partial<Record<StatKey, number>> = {};
 
   // 각 스탯 성장 적용
   for (const [key, baseValue] of Object.entries(activity.effects)) {
@@ -155,16 +160,19 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
       value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus);
 
+      // v6: 동일 축 중복 효율 감소 (주간 누적)
+      const hits = (log.statChanges[statKey] || 0) > 0.5 ? 1 : 0; // 이미 이번 주에 올랐으면
+      if (hits >= 1) value *= 0.7;  // 2회째 70%
+
       // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감
-      // moneyCost === 0만 체크 (알바처럼 돈 버는 활동은 제외)
       if (activity.moneyCost === 0 && state.stats[statKey] >= 80) {
         value *= 0.1;
       }
     }
 
-    // 최저 보장 (양수 성장의 경우)
-    if (baseValue > 0 && value < baseValue * 0.15) {
-      value = baseValue * 0.15;
+    // 최저 보장 (양수 성장의 경우) — v6: 최저 보장 축소
+    if (baseValue > 0 && value < baseValue * 0.1) {
+      value = baseValue * 0.1;
     }
 
     state.stats[statKey] = Math.max(0, Math.min(100, state.stats[statKey] + value));
@@ -192,12 +200,13 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 // v5.1: 학년별 학업 감소 + 고학업 추가 감소 + 피로→멘탈 침식
 function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean): void {
   // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가)
-  // 초등(Y1): 학기 0 / 방학 -0.3
+  // v6: 초등도 학업 감쇠 적용 (0→0.15)
+  // 초등(Y1): 학기 -0.15 / 방학 -0.4
   // 중등(Y2~4): 학기 -0.2 / 방학 -0.6
   // 고등(Y5~7): 학기 -0.4 / 방학 -1.0
   let academicDecay = 0;
   if (state.year <= 1) {
-    academicDecay = isVacation ? -0.3 : 0;
+    academicDecay = isVacation ? -0.4 : -0.15;
   } else if (state.year <= 4) {
     academicDecay = isVacation ? -0.6 : -0.2;
   } else {
@@ -254,6 +263,15 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   if (fatigueMentalDrain < 0) {
     state.stats.mental = Math.max(0, state.stats.mental + fatigueMentalDrain);
     log.statChanges.mental = (log.statChanges.mental || 0) + fatigueMentalDrain;
+  }
+
+  // v6: 고피로 90+ → 체력 자연 감소 (무리하면 몸이 망가짐)
+  if (state.fatigue >= 90) {
+    state.stats.health = Math.max(5, state.stats.health - 1);
+    log.statChanges.health = (log.statChanges.health || 0) - 1;
+    if (!log.messages.some(m => m.includes('체력'))) {
+      log.messages.push('⚠️ 피로가 극한이라 몸이 약해지고 있다...');
+    }
   }
 }
 
@@ -334,10 +352,18 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     state.mentalState = 'normal';
     log.messages.push('✨ 회복! — 다시 일상으로 돌아왔다.');
   }
-  // burnout → tired (멘탈 25+ AND 피로 < 25)
-  else if (state.mentalState === 'burnout' && state.stats.mental >= 25 && state.fatigue < 25) {
+  // burnout → tired (v6: 조건 완화 — 멘탈 20+ AND 피로 < 30)
+  else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 30) {
     state.mentalState = 'tired';
     log.messages.push('💪 번아웃에서 벗어나는 중...');
+  }
+
+  // v6: 번아웃 자동 회복 — 매주 피로 -5, 멘탈 +2 (영구 사형 방지)
+  if (state.mentalState === 'burnout') {
+    state.fatigue = Math.max(0, state.fatigue - 5);
+    state.stats.mental = Math.min(100, state.stats.mental + 2);
+    log.fatigueChange -= 5;
+    log.statChanges.mental = (log.statChanges.mental || 0) + 2;
   }
 }
 
@@ -447,11 +473,33 @@ export function processWeek(state: GameState): GameState {
   // 8. 마일스톤
   checkMilestones(newState, log);
 
-  // 9. 용돈 지급 (매주)
+  // 9. 용돈 지급 — 생활비 차감 (v6)
   let weeklyMoney = 3;
   if (newState.parents.includes('wealth')) weeklyMoney = 8;
-  newState.money += weeklyMoney;
-  log.moneyChange += weeklyMoney;
+  // v6: 생활비 자동 차감 (교통비, 간식, 잡비)
+  const livingCost = newState.parents.includes('wealth') ? 2.5 : 1.2;
+  const netMoney = weeklyMoney - livingCost;
+  newState.money += netMoney;
+  log.moneyChange += netMoney;
+
+  // 10. 방치 무기력 체크 (v6: 3주 연속 비생산적 활동 시 멘탈/소셜 감소)
+  const productiveActivities = [...(newState.isVacation ? newState.vacationChoices : newState.weekendChoices)];
+  if (newState.routineSlot2) productiveActivities.push(newState.routineSlot2);
+  if (newState.routineSlot3) productiveActivities.push(newState.routineSlot3);
+  const restOnlyIds = ['rest', 'deep-rest', 'gaming', 'park-walk'];
+  const isRestOnly = productiveActivities.length === 0 || productiveActivities.every(id => restOnlyIds.includes(id));
+  if (isRestOnly) {
+    newState.idleWeeks = (newState.idleWeeks || 0) + 1;
+  } else {
+    newState.idleWeeks = 0;
+  }
+  if ((newState.idleWeeks || 0) >= 3) {
+    newState.stats.mental = Math.max(0, newState.stats.mental - 2);
+    newState.stats.social = Math.max(5, newState.stats.social - 1);
+    log.statChanges.mental = (log.statChanges.mental || 0) - 2;
+    log.statChanges.social = (log.statChanges.social || 0) - 1;
+    log.messages.push('😶 무기력... 뭔가 해야 할 것 같은데, 아무것도 하기 싫다.');
+  }
 
   // 스탯 범위 보정
   for (const key of Object.keys(newState.stats) as StatKey[]) {
