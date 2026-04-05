@@ -659,7 +659,7 @@ export function GameScreen() {
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column',
-          zIndex: 150,
+          zIndex: 250,
         }}>
           <div style={{
             background: 'linear-gradient(180deg, rgba(15,52,96,0.98), rgba(26,26,46,0.99))',
