@@ -240,22 +240,25 @@ export function GameScreen() {
   ) => {
     const isEmpty = !activityName;
     const isClickable = !isFixed && onClick;
+    const shouldPulse = isEmpty && !isFixed && showTutorial;
     return (
       <div
         onClick={() => isClickable && onClick!()}
+        className={shouldPulse ? 'slot-pulse' : ''}
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', marginBottom: 4, borderRadius: 10,
           cursor: isClickable ? 'pointer' : 'default',
           background: isFixed ? 'rgba(255,255,255,0.03)' :
-                      isEmpty ? 'rgba(255,255,255,0.02)' :
+                      isEmpty ? (shouldPulse ? 'rgba(255,193,7,0.08)' : 'rgba(255,255,255,0.02)') :
                       isRoutine ? 'rgba(91,141,239,0.12)' : 'rgba(233,69,96,0.12)',
-          border: isEmpty && !isFixed ? '1px dashed rgba(255,255,255,0.15)' :
+          border: isEmpty && !isFixed ? (shouldPulse ? '1px dashed rgba(255,193,7,0.5)' : '1px dashed rgba(255,255,255,0.15)') :
                   isRoutine ? '1px solid rgba(91,141,239,0.2)' :
                   !isEmpty && !isFixed ? '1px solid rgba(233,69,96,0.2)' :
                   '1px solid rgba(255,255,255,0.04)',
           transition: 'all 0.15s',
           opacity: isFixed ? 0.6 : 1,
+          animation: shouldPulse ? 'slotPulse 1.5s ease-in-out infinite' : 'none',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
