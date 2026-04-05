@@ -26,17 +26,24 @@ const STEPS: TutorialStep[] = [
   },
   {
     target: 'routine',
-    title: '주간 일과표',
-    desc: '이게 이번 주 시간표예요!\n\n주중엔 학교 후 방과후·저녁 활동을,\n주말엔 토·일요일 활동을 골라 채워주세요.\n\n빈 칸을 터치하면 활동을 고를 수 있어요!',
+    title: '평일 일과',
+    desc: '이게 이번 주 시간표예요!\n주중엔 학교가 끝나면 방과후·저녁 시간이 있어요.\n\n왼쪽 빈 칸을 터치해서 방과후 활동을 골라 보세요!',
     position: 'bottom',
     interactive: true,
     waitFor: 'routine-done',
-    doneDesc: '잘했어요! 빈 칸을 채우면 한 주가 완성돼요.\n루틴은 매주 자동 반복되고, 터치하면 바꿀 수 있어요.',
+    doneDesc: '잘했어요! 방과후 루틴은 매주 자동 반복돼요.\n바꾸고 싶으면 언제든 터치하면 돼요.',
+  },
+  {
+    target: 'routine',
+    title: '주말 활동',
+    desc: '이번엔 주말이에요!\n오른쪽 토요일·일요일 빈 칸을 터치해서\n주말에 할 활동도 골라 보세요!',
+    position: 'bottom',
+    interactive: true,
   },
   {
     target: 'confirm',
     title: '한 주 보내기',
-    desc: '일과표를 다 채웠으면 이 버튼을 눌러\n한 주를 보내세요!\n\n정답은 없어요. 자유롭게 플레이하세요!',
+    desc: '시간표를 다 채웠으면 이 버튼을 눌러\n한 주를 보내세요!\n\n정답은 없어요. 자유롭게 플레이하세요!',
     position: 'top',
   },
 ];
