@@ -716,7 +716,7 @@ export function GameScreen() {
                 currentSlots={editingSlot?.startsWith('routine') ? 0 : currentSlots}
                 state={state}
                 npcChoices={npcChoices}
-                compact={editingSlot?.startsWith('routine')}
+                compact={false}
                 availableMoney={state.money - routineCost -
                   selectedActivities.reduce((sum, id) => sum + (ACTIVITIES.find(a => a.id === id)?.moneyCost || 0), 0)
                 }
