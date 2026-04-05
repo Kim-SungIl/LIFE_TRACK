@@ -658,21 +658,33 @@ export function GameScreen() {
       {editingSlot && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          background: 'rgba(0,0,0,0.9)', display: 'flex', flexDirection: 'column',
           zIndex: 150,
         }}>
           <div style={{
             background: 'linear-gradient(180deg, rgba(15,52,96,0.98), rgba(26,26,46,0.99))',
-            borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
-            maxHeight: '75vh', display: 'flex', flexDirection: 'column',
+            width: '100%', maxWidth: 600, margin: '0 auto',
+            flex: 1, display: 'flex', flexDirection: 'column',
           }}>
-            <div style={{ padding: '14px 20px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '1rem', fontWeight: 700 }}>
-                {editingSlot === 'routine1' ? '방과후 활동 선택' :
-                 editingSlot === 'routine2' ? '저녁 활동 선택' :
-                 '주말 활동 선택'}
-              </span>
-              <span onClick={() => setEditingSlot(null)} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer' }}>닫기 ✕</span>
+            {/* 헤더 — 크고 명확하게 */}
+            <div style={{
+              padding: '20px 20px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+                  {editingSlot === 'routine1' ? '📚 방과후 활동' :
+                   editingSlot === 'routine2' ? '🌙 저녁 활동' :
+                   '☀️ 주말 활동'}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                  {editingSlot?.startsWith('routine') ? '매주 반복되는 루틴을 골라주세요' : '이번 주말에 할 활동을 골라주세요'}
+                </div>
+              </div>
+              <span onClick={() => setEditingSlot(null)} style={{
+                fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer',
+                padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)',
+              }}>✕ 닫기</span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
               {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 */}
