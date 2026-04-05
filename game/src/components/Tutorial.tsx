@@ -133,13 +133,19 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
     return () => clearInterval(interval);
   }, [current.waitFor, routineSet, updateRect]);
 
-  // routineSet이 변하면 waitDone 업데이트
+  // routineSet이 변하면 자동으로 다음 스텝으로
   useEffect(() => {
     if (current.waitFor === 'routine-done' && routineSet) {
       setWaitDone(true);
       updateRect();
+      // 1.5초 후 자동으로 다음 스텝
+      const timer = setTimeout(() => {
+        if (step < STEPS.length - 1) setStep(step + 1);
+        setWaitDone(false);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
-  }, [routineSet, current.waitFor, updateRect]);
+  }, [routineSet, current.waitFor, updateRect, step]);
 
   const pad = 8;
   const isInteractive = current.interactive && !waitDone;

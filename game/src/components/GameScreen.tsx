@@ -729,7 +729,12 @@ export function GameScreen() {
                 onToggle={(id) => {
                   if (editingSlot === 'routine1') {
                     setRoutine(id, state.routineSlot3 === id ? null : state.routineSlot3);
-                    setEditingSlot(null);
+                    // routine1 설정 후 → routine2가 비어있으면 자동으로 열기
+                    if (!state.routineSlot3) {
+                      setEditingSlot('routine2');
+                    } else {
+                      setEditingSlot(null);
+                    }
                   } else if (editingSlot === 'routine2') {
                     setRoutine(state.routineSlot2, id);
                     setEditingSlot(null);
