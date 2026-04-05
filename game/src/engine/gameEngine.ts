@@ -50,6 +50,8 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
         greeting: '헤이~ 뭐해? 심심한데 같이 뭐 하자!', personality: '에너지가 넘치고 친구가 많은 인싸. 처음 보는 사람한테도 스스럼없이 다가간다.' },
       { id: 'yuna', name: '유나', intimacy: 20, description: '조용하지만 성적이 좋은 반 친구', emoji: '📚', met: false,
         greeting: '안녕... 혹시 오늘 숙제 했어?', personality: '말수가 적지만 성적은 항상 상위권. 알고 보면 따뜻한 친구.' },
+      { id: 'haeun', name: '하은', intimacy: 0, description: '2학기에 전학 온 새로운 친구', emoji: '🎨', met: false,
+        greeting: '아, 안녕! 여기 아직 낯설어서... 잘 부탁해!', personality: '다른 도시에서 전학 온 아이. 낯선 환경에서도 주변의 재미를 찾아내는 감각파. 만들고 꾸미고 표현하는 걸 좋아한다.' },
     ],
     events: [],
     currentEvent: null,

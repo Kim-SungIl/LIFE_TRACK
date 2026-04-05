@@ -190,19 +190,20 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'school-festival',
     title: '학교 축제',
-    description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n"너 뭐 할래? 요리? 홍보? 회계?"',
+    description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n하은이가 "나 포스터 그릴 수 있는데, 같이 할 사람?" 하고 손을 든다.',
     week: 30,
     choices: [
       {
-        text: '"홍보 할게!" — SNS 홍보 담당',
-        effects: { social: 5, talent: 1, mental: 2 },
+        text: '"나도 할게!" — 하은이랑 홍보 담당',
+        effects: { social: 4, talent: 3, mental: 2 },
         fatigueEffect: 5,
-        message: '홍보 포스터를 만들고, SNS에 올렸다. 반응이 좋다! 아이들이 "너 센스 있다"고 했다.',
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '하은이랑 같이 포스터를 만들었다. 하은이 그림에 내가 문구를 넣었더니 반응이 폭발! "너네 콤비 최고다!"',
       },
       {
         text: '"회계 할게" — 뒤에서 조용히',
         effects: { academic: 1, social: 1 },
-        message: '회계를 맡았다. 눈에 안 띄지만 없으면 안 되는 역할. 담임이 칭찬해줬다.',
+        message: '회계를 맡았다. 하은이가 혼자 포스터를 만들었는데... 솔직히 대단했다.',
       },
       {
         text: '"나 몸이 안 좋아서..." — 축제에 참여 안 한다',
@@ -268,8 +269,9 @@ export const GAME_EVENTS: GameEvent[] = [
         npcEffects: [
           { npcId: 'jihun', intimacyChange: 5 },
           { npcId: 'subin', intimacyChange: 3 },
+          { npcId: 'haeun', intimacyChange: 3 },
         ],
-        message: '친구들과 선물을 교환하고 케이크를 먹었다. 따뜻한 하루.',
+        message: '친구들과 선물을 교환하고 케이크를 먹었다. 하은이가 부산 특산 과자를 가져왔다. 따뜻한 하루.',
       },
       {
         text: '집에서 가족과 보낸다',
@@ -300,6 +302,94 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { mental: 5 },
         message: '올해를 돌아보니, 생각보다 많은 일이 있었다. 나쁘지 않았어.',
       },
+    ],
+  },
+  // ===== 하은 이벤트 체인 =====
+  {
+    id: 'new-student', title: '전학생',
+    description: '2학기가 시작된 지 얼마 안 됐는데, 반에 전학생이 왔다.\n선생님이 소개한다. "부산에서 온 김하은이라고 합니다."\n"안녕하세요... 잘 부탁해요." 낯설어하면서도 주변을 호기심 가득한 눈으로 둘러본다.',
+    week: 26,
+    choices: [
+      { text: '"안녕! 여기 처음이지? 뭐든 물어봐!" — 먼저 다가간다', effects: { social: 3, mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '하은이가 환하게 웃었다. "고마워! 너 이름이 뭐야?" 첫 대화가 생각보다 편했다.' },
+      { text: '지켜본다... 누군가 말 걸겠지', effects: {},
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 2 }],
+        message: '민재가 먼저 다가갔다. "야, 부산에서 왔어? 사투리 써봐!" 하은이가 웃으며 대답했다. 살짝 아쉽다.' },
+    ],
+  },
+  {
+    id: 'haeun-sketchbook', title: '낙서가 들켰다',
+    description: '쉬는 시간, 하은이가 공책 구석에 뭔가를 열심히 그리고 있다.\n들여다보니 교실 풍경 스케치다. 꽤 잘 그린다.',
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 10 && s.week > 28 && !s.isVacation;
+    },
+    choices: [
+      { text: '"뭐 그리는 거야? 진짜 잘 그린다!" — 관심을 보인다', effects: { talent: 2, mental: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        message: '"에이, 이건 낙서야..." 하면서도 하은이 표정이 밝아졌다. 전학 와서 처음으로 그림 칭찬 받았다고.' },
+      { text: '조용히 옆에 앉아서 본다', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        message: '하은이가 알아챘지만 뭐라 안 했다. 조용히 같이 있는 것도 나쁘지 않다.' },
+      { text: '별 관심 없는 척 지나간다', effects: {}, message: '나중에 보니 하은이가 그 스케치를 접어서 넣고 있었다.' },
+    ],
+  },
+  {
+    id: 'haeun-local-guide', title: '이 동네 구경시켜 줘',
+    description: '방과후, 하은이가 다가온다.\n"있잖아, 나 아직 이 동네를 잘 몰라서... 어디가 재밌어? 알려줄 수 있어?"',
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 20 && s.week > 29 && !s.isVacation;
+    },
+    choices: [
+      { text: '자주 가는 곳을 소개해준다', effects: { social: 2, mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        message: '분식집, 문구점, 공원... 하은이가 전부 사진을 찍었다. "여기 좋다! 부산이랑 완전 다르네."' },
+      { text: '조용한 곳을 데려간다', effects: { mental: 3 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        message: '한적한 산책로를 걸었다. 하은이가 "여기 그림 그리기 좋겠다..." 하며 눈을 빛냈다.' },
+      { text: '"민재한테 물어봐, 걔가 잘 알아" — 민재에게 넘긴다', effects: {},
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }, { npcId: 'haeun', intimacyChange: 1 }],
+        message: '민재가 하은이를 데리고 떡볶이집으로 갔다. 나중에 하은이가 "재밌었어, 근데 네가 같이 갔으면 좋았는데" 했다.' },
+    ],
+  },
+  {
+    id: 'haeun-afterclass', title: '방과후 교실',
+    description: '모두 돌아간 빈 교실. 하은이가 창가에서 축제 포스터 아이디어를 끄적이고 있다.\n"아, 왔어? 나 축제 포스터 아이디어 좀 내고 있었는데..."',
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 35 && s.week >= 29 && s.week <= 32 && !s.isVacation;
+    },
+    choices: [
+      { text: '같이 아이디어를 낸다', effects: { talent: 3 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '둘이서 아이디어를 주고받았다. 하은이가 "너 센스 좋은데? 같이 하면 진짜 괜찮겠다!" 했다.' },
+      { text: '색칠이나 정리를 도와준다', effects: { talent: 1, social: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        message: '하은이가 스케치하고 내가 색을 칠했다. 해가 질 때쯤 꽤 괜찮은 포스터가 나왔다.' },
+      { text: '"다음에 보자" — 먼저 간다', effects: {},
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 1 }],
+        message: '하은이가 "어, 그래..." 하고 혼자 남았다. 뒤돌아보니 좀 외로워 보였다.' },
+    ],
+  },
+  {
+    id: 'haeun-specialty-awake', title: '"너, 이런 거 잘하네"',
+    description: '하은이가 진지한 표정으로 다가온다.\n"있잖아... 네가 저번에 만든 거 봤는데, 솔직히 진짜 좋았어.\n너 이런 거 재능 있는 것 같아. 진심으로."',
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 60 && s.stats.talent >= 40;
+    },
+    choices: [
+      { text: '"진짜? 고마워..." — 쑥스럽지만 기쁘다', effects: { talent: 3, mental: 3 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
+        message: '누군가한테 진심으로 인정받는 느낌. 가슴이 따뜻해졌다. 하은이가 "더 해봐, 나도 도와줄게" 했다.' },
+      { text: '"별거 아니야..." — 넘긴다', effects: { talent: 1, mental: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        message: '"아냐, 별거 맞아." 하은이가 단호하게 말했다. 겸손해도 들린 건 들린 거다.' },
+      { text: '"같이 뭔가 더 해볼래?" — 제안한다', effects: { talent: 4, mental: 2, social: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '하은이 눈이 반짝였다. "진짜? 나 아이디어 있는데! 같이 하면 진짜 대박일 거야!"' },
     ],
   },
   // ===== 랜덤 이벤트 (조건부) =====
@@ -512,15 +602,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
       return !!electionEvent && s.stats.social >= 40;
     },
   },
-  {
-    id: 'new-student', title: '전학생',
-    description: '오늘 반에 전학생이 왔다.\n"김하은이라고 합니다. 잘 부탁해요..." 낯설어하는 표정이 보인다.',
-    choices: [
-      { text: '먼저 다가가 말을 건다', effects: { social: 3, mental: 2 }, message: '"안녕, 하은아! 여기 처음이지? 뭐 모르는 거 있으면 물어봐!" 하은이가 환하게 웃었다.' },
-      { text: '누군가 말 걸겠지... 지켜본다', effects: {}, message: '민재가 먼저 다가갔다. "야, 어디서 왔어?" 살짝 아쉽다.' },
-    ],
-    condition: (s) => !s.isVacation && s.week > 3,
-  },
+  // new-student는 GAME_EVENTS로 이동 (W26 고정)
   {
     id: 'group-project', title: '조별 과제',
     description: '선생님이 조별 과제를 내셨다.\n"한 달 안에 제출해야 합니다."',
@@ -636,7 +718,10 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
 ];
 
 // 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
-const FOLLOWUP_EVENT_IDS = new Set(['class-president-nudge']);
+const FOLLOWUP_EVENT_IDS = new Set([
+  'class-president-nudge',
+  'haeun-sketchbook', 'haeun-local-guide', 'haeun-afterclass', 'haeun-specialty-awake',
+]);
 
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
