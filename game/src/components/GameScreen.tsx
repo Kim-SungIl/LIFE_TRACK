@@ -320,11 +320,12 @@ export function GameScreen() {
     );
   };
 
-  // 다가오는 이벤트 계산
+  // 다가오는 이벤트 계산 (시험 주차는 엔진과 동일: 8, 17, 30, 38)
   const upcomingEvents: string[] = [];
-  const examWeeks = [8, 17, 34, 38];
+  const examWeeks = [8, 17, 30, 38];
   for (const ew of examWeeks) {
     const diff = ew - state.week;
+    // diff > 0: 아직 안 친 시험만, 시험 결과 주차에는 표시 안 함
     if (diff > 0 && diff <= 4) upcomingEvents.push(`시험까지 ${diff}주`);
   }
   if (state.week >= 18 && state.week < 20) upcomingEvents.push('여름방학이 다가온다');
