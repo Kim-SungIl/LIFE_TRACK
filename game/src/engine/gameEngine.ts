@@ -175,9 +175,15 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       }
     }
 
-    // 최저 보장 (양수 성장의 경우) — v6: 최저 보장 축소
-    if (baseValue > 0 && value < baseValue * 0.1) {
+    // 최저 보장 — v6.2: 85+ 구간은 최저 보장 없음 (고구간은 진짜 어려워야 함)
+    if (baseValue > 0 && state.stats[statKey] < 85 && value < baseValue * 0.1) {
       value = baseValue * 0.1;
+    }
+
+    // v6.2: 주당 스탯 성장 상한 (+3/주) — 활동 몰빵으로 감쇠 돌파 방지
+    const weeklyGainSoFar = log.statChanges[statKey] || 0;
+    if (statKey !== 'mental' && value > 0 && weeklyGainSoFar + value > 3) {
+      value = Math.max(0, 3 - weeklyGainSoFar);
     }
 
     state.stats[statKey] = Math.max(0, Math.min(100, state.stats[statKey] + value));
@@ -367,6 +373,14 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 30) {
     state.mentalState = 'tired';
     log.messages.push('💪 번아웃에서 벗어나는 중...');
+  }
+
+  // v6.2: tired 자동 회복 — 약하지만 탈출 가능 (tired↔burnout 무한 순환 방지)
+  if (state.mentalState === 'tired') {
+    state.fatigue = Math.max(0, state.fatigue - 3);
+    state.stats.mental = Math.min(100, state.stats.mental + 1);
+    log.fatigueChange -= 3;
+    log.statChanges.mental = (log.statChanges.mental || 0) + 1;
   }
 
   // v6.1: 번아웃 자동 회복 — 강화 (활동 피로를 이길 수 있는 수준)
