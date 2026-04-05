@@ -3,11 +3,45 @@ import { GameState, ParentStrength } from './types';
 import { createInitialState, processWeek } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 
+const SAVE_KEY = 'lifetrack_save';
+const SAVE_VERSION = 1;
+
+interface SaveData {
+  version: number;
+  state: GameState;
+  savedAt: string;
+}
+
+function saveToStorage(state: GameState) {
+  try {
+    const data: SaveData = { version: SAVE_VERSION, state, savedAt: new Date().toISOString() };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch { /* storage full or unavailable — silently skip */ }
+}
+
+export function loadFromStorage(): SaveData | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as SaveData;
+    if (data.version !== SAVE_VERSION || !data.state) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function deleteSave() {
+  localStorage.removeItem(SAVE_KEY);
+}
+
 interface GameStore {
   state: GameState | null;
   history: GameState[];
   npcActivityMap: Record<string, string>; // activityId -> npcId
   startGame: (gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]) => void;
+  loadSavedGame: () => boolean;
+  resetGame: () => void;
   setRoutine: (slot2: string | null, slot3: string | null) => void;
   setWeekendChoices: (choices: string[]) => void;
   setVacationChoices: (choices: string[]) => void;
@@ -26,7 +60,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
   startGame: (gender, parents) => {
     const initial = createInitialState(gender, parents);
     set({ state: initial, history: [] });
+    saveToStorage(initial);
     localStorage.removeItem('lifetrack_tutorial_done');
+  },
+
+  loadSavedGame: () => {
+    const save = loadFromStorage();
+    if (!save) return false;
+    set({ state: save.state, history: [] });
+    return true;
+  },
+
+  resetGame: () => {
+    deleteSave();
+    set({ state: null, history: [], npcActivityMap: {} });
   },
 
   setRoutine: (slot2, slot3) => {
@@ -117,8 +164,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
-    // 이벤트 기록
-    newState.events.push(newState.currentEvent!);
+    // 이벤트 기록 (선택 인덱스 포함)
+    newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex });
 
     // weekLog에 메시지 추가
     if (newState.weekLog) {
@@ -147,3 +194,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return messages;
   },
 }));
+
+// 상태 변경 시 자동 저장
+useGameStore.subscribe((curr, prev) => {
+  if (curr.state && curr.state !== prev.state) {
+    saveToStorage(curr.state);
+  }
+});

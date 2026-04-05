@@ -57,7 +57,8 @@ export interface WeekLog {
   fatigueChange: number;
   moneyChange: number;
   messages: string[];
-  milestone: string | null;
+  milestone: string | null;      // 하위호환용 (deprecated)
+  milestoneMessages: string[];   // 이번 주 달성한 성장 메시지들
 }
 
 // 시험 시스템
@@ -120,6 +121,7 @@ export interface GameEvent {
   // 성별 분기: 있으면 해당 성별에서 기본값 대신 사용
   femaleDescription?: string;
   femaleChoices?: EventChoice[];
+  resolvedChoice?: number; // 저장된 선택 인덱스 (이벤트 해결 후 기록)
 }
 
 export interface EventChoice {

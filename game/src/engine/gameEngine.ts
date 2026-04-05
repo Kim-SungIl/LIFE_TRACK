@@ -123,7 +123,7 @@ function getRoutineBonus(weeks: number): number {
 }
 
 // ===== 활동 적용 =====
-function applyActivity(state: GameState, activityId: string, log: WeekLog): void {
+function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0): void {
   const activity = ACTIVITIES.find(a => a.id === activityId);
   if (!activity) return;
 
@@ -150,8 +150,8 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog): void
       // 멘탈은 전용 감쇠
       value *= getMentalRecoveryRate(state.stats.mental);
     } else if (value > 0) {
-      // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프 보너스
-      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus);
+      // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
+      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus);
 
       // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감
       // moneyCost === 0만 체크 (알바처럼 돈 버는 활동은 제외)
@@ -287,11 +287,13 @@ function applySchoolClass(state: GameState, log: WeekLog): void {
 // ===== 마일스톤 체크 =====
 function checkMilestones(state: GameState, log: WeekLog): void {
   const milestoneChecks: { id: string; stat: StatKey; threshold: number; message: string }[] = [
-    { id: 'academic-30', stat: 'academic', threshold: 30, message: '"수업 내용이 들리기 시작했다"' },
-    { id: 'academic-50', stat: 'academic', threshold: 50, message: '"중간권 진입 — 선생님이 이름을 기억하기 시작한다"' },
+    // 초기값: academic 30, social 25, talent 15, mental 50, health 40
+    // 마일스톤은 초기값보다 충분히 높은 곳에서 시작
+    { id: 'academic-40', stat: 'academic', threshold: 40, message: '"수업 내용이 들리기 시작했다"' },
+    { id: 'academic-55', stat: 'academic', threshold: 55, message: '"중간권 진입 — 선생님이 이름을 기억하기 시작한다"' },
     { id: 'academic-70', stat: 'academic', threshold: 70, message: '"상위권 — 반에서 공부 잘하는 애로 인식된다"' },
     { id: 'academic-85', stat: 'academic', threshold: 85, message: '"전교 상위 5% — 부모님이 감동하신다"' },
-    { id: 'social-30', stat: 'social', threshold: 30, message: '"아는 사람이 생겼다 — 급식 시간에 혼자 먹지 않게 됐다"' },
+    { id: 'social-35', stat: 'social', threshold: 35, message: '"아는 사람이 생겼다 — 급식 시간에 혼자 먹지 않게 됐다"' },
     { id: 'social-50', stat: 'social', threshold: 50, message: '"쉬는 시간의 인기인 — 누군가 항상 말을 건다"' },
     { id: 'social-70', stat: 'social', threshold: 70, message: '"반 대표급 — 학교 행사에서 이름이 불린다"' },
     { id: 'talent-30', stat: 'talent', threshold: 30, message: '"취미가 생겼다 — 좋아하는 걸 찾은 느낌"' },
@@ -305,8 +307,8 @@ function checkMilestones(state: GameState, log: WeekLog): void {
   for (const m of milestoneChecks) {
     if (!state.milestones.includes(m.id) && state.stats[m.stat] >= m.threshold) {
       state.milestones.push(m.id);
-      log.milestone = m.message;
-      log.messages.push(`마일스톤 달성! ${m.message}`);
+      log.milestone = m.message; // 하위호환
+      log.milestoneMessages.push(m.message);
     }
   }
 }
@@ -347,11 +349,18 @@ function applyNpcDecay(state: GameState): void {
 // NPC 친밀도 증가 (친구놀기 등)
 function applyNpcBoost(state: GameState, activityIds: string[]): void {
   const socialActivities = ['hang-out', 'club', 'study-group'];
-  const hasSocial = activityIds.some(id => socialActivities.includes(id));
-  if (hasSocial && state.npcs.length > 0) {
-    // 가장 친밀도가 높은 NPC에게 +2
-    const sorted = [...state.npcs].sort((a, b) => b.intimacy - a.intimacy);
-    sorted[0].intimacy = Math.min(100, sorted[0].intimacy + 2);
+  const socialCount = activityIds.filter(id => socialActivities.includes(id)).length;
+  if (socialCount > 0 && state.npcs.length > 0) {
+    // 만난 NPC 전체에 소량 + 가장 친한 NPC에 추가
+    const metNpcs = state.npcs.filter(n => n.met);
+    for (const npc of metNpcs) {
+      npc.intimacy = Math.min(100, npc.intimacy + 0.5 * socialCount);
+    }
+    // 가장 친한 NPC에게 추가 보너스
+    if (metNpcs.length > 0) {
+      const sorted = [...metNpcs].sort((a, b) => b.intimacy - a.intimacy);
+      sorted[0].intimacy = Math.min(100, sorted[0].intimacy + 1 * socialCount);
+    }
   }
 }
 
@@ -373,6 +382,7 @@ export function processWeek(state: GameState): GameState {
     moneyChange: 0,
     messages: [],
     milestone: null,
+    milestoneMessages: [],
   };
 
   // 1. 피로 자연 회복
@@ -383,12 +393,13 @@ export function processWeek(state: GameState): GameState {
     applySchoolClass(newState, log);
   }
 
-  // 3. 루틴 활동 (학기 중, 방과후) — 돈 부족하면 스킵
+  // 3. 루틴 활동 (학기 중, 방과후) — 돈 부족하면 스킵 + 루틴 연속 보너스
   if (!newState.isVacation) {
+    const rBonus = getRoutineBonus(newState.routineWeeks);
     if (newState.routineSlot2) {
       const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
       if (r2 && (r2.moneyCost <= 0 || newState.money >= r2.moneyCost)) {
-        applyActivity(newState, newState.routineSlot2, log);
+        applyActivity(newState, newState.routineSlot2, log, rBonus);
         newState.routineWeeks++;
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r2?.name || '활동'}을 못 했다...`);
@@ -398,7 +409,7 @@ export function processWeek(state: GameState): GameState {
     if (newState.routineSlot3) {
       const r3 = ACTIVITIES.find(a => a.id === newState.routineSlot3);
       if (r3 && (r3.moneyCost <= 0 || newState.money >= r3.moneyCost)) {
-        applyActivity(newState, newState.routineSlot3, log);
+        applyActivity(newState, newState.routineSlot3, log, rBonus);
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r3?.name || '활동'}을 못 했다...`);
       }
