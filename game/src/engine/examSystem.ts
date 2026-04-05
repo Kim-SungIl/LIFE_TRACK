@@ -70,7 +70,8 @@ export function generateExamResult(
   }
 
   // 전 시험 대비 변화
-  const prevExam = state.examResults.length > 0 ? state.examResults[state.examResults.length - 1] : null;
+  const exams = state.examResults || [];
+  const prevExam = exams.length > 0 ? exams[exams.length - 1] : null;
   if (prevExam) {
     for (const key of Object.keys(subjects) as SubjectKey[]) {
       subjects[key].delta = subjects[key].score - prevExam.subjects[key].score;

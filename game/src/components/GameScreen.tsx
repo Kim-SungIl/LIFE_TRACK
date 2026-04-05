@@ -416,7 +416,7 @@ export function GameScreen() {
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
-          <div onClick={() => setShowShop(true)} style={{ cursor: 'pointer' }}>
+          <div onClick={() => { setShowShop(true); setNpcDetailFor(null); setNpcSelectFor(null); }} style={{ cursor: 'pointer' }}>
             💰 {state.money}만원 <span style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>🛒</span>
           </div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 8 : 3}만원</div>

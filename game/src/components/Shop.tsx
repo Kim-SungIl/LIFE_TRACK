@@ -38,9 +38,16 @@ export function Shop({ state, onBuy, onClose }: Props) {
   const categories = Object.keys(SHOP_CATEGORIES) as ItemCategory[];
   const items = SHOP_ITEMS.filter(i => i.category === selectedCat);
 
+  const metNpcs = state.npcs.filter(n => n.met);
+
   const handleBuy = (item: ShopItem) => {
     // 선물 아이템이면 NPC 선택 필요
     if (item.category === 'gift') {
+      if (metNpcs.length === 0) {
+        setBuyMessage('아직 선물을 줄 친구가 없어요...');
+        setTimeout(() => setBuyMessage(null), 2000);
+        return;
+      }
       setNpcSelectItem(item);
       return;
     }
