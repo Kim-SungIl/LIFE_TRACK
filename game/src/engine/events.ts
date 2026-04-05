@@ -496,7 +496,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
       const electionEvent = s.events.find(e =>
         e.id === 'class-president' &&
         e.resolvedChoice === 1 &&
-        s.week - (e.week || 0) <= 2
+        s.week - (e.week || 0) <= 4
       );
       return !!electionEvent && s.stats.social >= 40;
     },
@@ -624,8 +624,19 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
 ];
 
+// 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
+const FOLLOWUP_EVENT_IDS = new Set(['class-president-nudge']);
+
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
+  // 0. 후속 이벤트 최우선 체크 (100% 발동)
+  const followup = GAME_EVENTS.find(e =>
+    FOLLOWUP_EVENT_IDS.has(e.id) &&
+    e.condition && e.condition(state) &&
+    !state.events.some(prev => prev.id === e.id)
+  );
+  if (followup) return followup;
+
   // 고정 주차 이벤트 우선
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
@@ -638,6 +649,7 @@ export function getEventForWeek(state: GameState): GameEvent | null {
     !e.week &&
     e.condition &&
     e.condition(state) &&
+    !FOLLOWUP_EVENT_IDS.has(e.id) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 10)
   );
   if (conditionalEvents.length > 0 && Math.random() < 0.5) {
