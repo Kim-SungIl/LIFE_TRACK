@@ -269,9 +269,8 @@ export const GAME_EVENTS: GameEvent[] = [
         npcEffects: [
           { npcId: 'jihun', intimacyChange: 5 },
           { npcId: 'subin', intimacyChange: 3 },
-          { npcId: 'haeun', intimacyChange: 3 },
         ],
-        message: '친구들과 선물을 교환하고 케이크를 먹었다. 하은이가 부산 특산 과자를 가져왔다. 따뜻한 하루.',
+        message: '친구들과 선물을 교환하고 케이크를 먹었다. 따뜻한 하루.',
       },
       {
         text: '집에서 가족과 보낸다',
@@ -359,7 +358,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '모두 돌아간 빈 교실. 하은이가 창가에서 축제 포스터 아이디어를 끄적이고 있다.\n"아, 왔어? 나 축제 포스터 아이디어 좀 내고 있었는데..."',
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 35 && s.week >= 29 && s.week <= 32 && !s.isVacation;
+      return !!haeun?.met && haeun.intimacy >= 20 && s.week >= 28 && s.week <= 38 && !s.isVacation;
     },
     choices: [
       { text: '같이 아이디어를 낸다', effects: { talent: 3 },
@@ -378,7 +377,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '하은이가 진지한 표정으로 다가온다.\n"있잖아... 네가 저번에 만든 거 봤는데, 솔직히 진짜 좋았어.\n너 이런 거 재능 있는 것 같아. 진심으로."',
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 60 && s.stats.talent >= 40;
+      return !!haeun?.met && haeun.intimacy >= 45 && s.stats.talent >= 40;
     },
     choices: [
       { text: '"진짜? 고마워..." — 쑥스럽지만 기쁘다', effects: { talent: 3, mental: 3 },
@@ -391,6 +390,44 @@ export const GAME_EVENTS: GameEvent[] = [
         npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
         message: '하은이 눈이 반짝였다. "진짜? 나 아이디어 있는데! 같이 하면 진짜 대박일 거야!"' },
     ],
+  },
+  {
+    id: 'haeun-winter', title: '하은이의 겨울',
+    description: '겨울방학이 다가오자 하은이가 말을 꺼낸다.\n"나 방학에 부산 갈 건데... 너도 같이 갈래? 맛있는 거 사줄게!"',
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 30 && s.week >= 42 && s.week <= 46;
+    },
+    choices: [
+      { text: '"가자! 부산 가보고 싶었어!" — 함께 간다', effects: { social: 3, mental: 4, talent: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 10 }],
+        moneyEffect: -3,
+        message: '하은이의 고향 부산을 구경했다. 바다, 시장, 하은이가 다니던 학교... "여기가 내 세계였어." 하은이가 웃었다.' },
+      { text: '"미안, 이번엔 못 갈 것 같아" — 거절한다', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }],
+        message: '"그래, 알겠어... 다음에 꼭 같이 가자!" 하은이가 살짝 아쉬운 표정을 지었다.' },
+    ],
+  },
+  // ===== 반장 후속 이벤트 =====
+  {
+    id: 'class-president-nudge', title: '민재의 추천',
+    description: '쉬는 시간에 민재가 다가온다.\n"야, 부반장 자리 아직 비었는데, 너가 하면 딱인데? 내가 추천할까?"',
+    choices: [
+      { text: '"...해볼까?" — 민재 말에 용기를 낸다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '부반장이 됐다! 민재가 "내 눈은 틀리지 않지" 하며 웃었다.' },
+      { text: '"아니야, 난 괜찮아" — 정중하게 거절한다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '"알겠어, 근데 너 진짜 잘할 수 있었을 텐데." 민재 말에 기분이 나쁘진 않았다.' },
+    ],
+    condition: (s) => {
+      const electionEvent = s.events.find(e =>
+        (e.id === 'class-president' || e.id === 'class-president-2') &&
+        e.resolvedChoice === 1 &&
+        s.week - (e.week || 0) <= 4
+      );
+      return !!electionEvent && s.stats.social >= 40;
+    },
   },
   // ===== 랜덤 이벤트 (조건부) =====
   {
@@ -585,27 +622,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
         message: '민재가 또 나섰다. "내가 하지 뭐!" 2학기도 민재가 반장. 에너지가 대단하다.' },
     ],
   },
-  {
-    id: 'class-president-nudge', title: '민재의 추천',
-    description: '쉬는 시간에 민재가 다가온다.\n"야, 부반장 자리 아직 비었는데, 너가 하면 딱인데? 내가 추천할까?"',
-    choices: [
-      { text: '"...해볼까?" — 민재 말에 용기를 낸다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
-        message: '부반장이 됐다! 민재가 "내 눈은 틀리지 않지" 하며 웃었다.' },
-      { text: '"아니야, 난 괜찮아" — 정중하게 거절한다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '"알겠어, 근데 너 진짜 잘할 수 있었을 텐데." 민재 말에 기분이 나쁘진 않았다.' },
-    ],
-    condition: (s) => {
-      // 반장 선거(1학기 or 2학기)에서 "안 한다"(choiceIndex 1)를 골랐고, social >= 40일 때만
-      const electionEvent = s.events.find(e =>
-        (e.id === 'class-president' || e.id === 'class-president-2') &&
-        e.resolvedChoice === 1 &&
-        s.week - (e.week || 0) <= 4
-      );
-      return !!electionEvent && s.stats.social >= 40;
-    },
-  },
+  // class-president-nudge는 GAME_EVENTS로 이동됨
   // new-student는 GAME_EVENTS로 이동 (W26 고정)
   {
     id: 'group-project', title: '조별 과제',
@@ -778,7 +795,7 @@ function isClassPresident(s: GameState): boolean {
 // 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
 const FOLLOWUP_EVENT_IDS = new Set([
   'class-president-nudge',
-  'haeun-sketchbook', 'haeun-local-guide', 'haeun-afterclass', 'haeun-specialty-awake',
+  'haeun-sketchbook', 'haeun-local-guide', 'haeun-afterclass', 'haeun-specialty-awake', 'haeun-winter',
 ]);
 
 // 이번 주에 발동할 이벤트 가져오기
