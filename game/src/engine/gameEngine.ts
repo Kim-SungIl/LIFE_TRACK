@@ -156,6 +156,10 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
     if (statKey === 'mental') {
       // 멘탈은 전용 감쇠
       value *= getMentalRecoveryRate(state.stats.mental);
+      // v6.1: 무기력 3주+ 시 쉬기 계열 멘탈 회복 대폭 감소 (쉬어도 공허함)
+      if ((state.idleWeeks || 0) >= 3 && activity.category === 'rest' && value > 0) {
+        value *= 0.3;
+      }
     } else if (value > 0) {
       // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
       value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus);
@@ -180,8 +184,13 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
     log.statChanges[statKey]! += value;
   }
 
-  // 피로 적용 (v5.2: 체력 < 20이면 피로 증가량 1.5배)
+  // 피로 적용
   let fatigueDelta = activity.fatigue;
+  // v6: 번아웃 중 활동 피로 50% 감소 (몸이 제대로 움직이지 않음)
+  if (fatigueDelta > 0 && state.mentalState === 'burnout') {
+    fatigueDelta = Math.round(fatigueDelta * 0.5);
+  }
+  // v5.2: 체력 < 20이면 피로 증가량 1.5배
   if (fatigueDelta > 0 && state.stats.health < 20) {
     fatigueDelta = Math.round(fatigueDelta * 1.5);
   }
@@ -358,12 +367,12 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     log.messages.push('💪 번아웃에서 벗어나는 중...');
   }
 
-  // v6: 번아웃 자동 회복 — 매주 피로 -5, 멘탈 +2 (영구 사형 방지)
+  // v6.1: 번아웃 자동 회복 — 강화 (활동 피로를 이길 수 있는 수준)
   if (state.mentalState === 'burnout') {
-    state.fatigue = Math.max(0, state.fatigue - 5);
-    state.stats.mental = Math.min(100, state.stats.mental + 2);
-    log.fatigueChange -= 5;
-    log.statChanges.mental = (log.statChanges.mental || 0) + 2;
+    state.fatigue = Math.max(0, state.fatigue - 12);
+    state.stats.mental = Math.min(100, state.stats.mental + 4);
+    log.fatigueChange -= 12;
+    log.statChanges.mental = (log.statChanges.mental || 0) + 4;
   }
 }
 
