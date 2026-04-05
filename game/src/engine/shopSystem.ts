@@ -52,11 +52,11 @@ export const SHOP_ITEMS: ShopItem[] = [
     maxPerWeek: 2,
   },
   {
-    id: 'energy-drink', name: '에너지 드링크', description: '이번 주만 버티자! 다음 주엔 좀 피곤할 수 있다.',
+    id: 'energy-drink', name: '에너지 드링크', description: '마시면 피로가 좀 풀리고 이번 주 효율이 오른다.',
     price: 1, category: 'consumable', emoji: '⚡',
     effects: [
-      { type: 'buff', buffId: 'energy-boost', buffDuration: 1, buffTarget: 'all', buffAmount: 0.2 },
-      { type: 'instant', stat: 'fatigue', value: 3 }, // 다음 주 피로 반동
+      { type: 'buff', buffId: 'energy-boost', buffDuration: 1, buffTarget: 'all', buffAmount: 0.15 },
+      { type: 'instant', stat: 'fatigue', value: -5 }, // v6.1: 반동 → 피로 즉시 감소
     ],
     maxPerWeek: 1,
   },
