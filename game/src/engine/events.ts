@@ -567,7 +567,9 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 5, mental: 2 }, fatigueEffect: 3,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
         message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시 너야!" 했다.' },
-      { text: '가만히 있는다...', effects: { mental: 1 }, message: '다른 아이가 반장이 됐다. 뭔가 살짝 아쉽다.' },
+      { text: '가만히 있는다...', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '민재가 "아무도 없어? 그럼 내가!" 하고 나섰다. 민재가 반장이 됐다. 잘 어울리긴 한다.' },
     ],
   },
   {
@@ -578,7 +580,9 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 5, mental: 2 }, fatigueEffect: 3,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
         message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시 너야!" 했다.' },
-      { text: '가만히 있는다...', effects: { mental: 1 }, message: '다른 아이가 반장이 됐다. 뭔가 살짝 아쉽다.' },
+      { text: '가만히 있는다...', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '민재가 또 나섰다. "내가 하지 뭐!" 2학기도 민재가 반장. 에너지가 대단하다.' },
     ],
   },
   {
@@ -751,13 +755,14 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
   // ===== 비반장: 반장을 지켜보는 이벤트 =====
   {
-    id: 'watching-president', title: '반장이 힘들어 보인다',
-    description: '요즘 반장이 바빠 보인다. 선생님 심부름, 싸움 중재, 발표...\n쉬는 시간에 반장이 책상에 엎드려 있다.',
+    id: 'watching-president', title: '민재가 힘들어 보인다',
+    description: '요즘 반장 민재가 바빠 보인다. 선생님 심부름, 싸움 중재, 발표...\n쉬는 시간에 민재가 책상에 엎드려 있다.\n"야... 반장 하지 말걸..."',
     choices: [
       { text: '"괜찮아? 뭐 도와줄까?" — 다가간다', effects: { social: 3, mental: 2 },
-        message: '"진짜? 고마워..." 반장이 웃었다. 작은 도움이었지만 의미 있었다.' },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '"진짜? 고마워..." 민재가 웃었다. 항상 밝은 민재가 이렇게 지쳐 보이는 건 처음이다.' },
       { text: '조용히 지나간다', effects: { mental: 1 },
-        message: '반장도 힘든 거구나. 안 했길 잘한 건가, 아니면...' },
+        message: '민재도 힘든 거구나. 반장 안 했길 잘한 건가, 아니면 도와줬어야 했나...' },
     ],
     condition: (s) => !isClassPresident(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
   },
