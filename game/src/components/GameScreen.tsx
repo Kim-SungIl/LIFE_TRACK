@@ -35,6 +35,7 @@ export function GameScreen() {
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showShop, setShowShop] = useState(false);
+  const [editingSlot, setEditingSlot] = useState<'routine1' | 'routine2' | 'weekend1' | 'weekend2' | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
@@ -230,6 +231,55 @@ export function GameScreen() {
   const routineCost = (state.routineSlot2 ? (ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost || 0) : 0)
     + (state.routineSlot3 ? (ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost || 0) : 0);
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
+
+  // 슬롯 렌더 헬퍼
+  const renderSlot = (
+    emoji: string, timeLabel: string, activityName: string | null,
+    onClick: (() => void) | null, isFixed = false, isRoutine = false,
+    moneyCost?: number, withNpc?: string,
+  ) => {
+    const isEmpty = !activityName;
+    const isClickable = !isFixed && onClick;
+    return (
+      <div
+        onClick={() => isClickable && onClick!()}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 12px', marginBottom: 4, borderRadius: 10,
+          cursor: isClickable ? 'pointer' : 'default',
+          background: isFixed ? 'rgba(255,255,255,0.03)' :
+                      isEmpty ? 'rgba(255,255,255,0.02)' :
+                      isRoutine ? 'rgba(91,141,239,0.12)' : 'rgba(233,69,96,0.12)',
+          border: isEmpty && !isFixed ? '1px dashed rgba(255,255,255,0.15)' :
+                  isRoutine ? '1px solid rgba(91,141,239,0.2)' :
+                  !isEmpty && !isFixed ? '1px solid rgba(233,69,96,0.2)' :
+                  '1px solid rgba(255,255,255,0.04)',
+          transition: 'all 0.15s',
+          opacity: isFixed ? 0.6 : 1,
+        }}
+      >
+        <span style={{ fontSize: '1.1rem', width: 28, textAlign: 'center' }}>{emoji}</span>
+        <span style={{ width: 48, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>{timeLabel}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {activityName ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{activityName}</span>
+              {isRoutine && <span style={{ fontSize: '0.6rem', color: 'var(--blue)', background: 'rgba(91,141,239,0.15)', padding: '1px 5px', borderRadius: 3 }}>매주</span>}
+              {moneyCost !== undefined && moneyCost > 0 && <span style={{ fontSize: '0.65rem', color: 'var(--yellow)' }}>({moneyCost}만)</span>}
+              {withNpc && <span style={{ fontSize: '0.65rem', color: 'var(--accent-soft)' }}>({withNpc})</span>}
+            </div>
+          ) : isFixed ? (
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>수업</span>
+          ) : (
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>+ 활동 선택</span>
+          )}
+        </div>
+        {!isFixed && !isEmpty && (
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>변경</span>
+        )}
+      </div>
+    );
+  };
 
   // 다가오는 이벤트 계산
   const upcomingEvents: string[] = [];
@@ -494,182 +544,187 @@ export function GameScreen() {
         )}
       </div>
 
-      {/* 루틴 (학기 중) */}
-      {!state.isVacation && (
-        <div data-tutorial="routine" style={{
-          background: 'rgba(15,52,96,0.85)',
-          backdropFilter: 'blur(6px)', borderRadius: 12, padding: '14px 16px', marginBottom: 12,
-          border: routineTooExpensive ? '1px solid var(--red)' : !state.routineSlot2 ? '1px solid var(--yellow)' : '1px solid rgba(255,255,255,0.05)',
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>
-              📋 평일 방과후 루틴
-              {state.routineWeeks >= 3 && <span style={{ color: 'var(--blue)', marginLeft: 8, fontSize: '0.78rem' }}>{state.routineWeeks}주 연속 {state.routineWeeks >= 8 ? '🔥+2.0' : state.routineWeeks >= 6 ? '⭐+1.5' : '✨+1.0'}</span>}
+      {/* ===== 주간 플래너 ===== */}
+      <div data-tutorial="routine" style={{
+        background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)',
+        borderRadius: 14, padding: '14px 16px', marginBottom: 12,
+        border: routineTooExpensive ? '1px solid var(--red)' : '1px solid rgba(255,255,255,0.05)',
+      }}>
+        <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: 10 }}>
+          📅 이번 주 일과
+          {!state.isVacation && state.routineWeeks >= 3 && (
+            <span style={{ color: 'var(--blue)', marginLeft: 8, fontSize: '0.72rem' }}>
+              루틴 {state.routineWeeks}주째 {state.routineWeeks >= 8 ? '🔥' : state.routineWeeks >= 6 ? '⭐' : '✨'}
             </span>
-            {state.routineSlot2 && (
-              <span style={{ color: 'var(--blue)', cursor: 'pointer', fontSize: '0.75rem' }} onClick={() => { setRoutineConfirmed(!routineConfirmed); setRoutineStep(1); }}>
-                {routineConfirmed ? '닫기' : '변경'}
-              </span>
-            )}
-          </div>
-
-          {/* 루틴 미설정 시 */}
-          {!state.routineSlot2 && !routineConfirmed && (
-            <div style={{ textAlign: 'center', padding: '10px 0' }}>
-              <div style={{ fontSize: '0.85rem', marginBottom: 6, color: 'var(--text-secondary)' }}>
-                아직 평일 방과후 계획이 없어요
-              </div>
-              <div style={{ fontSize: '0.72rem', marginBottom: 12, color: 'var(--text-muted)' }}>
-                루틴을 정하면 매주 자동으로 진행돼요
-              </div>
-              <button className="btn btn-primary" style={{ maxWidth: 280, margin: '0 auto', display: 'block' }} onClick={() => { setRoutineConfirmed(true); setRoutineStep(1); }}>
-                방과후 활동 정해보기
-              </button>
-            </div>
           )}
+        </div>
 
-          {/* 루틴 설정됨: 요약 */}
-          {state.routineSlot2 && !routineConfirmed && (
-            <div>
-              {/* 돈 부족 경고 */}
-              {routineTooExpensive && (
-                <div style={{
-                  background: 'rgba(255,87,34,0.15)', border: '1px solid rgba(255,87,34,0.3)',
-                  borderRadius: 10, padding: '10px 14px', marginBottom: 10, textAlign: 'center',
+        {/* 돈 부족 경고 */}
+        {routineTooExpensive && (
+          <div style={{
+            background: 'rgba(255,87,34,0.15)', border: '1px solid rgba(255,87,34,0.3)',
+            borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem',
+            textAlign: 'center', color: 'var(--red)',
+          }}>
+            💰 돈이 부족해요! 방과후 활동을 변경해 주세요 (현재 {state.money}만원, 필요 {routineCost}만원)
+          </div>
+        )}
+
+        {/* 학기 중: 평일 + 주말 */}
+        {!state.isVacation && (
+          <>
+            {/* 평일 섹션 */}
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>평일</div>
+
+            {/* 오전 — 학교 (고정) */}
+            {renderSlot('🏫', '오전', '학교수업', null, true)}
+            {/* 오후 — 학교 (고정) */}
+            {renderSlot('🏫', '오후', '학교수업', null, true)}
+            {/* 방과후 — 루틴 슬롯 1 */}
+            {renderSlot(
+              ACTIVITIES.find(a => a.id === state.routineSlot2)?.category === 'study' ? '📚' : '🎯',
+              '방과후',
+              state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name || null : null,
+              () => setEditingSlot('routine1'),
+              false,
+              true,
+              state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost : undefined,
+            )}
+            {/* 저녁 — 루틴 슬롯 2 */}
+            {renderSlot(
+              state.routineSlot3 ? '🌙' : '🕊️',
+              '저녁',
+              state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name || null : (state.routineSlot2 ? '자유시간' : null),
+              () => setEditingSlot('routine2'),
+              false,
+              !!state.routineSlot2,
+              state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost : undefined,
+            )}
+
+            {/* 주말 섹션 */}
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 12, marginBottom: 6, fontWeight: 600 }}>주말</div>
+
+            {/* 토요일 */}
+            {renderSlot(
+              selectedActivities[0] ? (ACTIVITIES.find(a => a.id === selectedActivities[0])?.category === 'rest' ? '😴' : '🌟') : '🌟',
+              '토요일',
+              selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
+              () => setEditingSlot('weekend1'),
+              false, false,
+              selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
+              npcChoices[selectedActivities[0]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[0]])?.name : undefined,
+            )}
+            {/* 일요일 */}
+            {renderSlot(
+              selectedActivities[1] ? (ACTIVITIES.find(a => a.id === selectedActivities[1])?.category === 'rest' ? '😴' : '🌟') : '🌟',
+              '일요일',
+              selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.name || null : null,
+              () => setEditingSlot('weekend2'),
+              false, false,
+              selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.moneyCost : undefined,
+              npcChoices[selectedActivities[1]] ? state.npcs.find(n => n.id === npcChoices[selectedActivities[1]])?.name : undefined,
+            )}
+          </>
+        )}
+
+        {/* 방학: 자유 슬롯 */}
+        {state.isVacation && (
+          <>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
+              🏖️ 방학 — 자유 시간
+            </div>
+            {Array.from({ length: maxSlots }, (_, i) => (
+              <div key={i}>
+                {renderSlot(
+                  selectedActivities[i] ? '🌟' : '☀️',
+                  `활동 ${i + 1}`,
+                  selectedActivities[i] ? ACTIVITIES.find(a => a.id === selectedActivities[i])?.name || null : null,
+                  () => setEditingSlot(`weekend${i + 1}` as any),
+                )}
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
+      {/* 슬롯 편집 팝업 */}
+      {editingSlot && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+          zIndex: 150,
+        }}>
+          <div style={{
+            background: 'linear-gradient(180deg, rgba(15,52,96,0.98), rgba(26,26,46,0.99))',
+            borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
+            maxHeight: '75vh', display: 'flex', flexDirection: 'column',
+          }}>
+            <div style={{ padding: '14px 20px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '1rem', fontWeight: 700 }}>
+                {editingSlot === 'routine1' ? '방과후 활동 선택' :
+                 editingSlot === 'routine2' ? '저녁 활동 선택' :
+                 '주말 활동 선택'}
+              </span>
+              <span onClick={() => setEditingSlot(null)} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer' }}>닫기 ✕</span>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
+              {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 */}
+              {editingSlot === 'routine2' && (
+                <div onClick={() => {
+                  const slot1 = routineSlot2Pick ?? state.routineSlot2;
+                  if (slot1) { setRoutine(slot1, null); }
+                  setEditingSlot(null);
+                }} style={{
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
+                  borderRadius: 10, cursor: 'pointer',
+                  background: !state.routineSlot3 ? 'rgba(91,141,239,0.15)' : 'rgba(255,255,255,0.04)',
+                  border: !state.routineSlot3 ? '1px solid var(--blue)' : '1px solid rgba(255,255,255,0.06)',
                 }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--red)', marginBottom: 4 }}>
-                    💰 돈이 부족해요!
+                  <span style={{ fontSize: '1.1rem' }}>🕊️</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>자유시간</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>쉬면서 멘탈 회복 + 피로 감소</div>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                    현재 {state.money}만원인데 루틴 비용이 매주 {routineCost}만원이에요.
-                    <br />루틴을 바꾸지 않으면 이번 주 활동을 할 수 없어요.
-                  </div>
-                  <button className="btn btn-primary" style={{ maxWidth: 240, margin: '0 auto', display: 'block', fontSize: '0.85rem' }}
-                    onClick={() => { setRoutineConfirmed(true); setRoutineStep(1); }}>
-                    루틴 변경하기
-                  </button>
                 </div>
               )}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: '0.85rem' }}>
-                <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 12px' }}>
-                  🏫 학교수업
-                </div>
-                <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
-                  {ACTIVITIES.find(a => a.id === state.routineSlot2)?.name}
-                  {(() => { const a = ACTIVITIES.find(x => x.id === state.routineSlot2); return a && a.moneyCost > 0 ? ` (${a.moneyCost}만/주)` : ''; })()}
-                </div>
-                <div style={{ background: 'rgba(91,141,239,0.15)', border: '1px solid rgba(91,141,239,0.3)', borderRadius: 8, padding: '6px 12px' }}>
-                  {state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name : '🕊️ 자유시간'}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 루틴 설정 — 단계별 */}
-          {routineConfirmed && routineStep === 1 && (
-            <div>
-              <div style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: 8, color: 'var(--blue)' }}>
-                STEP 1 — 방과후 첫 번째 활동을 골라주세요
-              </div>
               <ActivityPicker
-                activities={activities.filter(a => a.slots === 1 && a.category !== 'rest')}
-                selected={routineSlot2Pick ? [routineSlot2Pick] : state.routineSlot2 ? [state.routineSlot2] : []}
+                activities={
+                  editingSlot === 'routine1' || editingSlot === 'routine2'
+                    ? activities.filter(a => a.slots === 1 && a.category !== 'rest' &&
+                        (editingSlot === 'routine2' ? a.id !== (state.routineSlot2) : true))
+                    : activities
+                }
+                selected={
+                  editingSlot === 'routine1' ? (state.routineSlot2 ? [state.routineSlot2] : []) :
+                  editingSlot === 'routine2' ? (state.routineSlot3 ? [state.routineSlot3] : []) :
+                  selectedActivities
+                }
                 onToggle={(id) => {
-                  setRoutineSlot2Pick(id);
-                  // 선택하면 자동으로 슬롯 2로
-                  setTimeout(() => setRoutineStep(2), 200);
+                  if (editingSlot === 'routine1') {
+                    setRoutine(id, state.routineSlot3 === id ? null : state.routineSlot3);
+                    setEditingSlot(null);
+                  } else if (editingSlot === 'routine2') {
+                    setRoutine(state.routineSlot2, id);
+                    setEditingSlot(null);
+                  } else {
+                    // 주말 슬롯
+                    toggleActivity(id);
+                    setEditingSlot(null);
+                  }
                 }}
-                maxSlots={1} currentSlots={0} state={state} compact
+                maxSlots={editingSlot?.startsWith('routine') ? 1 : maxSlots}
+                currentSlots={editingSlot?.startsWith('routine') ? 0 : currentSlots}
+                state={state}
+                npcChoices={npcChoices}
+                compact={editingSlot?.startsWith('routine')}
+                availableMoney={state.money - routineCost -
+                  selectedActivities.reduce((sum, id) => sum + (ACTIVITIES.find(a => a.id === id)?.moneyCost || 0), 0)
+                }
               />
             </div>
-          )}
-
-          {routineConfirmed && routineStep === 2 && (
-            <div>
-              {/* 슬롯 1 요약 (클릭하면 다시 열림) */}
-              <div
-                onClick={() => setRoutineStep(1)}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '8px 12px', borderRadius: 8, marginBottom: 10, cursor: 'pointer',
-                  background: 'rgba(91,141,239,0.1)', border: '1px solid rgba(91,141,239,0.2)',
-                }}
-              >
-                <span style={{ fontSize: '0.82rem' }}>
-                  슬롯 1: <strong>{ACTIVITIES.find(a => a.id === (routineSlot2Pick ?? state.routineSlot2))?.name}</strong>
-                </span>
-                <span style={{ fontSize: '0.7rem', color: 'var(--blue)' }}>변경</span>
-              </div>
-
-              <div style={{ fontSize: '0.88rem', fontWeight: 600, marginBottom: 8, color: 'var(--blue)' }}>
-                STEP 2 — 두 번째 활동을 골라주세요
-              </div>
-
-              {/* 자유시간 옵션 */}
-              <div onClick={() => setRoutineSlot3Pick('__none__')} style={{
-                display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
-                borderRadius: 10, cursor: 'pointer',
-                background: routineSlot3Pick === '__none__' ? 'rgba(91,141,239,0.15)' : 'rgba(255,255,255,0.04)',
-                border: routineSlot3Pick === '__none__' ? '1px solid var(--blue)' : '1px solid rgba(255,255,255,0.06)',
-              }}>
-                <span style={{ fontSize: '1.1rem' }}>🕊️</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>자유시간</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>쉬면서 멘탈 회복 + 피로 감소</div>
-                </div>
-                {routineSlot3Pick === '__none__' && <span>✓</span>}
-              </div>
-
-              <ActivityPicker
-                activities={activities.filter(a => a.slots === 1 && a.category !== 'rest' && a.id !== (routineSlot2Pick ?? state.routineSlot2))}
-                selected={routineSlot3Pick && routineSlot3Pick !== '__none__' ? [routineSlot3Pick] : state.routineSlot3 ? [state.routineSlot3] : []}
-                onToggle={(id) => setRoutineSlot3Pick(id)}
-                maxSlots={1} currentSlots={0} state={state} compact
-              />
-
-              <button className="btn btn-primary" style={{ marginTop: 12 }}
-                disabled={!(routineSlot2Pick ?? state.routineSlot2)}
-                onClick={() => {
-                  const s3 = routineSlot3Pick ?? state.routineSlot3;
-                  setRoutine(routineSlot2Pick ?? state.routineSlot2, s3 === '__none__' ? null : s3);
-                  setRoutineConfirmed(false);
-                  setRoutineStep(1);
-                }}>
-                루틴 확정하기
-              </button>
-            </div>
-          )}
+          </div>
         </div>
       )}
-
-      {/* 활동 선택 */}
-      <div data-tutorial="weekend" style={{ marginBottom: 8 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{state.isVacation ? '🏖️ 이번 주 활동' : '🗓️ 주말 활동'}</span>
-          <span style={{
-            fontSize: '0.78rem', fontWeight: 600, padding: '2px 10px', borderRadius: 10,
-            background: currentSlots >= maxSlots ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.08)',
-            color: currentSlots >= maxSlots ? 'var(--green)' : 'var(--text-muted)',
-          }}>
-            {currentSlots}/{maxSlots} 선택
-          </span>
-        </div>
-
-        <ActivityPicker
-          activities={activities}
-          selected={selectedActivities}
-          onToggle={toggleActivity}
-          maxSlots={maxSlots}
-          currentSlots={currentSlots}
-          state={state}
-          npcChoices={npcChoices}
-          availableMoney={state.money - (
-            (state.routineSlot2 ? (ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost || 0) : 0) +
-            (state.routineSlot3 ? (ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost || 0) : 0) +
-            selectedActivities.reduce((sum, id) => sum + (ACTIVITIES.find(a => a.id === id)?.moneyCost || 0), 0)
-          )}
-        />
-      </div>
 
       {/* NPC 관계 — 만난 친구만 표시 */}
       {state.npcs.some(n => n.met) && (
