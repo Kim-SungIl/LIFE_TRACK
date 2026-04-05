@@ -14,42 +14,36 @@ const STEPS: TutorialStep[] = [
   {
     target: 'hud',
     title: '내 상태',
-    desc: '내 캐릭터와 현재 날짜, 피로, 용돈이 표시돼요.\n매주 상태가 바뀌니 가끔 확인해 보세요.',
+    desc: '캐릭터, 날짜, 피로, 용돈이 표시돼요.\n💰을 누르면 상점에서 물건을 살 수 있어요.',
     position: 'bottom',
   },
   {
     target: 'stats',
     title: '능력치',
-    desc: '학업, 인기, 특기, 멘탈, 체력 5가지 능력치예요.\n눌러서 펼치면 상세 내용을 볼 수 있어요!\n활동에 따라 올라가거나 내려갈 수 있답니다.',
+    desc: '학업, 인기, 특기, 멘탈, 체력 5가지예요.\n눌러서 펼치면 상세 내용을 볼 수 있어요!',
     position: 'bottom',
     interactive: true,
   },
   {
     target: 'routine',
-    title: '방과후 루틴 설정',
-    desc: '먼저 방과후에 뭘 할지 정해 봐요!\n아래 버튼을 눌러서 직접 골라 보세요.',
+    title: '평일 일과',
+    desc: '이게 이번 주 시간표예요!\n주중엔 학교가 끝나면 방과후·저녁 시간이 있어요.\n\n왼쪽 빈 칸을 터치해서 방과후 활동을 골라 보세요!',
     position: 'bottom',
     interactive: true,
     waitFor: 'routine-done',
-    doneDesc: '잘하셨어요! 방과후 루틴이 설정됐어요.\n매주 자동으로 반복되고, 원할 때 바꿀 수 있어요.',
+    doneDesc: '잘했어요! 방과후 루틴은 매주 자동 반복돼요.\n바꾸고 싶으면 언제든 터치하면 돼요.',
   },
   {
-    target: 'weekend',
+    target: 'routine',
     title: '주말 활동',
-    desc: '주말에 할 활동을 골라요.\n카테고리를 눌러서 열고, 하고 싶은 걸 선택해 보세요!',
-    position: 'top',
+    desc: '이번엔 주말이에요!\n오른쪽 토요일·일요일 빈 칸을 터치해서\n주말에 할 활동도 골라 보세요!',
+    position: 'bottom',
     interactive: true,
   },
   {
-    target: 'npc',
-    title: '친구 관계',
-    desc: '친구들과의 친밀도예요.\n같이 놀거나 활동하면 친해질 수 있어요.',
-    position: 'top',
-  },
-  {
     target: 'confirm',
-    title: '주 확정',
-    desc: '활동을 다 골랐으면 이 버튼을 눌러 한 주를 보내세요!\n\n정답은 없어요. 자유롭게 플레이하세요!',
+    title: '한 주 보내기',
+    desc: '시간표를 다 채웠으면 이 버튼을 눌러\n한 주를 보내세요!\n\n정답은 없어요. 자유롭게 플레이하세요!',
     position: 'top',
   },
 ];
@@ -146,13 +140,19 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
     return () => clearInterval(interval);
   }, [current.waitFor, routineSet, updateRect]);
 
-  // routineSet이 변하면 waitDone 업데이트
+  // routineSet이 변하면 자동으로 다음 스텝으로
   useEffect(() => {
     if (current.waitFor === 'routine-done' && routineSet) {
       setWaitDone(true);
       updateRect();
+      // 1.5초 후 자동으로 다음 스텝
+      const timer = setTimeout(() => {
+        if (step < STEPS.length - 1) setStep(step + 1);
+        setWaitDone(false);
+      }, 1500);
+      return () => clearTimeout(timer);
     }
-  }, [routineSet, current.waitFor, updateRect]);
+  }, [routineSet, current.waitFor, updateRect, step]);
 
   const pad = 8;
   const isInteractive = current.interactive && !waitDone;

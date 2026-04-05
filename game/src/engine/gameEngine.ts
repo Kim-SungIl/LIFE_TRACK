@@ -154,8 +154,9 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog): void
       value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus);
 
       // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감
-      if (activity.moneyCost <= 0 && state.stats[statKey] >= 80) {
-        value *= 0.1; // 무료 활동으로는 80 이상 거의 못 올림
+      // moneyCost === 0만 체크 (알바처럼 돈 버는 활동은 제외)
+      if (activity.moneyCost === 0 && state.stats[statKey] >= 80) {
+        value *= 0.1;
       }
     }
 
@@ -207,17 +208,12 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   state.stats.academic = Math.max(0, state.stats.academic + academicDecay);
   log.statChanges.academic = (log.statChanges.academic || 0) + academicDecay;
 
-  // 인기: -1.0/주 (soft floor 10 — 학교 다니면 최소한의 존재감)
-  let socialDecay = -1.0;
-  if (state.stats.social <= 12) socialDecay = -0.2; // 바닥 근처에서 감소 완화
-  state.stats.social = Math.max(10, state.stats.social + socialDecay);
-  log.statChanges.social = (log.statChanges.social || 0) + socialDecay;
-
-  // 인기 50 미만: +0.3 (학기 중만)
-  if (!isVacation && state.stats.social < 50) {
-    state.stats.social = Math.min(100, state.stats.social + 0.3);
-    log.statChanges.social = (log.statChanges.social || 0) + 0.3;
-  }
+  // 인기: 감소 → 학기 중 회복 → floor 적용 (순서 중요)
+  let socialChange = -1.0;
+  if (state.stats.social <= 12) socialChange = -0.2; // 바닥 근처 감소 완화
+  if (!isVacation && state.stats.social < 50) socialChange += 0.3; // 학기 중 미량 회복
+  state.stats.social = Math.max(10, state.stats.social + socialChange); // floor 마지막에 적용
+  log.statChanges.social = (log.statChanges.social || 0) + socialChange;
 
   // v5.2: 인기 < 20 패널티 — 사회적 고립 → 멘탈 추가 감소
   if (state.stats.social < 20) {
@@ -362,6 +358,11 @@ function applyNpcBoost(state: GameState, activityIds: string[]): void {
 // ===== 주간 처리 (메인 루프) =====
 export function processWeek(state: GameState): GameState {
   const newState = JSON.parse(JSON.stringify(state)) as GameState;
+  // 구세이브 호환: 누락 필드 초기화
+  if (!newState.examResults) newState.examResults = [];
+  if (!newState.activeBuffs) newState.activeBuffs = [];
+  if (!newState.weekPurchases) newState.weekPurchases = {};
+
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
   newState.isVacation = info.isVacation;

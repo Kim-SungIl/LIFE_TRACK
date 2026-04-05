@@ -24,6 +24,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'jihun-call',
     title: '지훈이의 전화',
+    // 남자 버전: 농구
     description: '저녁에 지훈이한테 전화가 왔다.\n"야, 이번 주말에 농구하러 갈래? 민재도 온대."',
     week: 3,
     choices: [
@@ -33,6 +34,24 @@ export const GAME_EVENTS: GameEvent[] = [
         fatigueEffect: 3,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: 3 }],
         message: '지훈이, 민재와 농구를 했다. 오랜만에 신나게 뛰었다!',
+      },
+      {
+        text: '"미안, 공부해야 해..." — 거절한다',
+        effects: { academic: 1, mental: -2 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: -3 }],
+        message: '지훈이가 "알겠어..."라고 했다. 전화를 끊고 나니 좀 찝찝하다.',
+      },
+    ],
+    // 여자 버전: 떡볶이
+    femaleDescription: '저녁에 지훈이한테 전화가 왔다.\n"야, 너 요즘 공부만 하잖아. 이번 주말에 떡볶이 먹으러 갈래? 민재도 온대."',
+    femaleChoices: [
+      {
+        text: '"가자!" — 같이 떡볶이 먹으러 간다',
+        effects: { social: 3, mental: 4 },
+        fatigueEffect: 1,
+        moneyEffect: -1,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: 3 }],
+        message: '지훈이, 민재와 분식집에서 떡볶이를 먹었다. 수다 떨다 보니 시간 가는 줄 몰랐다!',
       },
       {
         text: '"미안, 공부해야 해..." — 거절한다',
@@ -392,6 +411,188 @@ export const GAME_EVENTS: GameEvent[] = [
   },
 ];
 
+// ===== 학교생활 랜덤 이벤트 풀 (매주 1개씩 발생) =====
+const SCHOOL_LIFE_EVENTS: GameEvent[] = [
+  {
+    id: 'random-quiz', title: '깜짝 퀴즈!',
+    description: '선생님이 갑자기 "자, 퀴즈 보자" 하셨다.\n교실이 술렁인다.',
+    choices: [
+      { text: '자신 있게 풀어본다', effects: { academic: 2, mental: 1 }, message: '대부분 맞혔다! 선생님이 "역시" 하며 웃으셨다.' },
+      { text: '찍기의 신이 되어본다', effects: { academic: 1, mental: -1 }, message: '반은 맞고 반은 틀렸다. 아슬아슬했다.' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'friend-snack', title: '간식 나눠먹기',
+    description: '쉬는 시간에 누군가가 과자를 까서 돌린다.\n"야, 너도 먹어!"',
+    choices: [
+      { text: '고맙게 받아 먹는다', effects: { social: 1, mental: 2 }, message: '맛있다. 이런 순간이 학교생활의 소소한 행복이다.' },
+      { text: '다이어트 중이라 거절한다', effects: { health: 1 }, message: '"아 나 괜찮아~" 했지만 좀 아쉽다.' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'class-prank', title: '교실 장난',
+    description: '수업 중에 뒤에서 종이 비행기가 날아왔다.\n선생님은 못 보신 것 같다.',
+    choices: [
+      { text: '웃으며 무시한다', effects: { mental: 1 }, message: '웃음을 참느라 힘들었다. 그래도 수업은 들었다.' },
+      { text: '같이 보내본다 (몰래)', effects: { social: 2, mental: 2, academic: -1 }, message: '같이 장난치다 수업을 날렸다. 하지만 재밌었다!' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'rain-day', title: '비 오는 날',
+    description: '우산을 안 가져왔는데 비가 온다.\n교문 앞에서 멈칫한다.',
+    choices: [
+      { text: '그냥 뛰어간다!', effects: { health: -1, mental: 1 }, message: '흠뻑 젖었지만 왠지 상쾌하다.' },
+      { text: '편의점에서 우산을 산다', effects: {}, moneyEffect: -1, message: '1000원짜리 투명 우산. 어른이 된 기분.' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'lost-eraser', title: '지우개의 행방',
+    description: '시험 중에 지우개가 바닥에 떨어졌다.\n옆자리 아이가 자기 거를 반으로 잘라 준다.',
+    choices: [
+      { text: '"고마워!" — 감동받는다', effects: { social: 1, mental: 2 }, message: '작은 친절이 큰 감동이 됐다. 시험도 잘 본 것 같다.' },
+      { text: '안 쓰고 그냥 시험 본다 (자존심)', effects: { academic: -1, mental: -1 }, message: '지우개 없이 시험 봤다. 아... 실수 고칠 걸.' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'teacher-praise', title: '선생님의 칭찬',
+    description: '오늘 수업 시간에 발표를 했는데 선생님이 크게 칭찬해주셨다.\n"와, 정말 잘했다!"',
+    choices: [
+      { text: '기분 좋게 받아들인다', effects: { mental: 3, academic: 1 }, message: '얼굴이 빨개졌지만 기분은 좋다. 자신감이 생겼다.' },
+      { text: '부끄러워서 작아진다', effects: { mental: 1 }, message: '칭찬은 좋은데... 다들 쳐다보니 부끄럽다.' },
+    ],
+    condition: (s) => s.stats.academic >= 40 && !s.isVacation,
+  },
+  {
+    id: 'class-president', title: '반장 선거',
+    description: '반장 선거 시즌이다.\n친구가 "야, 너 나가봐!" 한다.',
+    choices: [
+      { text: '출마한다!', effects: { social: 4, mental: -1 }, fatigueEffect: 3, message: '반장이 됐든 안 됐든, 용기를 낸 게 대단하다.' },
+      { text: '조용히 투표만 한다', effects: { mental: 1 }, message: '남이 하는 걸 보는 것도 나름 재밌다.' },
+    ],
+    condition: (s) => s.week === 2 || s.week === 25,
+  },
+  {
+    id: 'new-student', title: '전학생',
+    description: '오늘 반에 전학생이 왔다.\n낯설어하는 표정이 보인다.',
+    choices: [
+      { text: '먼저 다가가 말을 건다', effects: { social: 3, mental: 2 }, message: '"안녕! 여기 처음이지?" 전학생이 환하게 웃었다.' },
+      { text: '누군가 말 걸겠지... 지켜본다', effects: {}, message: '다른 아이가 먼저 다가갔다. 살짝 아쉽다.' },
+    ],
+    condition: (s) => !s.isVacation && s.week > 3,
+  },
+  {
+    id: 'group-project', title: '조별 과제',
+    description: '선생님이 조별 과제를 내셨다.\n"한 달 안에 제출해야 합니다."',
+    choices: [
+      { text: '리더를 맡는다', effects: { social: 2, academic: 2, mental: -2 }, fatigueEffect: 3, message: '힘들지만 뿌듯하다. 조원들이 고마워했다.' },
+      { text: '맡은 부분만 열심히 한다', effects: { academic: 2, mental: 1 }, message: '내 할 일은 끝냈다. 편하다.' },
+      { text: '대충 한다...', effects: { social: -2 }, message: '조원들 눈치가 좀 그렇다...', },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'sick-day', title: '컨디션 난조',
+    description: '아침부터 머리가 아프고 열이 나는 것 같다.\n"오늘 쉴까..."',
+    choices: [
+      { text: '참고 학교 간다', effects: { academic: 1, health: -2 }, fatigueEffect: 5, message: '억지로 갔는데 수업 내내 고통이었다.' },
+      { text: '하루 쉰다', effects: { health: 1, mental: 1 }, fatigueEffect: -8, message: '푹 쉬고 나니 한결 나아졌다.' },
+    ],
+    condition: (s) => s.fatigue >= 40 && !s.isVacation,
+  },
+  {
+    id: 'found-money', title: '길에서 만원',
+    description: '등굣길에 만원짜리를 주웠다.\n주변에 떨어뜨린 사람이 안 보인다.',
+    choices: [
+      { text: '경찰서에 맡긴다', effects: { mental: 3 }, message: '착한 일 했다. 마음이 뿌듯하다.' },
+      { text: '...주머니에 넣는다', effects: { mental: -2 }, moneyEffect: 1, message: '돈은 생겼는데 찝찝하다.' },
+    ],
+  },
+  {
+    id: 'birthday-friend', title: '친구 생일',
+    description: '오늘이 친구 생일이다.\n단톡방에 생일 축하 메시지가 쏟아진다.',
+    choices: [
+      { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2, message: '친구가 진짜 좋아했다. 돈 아깝지 않다.' },
+      { text: '카톡으로 축하만 한다', effects: { social: 1 }, message: '"ㅊㅋ~" 보냈다. 좀 성의없나?' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'pe-class-hero', title: '체육 시간의 영웅',
+    description: '체육 시간에 피구를 하는데, 상대편 에이스가 공을 던졌다!',
+    choices: [
+      { text: '멋지게 잡아본다!', effects: { health: 2, social: 3, mental: 2 }, message: '잡았다!! 반 전체가 환호했다. 오늘 영웅이다!' },
+      { text: '피한다 (안전제일)', effects: { health: 1 }, message: '무사히 살아남았다. 뭐, 이것도 전략이지.' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'study-cafe', title: '스터디 카페',
+    description: '시험 기간이라 스터디 카페가 만석이다.\n겨우 자리를 잡았는데 옆에 아는 얼굴이!',
+    choices: [
+      { text: '같이 공부한다', effects: { academic: 2, social: 1 }, moneyEffect: -1, message: '같이 하니까 집중이 잘 됐다.' },
+      { text: '이어폰 끼고 혼자 집중한다', effects: { academic: 2, mental: 1 }, moneyEffect: -1, message: '나만의 시간. 효율적이었다.' },
+    ],
+  },
+  {
+    id: 'social-media-drama', title: 'SNS 소동',
+    description: '단톡방에서 누가 누구 험담을 했다가 들켰다.\n분위기가 험악해졌다.',
+    choices: [
+      { text: '중재를 시도한다', effects: { social: 3, mental: -1 }, message: '양쪽 이야기를 듣고 화해시켰다. 피곤하지만 뿌듯하다.' },
+      { text: '안 끼어든다 (조용히 나간다)', effects: { mental: 1 }, message: '현명한 선택. 남의 싸움에 끼면 안 된다.' },
+    ],
+    condition: (s) => !s.isVacation && s.stats.social >= 20,
+  },
+  {
+    id: 'sunset-walk', title: '노을이 예쁜 날',
+    description: '방과후 집에 가는 길. 하늘이 유난히 예쁘다.\n발걸음이 느려진다.',
+    choices: [
+      { text: '사진 찍고 잠시 앉아있는다', effects: { mental: 4 }, message: '아무 생각 없이 하늘을 봤다. 마음이 편해졌다.' },
+      { text: '빨리 집에 간다 (할 일이 많아)', effects: { academic: 1 }, message: '집에 와서 공부를 시작했다. 하늘이 좀 아쉽다.' },
+    ],
+  },
+  {
+    id: 'music-discovery', title: '새로운 노래',
+    description: '유튜브에서 우연히 들은 노래가 너무 좋다.\n반복 재생이 멈추지 않는다.',
+    choices: [
+      { text: '공부하면서 계속 듣는다', effects: { mental: 2, talent: 1 }, message: '좋은 음악과 함께하니 공부도 즐겁다.' },
+      { text: '친구에게 공유한다', effects: { social: 2, mental: 1 }, message: '"이거 들어봐!" 친구도 좋아했다. 취향이 통하는 건 기분 좋다.' },
+    ],
+  },
+  {
+    id: 'cleaning-duty', title: '청소 당번',
+    description: '오늘 청소 당번이다.\n교실이 엉망이다...',
+    choices: [
+      { text: '열심히 한다', effects: { health: 1, mental: 1 }, fatigueEffect: 2, message: '깨끗해진 교실을 보니 뿌듯하다.' },
+      { text: '대충 하고 빠진다', effects: { social: -1 }, message: '옆에서 열심히 하는 애가 좀 미안하다.' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'dream-question', title: '꿈이 뭐야?',
+    description: '수업 시간에 선생님이 물었다.\n"너희, 나중에 뭐 하고 싶어?"',
+    choices: [
+      { text: '"아직 잘 모르겠어요" — 솔직하게', effects: { mental: 1 }, message: '모른다고 하는 것도 용기다. 선생님이 "천천히 찾아봐" 하셨다.' },
+      { text: '"공부 관련 일이요!" — 학업형', effects: { academic: 1, mental: 1 }, message: '말하고 보니 진짜 그런 것 같기도 하다.' },
+      { text: '"뭔가 만드는 일이요!" — 재능형', effects: { talent: 1, mental: 2 }, message: '선생님이 "좋은 꿈이네" 하며 웃으셨다.' },
+    ],
+    condition: (s) => !s.isVacation,
+  },
+  {
+    id: 'late-to-school', title: '지각!',
+    description: '알람을 못 듣고 늦잠을 잤다!\n학교까지 전력 질주 중...',
+    choices: [
+      { text: '뛰어간다!!!', effects: { health: 1 }, fatigueEffect: 3, message: '겨우 수업 시작 전에 도착했다. 심장이 터질 것 같다.' },
+      { text: '포기하고 천천히 간다', effects: { mental: -1 }, message: '선생님한테 혼났다. 오늘 하루가 우울하다.' },
+    ],
+    condition: (s) => s.fatigue >= 30 && !s.isVacation,
+  },
+];
+
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 고정 주차 이벤트 우선
@@ -401,16 +602,25 @@ export function getEventForWeek(state: GameState): GameEvent | null {
   );
   if (fixedEvent) return fixedEvent;
 
-  // 조건부 랜덤 이벤트 (30% 확률)
-  if (Math.random() > 0.3) return null;
-
+  // 조건부 상태 이벤트 (피로/멘탈/번아웃 등) — 50% 확률
   const conditionalEvents = GAME_EVENTS.filter(e =>
     !e.week &&
     e.condition &&
     e.condition(state) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 10)
   );
+  if (conditionalEvents.length > 0 && Math.random() < 0.5) {
+    return conditionalEvents[Math.floor(Math.random() * conditionalEvents.length)];
+  }
 
-  if (conditionalEvents.length === 0) return null;
-  return conditionalEvents[Math.floor(Math.random() * conditionalEvents.length)];
+  // 학교생활 랜덤 이벤트 — 70% 확률 (거의 매주 발생)
+  const availableSchoolEvents = SCHOOL_LIFE_EVENTS.filter(e =>
+    (!e.condition || e.condition(state)) &&
+    !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 6)
+  );
+  if (availableSchoolEvents.length > 0 && Math.random() < 0.7) {
+    return availableSchoolEvents[Math.floor(Math.random() * availableSchoolEvents.length)];
+  }
+
+  return null;
 }
