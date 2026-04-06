@@ -43,6 +43,7 @@ export interface GameState {
   weekPurchases: Record<string, number>; // 이번 주 구매 횟수
   idleWeeks: number;                // v6: 연속 비생산적 주 카운트
   consecutiveTiredWeeks: number;    // v6.4: 연속 피로 주수 (만성 피로 패널티)
+  eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
 }
 
 // 활성 버프 (shopSystem에서도 사용)
@@ -134,6 +135,7 @@ export interface EventChoice {
   moneyEffect?: number;
   npcEffects?: { npcId: string; intimacyChange: number }[];
   message: string;
+  timeCost?: 1 | 2; // 시간 소모: 1=루틴/주말 1슬롯, 2=루틴/주말 2슬롯
 }
 
 export const STAT_LABELS: Record<StatKey, string> = {

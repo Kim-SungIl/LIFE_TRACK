@@ -92,7 +92,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'tablet', name: '태블릿 PC', description: '인강, 노트 정리, 창작까지. 만능 도구.',
     price: 15, category: 'growth', emoji: '📱',
     effects: [{ type: 'buff', buffId: 'tablet', buffDuration: 24, buffTarget: 'all', buffAmount: 0.1 }],
-    requireYear: 2,
+    requireYear: 4, // 고1부터
   },
 
   // ===== 관계 아이템 (선물) =====
@@ -121,7 +121,7 @@ export const SHOP_ITEMS: ShopItem[] = [
       { type: 'npc_intimacy', npcBonus: 12 },
       { type: 'instant', stat: 'mental', value: 5 },
     ],
-    requireYear: 2,
+    requireYear: 3, // 중2부터
   },
 
   // ===== 자기표현 (패션) =====
@@ -140,7 +140,7 @@ export const SHOP_ITEMS: ShopItem[] = [
       { type: 'buff', buffId: 'trendy', buffDuration: 4, buffTarget: 'social', buffAmount: 0.2 },
       { type: 'instant', stat: 'social', value: 3 },
     ],
-    requireYear: 2,
+    requireYear: 3, // 중2부터
   },
 
   // ===== 기회 해금 =====
@@ -177,7 +177,10 @@ export const SHOP_CATEGORIES: Record<ItemCategory, { name: string; emoji: string
 // ===== 구매 가능 여부 체크 =====
 export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Record<string, number>): { ok: boolean; reason?: string } {
   if (state.money < item.price) return { ok: false, reason: '돈이 부족해요' };
-  if (item.requireYear && state.year < item.requireYear) return { ok: false, reason: `${item.requireYear}학년부터 구매 가능` };
+  if (item.requireYear && state.year < item.requireYear) {
+    const yearNames = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
+    return { ok: false, reason: `${yearNames[item.requireYear - 1]}부터 구매 가능` };
+  }
   if (item.requireStat) {
     const val = state.stats[item.requireStat.stat];
     if (val < item.requireStat.min) return { ok: false, reason: `${item.requireStat.stat} ${item.requireStat.min} 이상 필요` };
