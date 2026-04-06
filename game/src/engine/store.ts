@@ -164,6 +164,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
+    // 시간 소모 이벤트: 다음 주 루틴/주말 슬롯 감소
+    if (choice.timeCost) {
+      newState.eventTimeCost = choice.timeCost;
+    }
+
     // 이벤트 기록 (선택 인덱스 포함)
     newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex });
 

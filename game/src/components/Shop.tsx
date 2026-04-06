@@ -36,7 +36,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
   const [npcSelectItem, setNpcSelectItem] = useState<ShopItem | null>(null);
 
   const categories = Object.keys(SHOP_CATEGORIES) as ItemCategory[];
-  const items = SHOP_ITEMS.filter(i => i.category === selectedCat);
+  const items = SHOP_ITEMS.filter(i => i.category === selectedCat && (!i.requireYear || state.year >= i.requireYear));
 
   const metNpcs = state.npcs.filter(n => n.met);
 

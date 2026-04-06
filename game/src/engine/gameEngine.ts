@@ -64,6 +64,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     weekPurchases: {},
     idleWeeks: 0,
     consecutiveTiredWeeks: 0,
+    eventTimeCost: 0,
   };
 }
 
@@ -130,7 +131,7 @@ function getRoutineBonus(weeks: number): number {
 }
 
 // ===== 활동 적용 =====
-function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0): void {
+function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0): void {
   const activity = ACTIVITIES.find(a => a.id === activityId);
   if (!activity) return;
 
@@ -169,7 +170,7 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       }
     } else if (value > 0) {
       // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
-      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus);
+      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus) * efficiency;
 
       // v6.1: 동일 축 중복 효율 감소 — 3단계 (2회 70%, 3회+ 45%)
       const priorGain = log.statChanges[statKey] || 0;
@@ -448,6 +449,7 @@ export function processWeek(state: GameState): GameState {
   if (!newState.activeBuffs) newState.activeBuffs = [];
   if (!newState.weekPurchases) newState.weekPurchases = {};
   if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
+  if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
@@ -471,31 +473,41 @@ export function processWeek(state: GameState): GameState {
   }
 
   // 3. 루틴 활동 (학기 중, 방과후) — 돈 부족하면 스킵 + 루틴 연속 보너스
+  // 이벤트 시간 소모: 1=슬롯3 스킵, 2=둘 다 스킵
+  const timeCost = newState.eventTimeCost || 0;
+  if (timeCost > 0) {
+    const skipMsg = timeCost >= 2 ? '📅 이벤트 때문에 이번 주 방과후 활동을 다 빠졌다.' : '📅 이벤트 때문에 이번 주 방과후 활동 하나를 빠졌다.';
+    log.messages.push(skipMsg);
+    newState.eventTimeCost = 0;
+  }
   if (!newState.isVacation) {
     const rBonus = getRoutineBonus(newState.routineWeeks);
-    if (newState.routineSlot2) {
+    // timeCost 2: 둘 다 스킵, timeCost 1: 슬롯2는 실행 + 슬롯3 스킵
+    if (newState.routineSlot2 && timeCost < 2) {
       const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
       if (r2 && (r2.moneyCost <= 0 || newState.money >= r2.moneyCost)) {
         applyActivity(newState, newState.routineSlot2, log, rBonus);
         newState.routineWeeks++;
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r2?.name || '활동'}을 못 했다...`);
-        // v6.4: 돈 부족 시 routineWeeks 리셋 안 함 (습관은 유지)
       }
     }
-    if (newState.routineSlot3) {
+    if (newState.routineSlot3 && timeCost < 1) {
       const r3 = ACTIVITIES.find(a => a.id === newState.routineSlot3);
       if (r3 && (r3.moneyCost <= 0 || newState.money >= r3.moneyCost)) {
         applyActivity(newState, newState.routineSlot3, log, rBonus);
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r3?.name || '활동'}을 못 했다...`);
-        // v6.4: 돈 부족이어도 routineWeeks 유지
       }
     }
+    // timeCost로 스킵해도 routineWeeks는 유지 (습관은 남아있음)
+    if (timeCost >= 2 && newState.routineSlot2) newState.routineWeeks++;
   }
 
-  // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵
-  const choices = newState.isVacation ? newState.vacationChoices : newState.weekendChoices;
+  // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 슬롯 감소
+  const rawChoices = newState.isVacation ? newState.vacationChoices : newState.weekendChoices;
+  // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개 제거, 2=마지막 2개 제거)
+  const choices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
   const allActivities = [...choices];
   for (const choice of choices) {
     const act = ACTIVITIES.find(a => a.id === choice);
@@ -560,13 +572,20 @@ export function processWeek(state: GameState): GameState {
   newState.weekLog = log;
   newState.totalWeeksPlayed++;
 
-  // 10. 시험 체크 (W8 1학기 중간, W17 1학기 기말, W30 2학기 중간, W38 2학기 기말)
-  const examWeeks: Record<number, 'midterm' | 'final'> = { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
+  // 10. 시험 체크
+  // 일반: W8 중간, W17 기말, W30 중간, W38 기말
+  // 고3(Y7): W8 중간, W17 기말, W30 중간, W35 수능 (11월 셋째 주)
+  const isY7 = newState.year === 7;
+  const examWeeks: Record<number, 'midterm' | 'final'> = isY7
+    ? { 8: 'midterm', 17: 'final', 30: 'midterm', 35: 'final' }
+    : { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
   if (examWeeks[newState.week]) {
     const examResult = generateExamResult(newState, examWeeks[newState.week]);
     newState.examResults.push(examResult);
     newState.currentExamResult = examResult;
-    log.messages.push(`📝 ${examWeeks[newState.week] === 'midterm' ? '중간고사' : '기말고사'} 결과 발표!`);
+    const isSuneung = isY7 && newState.week === 35;
+    const examName = isSuneung ? '수능' : examWeeks[newState.week] === 'midterm' ? '중간고사' : '기말고사';
+    log.messages.push(`📝 ${examName} 결과 발표!`);
   } else {
     newState.currentExamResult = null;
   }
