@@ -16,7 +16,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
   // 부모 보정
   if (parents.includes('emotional')) stats.mental += 10;
   if (parents.includes('gene')) { stats.academic += 5; stats.health += 5; }
-  if (parents.includes('strict')) { stats.academic += 5; stats.mental -= 5; }
+  if (parents.includes('strict')) { stats.academic += 5; stats.mental -= 3; }
   if (parents.includes('wealth')) { /* 용돈으로 반영 */ }
 
   let money = 3; // 기본 용돈 3만원
@@ -63,6 +63,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     activeBuffs: [],
     weekPurchases: {},
     idleWeeks: 0,
+    consecutiveTiredWeeks: 0,
   };
 }
 
@@ -90,14 +91,15 @@ export function getMonthLabel(week: number): string {
   return `${months[week - 1] || 3}월`;
 }
 
-// ===== 구간 감쇠 (v6: 대폭 강화) =====
+// ===== 구간 감쇠 (v6.4: 50~60 소폭 하향) =====
 function getDiminishingReturn(value: number): number {
   if (value < 30) return 1.0;
-  if (value < 50) return 1.0;
-  if (value < 70) return 0.7;
-  if (value < 85) return 0.35;   // v5: 0.5 → 0.35
-  if (value < 95) return 0.18;   // v5: 0.3 → 0.18
-  return 0.05;                    // v5: 0.1 → 0.05 (95+는 사실상 특수 영역)
+  if (value < 50) return 0.8;
+  if (value < 60) return 0.50;   // v6.4: 0.55→0.50
+  if (value < 70) return 0.35;
+  if (value < 85) return 0.18;   // v6.3: 0.35→0.18
+  if (value < 95) return 0.08;   // v6.3: 0.18→0.08
+  return 0.03;
 }
 
 // ===== 멘탈 회복 감쇠 =====
@@ -133,8 +135,12 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   if (!activity) return;
 
   const fatiguemod = getFatigueModifier(state.fatigue);
-  // v6: tired/burnout 상태 성장 패널티 (번아웃 강화)
-  const mentalPenalty = state.mentalState === 'burnout' ? 0.2 : state.mentalState === 'tired' ? 0.7 : 1.0;
+  // v6.4: 만성 피로 누적 패널티 (잠깐은 가볍게, 오래되면 심각하게)
+  let tiredPenalty = 0.8;  // 기본 피로 배율
+  const ctw = state.consecutiveTiredWeeks || 0;
+  if (ctw >= 16) tiredPenalty = 0.4;       // 만성: 거의 성장 불가
+  else if (ctw >= 8) tiredPenalty = 0.6;   // 장기: 루틴 재고 필요
+  const mentalPenalty = state.mentalState === 'burnout' ? 0.2 : state.mentalState === 'tired' ? tiredPenalty : 1.0;
 
   // v5.3: 상점 버프 보너스 계산
   let buffBonus = 0;
@@ -194,9 +200,16 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 
   // 피로 적용
   let fatigueDelta = activity.fatigue;
-  // v6: 번아웃 중 활동 피로 50% 감소 (몸이 제대로 움직이지 않음)
+  // v6.3: tired/burnout 중 활동 피로 감소 (tired 함정 방지)
   if (fatigueDelta > 0 && state.mentalState === 'burnout') {
-    fatigueDelta = Math.round(fatigueDelta * 0.5);
+    fatigueDelta = Math.round(fatigueDelta * 0.5);  // 번아웃: 50% 감소
+  } else if (fatigueDelta > 0 && state.mentalState === 'tired') {
+    fatigueDelta = Math.round(fatigueDelta * 0.75); // tired: 25% 감소
+  }
+  // v6.4: 체력 기반 피로 저항 (체력이 높으면 같은 활동도 덜 힘들다)
+  if (fatigueDelta > 0) {
+    if (state.stats.health >= 60) fatigueDelta = Math.max(1, fatigueDelta - 2);
+    else if (state.stats.health >= 30) fatigueDelta = Math.max(1, fatigueDelta - 1);
   }
   // v5.2: 체력 < 20이면 피로 증가량 1.5배
   if (fatigueDelta > 0 && state.stats.health < 20) {
@@ -233,7 +246,7 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   if (state.stats.academic >= 95) academicDecay -= 1.0;
   else if (state.stats.academic >= 90) academicDecay -= 0.5;
 
-  state.stats.academic = Math.max(0, state.stats.academic + academicDecay);
+  state.stats.academic = Math.max(12, state.stats.academic + academicDecay); // v6.4: floor 12 (학교 다니는데 0은 과함)
   log.statChanges.academic = (log.statChanges.academic || 0) + academicDecay;
 
   // 인기: 감소 → 학기 중 회복 → floor 적용 (순서 중요)
@@ -367,22 +380,29 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     state.routineWeeks = 0; // v6.1: 번아웃 시 루틴 보너스 리셋
     log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
   }
-  // 회복: tired → normal (멘탈 50+ AND 피로 < 30)
-  else if (state.mentalState === 'tired' && state.stats.mental >= 50 && state.fatigue < 30) {
+  // 회복: tired → normal (v6.3: 피로 < 40으로 완화)
+  else if (state.mentalState === 'tired' && state.stats.mental >= 50 && state.fatigue < 40) {
     state.mentalState = 'normal';
     log.messages.push('✨ 회복! — 다시 일상으로 돌아왔다.');
   }
-  // burnout → tired (v6: 조건 완화 — 멘탈 20+ AND 피로 < 30)
-  else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 30) {
+  // burnout → tired (v6.3: 피로 < 40으로 완화)
+  else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 40) {
     state.mentalState = 'tired';
     log.messages.push('💪 번아웃에서 벗어나는 중...');
   }
 
-  // v6.2: tired 자동 회복 — 약하지만 탈출 가능 (tired↔burnout 무한 순환 방지)
+  // v6.4: 연속 피로 주수 카운터
+  if (state.mentalState === 'tired' || state.mentalState === 'burnout') {
+    state.consecutiveTiredWeeks = (state.consecutiveTiredWeeks || 0) + 1;
+  } else {
+    state.consecutiveTiredWeeks = 0;
+  }
+
+  // v6.4: tired 자동 회복 강화 — 피로 -5 (만성화 방지)
   if (state.mentalState === 'tired') {
-    state.fatigue = Math.max(0, state.fatigue - 3);
+    state.fatigue = Math.max(0, state.fatigue - 5);
     state.stats.mental = Math.min(100, state.stats.mental + 1);
-    log.fatigueChange -= 3;
+    log.fatigueChange -= 5;
     log.statChanges.mental = (log.statChanges.mental || 0) + 1;
   }
 
@@ -427,6 +447,7 @@ export function processWeek(state: GameState): GameState {
   if (!newState.examResults) newState.examResults = [];
   if (!newState.activeBuffs) newState.activeBuffs = [];
   if (!newState.weekPurchases) newState.weekPurchases = {};
+  if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
@@ -459,7 +480,7 @@ export function processWeek(state: GameState): GameState {
         newState.routineWeeks++;
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r2?.name || '활동'}을 못 했다...`);
-        newState.routineWeeks = 0;
+        // v6.4: 돈 부족 시 routineWeeks 리셋 안 함 (습관은 유지)
       }
     }
     if (newState.routineSlot3) {
@@ -468,6 +489,7 @@ export function processWeek(state: GameState): GameState {
         applyActivity(newState, newState.routineSlot3, log, rBonus);
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r3?.name || '활동'}을 못 했다...`);
+        // v6.4: 돈 부족이어도 routineWeeks 유지
       }
     }
   }
