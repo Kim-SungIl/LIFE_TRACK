@@ -13,11 +13,11 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'academy', name: '학원 수업', slots: 1, fatigue: 7,
-    effects: { academic: 2 }, moneyCost: 3, category: 'study',
+    effects: { academic: 1.5 }, moneyCost: 2, category: 'study', // v6.4: 비용 3→2
     description: '학원에서 체계적으로 배운다.',
     flavor: '학원 셔틀을 타고 간다. 선생님 설명은 빠르지만, 확실히 혼자보단 낫다.',
     tags: ['체계적', '비용 있음', '고효율'],
-    requires: (s) => s.money >= 3,
+    requires: (s) => s.money >= 2, // v6.4: 비용 3→2
   },
   {
     id: 'study-group', name: '스터디 그룹', slots: 1, fatigue: 4,
@@ -96,7 +96,7 @@ export const ACTIVITIES: Activity[] = [
   // === 자기계발 계열 ===
   {
     id: 'art-lesson', name: '예체능 레슨', slots: 1, fatigue: 6,
-    effects: { talent: 2 }, moneyCost: 2, category: 'talent',
+    effects: { talent: 1.7 }, moneyCost: 2, category: 'talent', // v6.4: 2→1.7
     description: '음악/미술/체육 레슨을 받는다.',
     flavor: '선생님의 지도를 받으며 실력을 갈고닦는다. 느리지만 확실히 늘고 있다.',
     tags: ['전문적', '비용 있음', '특기 집중'],
@@ -104,7 +104,7 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'creative', name: '창작 활동', slots: 1, fatigue: 3,
-    effects: { talent: 1.5, mental: 1 }, moneyCost: 0, category: 'talent',
+    effects: { talent: 1.2, mental: 1 }, moneyCost: 0, category: 'talent', // v6.4: 1.5→1.2
     description: '글쓰기, 그림, 작곡 등에 몰두한다.',
     flavor: '좋아하는 것에 빠져들면 시간 가는 줄 모른다. 이게 나만의 세계.',
     tags: ['자유', '멘탈 회복', '표현'],
