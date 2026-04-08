@@ -1478,24 +1478,23 @@ export const GAME_EVENTS: GameEvent[] = [
   },
   {
     id: 'class-president-win', title: '반장 당선!',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 내 이름이다!\n반 친구들이 박수를 쳐줬다.',
+    description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n반 친구들이 박수를 쳐준다.',
     condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social >= 30,
     location: 'classroom',
     choices: [
       { text: '반장이 됐다!', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '당선됐다! 떨리지만 잘 해보자. 민재가 "역시 너야!" 하며 웃었다.' },
+        message: '당선됐다! 떨리지만 잘 해보자.' },
     ],
   },
   {
     id: 'class-president-lose', title: '반장 선거 결과',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 내 이름이 아니다.\n아깝게 졌다.',
+    description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n가슴이 조금 내려앉았다.',
     condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social < 30,
     location: 'classroom',
     choices: [
       { text: '결과를 받아들인다', effects: { social: 1, mental: -1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
-        message: '민재가 "야, 잘 했어. 다음에 또 도전해" 했다. 조금 씁쓸하지만 인정한다.' },
+        message: '아깝게 졌다. 조금 씁쓸하지만 인정한다.' },
     ],
   },
   {
@@ -1526,7 +1525,7 @@ export const GAME_EVENTS: GameEvent[] = [
   },
   {
     id: 'class-president-2-win', title: '2학기 반장 당선!',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 다시 한 번 내 이름이다!\n2학기도 반장이 됐다!',
+    description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n다시 한 번 내 이름이 불렸다!\n2학기도 반장이다!',
     condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social >= 40,
     location: 'classroom',
     choices: [
@@ -1537,7 +1536,7 @@ export const GAME_EVENTS: GameEvent[] = [
   },
   {
     id: 'class-president-2-lose', title: '2학기 반장 선거 결과',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 내 이름이 아니다.\n이번에도 아깝게 졌다.',
+    description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n이번에도 아깝게 졌다.',
     condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social < 40,
     location: 'classroom',
     choices: [
