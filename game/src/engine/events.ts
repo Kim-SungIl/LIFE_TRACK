@@ -1477,30 +1477,25 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'class-president-win', title: '반장 선거 결과',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.',
+    id: 'class-president-win', title: '반장 당선!',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 내 이름이다!\n반 친구들이 박수를 쳐줬다.',
     condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social >= 20,
     location: 'classroom',
     choices: [
-      { text: '기쁘게 받아들인다', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
+      { text: '반장이 됐다!', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시! 내 눈은 틀리지 않아!" 했다.' },
-      { text: '살짝 부담스럽지만 한다', effects: { social: 3, mental: 1 }, fatigueEffect: 3,
-        message: '당선됐다. 뿌듯하면서도 조금 무섭다. 잘 할 수 있을까.' },
+        message: '당선됐다! 떨리지만 잘 해보자. 민재가 "역시 너야!" 하며 웃었다.' },
     ],
   },
   {
     id: 'class-president-lose', title: '반장 선거 결과',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n내 이름은... 없었다.',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 내 이름이 아니다.\n아깝게 졌다.',
     condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social < 20,
     location: 'classroom',
     choices: [
-      { text: '담담하게 받아들인다', effects: { mental: -1 },
+      { text: '결과를 받아들인다', effects: { social: 1, mental: -1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
-        message: '아깝게 졌다. 민재가 "야, 잘 했어. 다음에 또 도전해" 했다. 조금 씁쓸하다.' },
-      { text: '아쉽지만 박수를 쳐준다', effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '졌지만 깨끗하게 인정했다. 민재가 "너 진짜 멋있다"고 했다.' },
+        message: '민재가 "야, 잘 했어. 다음에 또 도전해" 했다. 조금 씁쓸하지만 인정한다.' },
     ],
   },
   {
@@ -1530,29 +1525,24 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
   },
   {
-    id: 'class-president-2-win', title: '2학기 반장 선거 결과',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.',
+    id: 'class-president-2-win', title: '2학기 반장 당선!',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 다시 한 번 내 이름이다!\n2학기도 반장이 됐다!',
     condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social >= 25,
     location: 'classroom',
     choices: [
-      { text: '기쁘게 받아들인다', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
+      { text: '2학기도 반장이다!', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '2학기도 반장! 민재가 "야, 이제 완전히 자리 잡았다" 했다.' },
-      { text: '책임감을 느끼며 받아들인다', effects: { social: 3, mental: 2 }, fatigueEffect: 3,
-        message: '두 번째 반장. 이번엔 더 잘 해내고 싶다.' },
+        message: '민재가 "야, 이제 완전히 자리 잡았다" 했다. 이번엔 더 잘 해내고 싶다.' },
     ],
   },
   {
     id: 'class-president-2-lose', title: '2학기 반장 선거 결과',
-    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n내 이름은... 없었다.',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n"이번 학기 반장은..." 내 이름이 아니다.\n이번에도 아깝게 졌다.',
     condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social < 25,
     location: 'classroom',
     choices: [
-      { text: '담담하게 받아들인다', effects: { mental: -1 },
-        message: '이번에도 아깝게 졌다. 인기를 더 쌓아야겠다는 생각이 든다.' },
-      { text: '박수를 치며 응원한다', effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '깨끗하게 인정했다. 민재가 "고마워" 하며 웃었다.' },
+      { text: '결과를 받아들인다', effects: { social: 1, mental: -1 },
+        message: '인기를 더 쌓아야겠다는 생각이 든다. 민재가 "고마워" 하며 웃었다.' },
     ],
   },
 ];
@@ -1783,14 +1773,12 @@ export function getFollowupForWeek(state: GameState): GameEvent | null {
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
   const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-graduation','high-school-entrance','suneung-eve','suneung-done','high-graduation','year-end-reflection']);
-  const allFixed = GAME_EVENTS.filter(e => e.week === state.week);
-  console.log(`[EVENT] week=${state.week}, year=${state.year}, fixedCandidates=${allFixed.map(e => e.id).join(',')}, resolvedEvents=${state.events.map(e => e.id).join(',')}`);
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
     (ANNUAL_EVENTS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
-  if (fixedEvent) { console.log(`[EVENT] → fixed: ${fixedEvent.id}`); return fixedEvent; }
+  if (fixedEvent) return fixedEvent;
 
   // 1. 후속 이벤트 체크 (100% 발동)
   const followup = GAME_EVENTS.find(e =>
