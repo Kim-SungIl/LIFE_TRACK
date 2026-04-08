@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { GameState, ParentStrength } from './types';
 import { createInitialState, processWeek } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
-import { getFollowupForWeek, GAME_EVENTS } from './events';
+import { getFollowupForWeek } from './events';
 
 const SAVE_KEY = 'lifetrack_save';
 const SAVE_VERSION = 1;
@@ -170,10 +170,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.eventTimeCost = choice.timeCost;
     }
 
-    // 고정 주차 이벤트 여부 — 원본 GAME_EVENTS 정의에 week가 있는지로 판별
-    const originalEventDef = GAME_EVENTS.find(e => e.id === newState.currentEvent!.id);
-    const wasFixedWeekEvent = originalEventDef?.week !== undefined;
-
     // 이벤트 기록 (선택 인덱스 포함)
     newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex });
 
@@ -184,15 +180,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     newState.currentEvent = null;
 
-    // 고정 주차 이벤트 해결 후 → followup 이벤트 즉시 발동 (주당 1회)
-    if (wasFixedWeekEvent) {
-      const followup = getFollowupForWeek(newState);
-      if (followup) {
-        newState.currentEvent = followup;
-        newState.phase = 'event';
-      } else {
-        newState.phase = 'weekday';
-      }
+    // 이벤트 해결 후 → 대기 중인 followup 이벤트 즉시 연쇄 발동
+    const followup = getFollowupForWeek(newState);
+    if (followup) {
+      newState.currentEvent = followup;
+      newState.phase = 'event';
     } else {
       newState.phase = 'weekday';
     }
