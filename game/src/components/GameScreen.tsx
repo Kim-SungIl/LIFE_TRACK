@@ -12,6 +12,7 @@ import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../en
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
 import { ShopItem } from '../engine/shopSystem';
+import { EventScene } from './EventScene';
 
 const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
@@ -45,7 +46,8 @@ export function GameScreen() {
   const [routineSlot3Pick, setRoutineSlot3Pick] = useState<string | null>(null);
   const [routineConfirmed, setRoutineConfirmed] = useState(false);
   const [routineStep, setRoutineStep] = useState<1 | 2>(1); // 슬롯 1 먼저, 그 다음 슬롯 2
-  const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[] } | null>(null);
+  const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[]; event?: any; choiceIndex?: number } | null>(null);
+  const [cgLoaded, setCgLoaded] = useState(false);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>({});
@@ -133,108 +135,166 @@ export function GameScreen() {
     );
   }
 
-  // ===== 이벤트 화면 =====
+  // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
   if (state.currentEvent && state.phase === 'event') {
-    const event = state.currentEvent;
-    // 성별 분기: 여자 버전이 있으면 사용
-    const isFemale = state.gender === 'female';
-    const eventDesc = (isFemale && event.femaleDescription) ? event.femaleDescription : event.description;
-    const eventChoices = (isFemale && event.femaleChoices) ? event.femaleChoices : event.choices;
-    const npcIds = new Set<string>();
-    eventChoices.forEach(c => c.npcEffects?.forEach(ne => npcIds.add(ne.npcId)));
-    const eventNpcs = state.npcs.filter(n => npcIds.has(n.id));
-
     return (
-      <BgWrapper>
-        <div className="fade-in">
-          <div style={{ textAlign: 'center', marginBottom: 16, marginTop: 12 }}>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{getWeekLabel(state)}</div>
-          </div>
-
-          {eventNpcs.length > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginBottom: 20 }}>
-              {eventNpcs.map(npc => (
-                <Portrait key={npc.id} characterId={npc.id} size={80} expression="neutral" label={npc.name} />
-              ))}
-            </div>
-          )}
-
-          <div style={{
-            background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(8px)',
-            borderRadius: 16, padding: '20px 24px', marginBottom: 20,
-            border: '1px solid rgba(233,69,96,0.2)',
-          }}>
-            <div style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: 10, color: 'var(--accent-soft)' }}>
-              {event.title}
-            </div>
-            <div style={{ fontSize: '0.9rem', lineHeight: 1.8, whiteSpace: 'pre-line' }}>
-              {eventDesc}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {eventChoices.map((choice, i) => (
-              <div key={i} onClick={() => {
-                const effects: Record<string, string>[] = [];
-                for (const [k, v] of Object.entries(choice.effects)) {
-                  const val = v as number;
-                  if (val !== 0) effects.push({ text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${val > 0 ? '+' + val : val}`, color: val > 0 ? 'var(--green)' : 'var(--red)' });
-                }
-                if (choice.fatigueEffect) effects.push({ text: `피로 ${choice.fatigueEffect > 0 ? '+' : ''}${choice.fatigueEffect}`, color: choice.fatigueEffect > 0 ? 'var(--red)' : 'var(--green)' });
-                if (choice.moneyEffect) effects.push({ text: `💰 ${choice.moneyEffect > 0 ? '+' : ''}${choice.moneyEffect}만`, color: choice.moneyEffect > 0 ? 'var(--green)' : 'var(--red)' });
-                if (choice.npcEffects) for (const ne of choice.npcEffects) {
-                  const npc = state.npcs.find(n => n.id === ne.npcId);
-                  if (npc) effects.push({ text: `${npc.emoji} ${npc.name} ${ne.intimacyChange > 0 ? '♥' : '💔'}`, color: ne.intimacyChange > 0 ? 'var(--blue)' : 'var(--red)' });
-                }
-                setEventResultData({ message: choice.message, effects });
-                resolveEvent(i);
-              }} style={{
-                background: 'rgba(15,52,96,0.8)', backdropFilter: 'blur(4px)',
-                borderRadius: 12, padding: '14px 16px', cursor: 'pointer',
-                border: '1px solid rgba(255,255,255,0.08)', transition: 'all 0.2s',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'rgba(233,69,96,0.12)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.background = 'rgba(15,52,96,0.8)'; }}
-              >
-                <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{choice.text}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </BgWrapper>
+      <EventScene
+        event={state.currentEvent}
+        gender={state.gender}
+        npcs={state.npcs.map(n => ({ id: n.id, name: n.name, met: n.met }))}
+        onChoice={(index: number) => {
+          const evt = state.currentEvent!;
+          const choice = ((state.gender === 'female' && evt.femaleChoices) ? evt.femaleChoices : evt.choices)[index];
+          const effects: Record<string, string>[] = [];
+          for (const [k, v] of Object.entries(choice.effects)) {
+            const val = v as number;
+            if (val !== 0) effects.push({ text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${val > 0 ? '+' + val : val}`, color: val > 0 ? 'var(--green)' : 'var(--red)' });
+          }
+          if (choice.fatigueEffect) effects.push({ text: `피로 ${choice.fatigueEffect > 0 ? '+' : ''}${choice.fatigueEffect}`, color: choice.fatigueEffect > 0 ? 'var(--red)' : 'var(--green)' });
+          if (choice.moneyEffect) effects.push({ text: `💰 ${choice.moneyEffect > 0 ? '+' : ''}${choice.moneyEffect}만`, color: choice.moneyEffect > 0 ? 'var(--green)' : 'var(--red)' });
+          // NPC 첫 만남 체크
+          const newMeets: string[] = [];
+          if (choice.npcEffects) for (const ne of choice.npcEffects) {
+            const npc = state.npcs.find(n => n.id === ne.npcId);
+            if (npc) {
+              effects.push({ text: `${npc.emoji} ${npc.name} ${ne.intimacyChange > 0 ? '♥' : '💔'}`, color: ne.intimacyChange > 0 ? 'var(--blue)' : 'var(--red)' });
+              if (!npc.met) newMeets.push(npc.name);
+            }
+          }
+          // 첫 만남 알림 추가
+          for (const name of newMeets) {
+            effects.unshift({ text: `🤝 ${name}와(과) 알게 되었다!`, color: 'var(--yellow)' });
+          }
+          setEventResultData({ message: choice.message, effects, event: evt, choiceIndex: index });
+          resolveEvent(index);
+        }}
+      />
     );
   }
 
-  // ===== 이벤트 결과 =====
+  // ===== 이벤트 결과 — 비주얼 노벨 배경 유지 =====
   if (eventResultData) {
+    const resultEvent = eventResultData.event;
+    const resultLocation = resultEvent?.location;
+    const BASE = import.meta.env.BASE_URL;
+    const gradients: Record<string, string> = {
+      classroom: 'linear-gradient(180deg, #2a3a5c 0%, #1a2744 100%)',
+      home: 'linear-gradient(180deg, #3d2b1f 0%, #2a1f15 100%)',
+      park: 'linear-gradient(180deg, #1a3a2a 0%, #0f2a1a 100%)',
+      hallway: 'linear-gradient(180deg, #2c3e50 0%, #1a2530 100%)',
+      rooftop: 'linear-gradient(180deg, #4a6fa5 0%, #2a4060 100%)',
+      street: 'linear-gradient(180deg, #4a3f5c 0%, #2a2535 100%)',
+      gym: 'linear-gradient(180deg, #5c3a2a 0%, #3a2518 100%)',
+      school_gate: 'linear-gradient(180deg, #3a5c4a 0%, #1a3a28 100%)',
+      cafe: 'linear-gradient(180deg, #5c4a3a 0%, #3a2f20 100%)',
+      music_room: 'linear-gradient(180deg, #3a2a5c 0%, #251a3a 100%)',
+      beach: 'linear-gradient(180deg, #4a8ab5 0%, #2a5a80 100%)',
+      auditorium: 'linear-gradient(180deg, #5c4a4a 0%, #3a2a2a 100%)',
+    };
+    const bgGradient = resultLocation ? (gradients[resultLocation] || 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)') : 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)';
+    // 배경 이미지: afternoon → evening → spring → 파일명 그대로 시도
+    const bgImgCandidates = resultLocation ? [
+      `${BASE}images/backgrounds/${resultLocation}_afternoon.png`,
+      `${BASE}images/backgrounds/${resultLocation}_evening.png`,
+      `${BASE}images/backgrounds/${resultLocation}_spring.png`,
+      `${BASE}images/backgrounds/${resultLocation}.png`,
+    ] : [];
+    const bgImgUrl = bgImgCandidates.length > 0 ? bgImgCandidates[0] : null;
+
+    // 이벤트 결과 이미지: {eventId}_c{choice}_{gender}.png → {eventId}_{gender}.png → {eventId}.png
+    const eventId = resultEvent?.id;
+    const ci = eventResultData.choiceIndex ?? 0;
+    const genderSuffix = state.gender === 'male' ? 'm' : 'f';
+    // 우선순위: 선택지+성별 → 이벤트+성별 → 이벤트 공용
+    const eventImgGendered = eventId ? `${BASE}images/events/${eventId}_c${ci}_${genderSuffix}.png` : null;
+    const eventImgFallback1 = eventId ? `${BASE}images/events/${eventId}_${genderSuffix}.png` : null;
+    const eventImgCommon = eventId ? `${BASE}images/events/${eventId}.png` : null;
+
     return (
-      <BgWrapper>
-        <div className="fade-in" style={{ paddingTop: 40 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
-            <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={56}
-              expression={eventResultData.effects.some(e => e.color.includes('green') || e.color.includes('blue')) ? 'happy' : 'sad'} />
-            <div style={{
-              flex: 1, background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(8px)',
-              borderRadius: '4px 16px 16px 16px', padding: '16px 18px',
-              border: '1px solid rgba(255,255,255,0.1)',
-            }}>
-              <div style={{ fontSize: '0.92rem', lineHeight: 1.8, fontStyle: 'italic', whiteSpace: 'pre-line' }}>
-                "{eventResultData.message}"
-              </div>
+      <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#0a1428' }}>
+        {/* 배경 — CG 로드 안 됐을 때 표시 */}
+        {!cgLoaded && (
+          <div style={{ position: 'absolute', inset: 0, background: bgGradient }}>
+            {bgImgUrl && <img src={bgImgUrl} alt="" data-bg-idx="0" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} onError={e => {
+              const img = e.target as HTMLImageElement;
+              const idx = parseInt(img.dataset.bgIdx || '0') + 1;
+              if (idx < bgImgCandidates.length) {
+                img.dataset.bgIdx = String(idx);
+                img.src = bgImgCandidates[idx];
+              } else {
+                img.style.display = 'none';
+              }
+            }} />}
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
+          </div>
+        )}
+        {/* CG 없을 때: 화면 중앙에 주인공 전신 */}
+        {!cgLoaded && (
+          <div style={{
+            position: 'absolute', top: '5%', left: 0, right: 0, bottom: '35%',
+            display: 'flex', justifyContent: 'center', alignItems: 'center',
+            zIndex: 5, pointerEvents: 'none',
+          }}>
+            <img
+              src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}_fullbody.png`}
+              alt=""
+              style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          </div>
+        )}
+        {/* 결과 내용 — CG 있으면 중앙, 없으면 하단 */}
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', justifyContent: cgLoaded ? 'center' : 'flex-end' }} className="fade-in">
+          {/* 이벤트 결과 이미지 (CG) */}
+          {eventImgGendered && (
+            <div style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+              <img
+                src={eventImgGendered}
+                alt=""
+                style={{ width: '100%', display: 'block', borderRadius: 12 }}
+                onLoad={() => setCgLoaded(true)}
+                onError={e => {
+                  const img = e.target as HTMLImageElement;
+                  // 폴백 체인: 선택지+성별 → 이벤트+성별 → 공용 → 숨김
+                  if (eventImgFallback1 && img.src.includes(`_c${ci}_`)) {
+                    img.src = eventImgFallback1;
+                  } else if (eventImgCommon && !img.src.endsWith(`${eventId}.png`)) {
+                    img.src = eventImgCommon;
+                  } else {
+                    img.style.display = 'none';
+                  }
+                }}
+              />
+            </div>
+          )}
+          {/* 결과 메시지 */}
+          <div style={{
+            background: 'rgba(10,20,40,0.92)', backdropFilter: 'blur(12px)',
+            borderRadius: 16, padding: '24px 20px', marginBottom: 20,
+            border: '1px solid rgba(255,255,255,0.1)',
+          }}>
+            <div style={{ fontSize: '1.15rem', lineHeight: 1.8, fontStyle: 'italic', whiteSpace: 'pre-line', color: 'rgba(255,255,255,0.95)', textAlign: 'center' }}>
+              "{eventResultData.message}"
             </div>
           </div>
+          {/* 효과 배지 */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
             {eventResultData.effects.map((eff, i) => (
-              <div key={i} style={{ background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 12px', fontSize: '0.78rem', fontWeight: 600, color: eff.color }}>
+              <div key={i} style={{
+                background: eff.text.includes('알게 되었다') ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.08)',
+                borderRadius: 8, padding: '10px 16px', fontSize: eff.text.includes('알게 되었다') ? '1.0rem' : '0.9rem',
+                fontWeight: 600, color: eff.color,
+                border: eff.text.includes('알게 되었다') ? '1px solid rgba(255,215,0,0.3)' : 'none',
+              }}>
                 {eff.text}
               </div>
             ))}
           </div>
-          <button className="btn btn-primary" onClick={() => { setEventResultData(null); setShowResult(true); }}>
+          <button className="btn btn-primary" onClick={() => { setEventResultData(null); setCgLoaded(false); setShowResult(true); }}>
             계속 →
           </button>
         </div>
-      </BgWrapper>
+      </div>
     );
   }
 
@@ -320,9 +380,9 @@ export function GameScreen() {
     );
   };
 
-  // 다가오는 이벤트 계산 (시험 주차는 엔진과 동일: 8, 17, 30, 38)
+  // 다가오는 이벤트 계산 (Y7은 수능 W35)
   const upcomingEvents: string[] = [];
-  const examWeeks = [8, 17, 30, 38];
+  const examWeeks = state.year === 7 ? [8, 17, 30, 35] : [8, 17, 30, 38];
   for (const ew of examWeeks) {
     const diff = ew - state.week;
     // diff > 0: 아직 안 친 시험만, 시험 결과 주차에는 표시 안 함

@@ -170,8 +170,8 @@ export const NPC_APPEARANCES: Record<string, { hair: string; skin: string; accen
   jihun: { hair: '#2c2c3e', skin: '#fdd5b1', accent: '#3b5998' },
   subin: { hair: '#4a3728', skin: '#fde0c8', accent: '#3b5998' },
   minjae: { hair: '#1a1a2e', skin: '#f5c7a1', accent: '#3b5998' },
-  yuna: { hair: '#2c1810', skin: '#fde8d0', accent: '#3b5998' },
-  haeun: { hair: '#8B6914', skin: '#fde0c8', accent: '#3b5998' },  // 밝은 갈색 머리 (외지형 차별화)
+  yuna: { hair: '#8B6914', skin: '#fde0c8', accent: '#3b5998' },  // 밝은 갈색 머리 (이미지 교환)
+  haeun: { hair: '#2c1810', skin: '#fde8d0', accent: '#3b5998' },  // 어두운 갈색 머리 (이미지 교환)
 };
 
 // 멘탈 상태 → 표정 매핑

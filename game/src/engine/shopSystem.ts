@@ -1,4 +1,4 @@
-import { GameState, StatKey, ActiveBuff } from './types';
+import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
 
 // ===== 아이템 타입 =====
 export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
@@ -92,7 +92,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'tablet', name: '태블릿 PC', description: '인강, 노트 정리, 창작까지. 만능 도구.',
     price: 15, category: 'growth', emoji: '📱',
     effects: [{ type: 'buff', buffId: 'tablet', buffDuration: 24, buffTarget: 'all', buffAmount: 0.1 }],
-    requireYear: 4, // 고1부터
+    requireYear: 5, // 고1부터 (Y5=고1)
   },
 
   // ===== 관계 아이템 (선물) =====
@@ -183,7 +183,7 @@ export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Reco
   }
   if (item.requireStat) {
     const val = state.stats[item.requireStat.stat];
-    if (val < item.requireStat.min) return { ok: false, reason: `${item.requireStat.stat} ${item.requireStat.min} 이상 필요` };
+    if (val < item.requireStat.min) return { ok: false, reason: `${STAT_LABELS[item.requireStat.stat]} ${item.requireStat.min} 이상 필요` };
   }
   if (item.maxPerWeek) {
     const bought = weekPurchases[item.id] || 0;

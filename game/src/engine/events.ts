@@ -9,6 +9,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '새 학기가 시작됐다. 교실에 들어서니 아는 얼굴도, 모르는 얼굴도 보인다.\n옆자리에 앉은 아이가 말을 건다. "야, 점심 같이 먹을래?"',
     week: 1,
     condition: (s) => s.year === 1,
+    location: 'classroom',
+    speakers: ['minjae'],
     choices: [
       {
         text: '"좋아!" — 같이 먹으러 간다',
@@ -30,6 +32,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '졸업식 날이다. 강당에 모인 아이들 표정이 다 다르다.\n웃는 애, 우는 애, 멍한 애.\n6년간 다니던 학교를 떠난다.\n교문을 나서며 뒤를 돌아본다.',
     week: 46,
     condition: (s) => s.year === 1,
+    location: 'auditorium',
+    speakers: ['jihun', 'minjae'],
     choices: [
       {
         text: '친구들과 사진을 찍는다',
@@ -56,6 +60,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '새 교복을 입고 교문을 들어선다. 모든 게 다르다.\n건물도 크고, 선배도 있고, 교실 번호도 낯설다.\n심장이 빨리 뛴다. 긴장되면서도 설렌다.\n"...나 여기서 잘 할 수 있겠지?"',
     week: 1,
     condition: (s) => s.year === 2,
+    location: 'auditorium',
+    speakers: ['subin'],
     choices: [
       {
         text: '옆자리 아이에게 먼저 말을 건다',
@@ -82,6 +88,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '2학년이 됐다. 이제 이 학교에 완전히 익숙하다.\n후배가 생겼다. 복도에서 마주치면 인사하는 게 좀 어색하면서도 뿌듯하다.\n교실 창밖으로 벚꽃이 보인다.',
     week: 1,
     condition: (s) => s.year === 3,
+    location: 'classroom',
     choices: [
       {
         text: '"올해는 좀 더 열심히 해볼까" — 다짐한다',
@@ -102,6 +109,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '중학교 마지막 해다. 선생님이 첫날부터 말씀하신다.\n"올해는 고등학교 진학이 있으니까 정신 차려야 해."\n교실 분위기가 작년과 좀 다르다. 다들 뭔가 진지해졌다.',
     week: 1,
     condition: (s) => s.year === 4,
+    location: 'classroom',
     choices: [
       {
         text: '"고등학교..." — 진지하게 생각해본다',
@@ -127,6 +135,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '졸업장을 받았다. 3년이 이렇게 빨리 갈 줄 몰랐다.\n교실에서 친구들과 마지막 시간을 보내고 있다.\n누군가가 "우리 고등학교 가서도 만나자" 했다.\n정말 만날 수 있을까?',
     week: 46,
     condition: (s) => s.year === 4,
+    location: 'auditorium',
+    speakers: ['jihun', 'subin', 'minjae', 'yuna'],
     choices: [
       {
         text: '친구들과 마지막 사진을 찍는다',
@@ -158,6 +168,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '고등학생이 됐다.\n교문 앞에서 한 번 멈춘다. 여기서 3년을 보내게 되는 거다.\n새 교복, 새 학교, 새 교실. 모든 게 처음부터 다시.\n"수능까지 3년..." 누군가가 중얼거렸다.\n\n...본격적인 시작이다.',
     week: 1,
     condition: (s) => s.year === 5,
+    location: 'auditorium',
+    speakers: ['jihun'],
     choices: [
       {
         text: '새로운 친구에게 말을 건다',
@@ -184,6 +196,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '고2가 됐다. 분위기가 확 달라졌다.\n선생님이 첫날부터 "올해가 가장 중요하다"고 하셨다.\n학원 상담, 내신 관리, 생기부 채우기...\n할 일이 너무 많다.',
     week: 1,
     condition: (s) => s.year === 6,
+    location: 'classroom',
     choices: [
       {
         text: '"올해 내신이 진짜 중요하대" — 학업에 집중한다',
@@ -209,6 +222,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '마지막 학년이다.\n교실에 들어서는데 분위기가 무겁다. 칠판 위에 "D-xxx" 카운트다운이 적혀 있다.\n12년의 학교생활이 이 한 해로 끝난다.\n\n...복잡한 감정이 든다.',
     week: 1,
     condition: (s) => s.year === 7,
+    location: 'classroom',
+    speakers: ['jihun'],
     choices: [
       {
         text: '"후회 없이 보내자" — 담담하게 시작한다',
@@ -234,6 +249,8 @@ export const GAME_EVENTS: GameEvent[] = [
     // 남자 버전: 농구
     description: '저녁에 지훈이한테 전화가 왔다.\n"야, 이번 주말에 농구하러 갈래? 민재도 온대."',
     week: 3,
+    location: 'home',
+    speakers: ['jihun', 'minjae'],
     choices: [
       {
         text: '"가자!" — 주말에 농구하러 간다',
@@ -276,6 +293,8 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '첫 중간고사',
     description: '중간고사가 다가온다. 교실 분위기가 달라졌다.\n다들 쉬는 시간에도 책을 펴고 있다.',
     week: 8,
+    location: 'classroom',
+    speakers: ['yuna'],
     choices: [
       {
         text: '시험공부에 올인한다 — 이번만큼은 잘 보고 싶다',
@@ -303,6 +322,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '학원에서 수빈이를 만났다. 같은 학원이었는데 몰랐다.\n"우리 같은 학원이었어? 쉬는 시간에 같이 편의점 갈래?"',
     week: 5,
     condition: (s) => s.routineSlot2 === 'academy' || s.routineSlot3 === 'academy',
+    location: 'convenience_store',
+    speakers: ['subin'],
     choices: [
       {
         text: '"그래!" — 같이 간다',
@@ -324,6 +345,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '체육대회',
     description: '학교 체육대회 날이다! 반 대항 릴레이가 있다.\n"야, 너 달리기 잘해? 우리 반 대표 한 명 더 필요한데..."',
     week: 10,
+    location: 'gym',
     choices: [
       {
         text: '"내가 할게!" — 대표로 나선다',
@@ -351,6 +373,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '여름방학 시작!',
     description: '드디어 방학이다! 종업식이 끝나고 교문을 나서는 순간, 자유의 공기가 느껴진다.\n이번 방학, 뭘 하고 싶어?',
     week: 20,
+    location: 'school_gate',
     choices: [
       {
         text: '"이번 방학엔 진짜 공부 열심히 할 거야"',
@@ -375,6 +398,8 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '지훈이의 제안',
     description: '"야, 이번에 바다 갈래? 민재도 간대.\n수빈이한테도 물어볼까?"',
     week: 22,
+    location: 'beach',
+    speakers: ['jihun', 'minjae', 'subin'],
     choices: [
       {
         text: '"가자!!!" — 다 같이 바다로!',
@@ -403,6 +428,8 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '학교 축제',
     description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n하은이가 "나 포스터 그릴 수 있는데, 같이 할 사람?" 하고 손을 든다.',
     week: 30,
+    location: 'classroom',
+    speakers: ['haeun'],
     choices: [
       {
         text: '"나도 할게!" — 하은이랑 홍보 담당',
@@ -429,7 +456,9 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '유나의 부탁',
     description: '유나가 조심스럽게 말을 건다.\n"있잖아... 나 수학 좀 알려줄 수 있어? 이번 시험 진짜 망할 것 같아."',
     week: 34,
-    condition: (s) => s.stats.academic >= 50,
+    condition: (s) => s.stats.academic >= 50 && s.year !== 7, // Y7 W34는 수능 전날
+    location: 'classroom',
+    speakers: ['yuna'],
     choices: [
       {
         text: '"그래, 같이 하자" — 가르쳐준다',
@@ -451,6 +480,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '기말고사',
     description: '2학기 기말고사. 올해의 마지막 시험이다.\n이번 성적이 통지표에 그대로 간다.',
     week: 38,
+    location: 'classroom',
     choices: [
       {
         text: '이번엔 진짜 최선을 다한다',
@@ -472,6 +502,8 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '겨울방학',
     description: '겨울방학이 시작됐다. 크리스마스가 다가오고, 거리에 캐롤이 흘러나온다.\n올해도 끝나간다.',
     week: 43,
+    location: 'home',
+    speakers: ['jihun', 'subin'],
     choices: [
       {
         text: '크리스마스에 친구들과 모인다',
@@ -502,6 +534,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '12월 31일 밤. 올 한 해를 돌아본다.\n창밖으로 불꽃놀이 소리가 들린다.',
     week: 47,
     condition: (s) => s.year !== 1 && s.year !== 4 && s.year !== 7, // 졸업 해에는 졸업 이벤트가 W46에 뜸
+    location: 'home',
     choices: [
       {
         text: '"내년에는 더 잘할 거야" — 다짐한다',
@@ -522,6 +555,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '내일이 수능이다.\n방에 앉아 있는데 아무것도 손에 잡히지 않는다.\n12년을 달려온 끝이 내일이라니.\n엄마가 방문을 열고 들어오셨다. "...잘 할 수 있어."',
     week: 34,
     condition: (s) => s.year === 7,
+    location: 'home',
+    speakers: ['jihun'],
     choices: [
       {
         text: '일찍 잠자리에 든다',
@@ -548,6 +583,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '시험장을 나온다. 하늘이 유난히 맑다.\n12년의 공부가 끝났다. 주변에서 우는 애도, 웃는 애도, 멍하니 서 있는 애도 있다.\n\n...끝났다. 정말로.',
     week: 36,
     condition: (s) => s.year === 7,
+    location: 'street',
+    speakers: ['jihun', 'minjae'],
     choices: [
       {
         text: '친구들과 치킨을 먹으러 간다',
@@ -576,6 +613,8 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '졸업식 날이다.\n12년간의 학교생활이 오늘로 끝난다.\n\n강당에서 졸업장을 받고, 교실로 돌아왔다.\n칠판에 누군가가 적어놨다.\n\n"졸업 축하해. 우리 모두 수고했어."',
     week: 46,
     condition: (s) => s.year === 7,
+    location: 'auditorium',
+    speakers: ['jihun', 'subin', 'minjae', 'yuna', 'haeun'],
     choices: [
       {
         text: '친구들과 마지막 인사를 나눈다',
@@ -606,6 +645,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'new-student', title: '전학생',
     description: '2학기가 시작된 지 얼마 안 됐는데, 반에 전학생이 왔다.\n선생님이 소개한다. "부산에서 온 김하은이라고 합니다."\n"안녕하세요... 잘 부탁해요." 낯설어하면서도 주변을 호기심 가득한 눈으로 둘러본다.',
     week: 26,
+    location: 'classroom',
+    speakers: ['haeun', 'minjae'],
     choices: [
       { text: '"안녕! 여기 처음이지? 뭐든 물어봐!" — 먼저 다가간다', effects: { social: 3, mental: 2 },
         npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
@@ -618,6 +659,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'haeun-sketchbook', title: '낙서가 들켰다',
     description: '쉬는 시간, 하은이가 공책 구석에 뭔가를 열심히 그리고 있다.\n들여다보니 교실 풍경 스케치다. 꽤 잘 그린다.',
+    location: 'classroom',
+    speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 10 && s.week > 28 && !s.isVacation;
@@ -635,6 +678,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'haeun-local-guide', title: '이 동네 구경시켜 줘',
     description: '방과후, 하은이가 다가온다.\n"있잖아, 나 아직 이 동네를 잘 몰라서... 어디가 재밌어? 알려줄 수 있어?"',
+    location: 'street',
+    speakers: ['haeun', 'minjae'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 20 && s.week > 29 && !s.isVacation;
@@ -656,6 +701,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'haeun-afterclass', title: '방과후 교실',
     description: '모두 돌아간 빈 교실. 하은이가 창가에서 축제 포스터 아이디어를 끄적이고 있다.\n"아, 왔어? 나 축제 포스터 아이디어 좀 내고 있었는데..."',
+    location: 'classroom',
+    speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 20 && s.week >= 28 && s.week <= 38 && !s.isVacation;
@@ -675,6 +722,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'haeun-specialty-awake', title: '"너, 이런 거 잘하네"',
     description: '하은이가 진지한 표정으로 다가온다.\n"있잖아... 네가 저번에 만든 거 봤는데, 솔직히 진짜 좋았어.\n너 이런 거 재능 있는 것 같아. 진심으로."',
+    location: 'classroom',
+    speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 45 && s.stats.talent >= 40;
@@ -694,6 +743,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'haeun-winter', title: '하은이의 겨울',
     description: '겨울방학이 다가오자 하은이가 말을 꺼낸다.\n"나 방학에 부산 갈 건데... 너도 같이 갈래? 맛있는 거 사줄게!"',
+    location: 'beach',
+    speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 30 && s.week >= 42 && s.week <= 46;
@@ -714,6 +765,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'jihun-basketball',
     title: '방과후 농구',
     description: '지훈이가 체육관 앞에서 손짓한다.\n"야, 오늘 방과후에 농구 안 할래? 3대3 하려는데 한 명 모자라."',
+    location: 'gym',
+    speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 15 && s.week >= 10 && !s.isVacation;
@@ -739,6 +792,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'jihun-secret',
     title: '지훈이의 고민',
     description: '하교 후, 지훈이가 평소와 달리 조용하다.\n"야... 나 좀 고민 있는데, 들어줄 수 있어?"\n벤치에 앉아서 지훈이가 말을 꺼낸다.\n"나 체육 특기생 준비할까 생각 중인데... 부모님은 공부하래."',
+    location: 'park',
+    speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 30 && s.week >= 20 && !s.isVacation;
@@ -768,6 +823,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'jihun-fight',
     title: '지훈이와 다툼',
     description: '지훈이가 갑자기 화를 냈다.\n"너는 맨날 공부만 하잖아. 나 불러도 안 오고."\n예상 못한 말에 당황했다.\n"...나도 바쁜 거 알잖아."\n"그래, 그러니까 말이야."',
+    location: 'hallway',
+    speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 40 && s.week >= 28 && !s.isVacation;
@@ -797,6 +854,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'jihun-support',
     title: '지훈이의 대회',
     description: '지훈이가 학교 대표로 농구 대회에 나간다.\n"이번 토요일인데... 너 올 수 있어? 아, 안 와도 되긴 하는데..."',
+    location: 'gym',
+    speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 55 && s.week >= 35;
@@ -822,6 +881,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'jihun-promise',
     title: '졸업 후 약속',
     description: '졸업이 다가온다. 지훈이가 학교 옥상으로 올라가자고 했다.\n바람이 분다. 지훈이가 멀리 보며 말한다.\n"야... 우리 진짜 오래 알았다, 그치?"\n"...어. 초등학교 때부터."',
+    location: 'rooftop',
+    speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 70;
@@ -846,6 +907,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'subin-notes',
     title: '수빈이의 노트',
     description: '수빈이가 쉬는 시간에 다가온다.\n"야, 너 저번 시간 필기 좀 빌려줄 수 있어? 나 그날 결석해서..."\n수빈이 필통이 잘 정리되어 있는 게 눈에 들어온다.',
+    location: 'classroom',
+    speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 15 && s.week >= 12 && !s.isVacation;
@@ -869,6 +932,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'subin-cafe',
     title: '카페에서 공부',
     description: '시험 2주 전. 수빈이가 카톡을 보냈다.\n"나 카페에서 공부할 건데 같이 할래? 혼자 하면 졸려서..."\n수빈이가 먼저 연락하는 건 드문 일이다.',
+    location: 'cafe',
+    speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 30 && s.week >= 22 && !s.isVacation;
@@ -895,6 +960,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'subin-dream',
     title: '수빈이의 꿈',
     description: '카페에서 공부하다가 수빈이가 갑자기 말했다.\n"있잖아... 나 사실 요리사가 되고 싶어."\n"...뭐?"\n성적 상위권인 수빈이 입에서 나올 줄 몰랐던 말.',
+    location: 'cafe',
+    speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 40 && s.week >= 30 && !s.isVacation;
@@ -924,6 +991,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'subin-exam-stress',
     title: '시험 스트레스',
     description: '시험 기간. 도서관에서 수빈이가 책을 덮고 고개를 숙이고 있다.\n가까이 가니 눈이 빨갛다.\n"...나 아무리 해도 안 되는 것 같아."',
+    location: 'library',
+    speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 50 && s.week >= 34 && !s.isVacation;
@@ -954,6 +1023,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'subin-farewell',
     title: '각자의 길',
     description: '졸업이 다가온다. 수빈이가 학원 앞에서 기다리고 있었다.\n"야, 나 조리 전문학교에 원서 넣었어."\n"...진짜? 부모님은?"\n"설득했어. 쉽지 않았지만." 수빈이가 담담하게 웃는다.',
+    location: 'school_gate',
+    speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 65;
@@ -978,6 +1049,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'minjae-party',
     title: '민재의 생일파티',
     description: '민재가 교실에서 크게 외친다.\n"야 다들! 이번 주 토요일 내 생일이거든? 우리 집에서 파티 한다! 다 와!"',
+    location: 'home',
+    speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 15 && s.week >= 8;
@@ -1004,6 +1077,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'minjae-mask',
     title: '민재의 뒷면',
     description: '쉬는 시간이 끝나고 복도에서 민재를 봤다.\n다른 애들이랑 웃고 떠들다가 혼자가 되자 표정이 확 바뀌었다.\n한숨을 쉬는 민재. 처음 보는 표정이다.',
+    location: 'hallway',
+    speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 30 && s.week >= 20 && !s.isVacation;
@@ -1027,6 +1102,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'minjae-family',
     title: '민재의 이야기',
     description: '방과후, 민재가 "야, 잠깐 시간 돼?" 하고 불렀다.\n교실 뒤편 계단에 앉아서 민재가 천천히 말한다.\n"우리 엄마 아빠... 요즘 많이 싸워. 이혼 얘기도 나온대."',
+    location: 'hallway',
+    speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 45 && s.week >= 30 && !s.isVacation;
@@ -1056,6 +1133,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'minjae-real',
     title: '진짜 민재',
     description: '민재가 요즘 달라졌다. 여전히 밝지만, 가끔 혼자 있을 때 생각에 잠기는 모습이 보인다.\n오늘도 옥상에서 혼자 앉아 있는 민재를 발견했다.\n"아, 왔어? 여기 바람 좋다."',
+    location: 'rooftop',
+    speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 55 && s.week >= 36 && !s.isVacation;
@@ -1080,6 +1159,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'minjae-future',
     title: '민재의 꿈',
     description: '졸업이 얼마 안 남았다. 민재가 진지하게 말한다.\n"야, 나 사회복지사 되려고. 웃기지? 맨날 놀기만 하던 애가."\n"뭐가 웃겨."\n"...나 같은 애한테 진짜 필요한 어른이 되고 싶어서."',
+    location: 'classroom',
+    speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 70;
@@ -1104,6 +1185,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'yuna-library',
     title: '도서관에서',
     description: '도서관 구석 자리에 유나가 앉아 있다.\n책을 읽고 있는데... 소설이다. 교과서가 아니라.\n눈이 마주쳤다. 유나가 살짝 고개를 숙인다.',
+    location: 'library',
+    speakers: ['yuna'],
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 10 && s.week >= 8 && !s.isVacation;
@@ -1132,6 +1215,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'yuna-lunch',
     title: '옥상에서 점심',
     description: '점심시간에 옥상에 올라왔다. 여기 아무도 없을 줄 알았는데.\n유나가 혼자 앉아서 도시락을 먹고 있다.\n눈이 마주쳤다. 유나가 당황한 표정이다.\n"...여기 나만 알고 있었는데."',
+    location: 'rooftop',
+    speakers: ['yuna'],
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 25 && s.week >= 18 && !s.isVacation;
@@ -1155,6 +1240,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'yuna-hobby',
     title: '유나의 취미',
     description: '방과후, 음악실에서 피아노 소리가 들린다.\n살짝 들여다보니 유나가 피아노를 치고 있다.\n쇼팽. 놀랄 정도로 잘 친다.\n문이 삐걱 소리를 내고 유나가 고개를 돌렸다.\n"...들었어?"',
+    location: 'music_room',
+    speakers: ['yuna'],
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 35 && s.week >= 25 && !s.isVacation;
@@ -1184,6 +1271,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'yuna-pressure',
     title: '1등의 무게',
     description: '시험 기간. 유나가 복도에서 멈춰 서 있다.\n가까이 가니 손이 떨리고 있다.\n"...나 또 1등 해야 해. 엄마가... 2등은 안 된대."',
+    location: 'hallway',
+    speakers: ['yuna'],
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 50 && s.week >= 33 && !s.isVacation;
@@ -1214,6 +1303,8 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'yuna-smile',
     title: '유나가 웃었다',
     description: '졸업이 다가온다. 유나가 드물게 먼저 말을 걸었다.\n"있잖아, 나 음대 가려고. 피아노."\n"...진짜?"\n"엄마한테 말했어. 크게 싸웠는데... 이번엔 안 지려고."',
+    location: 'classroom',
+    speakers: ['yuna'],
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 65;
@@ -1237,6 +1328,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'class-president-nudge', title: '민재의 추천',
     description: '쉬는 시간에 민재가 다가온다.\n"야, 부반장 자리 아직 비었는데, 너가 하면 딱인데? 내가 추천할까?"',
+    location: 'classroom',
+    speakers: ['minjae'],
     choices: [
       { text: '"...해볼까?" — 민재 말에 용기를 낸다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
@@ -1260,6 +1353,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '몸이 무겁다',
     description: '아침에 일어나기가 힘들다. 몸이 천근만근이다.\n"오늘 학교 가기 싫다..."',
     condition: (s) => s.fatigue >= 60 && s.week > 5,
+    location: 'home',
     choices: [
       {
         text: '그래도 간다 — 빠지면 뒤처져',
@@ -1280,6 +1374,8 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '혼자인 점심시간',
     description: '점심시간. 친구들이 다 어디 갔는지 주변에 아무도 없다.\n혼자 밥을 먹으며 핸드폰을 본다.',
     condition: (s) => s.stats.social < 25 && s.week > 8,
+    location: 'classroom',
+    speakers: ['minjae'],
     choices: [
       {
         text: '괜찮아, 혼자가 편해',
@@ -1299,6 +1395,8 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '한계',
     description: '아무것도 하고 싶지 않다. 책상 앞에 앉아도 글자가 안 읽힌다.\n창밖만 멍하니 바라본다.',
     condition: (s) => s.mentalState === 'burnout',
+    location: 'home',
+    speakers: ['jihun'],
     choices: [
       {
         text: '그래도 억지로 공부한다',
@@ -1325,6 +1423,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '성적 상승!',
     description: '시험 결과가 나왔다. 생각보다 잘 봤다!\n선생님이 "요즘 열심히 하더니 잘했네" 하고 말씀하셨다.',
     condition: (s) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1,
+    location: 'classroom',
     choices: [
       {
         text: '"더 열심히 해야지!" — 의욕이 생긴다',
@@ -1343,6 +1442,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '부모님의 한마디',
     description: '저녁 식사 중. 부모님이 성적 이야기를 꺼내신다.\n"요즘 공부는 잘 되니?"',
     condition: (s) => s.week === 15 || s.week === 36,
+    location: 'home',
     choices: [
       {
         text: '"네, 열심히 하고 있어요"',
@@ -1361,6 +1461,100 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
+  // ===== 반장 선거 이벤트 =====
+  {
+    id: 'class-president', title: '반장 선거',
+    description: '반장 선거 시즌이다.\n선생님이 교탁 앞에 서서 말했다.\n"자, 반장 후보 나올 사람 있나요?"',
+    week: 2,
+    location: 'classroom',
+    choices: [
+      { text: '"제가 할게요!" — 손을 든다', effects: { social: 2, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '손을 들었다. 민재도 눈을 크게 뜨며 "오, 진짜?" 했다. 이제 선거 연설을 해야 한다.' },
+      { text: '가만히 있는다...', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '민재가 "아무도 없어? 그럼 내가!" 하고 나섰다. 민재가 반장이 됐다. 잘 어울리긴 한다.' },
+    ],
+  },
+  {
+    id: 'class-president-win', title: '반장 선거 결과',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.',
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social >= 20,
+    location: 'classroom',
+    choices: [
+      { text: '기쁘게 받아들인다', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시! 내 눈은 틀리지 않아!" 했다.' },
+      { text: '살짝 부담스럽지만 한다', effects: { social: 3, mental: 1 }, fatigueEffect: 3,
+        message: '당선됐다. 뿌듯하면서도 조금 무섭다. 잘 할 수 있을까.' },
+    ],
+  },
+  {
+    id: 'class-president-lose', title: '반장 선거 결과',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n내 이름은... 없었다.',
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social < 20,
+    location: 'classroom',
+    choices: [
+      { text: '담담하게 받아들인다', effects: { mental: -1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
+        message: '아깝게 졌다. 민재가 "야, 잘 했어. 다음에 또 도전해" 했다. 조금 씁쓸하다.' },
+      { text: '아쉽지만 박수를 쳐준다', effects: { social: 2, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '졌지만 깨끗하게 인정했다. 민재가 "너 진짜 멋있다"고 했다.' },
+    ],
+  },
+  {
+    id: 'class-president-vice', title: '부반장 제안',
+    description: '쉬는 시간에 당선된 반장이 다가온다.\n"야, 부반장 자리 아직 비었는데... 어때?"',
+    condition: (s) => s.events.some(e => e.id === 'class-president-lose'),
+    location: 'classroom', speakers: ['minjae'],
+    choices: [
+      { text: '"좋아, 해볼게" — 부반장을 맡는다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '부반장이 됐다! 민재가 "우리 잘 해보자!" 하며 주먹을 내밀었다.' },
+      { text: '"아니, 괜찮아..." — 정중히 거절한다', effects: { mental: 1 },
+        message: '다음에 기회가 있을 거다. 지금은 조용히 지내자.' },
+    ],
+  },
+  {
+    id: 'class-president-2', title: '2학기 반장 선거',
+    description: '2학기가 시작됐다. 선생님이 교탁 앞에 서서 말했다.\n"이번 학기 반장, 나올 사람 있나요?"',
+    week: 25, location: 'classroom',
+    choices: [
+      { text: '"제가 할게요!" — 손을 든다', effects: { social: 2, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '손을 들었다. 1학기 경험이 있으니 이번엔 더 자신 있다.' },
+      { text: '가만히 있는다...', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '민재가 또 나섰다. "내가 하지 뭐!" 2학기도 민재가 반장. 에너지가 대단하다.' },
+    ],
+  },
+  {
+    id: 'class-president-2-win', title: '2학기 반장 선거 결과',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.',
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social >= 25,
+    location: 'classroom',
+    choices: [
+      { text: '기쁘게 받아들인다', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '2학기도 반장! 민재가 "야, 이제 완전히 자리 잡았다" 했다.' },
+      { text: '책임감을 느끼며 받아들인다', effects: { social: 3, mental: 2 }, fatigueEffect: 3,
+        message: '두 번째 반장. 이번엔 더 잘 해내고 싶다.' },
+    ],
+  },
+  {
+    id: 'class-president-2-lose', title: '2학기 반장 선거 결과',
+    description: '투표 결과가 발표됐다.\n선생님이 종이를 펼치며 이름을 부른다.\n내 이름은... 없었다.',
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social < 25,
+    location: 'classroom',
+    choices: [
+      { text: '담담하게 받아들인다', effects: { mental: -1 },
+        message: '이번에도 아깝게 졌다. 인기를 더 쌓아야겠다는 생각이 든다.' },
+      { text: '박수를 치며 응원한다', effects: { social: 2, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '깨끗하게 인정했다. 민재가 "고마워" 하며 웃었다.' },
+    ],
+  },
 ];
 
 // ===== 학교생활 랜덤 이벤트 풀 (매주 1개씩 발생) =====
@@ -1368,6 +1562,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'random-quiz', title: '깜짝 퀴즈!',
     description: '선생님이 갑자기 "자, 퀴즈 보자" 하셨다.\n교실이 술렁인다.',
+    location: 'classroom',
     choices: [
       { text: '자신 있게 풀어본다', effects: { academic: 2, mental: 1 }, message: '대부분 맞혔다! 선생님이 "역시" 하며 웃으셨다.' },
       { text: '찍기의 신이 되어본다', effects: { academic: 1, mental: -1 }, message: '반은 맞고 반은 틀렸다. 아슬아슬했다.' },
@@ -1377,6 +1572,8 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'friend-snack', title: '간식 나눠먹기',
     description: '쉬는 시간에 민재가 과자를 까서 돌린다.\n"야, 너도 먹어!"',
+    location: 'classroom',
+    speakers: ['minjae'],
     choices: [
       { text: '고맙게 받아 먹는다', effects: { social: 1, mental: 2 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
@@ -1388,6 +1585,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'class-prank', title: '교실 장난',
     description: '수업 중에 뒤에서 종이 비행기가 날아왔다.\n선생님은 못 보신 것 같다.',
+    location: 'classroom',
     choices: [
       { text: '웃으며 무시한다', effects: { mental: 1 }, message: '웃음을 참느라 힘들었다. 그래도 수업은 들었다.' },
       { text: '같이 보내본다 (몰래)', effects: { social: 2, mental: 2, academic: -1 }, message: '같이 장난치다 수업을 날렸다. 하지만 재밌었다!' },
@@ -1397,6 +1595,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'rain-day', title: '비 오는 날',
     description: '우산을 안 가져왔는데 비가 온다.\n교문 앞에서 멈칫한다.',
+    location: 'school_gate',
     choices: [
       { text: '그냥 뛰어간다!', effects: { health: -1, mental: 1 }, message: '흠뻑 젖었지만 왠지 상쾌하다.' },
       { text: '편의점에서 우산을 산다', effects: {}, moneyEffect: -1, message: '1000원짜리 투명 우산. 어른이 된 기분.' },
@@ -1406,6 +1605,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'lost-eraser', title: '지우개의 행방',
     description: '시험 중에 지우개가 바닥에 떨어졌다.\n옆자리 아이가 자기 거를 반으로 잘라 준다.',
+    location: 'classroom',
     choices: [
       { text: '"고마워!" — 감동받는다', effects: { social: 1, mental: 2 }, message: '작은 친절이 큰 감동이 됐다. 시험도 잘 본 것 같다.' },
       { text: '안 쓰고 그냥 시험 본다 (자존심)', effects: { academic: -1, mental: -1 }, message: '지우개 없이 시험 봤다. 아... 실수 고칠 걸.' },
@@ -1415,6 +1615,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'teacher-praise', title: '선생님의 칭찬',
     description: '오늘 수업 시간에 발표를 했는데 선생님이 크게 칭찬해주셨다.\n"와, 정말 잘했다!"',
+    location: 'classroom',
     choices: [
       { text: '기분 좋게 받아들인다', effects: { mental: 3, academic: 1 }, message: '얼굴이 빨개졌지만 기분은 좋다. 자신감이 생겼다.' },
       { text: '부끄러워서 작아진다', effects: { mental: 1 }, message: '칭찬은 좋은데... 다들 쳐다보니 부끄럽다.' },
@@ -1422,36 +1623,9 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     condition: (s) => s.stats.academic >= 40 && !s.isVacation,
   },
   {
-    id: 'class-president', title: '반장 선거',
-    description: '반장 선거 시즌이다.\n선생님이 "자, 반장 후보 나올 사람?" 하고 물으신다.',
-    week: 2,
-    choices: [
-      { text: '"제가 할게요!" — 손을 든다', effects: { social: 5, mental: 2 }, fatigueEffect: 3,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시 너야!" 했다.' },
-      { text: '가만히 있는다...', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '민재가 "아무도 없어? 그럼 내가!" 하고 나섰다. 민재가 반장이 됐다. 잘 어울리긴 한다.' },
-    ],
-  },
-  {
-    id: 'class-president-2', title: '2학기 반장 선거',
-    description: '2학기 반장 선거다.\n선생님이 "이번 학기 반장, 나올 사람?" 하고 물으신다.',
-    week: 25,
-    choices: [
-      { text: '"제가 할게요!" — 손을 든다', effects: { social: 5, mental: 2 }, fatigueEffect: 3,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '당선됐다! 반 친구들이 박수를 쳐줬다. 민재가 "역시 너야!" 했다.' },
-      { text: '가만히 있는다...', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '민재가 또 나섰다. "내가 하지 뭐!" 2학기도 민재가 반장. 에너지가 대단하다.' },
-    ],
-  },
-  // class-president-nudge는 GAME_EVENTS로 이동됨
-  // new-student는 GAME_EVENTS로 이동 (W26 고정)
-  {
     id: 'group-project', title: '조별 과제',
     description: '선생님이 조별 과제를 내셨다.\n"한 달 안에 제출해야 합니다."',
+    location: 'classroom',
     choices: [
       { text: '리더를 맡는다', effects: { social: 2, academic: 2, mental: -2 }, fatigueEffect: 3, message: '힘들지만 뿌듯하다. 조원들이 고마워했다.' },
       { text: '맡은 부분만 열심히 한다', effects: { academic: 2, mental: 1 }, message: '내 할 일은 끝냈다. 편하다.' },
@@ -1462,6 +1636,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'sick-day', title: '컨디션 난조',
     description: '아침부터 머리가 아프고 열이 나는 것 같다.\n"오늘 쉴까..."',
+    location: 'home',
     choices: [
       { text: '참고 학교 간다', effects: { academic: 1, health: -2 }, fatigueEffect: 5, message: '억지로 갔는데 수업 내내 고통이었다.' },
       { text: '하루 쉰다', effects: { health: 1, mental: 1 }, fatigueEffect: -8, message: '푹 쉬고 나니 한결 나아졌다.' },
@@ -1471,6 +1646,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'found-money', title: '길에서 만원',
     description: '등굣길에 만원짜리를 주웠다.\n주변에 떨어뜨린 사람이 안 보인다.',
+    location: 'street',
     choices: [
       { text: '경찰서에 맡긴다', effects: { mental: 3 }, message: '착한 일 했다. 마음이 뿌듯하다.' },
       { text: '...주머니에 넣는다', effects: { mental: -2 }, moneyEffect: 1, message: '돈은 생겼는데 찝찝하다.' },
@@ -1479,6 +1655,8 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'birthday-friend', title: '지훈이 생일',
     description: '오늘이 지훈이 생일이다.\n단톡방에 생일 축하 메시지가 쏟아진다.',
+    location: 'classroom',
+    speakers: ['jihun'],
     choices: [
       { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
@@ -1492,6 +1670,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'pe-class-hero', title: '체육 시간의 영웅',
     description: '체육 시간에 피구를 하는데, 상대편 에이스가 공을 던졌다!',
+    location: 'gym',
     choices: [
       { text: '멋지게 잡아본다!', effects: { health: 2, social: 3, mental: 2 }, message: '잡았다!! 반 전체가 환호했다. 오늘 영웅이다!' },
       { text: '피한다 (안전제일)', effects: { health: 1 }, message: '무사히 살아남았다. 뭐, 이것도 전략이지.' },
@@ -1501,6 +1680,8 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'study-cafe', title: '스터디 카페',
     description: '시험 기간이라 스터디 카페가 만석이다.\n겨우 자리를 잡았는데 옆에 수빈이가 앉아 있다!',
+    location: 'cafe',
+    speakers: ['subin'],
     choices: [
       { text: '수빈이랑 같이 공부한다', effects: { academic: 2, social: 1 }, moneyEffect: -1,
         npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
@@ -1511,6 +1692,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'social-media-drama', title: 'SNS 소동',
     description: '단톡방에서 누가 누구 험담을 했다가 들켰다.\n분위기가 험악해졌다.',
+    location: 'classroom',
     choices: [
       { text: '중재를 시도한다', effects: { social: 3, mental: -1 }, message: '양쪽 이야기를 듣고 화해시켰다. 피곤하지만 뿌듯하다.' },
       { text: '안 끼어든다 (조용히 나간다)', effects: { mental: 1 }, message: '현명한 선택. 남의 싸움에 끼면 안 된다.' },
@@ -1520,6 +1702,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'sunset-walk', title: '노을이 예쁜 날',
     description: '방과후 집에 가는 길. 하늘이 유난히 예쁘다.\n발걸음이 느려진다.',
+    location: 'street',
     choices: [
       { text: '사진 찍고 잠시 앉아있는다', effects: { mental: 4 }, message: '아무 생각 없이 하늘을 봤다. 마음이 편해졌다.' },
       { text: '빨리 집에 간다 (할 일이 많아)', effects: { academic: 1 }, message: '집에 와서 공부를 시작했다. 하늘이 좀 아쉽다.' },
@@ -1528,6 +1711,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'music-discovery', title: '새로운 노래',
     description: '유튜브에서 우연히 들은 노래가 너무 좋다.\n반복 재생이 멈추지 않는다.',
+    location: 'home',
     choices: [
       { text: '공부하면서 계속 듣는다', effects: { mental: 2, talent: 1 }, message: '좋은 음악과 함께하니 공부도 즐겁다.' },
       { text: '친구에게 공유한다', effects: { social: 2, mental: 1 }, message: '"이거 들어봐!" 친구도 좋아했다. 취향이 통하는 건 기분 좋다.' },
@@ -1536,6 +1720,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'cleaning-duty', title: '청소 당번',
     description: '오늘 청소 당번이다.\n교실이 엉망이다...',
+    location: 'classroom',
     choices: [
       { text: '열심히 한다', effects: { health: 1, mental: 1 }, fatigueEffect: 2, message: '깨끗해진 교실을 보니 뿌듯하다.' },
       { text: '대충 하고 빠진다', effects: { social: -1 }, message: '옆에서 열심히 하는 애가 좀 미안하다.' },
@@ -1545,6 +1730,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'dream-question', title: '꿈이 뭐야?',
     description: '수업 시간에 선생님이 물었다.\n"너희, 나중에 뭐 하고 싶어?"',
+    location: 'classroom',
     choices: [
       { text: '"아직 잘 모르겠어요" — 솔직하게', effects: { mental: 1 }, message: '모른다고 하는 것도 용기다. 선생님이 "천천히 찾아봐" 하셨다.' },
       { text: '"공부 관련 일이요!" — 학업형', effects: { academic: 1, mental: 1 }, message: '말하고 보니 진짜 그런 것 같기도 하다.' },
@@ -1555,70 +1741,27 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   {
     id: 'late-to-school', title: '지각!',
     description: '알람을 못 듣고 늦잠을 잤다!\n학교까지 전력 질주 중...',
+    location: 'street',
     choices: [
       { text: '뛰어간다!!!', effects: { health: 1 }, fatigueEffect: 3, message: '겨우 수업 시작 전에 도착했다. 심장이 터질 것 같다.' },
       { text: '포기하고 천천히 간다', effects: { mental: -1 }, message: '선생님한테 혼났다. 오늘 하루가 우울하다.' },
     ],
     condition: (s) => s.fatigue >= 30 && !s.isVacation,
   },
-  // ===== 반장 전용 이벤트 =====
-  {
-    id: 'president-errand', title: '반장의 심부름',
-    description: '선생님이 부르신다.\n"반장, 교무실에서 유인물 좀 가져다줄래? 아, 그리고 다음 주 현장학습 인원 확인도 부탁해."',
-    choices: [
-      { text: '"네, 알겠습니다!" — 성실하게 처리한다', effects: { social: 2, academic: 1 }, fatigueEffect: 3,
-        message: '바쁘지만 선생님이 "역시 믿음직하다" 하셨다. 뿌듯하다.' },
-      { text: '"아... 네..." — 좀 귀찮지만 한다', effects: { social: 1 }, fatigueEffect: 2,
-        message: '시킨 건 했지만 의욕은 없었다. 반장이 이렇게 피곤한 거였나.' },
-    ],
-    condition: (s) => isClassPresident(s) && !s.isVacation && s.week > 4,
-  },
-  {
-    id: 'president-mediate', title: '반장의 중재',
-    description: '반 친구 둘이 크게 싸우고 있다.\n선생님이 자리를 비운 사이, 다들 반장인 나를 쳐다본다.\n"야, 너가 좀 말려봐..."',
-    choices: [
-      { text: '중간에서 양쪽 이야기를 듣는다', effects: { social: 4, mental: -2 }, fatigueEffect: 3,
-        message: '쉽지 않았지만 결국 둘 다 진정시켰다. "고마워, 반장." 피곤하지만 보람 있다.' },
-      { text: '"선생님 오실 때까지 기다리자" — 넘긴다', effects: { social: -1, mental: 1 },
-        message: '결국 담임이 와서 해결했다. "반장이 좀 나섰어야지..." 누군가가 작게 말했다.' },
-    ],
-    condition: (s) => isClassPresident(s) && !s.isVacation && s.stats.social >= 30,
-  },
-  {
-    id: 'president-speech', title: '조회 시간 발표',
-    description: '월요일 조회. 담임이 "반장, 이번 주 공지사항 전달해" 한다.\n반 전체가 나를 본다. 긴장된다.',
-    choices: [
-      { text: '당당하게 발표한다', effects: { social: 3, mental: 2 }, fatigueEffect: 2,
-        message: '떨렸지만 잘 해냈다! 끝나고 지훈이가 "야, 반장 제법인데?" 했다.' },
-      { text: '후다닥 빨리 끝낸다', effects: { social: 1, mental: -1 },
-        message: '우물우물 빨리 끝냈다. 아무도 뭐라 안 했지만... 좀 창피하다.' },
-    ],
-    condition: (s) => isClassPresident(s) && !s.isVacation,
-  },
-  // ===== 비반장: 반장을 지켜보는 이벤트 =====
-  {
-    id: 'watching-president', title: '민재가 힘들어 보인다',
-    description: '요즘 반장 민재가 바빠 보인다. 선생님 심부름, 싸움 중재, 발표...\n쉬는 시간에 민재가 책상에 엎드려 있다.\n"야... 반장 하지 말걸..."',
-    choices: [
-      { text: '"괜찮아? 뭐 도와줄까?" — 다가간다', effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
-        message: '"진짜? 고마워..." 민재가 웃었다. 항상 밝은 민재가 이렇게 지쳐 보이는 건 처음이다.' },
-      { text: '조용히 지나간다', effects: { mental: 1 },
-        message: '민재도 힘든 거구나. 반장 안 했길 잘한 건가, 아니면 도와줬어야 했나...' },
-    ],
-    condition: (s) => !isClassPresident(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
-  },
 ];
 
 // 반장/부반장 당선 여부 체크
 function isClassPresident(s: GameState): boolean {
   return s.events.some(e =>
-    (e.id === 'class-president' || e.id === 'class-president-2') && e.resolvedChoice === 0
-  ) || s.events.some(e => e.id === 'class-president-nudge' && e.resolvedChoice === 0);
+    (e.id === 'class-president-win' || e.id === 'class-president-2-win') && e.resolvedChoice !== undefined
+  ) || s.events.some(e => e.id === 'class-president-nudge' && e.resolvedChoice === 0)
+    || s.events.some(e => e.id === 'class-president-vice' && e.resolvedChoice === 0);
 }
 
 // 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
 const FOLLOWUP_EVENT_IDS = new Set([
+  'class-president-win', 'class-president-lose', 'class-president-vice',
+  'class-president-2-win', 'class-president-2-lose',
   'class-president-nudge',
   'haeun-sketchbook', 'haeun-local-guide', 'haeun-afterclass', 'haeun-specialty-awake', 'haeun-winter',
   'jihun-basketball', 'jihun-secret', 'jihun-fight', 'jihun-support', 'jihun-promise',
@@ -1627,22 +1770,35 @@ const FOLLOWUP_EVENT_IDS = new Set([
   'yuna-library', 'yuna-lunch', 'yuna-hobby', 'yuna-pressure', 'yuna-smile',
 ]);
 
+// 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
+export function getFollowupForWeek(state: GameState): GameEvent | null {
+  return GAME_EVENTS.find(e =>
+    FOLLOWUP_EVENT_IDS.has(e.id) &&
+    e.condition && e.condition(state) &&
+    !state.events.some(prev => prev.id === e.id)
+  ) || null;
+}
+
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
-  // 0. 후속 이벤트 최우선 체크 (100% 발동)
+  // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
+  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-graduation','high-school-entrance','suneung-eve','suneung-done','high-graduation','year-end-reflection']);
+  const allFixed = GAME_EVENTS.filter(e => e.week === state.week);
+  console.log(`[EVENT] week=${state.week}, year=${state.year}, fixedCandidates=${allFixed.map(e => e.id).join(',')}, resolvedEvents=${state.events.map(e => e.id).join(',')}`);
+  const fixedEvent = GAME_EVENTS.find(e =>
+    e.week === state.week &&
+    (!e.condition || e.condition(state)) &&
+    (ANNUAL_EVENTS.has(e.id) || !state.events.some(prev => prev.id === e.id))
+  );
+  if (fixedEvent) { console.log(`[EVENT] → fixed: ${fixedEvent.id}`); return fixedEvent; }
+
+  // 1. 후속 이벤트 체크 (100% 발동)
   const followup = GAME_EVENTS.find(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
     !state.events.some(prev => prev.id === e.id)
   );
   if (followup) return followup;
-
-  // 고정 주차 이벤트 우선
-  const fixedEvent = GAME_EVENTS.find(e =>
-    e.week === state.week &&
-    (!e.condition || e.condition(state))
-  );
-  if (fixedEvent) return fixedEvent;
 
   // 조건부 상태 이벤트 (피로/멘탈/번아웃 등) — 50% 확률
   const conditionalEvents = GAME_EVENTS.filter(e =>

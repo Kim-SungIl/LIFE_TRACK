@@ -107,19 +107,39 @@ export function Shop({ state, onBuy, onClose }: Props) {
           {items.map(item => {
             const check = canBuyItem(item, state, state.weekPurchases || {});
             const effects = describeEffects(item);
+            // 주간 재고 계산
+            const weekBought = (state.weekPurchases || {})[item.id] || 0;
+            const hasLimit = !!item.maxPerWeek;
+            const remaining = hasLimit ? (item.maxPerWeek! - weekBought) : null;
+            // 이미 적용 중인 버프 확인
+            const activeBuffIds = item.effects.filter(e => e.type === 'buff' && e.buffId).map(e => e.buffId!);
+            const activeBuff = (state.activeBuffs || []).find(b => activeBuffIds.includes(b.id));
             return (
               <div key={item.id} style={{
                 padding: '12px 14px', marginBottom: 6, borderRadius: 12,
-                background: 'rgba(255,255,255,0.05)',
-                border: check.ok ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.03)',
+                background: activeBuff ? 'rgba(91,141,239,0.08)' : 'rgba(255,255,255,0.05)',
+                border: activeBuff ? '1px solid rgba(91,141,239,0.25)' : check.ok ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.03)',
                 opacity: check.ok ? 1 : 0.5,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '1.1rem' }}>{item.emoji}</span>
                       <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{item.name}</span>
                       <span style={{ fontSize: '0.72rem', color: 'var(--yellow)' }}>{item.price}만원</span>
+                      {hasLimit && (
+                        <span style={{ fontSize: '0.65rem', color: remaining! > 0 ? 'var(--text-muted)' : 'var(--red)', fontWeight: 500 }}>
+                          {remaining! > 0 ? `이번 주 ${remaining}회 더 구매 가능` : '이번 주 구매 불가'}
+                        </span>
+                      )}
+                      {activeBuff && (
+                        <span style={{
+                          fontSize: '0.62rem', padding: '1px 6px', borderRadius: 4,
+                          background: 'rgba(91,141,239,0.2)', color: 'var(--blue)', fontWeight: 600,
+                        }}>
+                          적용 중 {activeBuff.remainingWeeks}주 남음
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
                       {item.description}
