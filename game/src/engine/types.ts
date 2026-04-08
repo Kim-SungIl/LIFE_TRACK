@@ -114,6 +114,8 @@ export interface NpcState {
   personality?: string;   // 성격/관계 설명
 }
 
+export type EventLocation = 'classroom' | 'home' | 'park' | 'hallway' | 'rooftop' | 'street' | 'gym' | 'school_gate' | 'cafe' | 'music_room' | 'beach' | 'convenience_store' | 'library' | 'auditorium';
+
 export interface GameEvent {
   id: string;
   title: string;
@@ -121,6 +123,8 @@ export interface GameEvent {
   choices: EventChoice[];
   week?: number;          // 특정 주에만 발생
   condition?: (state: GameState) => boolean;
+  location?: EventLocation; // 이벤트 장소 (배경 이미지/폴백 색상)
+  speakers?: string[];    // 등장 NPC ID (캐릭터 표시 순서)
   // 성별 분기: 있으면 해당 성별에서 기본값 대신 사용
   femaleDescription?: string;
   femaleChoices?: EventChoice[];
