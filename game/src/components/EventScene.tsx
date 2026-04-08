@@ -246,14 +246,10 @@ export function EventScene({ event, gender, npcs, onChoice }: EventSceneProps) {
   const eventDesc = (isFemale && event.femaleDescription) ? event.femaleDescription : event.description;
   const eventChoices = (isFemale && event.femaleChoices) ? event.femaleChoices : event.choices;
 
-  // Extract NPC IDs from speakers or choices
+  // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
   const speakerIds: string[] = event.speakers && event.speakers.length > 0
     ? event.speakers
-    : (() => {
-        const ids = new Set<string>();
-        eventChoices.forEach(c => c.npcEffects?.forEach(ne => ids.add(ne.npcId)));
-        return Array.from(ids);
-      })();
+    : [];
 
   // Primary speaker (first in array)
   const primarySpeaker = speakerIds.length > 0 ? speakerIds[0] : null;
