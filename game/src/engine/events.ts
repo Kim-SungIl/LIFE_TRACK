@@ -1469,8 +1469,7 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'classroom',
     choices: [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '손을 들었다. 민재도 눈을 크게 뜨며 "오, 진짜?" 했다. 이제 선거 연설을 해야 한다.' },
+        message: '손을 들었다. 교실이 술렁인다. 이제 선거 연설을 해야 한다.' },
       { text: '가만히 있는다...', effects: { mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '민재가 "아무도 없어? 그럼 내가!" 하고 나섰다. 민재가 반장이 됐다. 잘 어울리긴 한다.' },
@@ -1483,7 +1482,6 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'classroom',
     choices: [
       { text: '반장이 됐다!', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
         message: '당선됐다! 떨리지만 잘 해보자.' },
     ],
   },
@@ -1516,7 +1514,6 @@ export const GAME_EVENTS: GameEvent[] = [
     week: 25, location: 'classroom',
     choices: [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '손을 들었다. 1학기 경험이 있으니 이번엔 더 자신 있다.' },
       { text: '가만히 있는다...', effects: { mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
@@ -1530,8 +1527,7 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'classroom',
     choices: [
       { text: '2학기도 반장이다!', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '민재가 "야, 이제 완전히 자리 잡았다" 했다. 이번엔 더 잘 해내고 싶다.' },
+        message: '이번엔 더 잘 해내고 싶다. 반 친구들의 기대가 느껴진다.' },
     ],
   },
   {
