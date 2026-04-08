@@ -7,7 +7,7 @@ import { Portrait } from './Portrait';
 import { NPC_APPEARANCES } from './CharacterAvatar';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
-import { getBackground } from '../engine/backgrounds';
+import { getBackground, getEventBackground } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
@@ -141,6 +141,7 @@ export function GameScreen() {
       <EventScene
         event={state.currentEvent}
         gender={state.gender}
+        year={state.year}
         npcs={state.npcs.map(n => ({ id: n.id, name: n.name, met: n.met }))}
         onChoice={(index: number) => {
           const evt = state.currentEvent!;
@@ -192,13 +193,16 @@ export function GameScreen() {
       auditorium: 'linear-gradient(180deg, #5c4a4a 0%, #3a2a2a 100%)',
     };
     const bgGradient = resultLocation ? (gradients[resultLocation] || 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)') : 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)';
-    // 배경 이미지: afternoon → evening → spring → 파일명 그대로 시도
-    const bgImgCandidates = resultLocation ? [
-      `${BASE}images/backgrounds/${resultLocation}_afternoon.png`,
-      `${BASE}images/backgrounds/${resultLocation}_evening.png`,
-      `${BASE}images/backgrounds/${resultLocation}_spring.png`,
-      `${BASE}images/backgrounds/${resultLocation}.png`,
-    ] : [];
+    // 배경 이미지: event.background 우선, 없으면 location 기반 폴백
+    const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, state.year) : undefined;
+    const bgImgCandidates = resolvedEventBg
+      ? [`${BASE}${resolvedEventBg.replace(/^\//, '')}`]
+      : resultLocation ? [
+        `${BASE}images/backgrounds/${resultLocation}_afternoon.png`,
+        `${BASE}images/backgrounds/${resultLocation}_evening.png`,
+        `${BASE}images/backgrounds/${resultLocation}_spring.png`,
+        `${BASE}images/backgrounds/${resultLocation}.png`,
+      ] : [];
     const bgImgUrl = bgImgCandidates.length > 0 ? bgImgCandidates[0] : null;
 
     // 이벤트 결과 이미지: {eventId}_c{choice}_{gender}.png → {eventId}_{gender}.png → {eventId}.png
