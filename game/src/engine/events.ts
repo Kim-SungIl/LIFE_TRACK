@@ -1144,7 +1144,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '민재의 이야기',
     description: '방과후, 민재가 "야, 잠깐 시간 돼?" 하고 불렀다.\n교실 뒤편 계단에 앉아서 민재가 천천히 말한다.\n"우리 엄마 아빠... 요즘 많이 싸워. 이혼 얘기도 나온대."',
     location: 'hallway',
-    background: 'stairwell',
+    background: 'hallway_{school}',
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
@@ -1753,6 +1753,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     description: '등굣길에 만원짜리를 주웠다.\n주변에 떨어뜨린 사람이 안 보인다.',
     location: 'street',
     background: 'school_road_morning',
+    condition: (s) => !s.isVacation,
     choices: [
       { text: '경찰서에 맡긴다', effects: { mental: 3 }, message: '착한 일 했다. 마음이 뿌듯하다.' },
       { text: '...주머니에 넣는다', effects: { mental: -2 }, moneyEffect: 1, message: '돈은 생겼는데 찝찝하다.' },
