@@ -333,7 +333,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '학원에서 수빈이를 만났다. 같은 학원이었는데 몰랐다.\n"우리 같은 학원이었어? 쉬는 시간에 같이 편의점 갈래?"',
     week: 5,
     condition: (s) => s.routineSlot2 === 'academy' || s.routineSlot3 === 'academy',
-    location: 'convenience_store',
+    location: 'street',
     background: 'hagwon_front',
     speakers: ['subin'],
     choices: [
@@ -473,7 +473,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '유나가 조심스럽게 말을 건다.\n"있잖아... 나 수학 좀 알려줄 수 있어? 이번 시험 진짜 망할 것 같아."',
     week: 34,
     condition: (s) => s.stats.academic >= 50 && s.year !== 7, // Y7 W34는 수능 전날
-    location: 'classroom',
+    location: 'library',
     background: 'library_{school}',
     speakers: ['yuna'],
     choices: [
@@ -732,7 +732,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 20 && s.week >= 28 && s.week <= 38 && !s.isVacation;
+      return !!haeun?.met && haeun.intimacy >= 30 && s.week >= 28 && s.week <= 38 && !s.isVacation;
     },
     choices: [
       { text: '같이 아이디어를 낸다', effects: { talent: 3 },
@@ -771,12 +771,12 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'haeun-winter', title: '하은이의 겨울',
     description: '겨울방학이 다가오자 하은이가 말을 꺼낸다.\n"나 방학에 부산 갈 건데... 너도 같이 갈래? 맛있는 거 사줄게!"',
-    location: 'beach',
+    location: 'cafe',
     background: 'cafe_study',
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 30 && s.week >= 42 && s.week <= 46;
+      return !!haeun?.met && haeun.intimacy >= 55 && s.week >= 42 && s.week <= 46;
     },
     choices: [
       { text: '"가자! 부산 가보고 싶었어!" — 함께 간다', effects: { social: 3, mental: 4, talent: 2 },
@@ -891,7 +891,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
-      return !!jihun?.met && jihun.intimacy >= 55 && s.week >= 35;
+      return !!jihun?.met && jihun.intimacy >= 55 && s.week >= 35 && !s.isVacation;
     },
     choices: [
       {
@@ -919,7 +919,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
-      return !!jihun?.met && jihun.intimacy >= 70;
+      return !!jihun?.met && jihun.intimacy >= 70 && s.week >= 40 && !s.isVacation;
     },
     choices: [
       {
@@ -1061,12 +1061,12 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'subin-farewell',
     title: '각자의 길',
     description: '졸업이 다가온다. 수빈이가 학원 앞에서 기다리고 있었다.\n"야, 나 조리 전문학교에 원서 넣었어."\n"...진짜? 부모님은?"\n"설득했어. 쉽지 않았지만." 수빈이가 담담하게 웃는다.',
-    location: 'school_gate',
+    location: 'street',
     background: 'hagwon_front',
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 65;
+      return !!subin?.met && subin.intimacy >= 65 && s.week >= 40 && !s.isVacation;
     },
     choices: [
       {
@@ -1202,7 +1202,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'minjae-future',
     title: '민재의 꿈',
     description: '졸업이 얼마 안 남았다. 민재가 진지하게 말한다.\n"야, 나 사회복지사 되려고. 웃기지? 맨날 놀기만 하던 애가."\n"뭐가 웃겨."\n"...나 같은 애한테 진짜 필요한 어른이 되고 싶어서."',
-    location: 'classroom',
+    location: 'rooftop',
     background: 'rooftop',
     speakers: ['minjae'],
     condition: (s) => {
@@ -1600,6 +1600,58 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '인기를 더 쌓아야겠다는 생각이 든다. 민재가 "고마워" 하며 웃었다.' },
     ],
   },
+  // ===== 반장 전용 이벤트 =====
+  {
+    id: 'president-errand', title: '반장의 심부름',
+    description: '선생님이 부르신다.\n"반장, 교무실에서 유인물 좀 가져다줄래? 아, 그리고 다음 주 현장학습 인원 확인도 부탁해."',
+    location: 'hallway', background: 'hallway_{school}',
+    choices: [
+      { text: '"네, 알겠습니다!" — 성실하게 처리한다', effects: { social: 2, academic: 1 }, fatigueEffect: 3,
+        message: '바쁘지만 선생님이 "역시 믿음직하다" 하셨다. 뿌듯하다.' },
+      { text: '"아... 네..." — 좀 귀찮지만 한다', effects: { social: 1 }, fatigueEffect: 2,
+        message: '시킨 건 했지만 의욕은 없었다. 반장이 이렇게 피곤한 거였나.' },
+    ],
+    condition: (s) => isClassPresident(s) && !s.isVacation && s.week > 4,
+  },
+  {
+    id: 'president-mediate', title: '반장의 중재',
+    description: '반 친구 둘이 크게 싸우고 있다.\n선생님이 자리를 비운 사이, 다들 반장인 나를 쳐다본다.\n"야, 너가 좀 말려봐..."',
+    location: 'classroom', background: 'classroom_{school}_afternoon',
+    choices: [
+      { text: '중간에서 양쪽 이야기를 듣는다', effects: { social: 4, mental: -2 }, fatigueEffect: 3,
+        message: '쉽지 않았지만 결국 둘 다 진정시켰다. "고마워, 반장." 피곤하지만 보람 있다.' },
+      { text: '"선생님 오실 때까지 기다리자" — 넘긴다', effects: { social: -1, mental: 1 },
+        message: '결국 담임이 와서 해결했다. "반장이 좀 나섰어야지..." 누군가가 작게 말했다.' },
+    ],
+    condition: (s) => isClassPresident(s) && !s.isVacation && s.stats.social >= 30,
+  },
+  {
+    id: 'president-speech', title: '조회 시간 발표',
+    description: '월요일 조회. 담임이 "반장, 이번 주 공지사항 전달해" 한다.\n반 전체가 나를 본다. 긴장된다.',
+    location: 'classroom', background: 'classroom_{school}',
+    choices: [
+      { text: '당당하게 발표한다', effects: { social: 3, mental: 2 }, fatigueEffect: 2,
+        message: '떨렸지만 잘 해냈다! 끝나고 지훈이가 "야, 반장 제법인데?" 했다.' },
+      { text: '후다닥 빨리 끝낸다', effects: { social: 1, mental: -1 },
+        message: '우물우물 빨리 끝냈다. 아무도 뭐라 안 했지만... 좀 창피하다.' },
+    ],
+    condition: (s) => isClassPresident(s) && !s.isVacation,
+  },
+  // ===== 비반장: 반장을 지켜보는 이벤트 =====
+  {
+    id: 'watching-president', title: '민재가 힘들어 보인다',
+    description: '요즘 반장 민재가 바빠 보인다. 선생님 심부름, 싸움 중재, 발표...\n쉬는 시간에 민재가 책상에 엎드려 있다.\n"야... 반장 하지 말걸..."',
+    location: 'classroom', background: 'classroom_{school}_afternoon',
+    speakers: ['minjae'],
+    choices: [
+      { text: '"괜찮아? 뭐 도와줄까?" — 다가간다', effects: { social: 3, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '"진짜? 고마워..." 민재가 웃었다. 항상 밝은 민재가 이렇게 지쳐 보이는 건 처음이다.' },
+      { text: '조용히 지나간다', effects: { mental: 1 },
+        message: '민재도 힘든 거구나. 반장 안 했길 잘한 건가, 아니면 도와줬어야 했나...' },
+    ],
+    condition: (s) => !isClassPresident(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
+  },
 ];
 
 // ===== 학교생활 랜덤 이벤트 풀 (매주 1개씩 발생) =====
@@ -1845,7 +1897,7 @@ export function getFollowupForWeek(state: GameState): GameEvent | null {
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
-  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-graduation','high-school-entrance','suneung-eve','suneung-done','high-graduation','year-end-reflection']);
+  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-school-graduation','high-school-entrance','suneung-eve','suneung-done','high-school-graduation','year-end-reflection']);
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
