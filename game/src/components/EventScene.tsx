@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { GameEvent, EventChoice, StatKey, STAT_LABELS, EventLocation } from '../engine/types';
+import { getEventBackground } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 
 const BASE_URL = import.meta.env.BASE_URL;
@@ -67,6 +68,7 @@ function injectKeyframes() {
 export interface EventSceneProps {
   event: GameEvent;
   gender: 'male' | 'female';
+  year: number;
   npcs?: { id: string; name: string; met: boolean }[];
   onChoice: (index: number) => void;
 }
@@ -221,7 +223,7 @@ function renderDescription(
   });
 }
 
-export function EventScene({ event, gender, npcs, onChoice }: EventSceneProps) {
+export function EventScene({ event, gender, year, npcs, onChoice }: EventSceneProps) {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [bgError, setBgError] = useState(false);
   const [chosenIndex, setChosenIndex] = useState<number | null>(null);
@@ -246,26 +248,25 @@ export function EventScene({ event, gender, npcs, onChoice }: EventSceneProps) {
   const eventDesc = (isFemale && event.femaleDescription) ? event.femaleDescription : event.description;
   const eventChoices = (isFemale && event.femaleChoices) ? event.femaleChoices : event.choices;
 
-  // Extract NPC IDs from speakers or choices
+  // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
   const speakerIds: string[] = event.speakers && event.speakers.length > 0
     ? event.speakers
-    : (() => {
-        const ids = new Set<string>();
-        eventChoices.forEach(c => c.npcEffects?.forEach(ne => ids.add(ne.npcId)));
-        return Array.from(ids);
-      })();
+    : [];
 
   // Primary speaker (first in array)
   const primarySpeaker = speakerIds.length > 0 ? speakerIds[0] : null;
 
-  // Background
+  // Background: prefer event.background (new system), fall back to location-based
   const location = event.location;
-  const bgCandidates = location ? [
-    `${BASE_URL}images/backgrounds/${location}_afternoon.png`,
-    `${BASE_URL}images/backgrounds/${location}_evening.png`,
-    `${BASE_URL}images/backgrounds/${location}_spring.png`,
-    `${BASE_URL}images/backgrounds/${location}.png`,
-  ] : [];
+  const resolvedEventBg = event.background ? getEventBackground(event.background, year) : undefined;
+  const bgCandidates = resolvedEventBg
+    ? [`${BASE_URL}${resolvedEventBg.replace(/^\//, '')}`]
+    : location ? [
+      `${BASE_URL}images/backgrounds/${location}_afternoon.png`,
+      `${BASE_URL}images/backgrounds/${location}_evening.png`,
+      `${BASE_URL}images/backgrounds/${location}_spring.png`,
+      `${BASE_URL}images/backgrounds/${location}.png`,
+    ] : [];
   const gradientBg = location
     ? (LOCATION_GRADIENTS[location] || DEFAULT_GRADIENT)
     : DEFAULT_GRADIENT;
@@ -286,7 +287,7 @@ export function EventScene({ event, gender, npcs, onChoice }: EventSceneProps) {
       img.src = bgCandidates[idx];
     };
     tryLoad(0);
-  }, [location]);
+  }, [location, event.background]);
 
   // Character positions
   const getCharacterPositions = (count: number): string[] => {

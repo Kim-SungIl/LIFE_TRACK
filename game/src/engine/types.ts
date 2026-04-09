@@ -125,6 +125,7 @@ export interface GameEvent {
   condition?: (state: GameState) => boolean;
   location?: EventLocation; // 이벤트 장소 (배경 이미지/폴백 색상)
   speakers?: string[];    // 등장 NPC ID (캐릭터 표시 순서)
+  background?: string;  // 배경 이미지 키 (없으면 기본 배경 사용)
   // 성별 분기: 있으면 해당 성별에서 기본값 대신 사용
   femaleDescription?: string;
   femaleChoices?: EventChoice[];

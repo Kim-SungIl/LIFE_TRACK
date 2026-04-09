@@ -5,6 +5,18 @@ export interface BgInfo {
   mood: string;
 }
 
+export function getSchoolLevel(year: number): 'elementary' | 'middle' | 'high' {
+  if (year <= 1) return 'elementary';
+  if (year <= 4) return 'middle';
+  return 'high';
+}
+
+export function getEventBackground(bgKey: string | undefined, year: number): string | undefined {
+  if (!bgKey) return undefined;
+  const level = getSchoolLevel(year);
+  return `/images/backgrounds/${bgKey.replace('{school}', level)}.png`;
+}
+
 export function getBackground(week: number, isVacation: boolean, mentalState: string): BgInfo {
   if (mentalState === 'burnout') {
     return {
