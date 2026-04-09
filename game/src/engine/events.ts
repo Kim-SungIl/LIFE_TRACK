@@ -684,7 +684,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'haeun-sketchbook', title: '낙서가 들켰다',
     description: '쉬는 시간, 하은이가 공책 구석에 뭔가를 열심히 그리고 있다.\n들여다보니 교실 풍경 스케치다. 꽤 잘 그린다.',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
@@ -750,7 +750,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'haeun-specialty-awake', title: '"너, 이런 거 잘하네"',
     description: '하은이가 진지한 표정으로 다가온다.\n"있잖아... 네가 저번에 만든 거 봤는데, 솔직히 진짜 좋았어.\n너 이런 거 재능 있는 것 같아. 진심으로."',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
@@ -942,7 +942,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '수빈이의 노트',
     description: '수빈이가 쉬는 시간에 다가온다.\n"야, 너 저번 시간 필기 좀 빌려줄 수 있어? 나 그날 결석해서..."\n수빈이 필통이 잘 정리되어 있는 게 눈에 들어온다.',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
@@ -1426,7 +1426,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '점심시간. 친구들이 다 어디 갔는지 주변에 아무도 없다.\n혼자 밥을 먹으며 핸드폰을 본다.',
     condition: (s) => s.stats.social < 25 && s.week > 8,
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
     choices: [
       {
@@ -1477,7 +1477,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '시험 결과가 나왔다. 생각보다 잘 봤다!\n선생님이 "요즘 열심히 하더니 잘했네" 하고 말씀하셨다.',
     condition: (s) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1,
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       {
         text: '"더 열심히 해야지!" — 의욕이 생긴다',
@@ -1608,7 +1608,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'random-quiz', title: '깜짝 퀴즈!',
     description: '선생님이 갑자기 "자, 퀴즈 보자" 하셨다.\n교실이 술렁인다.',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '자신 있게 풀어본다', effects: { academic: 2, mental: 1 }, message: '대부분 맞혔다! 선생님이 "역시" 하며 웃으셨다.' },
       { text: '찍기의 신이 되어본다', effects: { academic: 1, mental: -1 }, message: '반은 맞고 반은 틀렸다. 아슬아슬했다.' },
@@ -1619,7 +1619,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'friend-snack', title: '간식 나눠먹기',
     description: '쉬는 시간에 민재가 과자를 까서 돌린다.\n"야, 너도 먹어!"',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
     choices: [
       { text: '고맙게 받아 먹는다', effects: { social: 1, mental: 2 },
@@ -1633,7 +1633,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'class-prank', title: '교실 장난',
     description: '수업 중에 뒤에서 종이 비행기가 날아왔다.\n선생님은 못 보신 것 같다.',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '웃으며 무시한다', effects: { mental: 1 }, message: '웃음을 참느라 힘들었다. 그래도 수업은 들었다.' },
       { text: '같이 보내본다 (몰래)', effects: { social: 2, mental: 2, academic: -1 }, message: '같이 장난치다 수업을 날렸다. 하지만 재밌었다!' },
@@ -1655,7 +1655,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'lost-eraser', title: '지우개의 행방',
     description: '시험 중에 지우개가 바닥에 떨어졌다.\n옆자리 아이가 자기 거를 반으로 잘라 준다.',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '"고마워!" — 감동받는다', effects: { social: 1, mental: 2 }, message: '작은 친절이 큰 감동이 됐다. 시험도 잘 본 것 같다.' },
       { text: '안 쓰고 그냥 시험 본다 (자존심)', effects: { academic: -1, mental: -1 }, message: '지우개 없이 시험 봤다. 아... 실수 고칠 걸.' },
@@ -1666,7 +1666,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'teacher-praise', title: '선생님의 칭찬',
     description: '오늘 수업 시간에 발표를 했는데 선생님이 크게 칭찬해주셨다.\n"와, 정말 잘했다!"',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '기분 좋게 받아들인다', effects: { mental: 3, academic: 1 }, message: '얼굴이 빨개졌지만 기분은 좋다. 자신감이 생겼다.' },
       { text: '부끄러워서 작아진다', effects: { mental: 1 }, message: '칭찬은 좋은데... 다들 쳐다보니 부끄럽다.' },
@@ -1677,7 +1677,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'group-project', title: '조별 과제',
     description: '선생님이 조별 과제를 내셨다.\n"한 달 안에 제출해야 합니다."',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '리더를 맡는다', effects: { social: 2, academic: 2, mental: -2 }, fatigueEffect: 3, message: '힘들지만 뿌듯하다. 조원들이 고마워했다.' },
       { text: '맡은 부분만 열심히 한다', effects: { academic: 2, mental: 1 }, message: '내 할 일은 끝냈다. 편하다.' },
@@ -1710,7 +1710,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'birthday-friend', title: '지훈이 생일',
     description: '오늘이 지훈이 생일이다.\n단톡방에 생일 축하 메시지가 쏟아진다.',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     speakers: ['jihun'],
     choices: [
       { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2,
@@ -1750,7 +1750,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'social-media-drama', title: 'SNS 소동',
     description: '단톡방에서 누가 누구 험담을 했다가 들켰다.\n분위기가 험악해졌다.',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '중재를 시도한다', effects: { social: 3, mental: -1 }, message: '양쪽 이야기를 듣고 화해시켰다. 피곤하지만 뿌듯하다.' },
       { text: '안 끼어든다 (조용히 나간다)', effects: { mental: 1 }, message: '현명한 선택. 남의 싸움에 끼면 안 된다.' },
@@ -1781,7 +1781,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'cleaning-duty', title: '청소 당번',
     description: '오늘 청소 당번이다.\n교실이 엉망이다...',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '열심히 한다', effects: { health: 1, mental: 1 }, fatigueEffect: 2, message: '깨끗해진 교실을 보니 뿌듯하다.' },
       { text: '대충 하고 빠진다', effects: { social: -1 }, message: '옆에서 열심히 하는 애가 좀 미안하다.' },
@@ -1792,7 +1792,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     id: 'dream-question', title: '꿈이 뭐야?',
     description: '수업 시간에 선생님이 물었다.\n"너희, 나중에 뭐 하고 싶어?"',
     location: 'classroom',
-    background: 'classroom_{school}',
+    background: 'classroom_{school}_afternoon',
     choices: [
       { text: '"아직 잘 모르겠어요" — 솔직하게', effects: { mental: 1 }, message: '모른다고 하는 것도 용기다. 선생님이 "천천히 찾아봐" 하셨다.' },
       { text: '"공부 관련 일이요!" — 학업형', effects: { academic: 1, mental: 1 }, message: '말하고 보니 진짜 그런 것 같기도 하다.' },
