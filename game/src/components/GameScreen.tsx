@@ -332,27 +332,28 @@ export function GameScreen() {
   ) => {
     const isEmpty = !activityName;
     const isClickable = !isFixed && onClick;
-    const shouldPulse = isEmpty && !isFixed && showTutorial;
+    const shouldHighlight = isEmpty && !isFixed; // 빈 선택 슬롯은 항상 강조
     return (
       <div
         onClick={() => isClickable && onClick!()}
-        className={shouldPulse ? 'slot-pulse' : ''}
+        className={shouldHighlight ? 'slot-pulse' : ''}
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', marginBottom: 4, borderRadius: 10,
           cursor: isClickable ? 'pointer' : 'default',
           background: isFixed ? 'rgba(255,255,255,0.03)' :
-                      isEmpty ? (shouldPulse ? 'rgba(255,193,7,0.08)' : 'rgba(255,255,255,0.02)') :
+                      isEmpty ? 'rgba(233,69,96,0.08)' :
                       isRoutine ? 'rgba(91,141,239,0.12)' : 'rgba(233,69,96,0.12)',
-          border: isEmpty && !isFixed ? (shouldPulse ? '1px dashed rgba(255,193,7,0.5)' : '1px dashed rgba(255,255,255,0.15)') :
+          border: isEmpty && !isFixed ? '1px dashed rgba(233,69,96,0.4)' :
                   isRoutine && routineComboWeeks >= 3 ? '1px solid rgba(255,193,7,0.4)' :
                   isRoutine ? '1px solid rgba(91,141,239,0.2)' :
                   !isEmpty && !isFixed ? '1px solid rgba(233,69,96,0.2)' :
                   '1px solid rgba(255,255,255,0.04)',
-          boxShadow: isRoutine && routineComboWeeks >= 6 ? '0 0 8px rgba(255,193,7,0.2)' : 'none',
+          boxShadow: isRoutine && routineComboWeeks >= 6 ? '0 0 8px rgba(255,193,7,0.2)' :
+                     isEmpty && !isFixed ? '0 0 6px rgba(233,69,96,0.15)' : 'none',
           transition: 'all 0.15s',
           opacity: isFixed ? 0.6 : 1,
-          animation: shouldPulse ? 'slotPulse 1.5s ease-in-out infinite' : 'none',
+          animation: shouldHighlight ? 'slotPulse 2s ease-in-out infinite' : 'none',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
@@ -377,9 +378,15 @@ export function GameScreen() {
           ) : isFixed ? (
             <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>수업</span>
           ) : (
-            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', fontStyle: 'italic' }}>+ 선택</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--accent-soft)', fontWeight: 500 }}>탭하여 활동 선택</span>
           )}
         </div>
+        {/* 선택 가능한 슬롯에 변경 아이콘 표시 */}
+        {isClickable && (
+          <div style={{ flexShrink: 0, fontSize: '0.7rem', color: isEmpty ? 'var(--accent-soft)' : 'rgba(255,255,255,0.3)', padding: '2px 4px' }}>
+            {isEmpty ? '▶' : '✎'}
+          </div>
+        )}
       </div>
     );
   };
@@ -705,22 +712,34 @@ export function GameScreen() {
                 selectedActivities[0] ? '🌟' : '☀️',
                 '토요일',
                 selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
-                () => setEditingSlot('weekend1'),
+                () => {
+                  // slots=2 활동이 선택되어 있으면 전체 초기화 후 선택 패널 열기
+                  const act = ACTIVITIES.find(a => a.id === selectedActivities[0]);
+                  if (act && act.slots >= 2) {
+                    setSelectedActivities([]);
+                  }
+                  setEditingSlot('weekend1');
+                },
                 false, false,
                 selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
                 (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]])
                   ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]]))?.name : undefined,
               )}
-              {renderSlot(
-                selectedActivities[1] ? '🌟' : '☀️',
-                '일요일',
-                selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.name || null : null,
-                () => setEditingSlot('weekend2'),
-                false, false,
-                selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.moneyCost : undefined,
-                (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]])
-                  ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]]))?.name : undefined,
-              )}
+              {(() => {
+                const slot0Act = ACTIVITIES.find(a => a.id === selectedActivities[0]);
+                const isSlot0TwoSlot = slot0Act && slot0Act.slots >= 2;
+                return renderSlot(
+                  isSlot0TwoSlot ? '💤' : selectedActivities[1] ? '🌟' : '☀️',
+                  '일요일',
+                  isSlot0TwoSlot ? '(연속 활동)' : selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.name || null : null,
+                  isSlot0TwoSlot ? null : () => setEditingSlot('weekend2'),
+                  isSlot0TwoSlot, false,
+                  isSlot0TwoSlot ? undefined : selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.moneyCost : undefined,
+                  isSlot0TwoSlot ? undefined :
+                    (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]])
+                      ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]]))?.name : undefined,
+                );
+              })()}
 
               {/* 이번 주 이벤트 표시 */}
               {upcomingEvents.length > 0 && (
@@ -768,7 +787,7 @@ export function GameScreen() {
           <div onClick={e => e.stopPropagation()} style={{
             background: 'linear-gradient(180deg, rgba(15,52,96,0.99), rgba(26,26,46,0.99))',
             borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
-            maxHeight: '65vh', display: 'flex', flexDirection: 'column',
+            maxHeight: '85vh', display: 'flex', flexDirection: 'column',
             boxShadow: '0 -4px 30px rgba(0,0,0,0.5)',
           }}>
             {/* 헤더 — 크고 명확하게 */}
@@ -851,16 +870,31 @@ export function GameScreen() {
                       // NPC 선택 필요 — slotKey 저장 후 NPC 모달 열기
                       setNpcSelectFor(`slot:${slotIdx}:${id}`);
                     } else {
+                      const act = ACTIVITIES.find(a => a.id === id);
                       const newArr = [...selectedActivities];
-                      newArr[slotIdx] = id;
-                      setSelectedActivities(newArr);
+                      if (act && act.slots >= 2) {
+                        // slots=2 활동: 모든 슬롯을 채움
+                        for (let i = 0; i < maxSlots; i++) newArr[i] = id;
+                        setSelectedActivities(newArr.slice(0, maxSlots));
+                      } else {
+                        newArr[slotIdx] = id;
+                        setSelectedActivities(newArr);
+                      }
                       setLastReaction(getActivityReaction(id));
                     }
                     setEditingSlot(null);
                   }
                 }}
                 maxSlots={editingSlot?.startsWith('routine') ? 1 : maxSlots}
-                currentSlots={editingSlot?.startsWith('routine') ? 0 : currentSlots}
+                currentSlots={editingSlot?.startsWith('routine') ? 0 : (() => {
+                  // 편집 중인 슬롯의 활동을 제외한 슬롯 수 계산
+                  const idx = editingSlot === 'weekend1' ? 0 :
+                              editingSlot === 'weekend2' ? 1 :
+                              parseInt((editingSlot || '').replace('weekend', '')) - 1;
+                  const editingAct = selectedActivities[idx];
+                  const editingSlots = editingAct ? (activities.find(x => x.id === editingAct)?.slots || 0) : 0;
+                  return currentSlots - editingSlots;
+                })()}
                 state={state}
                 npcChoices={npcChoices}
                 compact={false}
@@ -1035,6 +1069,19 @@ export function GameScreen() {
         </div>
       </div>
 
+      {/* 선택 안내 메시지 */}
+      {currentSlots === 0 && !routineTooExpensive && (state.isVacation || state.routineSlot2) && (
+        <div style={{
+          textAlign: 'center', fontSize: '0.75rem', color: 'var(--accent-soft)',
+          padding: '6px 12px', marginBottom: 4,
+          background: 'rgba(233,69,96,0.08)', borderRadius: 8,
+        }}>
+          {state.isVacation
+            ? '위의 빈 슬롯을 탭해서 방학 활동을 선택하세요!'
+            : '주말 활동을 선택하면 스탯이 올라갑니다!'}
+        </div>
+      )}
+
       {/* 확정 버튼 */}
       <div data-tutorial="confirm" style={{ paddingBottom: 20 }}>
         <button className="btn btn-primary"
@@ -1046,7 +1093,7 @@ export function GameScreen() {
             : !state.isVacation && !state.routineSlot2
               ? '⬆ 먼저 방과후 루틴을 설정하세요'
               : currentSlots === 0
-                ? (state.isVacation ? '이번 주는 쉰다' : '주말 그냥 보내기')
+                ? (state.isVacation ? '이번 주는 쉰다' : '주말은 쉰다')
                 : '이번 주 확정 →'}
         </button>
       </div>

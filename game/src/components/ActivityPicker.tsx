@@ -120,7 +120,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   const isSel = selected.includes(a.id);
                   const money = availableMoney !== undefined ? availableMoney : state.money;
                   const canAfford = (a.moneyCost <= 0 || money >= a.moneyCost) && (!a.requires || a.requires(state));
-                  const canSelect = isSel || currentSlots + a.slots <= maxSlots;
+                  const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
                   const disabled = !canSelect || !canAfford;
 
                   // 서술형 태그 생성

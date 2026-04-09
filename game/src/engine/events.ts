@@ -305,7 +305,6 @@ export const GAME_EVENTS: GameEvent[] = [
     week: 8,
     location: 'classroom',
     background: 'classroom_{school}',
-    speakers: ['yuna'],
     choices: [
       {
         text: '시험공부에 올인한다 — 이번만큼은 잘 보고 싶다',
@@ -1650,7 +1649,7 @@ export const GAME_EVENTS: GameEvent[] = [
       { text: '조용히 지나간다', effects: { mental: 1 },
         message: '민재도 힘든 거구나. 반장 안 했길 잘한 건가, 아니면 도와줬어야 했나...' },
     ],
-    condition: (s) => !isClassPresident(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
+    condition: (s) => !isClassOfficer(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
   },
 ];
 
@@ -1866,11 +1865,17 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
 ];
 
-// 반장/부반장 당선 여부 체크
+// 실제 반장(반장선거 당선) 여부 체크 — 반장 전용 이벤트 조건에 사용
 function isClassPresident(s: GameState): boolean {
   return s.events.some(e =>
     (e.id === 'class-president-win' || e.id === 'class-president-2-win') && e.resolvedChoice !== undefined
-  ) || s.events.some(e => e.id === 'class-president-nudge' && e.resolvedChoice === 0)
+  );
+}
+
+// 반장/부반장 포함 학급 임원 여부 체크 — watching-president(비임원 조건)에 사용
+function isClassOfficer(s: GameState): boolean {
+  return isClassPresident(s)
+    || s.events.some(e => e.id === 'class-president-nudge' && e.resolvedChoice === 0)
     || s.events.some(e => e.id === 'class-president-vice' && e.resolvedChoice === 0);
 }
 
