@@ -97,15 +97,15 @@ const DIALOGUE_POOLS: DialoguePool[] = [
     '내가 잘하는 게 있다는 건 좋은 거지.',
     '이 분야에선 자신감이 좀 있어.',
   ]},
-  // 고등학생
-  { priority: 30, condition: s => s.week > 96, lines: [
+  // 고등학생 (Y5~Y7)
+  { priority: 30, condition: s => s.year >= 5, lines: [
     '고등학생이 되니 시간이 더 빨리 간다.',
     '진로를 슬슬 정해야 하는데...',
     '주변 분위기가 확 달라졌다.',
     '벌써 이만큼 컸구나.',
   ]},
-  // 중학생
-  { priority: 25, condition: s => s.week > 48, lines: [
+  // 중학생 (Y2~Y4)
+  { priority: 25, condition: s => s.year >= 2 && s.year <= 4, lines: [
     '중학생이 되니까 확실히 바빠졌다.',
     '교복 입으니까 좀 어른이 된 기분?',
     '선배가 무섭다...',

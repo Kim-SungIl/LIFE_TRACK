@@ -220,7 +220,7 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   log.fatigueChange += fatigueDelta;
 
   // 용돈 적용 (음수 방지)
-  state.money -= activity.moneyCost;
+  state.money = Math.round((state.money - activity.moneyCost) * 10) / 10;
   if (state.money < 0) state.money = 0;
   log.moneyChange -= activity.moneyCost;
 
@@ -540,8 +540,8 @@ export function processWeek(state: GameState): GameState {
   if (newState.parents.includes('wealth')) weeklyMoney = 8;
   // v6: 생활비 자동 차감 (교통비, 간식, 잡비)
   const livingCost = newState.parents.includes('wealth') ? 2.5 : 1.2;
-  const netMoney = weeklyMoney - livingCost;
-  newState.money += netMoney;
+  const netMoney = Math.round((weeklyMoney - livingCost) * 10) / 10;
+  newState.money = Math.round((newState.money + netMoney) * 10) / 10;
   log.moneyChange += netMoney;
 
   // 10. 방치 무기력 체크 (v6: 3주 연속 비생산적 활동 시 멘탈/소셜 감소)
@@ -583,11 +583,13 @@ export function processWeek(state: GameState): GameState {
     const examResult = generateExamResult(newState, examWeeks[newState.week]);
     newState.examResults.push(examResult);
     newState.currentExamResult = examResult;
+    log.examResult = examResult; // weekLog에 묶어 방학 중 잔류 방지
     const isSuneung = isY7 && newState.week === 35;
     const examName = isSuneung ? '수능' : examWeeks[newState.week] === 'midterm' ? '중간고사' : '기말고사';
     log.messages.push(`📝 ${examName} 결과 발표!`);
   } else {
     newState.currentExamResult = null;
+    log.examResult = null;
   }
 
   // 11. 이벤트 체크
