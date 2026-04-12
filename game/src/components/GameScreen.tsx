@@ -482,13 +482,13 @@ export function GameScreen() {
             })}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.72rem', paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <span style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)}</span>
-              <span>💰 {state.money}만원</span>
+              <span>💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원</span>
             </div>
           </div>
 
           {/* 시험 결과 */}
-          {state.currentExamResult && (() => {
-            const exam = state.currentExamResult!;
+          {state.weekLog?.examResult && (() => {
+            const exam = state.weekLog.examResult!;
             const gradeColors: Record<string, string> = { S: '#FFD700', A: '#4CAF50', B: '#2196F3', C: '#FF9800', D: '#F44336' };
             return (
               <div style={{
@@ -581,7 +581,7 @@ export function GameScreen() {
         <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
           <div onClick={() => { setShowShop(true); setNpcDetailFor(null); setNpcSelectFor(null); }} style={{ cursor: 'pointer' }}>
-            💰 {state.money}만원 <span style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>🛒</span>
+            💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원 <span style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>🛒</span>
           </div>
           <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 8 : 3}만원</div>
         </div>
@@ -675,7 +675,7 @@ export function GameScreen() {
             borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem',
             textAlign: 'center', color: 'var(--red)',
           }}>
-            💰 돈이 부족해요! 방과후 활동을 변경해 주세요 (현재 {state.money}만원, 필요 {routineCost}만원)
+            💰 돈이 부족해요! 방과후 활동을 변경해 주세요 (현재 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원, 필요 {routineCost}만원)
           </div>
         )}
 
@@ -1060,7 +1060,7 @@ export function GameScreen() {
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--yellow)' }}>💰 {state.money}만원</div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--yellow)' }}>💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원</div>
           {(state.activeBuffs || []).length > 0 && (
             <div style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>
               버프 {state.activeBuffs.length}개 활성

@@ -142,7 +142,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // 용돈 효과
     if (choice.moneyEffect) {
-      newState.money += choice.moneyEffect;
+      newState.money = Math.round((newState.money + choice.moneyEffect) * 10) / 10;
     }
 
     // NPC 친밀도 효과 + 만남 처리
@@ -170,8 +170,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.eventTimeCost = choice.timeCost;
     }
 
-    // 이벤트 기록 (선택 인덱스 포함)
-    newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex });
+    // 이벤트 기록 (선택 인덱스 + 발생 주차 포함)
+    newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex, week: newState.week });
 
     // weekLog에 메시지 추가
     if (newState.weekLog) {

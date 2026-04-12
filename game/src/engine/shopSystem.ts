@@ -201,7 +201,7 @@ export function applyItemEffects(
   const newState = JSON.parse(JSON.stringify(state)) as GameState;
   const messages: string[] = [];
 
-  newState.money -= item.price;
+  newState.money = Math.round((newState.money - item.price) * 10) / 10;
   if (newState.money < 0) newState.money = 0;
 
   for (const effect of item.effects) {
@@ -210,7 +210,7 @@ export function applyItemEffects(
         if (effect.stat === 'fatigue') {
           newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + (effect.value || 0)));
         } else if (effect.stat === 'money') {
-          newState.money += effect.value || 0;
+          newState.money = Math.round((newState.money + (effect.value || 0)) * 10) / 10;
         } else if (effect.stat) {
           const key = effect.stat as StatKey;
           newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (effect.value || 0)));

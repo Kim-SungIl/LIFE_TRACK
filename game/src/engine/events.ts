@@ -1087,12 +1087,13 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'minjae-party',
     title: '민재의 생일파티',
     description: '민재가 교실에서 크게 외친다.\n"야 다들! 이번 주 토요일 내 생일이거든? 우리 집에서 파티 한다! 다 와!"',
+    week: 7,
     location: 'home',
     background: 'party_room',
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 15 && s.week >= 8;
+      return !!minjae?.met && (s.year === 1 || minjae.intimacy >= 30);
     },
     choices: [
       {
@@ -1651,6 +1652,84 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
     condition: (s) => !isClassOfficer(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
   },
+
+  // ===== 생일 이벤트 (매년 고정 주차 발동) =====
+  {
+    id: 'jihun-birthday', title: '지훈이 생일',
+    description: '오늘이 지훈이 생일이다.\n단톡방에 생일 축하 메시지가 쏟아진다.',
+    week: 14,
+    location: 'classroom', background: 'classroom_{school}_afternoon',
+    speakers: ['jihun'],
+    condition: (s) => {
+      const jihun = s.npcs.find(n => n.id === 'jihun');
+      return !!jihun?.met && (s.year === 1 || jihun.intimacy >= 30);
+    },
+    choices: [
+      { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        message: '지훈이가 진짜 좋아했다. "야 너 최고다!" 돈 아깝지 않다.' },
+      { text: '카톡으로 축하만 한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
+        message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
+    ],
+  },
+  {
+    id: 'subin-birthday', title: '수빈이 생일',
+    description: '오늘이 수빈이 생일이라는 게 떠올랐다.\n2학기가 시작되고 9월이다.',
+    week: 29,
+    location: 'classroom', background: 'classroom_{school}_afternoon',
+    speakers: ['subin'],
+    condition: (s) => {
+      const subin = s.npcs.find(n => n.id === 'subin');
+      return !!subin?.met && (s.year === 1 || subin.intimacy >= 30);
+    },
+    choices: [
+      { text: '선물을 준비했다', effects: { social: 2, mental: 2 }, moneyEffect: -2,
+        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        message: '수빈이가 "어, 어떻게 알았어!" 하며 눈이 커졌다. "고마워..." 수줍게 웃었다.' },
+      { text: '카톡으로 축하한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
+        message: '"ㅊㅋㅋ 고마워~" 수빈이가 이모티콘을 보냈다.' },
+    ],
+  },
+  {
+    id: 'yuna-birthday', title: '유나의 생일',
+    description: '오늘이 유나 생일인 걸 단톡에서 알게 됐다.\n유나는 조용히 자리에 앉아 있다.',
+    week: 37,
+    location: 'classroom', background: 'classroom_{school}_afternoon',
+    speakers: ['yuna'],
+    condition: (s) => {
+      const yuna = s.npcs.find(n => n.id === 'yuna');
+      return !!yuna?.met && (s.year === 1 || yuna.intimacy >= 30);
+    },
+    choices: [
+      { text: '작은 선물을 준다', effects: { social: 2, mental: 2 }, moneyEffect: -2,
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
+        message: '유나가 조용히 받아들었다. "...고마워." 살짝 붉어진 귀가 보였다.' },
+      { text: '조용히 카톡으로 축하한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
+        message: '"고마워" 짧은 답장이 왔다. 유나답다.' },
+    ],
+  },
+  {
+    id: 'haeun-birthday', title: '하은이 생일',
+    description: '오늘이 하은이 생일이다.\n"어, 어떻게 알았어?" 하은이가 눈을 동그랗게 떴다.',
+    week: 35,
+    location: 'classroom', background: 'classroom_{school}_afternoon',
+    speakers: ['haeun'],
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && (s.year === 1 || haeun.intimacy >= 30);
+    },
+    choices: [
+      { text: '손수 만든 카드를 준다', effects: { social: 2, mental: 3 }, moneyEffect: -1,
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 9 }],
+        message: '"이거... 직접 만든 거야?" 하은이가 카드를 꼭 쥐었다. "정말 고마워."' },
+      { text: '카톡으로 축하한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 1 }],
+        message: '"ㅎㅎ 고마워~" 하은이가 답장을 보냈다.' },
+    ],
+  },
 ];
 
 // ===== 학교생활 랜덤 이벤트 풀 (매주 1개씩 발생) =====
@@ -1757,22 +1836,6 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
       { text: '경찰서에 맡긴다', effects: { mental: 3 }, message: '착한 일 했다. 마음이 뿌듯하다.' },
       { text: '...주머니에 넣는다', effects: { mental: -2 }, moneyEffect: 1, message: '돈은 생겼는데 찝찝하다.' },
     ],
-  },
-  {
-    id: 'birthday-friend', title: '지훈이 생일',
-    description: '오늘이 지훈이 생일이다.\n단톡방에 생일 축하 메시지가 쏟아진다.',
-    location: 'classroom',
-    background: 'classroom_{school}_afternoon',
-    speakers: ['jihun'],
-    choices: [
-      { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
-        message: '지훈이가 진짜 좋아했다. "야 너 최고다!" 돈 아깝지 않다.' },
-      { text: '카톡으로 축하만 한다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
-        message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
-    ],
-    condition: (s) => !s.isVacation,
   },
   {
     id: 'pe-class-hero', title: '체육 시간의 영웅',
@@ -1887,7 +1950,7 @@ const FOLLOWUP_EVENT_IDS = new Set([
   'haeun-sketchbook', 'haeun-local-guide', 'haeun-afterclass', 'haeun-specialty-awake', 'haeun-winter',
   'jihun-basketball', 'jihun-secret', 'jihun-fight', 'jihun-support', 'jihun-promise',
   'subin-notes', 'subin-cafe', 'subin-dream', 'subin-exam-stress', 'subin-farewell',
-  'minjae-party', 'minjae-mask', 'minjae-family', 'minjae-real', 'minjae-future',
+  'minjae-mask', 'minjae-family', 'minjae-real', 'minjae-future',
   'yuna-library', 'yuna-lunch', 'yuna-hobby', 'yuna-pressure', 'yuna-smile',
 ]);
 
@@ -1903,7 +1966,7 @@ export function getFollowupForWeek(state: GameState): GameEvent | null {
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
-  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-school-graduation','high-school-entrance','suneung-eve','suneung-done','high-school-graduation','year-end-reflection']);
+  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-school-graduation','high-school-entrance','suneung-eve','suneung-done','high-school-graduation','year-end-reflection','jihun-birthday','minjae-party','subin-birthday','yuna-birthday','haeun-birthday']);
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&

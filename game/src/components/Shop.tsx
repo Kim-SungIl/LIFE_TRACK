@@ -71,7 +71,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
         <div style={{ padding: '16px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>🛒 상점</div>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>현재 돈: {state.money}만원</div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>현재 돈: {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원</div>
           </div>
           <span onClick={onClose} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 8px' }}>닫기 ✕</span>
         </div>
