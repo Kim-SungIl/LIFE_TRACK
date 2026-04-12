@@ -62,6 +62,7 @@ export interface WeekLog {
   messages: string[];
   milestone: string | null;      // 하위호환용 (deprecated)
   milestoneMessages: string[];   // 이번 주 달성한 성장 메시지들
+  examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
 }
 
 // 시험 시스템
