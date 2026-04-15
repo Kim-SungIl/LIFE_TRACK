@@ -70,7 +70,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '옆자리 아이에게 먼저 말을 건다',
         effects: { social: 3, mental: 3 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
-        message: '"나도 떨려..." 수빈이가 웃으며 대답했다. 나만 긴장한 게 아니었다.',
+        message: '"야, 여기 진짜 크다! 같이 다니자~" 수빈이가 팔짱을 끼며 웃었다. 나만 긴장한 건가.',
       },
       {
         text: '일단 자리에 앉아서 주변을 살핀다',
@@ -329,7 +329,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'subin-academy',
     title: '수빈이와 학원',
-    description: '학원에서 수빈이를 만났다. 같은 학원이었는데 몰랐다.\n"우리 같은 학원이었어? 쉬는 시간에 같이 편의점 갈래?"',
+    description: '학원 복도에서 수빈이가 다른 반 아이들과 웃으며 얘기하고 있다.\n나를 발견하자 "야, 너도 김쌤 반이야? 김쌤 숙제 진짜 많지 않아? 쉬는 시간에 편의점 가자~"',
     week: 5,
     condition: (s) => s.routineSlot2 === 'academy' || s.routineSlot3 === 'academy',
     location: 'street',
@@ -341,13 +341,13 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { social: 1, mental: 2 },
         moneyEffect: -1,
         npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
-        message: '수빈이랑 편의점에서 아이스크림을 먹었다. 학원이 덜 지루해졌다.',
+        message: '수빈이랑 편의점에서 아이스크림을 먹었다. 수빈이는 벌써 편의점 누나랑도 친해져 있었다. 이 애는 어디서든 금방 친해진다.',
       },
       {
         text: '"나 복습 좀 해야 해" — 거절한다',
         effects: { academic: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: -2 }],
-        message: '수빈이가 "아, 그래..." 하고 혼자 갔다.',
+        message: '"아 그래? 알겠어~" 수빈이가 금방 다른 아이를 데리고 갔다. 아쉬울 틈도 없다.',
       },
     ],
   },
@@ -440,23 +440,23 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'school-festival',
     title: '학교 축제',
-    description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n하은이가 "나 포스터 그릴 수 있는데, 같이 할 사람?" 하고 손을 든다.',
+    description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n수빈이가 "야, 홍보는 내가 할게! 누가 같이 하자~" 하며 손을 든다.',
     week: 30,
     location: 'classroom',
     background: 'festival_classroom',
-    speakers: ['haeun'],
+    speakers: ['subin'],
     choices: [
       {
-        text: '"나도 할게!" — 하은이랑 홍보 담당',
+        text: '"나도 할게!" — 수빈이랑 홍보 담당',
         effects: { social: 4, talent: 3, mental: 2 },
         fatigueEffect: 5,
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
-        message: '하은이랑 같이 포스터를 만들었다. 하은이 그림에 내가 문구를 넣었더니 반응이 폭발! "너네 콤비 최고다!"',
+        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        message: '수빈이랑 같이 포스터를 만들었다. 수빈이가 옆 반 애들까지 불러와서 반응이 폭발! "너네 반 축제 진짜 기대된다!"',
       },
       {
         text: '"회계 할게" — 뒤에서 조용히',
         effects: { academic: 1, social: 1 },
-        message: '회계를 맡았다. 하은이가 혼자 포스터를 만들었는데... 솔직히 대단했다.',
+        message: '회계를 맡았다. 수빈이가 SNS에 올리고 옆 반까지 다 돌려서... 줄이 길어졌다.',
       },
       {
         text: '"나 몸이 안 좋아서..." — 축제에 참여 안 한다',
@@ -469,7 +469,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'yuna-study',
     title: '유나의 부탁',
-    description: '유나가 조심스럽게 말을 건다.\n"있잖아... 나 수학 좀 알려줄 수 있어? 이번 시험 진짜 망할 것 같아."',
+    description: '유나가 씩 웃으며 다가온다.\n"야, 나 수학 7번 도저히 모르겠거든? 너 잘하잖아, 좀 알려줘!"',
     week: 34,
     condition: (s) => s.stats.academic >= 50 && s.year !== 7, // Y7 W34는 수능 전날
     location: 'library',
@@ -481,13 +481,13 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { academic: 1, social: 2, mental: 2 },
         fatigueEffect: 3,
         npcEffects: [{ npcId: 'yuna', intimacyChange: 10 }],
-        message: '유나에게 수학을 가르쳤다. 가르치면서 나도 더 잘 이해하게 됐다. 유나가 "고마워, 진짜" 했다.',
+        message: '유나에게 수학을 가르쳤다. 가르치면서 나도 더 잘 이해하게 됐다. 유나가 "오 대박, 이거였어? 천재 아냐?" 했다.',
       },
       {
         text: '"미안, 나도 바빠서..." — 거절한다',
         effects: { academic: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: -5 }],
-        message: '유나가 "아, 그래... 알겠어"라며 돌아갔다. 표정이 안 좋았다.',
+        message: '유나가 "아 그래? 알겠어~" 하며 돌아갔다. 웃고 있는데 좀 아쉬워 보였다.',
       },
     ],
   },
@@ -636,7 +636,7 @@ export const GAME_EVENTS: GameEvent[] = [
     condition: (s) => s.year === 7,
     location: 'auditorium',
     background: 'auditorium_high',
-    speakers: ['jihun', 'subin', 'minjae', 'yuna', 'haeun'],
+    speakers: ['jihun', 'subin', 'minjae', 'yuna', 'junha'],
     choices: [
       {
         text: '친구들과 마지막 인사를 나눈다',
@@ -646,7 +646,7 @@ export const GAME_EVENTS: GameEvent[] = [
           { npcId: 'subin', intimacyChange: 5 },
           { npcId: 'minjae', intimacyChange: 5 },
           { npcId: 'yuna', intimacyChange: 5 },
-          { npcId: 'haeun', intimacyChange: 5 },
+          { npcId: 'junha', intimacyChange: 5 },
         ],
         message: '서로 안아주고, 사진 찍고, 연락처를 확인했다. "꼭 다시 만나자." 눈물이 났다.',
       },
@@ -662,130 +662,153 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
-  // ===== 하은 이벤트 체인 =====
+  // ===== 하은 이벤트 체인 (중학교 선배 멘토) =====
   {
-    id: 'new-student', title: '전학생',
-    description: '2학기가 시작된 지 얼마 안 됐는데, 반에 전학생이 왔다.\n선생님이 소개한다. "부산에서 온 김하은이라고 합니다."\n"안녕하세요... 잘 부탁해요." 낯설어하면서도 주변을 호기심 가득한 눈으로 둘러본다.',
-    week: 26,
-    location: 'classroom',
-    background: 'classroom_{school}',
-    speakers: ['haeun', 'minjae'],
-    choices: [
-      { text: '"안녕! 여기 처음이지? 뭐든 물어봐!" — 먼저 다가간다', effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
-        message: '하은이가 환하게 웃었다. "고마워! 너 이름이 뭐야?" 첫 대화가 생각보다 편했다.' },
-      { text: '지켜본다... 누군가 말 걸겠지', effects: {},
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 2 }],
-        message: '민재가 먼저 다가갔다. "야, 부산에서 왔어? 사투리 써봐!" 하은이가 웃으며 대답했다. 살짝 아쉽다.' },
-    ],
-  },
-  {
-    id: 'haeun-sketchbook', title: '낙서가 들켰다',
-    description: '쉬는 시간, 하은이가 공책 구석에 뭔가를 열심히 그리고 있다.\n들여다보니 교실 풍경 스케치다. 꽤 잘 그린다.',
-    location: 'classroom',
-    background: 'classroom_{school}_afternoon',
+    id: 'haeun-meet',
+    title: '도서관의 선배',
+    description: '점심시간에 도서관에 갔다.\n창가 자리에 교복 위에 가디건을 걸친 선배가 앉아 있다.\n책을 읽다가 이쪽을 봤다.\n"1학년이지? 여기 자주 와?"',
+    location: 'library',
+    background: 'library_{school}',
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 10 && s.week > 28 && !s.isVacation;
+      return s.year === 2 && !haeun?.met && s.week >= 4 && s.week <= 10 && !s.isVacation;
     },
     choices: [
-      { text: '"뭐 그리는 거야? 진짜 잘 그린다!" — 관심을 보인다', effects: { talent: 2, mental: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
-        message: '"에이, 이건 낙서야..." 하면서도 하은이 표정이 밝아졌다. 전학 와서 처음으로 그림 칭찬 받았다고.' },
-      { text: '조용히 옆에 앉아서 본다', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
-        message: '하은이가 알아챘지만 뭐라 안 했다. 조용히 같이 있는 것도 나쁘지 않다.' },
-      { text: '별 관심 없는 척 지나간다', effects: {}, message: '나중에 보니 하은이가 그 스케치를 접어서 넣고 있었다.' },
-    ],
-  },
-  {
-    id: 'haeun-local-guide', title: '이 동네 구경시켜 줘',
-    description: '방과후, 하은이가 다가온다.\n"있잖아, 나 아직 이 동네를 잘 몰라서... 어디가 재밌어? 알려줄 수 있어?"',
-    location: 'street',
-    background: 'school_gate_{school}',
-    speakers: ['haeun', 'minjae'],
-    condition: (s) => {
-      const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 20 && s.week > 29 && !s.isVacation;
-    },
-    choices: [
-      { text: '자주 가는 곳을 소개해준다', effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
-        message: '분식집, 문구점, 공원... 하은이가 전부 사진을 찍었다. "여기 좋다! 부산이랑 완전 다르네."',
-        timeCost: 1 },
-      { text: '조용한 곳을 데려간다', effects: { mental: 3 },
+      { text: '"네, 가끔요..." — 어색하게 대답한다', effects: { mental: 2 },
         npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
-        message: '한적한 산책로를 걸었다. 하은이가 "여기 그림 그리기 좋겠다..." 하며 눈을 빛냈다.',
-        timeCost: 1 },
-      { text: '"민재한테 물어봐, 걔가 잘 알아" — 민재에게 넘긴다', effects: {},
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }, { npcId: 'haeun', intimacyChange: 1 }],
-        message: '민재가 하은이를 데리고 떡볶이집으로 갔다. 나중에 하은이가 "재밌었어, 근데 네가 같이 갔으면 좋았는데" 했다.' },
-    ],
-  },
-  {
-    id: 'haeun-afterclass', title: '방과후 교실',
-    description: '모두 돌아간 빈 교실. 하은이가 창가에서 축제 포스터 아이디어를 끄적이고 있다.\n"아, 왔어? 나 축제 포스터 아이디어 좀 내고 있었는데..."',
-    location: 'classroom',
-    background: 'classroom_{school}_sunset',
-    speakers: ['haeun'],
-    condition: (s) => {
-      const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 30 && s.week >= 28 && s.week <= 38 && !s.isVacation;
-    },
-    choices: [
-      { text: '같이 아이디어를 낸다', effects: { talent: 3 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
-        message: '둘이서 아이디어를 주고받았다. 하은이가 "너 센스 좋은데? 같이 하면 진짜 괜찮겠다!" 했다.' },
-      { text: '색칠이나 정리를 도와준다', effects: { talent: 1, social: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
-        message: '하은이가 스케치하고 내가 색을 칠했다. 해가 질 때쯤 꽤 괜찮은 포스터가 나왔다.' },
-      { text: '"다음에 보자" — 먼저 간다', effects: {},
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 1 }],
-        message: '하은이가 "어, 그래..." 하고 혼자 남았다. 뒤돌아보니 좀 외로워 보였다.' },
-    ],
-  },
-  {
-    id: 'haeun-specialty-awake', title: '"너, 이런 거 잘하네"',
-    description: '하은이가 진지한 표정으로 다가온다.\n"있잖아... 네가 저번에 만든 거 봤는데, 솔직히 진짜 좋았어.\n너 이런 거 재능 있는 것 같아. 진심으로."',
-    location: 'classroom',
-    background: 'classroom_{school}_afternoon',
-    speakers: ['haeun'],
-    condition: (s) => {
-      const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 45 && s.stats.talent >= 40;
-    },
-    choices: [
-      { text: '"진짜? 고마워..." — 쑥스럽지만 기쁘다', effects: { talent: 3, mental: 3 },
+        message: '"야, 존댓말 하지 마. 어색해." 선배가 웃었다. "나 하은이야. 2학년." 무섭지 않은 선배다.' },
+      { text: '"선배는 여기 자주 오세요?" — 말을 건다', effects: { social: 1, mental: 2 },
         npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
-        message: '누군가한테 진심으로 인정받는 느낌. 가슴이 따뜻해졌다. 하은이가 "더 해봐, 나도 도와줄게" 했다.' },
-      { text: '"별거 아니야..." — 넘긴다', effects: { talent: 1, mental: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
-        message: '"아냐, 별거 맞아." 하은이가 단호하게 말했다. 겸손해도 들린 건 들린 거다.' },
-      { text: '"같이 뭔가 더 해볼래?" — 제안한다', effects: { talent: 4, mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
-        message: '하은이 눈이 반짝였다. "진짜? 나 아이디어 있는데! 같이 하면 진짜 대박일 거야!"' },
+        message: '"시끄러운 데보다 여기가 좋아서." 선배가 자리를 가리켰다. "앉아. 나 하은이야." 편한 선배다.' },
     ],
   },
   {
-    id: 'haeun-winter', title: '하은이의 겨울',
-    description: '겨울방학이 다가오자 하은이가 말을 꺼낸다.\n"나 방학에 부산 갈 건데... 너도 같이 갈래? 맛있는 거 사줄게!"',
-    location: 'cafe',
-    background: 'cafe_study',
+    id: 'haeun-advice',
+    title: '선배의 조언',
+    description: '시험이 다가오는데 정리가 안 된다.\n도서관에서 머리를 잡고 있는데 하은 선배가 옆에 앉았다.\n"어디 막혔어? 보여봐."',
+    location: 'library',
+    background: 'library_{school}',
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 55 && s.week >= 42 && s.week <= 46;
+      return !!haeun?.met && haeun.intimacy >= 15 && s.year === 2 && !s.isVacation
+        && [6, 7, 15, 16].includes(s.week);
     },
     choices: [
-      { text: '"가자! 부산 가보고 싶었어!" — 함께 간다', effects: { social: 3, mental: 4, talent: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 10 }],
-        moneyEffect: -3,
-        message: '하은이의 고향 부산을 구경했다. 바다, 시장, 하은이가 다니던 학교... "여기가 내 세계였어." 하은이가 웃었다.',
-        timeCost: 2 },
-      { text: '"미안, 이번엔 못 갈 것 같아" — 거절한다', effects: { mental: 1 },
+      { text: '"이거 어떻게 정리해요?" — 노트를 보여준다', effects: { academic: 2, mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        message: '하은 선배가 노트를 쓱 훑더니 "이거 이렇게 묶으면 외우기 쉬워" 하고 정리해줬다. 확실히 1년 먼저 산 사람이다.' },
+      { text: '"괜찮아요, 혼자 해볼게요" — 사양한다', effects: { mental: 1 },
         npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }],
-        message: '"그래, 알겠어... 다음에 꼭 같이 가자!" 하은이가 살짝 아쉬운 표정을 지었다.' },
+        message: '"그래? 막히면 말해." 선배가 자기 자리로 돌아갔다. 도움 받을걸 그랬나.' },
+    ],
+  },
+  {
+    id: 'haeun-vending',
+    title: '자판기 앞에서',
+    description: '방과후 복도. 자판기 앞에서 하은 선배가 동전을 넣고 있다.\n"아, 후배~ 뭐 마실래? 내가 살게."\n별일 아닌 것처럼 웃는다.',
+    location: 'hallway',
+    background: 'hallway_{school}',
+    speakers: ['haeun'],
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 25 && (s.year === 2 || s.year === 3) && !s.isVacation;
+    },
+    choices: [
+      { text: '"감사합니다— 아니, 고마워!" — 받아 마신다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        message: '자판기 옆에 기대서 같이 음료를 마셨다. 별 대화는 아닌데, 이 시간이 편하다. "시험 끝나면 뭐 할 거야?" "몰라요." "나도 몰라." 웃었다.' },
+      { text: '"제가— 내가 살게!" — 먼저 산다', effects: { social: 1, mental: 2 }, moneyEffect: -1,
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        message: '"어? 후배가 선배한테?" 하은이가 놀란 척했다. "고마워. 다음엔 내가 살게." 자판기 앞에서 웃으며 수다를 떨었다.' },
+    ],
+  },
+  {
+    id: 'haeun-brother',
+    title: '오빠 이야기',
+    description: '밤에 카톡이 왔다. 하은 선배다.\n"너 아직 안 잤지?"\n"오빠가 수능 망했거든."\n"그 뒤로 집이 장례식장 같았어."',
+    location: 'home',
+    background: 'bedroom_night',
+    speakers: ['haeun'],
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 40 && (s.year === 2 || s.year === 3) && s.week >= 25 && !s.isVacation;
+    },
+    choices: [
+      { text: '"힘들었겠다..." — 들어준다', effects: { social: 1, mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '"오빠가 방에서 안 나오더라. 몇 달째." 한참 뒤에 메시지가 왔다. "너한테 처음 말했다. 고마워."' },
+      { text: '"선배 오빠도 다시 괜찮아질 거예요" — 위로한다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        message: '"...그랬으면 좋겠다." 마지막 메시지 뒤로 한참 동안 답이 없었다. 나중에 "잘 자" 한 마디가 왔다.' },
+      { text: '화제를 돌린다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        message: '하은이가 "ㅋㅋ 갑자기 무거운 얘기해서 미안" 하고 이모티콘을 보냈다. 웃는 이모티콘인데 왠지 씁쓸했다.' },
+    ],
+  },
+  {
+    id: 'haeun-counselor',
+    title: '하은이의 꿈',
+    description: '점심시간에 하은 선배가 옥상으로 불렀다.\n바람을 맞으며 하은이가 말한다.\n"나 상담사 되고 싶어.\n오빠한테 누가 얘기 들어줬으면 달랐을까... 그런 생각이 들어서."',
+    location: 'rooftop',
+    background: 'rooftop',
+    speakers: ['haeun'],
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return !!haeun?.met && haeun.intimacy >= 50 && s.year === 3 && s.week >= 10 && !s.isVacation;
+    },
+    choices: [
+      { text: '"선배한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 3 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '하은이가 웃었다. "진짜? 엄마는 뭔 상담사냐고 했는데..." "선배가 저한테 그랬잖아요. 들어주는 것만으로도 다르다고." 하은이 눈이 살짝 젖었다.' },
+      { text: '"밥은 되는 거야?" — 현실적으로 묻는다', effects: { mental: -1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        message: '하은이가 잠깐 멈칫했다. "...부모님이랑 똑같은 말 하네." 웃었지만 좀 쓸쓸해 보였다.' },
+      { text: '"같이 고민해보자" — 진지하게 말한다', effects: { social: 1, mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
+        message: '"너한테 이런 얘기 하는 거 보면 나도 나이 먹었나 봐." 하은이가 바람을 맞으며 웃었다. "고마워. 진짜로."' },
+    ],
+  },
+  {
+    id: 'haeun-graduation',
+    title: '선배의 졸업',
+    description: '졸업식 날.\n강당에서 나오는 하은 선배를 찾았다.\n교복 위에 가디건을 걸친 모습이 처음 만났을 때랑 똑같다.\n"야, 왔어?"',
+    week: 46,
+    location: 'auditorium',
+    background: 'auditorium_middle',
+    speakers: ['haeun'],
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return s.year === 3 && !!haeun?.met && haeun.intimacy >= 20;
+    },
+    choices: [
+      { text: '"졸업 축하해요... 아니, 축하해" — 인사한다', effects: { social: 2, mental: 3 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '"고등학교 가면 처음엔 다 낯설어. 근데 한 달만 버텨. 그럼 괜찮아져." 하은이가 웃었다. "네가 걱정돼서 그래." 도서관에서 처음 만났을 때와 같은 웃음이다. 근데 왜 이렇게 아쉽지.' },
+      { text: '"선배 없으면 누가 조언해줘요" — 솔직하게 말한다', effects: { mental: 4 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 10 }],
+        message: '하은이가 잠깐 말을 잃었다. "...야, 그런 말 하지 마. 울 것 같잖아." 웃으면서 눈을 비볐다. "카톡은 계속 하자. 약속이다." 멘토가 떠나는 건, 생각보다 많이 아프다.' },
+    ],
+  },
+  {
+    id: 'haeun-reunion',
+    title: '재회',
+    description: '고등학교 입학 후 며칠이 지났다.\n복도를 걷는데 낯익은 가디건이 보인다.\n"...어? 너 여기 왔어?!"\n하은 선배가 눈을 크게 뜨고 달려왔다.',
+    location: 'hallway',
+    background: 'hallway_{school}',
+    speakers: ['haeun'],
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      return s.year === 5 && !!haeun?.met && haeun.intimacy >= 30 && s.week >= 2 && s.week <= 6;
+    },
+    choices: [
+      { text: '"선배! 같은 학교였어?!" — 반갑게 인사한다', effects: { social: 3, mental: 4 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        message: '"야, 반말해! 이제 같은 학교잖아." 하은이가 웃었다. 1년 만인데 하나도 안 변했다. 아니, 좀 더 어른스러워졌나. 멘토가 아니라 동료가 된 기분이다.' },
+      { text: '"어, 안녕..." — 어색하게 인사한다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        message: '"뭐야, 1년 만에 보는 건데 그렇게 시큰둥해?" 하은이가 어깨를 쳤다. "점심 같이 먹자. 급식 맛있는 거 알려줄게." 여전히 선배다.' },
     ],
   },
   // ===== 지훈 이벤트 체인 =====
@@ -937,290 +960,385 @@ export const GAME_EVENTS: GameEvent[] = [
   },
   // ===== 수빈 이벤트 체인 =====
   {
-    id: 'subin-notes',
-    title: '수빈이의 노트',
-    description: '수빈이가 쉬는 시간에 다가온다.\n"야, 너 저번 시간 필기 좀 빌려줄 수 있어? 나 그날 결석해서..."\n수빈이 필통이 잘 정리되어 있는 게 눈에 들어온다.',
+    id: 'subin-bridge',
+    title: '수빈이의 소개',
+    description: '점심시간에 수빈이가 손을 잡고 끌어간다.\n"야, 잠깐만! 내 학원 친구 소개시켜줄게. 너랑 잘 맞을 것 같아."\n옆 반 아이가 어색하게 웃으며 서 있다.',
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 15 && s.week >= 12 && !s.isVacation;
+      return !!subin?.met && subin.intimacy >= 20 && !s.isVacation && s.week >= 10;
     },
     choices: [
       {
-        text: '"그래, 여기" — 노트를 빌려준다',
-        effects: { social: 1, mental: 2 },
+        text: '"안녕!" — 밝게 인사한다',
+        effects: { social: 3, mental: 2 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
-        message: '수빈이가 노트를 꼼꼼히 사진 찍었다. "고마워, 다음에 내 거 필요하면 말해!" 믿음직하다.',
+        message: '수빈이 덕분에 새로운 친구가 생겼다. 수빈이는 이런 걸 참 잘한다. 어디서든 사람을 이어주는 애.',
       },
       {
-        text: '"나도 필기 별로 못했는데..." — 미안해한다',
-        effects: {},
-        npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
-        message: '"아 그래? 괜찮아~" 수빈이가 다른 아이에게 물어보러 갔다.',
-      },
-    ],
-  },
-  {
-    id: 'subin-cafe',
-    title: '카페에서 공부',
-    description: '시험 2주 전. 수빈이가 카톡을 보냈다.\n"나 카페에서 공부할 건데 같이 할래? 혼자 하면 졸려서..."\n수빈이가 먼저 연락하는 건 드문 일이다.',
-    location: 'cafe',
-    background: 'cafe_study',
-    speakers: ['subin'],
-    condition: (s) => {
-      const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 30 && s.week >= 22 && !s.isVacation;
-    },
-    choices: [
-      {
-        text: '"좋아, 어디서 만날까?" — 같이 공부하러 간다',
-        effects: { academic: 2, social: 2 },
-        fatigueEffect: 3,
-        moneyEffect: -1,
-        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
-        message: '수빈이랑 카페에서 4시간을 공부했다. 수빈이가 수학을, 내가 영어를 알려줬다. "우리 꽤 잘 맞는 것 같아."',
-        timeCost: 1,
-      },
-      {
-        text: '"오늘은 집에서 할래" — 거절한다',
-        effects: { academic: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: -2 }],
-        message: '수빈이가 "알겠어~" 하고 혼자 갔다. 읽씹할 뻔했다.',
+        text: '"아... 안녕" — 어색하게 인사한다',
+        effects: { social: 1 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
+        message: '수빈이가 중간에서 분위기를 풀어줬다. "걔 좀 낯가리는데 원래 재밌어~" 하면서.',
       },
     ],
   },
   {
-    id: 'subin-dream',
-    title: '수빈이의 꿈',
-    description: '카페에서 공부하다가 수빈이가 갑자기 말했다.\n"있잖아... 나 사실 요리사가 되고 싶어."\n"...뭐?"\n성적 상위권인 수빈이 입에서 나올 줄 몰랐던 말.',
-    location: 'cafe',
-    background: 'cafe_study',
+    id: 'subin-lonely',
+    title: '혼자 있는 수빈',
+    description: '체험학습 날. 다들 그룹으로 모여서 떠드는데,\n수빈이가 혼자 벤치에 앉아 핸드폰을 보고 있다.\n아까까지 다른 반 애들이랑 웃고 있었는데... 다 가고 없다.\n"어? 나? 괜찮아, 나 원래 이런 거 익숙해."',
+    location: 'school',
+    background: 'school_gate_{school}',
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 40 && s.week >= 30 && !s.isVacation;
+      return !!subin?.met && subin.intimacy >= 35 && !s.isVacation && s.year >= 2;
     },
     choices: [
       {
-        text: '"대박, 몰랐다! 진짜 해봐!" — 응원한다',
+        text: '"같이 있자" — 옆에 앉는다',
         effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
-        message: '수빈이 얼굴이 환해졌다. "진짜? 부모님한테도 못 말했는데... 너한테 먼저 말하고 싶었어."',
+        message: '수빈이가 잠깐 놀란 표정을 지었다가 웃었다. "...고마워." 친구가 많은 애인 줄만 알았는데, 이런 순간도 있구나.',
       },
       {
-        text: '"공부도 잘하는데, 좀 아깝지 않아?" — 현실적으로 말한다',
-        effects: { mental: -1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
-        message: '"...그런 말 많이 들었어." 수빈이가 조용해졌다. 잘못 말한 걸까.',
+        text: '"괜찮아?" — 물어본다',
+        effects: { social: 1, mental: 1 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
+        message: '"응, 진짜 괜찮아~ 나 혼자 있는 거 좋아해." 밝게 웃었지만, 아까 핸드폰을 보던 표정이 자꾸 생각난다.',
       },
       {
-        text: '"수빈이 성격이면 뭘 해도 잘할 것 같아" — 수빈이를 믿어준다',
-        effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
-        message: '"고마워... 너한테 말하니까 마음이 좀 편해졌다." 수빈이가 웃었다.',
+        text: '그냥 지나간다',
+        effects: {},
+        message: '수빈이가 뒤에서 누군가에게 전화를 걸고 있었다. 밝은 목소리로.',
       },
     ],
   },
   {
-    id: 'subin-exam-stress',
-    title: '시험 스트레스',
-    description: '시험 기간. 도서관에서 수빈이가 책을 덮고 고개를 숙이고 있다.\n가까이 가니 눈이 빨갛다.\n"...나 아무리 해도 안 되는 것 같아."',
-    location: 'library',
-    background: 'library_{school}',
-    speakers: ['subin'],
-    condition: (s) => {
-      const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 50 && s.week >= 34 && !s.isVacation;
-    },
-    choices: [
-      {
-        text: '옆에 앉아서 조용히 같이 있어준다',
-        effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
-        message: '아무 말 안 해도 됐다. 한참 후에 수빈이가 "...고마워, 좀 나아졌어" 했다.',
-      },
-      {
-        text: '"편의점 가자. 아이스크림 사줄게" — 기분전환을 유도한다',
-        effects: { social: 2, mental: 2 },
-        moneyEffect: -1,
-        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
-        message: '편의점에서 아이스크림을 먹으며 수다를 떨었다. "맨날 공부만 하니까 미치겠어 ㅋㅋ" 수빈이가 웃었다.',
-      },
-      {
-        text: '"수빈이는 잘하고 있어" — 위로한다',
-        effects: { mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
-        message: '"...그래?" 수빈이가 코를 훌쩍였다. "너도 힘들지?" "응, 나도."',
-      },
-    ],
-  },
-  {
-    id: 'subin-farewell',
-    title: '각자의 길',
-    description: '졸업이 다가온다. 수빈이가 학원 앞에서 기다리고 있었다.\n"야, 나 조리 전문학교에 원서 넣었어."\n"...진짜? 부모님은?"\n"설득했어. 쉽지 않았지만." 수빈이가 담담하게 웃는다.',
+    id: 'subin-divorce',
+    title: '수빈이의 비밀',
+    description: '학원 끝나고 편의점에서 아이스크림을 먹고 있는데,\n수빈이가 갑자기 조용해졌다.\n"있잖아... 우리 엄마아빠 이혼했어. 초등학교 때."\n"아 왜 이렇게 표정 심각해, 별 거 아니야."',
     location: 'street',
     background: 'hagwon_front',
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 65 && s.week >= 40 && !s.isVacation;
+      return !!subin?.met && subin.intimacy >= 50 && !s.isVacation && s.year >= 3;
     },
     choices: [
       {
-        text: '"잘했다, 수빈아. 나중에 네 가게 가서 밥 먹을게" — 진심으로 축하한다',
-        effects: { social: 3, mental: 5 },
+        text: '조용히 들어준다',
+        effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
-        message: '"꼭 와. 서비스 줄게." 수빈이가 웃었다. 학원 앞 가로등 아래에서 작별 인사를 했다. 서로 다른 길이지만 괜찮다.',
+        message: '"별 거 아니라고 했지만... 사실 아빠가 보고 싶을 때 있어." 수빈이가 아이스크림을 녹이고 있었다. 처음 보는 표정이다.',
       },
       {
-        text: '"좀 아쉽다... 같은 대학 갈 줄 알았는데" — 솔직한 감정을 말한다',
-        effects: { mental: 3 },
+        text: '"말해줘서 고마워" — 짧게 위로한다',
+        effects: { social: 1, mental: 2 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
-        message: '"나도 아쉬워. 근데 이게 내 길이야." 수빈이가 단단하게 말했다. 멋있다.',
+        message: '"야, 진짜 별 거 아니라니까~ 분위기 왜 이래 ㅋㅋ" 수빈이가 웃었지만 눈이 빨개져 있었다.',
+      },
+      {
+        text: '"그래서 그랬구나..." — 수빈이의 밝음이 이해가 된다',
+        effects: { mental: 2 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
+        message: '수빈이가 잠깐 멈칫했다. "...뭐가?" "항상 밝은 거." 한참 침묵. "...너 은근 무섭다." 수빈이가 코를 훌쩍였다.',
+      },
+    ],
+  },
+  {
+    id: 'subin-dream',
+    title: '어디든 갈 수 있다면',
+    description: '수빈이가 카톡을 보냈다. "야, 내일 학원 빠지고 카페 갈래?"\n카페에서 수빈이가 핸드폰에 항공사 사이트를 보여준다.\n"나 승무원 되고 싶어. 어디든 떠나고 싶어서..."',
+    location: 'cafe',
+    background: 'cafe_study',
+    speakers: ['subin'],
+    condition: (s) => {
+      const subin = s.npcs.find(n => n.id === 'subin');
+      return !!subin?.met && subin.intimacy >= 60 && !s.isVacation && s.year >= 5;
+    },
+    choices: [
+      {
+        text: '"수빈이답다. 어울린다" — 응원한다',
+        effects: { social: 3, mental: 4 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        message: '"진짜? 엄마는 대학 가라고 하는데..." 수빈이 눈이 반짝였다. "너한테 먼저 말하고 싶었어. 나 이거 진지해."',
+      },
+      {
+        text: '"왜 떠나고 싶어?" — 물어본다',
+        effects: { social: 2, mental: 3 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
+        message: '"...잠깐 만나고 스쳐지나가는 거, 그게 나한테는 오히려 편해." 수빈이가 조용히 말했다. 밝은 수빈이 안에 이런 마음이 있었다.',
+      },
+      {
+        text: '"멀리 가면 외롭지 않아?" — 걱정한다',
+        effects: { mental: 2 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        message: '"지금도 외로운 건 마찬가지야." 수빈이가 웃었다. "근데 비행기 위에서 외로운 게 여기서 외로운 것보단 나을 것 같아."',
+      },
+    ],
+  },
+  {
+    id: 'subin-farewell',
+    title: '각자의 하늘',
+    description: '졸업이 다가온다. 학원 앞에서 수빈이가 기다리고 있었다.\n"야, 나 항공서비스학과에 원서 넣었어."\n"...진짜?"\n"엄마 설득하는 게 제일 힘들었어. 근데 해냈다." 수빈이가 환하게 웃는다.',
+    location: 'street',
+    background: 'hagwon_front',
+    speakers: ['subin'],
+    condition: (s) => {
+      const subin = s.npcs.find(n => n.id === 'subin');
+      return !!subin?.met && subin.intimacy >= 70 && s.week >= 40 && !s.isVacation && s.year >= 6;
+    },
+    choices: [
+      {
+        text: '"수빈아, 꼭 되길 바라. 너 비행기에서 완전 잘 어울릴 거야"',
+        effects: { social: 3, mental: 5 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        message: '"야... 나 울 것 같잖아 ㅋㅋ" 수빈이가 눈을 비볐다. "너한테 먼저 말하길 잘했어." 학원 앞 가로등 아래에서 인사를 했다. 각자의 하늘로.',
+      },
+      {
+        text: '"좀 아쉽다... 근데 멋있다" — 솔직하게 말한다',
+        effects: { mental: 3, social: 2 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
+        message: '"나도 아쉬워. 근데 이게 내 길이야." 수빈이가 단단하게 말했다. "어디 가든 연락할게. 진짜야."',
       },
     ],
   },
   // ===== 민재 이벤트 체인 =====
   {
-    id: 'minjae-party',
-    title: '민재의 생일파티',
-    description: '민재가 교실에서 크게 외친다.\n"야 다들! 이번 주 토요일 내 생일이거든? 우리 집에서 파티 한다! 다 와!"',
-    week: 7,
-    location: 'home',
-    background: 'party_room',
+    id: 'minjae-sports',
+    title: '체육시간 같은 팀',
+    description: '체육시간. 축구를 하는데 민재가 같은 팀이 됐다.\n민재가 공을 받자마자 두 명을 제치고 슛을 넣었다.\n"...걔 공부만 하는 줄 알았는데?"',
+    location: 'gym',
+    background: 'gymnasium',
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && (s.year === 1 || minjae.intimacy >= 30);
+      return s.year === 1 && !!minjae?.met && !s.isVacation && s.week >= 4 && s.week <= 16;
     },
     choices: [
       {
-        text: '"나 갈게!" — 생일파티에 간다',
+        text: '"야, 운동도 잘하네!" — 하이파이브한다',
+        effects: { social: 2, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '민재가 웃으며 손바닥을 쳤다. "ㅋㅋ 축구는 좀 해." 의외의 모습이다. 공부만 하는 애가 아니었어.',
+      },
+      {
+        text: '"패스!" — 같이 플레이한다',
+        effects: { health: 2, social: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '민재에게 패스했더니 골로 연결됐다. "야, 너 패스 잘하는데?" 같은 팀이 되니 말이 트인다.',
+      },
+    ],
+  },
+  {
+    id: 'minjae-exam-chat',
+    title: '시험 결과',
+    description: '시험 결과가 나왔다.\n민재 시험지를 슬쩍 봤는데 거의 다 100점이다.\n"야... 너 다 맞았어?"\n민재가 시험지를 뒤집으며 "이번엔 좀 쉬웠어" 하고 넘긴다.',
+    location: 'classroom',
+    background: 'classroom_{school}_afternoon',
+    speakers: ['minjae'],
+    condition: (s) => {
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return s.year === 1 && !!minjae?.met && [8, 17].includes(s.week);
+    },
+    choices: [
+      {
+        text: '"와, 대단하다" — 솔직하게 감탄한다',
+        effects: { social: 1, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
+        message: '민재가 시험지를 가방에 넣으며 "뭐, 그냥 외운 거지" 했다. 대수롭지 않은 척하는데, 왠지 무리해서 웃는 것 같았다.',
+      },
+      {
+        text: '"나도 다음엔 더 해봐야지" — 자극을 받는다',
+        effects: { academic: 1, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '민재가 잠깐 나를 봤다. "...같이 공부할래? 모르는 거 있으면 알려줄게." 의외로 친절한 면이 있다.',
+      },
+    ],
+  },
+  {
+    id: 'minjae-birthday',
+    title: '민재 생일',
+    description: '오늘이 민재 생일이다.\n교실에서 누군가 "야 민재 생일이래!" 하고 외쳤다.\n민재가 살짝 당황하면서도 웃는다. "아, 뭐 별 거 아닌데..."',
+    week: 7,
+    location: 'classroom',
+    background: 'classroom_{school}_afternoon',
+    speakers: ['minjae'],
+    condition: (s) => {
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return !!minjae?.met && (s.year === 1 || minjae.intimacy >= 25);
+    },
+    choices: [
+      {
+        text: '"생일 축하해!" — 말을 건다',
+        effects: { social: 2, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '민재가 살짝 놀란 표정이었다가 웃었다. "고마워." 의외로 수줍게 웃는다.',
+      },
+      {
+        text: '편의점에서 작은 선물을 사온다',
         effects: { social: 3, mental: 3 },
         moneyEffect: -1,
-        fatigueEffect: 2,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
-        message: '민재네 집에 애들이 잔뜩 모였다. 피자 먹고, 게임하고, 웃느라 정신없었다. 민재가 "야 너 와줘서 고맙다!" 했다.',
-        timeCost: 1,
+        message: '"이걸 왜... 아 고마워." 민재가 진짜로 기뻐하는 것 같다. 전교 1등도 생일 선물은 좋은가 보다.',
       },
       {
-        text: '"미안, 그날 일이 있어" — 못 간다',
-        effects: { mental: -1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: -3 }],
-        message: '단톡방에 파티 사진이 올라왔다. 다들 재밌어 보인다... 좀 아쉽다.',
+        text: '그냥 넘어간다',
+        effects: {},
+        message: '민재 주변으로 축하하는 애들이 모였다. 나는 자리에서 지켜봤다.',
       },
     ],
   },
   {
-    id: 'minjae-mask',
-    title: '민재의 뒷면',
-    description: '쉬는 시간이 끝나고 복도에서 민재를 봤다.\n다른 애들이랑 웃고 떠들다가 혼자가 되자 표정이 확 바뀌었다.\n한숨을 쉬는 민재. 처음 보는 표정이다.',
+    id: 'minjae-ranking',
+    title: '성적표가 붙은 날',
+    description: '중간고사 성적표가 복도에 붙었다.\n다들 웅성거리며 성적표 앞에 몰려 있다.\n쭉 올라가보니 전교 1등 — 강민재.\n같은 반 민재? "하나도 안 했는데ㅋㅋ"라고 했던 그 민재가?',
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 30 && s.week >= 20 && !s.isVacation;
+      return s.year >= 2 && !!minjae?.met && minjae.intimacy >= 15 && [8, 17].includes(s.week);
     },
     choices: [
       {
-        text: '"야, 괜찮아?" — 다가간다',
-        effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
-        message: '민재가 놀란 표정을 지었다가 웃었다. "아, 봤어? ... 가끔 좀 피곤해." 처음으로 민재의 진짜 모습을 본 것 같다.',
+        text: '"야, 1등이네? 대단하다" — 말을 건다',
+        effects: { social: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '"어... 뭐, 운이 좋았어." 민재가 태연한 척했지만 귀가 살짝 빨개졌다. 운이 아닌 걸 나도 안다.',
       },
       {
-        text: '못 본 척 지나간다',
+        text: '그냥 지나친다',
         effects: {},
         npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
-        message: '다음에 민재를 보니 또 평소처럼 웃고 있었다. 그 표정이 자꾸 생각난다.',
+        message: '복도를 지나가는데 민재와 눈이 마주쳤다. 민재가 어색하게 웃고 지나갔다. 묘한 기분이다.',
       },
     ],
   },
   {
-    id: 'minjae-family',
-    title: '민재의 이야기',
-    description: '방과후, 민재가 "야, 잠깐 시간 돼?" 하고 불렀다.\n교실 뒤편 계단에 앉아서 민재가 천천히 말한다.\n"우리 엄마 아빠... 요즘 많이 싸워. 이혼 얘기도 나온대."',
+    id: 'minjae-effort',
+    title: '새벽의 비밀',
+    description: '학원 가려고 가방을 가지러 교실에 왔다.\n불이 꺼진 줄 알았는데, 구석 자리에 민재가 앉아 있다.\n스탠드 하나 켜놓고 노트를 펼치고 있다.\n학원원장 아들이 학원도 안 가고 여기서...? "하나도 안 했는데"라고 했던 애가?',
+    location: 'classroom',
+    background: 'classroom_{school}_afternoon',
+    speakers: ['minjae'],
+    condition: (s) => {
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return !!minjae?.met && minjae.intimacy >= 25 && !s.isVacation && s.year >= 2
+        && s.events.some(e => e.id === 'minjae-ranking');
+    },
+    choices: [
+      {
+        text: '"너... 공부 많이 하는구나" — 솔직하게 말한다',
+        effects: { social: 2, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        message: '민재가 굳었다. 한참 만에 "...들켰네." 웃지 않는 민재. 처음으로 가면이 벗겨진 순간이다. "이거 아무한테도 말하지 마."',
+      },
+      {
+        text: '"뭐야, 너도 벼락치기?" — 가볍게 넘긴다',
+        effects: { social: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        message: '"ㅋㅋ 그래, 나도 사람이지 뭐." 민재가 웃었다. 하지만 그 웃음이 평소와 좀 달랐다.',
+      },
+    ],
+  },
+  {
+    id: 'minjae-pressure',
+    title: '엄마의 전화',
+    description: '쉬는 시간에 복도를 지나가는데 민재가 전화를 받고 있다.\n"...네. 알겠어요."\n수화기 너머로 날카로운 목소리가 들린다.\n"그 아이한테 졌다며? 원장님 아들이 이래서야..."\n"...알겠어요." 민재가 고개를 숙인다.',
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 45 && s.week >= 30 && !s.isVacation;
+      return !!minjae?.met && minjae.intimacy >= 40 && !s.isVacation && s.year >= 2 && [9, 18, 35, 39].includes(s.week);
     },
     choices: [
       {
-        text: '아무 말 없이 옆에 있어준다',
+        text: '못 들은 척 지나간다',
+        effects: { mental: -1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        message: '민재가 전화를 끊고 잠시 서 있다가 교실로 돌아갔다. 평소와 같은 표정으로. 아까 전화를 떠올리니 복잡하다.',
+      },
+      {
+        text: '전화가 끝날 때까지 기다렸다가 다가간다',
         effects: { social: 2, mental: 2 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
-        message: '민재가 한참 동안 아무 말 안 했다. 그러다 "...고마워. 너한테 처음 말했다" 했다. 항상 밝던 민재가 이렇게 작아 보이는 건 처음이다.',
+        message: '"...들었어?" "조금." 민재가 한참 아무 말 안 하다가 작게 말했다. "우리 엄마 학원 원장이야. 아빠는 교사고. 나한테 지는 게 없어."',
       },
       {
-        text: '"힘들었겠다... 말해줘서 고마워" — 위로한다',
-        effects: { social: 1, mental: 3 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
-        message: '"맨날 웃기만 하니까 아무도 모르더라." 민재가 쓸쓸하게 웃었다. "너는 알아줬으면 해서."',
-      },
-      {
-        text: '"너 혼자 감당 안 해도 돼" — 함께하겠다고 말한다',
-        effects: { social: 3, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
-        message: '"...진짜?" 민재 눈이 살짝 젖었다. "야, 나 앞에서 울지 마 ㅋㅋ" "누가 울어 ㅋㅋ" 서로 웃었다.',
-      },
-    ],
-  },
-  {
-    id: 'minjae-real',
-    title: '진짜 민재',
-    description: '민재가 요즘 달라졌다. 여전히 밝지만, 가끔 혼자 있을 때 생각에 잠기는 모습이 보인다.\n오늘도 옥상에서 혼자 앉아 있는 민재를 발견했다.\n"아, 왔어? 여기 바람 좋다."',
-    location: 'rooftop',
-    background: 'rooftop',
-    speakers: ['minjae'],
-    condition: (s) => {
-      const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 55 && s.week >= 36 && !s.isVacation;
-    },
-    choices: [
-      {
-        text: '옆에 앉아서 같이 바람을 쐰다',
-        effects: { mental: 4 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
-        message: '"나 맨날 밝은 척 하는 거 알지?" "알아." "...근데 너 앞에서는 안 해도 되더라." 바람이 좋았다.',
-      },
-      {
-        text: '"야, 밥 먹으러 가자" — 분위기를 바꿔준다',
-        effects: { social: 2, mental: 2 },
+        text: '"야, 매점 가자" — 화제를 돌린다',
+        effects: { social: 1, mental: 1 },
         moneyEffect: -1,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
-        message: '분식집에서 라면을 먹었다. 민재가 "역시 넌 타이밍이 좋아" 하며 웃었다.',
+        message: '민재가 잠깐 멈칫하다가 따라왔다. 아이스크림을 먹으면서 아무 말 안 했지만, 돌아갈 때 "...고마워" 했다.',
       },
     ],
   },
   {
-    id: 'minjae-future',
-    title: '민재의 꿈',
-    description: '졸업이 얼마 안 남았다. 민재가 진지하게 말한다.\n"야, 나 사회복지사 되려고. 웃기지? 맨날 놀기만 하던 애가."\n"뭐가 웃겨."\n"...나 같은 애한테 진짜 필요한 어른이 되고 싶어서."',
+    id: 'minjae-honest',
+    title: '교실에 남은 민재',
+    description: '방과후가 끝나고 다들 가는데 민재가 교실에 남아 있다.\n책상 위에 펜만 쥐고 아무것도 안 쓰고 있다.\n가까이 가니 눈이 좀 붉다.\n"...아, 너 아직 안 갔어?"',
+    location: 'classroom',
+    background: 'classroom_{school}_afternoon',
+    speakers: ['minjae'],
+    condition: (s) => {
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return !!minjae?.met && minjae.intimacy >= 55 && !s.isVacation && s.year >= 4;
+    },
+    choices: [
+      {
+        text: '아무 말 없이 옆에 앉는다',
+        effects: { mental: 3, social: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        message: '한참 침묵이 흘렀다. "나 이거 왜 하는 건지 모르겠어." 민재가 펜을 내려놓았다. "1등 해도 아무것도 안 달라져. 엄마는 더 하래, 아빠는 당연하대." 처음 듣는 민재의 진짜 목소리다.',
+      },
+      {
+        text: '"집에 안 가?" — 가볍게 묻는다',
+        effects: { social: 1, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
+        message: '"...좀 있다가." 민재가 웃었지만 평소와 달랐다. 뭔가 말하고 싶은 게 있는 것 같았는데, 타이밍이 지나갔다.',
+      },
+      {
+        text: '그냥 지나간다',
+        effects: {},
+        npcEffects: [{ npcId: 'minjae', intimacyChange: -1 }],
+        message: '복도를 걸으며 뒤를 돌아봤다. 교실 불이 꺼지지 않았다.',
+      },
+    ],
+  },
+  {
+    id: 'minjae-dream',
+    title: '의대가 전부야?',
+    description: '점심시간에 민재가 옥상으로 부른다.\n바람을 맞으며 한참 동안 아무 말 없이 서 있다가,\n"야 솔직히... 나 의사 되고 싶은 건지 모르겠어."\n"그냥 가장 틀리지 않는 대답이라서 의대라고 한 거야."',
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 70;
+      return !!minjae?.met && minjae.intimacy >= 65 && s.year >= 6;
     },
     choices: [
       {
-        text: '"민재야, 너 진짜 멋있다" — 진심으로 말한다',
-        effects: { social: 3, mental: 5 },
+        text: '"그럼 뭘 하고 싶어?" — 물어본다',
+        effects: { social: 3, mental: 4 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
-        message: '"야... 그런 말 하지 마, 울 것 같잖아 ㅋㅋ" 민재가 눈을 비볐다. 이 녀석, 처음부터 끝까지 따뜻한 애였다.',
+        message: '"...모르겠어. 그걸 모르는 게 제일 무서워." 민재가 처음으로 완전히 솔직했다. "근데 너한테는 말할 수 있어서 다행이다."',
       },
       {
-        text: '"너라면 할 수 있어. 진심으로" — 응원한다',
-        effects: { mental: 4, social: 2 },
+        text: '"일단 가서 생각해도 되지 않아?" — 현실적으로 답한다',
+        effects: { mental: 2, social: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '"...그것도 맞는 말이긴 해." 민재가 쓸쓸하게 웃었다. "그게 안 되니까 문제지."',
+      },
+      {
+        text: '"네가 정하는 거야. 네 인생이잖아" — 단호하게 말한다',
+        effects: { social: 2, mental: 5 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
-        message: '"고마워. 진짜." 민재가 주먹을 내밀었다. 쿵. 말 안 해도 통하는 사이가 됐다.',
+        message: '민재가 한참 동안 아무 말 안 했다. 그러다 "야... 그 말 진짜 좋다." 주먹을 내밀었다. 쿵. 라이벌이자, 유일하게 진짜를 보여줄 수 있는 사이.',
       },
     ],
   },
@@ -1228,7 +1346,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'yuna-library',
     title: '도서관에서',
-    description: '도서관 구석 자리에 유나가 앉아 있다.\n책을 읽고 있는데... 소설이다. 교과서가 아니라.\n눈이 마주쳤다. 유나가 살짝 고개를 숙인다.',
+    description: '도서관에서 유나를 발견했다.\n교과서가 아니라 소설을 읽고 있다.\n눈이 마주치자 유나가 손을 흔든다.\n"어, 왔어? 나 지금 이거 읽는데 진짜 재밌어!"',
     location: 'library',
     background: 'library_{school}',
     speakers: ['yuna'],
@@ -1241,25 +1359,25 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"무슨 책 읽어?" — 말을 건다',
         effects: { social: 1, mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
-        message: '"...무라카미 하루키." 유나가 작은 목소리로 답했다. 의외다. "좋아해?" "...응." 짧지만 대화다.',
+        message: '"무라카미 하루키! 이거 진짜 좋아, 너도 읽어봐." 유나가 신나서 책을 보여줬다. 의외로 소설 취향이 있다.',
       },
       {
         text: '조용히 옆에 앉아서 공부한다',
         effects: { academic: 1, mental: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }],
-        message: '아무 말 없이 옆에서 공부했다. 돌아갈 때 유나가 작게 "안녕" 했다.',
+        message: '옆에서 공부했다. 유나가 가끔 소설 구절을 읽어줬다. 돌아갈 때 "다음에도 같이 오자!" 했다.',
       },
       {
         text: '그냥 지나간다',
         effects: {},
-        message: '유나가 다시 책에 집중했다. 뭘 읽고 있었는지 좀 궁금하다.',
+        message: '유나가 "에이~" 하더니 다시 책에 빠졌다. 뭘 읽고 있었는지 좀 궁금하다.',
       },
     ],
   },
   {
     id: 'yuna-lunch',
     title: '옥상에서 점심',
-    description: '점심시간에 옥상에 올라왔다. 여기 아무도 없을 줄 알았는데.\n유나가 혼자 앉아서 도시락을 먹고 있다.\n눈이 마주쳤다. 유나가 당황한 표정이다.\n"...여기 나만 알고 있었는데."',
+    description: '점심시간에 옥상에 올라왔다. 여기 아무도 없을 줄 알았는데.\n유나가 도시락을 펼쳐놓고 앉아 있다.\n"어, 너도 여기 왔어? 여기 바람 좋지 않아? 나만의 비밀 장소인데!"',
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['yuna'],
@@ -1272,20 +1390,20 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"같이 먹어도 돼?" — 옆에 앉는다',
         effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
-        message: '유나가 잠깐 망설이다가 고개를 끄덕였다. 바람이 좋았다. 유나가 "...여기, 아무한테도 말하지 마" 했다. 비밀 장소다.',
+        message: '유나가 신나서 자리를 만들어줬다. 바람이 좋았다. "여기 비밀이야? 아무한테도 말하면 안 돼!" 하며 새끼손가락을 내밀었다.',
       },
       {
         text: '"아, 미안. 나갈게" — 자리를 비켜준다',
         effects: { mental: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
-        message: '"...괜찮은데." 유나가 뒤늦게 말했지만 이미 문을 닫은 뒤였다.',
+        message: '"에이, 같이 먹자!" 유나가 뒤늦게 외쳤지만 이미 문을 닫은 뒤였다.',
       },
     ],
   },
   {
     id: 'yuna-hobby',
     title: '유나의 취미',
-    description: '방과후, 음악실에서 피아노 소리가 들린다.\n살짝 들여다보니 유나가 피아노를 치고 있다.\n쇼팽. 놀랄 정도로 잘 친다.\n문이 삐걱 소리를 내고 유나가 고개를 돌렸다.\n"...들었어?"',
+    description: '방과후, 음악실에서 피아노 소리가 들린다.\n들여다보니 유나가 피아노를 치고 있다.\n쇼팽. 놀랄 정도로 잘 친다.\n문이 삐걱 소리를 내고 유나가 고개를 돌렸다.\n"아, 들었어? 어때, 좀 치지?"',
     location: 'music_room',
     background: 'music_room',
     speakers: ['yuna'],
@@ -1298,26 +1416,26 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"진짜 잘 친다... 피아노 배웠어?" — 관심을 보인다',
         effects: { talent: 2, mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
-        message: '"...초등학교 때부터. 그만뒀는데 가끔 치고 싶을 때가 있어." 유나가 어색하게 웃었다. "너한테 들킨 건 처음이야."',
+        message: '"초등학교 때부터 쳤어! 그만뒀는데 가끔 치고 싶을 때가 있거든." 유나가 환하게 웃었다. "너한테 들킨 건 처음이야. 비밀이다?"',
       },
       {
         text: '"한 곡만 더 쳐줘" — 부탁한다',
         effects: { mental: 4, talent: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
-        message: '유나가 잠깐 망설이다가 다시 건반에 손을 올렸다. 드뷔시. 저녁 햇살이 음악실을 물들였다. 아름다운 시간이었다.',
+        message: '"그래? 그럼 이거 들어봐!" 유나가 신나서 다시 건반에 손을 올렸다. 드뷔시. 저녁 햇살이 음악실을 물들였다. 아름다운 시간이었다.',
       },
       {
         text: '"미안, 실수로 들었어" — 물러난다',
         effects: {},
         npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
-        message: '"...괜찮아." 유나가 뚜껑을 닫았다. 그 소리가 아쉬웠다.',
+        message: '"아 괜찮아~ 다음에 제대로 들려줄게!" 유나가 뚜껑을 닫았다. 다음이 기대된다.',
       },
     ],
   },
   {
     id: 'yuna-pressure',
     title: '1등의 무게',
-    description: '시험 기간. 유나가 복도에서 멈춰 서 있다.\n가까이 가니 손이 떨리고 있다.\n"...나 또 1등 해야 해. 엄마가... 2등은 안 된대."',
+    description: '시험 기간. 항상 밝던 유나가 복도에서 멈춰 서 있다.\n가까이 가니 손이 떨리고 있다.\n"...나 또 1등 해야 해. 엄마가... 2등은 안 된대."\n처음 보는 표정이다.',
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['yuna'],
@@ -1330,27 +1448,27 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"2등이면 어때, 유나는 유나야" — 있는 그대로를 인정해준다',
         effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
-        message: '유나가 눈물을 참고 있었다. "...아무도 그런 말 안 해줬어." 작게 "고마워" 하고 교실로 돌아갔다.',
+        message: '유나가 눈물을 참고 있었다. 항상 웃기만 하던 유나가. "...아무도 그런 말 안 해줬어." 작게 "고마워" 하고 교실로 돌아갔다.',
       },
       {
         text: '"같이 공부하자. 내가 도와줄게" — 실질적으로 돕는다',
         effects: { academic: 1, social: 1, mental: 1 },
         fatigueEffect: 3,
         npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
-        message: '같이 도서관에서 공부했다. 유나가 조금씩 안정을 찾았다. "...너랑 공부하면 덜 무서워."',
+        message: '같이 도서관에서 공부했다. 유나가 조금씩 원래 모습을 되찾았다. "너랑 공부하면 덜 무서워. 진짜야."',
       },
       {
         text: '"힘들면 쉬어도 돼" — 쉬는 것도 괜찮다고 말해준다',
         effects: { mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
-        message: '"쉬는 거... 나한테는 사치야." 유나가 쓸쓸하게 웃었다. 마음이 아팠다.',
+        message: '"쉬는 거... 나한테는 사치야." 유나가 평소와 다르게 힘없이 웃었다. 마음이 아팠다.',
       },
     ],
   },
   {
     id: 'yuna-smile',
-    title: '유나가 웃었다',
-    description: '졸업이 다가온다. 유나가 드물게 먼저 말을 걸었다.\n"있잖아, 나 음대 가려고. 피아노."\n"...진짜?"\n"엄마한테 말했어. 크게 싸웠는데... 이번엔 안 지려고."',
+    title: '유나의 선택',
+    description: '졸업이 다가온다. 유나가 평소보다 더 환하게 다가왔다.\n"야, 나 결정했어. 음대 갈 거야. 피아노."\n"...진짜?"\n"엄마한테 말했거든. 크게 싸웠는데... 이번엔 안 지려고."',
     location: 'classroom',
     background: 'classroom_{school}_sunset',
     speakers: ['yuna'],
@@ -1363,13 +1481,13 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"잘했다, 유나. 네 피아노 진짜 좋았어" — 진심을 말한다',
         effects: { social: 3, mental: 5 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
-        message: '유나가 웃었다. 진짜로. 소리 내서. 처음 보는 환한 웃음이었다.\n"...고마워. 네가 그때 들어줘서, 내가 여기까지 온 거야."',
+        message: '유나가 웃었다. 평소의 밝은 웃음이 아니라, 뭔가를 이겨낸 사람의 웃음이었다.\n"고마워. 네가 그때 들어줘서, 내가 여기까지 온 거야."',
       },
       {
         text: '"나중에 연주회 하면 꼭 갈게" — 약속한다',
         effects: { mental: 4, social: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
-        message: '"...꼭 와." 유나가 작게 웃으며 새끼손가락을 내밀었다. 약속.',
+        message: '"꼭 와야 해! 약속!" 유나가 새끼손가락을 내밀었다. 약속.',
       },
     ],
   },
@@ -1528,7 +1646,7 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '손을 들었다. 교실이 술렁인다. 이제 선거 연설을 해야 한다.' },
       { text: '가만히 있는다...', effects: { mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '민재가 "아무도 없어? 그럼 내가!" 하고 나섰다. 민재가 반장이 됐다. 잘 어울리긴 한다.' },
+        message: '민재가 조용히 손을 들었다. "아무도 안 하면 제가 할게요." 민재가 반장이 됐다. 의외로 차분하게 나서는 타입이다.' },
     ],
   },
   {
@@ -1575,7 +1693,7 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '손을 들었다. 1학기 경험이 있으니 이번엔 더 자신 있다.' },
       { text: '가만히 있는다...', effects: { mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '민재가 또 나섰다. "내가 하지 뭐!" 2학기도 민재가 반장. 에너지가 대단하다.' },
+        message: '민재가 다시 손을 들었다. "할 사람 없으면 제가 하죠." 2학기도 민재가 반장. 책임감이 대단하다.' },
     ],
   },
   {
@@ -1639,16 +1757,16 @@ export const GAME_EVENTS: GameEvent[] = [
   },
   // ===== 비반장: 반장을 지켜보는 이벤트 =====
   {
-    id: 'watching-president', title: '민재가 힘들어 보인다',
-    description: '요즘 반장 민재가 바빠 보인다. 선생님 심부름, 싸움 중재, 발표...\n쉬는 시간에 민재가 책상에 엎드려 있다.\n"야... 반장 하지 말걸..."',
+    id: 'watching-president', title: '민재가 지쳐 보인다',
+    description: '요즘 반장 민재가 피곤해 보인다. 성적도 유지해야 하고, 반장 일도 해야 하고...\n쉬는 시간에 민재가 노트를 펴놓고 한숨을 쉬고 있다.\n"야... 시간이 안 된다 진짜..."',
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
     choices: [
       { text: '"괜찮아? 뭐 도와줄까?" — 다가간다', effects: { social: 3, mental: 2 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
-        message: '"진짜? 고마워..." 민재가 웃었다. 항상 밝은 민재가 이렇게 지쳐 보이는 건 처음이다.' },
+        message: '"진짜? 고마워..." 민재가 노트를 덮었다. 반장 일에 성적까지, 혼자 다 하려는 애다.' },
       { text: '조용히 지나간다', effects: { mental: 1 },
-        message: '민재도 힘든 거구나. 반장 안 했길 잘한 건가, 아니면 도와줬어야 했나...' },
+        message: '민재도 버거운 거구나. 전교 1등이 쉬운 게 아니라는 걸 처음 느꼈다.' },
     ],
     condition: (s) => !isClassOfficer(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
   },
@@ -1711,23 +1829,179 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '"고마워" 짧은 답장이 왔다. 유나답다.' },
     ],
   },
+  // ===== 준하 이벤트 체인 (고2 전학생, 후반부 변수) =====
   {
-    id: 'haeun-birthday', title: '하은이 생일',
-    description: '오늘이 하은이 생일이다.\n"어, 어떻게 알았어?" 하은이가 눈을 동그랗게 떴다.',
+    id: 'junha-transfer',
+    title: '전학생이 왔다',
+    description: '담임이 말한다. "전학생이다, 잘 지내라."\n키가 크고 좀 어색해 보이는 남자애가 서 있다.\n"안녕하세요, 송준하입니다. 부산에서 왔습니다."\n사투리가 살짝 섞여 있다.',
+    location: 'classroom',
+    background: 'classroom_{school}',
+    speakers: ['junha'],
+    condition: (s) => {
+      const junha = s.npcs.find(n => n.id === 'junha');
+      return s.year === 6 && !junha?.met && s.week >= 6 && s.week <= 10 && !s.isVacation;
+    },
+    choices: [
+      { text: '"여기 앉아, 같이 밥 먹자" — 먼저 다가간다', effects: { social: 3, mental: 2 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        message: '준하가 살짝 놀란 표정을 지었다. "...고맙다. 서울 애들은 좀 무서울 줄 알았는데." 첫날 점심을 같이 먹었다.' },
+      { text: '눈인사만 한다', effects: {},
+        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
+        message: '준하가 점심시간에 혼자 주먹밥을 꺼내 먹고 있었다. 낡은 도시락통이 눈에 들어왔다.' },
+    ],
+  },
+  {
+    id: 'junha-riceball',
+    title: '준하의 주먹밥',
+    description: '점심시간. 준하가 다가와서 도시락통을 내밀었다.\n"이거 어제 만들어 봤는데, 먹어봐."\n안에 주먹밥이 가지런히 놓여 있다.',
+    location: 'classroom',
+    background: 'classroom_{school}_afternoon',
+    speakers: ['junha'],
+    condition: (s) => {
+      const junha = s.npcs.find(n => n.id === 'junha');
+      return !!junha?.met && junha.intimacy >= 15 && s.year >= 6 && !s.isVacation;
+    },
+    choices: [
+      { text: '"이거 네가 만든 거야? 맛있는데!" — 감탄한다', effects: { mental: 3, health: 1 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 7 }],
+        message: '준하 얼굴이 환해졌다. "진짜? 참치마요 넣었거든. 나 이거 좀 자신 있어." 말하는 표정이 지금까지 본 것 중 제일 밝다.' },
+      { text: '"고마워, 잘 먹을게" — 조용히 받는다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
+        message: '맛있다. 집에서 만든 느낌이 난다. 준하가 반응을 기다리는 눈치다. "...맛있어." "ㅋㅋ 그렇지?"' },
+    ],
+  },
+  {
+    id: 'junha-dialect',
+    title: '사투리가 나왔다',
+    description: '체육 시간, 축구를 하다가 준하가 흥분했다.\n"아이고 마! 야 빨리 패스해라!!"\n교실이 조용해졌다가 웃음이 터졌다.\n준하 얼굴이 빨개졌다.',
+    location: 'gym',
+    background: 'gymnasium',
+    speakers: ['junha'],
+    condition: (s) => {
+      const junha = s.npcs.find(n => n.id === 'junha');
+      return !!junha?.met && junha.intimacy >= 30 && s.year >= 6 && !s.isVacation;
+    },
+    choices: [
+      { text: '"사투리 멋있는데? 원래 말투가 더 낫다" — 편하게 말한다', effects: { social: 2, mental: 2 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        message: '준하가 멈칫했다가 웃었다. "...진짜? 여기서 사투리 쓰면 좀 눈치 보여서." "쓰지 마." "야 뭐라카노!" 같이 웃었다.' },
+      { text: '같이 웃는다 — 자연스럽게 넘긴다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
+        message: '준하가 "아 진짜..." 하면서 머리를 긁었다. 분위기는 나쁘지 않았다. 오히려 반 분위기가 좀 풀렸다.' },
+      { text: '"ㅋㅋ 부산 사람 맞네" — 놀린다', effects: { social: -1 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: -2 }],
+        message: '준하가 웃긴 했는데 눈이 안 웃었다. "...서울 애들은 꼭 그러더라." 괜히 미안해졌다.' },
+    ],
+  },
+  {
+    id: 'junha-homesick',
+    title: '부산 단톡방',
+    description: '밤에 카톡이 왔다. 준하다.\n"나 부산 친구들 단톡방 나왔어."\n"왜?"\n"대화에 못 끼겠더라. 걔들은 걔들 세계가 있고... 나는 여기도 저기도 아닌 것 같아."',
+    location: 'home',
+    background: 'bedroom_night',
+    speakers: ['junha'],
+    condition: (s) => {
+      const junha = s.npcs.find(n => n.id === 'junha');
+      return !!junha?.met && junha.intimacy >= 50 && s.year >= 6 && !s.isVacation;
+    },
+    choices: [
+      { text: '"여기에 네 자리 있잖아" — 위로한다', effects: { social: 2, mental: 3 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        message: '한참 뒤에 답이 왔다. "...고맙다. 서울 와서 이런 말 처음 들었다." 그 뒤로 준하가 좀 더 편해진 것 같다.' },
+      { text: '"새 친구 있잖아, 여기서 만든 거" — 격려한다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 6 }],
+        message: '"...맞나?" 잠깐 뒤에 "ㅋㅋ 맞는 것 같기도 하다" 답이 왔다. 이모티콘 하나. 그래도 좀 나아 보인다.' },
+      { text: '그냥 들어준다', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 5 }],
+        message: '한참 동안 대화가 이어졌다. 부산 이야기, 친구 이야기, 전학 이야기. 마지막에 "들어줘서 고맙다" 했다.' },
+    ],
+  },
+  {
+    id: 'junha-cook',
+    title: '요리사의 꿈',
+    description: '점심시간, 준하가 옥상으로 불렀다.\n오늘도 직접 만든 도시락을 꺼낸다.\n"나 요리사 될 거야."\n"엄마가 식당에서 일하는 거 보면서... 음식이 사람을 편하게 만든다고 느꼈어."',
+    location: 'rooftop',
+    background: 'rooftop',
+    speakers: ['junha'],
+    condition: (s) => {
+      const junha = s.npcs.find(n => n.id === 'junha');
+      return !!junha?.met && junha.intimacy >= 65 && s.year === 7 && s.week >= 8 && !s.isVacation;
+    },
+    choices: [
+      { text: '"멋있다. 너한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 4 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 10 }],
+        message: '준하가 웃었다. "진짜? 아빠는 뭔 요리사냐고 했는데... 엄마는 응원해줘." "네 주먹밥 먹어본 사람은 다 응원할걸." 준하가 주먹밥을 하나 더 건넸다. "이거 새 메뉴야. 먹어봐."' },
+      { text: '"대학은 어떻게 할 거야?" — 현실적으로 묻는다', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
+        message: '"조리학과 갈 거야. 수시는 힘들고 정시로." 준하가 담담하게 말했다. 이미 다 생각해둔 눈빛이었다.' },
+      { text: '"언젠가 네 가게에 갈게" — 약속한다', effects: { social: 3, mental: 3 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 9 }],
+        message: '준하가 잠깐 멈칫했다가 웃었다. "약속이다. 첫 번째 손님." 바람이 불었다. 옥상에서 먹는 주먹밥이 유난히 맛있었다.' },
+    ],
+  },
+  // ===== 준하 x 민재 교차이벤트 =====
+  {
+    id: 'junha-minjae',
+    title: '직설과 페르소나',
+    description: '쉬는 시간. 준하가 민재에게 말을 걸었다.\n"야, 너 진짜 공부 안 하냐? 전교 1등이 공부 안 한다는 거 누가 믿어."\n교실이 살짝 조용해졌다. 민재가 웃는다.\n"ㅋㅋ 진짜 안 했는데?"\n준하가 가만히 쳐다본다. "...거짓말하지 마."',
+    location: 'classroom',
+    background: 'classroom_{school}',
+    speakers: ['junha', 'minjae'],
+    condition: (s) => {
+      const junha = s.npcs.find(n => n.id === 'junha');
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return !!junha?.met && !!minjae?.met && junha.intimacy >= 25 && minjae.intimacy >= 30
+        && s.year >= 6 && !s.isVacation;
+    },
+    choices: [
+      { text: '지켜본다 — 흥미롭다', effects: { mental: 2 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 2 }],
+        message: '민재가 처음으로 말을 잃었다. 준하의 직설 앞에서 여유로운 척이 안 먹힌 거다. "...알겠어. 좀 한다." 민재가 웃으면서 인정했다. 교실 분위기가 묘하게 달라졌다.' },
+      { text: '"준하 말이 맞긴 해" — 준하 편을 든다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: -1 }],
+        message: '민재가 살짝 당황했다. "야, 너까지..." 준하가 "ㅋㅋ 역시 내 말이 맞지" 했다. 민재가 한숨을 쉬었다. "...좀 하는 거 맞아."' },
+      { text: '"민재는 원래 그래" — 민재를 감싸준다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }, { npcId: 'junha', intimacyChange: 2 }],
+        message: '준하가 "그래? 서울 애들은 다 그런 건가" 했다. 민재가 고마운 듯 쳐다봤다. 하지만 준하의 말이 머릿속에 남았다.' },
+    ],
+  },
+  {
+    id: 'junha-birthday', title: '준하 생일',
+    description: '오늘이 준하 생일이다.\n준하가 반 전체에 주먹밥을 싸왔다.\n"생일이라고 뭘 받으면 이상하잖아. 내가 해온 거 먹어."',
+    week: 20,
+    location: 'classroom', background: 'classroom_{school}_afternoon',
+    speakers: ['junha'],
+    condition: (s) => {
+      const junha = s.npcs.find(n => n.id === 'junha');
+      return !!junha?.met && junha.intimacy >= 10 && s.year >= 6;
+    },
+    choices: [
+      { text: '"생일 축하해! 근데 생일인 사람이 왜 음식을 해와" — 웃으며 말한다', effects: { social: 2, mental: 3 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        message: '"ㅋㅋ 부산에서는 원래 이래." 준하가 웃었다. 주먹밥이 정말 맛있었다. 반 애들이 "야, 매주 해와라" 했다.' },
+      { text: '카톡으로 축하한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
+        message: '"ㅋㅋ 고맙다~" 준하가 답장을 보냈다. 이모티콘이 부산 사투리였다.' },
+    ],
+  },
+  {
+    id: 'haeun-birthday', title: '하은 선배 생일',
+    description: '오늘이 하은 선배 생일이다.\n카톡으로 축하 메시지를 보낼까?',
     week: 35,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && (s.year === 1 || haeun.intimacy >= 30);
+      return !!haeun?.met && haeun.intimacy >= 20
+        && (s.year === 2 || s.year === 3 || (s.year >= 5 && s.events.some(e => e.id === 'haeun-reunion')));
     },
     choices: [
-      { text: '손수 만든 카드를 준다', effects: { social: 2, mental: 3 }, moneyEffect: -1,
+      { text: '직접 찾아가서 축하한다', effects: { social: 2, mental: 3 }, moneyEffect: -1,
         npcEffects: [{ npcId: 'haeun', intimacyChange: 9 }],
-        message: '"이거... 직접 만든 거야?" 하은이가 카드를 꼭 쥐었다. "정말 고마워."' },
+        message: '"야, 어떻게 알았어?" 하은이가 웃었다. "후배가 이렇게까지 해주니까 감동인데?"' },
       { text: '카톡으로 축하한다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 1 }],
-        message: '"ㅎㅎ 고마워~" 하은이가 답장을 보냈다.' },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        message: '"ㅎㅎ 고마워~ 넌 진짜 챙김이 남다르다?" 하은이가 답장을 보냈다.' },
     ],
   },
 ];
@@ -1747,15 +2021,15 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
   {
     id: 'friend-snack', title: '간식 나눠먹기',
-    description: '쉬는 시간에 민재가 과자를 까서 돌린다.\n"야, 너도 먹어!"',
+    description: '쉬는 시간에 민재가 편의점 봉지를 꺼냈다.\n"이거 먹을래? 아까 사 온 건데."',
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
     choices: [
       { text: '고맙게 받아 먹는다', effects: { social: 1, mental: 2 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
-        message: '맛있다. 민재 덕분에 소소한 행복.' },
-      { text: '다이어트 중이라 거절한다', effects: { health: 1 }, message: '"아 나 괜찮아~" 했지만 좀 아쉽다.' },
+        message: '맛있다. 민재가 의외로 이런 건 잘 챙긴다.' },
+      { text: '"괜찮아, 고마워" — 거절한다', effects: {}, message: '"그래? 알겠어." 민재가 담담하게 넘겼다.' },
     ],
     condition: (s) => !s.isVacation,
   },
@@ -1947,11 +2221,13 @@ const FOLLOWUP_EVENT_IDS = new Set([
   'class-president-win', 'class-president-lose', 'class-president-vice',
   'class-president-2-win', 'class-president-2-lose',
   'class-president-nudge',
-  'haeun-sketchbook', 'haeun-local-guide', 'haeun-afterclass', 'haeun-specialty-awake', 'haeun-winter',
+  'haeun-meet', 'haeun-advice', 'haeun-vending', 'haeun-brother', 'haeun-counselor', 'haeun-reunion',
   'jihun-basketball', 'jihun-secret', 'jihun-fight', 'jihun-support', 'jihun-promise',
-  'subin-notes', 'subin-cafe', 'subin-dream', 'subin-exam-stress', 'subin-farewell',
-  'minjae-mask', 'minjae-family', 'minjae-real', 'minjae-future',
+  'subin-bridge', 'subin-lonely', 'subin-divorce', 'subin-dream', 'subin-farewell',
+  'minjae-sports', 'minjae-exam-chat',
+  'minjae-ranking', 'minjae-effort', 'minjae-pressure', 'minjae-honest', 'minjae-dream',
   'yuna-library', 'yuna-lunch', 'yuna-hobby', 'yuna-pressure', 'yuna-smile',
+  'junha-transfer', 'junha-riceball', 'junha-dialect', 'junha-homesick', 'junha-cook', 'junha-minjae',
 ]);
 
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
@@ -1966,7 +2242,7 @@ export function getFollowupForWeek(state: GameState): GameEvent | null {
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
-  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-school-graduation','high-school-entrance','suneung-eve','suneung-done','high-school-graduation','year-end-reflection','jihun-birthday','minjae-party','subin-birthday','yuna-birthday','haeun-birthday']);
+  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-school-graduation','high-school-entrance','suneung-eve','suneung-done','high-school-graduation','year-end-reflection','jihun-birthday','minjae-birthday','subin-birthday','yuna-birthday','haeun-birthday','junha-birthday']);
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&

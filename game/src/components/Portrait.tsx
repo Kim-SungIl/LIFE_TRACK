@@ -8,17 +8,24 @@ interface Props {
   label?: string;
   mental?: number;
   mentalState?: string;
+  year?: number;
 }
 
-export function Portrait({ characterId, expression, size = 80, label, mental, mentalState }: Props) {
+export function Portrait({ characterId, expression, size = 80, label, mental, mentalState, year }: Props) {
   const expr = expression || (mental !== undefined && mentalState
     ? mentalToExpression(mental, mentalState)
     : 'neutral');
 
-  // 먼저 정확한 표정 파일을 시도, 실패하면 neutral, 그것도 실패하면 CSS 폴백
+  // year 1(초6)이면 elementary 프리픽스 추가
+  const prefix = year === 1 ? `${characterId}_elementary` : characterId;
+
+  // 폴백 체인: elementary 표정 → elementary neutral → 일반 표정 → 일반 neutral → CSS 아바타
   const base = import.meta.env.BASE_URL;
-  const exactPath = `${base}images/characters/${characterId}_${expr}.png`;
-  const neutralPath = `${base}images/characters/${characterId}_neutral.png`;
+  const isElementary = year === 1;
+  const exactPath = `${base}images/characters/${prefix}_${expr}.png`;
+  const neutralPath = `${base}images/characters/${prefix}_neutral.png`;
+  const baseExactPath = isElementary ? `${base}images/characters/${characterId}_${expr}.png` : null;
+  const baseNeutralPath = `${base}images/characters/${characterId}_neutral.png`;
 
   const [src, setSrc] = useState(exactPath);
   const [useFallback, setUseFallback] = useState(false);
@@ -42,10 +49,15 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
           }}
           onError={() => {
             if (src === exactPath && expr !== 'neutral') {
-              // 정확한 표정 파일 없으면 neutral로 폴백
               setSrc(neutralPath);
+            } else if (src === neutralPath && baseExactPath) {
+              // elementary neutral 없으면 일반 표정으로 폴백
+              setSrc(baseExactPath);
+            } else if (src === baseExactPath && expr !== 'neutral') {
+              setSrc(baseNeutralPath);
+            } else if (src !== baseNeutralPath && isElementary) {
+              setSrc(baseNeutralPath);
             } else {
-              // neutral도 없으면 CSS 아바타
               setUseFallback(true);
             }
           }}

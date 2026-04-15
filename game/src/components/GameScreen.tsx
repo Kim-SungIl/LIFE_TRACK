@@ -62,7 +62,7 @@ export function GameScreen() {
 
   if (!state) return null;
 
-  const bg = getBackground(state.week, state.isVacation, state.mentalState);
+  const bg = getBackground(state.week, state.isVacation, state.mentalState, state.year);
   const [bgImgError, setBgImgError] = useState(false);
 
   // 공통 배경 래퍼
@@ -240,7 +240,7 @@ export function GameScreen() {
             zIndex: 5, pointerEvents: 'none',
           }}>
             <img
-              src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}_fullbody.png`}
+              src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}${state.year === 1 ? '_elementary' : ''}_fullbody.png`}
               alt=""
               style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -442,7 +442,7 @@ export function GameScreen() {
 
           {/* 주인공 + 독백 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} />
+            <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
             <div style={{
               flex: 1, background: 'rgba(15,52,96,0.9)', backdropFilter: 'blur(6px)',
               borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
@@ -568,7 +568,7 @@ export function GameScreen() {
     <BgWrapper>
       {/* HUD 상단 */}
       <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-        <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} />
+        <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '1rem', fontWeight: 700 }}>{bg.mood} {weekInfo}</div>
           <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{month} {state.isVacation ? '· 방학' : ''}</div>
@@ -924,7 +924,7 @@ export function GameScreen() {
                     transition: 'background 0.15s',
                   }}
                 >
-                  <Portrait characterId={n.id} size={36} expression="neutral" />
+                  <Portrait characterId={n.id} size={36} expression="neutral" year={state.year} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{n.name}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
@@ -975,7 +975,7 @@ export function GameScreen() {
                 onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; }}
               >
-                <Portrait characterId={npc.id} size={40} expression="neutral" />
+                <Portrait characterId={npc.id} size={40} expression="neutral" year={state.year} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{npc.name}</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{npc.description}</div>
@@ -1005,7 +1005,7 @@ export function GameScreen() {
               borderRadius: 16, padding: 24, width: '85%', maxWidth: 340, textAlign: 'center',
               border: '1px solid rgba(255,255,255,0.1)',
             }}>
-              <Portrait characterId={npc.id} size={72} expression="neutral" />
+              <Portrait characterId={npc.id} size={72} expression="neutral" year={state.year} />
               <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>{npc.description}</div>
 
