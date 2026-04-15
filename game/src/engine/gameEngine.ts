@@ -47,7 +47,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
       { id: 'subin', name: '수빈', intimacy: 25, description: '같은 동네에 사는 같은 학원 친구', emoji: '😊', met: false,
         greeting: '어, 안녕! 너도 김쌤 반이야? 숙제 진짜 많지 않아?', personality: '어디서든 금방 친해지는 외향형. 친구가 많아 보이지만 어느 그룹에서든 "같이 어울리는 애" 포지션. 엄마와 둘이 산다.' },
       { id: 'minjae', name: '민재', intimacy: 15, description: '공부를 잘하는데 티를 안 내는 아이', emoji: '😎', met: false,
-        greeting: '어, 안녕. 시험공부 했어? 나 하나도 안 했는데 ㅋㅋ', personality: '전교 1등이지만 천재가 아니라 노력형. 새벽까지 공부하고 아침에 태연한 척하는 아이. 학원 원장 엄마와 교사 아빠 밑에서 자란 교육 가정.' },
+        greeting: '어, 안녕. 시험공부 했어? 나 하나도 안 했는데.', personality: '전교 1등이지만 천재가 아니라 노력형. 새벽까지 공부하고 아침에 태연한 척하는 아이. 학원 원장 엄마와 교사 아빠 밑에서 자란 교육 가정.' },
       { id: 'yuna', name: '유나', intimacy: 20, description: '밝고 활발한 같은 반 친구', emoji: '🌟', met: false,
         greeting: '야! 오늘 숙제 했어? 나 7번 모르겠는데 같이 풀자!', personality: '성적은 항상 상위권인데 공부벌레 느낌은 아니다. 밝고 에너지 넘치는 성격. 피아노도 잘 치고 친구도 잘 사귄다. 근데 그 밝음 뒤에는 1등을 놓치면 안 된다는 압박이 있다.' },
       { id: 'haeun', name: '하은', intimacy: 0, description: '1학년 위 선배', emoji: '🌿', met: false,
