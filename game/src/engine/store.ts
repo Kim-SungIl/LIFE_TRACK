@@ -180,8 +180,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     newState.currentEvent = null;
 
-    // 이벤트 해결 후 → 대기 중인 followup 이벤트 즉시 연쇄 발동
-    const followup = getFollowupForWeek(newState);
+    // 이벤트 해결 후 → 대기 중인 followup 이벤트 즉시 연쇄 발동 (같은 장소 제외)
+    const followup = getFollowupForWeek(newState, s.currentEvent?.location);
     if (followup) {
       newState.currentEvent = followup;
       newState.phase = 'event';

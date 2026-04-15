@@ -65,7 +65,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
       <div style={{
         background: 'linear-gradient(180deg, rgba(15,52,96,0.98), rgba(26,26,46,0.99))',
         borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
-        maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+        maxHeight: '92vh', minHeight: '70vh', display: 'flex', flexDirection: 'column',
       }}>
         {/* 헤더 */}
         <div style={{ padding: '16px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

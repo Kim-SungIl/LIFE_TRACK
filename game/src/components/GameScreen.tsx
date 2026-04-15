@@ -421,6 +421,12 @@ export function GameScreen() {
   };
 
   const handleConfirm = () => {
+    // 주말 활동 미선택 시 확인 팝업
+    if (!state.isVacation && selectedActivities.length === 0) {
+      if (!window.confirm('주말 활동을 선택하지 않았어요!\n정말 이번 주말은 쉴까요?')) {
+        return;
+      }
+    }
     if (state.isVacation) setVacationChoices(selectedActivities);
     else setWeekendChoices(selectedActivities);
     // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
@@ -741,6 +747,18 @@ export function GameScreen() {
                 );
               })()}
 
+              {/* 주말 미선택 경고 */}
+              {selectedActivities.length === 0 && state.routineSlot2 && (
+                <div style={{
+                  marginTop: 8, padding: '8px 10px', borderRadius: 8,
+                  background: 'rgba(255,193,7,0.15)', border: '1px solid rgba(255,193,7,0.3)',
+                  fontSize: '0.72rem', color: '#ffb300', lineHeight: 1.4,
+                  textAlign: 'center', animation: 'pulse-soft 2s ease-in-out infinite',
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>주말 활동이 비어있어요!</div>
+                  <div style={{ fontSize: '0.65rem', opacity: 0.85 }}>토/일 슬롯을 탭해서 활동을 선택하세요</div>
+                </div>
+              )}
               {/* 이번 주 이벤트 표시 */}
               {upcomingEvents.length > 0 && (
                 <div style={{
@@ -787,7 +805,7 @@ export function GameScreen() {
           <div onClick={e => e.stopPropagation()} style={{
             background: 'linear-gradient(180deg, rgba(15,52,96,0.99), rgba(26,26,46,0.99))',
             borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
-            maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+            maxHeight: '92vh', minHeight: '70vh', display: 'flex', flexDirection: 'column',
             boxShadow: '0 -4px 30px rgba(0,0,0,0.5)',
           }}>
             {/* 헤더 — 크고 명확하게 */}
@@ -1007,7 +1025,9 @@ export function GameScreen() {
             }}>
               <Portrait characterId={npc.id} size={72} expression="neutral" year={state.year} />
               <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>{npc.description}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                {npc.intimacy >= 30 ? npc.description : '같은 학교 친구'}
+              </div>
 
               {/* 인사말 — 친밀도/상황에 따라 다양한 대사 */}
               <div style={{
@@ -1016,13 +1036,6 @@ export function GameScreen() {
               }}>
                 "{getNpcDialogue(npc.id, npc.intimacy, state)}"
               </div>
-
-              {/* 성격 설명 */}
-              {npc.personality && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.5 }}>
-                  {npc.personality}
-                </div>
-              )}
 
               {/* 친밀도 */}
               <div style={{ marginTop: 14 }}>
@@ -1054,10 +1067,7 @@ export function GameScreen() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: '1.1rem' }}>🛒</span>
-          <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>상점</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>간식, 참고서, 선물, 장비</div>
-          </div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>상점</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--yellow)' }}>💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원</div>

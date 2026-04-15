@@ -241,7 +241,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '(노트 필기에 집중하고 있다)',
     ]},
     { priority: 90, condition: (_, s) => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
-      '시험? 하나도 안 했는데 ㅋㅋ (눈 밑에 다크서클이 있다)',
+      '시험? 하나도 안 했는데. (눈 밑에 다크서클이 있다)',
       '이번엔 좀 어려울 것 같다... 아 아니, 그냥 그런 느낌.',
       '너 몇 등 나올 것 같아? ...아무것도 아니야, 그냥 물어본 거야.',
     ]},
@@ -268,7 +268,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     { priority: 60, condition: (int) => int >= 30, lines: [
       '안녕! 오늘도 파이팅이지!',
       '오늘도 열심히 해보자~',
-      '수업 어땠어? 나 좀 졸렸어 ㅋㅋ',
+      '수업 어땠어? 나 좀 졸렸어.',
     ]},
     { priority: 0, condition: () => true, lines: [
       '안녕!',
@@ -282,7 +282,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '같은 학교인데 잘 안 마주치네! 아쉬워~',
     ]},
     { priority: 45, condition: (int, s) => s.year >= 5 && int >= 60, lines: [
-      '야, 오랜만에 얘기하는 것 같아! 좀 그리웠어 ㅋㅋ',
+      '야, 오랜만에 얘기하는 것 같아! 좀 그리웠어.',
       '나 요즘 피아노 다시 치기 시작했어! 예전 감각 돌아오더라~',
       '너는 변하지 않는 것 같아. 좋은 의미로!',
     ]},
@@ -314,12 +314,12 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     { priority: 60, condition: (int) => int >= 30, lines: [
       '1학년이 제일 좋은 거야. 아직 아무것도 정해진 거 없잖아.',
       '시험 걱정돼? 이거 이렇게 정리하면 외우기 쉬워.',
-      '급식에서 저거 먹지 마, 그거 맛없어 ㅋㅋ',
+      '급식에서 저거 먹지 마, 그거 맛없어.',
     ]},
     { priority: 40, condition: (int) => int >= 10, lines: [
       '야, 존댓말 하지 마. 어색해.',
       '후배~ 오늘 하루 어땠어?',
-      '복도에서 뛰지 마, 다쳐 ㅋㅋ',
+      '복도에서 뛰지 마, 다친다.',
     ]},
     { priority: 0, condition: () => true, lines: [
       '(가디건을 걸치고 복도를 지나간다)',
