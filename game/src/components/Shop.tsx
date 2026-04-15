@@ -89,7 +89,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                 color: isActive ? 'white' : 'var(--text-secondary)',
                 transition: 'all 0.15s',
               }}>
-                {info.emoji}{isActive ? ` ${info.name}` : ''}
+                {info.emoji} {info.name}
               </div>
             );
           })}

@@ -1067,10 +1067,7 @@ export function GameScreen() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontSize: '1.1rem' }}>🛒</span>
-          <div>
-            <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>상점</div>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>간식, 참고서, 선물, 장비</div>
-          </div>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>상점</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--yellow)' }}>💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원</div>
