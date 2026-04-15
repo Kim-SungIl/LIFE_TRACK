@@ -805,7 +805,7 @@ export function GameScreen() {
           <div onClick={e => e.stopPropagation()} style={{
             background: 'linear-gradient(180deg, rgba(15,52,96,0.99), rgba(26,26,46,0.99))',
             borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
-            maxHeight: '85vh', display: 'flex', flexDirection: 'column',
+            maxHeight: '92vh', minHeight: '70vh', display: 'flex', flexDirection: 'column',
             boxShadow: '0 -4px 30px rgba(0,0,0,0.5)',
           }}>
             {/* 헤더 — 크고 명확하게 */}
