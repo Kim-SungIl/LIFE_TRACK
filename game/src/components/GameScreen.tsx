@@ -56,6 +56,7 @@ export function GameScreen() {
   const [showStats, setShowStats] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [skipWeekend, setSkipWeekend] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
@@ -414,8 +415,8 @@ export function GameScreen() {
     } else {
       const cur = selectedActivities.reduce((s, aid) => s + (activities.find(x => x.id === aid)?.slots || 0), 0);
       if (cur + activity.slots <= maxSlots) {
-        if (SOCIAL_ACTIVITIES.includes(id)) { setNpcSelectFor(id); }
-        else { setSelectedActivities([...selectedActivities, id]); setLastReaction(getActivityReaction(id)); }
+        if (SOCIAL_ACTIVITIES.includes(id)) { setNpcSelectFor(id); setSkipWeekend(false); }
+        else { setSelectedActivities([...selectedActivities, id]); setLastReaction(getActivityReaction(id)); setSkipWeekend(false); }
       }
     }
   };
@@ -426,7 +427,7 @@ export function GameScreen() {
     // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
     setNpcActivityMap(npcChoices);
     advanceWeek();
-    setSelectedActivities([]); setNpcChoices({}); setShowResult(true); setRoutineConfirmed(false); setLastReaction(null);
+    setSelectedActivities([]); setNpcChoices({}); setShowResult(true); setRoutineConfirmed(false); setLastReaction(null); setSkipWeekend(false);
   };
 
   // ===== 주간 결산 =====
@@ -707,12 +708,32 @@ export function GameScreen() {
 
             {/* 오른쪽: 주말 */}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>주말 (토~일)</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>주말 (토~일)</span>
+                <label style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  fontSize: '0.68rem', color: skipWeekend ? 'var(--accent)' : 'var(--text-muted)',
+                  cursor: 'pointer', userSelect: 'none',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={skipWeekend}
+                    onChange={e => {
+                      setSkipWeekend(e.target.checked);
+                      if (e.target.checked) {
+                        setSelectedActivities([]);
+                      }
+                    }}
+                    style={{ width: 14, height: 14, accentColor: 'var(--accent)' }}
+                  />
+                  쉰다
+                </label>
+              </div>
               {renderSlot(
-                selectedActivities[0] ? '🌟' : '☀️',
+                skipWeekend ? '😴' : selectedActivities[0] ? '🌟' : '☀️',
                 '토요일',
-                selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
-                () => {
+                skipWeekend ? '쉬는 날' : selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
+                skipWeekend ? null : () => {
                   // slots=2 활동이 선택되어 있으면 전체 초기화 후 선택 패널 열기
                   const act = ACTIVITIES.find(a => a.id === selectedActivities[0]);
                   if (act && act.slots >= 2) {
@@ -720,12 +741,16 @@ export function GameScreen() {
                   }
                   setEditingSlot('weekend1');
                 },
-                false, false,
-                selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
+                skipWeekend, false,
+                skipWeekend ? undefined : selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
+                skipWeekend ? undefined :
                 (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]])
                   ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]]))?.name : undefined,
               )}
               {(() => {
+                if (skipWeekend) {
+                  return renderSlot('😴', '일요일', '쉬는 날', null, true);
+                }
                 const slot0Act = ACTIVITIES.find(a => a.id === selectedActivities[0]);
                 const isSlot0TwoSlot = slot0Act && slot0Act.slots >= 2;
                 return renderSlot(
