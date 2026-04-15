@@ -56,7 +56,6 @@ export function GameScreen() {
   const [showStats, setShowStats] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
-  const [skipWeekend, setSkipWeekend] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
@@ -415,19 +414,25 @@ export function GameScreen() {
     } else {
       const cur = selectedActivities.reduce((s, aid) => s + (activities.find(x => x.id === aid)?.slots || 0), 0);
       if (cur + activity.slots <= maxSlots) {
-        if (SOCIAL_ACTIVITIES.includes(id)) { setNpcSelectFor(id); setSkipWeekend(false); }
-        else { setSelectedActivities([...selectedActivities, id]); setLastReaction(getActivityReaction(id)); setSkipWeekend(false); }
+        if (SOCIAL_ACTIVITIES.includes(id)) { setNpcSelectFor(id); }
+        else { setSelectedActivities([...selectedActivities, id]); setLastReaction(getActivityReaction(id)); }
       }
     }
   };
 
   const handleConfirm = () => {
+    // 주말 활동 미선택 시 확인 팝업
+    if (!state.isVacation && selectedActivities.length === 0) {
+      if (!window.confirm('주말 활동을 선택하지 않았어요!\n정말 이번 주말은 쉴까요?')) {
+        return;
+      }
+    }
     if (state.isVacation) setVacationChoices(selectedActivities);
     else setWeekendChoices(selectedActivities);
     // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
     setNpcActivityMap(npcChoices);
     advanceWeek();
-    setSelectedActivities([]); setNpcChoices({}); setShowResult(true); setRoutineConfirmed(false); setLastReaction(null); setSkipWeekend(false);
+    setSelectedActivities([]); setNpcChoices({}); setShowResult(true); setRoutineConfirmed(false); setLastReaction(null);
   };
 
   // ===== 주간 결산 =====
@@ -708,32 +713,12 @@ export function GameScreen() {
 
             {/* 오른쪽: 주말 */}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>주말 (토~일)</span>
-                <label style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  fontSize: '0.68rem', color: skipWeekend ? 'var(--accent)' : 'var(--text-muted)',
-                  cursor: 'pointer', userSelect: 'none',
-                }}>
-                  <input
-                    type="checkbox"
-                    checked={skipWeekend}
-                    onChange={e => {
-                      setSkipWeekend(e.target.checked);
-                      if (e.target.checked) {
-                        setSelectedActivities([]);
-                      }
-                    }}
-                    style={{ width: 14, height: 14, accentColor: 'var(--accent)' }}
-                  />
-                  쉰다
-                </label>
-              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>주말 (토~일)</div>
               {renderSlot(
-                skipWeekend ? '😴' : selectedActivities[0] ? '🌟' : '☀️',
+                selectedActivities[0] ? '🌟' : '☀️',
                 '토요일',
-                skipWeekend ? '쉬는 날' : selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
-                skipWeekend ? null : () => {
+                selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
+                () => {
                   // slots=2 활동이 선택되어 있으면 전체 초기화 후 선택 패널 열기
                   const act = ACTIVITIES.find(a => a.id === selectedActivities[0]);
                   if (act && act.slots >= 2) {
@@ -741,16 +726,12 @@ export function GameScreen() {
                   }
                   setEditingSlot('weekend1');
                 },
-                skipWeekend, false,
-                skipWeekend ? undefined : selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
-                skipWeekend ? undefined :
+                false, false,
+                selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
                 (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]])
                   ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]]))?.name : undefined,
               )}
               {(() => {
-                if (skipWeekend) {
-                  return renderSlot('😴', '일요일', '쉬는 날', null, true);
-                }
                 const slot0Act = ACTIVITIES.find(a => a.id === selectedActivities[0]);
                 const isSlot0TwoSlot = slot0Act && slot0Act.slots >= 2;
                 return renderSlot(
@@ -766,6 +747,18 @@ export function GameScreen() {
                 );
               })()}
 
+              {/* 주말 미선택 경고 */}
+              {selectedActivities.length === 0 && state.routineSlot2 && (
+                <div style={{
+                  marginTop: 8, padding: '8px 10px', borderRadius: 8,
+                  background: 'rgba(255,193,7,0.15)', border: '1px solid rgba(255,193,7,0.3)',
+                  fontSize: '0.72rem', color: '#ffb300', lineHeight: 1.4,
+                  textAlign: 'center', animation: 'pulse-soft 2s ease-in-out infinite',
+                }}>
+                  <div style={{ fontWeight: 600, marginBottom: 2 }}>주말 활동이 비어있어요!</div>
+                  <div style={{ fontSize: '0.65rem', opacity: 0.85 }}>토/일 슬롯을 탭해서 활동을 선택하세요</div>
+                </div>
+              )}
               {/* 이번 주 이벤트 표시 */}
               {upcomingEvents.length > 0 && (
                 <div style={{
