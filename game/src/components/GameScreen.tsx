@@ -1025,7 +1025,9 @@ export function GameScreen() {
             }}>
               <Portrait characterId={npc.id} size={72} expression="neutral" year={state.year} />
               <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>{npc.description}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                {npc.intimacy >= 30 ? npc.description : '같은 학교 친구'}
+              </div>
 
               {/* 인사말 — 친밀도/상황에 따라 다양한 대사 */}
               <div style={{
@@ -1034,13 +1036,6 @@ export function GameScreen() {
               }}>
                 "{getNpcDialogue(npc.id, npc.intimacy, state)}"
               </div>
-
-              {/* 성격 설명 */}
-              {npc.personality && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.5 }}>
-                  {npc.personality}
-                </div>
-              )}
 
               {/* 친밀도 */}
               <div style={{ marginTop: 14 }}>
