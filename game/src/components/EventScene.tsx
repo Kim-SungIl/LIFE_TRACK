@@ -80,12 +80,18 @@ interface CharacterImageProps {
   height: number;
   isActive: boolean;
   delay: number;
+  year?: number;
 }
 
-function CharacterImage({ npcId, height, isActive, delay }: CharacterImageProps) {
-  const [src, setSrc] = useState(`${BASE_URL}images/characters/${npcId}_fullbody.png`);
+function CharacterImage({ npcId, height, isActive, delay, year }: CharacterImageProps) {
+  const isElementary = year === 1;
+  const prefix = isElementary ? `${npcId}_elementary` : npcId;
+  const elemFullbody = `${BASE_URL}images/characters/${prefix}_fullbody.png`;
+  const elemNeutral = `${BASE_URL}images/characters/${prefix}_neutral.png`;
+  const baseFullbody = `${BASE_URL}images/characters/${npcId}_fullbody.png`;
+  const baseNeutral = `${BASE_URL}images/characters/${npcId}_neutral.png`;
+  const [src, setSrc] = useState(elemFullbody);
   const [useFallback, setUseFallback] = useState(false);
-  const neutralPath = `${BASE_URL}images/characters/${npcId}_neutral.png`;
 
   if (!useFallback) {
     return (
@@ -104,8 +110,13 @@ function CharacterImage({ npcId, height, isActive, delay }: CharacterImageProps)
             display: 'block',
           }}
           onError={() => {
-            if (src !== neutralPath) {
-              setSrc(neutralPath);
+            // 폴백: elem fullbody → elem neutral → base fullbody → base neutral → CSS
+            if (src === elemFullbody && isElementary) {
+              setSrc(elemNeutral);
+            } else if (src === elemNeutral && isElementary) {
+              setSrc(baseFullbody);
+            } else if (src !== baseNeutral) {
+              setSrc(baseNeutral);
             } else {
               setUseFallback(true);
             }
@@ -408,6 +419,7 @@ export function EventScene({ event, gender, year, npcs, onChoice }: EventScenePr
                 height={charHeight * 0.95}
                 isActive={isSpeaking}
                 delay={i * 0.1}
+                year={year}
               />
               {/* 캐릭터 아래 이름 태그 */}
               {NPC_COLORS[npcId] && (
