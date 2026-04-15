@@ -2231,11 +2231,13 @@ const FOLLOWUP_EVENT_IDS = new Set([
 ]);
 
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
-export function getFollowupForWeek(state: GameState): GameEvent | null {
+export function getFollowupForWeek(state: GameState, excludeLocation?: string): GameEvent | null {
   return GAME_EVENTS.find(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
-    !state.events.some(prev => prev.id === e.id)
+    !state.events.some(prev => prev.id === e.id) &&
+    // 같은 장소 이벤트 연쇄 방지 (농구→축구 같은 어색한 연결 차단)
+    (!excludeLocation || e.location !== excludeLocation)
   ) || null;
 }
 
