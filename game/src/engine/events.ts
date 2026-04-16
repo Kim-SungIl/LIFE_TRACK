@@ -302,7 +302,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'midterm-1',
     title: '첫 중간고사',
     description: '중간고사가 다가온다. 교실 분위기가 달라졌다.\n다들 쉬는 시간에도 책을 펴고 있다.',
-    week: 8,
+    week: 7,
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -495,7 +495,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'final-exam-2',
     title: '기말고사',
     description: '2학기 기말고사. 올해의 마지막 시험이다.\n이번 성적이 통지표에 그대로 간다.',
-    week: 38,
+    week: 37,
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -1006,7 +1006,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'subin-lonely',
     title: '혼자 있는 수빈',
     description: '체험학습 날. 다들 그룹으로 모여서 떠드는데,\n수빈이가 혼자 벤치에 앉아 핸드폰을 보고 있다.\n아까까지 다른 반 애들이랑 웃고 있었는데... 다 가고 없다.\n"어? 나? 괜찮아, 나 원래 이런 거 익숙해."',
-    location: 'school',
+    location: 'school_gate',
     background: 'school_gate_{school}',
     speakers: ['subin'],
     condition: (s) => {
