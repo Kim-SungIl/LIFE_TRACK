@@ -196,30 +196,27 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
-  // ===== 고2 개학 (Y6 W1) =====
+  // ===== 고2 개학 + 문이과 선택 (Y6 W1) =====
   {
-    id: 'high2-start',
-    title: '고2, 승부의 해',
-    description: '고2가 됐다. 분위기가 확 달라졌다.\n선생님이 첫날부터 "올해가 가장 중요하다"고 하셨다.\n학원 상담, 내신 관리, 생기부 채우기...\n할 일이 너무 많다.',
+    id: 'high2-track-select',
+    title: '고2, 문·이과를 고르다',
+    description: '고2가 됐다. 담임이 종이 한 장을 나눠준다.\n"이번 주까지 문·이과 결정해서 내. 나중에 바꾸기 어려워."\n\n주변 애들이 웅성거린다.\n"나 그냥 이과 갈래, 취업 잘 된다잖아."\n"난 수학 못 해서 문과..."\n\n한 번 정하면 돌이킬 수 없는 선택이다.',
     week: 1,
-    condition: (s) => s.year === 6,
+    condition: (s) => s.year === 6 && s.track === null,
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
       {
-        text: '"올해 내신이 진짜 중요하대" — 학업에 집중한다',
-        effects: { academic: 2, mental: -1 },
-        message: '부담이 크지만 피할 수 없다. 올해 어떻게 보내느냐가 대학을 결정한다.',
+        text: '문과 — 사람과 사회를 공부하고 싶다',
+        effects: { social: 2, mental: -1 },
+        trackSelect: 'humanities',
+        message: '문과로 결정했다. 국어·영어·사회탐구가 주 과목이다.\n법, 경영, 언론, 교육... 길은 많다.',
       },
       {
-        text: '"생기부도 채워야 하는데..." — 활동을 고민한다',
-        effects: { talent: 1, social: 1, mental: 1 },
-        message: '동아리, 봉사, 대회... 뭐부터 해야 할지 머리가 복잡하다.',
-      },
-      {
-        text: '"하나씩 하면 되지" — 마음을 다잡는다',
-        effects: { mental: 4 },
-        message: '불안해도 소용없다. 오늘 할 일부터 하자. 하나씩, 천천히.',
+        text: '이과 — 수학·과학이 더 적성에 맞는다',
+        effects: { talent: 2, mental: -1 },
+        trackSelect: 'science',
+        message: '이과로 결정했다. 수학·과학탐구가 주 과목이다.\n의대, 공대, 자연과학... 길은 많지만 수학이 관건이다.',
       },
     ],
   },

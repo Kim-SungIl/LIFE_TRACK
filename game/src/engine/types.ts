@@ -13,10 +13,13 @@ export interface Stats {
 
 export type StatKey = keyof Stats;
 
+export type Track = 'humanities' | 'science';
+
 export interface GameState {
   week: number;             // 1~48 (1년)
   year: number;             // 1~7 (Y1=초6, Y7=고3)
   phase: 'setup' | 'weekday' | 'weekend' | 'vacation' | 'result' | 'event' | 'semester-end' | 'year-end' | 'ending';
+  track: Track | null;      // 문과/이과 (Y6 고2 시작 때 선택)
   gender: Gender;
   stats: Stats;
   fatigue: number;          // 피로 0~100
@@ -150,6 +153,7 @@ export interface EventChoice {
   npcEffects?: { npcId: string; intimacyChange: number }[];
   message: string;
   timeCost?: 1 | 2; // 시간 소모: 1=루틴/주말 1슬롯, 2=루틴/주말 2슬롯
+  trackSelect?: Track; // 문과/이과 선택 (Y6 W1 이벤트 전용)
 }
 
 export const STAT_LABELS: Record<StatKey, string> = {

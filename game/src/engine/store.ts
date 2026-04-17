@@ -170,6 +170,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.eventTimeCost = choice.timeCost;
     }
 
+    // 문/이과 선택 (Y6 W1 이벤트 전용)
+    if (choice.trackSelect) {
+      newState.track = choice.trackSelect;
+    }
+
     // 이벤트 기록 (선택 인덱스 + 발생 주차 포함)
     newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex, week: newState.week });
 

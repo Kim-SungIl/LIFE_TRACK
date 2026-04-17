@@ -28,6 +28,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     week: 1,
     year: 1,
     phase: 'weekday',
+    track: null,
     gender,
     stats,
     fatigue: 0,
@@ -670,19 +671,86 @@ export function processWeek(state: GameState): GameState {
 }
 
 // ===== 엔딩 계산 =====
+// ===== 진로 판정 =====
+// 수능 등급 + 문이과 + 특기를 기반으로 "진로" 결정
+function determineCareer(state: GameState): { path: string; detail: string } {
+  const suneung = state.examResults.find(e => e.examType === 'suneung');
+  const mockGrade = suneung?.mockGrade ?? 9; // 수능 없으면 9등급 취급
+  const { academic, talent, mental } = state.stats;
+  const track = state.track;
+
+  // 예체능 특기자 (academic 무관, talent 우위)
+  if (talent >= 85 && academic < 70) {
+    if (talent >= 90) return { path: '예술/체육 특기자', detail: '특기로 명문 예술대학·체대에 진학했다.' };
+    return { path: '예체능 진학', detail: '특기를 살려 예체능 계열 대학에 진학했다.' };
+  }
+
+  // 번아웃 심각 or 멘탈 붕괴 → 방황
+  if (state.burnoutCount >= 4 || mental < 20) {
+    return { path: '재수 결심', detail: '올해는 결과가 좋지 않았다. 1년 더 해보기로 했다.' };
+  }
+
+  // 수능 7등급 이하 — 입시 실패 루트
+  if (mockGrade >= 7) {
+    if (state.burnoutCount >= 2) return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
+    return { path: '전문대 / 재수', detail: '원하는 곳은 못 갔다. 다른 길을 찾아야 한다.' };
+  }
+
+  // 문과 진로
+  if (track === 'humanities') {
+    if (mockGrade <= 1) {
+      if (academic >= 85 && mental >= 50) return { path: 'SKY 경영대 합격', detail: '전국 수석권. 원하는 대학 어디든 갈 수 있다.' };
+      return { path: 'SKY 인문대 합격', detail: '오랜 노력의 결실. 명문대 합격 통지서를 받았다.' };
+    }
+    if (mockGrade === 2) return { path: '인서울 상위권 대학', detail: '중앙대·경희대 수준의 문과 상위권에 합격했다.' };
+    if (mockGrade === 3) return { path: '인서울 문과', detail: '인서울 문과 대학에 합격했다. 나쁘지 않은 결과다.' };
+    if (mockGrade === 4) return { path: '수도권 대학', detail: '수도권 4년제에 합격. 이제 본격적인 시작이다.' };
+    return { path: '지방 국립대', detail: '지방 국립대 문과에 합격했다. 길은 여기서부터다.' };
+  }
+
+  // 이과 진로
+  if (track === 'science') {
+    if (mockGrade <= 1) {
+      if (academic >= 88) return { path: '의대 합격', detail: '최고의 성적. 의과대학 합격 통지서를 받았다.' };
+      return { path: 'SKY 공대 합격', detail: '최상위권 공대에 합격. 공학도의 길이 시작된다.' };
+    }
+    if (mockGrade === 2) return { path: '인서울 상위권 공대', detail: '한양·성균관 수준 공대에 합격했다.' };
+    if (mockGrade === 3) return { path: '인서울 이과', detail: '인서울 4년제 이공계에 합격했다.' };
+    if (mockGrade === 4) return { path: '수도권 이공계', detail: '수도권 이공계 대학에 합격했다.' };
+    return { path: '지방 국립대 이공계', detail: '지방 국립대 이공계에 합격했다. 길은 여기서부터다.' };
+  }
+
+  // track 미선택(Y5~Y6 조기 종료) fallback
+  if (mockGrade <= 2) return { path: '상위권 대학', detail: '좋은 성적으로 상위권 대학에 합격했다.' };
+  if (mockGrade <= 4) return { path: '인서울 대학', detail: '인서울 대학에 합격했다.' };
+  return { path: '대학 진학', detail: '대학에 합격했다. 이제 새로운 시작이다.' };
+}
+
+// ===== 주요 NPC 근황 =====
+function getTopNpcStories(state: GameState, limit = 2): string[] {
+  const sorted = [...state.npcs]
+    .filter(n => n.met && n.intimacy >= 50)
+    .sort((a, b) => b.intimacy - a.intimacy)
+    .slice(0, limit);
+
+  const stories: string[] = [];
+  for (const npc of sorted) {
+    if (npc.intimacy >= 85) stories.push(`${npc.name}와는 지금도 가장 친한 친구다.`);
+    else if (npc.intimacy >= 70) stories.push(`${npc.name}와는 종종 연락한다. 좋은 기억으로 남아 있다.`);
+    else stories.push(`${npc.name}와는 가끔 생각나는 사이다.`);
+  }
+  return stories;
+}
+
 export function calculateEnding(state: GameState) {
   const { academic, social, talent, mental, health } = state.stats;
   const total = academic + social + talent + mental + health;
 
-  // v5.2: 성취 3축 평가 — 학업/특기/생활 중 최고축 기반 + 결함 체크
-  // 학업 성취: 학업 중심
+  // 성취 3축
   const academicScore = academic;
-  // 특기 성취: 특기 중심
   const talentScore = talent;
-  // 생활 성취: 멘탈+체력+인기 평균
   const lifeScore = (mental + health + social) / 3;
 
-  // 최고 축으로 기본 등급 결정
   const bestAxis = Math.max(academicScore, talentScore, lifeScore);
   let achievement = 'C';
   if (bestAxis >= 85) achievement = 'S';
@@ -691,10 +759,9 @@ export function calculateEnding(state: GameState) {
   else if (bestAxis >= 30) achievement = 'C';
   else achievement = 'D';
 
-  // 결함 체크: 핵심 스탯 중 20 미만이 있으면 S 불가, 10 미만이면 A도 불가
   const allStats = [academic, social, talent, mental, health];
-  const hasCollapse = allStats.some(v => v < 10);      // 붕괴
-  const hasWeakness = allStats.some(v => v < 20);       // 결함
+  const hasCollapse = allStats.some(v => v < 10);
+  const hasWeakness = allStats.some(v => v < 20);
   if (hasCollapse && achievement === 'A') achievement = 'B';
   if (hasWeakness && achievement === 'S') achievement = 'A';
   if (hasCollapse && achievement === 'S') achievement = 'B';
@@ -707,35 +774,42 @@ export function calculateEnding(state: GameState) {
   else if (mental >= 25) happiness = 'C';
   else happiness = 'D';
 
-  // 엔딩 타이틀
-  let title = '평범한 학창시절';
-  let description = '특별할 것 없지만, 그래도 나쁘지 않은 7년이었다.';
+  // 진로 판정
+  const career = determineCareer(state);
+  const suneung = state.examResults.find(e => e.examType === 'suneung');
+  const suneungGrade = suneung?.mockGrade ?? null;
 
-  if (achievement === 'S' && happiness === 'S') {
-    title = '완벽한 청춘';
-    description = '성적도, 관계도, 모든 것이 빛나는 학창시절이었다.';
-  } else if (achievement === 'S' && happiness <= 'C') {
-    title = '고독한 승리자';
-    description = '성적은 최고였지만, 돌아보면 곁에 아무도 없었다.';
-  } else if (achievement <= 'C' && happiness === 'S') {
-    title = '행복한 평범함';
-    description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다.';
-  } else if (academic >= 85) {
-    title = '공부의 신';
-    description = '오직 공부만을 위한 7년. 그 끝에 무엇이 있을까.';
-  } else if (talent >= 85) {
-    title = '숨은 천재';
-    description = '남들과 다른 길을 걸었다. 그리고 그 길이 맞았다.';
-  } else if (social >= 85) {
-    title = '인싸 of 인싸';
-    description = '모두가 아는 이름. 하지만 진짜 친구는 몇 명일까.';
-  } else if (state.burnoutCount >= 3) {
-    title = '불꽃은 꺼지지 않는다';
-    description = '몇 번이고 쓰러졌지만, 그래도 일어났다.';
-  } else if (total >= 350) {
-    title = '밸런스의 달인';
-    description = '모든 것을 조금씩. 평범하지만 단단한 인생의 기반.';
+  // NPC 근황
+  const npcStories = getTopNpcStories(state);
+
+  // 엔딩 타이틀 (진로 기반 + 성취/행복으로 수식)
+  let title = career.path;
+  let description = career.description;
+
+  // 특수 조합 — 진로 덮어쓰기
+  if (achievement === 'S' && happiness === 'S' && suneungGrade && suneungGrade <= 2) {
+    title = `완벽한 청춘 — ${career.path}`;
+    description = '성적도, 관계도, 모든 것이 빛나는 학창시절이었다. ' + career.detail;
+  } else if (achievement === 'S' && happiness === 'D' && suneungGrade && suneungGrade <= 2) {
+    title = `고독한 승리자 — ${career.path}`;
+    description = '성적은 최고였지만, 돌아보면 곁에 아무도 없었다. ' + career.detail;
+  } else if (state.burnoutCount >= 3 && suneungGrade && suneungGrade <= 4) {
+    title = `불꽃은 꺼지지 않는다 — ${career.path}`;
+    description = '몇 번이고 쓰러졌지만, 그래도 일어났다. ' + career.detail;
+  } else if (happiness === 'S' && achievement === 'C') {
+    title = `행복한 평범함 — ${career.path}`;
+    description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다. ' + career.detail;
   }
 
-  return { title, description, achievement, happiness, total };
+  return {
+    title,
+    description,
+    achievement,
+    happiness,
+    total,
+    career: career.path,
+    careerDetail: career.detail,
+    suneungGrade,
+    npcStories,
+  };
 }

@@ -115,8 +115,24 @@ function calculateSubjectScores(
     const ea = effectiveAcademic(academic);
     subjects.korean.score = clamp(ea * 0.95 + talent * 0.08 + commonMod + rand(7));
     subjects.english.score = clamp(ea * 0.98 + commonMod + rand(7));
-    subjects.math.score = clamp(ea * 1.00 + commonMod + rand(9));
-    subjects.socialScience.score = clamp(ea * 0.90 + social * 0.15 + commonMod + rand(7));
+
+    // 수학: 이과(가형)는 변동성 더 큼 — 난이도 UP
+    const isScience = state.track === 'science';
+    const mathRand = isScience ? 11 : 9;
+    subjects.math.score = clamp(ea * 1.00 + commonMod + rand(mathRand));
+
+    // 사회탐구(문과) vs 과학탐구(이과) 차등
+    if (state.track === 'humanities') {
+      // 문과 사회탐구: 글쓰기·토론·암기 → social 영향
+      subjects.socialScience.score = clamp(ea * 0.92 + social * 0.15 + commonMod + rand(7));
+    } else if (state.track === 'science') {
+      // 이과 과학탐구: 실험·논리·계산 → talent 영향, rand 큼
+      subjects.socialScience.score = clamp(ea * 0.94 + talent * 0.10 + commonMod + rand(9));
+    } else {
+      // track 미선택 (Y5 고1): 기존 공식 유지
+      subjects.socialScience.score = clamp(ea * 0.90 + social * 0.15 + commonMod + rand(7));
+    }
+
     subjects.artsPhysical.score = clamp(talent * 0.72 + health * 0.22 + mental * 0.05 + commonMod + rand(6));
   }
 
