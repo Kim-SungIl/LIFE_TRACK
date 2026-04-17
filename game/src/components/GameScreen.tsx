@@ -538,8 +538,10 @@ export function GameScreen() {
                   </div>
                 )}
 
-                {/* 과목별 — 초등은 3단계, 중등/고등은 점수+등급 */}
-                {(Object.keys(exam.subjects) as SubjectKey[]).map(key => {
+                {/* 과목별 — 초등은 3단계, 중등/고등은 점수+등급. 모의/수능은 예체능 제외 */}
+                {(Object.keys(exam.subjects) as SubjectKey[])
+                  .filter(key => !(isMockOrSuneung && key === 'artsPhysical'))
+                  .map(key => {
                   const s = exam.subjects[key];
                   const isElementary = exam.schoolLevel === 'elementary';
                   const elemGrade = s.elementaryGrade;

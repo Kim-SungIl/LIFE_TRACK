@@ -221,20 +221,26 @@ export function generateMockExamResult(
   const mockScore = clamp(ea * 0.98 + mental * 0.15 + prepBonus + fatiguePenalty + mentalStatePenalty + rand(12));
   const mockGrade = toMockGrade(mockScore);
 
-  // 과목별 점수도 생성 (표시용)
+  // 과목별 점수 생성 (표시용) — 모의고사는 예체능 제외 (실제 수능에 없음)
   const commonMod = getCommonMod(state, 'high', prep);
   const subjects = calculateSubjectScores(state, 'high', commonMod);
+  // 예체능 점수는 모의/수능에서 의미 없음 — 0으로 설정 (UI에서 숨김)
+  subjects.artsPhysical.score = 0;
+  subjects.artsPhysical.grade = 'D';
+  subjects.artsPhysical.delta = 0;
 
   const exams = state.examResults || [];
-  const prevExam = exams.length > 0 ? exams[exams.length - 1] : null;
+  // 직전 내신 시험(midterm/final)만 delta 비교 대상으로 사용
+  const prevExam = exams.filter(e => e.examType === 'mock' || e.examType === 'midterm' || e.examType === 'final').slice(-1)[0] || null;
   if (prevExam) {
     for (const key of Object.keys(subjects) as SubjectKey[]) {
+      if (key === 'artsPhysical') continue;
       subjects[key].delta = subjects[key].score - prevExam.subjects[key].score;
     }
   }
 
-  const mainAvg = (subjects.korean.score + subjects.english.score + subjects.math.score + subjects.socialScience.score) / 4;
-  const average = Math.round(mainAvg * 0.7 + subjects.artsPhysical.score * 0.3);
+  // 모의/수능 평균: 주요 4과목만 (예체능 제외)
+  const average = Math.round((subjects.korean.score + subjects.english.score + subjects.math.score + subjects.socialScience.score) / 4);
 
   const mentalDelta = getMockMentalDelta(mockGrade);
 
@@ -276,12 +282,17 @@ export function generateSuneungResult(state: GameState): ExamResult {
   const suneungScore = clamp(Math.round(suneungBase + growthBonus + rand(3)));
   const mockGrade = toMockGrade(suneungScore);
 
-  // 과목별 (표시용)
+  // 과목별 (표시용) — 수능도 예체능 제외
   const commonMod = getCommonMod(state, 'high', 'normal');
   const subjects = calculateSubjectScores(state, 'high', commonMod);
-  const prevExam = state.examResults.length > 0 ? state.examResults[state.examResults.length - 1] : null;
+  subjects.artsPhysical.score = 0;
+  subjects.artsPhysical.grade = 'D';
+  subjects.artsPhysical.delta = 0;
+
+  const prevExam = state.examResults.filter(e => e.examType === 'mock').slice(-1)[0] || null;
   if (prevExam) {
     for (const key of Object.keys(subjects) as SubjectKey[]) {
+      if (key === 'artsPhysical') continue;
       subjects[key].delta = subjects[key].score - prevExam.subjects[key].score;
     }
   }
