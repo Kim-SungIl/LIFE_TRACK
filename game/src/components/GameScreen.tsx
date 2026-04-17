@@ -391,13 +391,28 @@ export function GameScreen() {
     );
   };
 
-  // 다가오는 이벤트 계산 (Y7은 수능 W35)
+  // 다가오는 이벤트 계산 (학교급별 시험 스케줄)
   const upcomingEvents: string[] = [];
-  const examWeeks = state.year === 7 ? [8, 17, 30, 35] : [8, 17, 30, 38];
-  for (const ew of examWeeks) {
-    const diff = ew - state.week;
-    // diff > 0: 아직 안 친 시험만, 시험 결과 주차에는 표시 안 함
-    if (diff > 0 && diff <= 4) upcomingEvents.push(`시험까지 ${diff}주`);
+  const examScheduleMap: Record<number, string> = {};
+  if (state.year <= 1) {
+    // 초등: 단원평가
+    examScheduleMap[17] = '단원평가';
+    examScheduleMap[38] = '단원평가';
+  } else if (state.year <= 4) {
+    // 중등
+    examScheduleMap[8] = '중간고사'; examScheduleMap[17] = '기말고사';
+    examScheduleMap[30] = '중간고사'; examScheduleMap[38] = '기말고사';
+  } else {
+    // 고등: 내신 + 모의
+    examScheduleMap[8] = '중간고사'; examScheduleMap[12] = '모의고사';
+    examScheduleMap[17] = '기말고사'; examScheduleMap[30] = '중간고사';
+    examScheduleMap[33] = '모의고사';
+    if (state.year === 7) { examScheduleMap[35] = '수능'; }
+    else { examScheduleMap[38] = '기말고사'; }
+  }
+  for (const [weekStr, name] of Object.entries(examScheduleMap)) {
+    const diff = Number(weekStr) - state.week;
+    if (diff > 0 && diff <= 4) upcomingEvents.push(`${name}까지 ${diff}주`);
   }
   if (state.week >= 18 && state.week < 20) upcomingEvents.push('여름방학이 다가온다');
   if (state.week >= 40 && state.week < 43) upcomingEvents.push('겨울방학이 다가온다');
@@ -492,54 +507,85 @@ export function GameScreen() {
             </div>
           </div>
 
-          {/* 시험 결과 */}
+          {/* 시험 결과 (학교급별 분기) */}
           {state.weekLog?.examResult && (() => {
             const exam = state.weekLog.examResult!;
             const gradeColors: Record<string, string> = { S: '#FFD700', A: '#4CAF50', B: '#2196F3', C: '#FF9800', D: '#F44336' };
+            const examTitle = exam.examType === 'unit-test' ? '단원평가'
+              : exam.examType === 'mock' ? '모의고사'
+              : exam.examType === 'suneung' ? '수능'
+              : exam.examType === 'midterm' ? '중간고사' : '기말고사';
+            const isMockOrSuneung = exam.examType === 'mock' || exam.examType === 'suneung';
+
             return (
               <div style={{
-                background: 'rgba(15,52,96,0.92)', backdropFilter: 'blur(6px)', borderRadius: 14,
-                padding: '16px 16px', marginBottom: 16, border: '1px solid rgba(233,69,96,0.2)',
+                background: isMockOrSuneung ? 'rgba(96,15,52,0.92)' : 'rgba(15,52,96,0.92)',
+                backdropFilter: 'blur(6px)', borderRadius: 14,
+                padding: '16px 16px', marginBottom: 16,
+                border: isMockOrSuneung ? '1px solid rgba(233,150,96,0.3)' : '1px solid rgba(233,69,96,0.2)',
               }}>
                 <div style={{ fontSize: '1rem', fontWeight: 700, textAlign: 'center', marginBottom: 12 }}>
-                  📝 {exam.examType === 'midterm' ? '중간고사' : '기말고사'} 성적표
+                  {isMockOrSuneung ? '📊' : '📝'} {examTitle} {exam.examType === 'unit-test' ? '결과' : '성적표'}
                 </div>
 
-                {/* 과목별 등급 */}
+                {/* 모의고사/수능: 등급 크게 표시 */}
+                {isMockOrSuneung && exam.mockGrade != null && (
+                  <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: exam.mockGrade <= 2 ? '#FFD700' : exam.mockGrade <= 4 ? '#4CAF50' : exam.mockGrade <= 6 ? '#2196F3' : '#F44336' }}>
+                      {exam.mockGrade}등급
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>전국 기준</div>
+                  </div>
+                )}
+
+                {/* 과목별 — 초등은 3단계, 중등/고등은 점수+등급 */}
                 {(Object.keys(exam.subjects) as SubjectKey[]).map(key => {
                   const s = exam.subjects[key];
+                  const isElementary = exam.schoolLevel === 'elementary';
+                  const elemGrade = s.elementaryGrade;
+                  const elemColor = elemGrade === '잘함' ? '#4CAF50' : elemGrade === '보통' ? '#2196F3' : '#FF9800';
                   return (
                     <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                       <span style={{ width: 70, fontSize: '0.8rem', fontWeight: 600 }}>{SUBJECT_LABELS[key]}</span>
-                      <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, margin: '0 8px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${s.score}%`, background: gradeColors[s.grade], borderRadius: 4, transition: 'width 0.5s' }} />
-                      </div>
-                      <span style={{ width: 22, fontSize: '0.82rem', fontWeight: 700, color: gradeColors[s.grade], textAlign: 'center' }}>{s.grade}</span>
-                      {s.delta !== 0 && (
-                        <span style={{ width: 36, fontSize: '0.65rem', fontWeight: 600, textAlign: 'right', color: s.delta > 0 ? 'var(--green)' : 'var(--red)' }}>
-                          {s.delta > 0 ? '▲' : '▼'}{Math.abs(Math.round(s.delta))}
+                      {isElementary ? (
+                        <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 700, color: elemColor, textAlign: 'center' }}>
+                          {elemGrade}
                         </span>
+                      ) : (
+                        <>
+                          <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.08)', borderRadius: 4, margin: '0 8px', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${s.score}%`, background: gradeColors[s.grade], borderRadius: 4, transition: 'width 0.5s' }} />
+                          </div>
+                          <span style={{ width: 22, fontSize: '0.82rem', fontWeight: 700, color: gradeColors[s.grade], textAlign: 'center' }}>{s.grade}</span>
+                          {s.delta !== 0 && (
+                            <span style={{ width: 36, fontSize: '0.65rem', fontWeight: 600, textAlign: 'right', color: s.delta > 0 ? 'var(--green)' : 'var(--red)' }}>
+                              {s.delta > 0 ? '▲' : '▼'}{Math.abs(Math.round(s.delta))}
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   );
                 })}
 
-                {/* 석차 */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>반 석차</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: '1rem', fontWeight: 700 }}>{exam.rank}등</span>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>/ 30명</span>
-                    {exam.prevRank && (
-                      <span style={{
-                        fontSize: '0.72rem', fontWeight: 600,
-                        color: exam.rank < exam.prevRank ? 'var(--green)' : exam.rank > exam.prevRank ? 'var(--red)' : 'var(--text-muted)',
-                      }}>
-                        {exam.rank < exam.prevRank ? `▲${exam.prevRank - exam.rank}` : exam.rank > exam.prevRank ? `▼${exam.rank - exam.prevRank}` : '→'}
-                      </span>
-                    )}
+                {/* 석차 — 중등/고등 내신만 표시 */}
+                {exam.rank != null && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, padding: '8px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>반 석차</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: '1rem', fontWeight: 700 }}>{exam.rank}등</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>/ 30명</span>
+                      {exam.prevRank != null && (
+                        <span style={{
+                          fontSize: '0.72rem', fontWeight: 600,
+                          color: exam.rank < exam.prevRank ? 'var(--green)' : exam.rank > exam.prevRank ? 'var(--red)' : 'var(--text-muted)',
+                        }}>
+                          {exam.rank < exam.prevRank ? `▲${exam.prevRank - exam.rank}` : exam.rank > exam.prevRank ? `▼${exam.rank - exam.prevRank}` : '→'}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* 총평 */}
                 <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: '10px 12px', marginTop: 8, fontSize: '0.8rem', fontStyle: 'italic', lineHeight: 1.6, color: 'var(--text-secondary)' }}>
@@ -603,6 +649,20 @@ export function GameScreen() {
       }}>
         {lastReaction ? `"${lastReaction}"` : `"${dialogue}"`}
       </div>
+
+      {/* 다가오는 이벤트 배너 */}
+      {upcomingEvents.length > 0 && (
+        <div style={{
+          background: 'rgba(233,69,96,0.15)', border: '1px solid rgba(233,69,96,0.3)',
+          borderRadius: 10, padding: '8px 14px', marginBottom: 10,
+          fontSize: '0.8rem', fontWeight: 600, textAlign: 'center',
+          color: '#ff6b81',
+        }}>
+          {upcomingEvents.map((e, i) => (
+            <div key={i}>📌 {e}</div>
+          ))}
+        </div>
+      )}
 
       {/* 스탯 (접기/펼치기) */}
       <div data-tutorial="stats" style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: showStats ? '8px 12px' : '8px 12px', marginBottom: 10 }}>
@@ -690,7 +750,7 @@ export function GameScreen() {
           <div style={{ display: 'flex', gap: 8 }}>
             {/* 왼쪽: 주중 */}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>주중 (월~금)</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 600 }}>주중 (월~금)</div>
               {renderSlot('🏫', '오전', '학교', null, true)}
               {renderSlot('🏫', '오후', '학교', null, true)}
               {renderSlot(
@@ -713,7 +773,7 @@ export function GameScreen() {
 
             {/* 오른쪽: 주말 */}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>주말 (토~일)</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 600 }}>주말 (토~일)</div>
               {renderSlot(
                 selectedActivities[0] ? '🌟' : '☀️',
                 '토요일',
@@ -757,18 +817,6 @@ export function GameScreen() {
                 }}>
                   <div style={{ fontWeight: 600, marginBottom: 2 }}>주말 활동이 비어있어요!</div>
                   <div style={{ fontSize: '0.65rem', opacity: 0.85 }}>토/일 슬롯을 탭해서 활동을 선택하세요</div>
-                </div>
-              )}
-              {/* 이번 주 이벤트 표시 */}
-              {upcomingEvents.length > 0 && (
-                <div style={{
-                  marginTop: 8, padding: '6px 8px', borderRadius: 8,
-                  background: 'rgba(233,69,96,0.1)', fontSize: '0.68rem',
-                  color: 'var(--accent-soft)', lineHeight: 1.5,
-                }}>
-                  {upcomingEvents.map((e, i) => (
-                    <div key={i}>📌 {e}</div>
-                  ))}
                 </div>
               )}
             </div>
@@ -1082,13 +1130,13 @@ export function GameScreen() {
       {/* 선택 안내 메시지 */}
       {currentSlots === 0 && !routineTooExpensive && (state.isVacation || state.routineSlot2) && (
         <div style={{
-          textAlign: 'center', fontSize: '0.75rem', color: 'var(--accent-soft)',
+          textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)',
           padding: '6px 12px', marginBottom: 4,
-          background: 'rgba(233,69,96,0.08)', borderRadius: 8,
+          background: 'rgba(255,255,255,0.08)', borderRadius: 8,
         }}>
           {state.isVacation
             ? '위의 빈 슬롯을 탭해서 방학 활동을 선택하세요!'
-            : '주말 활동을 선택하면 스탯이 올라갑니다!'}
+            : '주말 활동을 선택하지 않으면 자동으로 휴식합니다.'}
         </div>
       )}
 
