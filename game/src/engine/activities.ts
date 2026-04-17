@@ -96,7 +96,7 @@ export const ACTIVITIES: Activity[] = [
   // === 자기계발 계열 ===
   {
     id: 'art-lesson', name: '예체능 레슨', slots: 1, fatigue: 6,
-    effects: { talent: 1.7 }, moneyCost: 2, category: 'talent', // v6.4: 2→1.7
+    effects: { talent: 2.0 }, moneyCost: 2, category: 'talent',
     description: '음악/미술/체육 레슨을 받는다.',
     flavor: '선생님의 지도를 받으며 실력을 갈고닦는다. 느리지만 확실히 늘고 있다.',
     tags: ['전문적', '비용 있음', '특기 집중'],
@@ -104,7 +104,7 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'creative', name: '창작 활동', slots: 1, fatigue: 3,
-    effects: { talent: 1.2, mental: 1 }, moneyCost: 0, category: 'talent', // v6.4: 1.5→1.2
+    effects: { talent: 1.5, mental: 1 }, moneyCost: 0, category: 'talent',
     description: '글쓰기, 그림, 작곡 등에 몰두한다.',
     flavor: '좋아하는 것에 빠져들면 시간 가는 줄 모른다. 이게 나만의 세계.',
     tags: ['자유', '멘탈 회복', '표현'],
@@ -125,14 +125,14 @@ export const ACTIVITIES: Activity[] = [
   },
   // === 휴식 계열 ===
   {
-    id: 'rest', name: '휴식', slots: 1, fatigue: -12,
+    id: 'rest', name: '휴식', slots: 1, fatigue: -10,
     effects: { mental: 2, health: 1 }, moneyCost: 0, category: 'rest',
     description: '아무것도 안 하고 푹 쉰다.',
     flavor: '이불 속에서 뒹굴거린다. 아무 생각 없이. 가끔은 이런 시간이 필요해.',
     tags: ['회복', '피로 해소', '여유'],
   },
   {
-    id: 'deep-rest', name: '푹 쉬기', slots: 2, fatigue: -25,
+    id: 'deep-rest', name: '푹 쉬기', slots: 2, fatigue: -22,
     effects: { mental: 5, health: 2 }, moneyCost: 0, category: 'rest',
     description: '주말 전체를 휴식에 쓴다.',
     flavor: '토요일부터 일요일까지 완전히 쉬었다. 세상이 다르게 보인다.',

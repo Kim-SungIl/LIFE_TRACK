@@ -68,6 +68,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     weekPurchases: {},
     idleWeeks: 0,
     consecutiveTiredWeeks: 0,
+    burnoutCooldown: 0,
     eventTimeCost: 0,
   };
 }
@@ -234,22 +235,20 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 // ===== 자연 감소 =====
 // v5.1: 학년별 학업 감소 + 고학업 추가 감소 + 피로→멘탈 침식
 function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean): void {
-  // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가)
-  // v6: 초등도 학업 감쇠 적용 (0→0.15)
-  // 초등(Y1): 학기 -0.15 / 방학 -0.4
-  // 중등(Y2~4): 학기 -0.2 / 방학 -0.6
-  // 고등(Y5~7): 학기 -0.4 / 방학 -1.0
+  // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가) — v7: 감쇠 완화로 85+ 달성 가능하게
+  // 초등(Y1): 학기 -0.1 / 방학 -0.3
+  // 중등(Y2~4): 학기 -0.15 / 방학 -0.4
+  // 고등(Y5~7): 학기 -0.3 / 방학 -0.7
   let academicDecay = 0;
   if (state.year <= 1) {
-    academicDecay = isVacation ? -0.4 : -0.15;
+    academicDecay = isVacation ? -0.3 : -0.1;
   } else if (state.year <= 4) {
-    academicDecay = isVacation ? -0.6 : -0.2;
+    academicDecay = isVacation ? -0.4 : -0.15;
   } else {
-    academicDecay = isVacation ? -1.0 : -0.4;
+    academicDecay = isVacation ? -0.7 : -0.3;
   }
-  // 고학업 추가 감소: 90+ → -0.5 추가, 95+ → -1.0 추가
-  if (state.stats.academic >= 95) academicDecay -= 1.0;
-  else if (state.stats.academic >= 90) academicDecay -= 0.5;
+  // 고학업 추가 감소: 95+ → -0.5 추가 (90+는 삭제 — 90대 진입 자체가 어려워지는 문제)
+  if (state.stats.academic >= 95) academicDecay -= 0.5;
 
   state.stats.academic = Math.max(12, state.stats.academic + academicDecay); // v6.4: floor 12 (학교 다니는데 0은 과함)
   log.statChanges.academic = (log.statChanges.academic || 0) + academicDecay;
@@ -268,9 +267,9 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
     log.statChanges.mental = (log.statChanges.mental || 0) + isolationDrain;
   }
 
-  // 특기: -0.3/주 (v6.2: floor 5 — 초보도 바닥 안 뚫림)
-  state.stats.talent = Math.max(5, state.stats.talent - 0.3);
-  log.statChanges.talent = (log.statChanges.talent || 0) - 0.3;
+  // 특기: -0.2/주 (v7: -0.3→-0.2로 완화 — talent 85 달성 가능하게)
+  state.stats.talent = Math.max(5, state.stats.talent - 0.2);
+  log.statChanges.talent = (log.statChanges.talent || 0) - 0.2;
 
   // 체력: -0.8/주 (학기 중 학교가 50% 상쇄, soft floor 10)
   let healthDecay = isVacation ? -0.8 : -0.4;
@@ -378,22 +377,36 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     state.mentalState = 'tired';
     log.messages.push('⚠️ 피로 상태 진입 — "요즘 뭘 해도 재미없다..."');
   }
-  // burnout 진입: tired + 멘탈 < 20 (기존: < 15), 또는 멘탈 < 25 + 피로 > 70
+  // burnout 진입: tired + 멘탈 < 20 또는 멘탈 < 25 + 피로 > 70
+  // 단, 번아웃 쿨다운 중이면 재진입 차단 (데스 스파이럴 방지)
   else if (state.mentalState === 'tired' && (state.stats.mental < 20 || (state.stats.mental < 25 && state.fatigue > 70))) {
-    state.mentalState = 'burnout';
-    state.burnoutCount++;
-    state.routineWeeks = 0; // v6.1: 번아웃 시 루틴 보너스 리셋
-    log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
+    if ((state.burnoutCooldown || 0) > 0) {
+      // 쿨다운 중 — 번아웃 대신 tired 유지, 멘탈 소폭 회복 (면역 효과)
+      state.stats.mental = Math.min(100, state.stats.mental + 2);
+      log.statChanges.mental = (log.statChanges.mental || 0) + 2;
+      log.messages.push('😮‍💨 한계 직전이지만, 간신히 버텼다.');
+    } else {
+      state.mentalState = 'burnout';
+      state.burnoutCount++;
+      state.routineWeeks = 0;
+      log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
+    }
   }
-  // 회복: tired → normal (v6.3: 피로 < 40으로 완화)
+  // 회복: tired → normal
   else if (state.mentalState === 'tired' && state.stats.mental >= 50 && state.fatigue < 40) {
     state.mentalState = 'normal';
     log.messages.push('✨ 회복! — 다시 일상으로 돌아왔다.');
   }
-  // burnout → tired (v6.3: 피로 < 40으로 완화)
+  // burnout → tired (회복 시작)
   else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 40) {
     state.mentalState = 'tired';
+    state.burnoutCooldown = 4; // 번아웃 회복 후 4주 면역
     log.messages.push('💪 번아웃에서 벗어나는 중...');
+  }
+
+  // 쿨다운 틱다운
+  if ((state.burnoutCooldown || 0) > 0 && state.mentalState !== 'burnout') {
+    state.burnoutCooldown = Math.max(0, (state.burnoutCooldown || 0) - 1);
   }
 
   // v6.4: 연속 피로 주수 카운터
@@ -453,6 +466,7 @@ export function processWeek(state: GameState): GameState {
   if (!newState.activeBuffs) newState.activeBuffs = [];
   if (!newState.weekPurchases) newState.weekPurchases = {};
   if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
+  if (newState.burnoutCooldown == null) newState.burnoutCooldown = 0;
   if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
 
   const info = getWeekInfo(newState.week);
@@ -679,10 +693,12 @@ function determineCareer(state: GameState): { path: string; detail: string } {
   const { academic, talent, mental } = state.stats;
   const track = state.track;
 
-  // 예체능 특기자 (academic 무관, talent 우위)
-  if (talent >= 85 && academic < 70) {
+  // 예체능 특기자 최우선 체크 (수능 등급과 무관하게 talent 우위이면 특기자 루트)
+  // academic 낮아도 특기로 대학 가는 실제 진로 반영
+  if (talent >= 85) {
     if (talent >= 90) return { path: '예술/체육 특기자', detail: '특기로 명문 예술대학·체대에 진학했다.' };
-    return { path: '예체능 진학', detail: '특기를 살려 예체능 계열 대학에 진학했다.' };
+    if (academic < 70) return { path: '예체능 진학', detail: '특기를 살려 예체능 계열 대학에 진학했다.' };
+    // talent 85~89 + academic 70+ → 특기 + 학업 균형 → 아래 일반 진로 로직에서 +α
   }
 
   // 번아웃 심각 or 멘탈 붕괴 → 방황
