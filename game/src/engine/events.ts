@@ -298,6 +298,29 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
   },
   // ===== 1학기 이벤트 =====
+  // 초등 단원평가 이벤트 (Y1, W16 — 단원평가 W17 전주)
+  {
+    id: 'elementary-unit-test',
+    title: '단원평가가 다가온다',
+    description: '선생님이 "다음 주에 단원평가 볼 거야~" 하고 말했다.\n주변 친구들은 별로 신경 안 쓰는 눈치다.',
+    week: 16,
+    location: 'classroom',
+    background: 'classroom_{school}',
+    condition: (s) => s.year === 1,
+    choices: [
+      {
+        text: '집에 가서 복습한다',
+        effects: { academic: 2, mental: -1 },
+        message: '교과서를 펴고 복습했다. 내용이 좀 기억난다.',
+      },
+      {
+        text: '그냥 평소대로 논다',
+        effects: { mental: 1 },
+        message: '시험이라고 해도 별로 긴장은 안 된다. 어차피 단원평가잖아.',
+      },
+    ],
+  },
+  // 중등/고등 중간고사 이벤트 (W7 — 중간고사 W8 전주)
   {
     id: 'midterm-1',
     title: '첫 중간고사',
@@ -305,6 +328,7 @@ export const GAME_EVENTS: GameEvent[] = [
     week: 7,
     location: 'classroom',
     background: 'classroom_{school}',
+    condition: (s) => s.year >= 2,
     choices: [
       {
         text: '시험공부에 올인한다 — 이번만큼은 잘 보고 싶다',
@@ -323,6 +347,34 @@ export const GAME_EVENTS: GameEvent[] = [
         fatigueEffect: 5,
         npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '유나랑 같이 공부했다. 유나가 모르는 거 잘 알려준다.',
+      },
+    ],
+  },
+  // 고등 모의고사 이벤트 (W11 — 모의 W12 전주)
+  {
+    id: 'mock-exam-prep',
+    title: '모의고사가 다가온다',
+    description: '다음 주에 전국 모의고사다.\n선생님이 "이번 모의는 수능 출제 방식이랑 똑같아" 하고 말한다.\n...긴장된다.',
+    week: 11,
+    location: 'classroom',
+    background: 'classroom_{school}',
+    condition: (s) => s.year >= 5,
+    choices: [
+      {
+        text: '기출문제를 풀며 감을 잡는다',
+        effects: { academic: 3, mental: -2 },
+        fatigueEffect: 8,
+        message: '기출문제를 풀었다. 실전 감각이 좀 살아나는 느낌이다.',
+      },
+      {
+        text: '컨디션 관리에 집중한다',
+        effects: { mental: 2, health: 1 },
+        message: '무리하지 않고 컨디션을 맞췄다. 머리가 맑다.',
+      },
+      {
+        text: '모의는 모의일 뿐 — 크게 신경 안 쓴다',
+        effects: { mental: 1 },
+        message: '별로 긴장하지 않았다. 어차피 모의고사잖아.',
       },
     ],
   },
@@ -491,6 +543,29 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
+  // 초등 2학기 단원평가 이벤트 (Y1, W37 — 단원평가 W38 전주)
+  {
+    id: 'elementary-unit-test-2',
+    title: '2학기 단원평가',
+    description: '벌써 2학기 단원평가 시간이다.\n선생님이 "이번이 올해 마지막이야~ 잘 해보자!" 하고 웃는다.',
+    week: 37,
+    location: 'classroom',
+    background: 'classroom_{school}',
+    condition: (s) => s.year === 1,
+    choices: [
+      {
+        text: '열심히 복습한다 — 마지막이니까!',
+        effects: { academic: 2, mental: -1 },
+        message: '열심히 복습했다. 올해 배운 게 꽤 많았구나.',
+      },
+      {
+        text: '대충 본다 — 곧 졸업이잖아',
+        effects: { mental: 1 },
+        message: '시험보다는 졸업식이 더 기대된다.',
+      },
+    ],
+  },
+  // 중등/고등 기말고사 이벤트 (W37 — 기말 W38 전주)
   {
     id: 'final-exam-2',
     title: '기말고사',
@@ -498,6 +573,7 @@ export const GAME_EVENTS: GameEvent[] = [
     week: 37,
     location: 'classroom',
     background: 'classroom_{school}',
+    condition: (s) => s.year >= 2,
     choices: [
       {
         text: '이번엔 진짜 최선을 다한다',
@@ -510,6 +586,29 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { academic: 2, mental: 1 },
         fatigueEffect: 3,
         message: '무리하지 않았다. 결과가 어떻든 후회는 없다.',
+      },
+    ],
+  },
+  // 고등 2학기 모의고사 이벤트 (W32 — 모의 W33 전주)
+  {
+    id: 'mock-exam-prep-2',
+    title: '9월 모의고사',
+    description: '9월 모의고사가 다가온다.\n"이번 모의 성적이 수시 지원 기준이야" — 선생님의 말에 교실이 조용해졌다.',
+    week: 32,
+    location: 'classroom',
+    background: 'classroom_{school}',
+    condition: (s) => s.year >= 5,
+    choices: [
+      {
+        text: '이번엔 제대로 준비한다',
+        effects: { academic: 4, mental: -3 },
+        fatigueEffect: 10,
+        message: '밤늦게까지 공부했다. 이번엔 좀 다른 결과가 나올까.',
+      },
+      {
+        text: '평소 실력대로 본다',
+        effects: { mental: 1 },
+        message: '있는 그대로 보기로 했다. 그게 진짜 실력이니까.',
       },
     ],
   },

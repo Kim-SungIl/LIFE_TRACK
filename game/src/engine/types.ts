@@ -72,22 +72,30 @@ export const SUBJECT_LABELS: Record<SubjectKey, string> = {
   socialScience: '사회/과학', artsPhysical: '예체능',
 };
 export type ExamGrade = 'S' | 'A' | 'B' | 'C' | 'D';
+export type ElementaryGrade = '잘함' | '보통' | '노력필요';
+export type SchoolLevel = 'elementary' | 'middle' | 'high';
+export type ExamType = 'unit-test' | 'midterm' | 'final' | 'mock' | 'suneung';
+
 export interface SubjectResult {
   score: number;        // 0~100 원점수
   grade: ExamGrade;
   delta: number;        // 전 시험 대비 변화
+  elementaryGrade?: ElementaryGrade; // 초등 전용 3단계 평가
 }
 export interface ExamResult {
   subjects: Record<SubjectKey, SubjectResult>;
   average: number;
-  rank: number;         // 반 석차 (1~30)
+  rank: number | null;         // 반 석차 (1~30), 초등은 null
   prevRank: number | null;
   comment: string;      // 한 줄 총평
   parentReaction: string;
   teacherReaction: string;
-  examType: 'midterm' | 'final';
+  examType: ExamType;
+  schoolLevel: SchoolLevel;
   year: number;
   semester: number;
+  mockGrade?: number;          // 모의고사 1~9등급 (고등 모의/수능 전용)
+  mentalDelta?: number;        // 시험 결과로 인한 멘탈 변화량
 }
 
 export interface Activity {
