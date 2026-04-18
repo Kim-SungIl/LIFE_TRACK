@@ -33,6 +33,29 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '지훈이가 "으, 숙제? ...알겠어, 같이 하면 그나마 낫겠지." 공부는 싫어하지만 친구 부탁은 못 거절한다.',
       },
     ],
+    // 여자 버전: 배드민턴 (기존 컨벤션)
+    femaleDescription: '새 학기 첫날. 교실에 들어서자마자 뒤에서 "야!" 하는 소리.\n돌아보니 지훈이가 배드민턴 라켓을 어깨에 걸친 채 달려온다.\n"우리 또 같은 반이다? 3년 연속이야!"\n싱글벙글 웃는 얼굴이 어릴 때랑 똑같다.\n"방과 후에 배드민턴 어때? 오랜만에 한 판 치자."',
+    femaleChoices: [
+      {
+        text: '"좋아! 체육관에서 보자"',
+        effects: { social: 2, health: 2, mental: 3 },
+        fatigueEffect: 3,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
+        message: '방과 후에 체육관에서 배드민턴 쳤다. 지훈이랑 놀면 항상 편하다. "야 너 잘 치네!"',
+      },
+      {
+        text: '"오늘은 좀 피곤해..." — 다음에 하자고 한다',
+        effects: { mental: 1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
+        message: '지훈이가 "알겠어, 그럼 내일!" 쿨하게 넘겼다. 소꿉친구라 이런 게 편하다.',
+      },
+      {
+        text: '"대신 같이 숙제 하자" — 공부 제안',
+        effects: { academic: 2, social: 1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
+        message: '지훈이가 "으, 숙제? ...알겠어, 같이 하면 그나마 낫겠지." 공부는 싫어하지만 친구 부탁은 못 거절한다.',
+      },
+    ],
   },
   // ===== 옆자리 민재 (Y1 W2) — 새 짝꿍 =====
   {
