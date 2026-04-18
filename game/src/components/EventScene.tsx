@@ -81,16 +81,26 @@ interface CharacterImageProps {
   isActive: boolean;
   delay: number;
   year?: number;
+  gender?: 'male' | 'female';
 }
 
-function CharacterImage({ npcId, height, isActive, delay, year }: CharacterImageProps) {
+function CharacterImage({ npcId, height, isActive, delay, year, gender }: CharacterImageProps) {
   const isElementary = year === 1;
   const prefix = isElementary ? `${npcId}_elementary` : npcId;
+  const g = gender === 'female' ? 'f' : 'm';
+  // 여자 주인공 전용 NPC 이미지 (지훈 배드민턴 버전 등) — _f 접미사
+  // 남자 주인공은 기본 이미지 사용
+  const elemFullbodyGendered = gender === 'female'
+    ? `${BASE_URL}images/characters/${prefix}_fullbody_${g}.png`
+    : null;
   const elemFullbody = `${BASE_URL}images/characters/${prefix}_fullbody.png`;
   const elemNeutral = `${BASE_URL}images/characters/${prefix}_neutral.png`;
+  const baseFullbodyGendered = gender === 'female'
+    ? `${BASE_URL}images/characters/${npcId}_fullbody_${g}.png`
+    : null;
   const baseFullbody = `${BASE_URL}images/characters/${npcId}_fullbody.png`;
   const baseNeutral = `${BASE_URL}images/characters/${npcId}_neutral.png`;
-  const [src, setSrc] = useState(elemFullbody);
+  const [src, setSrc] = useState(elemFullbodyGendered || elemFullbody);
   const [useFallback, setUseFallback] = useState(false);
 
   if (!useFallback) {
@@ -110,10 +120,16 @@ function CharacterImage({ npcId, height, isActive, delay, year }: CharacterImage
             display: 'block',
           }}
           onError={() => {
-            // 폴백: elem fullbody → elem neutral → base fullbody → base neutral → CSS
-            if (src === elemFullbody && isElementary) {
+            // 폴백 순서:
+            // (여자면) elem gendered → elem fullbody → elem neutral → base gendered → base fullbody → base neutral → CSS
+            // (남자면) elem fullbody → elem neutral → base fullbody → base neutral → CSS
+            if (isElementary && elemFullbodyGendered && src === elemFullbodyGendered) {
+              setSrc(elemFullbody);
+            } else if (src === elemFullbody && isElementary) {
               setSrc(elemNeutral);
             } else if (src === elemNeutral && isElementary) {
+              setSrc(baseFullbodyGendered || baseFullbody);
+            } else if (baseFullbodyGendered && src === baseFullbodyGendered) {
               setSrc(baseFullbody);
             } else if (src !== baseNeutral) {
               setSrc(baseNeutral);
@@ -420,6 +436,7 @@ export function EventScene({ event, gender, year, npcs, onChoice }: EventScenePr
                 isActive={isSpeaking}
                 delay={i * 0.1}
                 year={year}
+                gender={gender}
               />
               {/* 캐릭터 아래 이름 태그 */}
               {NPC_COLORS[npcId] && (
