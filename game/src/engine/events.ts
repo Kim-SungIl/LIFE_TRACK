@@ -418,12 +418,12 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
   },
   // ===== 1학기 이벤트 =====
-  // ===== 초등 봄 소풍 (Y1 W20) =====
+  // ===== 초등 봄 소풍 (Y1 W5) — 4월 말 =====
   {
     id: 'elementary-spring-picnic',
     title: '봄 소풍',
-    description: '오늘은 봄 소풍 날. 김밥 도시락에 간식까지 든 가방이 묵직하다.\n공원에 도착하니 다들 잔디밭에 자리를 잡고 있다.\n민재가 손을 흔든다. "야 너도 여기 앉아!"',
-    week: 20,
+    description: '오늘은 봄 소풍 날. 김밥 도시락에 간식까지 든 가방이 묵직하다.\n공원에 도착하니 벚꽃잎이 바람에 흩날린다.\n민재가 손을 흔든다. "야 너도 여기 앉아!"',
+    week: 5,
     condition: (s) => s.year === 1,
     location: 'park',
     background: 'park_spring',
@@ -447,38 +447,12 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
-  // ===== 초등 운동회 (Y1 W25) =====
-  {
-    id: 'elementary-sports-day',
-    title: '운동회 날',
-    description: '운동회다. 청팀, 백팀으로 나뉘어 응원 소리가 운동장을 가득 메운다.\n이어달리기 순서가 돌아왔다.\n지훈이가 바통을 건넨다. "야, 우리 청팀이 이길 수 있어!"',
-    week: 25,
-    condition: (s) => s.year === 1,
-    location: 'gym',
-    background: 'gymnasium',
-    speakers: ['jihun'],
-    choices: [
-      {
-        text: '있는 힘껏 달린다',
-        effects: { health: 3, social: 2, mental: 2 },
-        fatigueEffect: 8,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
-        message: '바람이 귀를 스친다. 결과는 2등. 지훈이가 "수고했다!" 하며 어깨를 감쌌다.',
-      },
-      {
-        text: '무리 안 하고 페이스 유지한다',
-        effects: { health: 1, mental: 1 },
-        fatigueEffect: 3,
-        message: '적당히 뛰었다. 순위는 중간쯤. 그래도 즐거웠다.',
-      },
-    ],
-  },
-  // ===== 초등 2학기 시작 (Y1 W26) =====
+  // ===== 초등 2학기 시작 (Y1 W25) — 여름방학 끝, 9월 초 =====
   {
     id: 'elementary-semester2-start',
     title: '2학기 시작',
     description: '여름방학이 끝나고 2학기가 시작됐다.\n반 애들이 햇빛에 탄 얼굴로 돌아왔다.\n칠판에는 "곧 졸업이다!" 라고 선생님이 큰 글씨로 써놓았다.\n벌써 마지막 학기라니.',
-    week: 26,
+    week: 25,
     condition: (s) => s.year === 1,
     location: 'classroom',
     background: 'classroom_elementary_afternoon',
@@ -497,6 +471,32 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"졸업 전에 좋은 추억 많이 남겨야지"',
         effects: { mental: 3, social: 1 },
         message: '이 교실에 있을 시간도 얼마 안 남았다는 게 새삼 실감난다.',
+      },
+    ],
+  },
+  // ===== 초등 가을 운동회 (Y1 W32) — 10월 =====
+  {
+    id: 'elementary-sports-day',
+    title: '가을 운동회',
+    description: '가을 운동회다. 선선한 바람에 깃발이 펄럭이고, 청팀·백팀 응원 소리가 운동장을 가득 메운다.\n이어달리기 순서가 돌아왔다.\n지훈이가 바통을 건넨다. "야, 우리 청팀이 이길 수 있어!"',
+    week: 32,
+    condition: (s) => s.year === 1,
+    location: 'gym',
+    background: 'gymnasium',
+    speakers: ['jihun'],
+    choices: [
+      {
+        text: '있는 힘껏 달린다',
+        effects: { health: 3, social: 2, mental: 2 },
+        fatigueEffect: 8,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        message: '바람이 귀를 스친다. 결과는 2등. 지훈이가 "수고했다!" 하며 어깨를 감쌌다.',
+      },
+      {
+        text: '무리 안 하고 페이스 유지한다',
+        effects: { health: 1, mental: 1 },
+        fatigueEffect: 3,
+        message: '적당히 뛰었다. 순위는 중간쯤. 그래도 즐거웠다.',
       },
     ],
   },
