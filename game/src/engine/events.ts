@@ -2,51 +2,27 @@ import { GameEvent, GameState } from './types';
 
 export const GAME_EVENTS: GameEvent[] = [
   // ===== 초반 이벤트 (W1~W4) =====
-  // ===== 초6 첫날 (Y1 W1) =====
+  // ===== 초6 첫날 (Y1 W1) — 소꿉친구 지훈이랑 또 같은 반 =====
   {
     id: 'first-week',
     title: '새 학기 첫날',
-    description: '새 학기가 시작됐다. 교실에 들어서니 아는 얼굴도, 모르는 얼굴도 보인다.\n옆자리에 앉은 아이가 말을 건다. "야, 점심 같이 먹을래?"',
+    description: '새 학기 첫날. 교실에 들어서자마자 뒤에서 "야!" 하는 소리.\n돌아보니 지훈이가 농구공을 옆구리에 낀 채 달려온다.\n"우리 또 같은 반이다? 3년 연속이야!"\n싱글벙글 웃는 얼굴이 어릴 때랑 똑같다.\n"방과 후에 한 판 어때? 오랜만에 뛰자."',
     week: 1,
     condition: (s) => s.year === 1,
     location: 'classroom',
-    background: 'classroom_{school}',
-    speakers: ['minjae'],
-    choices: [
-      {
-        text: '"좋아!" — 같이 먹으러 간다',
-        effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
-        message: '민재와 점심을 먹었다. 생각보다 재밌는 애다.',
-      },
-      {
-        text: '"아... 나 할 거 있어서" — 혼자 도서관에 간다',
-        effects: { academic: 1, mental: -1 },
-        message: '도서관에서 조용히 시간을 보냈다. 편하긴 한데... 좀 외롭다.',
-      },
-    ],
-  },
-  // ===== 지훈과 같은 반 (Y1 W2) — 소꿉친구인데 또 같은 반! =====
-  {
-    id: 'jihun-same-class-elementary',
-    title: '지훈이랑 또 같은 반',
-    description: '쉬는 시간. 뒷자리에서 지훈이가 의자를 탁 당겨 앉는다.\n"야! 우리 또 같은 반이다? 3년 연속이야!"\n농구공을 옆구리에 낀 채 싱글벙글 웃는다.\n"방과 후에 농구 한 판 어때? 오랜만에 뛰자."',
-    week: 2,
-    condition: (s) => s.year === 1,
-    location: 'classroom',
-    background: 'classroom_elementary_afternoon',
+    background: 'classroom_elementary_spring',
     speakers: ['jihun'],
     choices: [
       {
         text: '"좋아! 운동장에서 보자"',
-        effects: { social: 2, health: 2, mental: 2 },
+        effects: { social: 2, health: 2, mental: 3 },
         fatigueEffect: 3,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '방과 후에 운동장에서 뛰었다. 지훈이랑 같이 놀면 항상 편하다. "넌 역시 최고야!"',
       },
       {
         text: '"오늘은 좀 피곤해..." — 다음에 하자고 한다',
-        effects: { mental: 0 },
+        effects: { mental: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
         message: '지훈이가 "알겠어, 그럼 내일!" 쿨하게 넘겼다. 소꿉친구라 이런 게 편하다.',
       },
@@ -54,7 +30,37 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"대신 같이 숙제 하자" — 공부 제안',
         effects: { academic: 2, social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
-        message: '지훈이가 "으, 숙제? ...알겠어, 같이 하면 그나마 낫겠지." 지훈이는 공부가 싫지만 친구 부탁은 못 거절한다.',
+        message: '지훈이가 "으, 숙제? ...알겠어, 같이 하면 그나마 낫겠지." 공부는 싫어하지만 친구 부탁은 못 거절한다.',
+      },
+    ],
+  },
+  // ===== 옆자리 민재 (Y1 W2) — 새 짝꿍 =====
+  {
+    id: 'minjae-meet-elementary',
+    title: '옆자리 민재',
+    description: '새 자리 배치. 옆자리에 처음 보는 애가 앉았다.\n필통을 가지런히 꺼내놓고, 노트에 오늘 날짜를 정자로 적는다.\n쉬는 시간에 조심스럽게 말을 건다.\n"야, 점심 같이 먹을래? 나 박민재."',
+    week: 2,
+    condition: (s) => s.year === 1,
+    location: 'classroom',
+    background: 'classroom_elementary_spring',
+    speakers: ['minjae'],
+    choices: [
+      {
+        text: '"좋아!" — 같이 먹으러 간다',
+        effects: { social: 2, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        message: '민재와 점심을 먹었다. 조용한 줄 알았는데 의외로 유쾌한 애다.',
+      },
+      {
+        text: '"나도 네 옆자리야" — 이야기 나눈다',
+        effects: { social: 1, academic: 1, mental: 1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
+        message: '민재가 교과서를 짝 맞춰 정리해주며 웃었다. 꼼꼼한 애다.',
+      },
+      {
+        text: '"아... 나 할 거 있어서" — 혼자 도서관에 간다',
+        effects: { academic: 1, mental: -1 },
+        message: '도서관에서 조용히 시간을 보냈다. 편하긴 한데... 좀 외롭다.',
       },
     ],
   },
