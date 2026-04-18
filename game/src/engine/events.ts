@@ -26,6 +26,100 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
+  // ===== 지훈 첫 만남 (Y1 W2) — 소꿉친구 =====
+  {
+    id: 'jihun-meet-elementary',
+    title: '등굣길에서 — 지훈',
+    description: '학교 가는 길. 뒤에서 누가 내 어깨를 툭 친다.\n돌아보니 동네에서 몇 번 본 적 있는 애다.\n"야, 너 우리 학교 맞지? 나 한지훈! 농구 좋아해?"\n농구공을 옆구리에 낀 채 싱글벙글 웃는다.',
+    week: 2,
+    condition: (s) => s.year === 1,
+    location: 'school_gate',
+    background: 'school_gate_elementary',
+    speakers: ['jihun'],
+    choices: [
+      {
+        text: '"어, 나도 좋아해!" — 같이 농구한다',
+        effects: { social: 2, health: 2, mental: 2 },
+        fatigueEffect: 3,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        message: '방과 후에 운동장에서 지훈이랑 농구했다. 지훈이 정말 잘한다. "야 너도 생각보다 잘하는데?"',
+      },
+      {
+        text: '"아, 나 농구는 잘 못해..."',
+        effects: { social: 1, mental: 1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        message: '지훈이가 "그럼 내가 가르쳐줄게!" 하며 웃었다. 좋은 애 같다.',
+      },
+      {
+        text: '"미안, 나 집에 빨리 가봐야 돼" — 거절한다',
+        effects: { mental: -1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
+        message: '지훈이가 "알겠어, 다음에 보자!" 하며 쿨하게 넘겼다. 나중에 또 마주치겠지.',
+      },
+    ],
+  },
+  // ===== 유나 첫 만남 (Y1 W6) — 같은 반 모범생 =====
+  {
+    id: 'yuna-meet-elementary',
+    title: '도서관에서 — 유나',
+    description: '쉬는 시간에 도서관에 갔다. 창가 자리에 같은 반 여자애가 혼자 책을 읽고 있다.\n머리핀에 작은 별 장식. 피아노 학원 가방이 의자에 걸려 있다.\n나를 보더니 살짝 웃어준다.\n"아, 너도 책 좋아해?"',
+    week: 6,
+    condition: (s) => s.year === 1,
+    location: 'library',
+    background: 'library_elementary',
+    speakers: ['yuna'],
+    choices: [
+      {
+        text: '"응, 나도 가끔 읽어" — 같이 책 얘기한다',
+        effects: { academic: 1, social: 1, mental: 2 },
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
+        message: '유나랑 책 얘기했다. 유나가 추천해 준 책이 있는데, 재밌어 보인다.',
+      },
+      {
+        text: '"피아노 배워? 멋있다!"',
+        effects: { social: 2, mental: 1 },
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        message: '유나가 "엄마가 시켜서 하는 건데..." 하면서도 입가에 웃음. 피아노 연주회 얘기도 해줬다.',
+      },
+      {
+        text: '"난 책 잘 안 봐" — 솔직히 말한다',
+        effects: { mental: 0 },
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
+        message: '유나가 "괜찮아, 그럴 수도 있지" 하며 다시 책으로 돌아갔다. 약간 어색했다.',
+      },
+    ],
+  },
+  // ===== 수빈 첫 만남 (Y1 W10) — 학원 친구 =====
+  {
+    id: 'subin-meet-elementary',
+    title: '학원에서 — 수빈',
+    description: '학원 쉬는 시간. 뒷자리 여자애가 내 책을 힐끔 본다.\n단정한 단발머리, 작은 별 귀걸이. 손에는 작은 노트를 들고 있다.\n"너도 이 문제집 풀어? 나 여기 막혔는데..."\n공책을 살며시 내밀어 보인다.',
+    week: 10,
+    condition: (s) => s.year === 1,
+    location: 'classroom',
+    background: 'hagwon_front',
+    speakers: ['subin'],
+    choices: [
+      {
+        text: '"어, 이거 나도 어렵더라" — 같이 푼다',
+        effects: { academic: 2, social: 1 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
+        message: '수빈이랑 같이 문제를 풀었다. 조용한데 꼼꼼한 애다. 모르는 걸 솔직히 말할 줄 안다.',
+      },
+      {
+        text: '"이거? 이렇게 푸는 거야" — 설명해준다',
+        effects: { academic: 1, social: 2, mental: 1 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        message: '수빈이가 "아, 그렇구나! 고마워" 하며 노트에 꼼꼼히 적었다. 누굴 도와주는 게 생각보다 뿌듯하다.',
+      },
+      {
+        text: '"나도 막혔어..." — 같이 고민한다',
+        effects: { social: 2, mental: 1 },
+        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        message: '같이 끙끙대다가 둘 다 모른다는 걸 깨닫고 웃었다. 그래도 이상하게 친해진 기분이다.',
+      },
+    ],
+  },
   // ===== 초등학교 졸업 (Y1 W46) =====
   {
     id: 'elementary-graduation',
@@ -295,6 +389,88 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
   },
   // ===== 1학기 이벤트 =====
+  // ===== 초등 봄 소풍 (Y1 W20) =====
+  {
+    id: 'elementary-spring-picnic',
+    title: '봄 소풍',
+    description: '오늘은 봄 소풍 날. 김밥 도시락에 간식까지 든 가방이 묵직하다.\n공원에 도착하니 다들 잔디밭에 자리를 잡고 있다.\n민재가 손을 흔든다. "야 너도 여기 앉아!"',
+    week: 20,
+    condition: (s) => s.year === 1,
+    location: 'park',
+    background: 'park_spring',
+    speakers: ['minjae', 'jihun'],
+    choices: [
+      {
+        text: '친구들이랑 같이 먹는다',
+        effects: { social: 3, mental: 3 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }, { npcId: 'jihun', intimacyChange: 3 }],
+        message: '김밥 나눠 먹으면서 웃고 떠들었다. 이런 게 학교 다니는 맛이지.',
+      },
+      {
+        text: '장기자랑에 나간다',
+        effects: { social: 4, talent: 2, mental: 2 },
+        message: '얼떨결에 무대에 올라갔다. 얼굴이 빨개졌지만, 박수 소리가 좋았다.',
+      },
+      {
+        text: '혼자 조용히 주변을 구경한다',
+        effects: { mental: 3, health: 1 },
+        message: '벚꽃이 바람에 흩날린다. 혼자 있는 시간도 나쁘지 않다.',
+      },
+    ],
+  },
+  // ===== 초등 운동회 (Y1 W25) =====
+  {
+    id: 'elementary-sports-day',
+    title: '운동회 날',
+    description: '운동회다. 청팀, 백팀으로 나뉘어 응원 소리가 운동장을 가득 메운다.\n이어달리기 순서가 돌아왔다.\n지훈이가 바통을 건넨다. "야, 우리 청팀이 이길 수 있어!"',
+    week: 25,
+    condition: (s) => s.year === 1,
+    location: 'gym',
+    background: 'gymnasium',
+    speakers: ['jihun'],
+    choices: [
+      {
+        text: '있는 힘껏 달린다',
+        effects: { health: 3, social: 2, mental: 2 },
+        fatigueEffect: 8,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        message: '바람이 귀를 스친다. 결과는 2등. 지훈이가 "수고했다!" 하며 어깨를 감쌌다.',
+      },
+      {
+        text: '무리 안 하고 페이스 유지한다',
+        effects: { health: 1, mental: 1 },
+        fatigueEffect: 3,
+        message: '적당히 뛰었다. 순위는 중간쯤. 그래도 즐거웠다.',
+      },
+    ],
+  },
+  // ===== 초등 2학기 시작 (Y1 W26) =====
+  {
+    id: 'elementary-semester2-start',
+    title: '2학기 시작',
+    description: '여름방학이 끝나고 2학기가 시작됐다.\n반 애들이 햇빛에 탄 얼굴로 돌아왔다.\n칠판에는 "곧 졸업이다!" 라고 선생님이 큰 글씨로 써놓았다.\n벌써 마지막 학기라니.',
+    week: 26,
+    condition: (s) => s.year === 1,
+    location: 'classroom',
+    background: 'classroom_elementary_afternoon',
+    choices: [
+      {
+        text: '"중학교 가기 전에 더 열심히 해야지"',
+        effects: { academic: 2, mental: -1 },
+        message: '마지막 학기. 중학교 진학 준비를 조금씩 시작하기로 했다.',
+      },
+      {
+        text: '"일단 방학 얘기부터 풀자!" — 친구들과 수다',
+        effects: { social: 3, mental: 3 },
+        message: '방학 동안 있었던 얘기로 한참을 떠들었다. 다들 할 얘기가 많다.',
+      },
+      {
+        text: '"졸업 전에 좋은 추억 많이 남겨야지"',
+        effects: { mental: 3, social: 1 },
+        message: '이 교실에 있을 시간도 얼마 안 남았다는 게 새삼 실감난다.',
+      },
+    ],
+  },
   // 초등 단원평가 이벤트 (Y1, W16 — 단원평가 W17 전주)
   {
     id: 'elementary-unit-test',
