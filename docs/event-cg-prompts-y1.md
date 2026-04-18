@@ -85,23 +85,30 @@ no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/s
 
 ### [c0] "좋아! 운동장에서 보자" → 방과후 함께 운동
 
+> 결과 메시지: "방과 후에 운동장에서 뛰었다. 지훈이랑 같이 놀면 항상 편하다."
+> → CG는 **이벤트 설명(첫 인사) 씬**이 아니라 **선택 결과 씬(방과후 운동)** 으로.
+
 **[male / c0]** `first-week_c0_m.png`
 ```
-Elementary classroom spring afternoon scene, two 12-year-old Korean boys laughing together.
-Foreground: childhood-friend boy (jihun reference) with messy black hair, holding a basketball
-under one arm, big grin showing teeth, waving enthusiastically toward viewer POV.
-Mid-ground: male protagonist (player_m reference) turned toward jihun, shy excited smile,
-backpack on shoulder.
-Background: spring classroom with cherry blossom visible through window, golden afternoon
-light streaming in, empty desks, blackboard with "3월" visible.
-Emotion: warm nostalgia, childhood friendship reunion.
+Elementary school outdoor court, late afternoon. Two 12-year-old Korean boys playing
+basketball together on a small half-court.
+Jihun (reference) mid-jump going for a shot, messy black hair flying, huge confident grin,
+athletic hoodie on. Sweat shining in golden afternoon sun.
+Male protagonist (player_m reference) under the basket or defending, bright laughing expression,
+similarly sweaty and happy.
+Background: school building in distance, trees, long shadows from afternoon sun.
+Mood: pure joyful exhaustion, childhood-friend playtime, golden hour nostalgia.
 ```
 
 **[female / c0]** `first-week_c0_f.png`
 ```
-Same scene, female protagonist version. Jihun holds a BADMINTON RACKET on his shoulder
-instead of basketball. Female protagonist (player_f reference) with the same shy excited smile.
-All other details identical.
+School gymnasium, badminton court indoors. Two 12-year-old Korean kids playing badminton.
+Jihun (reference) on one side of the net, mid-swing with badminton racket, wide grin,
+shuttlecock in the air.
+Female protagonist (player_f reference) on the other side, bright laughing expression,
+racket ready, pony-tail/hair flying.
+Background: gymnasium interior, wooden floor, afternoon light through high windows.
+Mood: energetic fun, childhood-friend match.
 ```
 
 ### [c1] "오늘은 좀 피곤해..." → 거절
@@ -165,17 +172,25 @@ Same setting with female protagonist. No other changes.
 
 ### [c1] "나도 네 옆자리야" — 이야기 나눈다
 
+> ⚠️ c0 "같이 점심 먹기" 승낙과 동일하게 "점심 중" 시점으로 맞춰야 함.
+> 민재가 먼저 "점심 같이 먹자"고 제안한 상황 → c1은 그 제안에 응하면서 대화도 이어가는 선택.
+> 따라서 교실 쉬는시간(책 정리) 씬은 시간이 역행되어 부자연스러움.
+
 **[male / c1]** `minjae-meet-elementary_c1_m.png`
 ```
-Classroom desk scene. Minjae (reference) carefully aligning textbooks on the desk in
-a neat row, small proud smile. Male protagonist leaning in, watching with curious expression.
-Background: spring classroom, soft morning light.
-Mood: quiet bonding moment, discovering minjae's meticulous personality.
+Elementary school cafeteria, lunch time. Two 12-year-old Korean boys sitting side by side
+at cafeteria table, trays with lunch in front of them.
+Minjae (reference): buzz cut, tanned skin, mid-speaking expression with chopsticks pausing,
+eyes animated, explaining something enthusiastically.
+Male protagonist turned toward minjae, engaged listener posture, leaning forward slightly
+with curious "아 그래?" face.
+Background: bright cafeteria, trays/food on table, blurred students in background.
+Mood: deeper conversation while eating, friendship warming up beyond casual chat.
 ```
 
 **[female / c1]** `minjae-meet-elementary_c1_f.png`
 ```
-Same with female protagonist.
+Same setting with female protagonist. No other changes.
 ```
 
 ### [c2] "아... 나 할 거 있어서" — 혼자 도서관
