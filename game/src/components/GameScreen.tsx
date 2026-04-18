@@ -92,12 +92,34 @@ export function GameScreen() {
   // ===== 엔딩 =====
   if (state.phase === 'ending') {
     const ending = calculateEnding(state);
+    const trackLabel = state.track === 'humanities' ? '문과' : state.track === 'science' ? '이과' : null;
     return (
       <BgWrapper>
         <div className="ending-screen fade-in" style={{ minHeight: 'auto', padding: 0 }}>
           <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 8 }}>7년의 여정이 끝났습니다</div>
           <div className="ending-title">{ending.title}</div>
           <div className="ending-desc">{ending.description}</div>
+
+          {/* 수능 등급 + 진로 카드 */}
+          {ending.suneungGrade && (
+            <div style={{
+              background: 'rgba(233,69,96,0.1)', border: '1px solid rgba(233,69,96,0.3)',
+              borderRadius: 12, padding: '12px 16px', margin: '12px auto 16px', maxWidth: 360,
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 4 }}>수능 결과</div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: ending.suneungGrade <= 2 ? '#FFD700' : ending.suneungGrade <= 4 ? '#4CAF50' : ending.suneungGrade <= 6 ? '#2196F3' : '#F44336' }}>
+                {ending.suneungGrade}등급
+              </div>
+              {trackLabel && (
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>{trackLabel}</div>
+              )}
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, marginTop: 8, color: 'var(--accent-soft)' }}>
+                {ending.career}
+              </div>
+            </div>
+          )}
+
           <div className="ending-grades">
             <div className="ending-grade-item">
               <div className="ending-grade-label">성취 지수</div>
@@ -108,7 +130,8 @@ export function GameScreen() {
               <div className="ending-grade-value" style={{ color: 'var(--accent-soft)' }}>{ending.happiness}</div>
             </div>
           </div>
-          <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 24px' }}>
+
+          <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 16px' }}>
             {(Object.keys(state.stats) as StatKey[]).map(key => {
               const grade = getGrade(state.stats[key]);
               return (
@@ -124,9 +147,28 @@ export function GameScreen() {
               );
             })}
           </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 24 }}>
+
+          {/* NPC 근황 */}
+          {ending.npcStories.length > 0 && (
+            <div style={{ maxWidth: 360, margin: '0 auto 16px', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 10 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, textAlign: 'center' }}>그리고 그 후</div>
+              {ending.npcStories.map((s, i) => (
+                <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6, textAlign: 'center' }}>
+                  {s}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'center' }}>
             총합 {Math.round(Object.values(state.stats).reduce((a, b) => a + b, 0))}점 · 번아웃 {state.burnoutCount}회
           </div>
+
+          {/* 다회차 유도 문구 */}
+          <div style={{ fontSize: '0.8rem', color: 'var(--accent-soft)', marginBottom: 16, textAlign: 'center', fontStyle: 'italic' }}>
+            다른 길은 어땠을까?
+          </div>
+
           <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => window.location.reload()}>
             다시 시작하기
           </button>
@@ -546,9 +588,13 @@ export function GameScreen() {
                   const isElementary = exam.schoolLevel === 'elementary';
                   const elemGrade = s.elementaryGrade;
                   const elemColor = elemGrade === '잘함' ? '#4CAF50' : elemGrade === '보통' ? '#2196F3' : '#FF9800';
+                  // socialScience 라벨: 고등 + track에 따라 분기
+                  const subjectLabel = (key === 'socialScience' && exam.schoolLevel === 'high')
+                    ? (state.track === 'humanities' ? '사회탐구' : state.track === 'science' ? '과학탐구' : '탐구')
+                    : SUBJECT_LABELS[key];
                   return (
                     <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <span style={{ width: 70, fontSize: '0.8rem', fontWeight: 600 }}>{SUBJECT_LABELS[key]}</span>
+                      <span style={{ width: 70, fontSize: '0.8rem', fontWeight: 600 }}>{subjectLabel}</span>
                       {isElementary ? (
                         <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 700, color: elemColor, textAlign: 'center' }}>
                           {elemGrade}

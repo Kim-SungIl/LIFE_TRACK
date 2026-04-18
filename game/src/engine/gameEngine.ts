@@ -28,6 +28,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     week: 1,
     year: 1,
     phase: 'weekday',
+    track: null,
     gender,
     stats,
     fatigue: 0,
@@ -67,6 +68,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     weekPurchases: {},
     idleWeeks: 0,
     consecutiveTiredWeeks: 0,
+    burnoutCooldown: 0,
     eventTimeCost: 0,
   };
 }
@@ -233,22 +235,20 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 // ===== 자연 감소 =====
 // v5.1: 학년별 학업 감소 + 고학업 추가 감소 + 피로→멘탈 침식
 function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean): void {
-  // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가)
-  // v6: 초등도 학업 감쇠 적용 (0→0.15)
-  // 초등(Y1): 학기 -0.15 / 방학 -0.4
-  // 중등(Y2~4): 학기 -0.2 / 방학 -0.6
-  // 고등(Y5~7): 학기 -0.4 / 방학 -1.0
+  // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가) — v7: 감쇠 완화로 85+ 달성 가능하게
+  // 초등(Y1): 학기 -0.1 / 방학 -0.3
+  // 중등(Y2~4): 학기 -0.15 / 방학 -0.4
+  // 고등(Y5~7): 학기 -0.3 / 방학 -0.7
   let academicDecay = 0;
   if (state.year <= 1) {
-    academicDecay = isVacation ? -0.4 : -0.15;
+    academicDecay = isVacation ? -0.3 : -0.1;
   } else if (state.year <= 4) {
-    academicDecay = isVacation ? -0.6 : -0.2;
+    academicDecay = isVacation ? -0.4 : -0.15;
   } else {
-    academicDecay = isVacation ? -1.0 : -0.4;
+    academicDecay = isVacation ? -0.7 : -0.3;
   }
-  // 고학업 추가 감소: 90+ → -0.5 추가, 95+ → -1.0 추가
-  if (state.stats.academic >= 95) academicDecay -= 1.0;
-  else if (state.stats.academic >= 90) academicDecay -= 0.5;
+  // 고학업 추가 감소: 95+ → -0.5 추가 (90+는 삭제 — 90대 진입 자체가 어려워지는 문제)
+  if (state.stats.academic >= 95) academicDecay -= 0.5;
 
   state.stats.academic = Math.max(12, state.stats.academic + academicDecay); // v6.4: floor 12 (학교 다니는데 0은 과함)
   log.statChanges.academic = (log.statChanges.academic || 0) + academicDecay;
@@ -267,9 +267,9 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
     log.statChanges.mental = (log.statChanges.mental || 0) + isolationDrain;
   }
 
-  // 특기: -0.3/주 (v6.2: floor 5 — 초보도 바닥 안 뚫림)
-  state.stats.talent = Math.max(5, state.stats.talent - 0.3);
-  log.statChanges.talent = (log.statChanges.talent || 0) - 0.3;
+  // 특기: -0.2/주 (v7: -0.3→-0.2로 완화 — talent 85 달성 가능하게)
+  state.stats.talent = Math.max(5, state.stats.talent - 0.2);
+  log.statChanges.talent = (log.statChanges.talent || 0) - 0.2;
 
   // 체력: -0.8/주 (학기 중 학교가 50% 상쇄, soft floor 10)
   let healthDecay = isVacation ? -0.8 : -0.4;
@@ -377,22 +377,36 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     state.mentalState = 'tired';
     log.messages.push('⚠️ 피로 상태 진입 — "요즘 뭘 해도 재미없다..."');
   }
-  // burnout 진입: tired + 멘탈 < 20 (기존: < 15), 또는 멘탈 < 25 + 피로 > 70
+  // burnout 진입: tired + 멘탈 < 20 또는 멘탈 < 25 + 피로 > 70
+  // 단, 번아웃 쿨다운 중이면 재진입 차단 (데스 스파이럴 방지)
   else if (state.mentalState === 'tired' && (state.stats.mental < 20 || (state.stats.mental < 25 && state.fatigue > 70))) {
-    state.mentalState = 'burnout';
-    state.burnoutCount++;
-    state.routineWeeks = 0; // v6.1: 번아웃 시 루틴 보너스 리셋
-    log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
+    if ((state.burnoutCooldown || 0) > 0) {
+      // 쿨다운 중 — 번아웃 대신 tired 유지, 멘탈 소폭 회복 (면역 효과)
+      state.stats.mental = Math.min(100, state.stats.mental + 2);
+      log.statChanges.mental = (log.statChanges.mental || 0) + 2;
+      log.messages.push('😮‍💨 한계 직전이지만, 간신히 버텼다.');
+    } else {
+      state.mentalState = 'burnout';
+      state.burnoutCount++;
+      state.routineWeeks = 0;
+      log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
+    }
   }
-  // 회복: tired → normal (v6.3: 피로 < 40으로 완화)
+  // 회복: tired → normal
   else if (state.mentalState === 'tired' && state.stats.mental >= 50 && state.fatigue < 40) {
     state.mentalState = 'normal';
     log.messages.push('✨ 회복! — 다시 일상으로 돌아왔다.');
   }
-  // burnout → tired (v6.3: 피로 < 40으로 완화)
+  // burnout → tired (회복 시작)
   else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 40) {
     state.mentalState = 'tired';
+    state.burnoutCooldown = 4; // 번아웃 회복 후 4주 면역
     log.messages.push('💪 번아웃에서 벗어나는 중...');
+  }
+
+  // 쿨다운 틱다운
+  if ((state.burnoutCooldown || 0) > 0 && state.mentalState !== 'burnout') {
+    state.burnoutCooldown = Math.max(0, (state.burnoutCooldown || 0) - 1);
   }
 
   // v6.4: 연속 피로 주수 카운터
@@ -452,6 +466,7 @@ export function processWeek(state: GameState): GameState {
   if (!newState.activeBuffs) newState.activeBuffs = [];
   if (!newState.weekPurchases) newState.weekPurchases = {};
   if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
+  if (newState.burnoutCooldown == null) newState.burnoutCooldown = 0;
   if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
 
   const info = getWeekInfo(newState.week);
@@ -670,19 +685,88 @@ export function processWeek(state: GameState): GameState {
 }
 
 // ===== 엔딩 계산 =====
+// ===== 진로 판정 =====
+// 수능 등급 + 문이과 + 특기를 기반으로 "진로" 결정
+function determineCareer(state: GameState): { path: string; detail: string } {
+  const suneung = state.examResults.find(e => e.examType === 'suneung');
+  const mockGrade = suneung?.mockGrade ?? 9; // 수능 없으면 9등급 취급
+  const { academic, talent, mental } = state.stats;
+  const track = state.track;
+
+  // 예체능 특기자 최우선 체크 (수능 등급과 무관하게 talent 우위이면 특기자 루트)
+  // academic 낮아도 특기로 대학 가는 실제 진로 반영
+  if (talent >= 85) {
+    if (talent >= 90) return { path: '예술/체육 특기자', detail: '특기로 명문 예술대학·체대에 진학했다.' };
+    if (academic < 70) return { path: '예체능 진학', detail: '특기를 살려 예체능 계열 대학에 진학했다.' };
+    // talent 85~89 + academic 70+ → 특기 + 학업 균형 → 아래 일반 진로 로직에서 +α
+  }
+
+  // 번아웃 심각 or 멘탈 붕괴 → 방황
+  if (state.burnoutCount >= 4 || mental < 20) {
+    return { path: '재수 결심', detail: '올해는 결과가 좋지 않았다. 1년 더 해보기로 했다.' };
+  }
+
+  // 수능 7등급 이하 — 입시 실패 루트
+  if (mockGrade >= 7) {
+    if (state.burnoutCount >= 2) return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
+    return { path: '전문대 / 재수', detail: '원하는 곳은 못 갔다. 다른 길을 찾아야 한다.' };
+  }
+
+  // 문과 진로
+  if (track === 'humanities') {
+    if (mockGrade <= 1) {
+      if (academic >= 85 && mental >= 50) return { path: 'SKY 경영대 합격', detail: '전국 수석권. 원하는 대학 어디든 갈 수 있다.' };
+      return { path: 'SKY 인문대 합격', detail: '오랜 노력의 결실. 명문대 합격 통지서를 받았다.' };
+    }
+    if (mockGrade === 2) return { path: '인서울 상위권 대학', detail: '중앙대·경희대 수준의 문과 상위권에 합격했다.' };
+    if (mockGrade === 3) return { path: '인서울 문과', detail: '인서울 문과 대학에 합격했다. 나쁘지 않은 결과다.' };
+    if (mockGrade === 4) return { path: '수도권 대학', detail: '수도권 4년제에 합격. 이제 본격적인 시작이다.' };
+    return { path: '지방 국립대', detail: '지방 국립대 문과에 합격했다. 길은 여기서부터다.' };
+  }
+
+  // 이과 진로
+  if (track === 'science') {
+    if (mockGrade <= 1) {
+      if (academic >= 88) return { path: '의대 합격', detail: '최고의 성적. 의과대학 합격 통지서를 받았다.' };
+      return { path: 'SKY 공대 합격', detail: '최상위권 공대에 합격. 공학도의 길이 시작된다.' };
+    }
+    if (mockGrade === 2) return { path: '인서울 상위권 공대', detail: '한양·성균관 수준 공대에 합격했다.' };
+    if (mockGrade === 3) return { path: '인서울 이과', detail: '인서울 4년제 이공계에 합격했다.' };
+    if (mockGrade === 4) return { path: '수도권 이공계', detail: '수도권 이공계 대학에 합격했다.' };
+    return { path: '지방 국립대 이공계', detail: '지방 국립대 이공계에 합격했다. 길은 여기서부터다.' };
+  }
+
+  // track 미선택(Y5~Y6 조기 종료) fallback
+  if (mockGrade <= 2) return { path: '상위권 대학', detail: '좋은 성적으로 상위권 대학에 합격했다.' };
+  if (mockGrade <= 4) return { path: '인서울 대학', detail: '인서울 대학에 합격했다.' };
+  return { path: '대학 진학', detail: '대학에 합격했다. 이제 새로운 시작이다.' };
+}
+
+// ===== 주요 NPC 근황 =====
+function getTopNpcStories(state: GameState, limit = 2): string[] {
+  const sorted = [...state.npcs]
+    .filter(n => n.met && n.intimacy >= 50)
+    .sort((a, b) => b.intimacy - a.intimacy)
+    .slice(0, limit);
+
+  const stories: string[] = [];
+  for (const npc of sorted) {
+    if (npc.intimacy >= 85) stories.push(`${npc.name}와는 지금도 가장 친한 친구다.`);
+    else if (npc.intimacy >= 70) stories.push(`${npc.name}와는 종종 연락한다. 좋은 기억으로 남아 있다.`);
+    else stories.push(`${npc.name}와는 가끔 생각나는 사이다.`);
+  }
+  return stories;
+}
+
 export function calculateEnding(state: GameState) {
   const { academic, social, talent, mental, health } = state.stats;
   const total = academic + social + talent + mental + health;
 
-  // v5.2: 성취 3축 평가 — 학업/특기/생활 중 최고축 기반 + 결함 체크
-  // 학업 성취: 학업 중심
+  // 성취 3축
   const academicScore = academic;
-  // 특기 성취: 특기 중심
   const talentScore = talent;
-  // 생활 성취: 멘탈+체력+인기 평균
   const lifeScore = (mental + health + social) / 3;
 
-  // 최고 축으로 기본 등급 결정
   const bestAxis = Math.max(academicScore, talentScore, lifeScore);
   let achievement = 'C';
   if (bestAxis >= 85) achievement = 'S';
@@ -691,10 +775,9 @@ export function calculateEnding(state: GameState) {
   else if (bestAxis >= 30) achievement = 'C';
   else achievement = 'D';
 
-  // 결함 체크: 핵심 스탯 중 20 미만이 있으면 S 불가, 10 미만이면 A도 불가
   const allStats = [academic, social, talent, mental, health];
-  const hasCollapse = allStats.some(v => v < 10);      // 붕괴
-  const hasWeakness = allStats.some(v => v < 20);       // 결함
+  const hasCollapse = allStats.some(v => v < 10);
+  const hasWeakness = allStats.some(v => v < 20);
   if (hasCollapse && achievement === 'A') achievement = 'B';
   if (hasWeakness && achievement === 'S') achievement = 'A';
   if (hasCollapse && achievement === 'S') achievement = 'B';
@@ -707,35 +790,42 @@ export function calculateEnding(state: GameState) {
   else if (mental >= 25) happiness = 'C';
   else happiness = 'D';
 
-  // 엔딩 타이틀
-  let title = '평범한 학창시절';
-  let description = '특별할 것 없지만, 그래도 나쁘지 않은 7년이었다.';
+  // 진로 판정
+  const career = determineCareer(state);
+  const suneung = state.examResults.find(e => e.examType === 'suneung');
+  const suneungGrade = suneung?.mockGrade ?? null;
 
-  if (achievement === 'S' && happiness === 'S') {
-    title = '완벽한 청춘';
-    description = '성적도, 관계도, 모든 것이 빛나는 학창시절이었다.';
-  } else if (achievement === 'S' && happiness <= 'C') {
-    title = '고독한 승리자';
-    description = '성적은 최고였지만, 돌아보면 곁에 아무도 없었다.';
-  } else if (achievement <= 'C' && happiness === 'S') {
-    title = '행복한 평범함';
-    description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다.';
-  } else if (academic >= 85) {
-    title = '공부의 신';
-    description = '오직 공부만을 위한 7년. 그 끝에 무엇이 있을까.';
-  } else if (talent >= 85) {
-    title = '숨은 천재';
-    description = '남들과 다른 길을 걸었다. 그리고 그 길이 맞았다.';
-  } else if (social >= 85) {
-    title = '인싸 of 인싸';
-    description = '모두가 아는 이름. 하지만 진짜 친구는 몇 명일까.';
-  } else if (state.burnoutCount >= 3) {
-    title = '불꽃은 꺼지지 않는다';
-    description = '몇 번이고 쓰러졌지만, 그래도 일어났다.';
-  } else if (total >= 350) {
-    title = '밸런스의 달인';
-    description = '모든 것을 조금씩. 평범하지만 단단한 인생의 기반.';
+  // NPC 근황
+  const npcStories = getTopNpcStories(state);
+
+  // 엔딩 타이틀 (진로 기반 + 성취/행복으로 수식)
+  let title = career.path;
+  let description = career.description;
+
+  // 특수 조합 — 진로 덮어쓰기
+  if (achievement === 'S' && happiness === 'S' && suneungGrade && suneungGrade <= 2) {
+    title = `완벽한 청춘 — ${career.path}`;
+    description = '성적도, 관계도, 모든 것이 빛나는 학창시절이었다. ' + career.detail;
+  } else if (achievement === 'S' && happiness === 'D' && suneungGrade && suneungGrade <= 2) {
+    title = `고독한 승리자 — ${career.path}`;
+    description = '성적은 최고였지만, 돌아보면 곁에 아무도 없었다. ' + career.detail;
+  } else if (state.burnoutCount >= 3 && suneungGrade && suneungGrade <= 4) {
+    title = `불꽃은 꺼지지 않는다 — ${career.path}`;
+    description = '몇 번이고 쓰러졌지만, 그래도 일어났다. ' + career.detail;
+  } else if (happiness === 'S' && achievement === 'C') {
+    title = `행복한 평범함 — ${career.path}`;
+    description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다. ' + career.detail;
   }
 
-  return { title, description, achievement, happiness, total };
+  return {
+    title,
+    description,
+    achievement,
+    happiness,
+    total,
+    career: career.path,
+    careerDetail: career.detail,
+    suneungGrade,
+    npcStories,
+  };
 }
