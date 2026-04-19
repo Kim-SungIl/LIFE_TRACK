@@ -78,7 +78,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"나도 네 옆자리야" — 이야기 나눈다',
         effects: { social: 1, academic: 1, mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
-        message: '민재가 교과서를 짝 맞춰 정리해주며 웃었다. 꼼꼼한 애다.',
+        message: '급식실에서 같이 먹으며 이야기 나눴다. 조용한데 막상 얘기해보면 은근 디테일에 꼼꼼한 애다.',
       },
       {
         text: '"아... 나 할 거 있어서" — 혼자 도서관에 간다',
@@ -1878,7 +1878,7 @@ export const GAME_EVENTS: GameEvent[] = [
     condition: (s) => s.stats.social < 25 && s.week > 8,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
-    speakers: ['minjae'],
+    // speakers 제거 — description에는 아직 아무도 등장하지 않음 (choices에서만 등장)
     choices: [
       {
         text: '괜찮아, 혼자가 편해',
@@ -1886,7 +1886,7 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '혼자만의 시간도 나쁘지 않다. ... 정말?',
       },
       {
-        text: '옆 반 아이에게 말을 걸어본다',
+        text: '같은 반 아이에게 말을 걸어본다',
         effects: { social: 3, mental: 2 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
         message: '"같이 먹어도 돼?" "어, 그래!" 용기를 냈더니 생각보다 쉬웠다.',
@@ -1900,7 +1900,7 @@ export const GAME_EVENTS: GameEvent[] = [
     condition: (s) => s.mentalState === 'burnout',
     location: 'home',
     background: 'bedroom_night',
-    speakers: ['jihun'],
+    // speakers 제거 — 집에서 혼자인 장면. 지훈은 choices[2]에서만 등장
     choices: [
       {
         text: '그래도 억지로 공부한다',
