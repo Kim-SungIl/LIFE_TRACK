@@ -800,7 +800,7 @@ export function calculateEnding(state: GameState) {
 
   // 엔딩 타이틀 (진로 기반 + 성취/행복으로 수식)
   let title = career.path;
-  let description = career.description;
+  let description = career.detail;
 
   // 특수 조합 — 진로 덮어쓰기
   if (achievement === 'S' && happiness === 'S' && suneungGrade && suneungGrade <= 2) {
