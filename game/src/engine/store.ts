@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { GameState, ParentStrength } from './types';
-import { createInitialState, processWeek } from './gameEngine';
+import { createInitialState, processWeek, hashInitialState } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek } from './events';
 
@@ -11,6 +11,22 @@ interface SaveData {
   version: number;
   state: GameState;
   savedAt: string;
+}
+
+// v1.2 로드 시 누락 필드 백필 (processWeek 미경유 경로 보호)
+// SAVE_VERSION을 올리지 않고 부재 필드 초기화로 호환 유지
+function migrateLoadedState(state: GameState): GameState {
+  return {
+    ...state,
+    memorySlots: state.memorySlots || [],
+    socialRipples: state.socialRipples || [],
+    milestoneScenes: state.milestoneScenes || [],
+    rngSeed: (state.rngSeed && state.rngSeed !== 0)
+      ? state.rngSeed
+      : hashInitialState({ gender: state.gender, parents: state.parents }),
+    hardCrisisYears: state.hardCrisisYears || [],
+    unlockedEvents: state.unlockedEvents || [],
+  };
 }
 
 function saveToStorage(state: GameState) {
@@ -68,7 +84,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   loadSavedGame: () => {
     const save = loadFromStorage();
     if (!save) return false;
-    set({ state: save.state, history: [] });
+    set({ state: migrateLoadedState(save.state), history: [] });
     return true;
   },
 

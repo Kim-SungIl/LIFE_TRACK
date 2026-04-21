@@ -3,6 +3,10 @@ import { ACTIVITIES } from './activities';
 import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult } from './examSystem';
 import { ExamType } from './types';
+import { seededRandom, hashInitialState } from './rng';
+
+// rng utility re-export (하위 호환)
+export { seededRandom, hashInitialState } from './rng';
 
 // ===== 초기 상태 생성 =====
 export function createInitialState(gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]): GameState {
@@ -71,6 +75,12 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     burnoutCooldown: 0,
     eventTimeCost: 0,
     unlockedEvents: [],
+    // v1.2 기억 슬롯 시스템
+    memorySlots: [],
+    socialRipples: [],
+    milestoneScenes: [],
+    rngSeed: hashInitialState({ gender, parents }),
+    hardCrisisYears: [],
   };
 }
 
@@ -470,6 +480,14 @@ export function processWeek(state: GameState): GameState {
   if (newState.burnoutCooldown == null) newState.burnoutCooldown = 0;
   if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
   if (!newState.unlockedEvents) newState.unlockedEvents = [];
+  // v1.2 기억 슬롯 시스템 마이그레이션
+  if (!newState.memorySlots) newState.memorySlots = [];
+  if (!newState.socialRipples) newState.socialRipples = [];
+  if (!newState.milestoneScenes) newState.milestoneScenes = [];
+  if (newState.rngSeed == null || newState.rngSeed === 0) {
+    newState.rngSeed = hashInitialState({ gender: newState.gender, parents: newState.parents });
+  }
+  if (!newState.hardCrisisYears) newState.hardCrisisYears = [];
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;

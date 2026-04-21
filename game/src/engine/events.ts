@@ -1,4 +1,5 @@
 import { GameEvent, GameState } from './types';
+import { seededRandom } from './rng';
 
 export const GAME_EVENTS: GameEvent[] = [
   // ===== 초반 이벤트 (W1~W4) =====
@@ -60,7 +61,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 옆자리 민재 (Y1 W2) — 새 짝꿍 =====
   {
     id: 'minjae-meet-elementary',
-    title: '옆자리 민재',
+    title: '새 짝꿍',
     description: '새 자리 배치. 옆자리에 처음 보는 애가 앉았다.\n필통을 가지런히 꺼내놓고, 노트에 오늘 날짜를 정자로 적는다.\n쉬는 시간에 조심스럽게 말을 건다.\n"야, 점심 같이 먹을래? 나 박민재."',
     week: 2,
     condition: (s) => s.year === 1,
@@ -90,7 +91,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 유나 첫 만남 (Y1 W6) — 같은 반 모범생 =====
   {
     id: 'yuna-meet-elementary',
-    title: '도서관에서 — 유나',
+    title: '도서관 창가 자리',
     description: '쉬는 시간에 도서관에 갔다. 창가 자리에 같은 반 여자애가 혼자 책을 읽고 있다.\n머리핀에 작은 별 장식. 피아노 학원 가방이 의자에 걸려 있다.\n나를 보더니 살짝 웃어준다.\n"아, 너도 책 좋아해?"',
     week: 6,
     condition: (s) => s.year === 1,
@@ -121,7 +122,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 수빈 첫 만남 (Y1 W10) — 학원 친구 =====
   {
     id: 'subin-meet-elementary',
-    title: '학원에서 — 수빈',
+    title: '학원 뒷자리',
     description: '학원 쉬는 시간. 뒷자리 여자애가 내 책을 힐끔 본다.\n단정한 단발머리, 작은 별 귀걸이. 손에는 작은 노트를 들고 있다.\n"너도 이 문제집 풀어? 나 여기 막혔는데..."\n공책을 살며시 내밀어 보인다.',
     week: 10,
     condition: (s) => s.year === 1,
@@ -2623,8 +2624,8 @@ export function getEventForWeek(state: GameState): GameEvent | null {
     !FOLLOWUP_EVENT_IDS.has(e.id) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 10)
   );
-  if (conditionalEvents.length > 0 && Math.random() < 0.5) {
-    return conditionalEvents[Math.floor(Math.random() * conditionalEvents.length)];
+  if (conditionalEvents.length > 0 && seededRandom(state) < 0.5) {
+    return conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)];
   }
 
   // 학교생활 랜덤 이벤트 — 70% 확률 (거의 매주 발생)
@@ -2632,8 +2633,8 @@ export function getEventForWeek(state: GameState): GameEvent | null {
     (!e.condition || e.condition(state)) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 6)
   );
-  if (availableSchoolEvents.length > 0 && Math.random() < 0.7) {
-    return availableSchoolEvents[Math.floor(Math.random() * availableSchoolEvents.length)];
+  if (availableSchoolEvents.length > 0 && seededRandom(state) < 0.7) {
+    return availableSchoolEvents[Math.floor(seededRandom(state) * availableSchoolEvents.length)];
   }
 
   return null;
