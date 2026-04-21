@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createInitialState, processWeek } from '../src/engine/gameEngine';
 import { GAME_EVENTS } from '../src/engine/events';
+import { SHOP_ITEMS, canBuyItem, applyItemEffects } from '../src/engine/shopSystem';
 import type { GameState, ParentStrength } from '../src/engine/types';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -162,7 +163,38 @@ console.log('\n=== 10. jihun-fight: "맨날 공부만" 제거 ===');
   assert('description에 "맨날 공부만" 없음', !ev?.description?.includes('맨날 공부만'));
 }
 
-console.log('\n=== 11. 48주 × 7년 시뮬: 이벤트 연속 진행 crash 없음 ===');
+console.log('\n=== 11. 상점 seasonal 아이템: 학기중 차단 / 방학중 허용 ===');
+{
+  const camp = SHOP_ITEMS.find(i => i.id === 'camp-fee')!;
+  let s = setupState();
+  s = mutate(s, { money: 20, isVacation: false, year: 2 });
+  const blocked = canBuyItem(camp, s, {});
+  assert('학기중 camp-fee 구매 차단', !blocked.ok && !!blocked.reason?.includes('방학'));
+
+  s = mutate(s, { isVacation: true });
+  const allowed = canBuyItem(camp, s, {});
+  assert('방학중 camp-fee 구매 허용', allowed.ok);
+}
+
+console.log('\n=== 12. 상점 event_unlock: 배열 push + 재구매 차단 ===');
+{
+  const contest = SHOP_ITEMS.find(i => i.id === 'contest-fee')!;
+  let s = setupState();
+  s = mutate(s, { money: 20, year: 2 });
+  s.stats.talent = 50;
+
+  const initial = canBuyItem(contest, s, {});
+  assert('초기 contest-fee 구매 가능', initial.ok);
+
+  const { newState } = applyItemEffects(contest, s);
+  assert('구매 후 unlockedEvents에 "contest" 추가', newState.unlockedEvents?.includes('contest') || false);
+  assert('placeholder talent +2 적용', newState.stats.talent === s.stats.talent + 2);
+
+  const reblock = canBuyItem(contest, newState, {});
+  assert('해금된 아이템 재구매 차단', !reblock.ok && reblock.reason === '이미 해금됨');
+}
+
+console.log('\n=== 13. 48주 × 7년 시뮬: 이벤트 연속 진행 crash 없음 ===');
 {
   let s = setupState();
   s.routineSlot2 = 'self-study';

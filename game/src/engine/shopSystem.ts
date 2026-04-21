@@ -147,7 +147,10 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'contest-fee', name: '대회 참가비', description: '교내/교외 대회에 참가할 수 있다.',
     price: 3, category: 'opportunity', emoji: '🏆',
-    effects: [{ type: 'event_unlock', eventId: 'contest' }],
+    effects: [
+      { type: 'event_unlock', eventId: 'contest' },
+      { type: 'instant', stat: 'talent', value: 2 },
+    ],
     requireStat: { stat: 'talent', min: 40 },
   },
   {
@@ -159,7 +162,11 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'portfolio-kit', name: '포트폴리오 준비 패키지', description: '특기자 전형을 위한 준비물.',
     price: 10, category: 'opportunity', emoji: '📂',
-    effects: [{ type: 'event_unlock', eventId: 'portfolio' }],
+    effects: [
+      { type: 'event_unlock', eventId: 'portfolio' },
+      { type: 'instant', stat: 'talent', value: 3 },
+      { type: 'instant', stat: 'academic', value: 2 },
+    ],
     requireYear: 5,
     requireStat: { stat: 'talent', min: 60 },
   },
@@ -188,6 +195,10 @@ export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Reco
   if (item.maxPerWeek) {
     const bought = weekPurchases[item.id] || 0;
     if (bought >= item.maxPerWeek) return { ok: false, reason: '이번 주 구매 한도 초과' };
+  }
+  if (item.seasonal && !state.isVacation) return { ok: false, reason: '방학 기간에만 구매 가능' };
+  if (item.effects.some(e => e.type === 'event_unlock' && e.eventId && state.unlockedEvents?.includes(e.eventId))) {
+    return { ok: false, reason: '이미 해금됨' };
   }
   return { ok: true };
 }
@@ -243,8 +254,13 @@ export function applyItemEffects(
         break;
 
       case 'event_unlock':
-        // 이벤트 해금은 별도 처리 (추후)
-        messages.push(`${item.name} 구매 완료!`);
+        if (effect.eventId) {
+          if (!newState.unlockedEvents) newState.unlockedEvents = [];
+          if (!newState.unlockedEvents.includes(effect.eventId)) {
+            newState.unlockedEvents.push(effect.eventId);
+          }
+          messages.push(`${item.name} 구매 완료! 관련 기회가 열렸다.`);
+        }
         break;
     }
   }

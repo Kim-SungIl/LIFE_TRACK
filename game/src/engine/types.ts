@@ -48,6 +48,7 @@ export interface GameState {
   consecutiveTiredWeeks: number;    // v6.4: 연속 피로 주수 (만성 피로 패널티)
   burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
+  unlockedEvents: string[];         // 상점 event_unlock 아이템으로 해금된 이벤트 ID
 }
 
 // 활성 버프 (shopSystem에서도 사용)

@@ -70,6 +70,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     consecutiveTiredWeeks: 0,
     burnoutCooldown: 0,
     eventTimeCost: 0,
+    unlockedEvents: [],
   };
 }
 
@@ -468,6 +469,7 @@ export function processWeek(state: GameState): GameState {
   if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
   if (newState.burnoutCooldown == null) newState.burnoutCooldown = 0;
   if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
+  if (!newState.unlockedEvents) newState.unlockedEvents = [];
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
