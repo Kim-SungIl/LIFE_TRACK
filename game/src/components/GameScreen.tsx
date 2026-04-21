@@ -247,13 +247,14 @@ export function GameScreen() {
       ] : [];
     const bgImgUrl = bgImgCandidates.length > 0 ? bgImgCandidates[0] : null;
 
-    // 이벤트 결과 이미지: {eventId}_c{choice}_{gender}.png → {eventId}_{gender}.png → {eventId}.png
+    // 이벤트 결과 이미지: {eventId}_c{choice}_{gender} → {eventId}_{gender} → {eventId}_c{choice} → {eventId}
     const eventId = resultEvent?.id;
     const ci = eventResultData.choiceIndex ?? 0;
     const genderSuffix = state.gender === 'male' ? 'm' : 'f';
-    // 우선순위: 선택지+성별 → 이벤트+성별 → 이벤트 공용
+    // 우선순위: 선택지+성별 → 이벤트+성별 → 선택지 공용 → 이벤트 공용
     const eventImgGendered = eventId ? `${BASE}images/events/${eventId}_c${ci}_${genderSuffix}.png` : null;
     const eventImgFallback1 = eventId ? `${BASE}images/events/${eventId}_${genderSuffix}.png` : null;
+    const eventImgChoiceCommon = eventId ? `${BASE}images/events/${eventId}_c${ci}.png` : null;
     const eventImgCommon = eventId ? `${BASE}images/events/${eventId}.png` : null;
 
     return (
@@ -301,9 +302,11 @@ export function GameScreen() {
                 onLoad={() => setCgLoaded(true)}
                 onError={e => {
                   const img = e.target as HTMLImageElement;
-                  // 폴백 체인: 선택지+성별 → 이벤트+성별 → 공용 → 숨김
+                  // 폴백 체인: 선택지+성별 → 이벤트+성별 → 선택지 공용 → 이벤트 공용 → 숨김
                   if (eventImgFallback1 && img.src.includes(`_c${ci}_`)) {
                     img.src = eventImgFallback1;
+                  } else if (eventImgChoiceCommon && img.src.endsWith(`_${genderSuffix}.png`)) {
+                    img.src = eventImgChoiceCommon;
                   } else if (eventImgCommon && !img.src.endsWith(`${eventId}.png`)) {
                     img.src = eventImgCommon;
                   } else {

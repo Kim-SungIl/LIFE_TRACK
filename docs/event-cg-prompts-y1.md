@@ -219,12 +219,17 @@ Same setting with female protagonist. No other changes.
 
 ### [c2] "아... 나 할 거 있어서" — 혼자 도서관
 
-**공통 (성별 무관)** `minjae-meet-elementary_c2.png`
+**[male / c2]** `minjae-meet-elementary_c2_m.png`
 ```
 Elementary school library (reference: library_elementary.png). Empty quiet space,
-dust motes in sunlight. A single figure (protagonist, can be androgynous silhouette or
-rear view) sitting alone at a reading desk, one chair pulled out.
+dust motes in sunlight. Male protagonist (player_m reference) sitting alone at a reading desk,
+open book or notebook in front, quiet focused-but-slightly-lonely expression.
 Mood: peaceful solitude with a hint of loneliness.
+```
+
+**[female / c2]** `minjae-meet-elementary_c2_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ---
@@ -240,35 +245,51 @@ Mood: peaceful solitude with a hint of loneliness.
 
 ### [c0] 친구들이랑 같이 먹는다
 
-**공통** `elementary-spring-picnic_c0.png`
+**[male / c0]** `elementary-spring-picnic_c0_m.png`
 ```
 Public park in spring, cherry blossom petals falling. Three 12-year-old Korean
 elementary students sitting on a picnic mat with gimbap boxes and snacks.
 Jihun (reference): excited grin, mouth full of gimbap.
 Minjae (reference): laughing, arm raised in animated gesture.
-Protagonist (player reference, gender ambiguous back-angle OR pick m/f version): mid-laugh.
+Male protagonist (player_m reference): mid-laugh.
 Background: blooming cherry trees, other picnic groups scattered in distance.
 Mood: warm spring day, pure childhood joy.
 ```
 
+**[female / c0]** `elementary-spring-picnic_c0_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
+```
+
 ### [c1] 장기자랑에 나간다
 
-**공통** `elementary-spring-picnic_c1.png`
+**[male / c1]** `elementary-spring-picnic_c1_m.png`
 ```
-Small makeshift stage in the park, protagonist standing center-stage, microphone in hand,
-face red from embarrassment but smiling bravely. Audience of classmates clapping and cheering
-in foreground silhouette. Cherry blossom petals in the air.
+Small makeshift stage in the park, male protagonist (player_m reference) standing center-stage,
+microphone in hand, face red from embarrassment but smiling bravely. Audience of classmates
+clapping and cheering in foreground silhouette. Cherry blossom petals in the air.
 Mood: stage fright conquered, coming-of-age moment.
+```
+
+**[female / c1]** `elementary-spring-picnic_c1_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ### [c2] 혼자 조용히 주변을 구경한다
 
-**공통** `elementary-spring-picnic_c2.png`
+**[male / c2]** `elementary-spring-picnic_c2_m.png`
 ```
-Quiet corner of the park. Protagonist (back view or 3/4) standing alone under a
-cherry blossom tree, petals drifting around them. Distant blurred classmates laughing
-in the background.
+Quiet corner of the park. Male protagonist (player_m reference, back view, face hidden)
+standing alone under a cherry blossom tree, petals drifting around him. Short boy's haircut,
+casual spring outfit visible from behind. Distant blurred classmates laughing in the background.
 Mood: introspective peace, gentle solitude.
+```
+
+**[female / c2]** `elementary-spring-picnic_c2_f.png`
+```
+Same setting with female protagonist (player_f reference, back view, face hidden).
+Longer hair visible from behind, girl's casual spring outfit. No other changes.
 ```
 
 ---
@@ -301,22 +322,36 @@ Same setting with female protagonist. No other changes.
 
 ### [c1] "피아노 배워? 멋있다!" — 피아노 얘기
 
-**공통** `yuna-meet-elementary_c1.png`
+**[male / c1]** `yuna-meet-elementary_c1_m.png`
 ```
 Library window seat. Yuna (reference) with hands near mouth hiding a small flattered smile,
-eyes crinkled. Piano bag in focus beside her. Sheet music peeking out of the bag.
+eyes crinkled. Piano bag beside her, sheet music peeking out. Male protagonist
+(player_m reference) sitting across from her, leaning in with a curious smile.
 Background: soft sunlight, empty library.
 Mood: sweet flustered reaction, gentle pride beneath shyness.
 ```
 
+**[female / c1]** `yuna-meet-elementary_c1_f.png`
+```
+Same setting with female protagonist (player_f reference) leaning in with curious smile.
+No other changes.
+```
+
 ### [c2] "난 책 잘 안 봐" — 솔직히
 
-**공통** `yuna-meet-elementary_c2.png`
+**[male / c2]** `yuna-meet-elementary_c2_m.png`
 ```
 Library window seat. Yuna (reference) back to reading her book, slightly awkward
 but polite expression — "oh, that's okay" kind of smile while turning page.
-Protagonist (back view or side) slightly stepping away, awkward moment.
+Male protagonist (player_m reference, back view, face hidden) slightly stepping away,
+short boy's haircut visible from behind.
 Mood: gentle awkwardness, missed connection but not hostile.
+```
+
+**[female / c2]** `yuna-meet-elementary_c2_f.png`
+```
+Same setting with female protagonist (player_f reference, back view, face hidden).
+Longer hair visible from behind. No other changes.
 ```
 
 ---
@@ -343,8 +378,9 @@ Mood: heartfelt surprise, childhood friendship milestone.
 
 **공통** `minjae-birthday_c1.png`
 ```
-Close-up of a 2012-era flip phone or slide phone screen showing a Korean Kakao chat:
-"생일축하해 ㅊㅋ" bubble sent, then "ㄱㅅ" reply.
+Close-up of a 2012-era flip phone or slide phone screen showing a Korean messaging app
+chat interface (soft yellow background, white speech bubbles — generic messaging style, no brand name):
+"생일 축하해" bubble sent, then "고마워" reply.
 Background: hand holding the phone, out of focus classroom environment.
 Mood: casual minimal effort, slight awkwardness.
 ```
@@ -388,11 +424,17 @@ Mood: the satisfying moment of teaching a friend, subin's diligent note-taking.
 
 ### [c2] "나도 막혔어..."
 
-**공통** `subin-meet-elementary_c2.png`
+**[male / c2]** `subin-meet-elementary_c2_m.png`
 ```
-Both students at the desk with defeated but amused expressions, subin covering her mouth
-with a small laugh, protagonist slumped on the desk. Problem book open with crossed-out scribbles.
+Both students at the hagwon desk with defeated but amused expressions, subin covering her mouth
+with a small laugh, male protagonist (player_m reference) slumped on the desk. Problem book open
+with crossed-out scribbles.
 Mood: commiserating failure, unexpected friendship in shared defeat.
+```
+
+**[female / c2]** `subin-meet-elementary_c2_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ---
@@ -418,7 +460,9 @@ Mood: pure happy energetic friendship.
 
 **공통** `jihun-birthday_c1.png`
 ```
-Similar to minjae-birthday c1 — 2012 era phone screen with "ㅊㅋ~" and "ㄱㅅ".
+Similar to minjae-birthday c1 — 2012 era phone screen, Korean messaging app chat interface
+(soft yellow background, white speech bubbles — generic messaging style, no brand name):
+"생일 축하해" bubble sent, then "고마워" reply.
 Mood: casual but slightly impersonal.
 ```
 
@@ -432,20 +476,30 @@ Mood: casual but slightly impersonal.
 
 ### [c0] 집에서 복습
 
-**공통** `elementary-unit-test_c0.png`
+**[male / c0]** `elementary-unit-test_c0_m.png`
 ```
-Child's bedroom desk at home, evening. Protagonist sitting at desk with textbook open,
-small focused expression. Warm desk lamp light. Stuffed animal or toy on bed visible.
+Child's bedroom desk at home, evening. Male protagonist (player_m reference) sitting at desk
+with textbook open, small focused expression. Warm desk lamp light. Stuffed animal or toy on bed visible.
 Mood: quiet earnest effort, elementary-student studying.
+```
+
+**[female / c0]** `elementary-unit-test_c0_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ### [c1] 그냥 평소대로 논다
 
-**공통** `elementary-unit-test_c1.png`
+**[male / c1]** `elementary-unit-test_c1_m.png`
 ```
-Outside a Korean apartment complex playground area, late afternoon. Protagonist playing
-on swings or running with a ball, carefree expression.
+Outside a Korean apartment complex playground area, late afternoon. Male protagonist
+(player_m reference) playing on swings or running with a ball, carefree expression.
 Mood: carefree childhood, "test? what test".
+```
+
+**[female / c1]** `elementary-unit-test_c1_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ---
@@ -458,30 +512,42 @@ Mood: carefree childhood, "test? what test".
 
 ### [c0] 열심히 해야지
 
-**공통** `elementary-semester2-start_c0.png`
+**[male / c0]** `elementary-semester2-start_c0_m.png`
 ```
-Elementary classroom first day of fall semester. Protagonist at desk with determined
-expression, new textbooks stacked neatly, teacher writing "곧 졸업!" on blackboard in background.
-Other students visible but blurred. Sunlight through window — shift from summer to early fall tone.
+Elementary classroom first day of fall semester. Male protagonist (player_m reference) at desk
+with determined expression, new textbooks stacked neatly, teacher writing "곧 졸업!" on blackboard
+in background. Other students visible but blurred. Sunlight through window — shift from summer
+to early fall tone.
 Mood: fresh resolve, end-of-childhood awareness.
+```
+
+**[female / c0]** `elementary-semester2-start_c0_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ### [c1] 방학 얘기 수다
 
-**공통** `elementary-semester2-start_c1.png`
+**[male / c1]** `elementary-semester2-start_c1_m.png`
 ```
-Classroom break time cluster shot. Protagonist + 2~3 classmates (minjae, jihun in
-reference style) gathered at a desk laughing, one showing a photo on a flip phone.
+Classroom break time cluster shot. Male protagonist (player_m reference) + 2~3 classmates
+(minjae, jihun in reference style) gathered at a desk laughing, one showing a photo on a flip phone.
 Tan lines visible on some faces.
 Mood: happy post-vacation chatter, summer tan vibes.
+```
+
+**[female / c1]** `elementary-semester2-start_c1_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ### [c2] 추억을 남기자
 
 **공통** `elementary-semester2-start_c2.png`
 ```
-Classroom viewed from protagonist's POV or 3/4 view, looking around quietly. Empty desks,
-late afternoon sun. Sentimental mood.
+Classroom viewed from protagonist's POV (first-person, looking out across the room from their desk).
+Empty desks, late afternoon sun. Protagonist not shown directly (only hint of shoulder/hand on desk at edge of frame).
+Sentimental mood.
 Mood: nostalgic contemplation of "last semester here".
 ```
 
@@ -539,11 +605,16 @@ Same with female protagonist.
 
 ### [c1] 페이스 유지
 
-**공통** `elementary-sports-day_c1.png`
+**[male / c1]** `elementary-sports-day_c1_m.png`
 ```
-Same track setting but protagonist at measured pace, relaxed but focused expression.
-Other runners visible ahead but not too far.
+Same track setting but male protagonist (player_m reference) at measured pace, relaxed but
+focused expression. Other runners visible ahead but not too far.
 Mood: steady calm, not about winning.
+```
+
+**[female / c1]** `elementary-sports-day_c1_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ---
@@ -573,28 +644,38 @@ Mood: cool and quiet.
 
 ---
 
-## 🟡 W37 elementary-unit-test-2 — 2학기 단원평가 준비
+## 🟡 W37 elementary-unit-test-2 — 2학기 단원평가가 다가온다
 
-**Scene**: 2학기 마지막 단원평가. "올해 마지막" 선생님 말.
+**Scene**: 2학기 마지막 단원평가 전주(W37). "다음 주에 2학기 단원평가~ 올해 마지막" 선생님 말.
 
 **References**: `classroom_elementary_afternoon.png`
 
 ### [c0] 열심히 복습
 
-**공통** `elementary-unit-test-2_c0.png`
+**[male / c0]** `elementary-unit-test-2_c0_m.png`
 ```
-Protagonist at home desk, concentrated — but softer, more wistful mood than c0 of W16.
-"마지막이니까" awareness. Winter light through window.
+Male protagonist (player_m reference) at home desk, concentrated — but softer, more wistful mood
+than c0 of W16. "마지막이니까" awareness. Winter light through window.
 Mood: quiet diligence, end-of-elementary-era reflection.
+```
+
+**[female / c0]** `elementary-unit-test-2_c0_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ### [c1] 대충 본다
 
-**공통** `elementary-unit-test-2_c1.png`
+**[male / c1]** `elementary-unit-test-2_c1_m.png`
 ```
-Protagonist on bed or lounging, daydreaming expression, holding a graduation photo booklet
-or looking at something unrelated to study.
+Male protagonist (player_m reference) on bed or lounging, daydreaming expression, holding a
+graduation photo booklet or looking at something unrelated to study.
 Mood: "곧 졸업이잖아" daydream.
+```
+
+**[female / c1]** `elementary-unit-test-2_c1_f.png`
+```
+Same setting with female protagonist (player_f reference). No other changes.
 ```
 
 ---
@@ -628,58 +709,81 @@ Same composition with female protagonist. No other changes.
 
 ### [c1] 조용히 교실을 둘러본다
 
-**공통** `elementary-graduation_c1.png`
+**[male / c1]** `elementary-graduation_c1_m.png`
 ```
-Empty classroom viewed from doorway. Single small figure (protagonist silhouette or back view)
-standing in middle of the empty classroom, chairs up on desks. Afternoon winter sunlight streams
-through window. Blackboard wiped clean. One flower petal or graduation paper on a desk.
+Empty classroom viewed from doorway. Male protagonist (player_m reference, back view or
+silhouette) standing in middle of the empty classroom, chairs up on desks, short boy's
+haircut visible from behind. Afternoon winter sunlight streams through window. Blackboard
+wiped clean. One flower petal or graduation paper on a desk.
 Mood: profound nostalgic solitude, "this chapter is closing".
+```
+
+**[female / c1]** `elementary-graduation_c1_f.png`
+```
+Same setting with female protagonist (player_f reference, back view or silhouette,
+longer hair visible from behind). No other changes.
 ```
 
 ### [c2] "빨리 중학교 가고 싶다!"
 
-**공통** `elementary-graduation_c2.png`
+**[male / c2]** `elementary-graduation_c2_m.png`
 ```
-Protagonist walking out of school gate, back view, looking forward with confident stride.
-Elementary school building fades behind. Cherry blossom buds (pre-bloom) on trees hint at
-spring ahead.
+Male protagonist (player_m reference) walking out of school gate, back view, short
+boy's haircut, looking forward with confident stride. Elementary school building fades
+behind. Cherry blossom buds (pre-bloom) on trees hint at spring ahead.
 Mood: forward-facing hope, end as new beginning.
+```
+
+**[female / c2]** `elementary-graduation_c2_f.png`
+```
+Same setting with female protagonist (player_f reference, back view, longer hair
+visible from behind). No other changes.
 ```
 
 ---
 
 # 📊 생성 체크리스트
 
-## 필수 (15장)
+## 필수
 - [ ] `first-week_c0_m.png`, `_c0_f.png`
 - [ ] `first-week_c1_m.png`, `_c1_f.png`
 - [ ] `first-week_c2_m.png`, `_c2_f.png`
 - [ ] `minjae-meet-elementary_c0_m.png`, `_c0_f.png`
 - [ ] `minjae-meet-elementary_c1_m.png`, `_c1_f.png`
-- [ ] `minjae-meet-elementary_c2.png`
+- [ ] `minjae-meet-elementary_c2_m.png`, `_c2_f.png`
 - [ ] `yuna-meet-elementary_c0_m.png`, `_c0_f.png`
 - [ ] `subin-meet-elementary_c0_m.png`, `_c0_f.png`
 - [ ] `elementary-graduation_c0_m.png`, `_c0_f.png`
 
-## 중요 (10장)
-- [ ] `elementary-spring-picnic_c0.png`, `_c1.png`, `_c2.png`
-- [ ] `yuna-meet-elementary_c1.png`, `_c2.png`
-- [ ] `subin-meet-elementary_c1.png`, `_c2.png`
-- [ ] `elementary-sports-day_c0_m.png`, `_c0_f.png`, `_c1.png`
-- [ ] `elementary-graduation_c1.png`, `_c2.png`
+## 중요
+- [ ] `elementary-spring-picnic_c0_m.png`, `_c0_f.png`
+- [ ] `elementary-spring-picnic_c1_m.png`, `_c1_f.png`
+- [ ] `elementary-spring-picnic_c2_m.png`, `_c2_f.png` (back view, 실루엣/헤어 구분)
+- [ ] `yuna-meet-elementary_c1_m.png`, `_c1_f.png` (피아노 reaction)
+- [ ] `yuna-meet-elementary_c2_m.png`, `_c2_f.png` (back view, 실루엣/헤어 구분)
+- [ ] `subin-meet-elementary_c1.png` (공통: hand only)
+- [ ] `subin-meet-elementary_c2_m.png`, `_c2_f.png`
+- [ ] `elementary-sports-day_c0_m.png`, `_c0_f.png`
+- [ ] `elementary-sports-day_c1_m.png`, `_c1_f.png`
+- [ ] `elementary-graduation_c1_m.png`, `_c1_f.png` (silhouette/back view, 헤어 구분)
+- [ ] `elementary-graduation_c2_m.png`, `_c2_f.png` (back view, 헤어 구분)
 
-## 있으면 좋음 (9장)
-- [ ] `minjae-birthday_c0.png`, `_c1.png`
-- [ ] `jihun-birthday_c0.png`, `_c1.png`
-- [ ] `subin-birthday_c0.png`, `_c1.png`
-- [ ] `yuna-birthday_c0.png`, `_c1.png`
-- [ ] `elementary-unit-test_c0.png`, `_c1.png`
-- [ ] `elementary-semester2-start_c0.png`, `_c1.png`, `_c2.png`
-- [ ] `elementary-unit-test-2_c0.png`, `_c1.png`
+## 있으면 좋음
+- [ ] `minjae-birthday_c0.png`, `_c1.png` (공통: minjae / phone)
+- [ ] `jihun-birthday_c0.png`, `_c1.png` (공통: jihun / phone)
+- [ ] `subin-birthday_c0.png`, `_c1.png` (공통: subin / phone)
+- [ ] `yuna-birthday_c0.png`, `_c1.png` (공통: yuna / phone)
+- [ ] `elementary-unit-test_c0_m.png`, `_c0_f.png`
+- [ ] `elementary-unit-test_c1_m.png`, `_c1_f.png`
+- [ ] `elementary-semester2-start_c0_m.png`, `_c0_f.png`
+- [ ] `elementary-semester2-start_c1_m.png`, `_c1_f.png`
+- [ ] `elementary-semester2-start_c2.png` (공통: POV view)
+- [ ] `elementary-unit-test-2_c0_m.png`, `_c0_f.png`
+- [ ] `elementary-unit-test-2_c1_m.png`, `_c1_f.png`
 
 ---
 
-**총 34종 (남/여 변형 포함 시 약 45~50장)**
+**총 34종 (남/여 변형 포함 시 약 55~60장)**
 
 ## 🧠 GPT 작업 팁
 
