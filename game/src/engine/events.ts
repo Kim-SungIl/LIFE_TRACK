@@ -656,7 +656,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"돈 좀 모아야겠다"',
         effects: {},
         moneyEffect: 3,
-        message: '알바를 알아보기로 했다.',
+        message: '용돈 벌 방법을 찾아봤다. 뭐라도 해봐야지.',
       },
     ],
   },
@@ -748,8 +748,8 @@ export const GAME_EVENTS: GameEvent[] = [
   // 초등 2학기 단원평가 이벤트 (Y1, W37 — 단원평가 W38 전주)
   {
     id: 'elementary-unit-test-2',
-    title: '2학기 단원평가',
-    description: '벌써 2학기 단원평가 시간이다.\n선생님이 "이번이 올해 마지막이야~ 잘 해보자!" 하고 웃는다.',
+    title: '2학기 단원평가가 다가온다',
+    description: '선생님이 "다음 주에 2학기 단원평가 볼 거야~ 올해 마지막이니까 잘 해보자!" 하고 웃는다.\n주변 친구들도 이번엔 조금은 긴장하는 눈치다.',
     week: 37,
     location: 'classroom',
     background: 'classroom_{school}',
@@ -1193,7 +1193,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'jihun-fight',
     title: '지훈이와 다툼',
-    description: '지훈이가 갑자기 화를 냈다.\n"너는 맨날 공부만 하잖아. 나 불러도 안 오고."\n예상 못한 말에 당황했다.\n"...나도 바쁜 거 알잖아."\n"그래, 그러니까 말이야."',
+    description: '지훈이가 갑자기 화를 냈다.\n"너는 요즘 연락도 잘 안 되고, 불러도 안 오고."\n예상 못한 말에 당황했다.\n"...나도 바쁜 거 알잖아."\n"그래, 그러니까 말이야."',
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['jihun'],
@@ -1226,6 +1226,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'jihun-support',
     title: '지훈이의 대회',
     description: '지훈이가 학교 대표로 농구 대회에 나간다.\n"이번 토요일인데... 너 올 수 있어? 아, 안 와도 되긴 하는데..."',
+    femaleDescription: '지훈이가 학교 대표로 배드민턴 대회에 나간다.\n"이번 토요일인데... 너 올 수 있어? 아, 안 와도 되긴 하는데..."',
     location: 'gym',
     background: 'gymnasium',
     speakers: ['jihun'],
@@ -1240,6 +1241,22 @@ export const GAME_EVENTS: GameEvent[] = [
         fatigueEffect: 3,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
         message: '관중석에서 목이 터져라 응원했다. 지훈이가 3점슛을 넣고 이쪽을 봤다. 눈이 마주쳤다. 최고의 순간.',
+        timeCost: 1,
+      },
+      {
+        text: '"미안, 그날 일이 있어..." — 못 간다',
+        effects: { mental: -2 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: -3 }],
+        message: '나중에 지훈이가 "이겼다" 하고 보냈다. 축하한다고 했지만... 직접 보고 싶었다.',
+      },
+    ],
+    femaleChoices: [
+      {
+        text: '"당연히 가야지!" — 응원하러 간다',
+        effects: { social: 3, mental: 3 },
+        fatigueEffect: 3,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        message: '관중석에서 목이 터져라 응원했다. 지훈이가 결정적인 스매시를 넣고 이쪽을 봤다. 눈이 마주쳤다. 최고의 순간.',
         timeCost: 1,
       },
       {
@@ -1475,7 +1492,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return s.year === 1 && !!minjae?.met && [8, 17].includes(s.week);
+      return s.year === 1 && !!minjae?.met && s.week === 17;
     },
     choices: [
       {
@@ -1774,7 +1791,8 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['yuna'],
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 50 && s.week >= 33 && !s.isVacation;
+      // 가을 기말고사 직전 스트레스 타이밍으로 한정
+      return !!yuna?.met && yuna.intimacy >= 50 && s.week >= 36 && s.week <= 38 && !s.isVacation;
     },
     choices: [
       {
@@ -1925,7 +1943,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'good-grade',
     title: '성적 상승!',
-    description: '시험 결과가 나왔다. 생각보다 잘 봤다!\n선생님이 "요즘 열심히 하더니 잘했네" 하고 말씀하셨다.',
+    description: '요즘 공부 흐름이 좋다.\n쉬는 시간에 담임 선생님이 지나가다 "요즘 꽤 열심히 하더라? 이대로만 계속 해" 하고 말씀하셨다.',
     condition: (s) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
@@ -2023,7 +2041,7 @@ export const GAME_EVENTS: GameEvent[] = [
     week: 25, location: 'classroom', background: 'classroom_{school}',
     choices: [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 2, mental: 1 },
-        message: '손을 들었다. 1학기 경험이 있으니 이번엔 더 자신 있다.' },
+        message: '손을 들었다. 올해는 조금 더 자신 있게.' },
       { text: '가만히 있는다...', effects: { mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '민재가 다시 손을 들었다. "할 사람 없으면 제가 하죠." 2학기도 민재가 반장. 책임감이 대단하다.' },
@@ -2206,7 +2224,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'junha-dialect',
     title: '사투리가 나왔다',
-    description: '체육 시간, 축구를 하다가 준하가 흥분했다.\n"아이고 마! 야 빨리 패스해라!!"\n교실이 조용해졌다가 웃음이 터졌다.\n준하 얼굴이 빨개졌다.',
+    description: '체육 시간, 축구를 하다가 준하가 흥분했다.\n"아이고 마! 야 빨리 패스해라!!"\n체육관이 조용해졌다가 웃음이 터졌다.\n준하 얼굴이 빨개졌다.',
     femaleDescription: '체육 시간, 피구를 하다가 준하가 흥분했다.\n"아이고 마! 피해라!!"\n체육관이 조용해졌다가 웃음이 터졌다.\n준하 얼굴이 빨개졌다.',
     location: 'gym',
     background: 'gymnasium',
@@ -2365,7 +2383,10 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
         message: '맛있다. 민재가 의외로 이런 건 잘 챙긴다.' },
       { text: '"괜찮아, 고마워" — 거절한다', effects: {}, message: '"그래? 알겠어." 민재가 담담하게 넘겼다.' },
     ],
-    condition: (s) => !s.isVacation,
+    condition: (s) => {
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return !s.isVacation && !!minjae?.met;
+    },
   },
   {
     id: 'class-prank', title: '교실 장난',
