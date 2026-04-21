@@ -18,6 +18,7 @@ export interface ShopItem {
   requireYear?: number;     // 최소 학년
   requireStat?: { stat: StatKey; min: number }; // 스탯 조건
   seasonal?: boolean;       // 기간 한정
+  purchaseMessage?: string; // 구매 시 커스텀 메시지 (없으면 기본 "구매 완료" 문구)
 }
 
 export interface ItemEffect {
@@ -152,6 +153,7 @@ export const SHOP_ITEMS: ShopItem[] = [
       { type: 'instant', stat: 'talent', value: 2 },
     ],
     requireStat: { stat: 'talent', min: 40 },
+    purchaseMessage: '대회 참가 신청 완료! 출전 자격을 얻었다.',
   },
   {
     id: 'camp-fee', name: '캠프 참가비', description: '방학 특별 캠프에 참가한다.',
@@ -169,6 +171,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     ],
     requireYear: 5,
     requireStat: { stat: 'talent', min: 60 },
+    purchaseMessage: '포트폴리오 준비를 시작했다. 특기자 전형에 한 발 다가섰다.',
   },
 ];
 
@@ -259,14 +262,14 @@ export function applyItemEffects(
           if (!newState.unlockedEvents.includes(effect.eventId)) {
             newState.unlockedEvents.push(effect.eventId);
           }
-          messages.push(`${item.name} 구매 완료! 관련 기회가 열렸다.`);
+          messages.push(item.purchaseMessage || `${item.name} 구매 완료! 관련 기회가 열렸다.`);
         }
         break;
     }
   }
 
   if (messages.length === 0) {
-    messages.push(`${item.name}을(를) 구매했다!`);
+    messages.push(item.purchaseMessage || `${item.name}을(를) 구매했다!`);
   }
 
   return { newState, messages };

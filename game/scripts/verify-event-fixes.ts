@@ -186,9 +186,11 @@ console.log('\n=== 12. 상점 event_unlock: 배열 push + 재구매 차단 ===')
   const initial = canBuyItem(contest, s, {});
   assert('초기 contest-fee 구매 가능', initial.ok);
 
-  const { newState } = applyItemEffects(contest, s);
+  const { newState, messages } = applyItemEffects(contest, s);
   assert('구매 후 unlockedEvents에 "contest" 추가', newState.unlockedEvents?.includes('contest') || false);
   assert('placeholder talent +2 적용', newState.stats.talent === s.stats.talent + 2);
+  assert('커스텀 메시지 "대회 참가 신청 완료" 사용', messages.some(m => m.includes('대회 참가 신청 완료')));
+  assert('"구매 완료" 기본 문구 미사용', !messages.some(m => m === '대회 참가비 구매 완료! 관련 기회가 열렸다.'));
 
   const reblock = canBuyItem(contest, newState, {});
   assert('해금된 아이템 재구매 차단', !reblock.ok && reblock.reason === '이미 해금됨');
