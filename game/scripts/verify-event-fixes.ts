@@ -196,7 +196,29 @@ console.log('\n=== 12. 상점 event_unlock: 배열 push + 재구매 차단 ===')
   assert('해금된 아이템 재구매 차단', !reblock.ok && reblock.reason === '이미 해금됨');
 }
 
-console.log('\n=== 13. 48주 × 7년 시뮬: 이벤트 연속 진행 crash 없음 ===');
+console.log('\n=== 13. 상점 buff 중복 구매 차단: 남은 기간 손실 방지 ===');
+{
+  const vitamin = SHOP_ITEMS.find(i => i.id === 'vitamin');
+  if (!vitamin) {
+    console.log('  (vitamin 아이템 없음 — 스킵)');
+  } else {
+    let s = setupState();
+    s = mutate(s, { money: 100, year: 2 });
+    const { newState: afterBuy } = applyItemEffects(vitamin, s);
+    const buff = afterBuy.activeBuffs?.find(b => vitamin.effects.some(e => e.buffId === b.id));
+    assert('vitamin 구매 후 buff 활성화됨', !!buff);
+
+    // 1주 경과 시뮬 (remainingWeeks -1)
+    if (buff) {
+      afterBuy.activeBuffs = afterBuy.activeBuffs!.map(b => ({ ...b, remainingWeeks: b.remainingWeeks - 1 }));
+      const reblock = canBuyItem(vitamin, afterBuy, {});
+      assert('buff 활성 중 재구매 차단', !reblock.ok && !!reblock.reason?.includes('이미 활성'));
+      assert('차단 메시지에 남은 주수 포함', !!reblock.reason?.match(/\d+주 남음/));
+    }
+  }
+}
+
+console.log('\n=== 14. 48주 × 7년 시뮬: 이벤트 연속 진행 crash 없음 ===');
 {
   let s = setupState();
   s.routineSlot2 = 'self-study';

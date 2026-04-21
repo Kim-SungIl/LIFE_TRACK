@@ -203,6 +203,14 @@ export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Reco
   if (item.effects.some(e => e.type === 'event_unlock' && e.eventId && state.unlockedEvents?.includes(e.eventId))) {
     return { ok: false, reason: '이미 해금됨' };
   }
+  // 동일 buff 활성 중이면 재구매 차단 (덮어쓰기로 남은 기간 손실 방지)
+  const activeBuffIds = new Set((state.activeBuffs || []).map(b => b.id));
+  const clashingBuff = item.effects.find(e => e.type === 'buff' && e.buffId && activeBuffIds.has(e.buffId));
+  if (clashingBuff) {
+    const existing = state.activeBuffs?.find(b => b.id === clashingBuff.buffId);
+    const weeks = existing?.remainingWeeks ?? 0;
+    return { ok: false, reason: `이미 활성 (${weeks}주 남음)` };
+  }
   return { ok: true };
 }
 
