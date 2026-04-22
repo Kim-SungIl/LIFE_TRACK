@@ -4,6 +4,7 @@ import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult } from './examSystem';
 import { ExamType } from './types';
 import { seededRandom, hashInitialState } from './rng';
+import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem';
 
 // rng utility re-export (하위 호환)
 export { seededRandom, hashInitialState } from './rng';
@@ -685,6 +686,8 @@ export function processWeek(state: GameState): GameState {
   // 주 진행
   newState.week++;
   if (newState.week > 48) {
+    // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
+    recordMilestoneForYear(newState, newState.year);
     newState.week = 1;
     newState.year++;
     if (newState.year > 7) {
@@ -837,6 +840,12 @@ export function calculateEnding(state: GameState) {
     description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다. ' + career.detail;
   }
 
+  // v1.2 회상 레이어 (크래시 보험: 빈 배열도 안전)
+  const memorialHighlights = selectMemorialHighlights(state);
+  const yearClosings = [...(state.milestoneScenes || [])]
+    .sort((a, b) => a.year - b.year)
+    .map(ms => ms.summaryText || `${ms.year}학년의 기억.`);
+
   return {
     title,
     description,
@@ -847,5 +856,7 @@ export function calculateEnding(state: GameState) {
     careerDetail: career.detail,
     suneungGrade,
     npcStories,
+    memorialHighlights,
+    yearClosings,
   };
 }

@@ -1569,6 +1569,64 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
+  // v1.2 소프트 위기: 민재 질투 (부록 D.1)
+  {
+    id: 'minjae-jealousy',
+    title: '굳어진 민재',
+    description: '쉬는 시간, 반 공부 1등 민재가 평소와 다르다.\n내가 최근에 성적이 올랐다는 소문을 들은 눈치다.\n민재가 말을 걸었지만, 목소리는 평소보다 한 톤 낮다.\n"...너 요즘 진짜 다르더라."',
+    location: 'classroom',
+    background: 'classroom_{school}_afternoon',
+    speakers: ['minjae'],
+    condition: (s) => {
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return !!minjae?.met && minjae.intimacy >= 60
+        && (s.year === 2 || s.year === 3)
+        && s.stats.academic >= 55
+        && !s.isVacation;
+    },
+    choices: [
+      {
+        text: '어색하게 먼저 자리를 뜬다',
+        effects: { mental: -2, social: -1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: -3 }],
+        message: '민재 눈을 피해 교실을 먼저 나섰다. 무언가 풀리지 않은 채로 남았다.',
+        memorySlotDraft: {
+          category: 'betrayal',
+          importance: 5,
+          toneTag: 'regret',
+          recallText: '중2 가을, 민재의 눈을 피해 먼저 교실을 나섰다.',
+          npcIds: ['minjae'],
+        },
+      },
+      {
+        text: '"미안, 너 덕분에 자극 받았어" — 솔직히 말한다',
+        effects: { social: 3, mental: 3 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        message: '민재가 잠깐 말을 잃더니 "...알아" 하고 고개를 돌렸다. 그래도 어깨의 힘이 조금 풀린 것 같았다.',
+        memorySlotDraft: {
+          category: 'reconciliation',
+          importance: 6,
+          toneTag: 'warm',
+          recallText: "사과했더니 민재가 '알아'라고만 했다. 그걸로 충분했다.",
+          npcIds: ['minjae'],
+        },
+        activateRipples: ['minjae-yuna-admiration'],
+      },
+      {
+        text: '"솔직히 나도 지기 싫어" — 경쟁을 인정한다',
+        effects: { social: 2, academic: 2, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
+        message: '"...그래?" 민재가 피식 웃었다. 처음으로 "지는 게 싫다"고 민재가 직접 말해줬다. 경쟁이지만, 같은 편 같기도 한.',
+        memorySlotDraft: {
+          category: 'reconciliation',
+          importance: 6,
+          toneTag: 'resolve',
+          recallText: '지는 게 싫다고, 민재가 처음으로 말해줬다.',
+          npcIds: ['minjae'],
+        },
+      },
+    ],
+  },
   {
     id: 'minjae-effort',
     title: '새벽의 비밀',
@@ -1912,11 +1970,60 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
+  // v1.2 하드 위기: 중2 번아웃 (Y3 전용, 부록 D.1)
+  // getEventForWeek가 state.hardCrisisYears 가드로 연간 1회 상한 강제
+  {
+    id: 'middle-burnout',
+    title: '중2의 긴 겨울',
+    description: '책상 앞에 앉아도 펜만 굴러다닌다.\n어제랑 오늘이 구분이 안 간다.\n엄마가 뭐라고 했는데 반쪽은 흘려들었다.\n"나 괜찮은 걸까..."',
+    condition: (s) => s.year === 3 && s.idleWeeks >= 4 && s.stats.mental <= 40,
+    location: 'home',
+    background: 'bedroom_night',
+    choices: [
+      {
+        text: '그래도 억지로 공부한다',
+        effects: { academic: 1, mental: -4 },
+        fatigueEffect: 5,
+        message: '책은 펼쳐 놨지만 글자가 안 읽힌다. 저녁이 지나가고 커피만 식었다.',
+        memorySlotDraft: {
+          category: 'failure',
+          importance: 7,
+          toneTag: 'regret',
+          recallText: '책상 위 커피 얼룩만 늘어가던, 중2의 긴 겨울.',
+        },
+      },
+      {
+        text: '오늘은 아무것도 안 한다 — 쉰다',
+        effects: { mental: 4 },
+        fatigueEffect: -15,
+        message: '책상 정리하고 이불 안으로 들어갔다. 죄책감보다 숨이 먼저 돌아왔다.',
+        memorySlotDraft: {
+          category: 'growth',
+          importance: 8,
+          toneTag: 'breakthrough',
+          recallText: '아무것도 안 한 날. 죄책감보다 숨이 먼저 돌아왔다.',
+        },
+      },
+      {
+        text: '지훈이에게 전화한다 — 힘들다고 말한다',
+        effects: { mental: 6, social: 2 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        message: '"...힘들어." 지훈이가 오래 들어줬다. 뭐라고 조언해준 건 아닌데, 그게 더 좋았다.',
+        memorySlotDraft: {
+          category: 'growth',
+          importance: 8,
+          toneTag: 'warm',
+          recallText: '힘들다고 말했더니, 지훈이는 그냥 들어줬다.',
+          npcIds: ['jihun'],
+        },
+      },
+    ],
+  },
   {
     id: 'burnout-event',
     title: '한계',
     description: '아무것도 하고 싶지 않다. 책상 앞에 앉아도 글자가 안 읽힌다.\n창밖만 멍하니 바라본다.',
-    condition: (s) => s.mentalState === 'burnout',
+    condition: (s) => s.mentalState === 'burnout' && s.year !== 3,  // v1.2: Y3는 middle-burnout이 선점
     location: 'home',
     background: 'bedroom_night',
     // speakers 제거 — 집에서 혼자인 장면. 지훈은 choices[2]에서만 등장
@@ -2597,10 +2704,29 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
   ) || null;
 }
 
+// v1.2 하드/소프트 위기 ID 세트 (§4.3 우선순위 레이어)
+// 하드: 연간 1회 상한 (state.hardCrisisYears 가드)
+// 소프트: 연간 2건 상한
+export const HARD_CRISIS_IDS = new Set<string>([
+  'middle-burnout', 'high-panic', 'family-strain', 'identity-crisis',
+]);
+export const SOFT_CRISIS_IDS = new Set<string>([
+  'minjae-jealousy', 'yuna-misunderstanding', 'subin-drift',
+  'jihun-envy', 'haeun-distance',
+]);
+
+// ANNUAL 이벤트 세트 (년도별 재발 허용) — memorySystem.ANNUAL_EVENT_IDS와 동기
+const ANNUAL_EVENTS = new Set([
+  'elementary-graduation','middle-school-entrance','middle-school-graduation',
+  'high-school-entrance','suneung-eve','suneung-done','high-school-graduation',
+  'year-end-reflection',
+  'jihun-birthday','minjae-birthday','subin-birthday',
+  'yuna-birthday','haeun-birthday','junha-birthday',
+]);
+
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
-  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-school-graduation','high-school-entrance','suneung-eve','suneung-done','high-school-graduation','year-end-reflection','jihun-birthday','minjae-birthday','subin-birthday','yuna-birthday','haeun-birthday','junha-birthday']);
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
@@ -2616,19 +2742,48 @@ export function getEventForWeek(state: GameState): GameEvent | null {
   );
   if (followup) return followup;
 
-  // 조건부 상태 이벤트 (피로/멘탈/번아웃 등) — 50% 확률
+  // v1.2 (§4.3): 2. 하드 위기 — 연간 1회 가드 (state.hardCrisisYears)
+  if (!state.hardCrisisYears.includes(state.year)) {
+    const hardCrisis = GAME_EVENTS.find(e =>
+      HARD_CRISIS_IDS.has(e.id) &&
+      e.condition && e.condition(state) &&
+      !state.events.some(prev => prev.id === e.id)
+    );
+    if (hardCrisis) {
+      state.hardCrisisYears.push(state.year);
+      return hardCrisis;
+    }
+  }
+
+  // v1.2 (§4.3): 3. 소프트 위기 — 연간 2건 상한
+  const softCrisisThisYear = state.events.filter(e =>
+    e.year === state.year && SOFT_CRISIS_IDS.has(e.id)
+  ).length;
+  if (softCrisisThisYear < 2) {
+    const softCrisis = GAME_EVENTS.find(e =>
+      SOFT_CRISIS_IDS.has(e.id) &&
+      e.condition && e.condition(state) &&
+      !state.events.some(prev => prev.id === e.id)
+    );
+    if (softCrisis) return softCrisis;
+  }
+
+  // 4. 조건부 상태 이벤트 (피로/멘탈 등) — 50% 확률
+  // 위기 ID는 위에서 이미 처리했으므로 중복 제거
   const conditionalEvents = GAME_EVENTS.filter(e =>
     !e.week &&
     e.condition &&
     e.condition(state) &&
     !FOLLOWUP_EVENT_IDS.has(e.id) &&
+    !HARD_CRISIS_IDS.has(e.id) &&
+    !SOFT_CRISIS_IDS.has(e.id) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 10)
   );
   if (conditionalEvents.length > 0 && seededRandom(state) < 0.5) {
     return conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)];
   }
 
-  // 학교생활 랜덤 이벤트 — 70% 확률 (거의 매주 발생)
+  // 5. 학교생활 랜덤 이벤트 — 70% 확률
   const availableSchoolEvents = SCHOOL_LIFE_EVENTS.filter(e =>
     (!e.condition || e.condition(state)) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 6)

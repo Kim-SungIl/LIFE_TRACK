@@ -3,6 +3,7 @@ import { GameState, ParentStrength } from './types';
 import { createInitialState, processWeek, hashInitialState } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek } from './events';
+import { applyMemorySlotFromChoice } from './memorySystem';
 
 const SAVE_KEY = 'lifetrack_save';
 const SAVE_VERSION = 1;
@@ -191,8 +192,26 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.track = choice.trackSelect;
     }
 
-    // 이벤트 기록 (선택 인덱스 + 발생 주차 포함)
-    newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex, week: newState.week });
+    // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
+    applyMemorySlotFromChoice(newState, newState.currentEvent!, choiceIndex, choice);
+
+    // v1.2 ripple 활성화
+    if (choice.activateRipples) {
+      for (const rid of choice.activateRipples) {
+        // ripple 정의는 이벤트 콘텐츠 측에서 등록 가정. 여기서는 activatedAt만 갱신.
+        const ripple = newState.socialRipples.find(r => r.id === rid);
+        if (ripple && !ripple.activatedAt) ripple.activatedAt = newState.week;
+      }
+    }
+
+    // 이벤트 기록 (선택 인덱스 + 발생 주차 + 연차 + 성별 분기 정보 포함)
+    newState.events.push({
+      ...newState.currentEvent!,
+      resolvedChoice: choiceIndex,
+      week: newState.week,
+      year: newState.year,
+      resolvedFemale: isFemale && !!s.currentEvent!.femaleChoices,
+    });
 
     // weekLog에 메시지 추가
     if (newState.weekLog) {
