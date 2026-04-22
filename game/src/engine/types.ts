@@ -48,6 +48,13 @@ export interface GameState {
   consecutiveTiredWeeks: number;    // v6.4: 연속 피로 주수 (만성 피로 패널티)
   burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
+  unlockedEvents: string[];         // 상점 event_unlock 아이템으로 해금된 이벤트 ID
+  // v1.2 기억 슬롯 시스템
+  memorySlots: MemorySlot[];        // 최대 12 (카테고리당 2)
+  socialRipples: SocialRipple[];    // NPC 간 관계 전염
+  milestoneScenes: MilestoneScene[]; // 학년별 1개, 최대 7
+  rngSeed: number;                  // 결정론적 RNG 시드 (이벤트 선택용)
+  hardCrisisYears: number[];        // 하드위기 발동 연도 (연간 1회 가드)
 }
 
 // 활성 버프 (shopSystem에서도 사용)
@@ -143,6 +150,8 @@ export interface GameEvent {
   femaleDescription?: string;
   femaleChoices?: EventChoice[];
   resolvedChoice?: number; // 저장된 선택 인덱스 (이벤트 해결 후 기록)
+  resolvedFemale?: boolean; // v1.2: femaleChoices 경로로 해결되었는지 (엔딩 해시 구분용)
+  year?: number;           // 저장된 발생 연차 (ANNUAL 재발동 판정용)
 }
 
 export interface EventChoice {
@@ -155,6 +164,86 @@ export interface EventChoice {
   message: string;
   timeCost?: 1 | 2; // 시간 소모: 1=루틴/주말 1슬롯, 2=루틴/주말 2슬롯
   trackSelect?: Track; // 문과/이과 선택 (Y6 W1 이벤트 전용)
+  // v1.2: 이 선택을 고르면 엔딩 회상 슬롯 생성 후보 (importance ≥3만 실제 생성)
+  memorySlotDraft?: MemorySlotDraft;
+  // v1.2: 이 선택을 고르면 활성화되는 ripple ID 목록
+  activateRipples?: string[];
+  // M4: 이 선택을 고르면 활성 버프에 추가 (상점 버프와 동일 구조)
+  addBuff?: ActiveBuff;
+}
+
+// ===== v1.2 기억 슬롯 시스템 =====
+
+export type MemoryCategory =
+  | 'courage'         // 용기: 반장 자원, 장기자랑
+  | 'betrayal'        // 상처: 약속 어김, 험담
+  | 'reconciliation'  // 화해: 사과, 오해 풀기
+  | 'failure'         // 실패: 시험 대실수, 낙방
+  | 'discovery'       // 깨달음: 진로 결정, 재능 발견
+  | 'growth';         // 성장: 번아웃 극복, 가치관 변화
+
+export type PhaseTag = 'early' | 'mid' | 'late';
+// early: Y1~Y2 (초6~중1)
+// mid:   Y3~Y4 (중2~중3)
+// late:  Y5~Y7 (고1~고3)
+
+export type ToneTag = 'warm' | 'regret' | 'resolve' | 'breakthrough';
+
+export interface MemorySlotDraft {
+  category: MemoryCategory;
+  importance: number;  // 1~10, 부록 C 기준. <3은 슬롯 생성 스킵
+  toneTag?: ToneTag;
+  recallText: string;  // 20~35자, 과거 회상형, 스탯 금지
+  npcIds?: string[];
+}
+
+export interface MemorySlot {
+  id: string;           // {category}_{year}_{week}_{choiceIndex}
+  category: MemoryCategory;
+  week: number;
+  year: number;
+  sourceEventId: string;
+  choiceIndex: number;
+  recallText: string;
+  npcIds?: string[];
+  importance: number;
+  phaseTag: PhaseTag;   // year 기반 자동 산출
+  toneTag?: ToneTag;
+}
+
+export type RippleType =
+  | 'admiration'    // 감탄
+  | 'jealousy'      // 질투
+  | 'concern'       // 걱정
+  | 'rumor'         // 소문
+  | 'group_unlock'; // 그룹 이벤트 해금
+
+export type RippleSourceCondition =
+  | 'intimacy_high'  // 친밀도 ≥70
+  | 'intimacy_mid'   // 친밀도 ≥50
+  | 'event_resolved' // 특정 이벤트 resolvedChoice 종료
+  | 'drifted';       // 친밀도 ≤20
+
+export interface SocialRipple {
+  id: string;
+  sourceNpcId: string;
+  targetNpcId: string;
+  sourceCondition: RippleSourceCondition;
+  rippleType: RippleType;
+  activatedAt?: number;      // 활성 주차 (없으면 비활성)
+  consumed?: boolean;        // 일회성 소비 후 재활성 금지
+  sourceEventId?: string;
+}
+
+export type MilestoneTheme = 'connection' | 'pressure' | 'identity' | 'loss' | 'growth';
+
+export interface MilestoneScene {
+  year: number;              // 1~7
+  sceneId: string;           // 렌더링 템플릿 키
+  dominantTheme?: MilestoneTheme;
+  sourceMemoryIds?: string[];  // 이 학년의 주요 memorySlot 참조
+  summaryText?: string;
+  recordedAt: number;        // 기록 주차
 }
 
 export const STAT_LABELS: Record<StatKey, string> = {
@@ -166,11 +255,11 @@ export const STAT_LABELS: Record<StatKey, string> = {
 };
 
 export const STAT_GRADES = [
-  { min: 80, grade: 'A', label: '최상', color: '#FFD700' },
-  { min: 60, grade: 'B', label: '우수', color: '#4CAF50' },
-  { min: 40, grade: 'C', label: '보통', color: '#FFC107' },
-  { min: 20, grade: 'D', label: '부족', color: '#FF5722' },
-  { min: 0,  grade: 'E', label: '매우 부족', color: '#9E9E9E' },
+  { min: 80, grade: 'A', label: '최상', color: '#e5c07b' },
+  { min: 60, grade: 'B', label: '우수', color: '#8fb573' },
+  { min: 40, grade: 'C', label: '보통', color: '#e0b354' },
+  { min: 20, grade: 'D', label: '부족', color: '#d96458' },
+  { min: 0,  grade: 'E', label: '매우 부족', color: '#8a8078' },
 ];
 
 export function getGrade(value: number) {

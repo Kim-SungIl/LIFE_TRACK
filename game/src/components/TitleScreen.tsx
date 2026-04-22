@@ -75,8 +75,8 @@ export function TitleScreen() {
       <div className="title-screen fade-in">
         {/* 남녀 캐릭터 나란히 */}
         <div style={{ display: 'flex', gap: 20, marginBottom: 32, alignItems: 'flex-end' }}>
-          <Portrait characterId="player_m" size={100} expression="neutral" />
-          <Portrait characterId="player_f" size={100} expression="neutral" />
+          <Portrait characterId="player_m" size={100} expression="neutral" year={1} />
+          <Portrait characterId="player_f" size={100} expression="neutral" year={1} />
         </div>
 
         <div className="title-logo">LIFE TRACK</div>
@@ -162,7 +162,7 @@ export function TitleScreen() {
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--blue)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
             >
-              <Portrait characterId="player_m" size={140} expression="neutral" />
+              <Portrait characterId="player_m" size={140} expression="neutral" year={1} />
             </div>
 
             <div
@@ -177,7 +177,7 @@ export function TitleScreen() {
               onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
             >
-              <Portrait characterId="player_f" size={140} expression="neutral" />
+              <Portrait characterId="player_f" size={140} expression="neutral" year={1} />
             </div>
           </div>
         </div>
@@ -205,7 +205,7 @@ export function TitleScreen() {
               key={m.id}
               onClick={() => toggle(m.id)}
               style={{
-                background: isSelected ? 'rgba(233,69,96,0.12)' : 'var(--bg-card)',
+                background: isSelected ? 'rgba(224,138,91,0.14)' : 'var(--bg-card)',
                 border: isSelected ? '2px solid var(--accent)' : '2px solid transparent',
                 borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
                 transition: 'all 0.2s',

@@ -1,4 +1,5 @@
 import { GameEvent, GameState } from './types';
+import { seededRandom } from './rng';
 
 export const GAME_EVENTS: GameEvent[] = [
   // ===== 초반 이벤트 (W1~W4) =====
@@ -60,7 +61,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 옆자리 민재 (Y1 W2) — 새 짝꿍 =====
   {
     id: 'minjae-meet-elementary',
-    title: '옆자리 민재',
+    title: '새 짝꿍',
     description: '새 자리 배치. 옆자리에 처음 보는 애가 앉았다.\n필통을 가지런히 꺼내놓고, 노트에 오늘 날짜를 정자로 적는다.\n쉬는 시간에 조심스럽게 말을 건다.\n"야, 점심 같이 먹을래? 나 박민재."',
     week: 2,
     condition: (s) => s.year === 1,
@@ -90,7 +91,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 유나 첫 만남 (Y1 W6) — 같은 반 모범생 =====
   {
     id: 'yuna-meet-elementary',
-    title: '도서관에서 — 유나',
+    title: '도서관 창가 자리',
     description: '쉬는 시간에 도서관에 갔다. 창가 자리에 같은 반 여자애가 혼자 책을 읽고 있다.\n머리핀에 작은 별 장식. 피아노 학원 가방이 의자에 걸려 있다.\n나를 보더니 살짝 웃어준다.\n"아, 너도 책 좋아해?"',
     week: 6,
     condition: (s) => s.year === 1,
@@ -121,7 +122,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 수빈 첫 만남 (Y1 W10) — 학원 친구 =====
   {
     id: 'subin-meet-elementary',
-    title: '학원에서 — 수빈',
+    title: '학원 뒷자리',
     description: '학원 쉬는 시간. 뒷자리 여자애가 내 책을 힐끔 본다.\n단정한 단발머리, 작은 별 귀걸이. 손에는 작은 노트를 들고 있다.\n"너도 이 문제집 풀어? 나 여기 막혔는데..."\n공책을 살며시 내밀어 보인다.',
     week: 10,
     condition: (s) => s.year === 1,
@@ -1529,11 +1530,18 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '민재가 살짝 놀란 표정이었다가 웃었다. "고마워." 의외로 수줍게 웃는다.',
       },
       {
-        text: '편의점에서 작은 선물을 사온다',
+        text: '편의점에서 작은 선물을 사온다 (-1만원)',
         effects: { social: 3, mental: 3 },
         moneyEffect: -1,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
         message: '"이걸 왜... 아 고마워." 민재가 진짜로 기뻐하는 것 같다. 전교 1등도 생일 선물은 좋은가 보다.',
+      },
+      {
+        text: '따로 골라 온 책 한 권을 준다 (-5만원)',
+        effects: { social: 3, mental: 4 },
+        moneyEffect: -5,
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 12 }],
+        message: '민재가 책 제목을 한참 보더니 "...너, 날 너무 잘 아는데?" 처음으로 태연한 척이 완전히 벗겨진 순간이었다.',
       },
       {
         text: '그냥 넘어간다',
@@ -1565,6 +1573,64 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: {},
         npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '복도를 지나가는데 민재와 눈이 마주쳤다. 민재가 어색하게 웃고 지나갔다. 묘한 기분이다.',
+      },
+    ],
+  },
+  // v1.2 소프트 위기: 민재 질투 (부록 D.1)
+  {
+    id: 'minjae-jealousy',
+    title: '굳어진 민재',
+    description: '쉬는 시간, 반 공부 1등 민재가 평소와 다르다.\n내가 최근에 성적이 올랐다는 소문을 들은 눈치다.\n민재가 말을 걸었지만, 목소리는 평소보다 한 톤 낮다.\n"...너 요즘 진짜 다르더라."',
+    location: 'classroom',
+    background: 'classroom_{school}_afternoon',
+    speakers: ['minjae'],
+    condition: (s) => {
+      const minjae = s.npcs.find(n => n.id === 'minjae');
+      return !!minjae?.met && minjae.intimacy >= 60
+        && (s.year === 2 || s.year === 3)
+        && s.stats.academic >= 55
+        && !s.isVacation;
+    },
+    choices: [
+      {
+        text: '어색하게 먼저 자리를 뜬다',
+        effects: { mental: -2, social: -1 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: -3 }],
+        message: '민재 눈을 피해 교실을 먼저 나섰다. 무언가 풀리지 않은 채로 남았다.',
+        memorySlotDraft: {
+          category: 'betrayal',
+          importance: 5,
+          toneTag: 'regret',
+          recallText: '중2 가을, 민재의 눈을 피해 먼저 교실을 나섰다.',
+          npcIds: ['minjae'],
+        },
+      },
+      {
+        text: '"미안, 너 덕분에 자극 받았어" — 솔직히 말한다',
+        effects: { social: 3, mental: 3 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        message: '민재가 잠깐 말을 잃더니 "...알아" 하고 고개를 돌렸다. 그래도 어깨의 힘이 조금 풀린 것 같았다.',
+        memorySlotDraft: {
+          category: 'reconciliation',
+          importance: 6,
+          toneTag: 'warm',
+          recallText: "사과했더니 민재가 '알아'라고만 했다. 그걸로 충분했다.",
+          npcIds: ['minjae'],
+        },
+        activateRipples: ['minjae-yuna-admiration'],
+      },
+      {
+        text: '"솔직히 나도 지기 싫어" — 경쟁을 인정한다',
+        effects: { social: 2, academic: 2, mental: 2 },
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
+        message: '"...그래?" 민재가 피식 웃었다. 처음으로 "지는 게 싫다"고 민재가 직접 말해줬다. 경쟁이지만, 같은 편 같기도 한.',
+        memorySlotDraft: {
+          category: 'reconciliation',
+          importance: 6,
+          toneTag: 'resolve',
+          recallText: '지는 게 싫다고, 민재가 처음으로 말해줬다.',
+          npcIds: ['minjae'],
+        },
       },
     ],
   },
@@ -1911,11 +1977,60 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
   },
+  // v1.2 하드 위기: 중2 번아웃 (Y3 전용, 부록 D.1)
+  // getEventForWeek가 state.hardCrisisYears 가드로 연간 1회 상한 강제
+  {
+    id: 'middle-burnout',
+    title: '중2의 긴 겨울',
+    description: '책상 앞에 앉아도 펜만 굴러다닌다.\n어제랑 오늘이 구분이 안 간다.\n엄마가 뭐라고 했는데 반쪽은 흘려들었다.\n"나 괜찮은 걸까..."',
+    condition: (s) => s.year === 3 && s.idleWeeks >= 4 && s.stats.mental <= 40,
+    location: 'home',
+    background: 'bedroom_night',
+    choices: [
+      {
+        text: '그래도 억지로 공부한다',
+        effects: { academic: 1, mental: -4 },
+        fatigueEffect: 5,
+        message: '책은 펼쳐 놨지만 글자가 안 읽힌다. 저녁이 지나가고 커피만 식었다.',
+        memorySlotDraft: {
+          category: 'failure',
+          importance: 7,
+          toneTag: 'regret',
+          recallText: '책상 위 커피 얼룩만 늘어가던, 중2의 긴 겨울.',
+        },
+      },
+      {
+        text: '오늘은 아무것도 안 한다 — 쉰다',
+        effects: { mental: 4 },
+        fatigueEffect: -15,
+        message: '책상 정리하고 이불 안으로 들어갔다. 죄책감보다 숨이 먼저 돌아왔다.',
+        memorySlotDraft: {
+          category: 'growth',
+          importance: 8,
+          toneTag: 'breakthrough',
+          recallText: '아무것도 안 한 날. 죄책감보다 숨이 먼저 돌아왔다.',
+        },
+      },
+      {
+        text: '지훈이에게 전화한다 — 힘들다고 말한다',
+        effects: { mental: 6, social: 2 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        message: '"...힘들어." 지훈이가 오래 들어줬다. 뭐라고 조언해준 건 아닌데, 그게 더 좋았다.',
+        memorySlotDraft: {
+          category: 'growth',
+          importance: 8,
+          toneTag: 'warm',
+          recallText: '힘들다고 말했더니, 지훈이는 그냥 들어줬다.',
+          npcIds: ['jihun'],
+        },
+      },
+    ],
+  },
   {
     id: 'burnout-event',
     title: '한계',
     description: '아무것도 하고 싶지 않다. 책상 앞에 앉아도 글자가 안 읽힌다.\n창밖만 멍하니 바라본다.',
-    condition: (s) => s.mentalState === 'burnout',
+    condition: (s) => s.mentalState === 'burnout' && s.year !== 3,  // v1.2: Y3는 middle-burnout이 선점
     location: 'home',
     background: 'bedroom_night',
     // speakers 제거 — 집에서 혼자인 장면. 지훈은 choices[2]에서만 등장
@@ -2134,9 +2249,12 @@ export const GAME_EVENTS: GameEvent[] = [
       return !!jihun?.met && (s.year === 1 || jihun.intimacy >= 30);
     },
     choices: [
-      { text: '선물을 사서 준다', effects: { social: 3, mental: 2 }, moneyEffect: -2,
+      { text: '선물을 사서 준다 (-2만원)', effects: { social: 3, mental: 2 }, moneyEffect: -2,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
         message: '지훈이가 진짜 좋아했다. "야 너 최고다!" 돈 아깝지 않다.' },
+      { text: '좋아하는 농구화 끈 세트를 고른다 (-5만원)', effects: { social: 4, mental: 4 }, moneyEffect: -5,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 12 }],
+        message: '지훈이가 신발끈을 보더니 입이 쩍 벌어졌다. "야, 이거... 너 진짜 나랑 오래 볼 생각인가 보네." 웃으며 말했지만 진지한 눈이었다.' },
       { text: '카톡으로 축하만 한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
         message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
@@ -2153,9 +2271,12 @@ export const GAME_EVENTS: GameEvent[] = [
       return !!subin?.met && (s.year === 1 || subin.intimacy >= 30);
     },
     choices: [
-      { text: '선물을 준비했다', effects: { social: 2, mental: 2 }, moneyEffect: -2,
+      { text: '선물을 준비했다 (-2만원)', effects: { social: 2, mental: 2 }, moneyEffect: -2,
         npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
         message: '수빈이가 "어, 어떻게 알았어!" 하며 눈이 커졌다. "고마워..." 수줍게 웃었다.' },
+      { text: '여행 에세이 책 한 권을 고른다 (-5만원)', effects: { social: 3, mental: 4 }, moneyEffect: -5,
+        npcEffects: [{ npcId: 'subin', intimacyChange: 12 }],
+        message: '수빈이가 책을 받아 들고 한참 아무 말도 안 했다. "...너, 내가 어디 떠나고 싶어하는 거 알았어?" 목소리가 살짝 떨렸다.' },
       { text: '카톡으로 축하한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
         message: '"고마워~" 수빈이가 이모티콘을 보냈다.' },
@@ -2172,9 +2293,12 @@ export const GAME_EVENTS: GameEvent[] = [
       return !!yuna?.met && (s.year === 1 || yuna.intimacy >= 30);
     },
     choices: [
-      { text: '작은 선물을 준다', effects: { social: 2, mental: 2 }, moneyEffect: -2,
+      { text: '작은 선물을 준다 (-2만원)', effects: { social: 2, mental: 2 }, moneyEffect: -2,
         npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
         message: '유나가 조용히 받아들었다. "...고마워." 살짝 붉어진 귀가 보였다.' },
+      { text: '별 장식 머리핀 세트를 준비한다 (-5만원)', effects: { social: 3, mental: 4 }, moneyEffect: -5,
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 12 }],
+        message: '유나가 머리핀을 한참 보더니 말했다. "...이거, 내가 늘 쓰는 거 알았어?" 그리고 바로 꽂았다. 교실이 창문 빛에 빛났다.' },
       { text: '조용히 카톡으로 축하한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '"고마워" 짧은 답장이 왔다. 유나답다.' },
@@ -2331,6 +2455,9 @@ export const GAME_EVENTS: GameEvent[] = [
       { text: '"생일 축하해! 근데 생일인 사람이 왜 음식을 해와" — 웃으며 말한다', effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
         message: '"부산에서는 원래 이래." 준하가 웃었다. 주먹밥이 정말 맛있었다. 반 애들이 "야, 매주 해와라" 했다.' },
+      { text: '요리책 + 앞치마를 선물한다 (-5만원)', effects: { social: 3, mental: 4 }, moneyEffect: -5,
+        npcEffects: [{ npcId: 'junha', intimacyChange: 12 }],
+        message: '준하가 앞치마를 받아 들고 잠깐 말을 잃었다. "...니, 내 꿈 기억하고 있었나." 그 뒤로 복도에서 마주치면 먼저 웃어줬다.' },
       { text: '카톡으로 축하한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
         message: '"고맙다~" 준하가 답장을 보냈다. 이모티콘이 부산 사투리였다.' },
@@ -2348,12 +2475,225 @@ export const GAME_EVENTS: GameEvent[] = [
         && (s.year === 2 || s.year === 3 || (s.year >= 5 && s.events.some(e => e.id === 'haeun-reunion')));
     },
     choices: [
-      { text: '직접 찾아가서 축하한다', effects: { social: 2, mental: 3 }, moneyEffect: -1,
+      { text: '직접 찾아가서 축하한다 (-1만원)', effects: { social: 2, mental: 3 }, moneyEffect: -1,
         npcEffects: [{ npcId: 'haeun', intimacyChange: 9 }],
         message: '"야, 어떻게 알았어?" 하은이가 웃었다. "후배가 이렇게까지 해주니까 감동인데?"' },
+      { text: '꽃다발과 편지를 준비한다 (-5만원)', effects: { social: 3, mental: 5 }, moneyEffect: -5,
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 13 }],
+        message: '하은이가 편지를 읽고 한참 아무 말 안 했다. "...야, 나 지금 울면 이상한 거야?" 눈이 빨개진 채로 웃었다.' },
       { text: '카톡으로 축하한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
         message: '"고마워~ 넌 진짜 챙김이 남다르다?" 하은이가 답장을 보냈다.' },
+    ],
+  },
+
+  // ===== M4: 돈 싱크 이벤트 =====
+  // 수학여행 — 중1 가을 (Y2 W28) — 경주
+  {
+    id: 'school-trip-middle',
+    title: '수학여행 신청서',
+    description: '담임이 종이 한 장을 나눠준다.\n"다음 달 수학여행이다. 경주 2박 3일, 참가비 10만원. 내일까지 제출."\n책상에 신청서가 놓인다.\n옆자리에서 "같이 가야지?" 하는 목소리가 들린다.',
+    week: 28,
+    condition: (s) => s.year === 2 && !s.isVacation,
+    location: 'classroom',
+    background: 'classroom_middle_afternoon',
+    speakers: ['jihun'],
+    choices: [
+      {
+        text: '"간다" — 신청서를 낸다 (-10만원)',
+        effects: { social: 4, mental: 5, talent: 1 },
+        fatigueEffect: 6,
+        moneyEffect: -10,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }, { npcId: 'minjae', intimacyChange: 3 }],
+        message: '경주 밤, 숙소 복도에서 지훈이랑 몰래 라면을 끓였다. 걸려서 혼났지만 그게 더 웃겼다.',
+        memorySlotDraft: {
+          category: 'discovery',
+          importance: 6,
+          toneTag: 'warm',
+          recallText: '중1 수학여행 밤, 숙소 복도의 라면 냄새.',
+          npcIds: ['jihun'],
+        },
+      },
+      {
+        text: '"돈이 좀..." — 집안 사정으로 불참',
+        effects: { social: -2, mental: -3 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: -2 }],
+        message: '수학여행 기간, 교실에 남은 몇 명 중 하나였다. 단톡방 사진을 보며 좀 먹먹했다.',
+        memorySlotDraft: {
+          category: 'betrayal',
+          importance: 4,
+          toneTag: 'regret',
+          recallText: '수학여행 간 친구들 사진만 봤다. 교실이 유난히 넓었다.',
+        },
+      },
+      {
+        text: '"참가만 한다" — 돈은 아낀다 불가',
+        effects: { mental: -1 },
+        moneyEffect: 0,
+        message: '신청서를 들고만 있다가 버렸다. 결국 결정을 미룬 것이다.',
+      },
+    ],
+  },
+
+  // 수학여행 — 고1 가을 (Y5 W28) — 제주
+  {
+    id: 'school-trip-high',
+    title: '제주 수학여행',
+    description: '고등학교 첫 수학여행이다.\n"제주 3박 4일, 참가비 10만원. 이게 마지막일 거다."\n담임이 신청서를 나눠준다.\n단톡방에서 이미 "너 갈 거지?" 확인이 돌고 있다.',
+    week: 28,
+    condition: (s) => s.year === 5 && !s.isVacation,
+    location: 'classroom',
+    background: 'classroom_high_afternoon',
+    speakers: ['jihun', 'junha'],
+    choices: [
+      {
+        text: '"간다" — 마지막 수학여행이니까 (-10만원)',
+        effects: { social: 4, mental: 6, talent: 1 },
+        fatigueEffect: 7,
+        moneyEffect: -10,
+        npcEffects: [
+          { npcId: 'jihun', intimacyChange: 5 },
+          { npcId: 'junha', intimacyChange: 5 },
+        ],
+        message: '제주 해변에서 밤까지 놀았다. 파도 소리를 들으면서 "우리 진짜 고3 되면 이런 거 못 해" 누군가가 말했다.',
+        memorySlotDraft: {
+          category: 'discovery',
+          importance: 7,
+          toneTag: 'warm',
+          recallText: '고1 제주 밤, 파도 소리에 섞여 친구들이 웃었다.',
+          npcIds: ['jihun', 'junha'],
+        },
+      },
+      {
+        text: '"공부해야지" — 불참',
+        effects: { academic: 2, mental: -4, social: -3 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: -3 }, { npcId: 'junha', intimacyChange: -2 }],
+        message: '텅 빈 교실에서 참고서를 폈다. 집중은 안 됐지만 "난 나대로 달렸다"고 자신에게 말했다.',
+        memorySlotDraft: {
+          category: 'failure',
+          importance: 5,
+          toneTag: 'regret',
+          recallText: '제주에 간 친구들 대신, 나는 빈 교실에서 참고서만 넘겼다.',
+        },
+      },
+    ],
+  },
+
+  // 졸업 준비 — 초등 (Y1 W45, 졸업식 1주 전) — 겨울방학 중 단체 신청
+  {
+    id: 'graduation-prep-elementary',
+    title: '졸업 앨범',
+    description: '졸업식 전주. 교실 뒤에 졸업 앨범 신청서가 붙었다.\n"사진관 촬영 + 앨범 + 롤링페이퍼 세트 5만원."\n반 애들이 하나씩 줄을 선다.\n신청할까, 말까.',
+    week: 45,
+    condition: (s) => s.year === 1,
+    location: 'classroom',
+    background: 'classroom_elementary_afternoon',
+    choices: [
+      {
+        text: '신청한다 — 남길 건 남기자 (-5만원)',
+        effects: { social: 3, mental: 4 },
+        moneyEffect: -5,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 2 }],
+        message: '사진관에서 반 전체가 웃으면서 찍었다. 롤링페이퍼에 "우리 중학교 가서도 보자"가 여러 장 적혔다.',
+        memorySlotDraft: {
+          category: 'discovery',
+          importance: 7,
+          toneTag: 'warm',
+          recallText: '초등 졸업 앨범, 롤링페이퍼에 "중학교 가서도 보자"가 여러 장.',
+          npcIds: ['jihun', 'minjae'],
+        },
+      },
+      {
+        text: '"나중에 보면 되지" — 스킵한다',
+        effects: { mental: -2 },
+        message: '반 애들이 앨범을 펼쳐 보며 웃는 동안 혼자 책가방을 쌌다. 나중에 보자고 했는데, 나중이 올까.',
+      },
+    ],
+  },
+
+  // 졸업 준비 — 고등 (Y7 W45, 졸업식 1주 전) — 겨울방학 중
+  {
+    id: 'graduation-prep-high',
+    title: '졸업 준비',
+    description: '수능도 끝났고, 졸업식이 다음 주다.\n"졸업 정장 대여 + 앨범 + 꽃다발 세트 5만원, 학교에서 단체 신청 받는다."\n마지막이라는 말이 유난히 묵직하다.',
+    week: 45,
+    condition: (s) => s.year === 7,
+    location: 'classroom',
+    background: 'classroom_high_afternoon',
+    choices: [
+      {
+        text: '제대로 준비한다 (-5만원)',
+        effects: { social: 3, mental: 5 },
+        moneyEffect: -5,
+        message: '정장을 입고 거울 앞에 서니, 어색한데도 뭔가 달라 보인다. 친구들과 교정에서 찍은 사진은 한참 보게 됐다.',
+        memorySlotDraft: {
+          category: 'growth',
+          importance: 8,
+          toneTag: 'breakthrough',
+          recallText: '고3 졸업, 정장 입고 거울 앞에 선 낯선 얼굴.',
+        },
+      },
+      {
+        text: '"그냥 평소 옷으로 갈래" — 간소하게',
+        effects: { mental: 1 },
+        message: '평소 옷 그대로 졸업식에 갔다. 정장 입은 애들 사이에서 조금 동떨어진 기분이었다.',
+      },
+    ],
+  },
+
+  // 동아리/학원 선택 — Y5 W2 (고1 입학 다음 주)
+  {
+    id: 'club-academy-choice-y5',
+    title: '방과 후, 뭐 할래',
+    description: '고등학교 둘째 주. 방과 후 활동 배정이 시작됐다.\n게시판에 붙은 종이 — "동아리 활동 10만원 / 학원 등록 10만원 / 자율".\n옆반에서는 이미 다 정한 듯 빠르게 움직인다.\n"너는 어떻게 할 거야?" 누군가가 묻는다.',
+    week: 2,
+    condition: (s) => s.year === 5 && !s.isVacation,
+    location: 'classroom',
+    background: 'classroom_high',
+    choices: [
+      {
+        text: '"학원 등록할게" — 공부에 집중 (-10만원, 학업 루틴 20% 버프 8주)',
+        effects: { academic: 2, mental: -1 },
+        moneyEffect: -10,
+        message: '학원을 등록했다. 선생님이 "고1이 제일 중요하다"고 했다. 주 3회, 이제 저녁이 학원에서 흘러간다.',
+        memorySlotDraft: {
+          category: 'discovery',
+          importance: 5,
+          toneTag: 'resolve',
+          recallText: '고1 봄, 학원 등록증을 받던 날. "이제 진짜 시작이다."',
+        },
+        addBuff: {
+          id: 'y5-academy-boost',
+          name: '학원 집중 기간',
+          target: 'study',
+          amount: 0.2,
+          remainingWeeks: 8,
+        },
+      },
+      {
+        text: '"동아리 들어갈래" — 사람 (-10만원, 특기 루틴 15% 버프 8주)',
+        effects: { social: 3, talent: 2, mental: 3 },
+        moneyEffect: -10,
+        message: '동아리에 이름을 적었다. 선배들이 웃으며 맞아줬다. "공부만 하면 재미없잖아?" — 맞는 말이었다.',
+        memorySlotDraft: {
+          category: 'discovery',
+          importance: 5,
+          toneTag: 'warm',
+          recallText: '고1 봄, 동아리방 문을 처음 연 날의 어색한 공기.',
+        },
+        addBuff: {
+          id: 'y5-club-boost',
+          name: '동아리 활동',
+          target: 'talent',
+          amount: 0.15,
+          remainingWeeks: 8,
+        },
+      },
+      {
+        text: '"알아서 할게" — 돈 아낀다',
+        effects: { mental: -1 },
+        message: '아무 데도 안 들어갔다. 방과 후는 자유로웠지만, 반 친구들 이야기에 끼기가 조금 어색해졌다.',
+      },
     ],
   },
 ];
@@ -2596,10 +2936,29 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
   ) || null;
 }
 
+// v1.2 하드/소프트 위기 ID 세트 (§4.3 우선순위 레이어)
+// 하드: 연간 1회 상한 (state.hardCrisisYears 가드)
+// 소프트: 연간 2건 상한
+export const HARD_CRISIS_IDS = new Set<string>([
+  'middle-burnout', 'high-panic', 'family-strain', 'identity-crisis',
+]);
+export const SOFT_CRISIS_IDS = new Set<string>([
+  'minjae-jealousy', 'yuna-misunderstanding', 'subin-drift',
+  'jihun-envy', 'haeun-distance',
+]);
+
+// ANNUAL 이벤트 세트 (년도별 재발 허용) — memorySystem.ANNUAL_EVENT_IDS와 동기
+const ANNUAL_EVENTS = new Set([
+  'elementary-graduation','middle-school-entrance','middle-school-graduation',
+  'high-school-entrance','suneung-eve','suneung-done','high-school-graduation',
+  'year-end-reflection',
+  'jihun-birthday','minjae-birthday','subin-birthday',
+  'yuna-birthday','haeun-birthday','junha-birthday',
+]);
+
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
-  const ANNUAL_EVENTS = new Set(['elementary-graduation','middle-school-entrance','middle-school-graduation','high-school-entrance','suneung-eve','suneung-done','high-school-graduation','year-end-reflection','jihun-birthday','minjae-birthday','subin-birthday','yuna-birthday','haeun-birthday','junha-birthday']);
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
@@ -2615,25 +2974,54 @@ export function getEventForWeek(state: GameState): GameEvent | null {
   );
   if (followup) return followup;
 
-  // 조건부 상태 이벤트 (피로/멘탈/번아웃 등) — 50% 확률
+  // v1.2 (§4.3): 2. 하드 위기 — 연간 1회 가드 (state.hardCrisisYears)
+  if (!state.hardCrisisYears.includes(state.year)) {
+    const hardCrisis = GAME_EVENTS.find(e =>
+      HARD_CRISIS_IDS.has(e.id) &&
+      e.condition && e.condition(state) &&
+      !state.events.some(prev => prev.id === e.id)
+    );
+    if (hardCrisis) {
+      state.hardCrisisYears.push(state.year);
+      return hardCrisis;
+    }
+  }
+
+  // v1.2 (§4.3): 3. 소프트 위기 — 연간 2건 상한
+  const softCrisisThisYear = state.events.filter(e =>
+    e.year === state.year && SOFT_CRISIS_IDS.has(e.id)
+  ).length;
+  if (softCrisisThisYear < 2) {
+    const softCrisis = GAME_EVENTS.find(e =>
+      SOFT_CRISIS_IDS.has(e.id) &&
+      e.condition && e.condition(state) &&
+      !state.events.some(prev => prev.id === e.id)
+    );
+    if (softCrisis) return softCrisis;
+  }
+
+  // 4. 조건부 상태 이벤트 (피로/멘탈 등) — 50% 확률
+  // 위기 ID는 위에서 이미 처리했으므로 중복 제거
   const conditionalEvents = GAME_EVENTS.filter(e =>
     !e.week &&
     e.condition &&
     e.condition(state) &&
     !FOLLOWUP_EVENT_IDS.has(e.id) &&
+    !HARD_CRISIS_IDS.has(e.id) &&
+    !SOFT_CRISIS_IDS.has(e.id) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 10)
   );
-  if (conditionalEvents.length > 0 && Math.random() < 0.5) {
-    return conditionalEvents[Math.floor(Math.random() * conditionalEvents.length)];
+  if (conditionalEvents.length > 0 && seededRandom(state) < 0.5) {
+    return conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)];
   }
 
-  // 학교생활 랜덤 이벤트 — 70% 확률 (거의 매주 발생)
+  // 5. 학교생활 랜덤 이벤트 — 70% 확률
   const availableSchoolEvents = SCHOOL_LIFE_EVENTS.filter(e =>
     (!e.condition || e.condition(state)) &&
     !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 6)
   );
-  if (availableSchoolEvents.length > 0 && Math.random() < 0.7) {
-    return availableSchoolEvents[Math.floor(Math.random() * availableSchoolEvents.length)];
+  if (availableSchoolEvents.length > 0 && seededRandom(state) < 0.7) {
+    return availableSchoolEvents[Math.floor(seededRandom(state) * availableSchoolEvents.length)];
   }
 
   return null;

@@ -66,10 +66,10 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
 
         return (
           <div key={cat} style={{
-            background: 'rgba(15,52,96,0.9)',
+            background: 'rgba(42,34,48,0.9)',
             borderRadius: 12,
             overflow: 'hidden',
-            border: selectedInCat.length > 0 ? '1px solid rgba(233,69,96,0.3)' : '1px solid rgba(255,255,255,0.1)',
+            border: selectedInCat.length > 0 ? '1px solid rgba(224,138,91,0.3)' : '1px solid rgba(255,255,255,0.1)',
           }}>
             {/* 카테고리 헤더 */}
             <div
@@ -89,7 +89,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 {selectedInCat.length > 0 && (
-                  <span style={{ fontSize: '0.72rem', color: 'var(--blue, #5b8def)', fontWeight: 600 }}>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--blue)', fontWeight: 600 }}>
                     ✓ {selectedInCat.map(a => a.name).join(', ')}
                   </span>
                 )}
@@ -109,7 +109,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                     style={{
                       fontSize: '0.65rem', color: showDetail ? 'var(--blue)' : 'var(--text-muted)',
                       cursor: 'pointer', padding: '1px 6px', borderRadius: 4,
-                      background: showDetail ? 'rgba(91,141,239,0.15)' : 'transparent',
+                      background: showDetail ? 'rgba(125,163,217,0.15)' : 'transparent',
                     }}
                   >
                     {showDetail ? '수치 ON' : '수치 보기'}
@@ -145,7 +145,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                       style={{
                         padding: compact ? '8px 10px' : '10px 12px',
                         marginTop: 4, borderRadius: 10, cursor: disabled ? 'not-allowed' : 'pointer',
-                        background: isSel ? 'rgba(233,69,96,0.25)' : 'rgba(255,255,255,0.06)',
+                        background: isSel ? 'rgba(224,138,91,0.25)' : 'rgba(255,255,255,0.06)',
                         border: isSel ? '1px solid var(--accent)' : '1px solid transparent',
                         opacity: disabled && !isSel ? 0.4 : 1,
                         transition: 'all 0.15s',
@@ -193,7 +193,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           {hintTags.map((tag, i) => (
                             <span key={i} style={{
                               fontSize: '0.68rem', color: tag.color,
-                              background: tag.color.includes('green') ? 'rgba(76,175,80,0.1)' : 'rgba(255,87,34,0.1)',
+                              background: tag.color.includes('green') ? 'rgba(143,181,115,0.1)' : 'rgba(217,100,88,0.1)',
                               padding: '2px 7px', borderRadius: 4,
                             }}>
                               {tag.text}
@@ -208,7 +208,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           {Object.entries(a.effects).map(([k, v]) => (
                             <span key={k} style={{
                               fontSize: '0.7rem', color: (v as number) > 0 ? 'var(--green)' : 'var(--red)',
-                              background: (v as number) > 0 ? 'rgba(76,175,80,0.1)' : 'rgba(255,87,34,0.1)',
+                              background: (v as number) > 0 ? 'rgba(143,181,115,0.1)' : 'rgba(217,100,88,0.1)',
                               padding: '1px 6px', borderRadius: 4,
                             }}>
                               {STAT_LABELS[k as StatKey]}{(v as number) > 0 ? '+' + v : v}
@@ -217,7 +217,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           <span style={{
                             fontSize: '0.7rem',
                             color: a.fatigue > 0 ? 'var(--red)' : 'var(--green)',
-                            background: a.fatigue > 0 ? 'rgba(255,87,34,0.1)' : 'rgba(76,175,80,0.1)',
+                            background: a.fatigue > 0 ? 'rgba(217,100,88,0.1)' : 'rgba(143,181,115,0.1)',
                             padding: '1px 6px', borderRadius: 4,
                           }}>
                             피로{a.fatigue > 0 ? '+' : ''}{a.fatigue}

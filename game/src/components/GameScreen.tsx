@@ -89,6 +89,75 @@ export function GameScreen() {
     </div>
   );
 
+  // ===== v1.2 학년말 일기장 (Y1~Y6) =====
+  if (state.phase === 'year-end') {
+    const finishedYear = state.year;  // 방금 끝난 학년 (advance 전)
+    const yearNames = ['초등학교 6학년', '중학교 1학년', '중학교 2학년', '중학교 3학년', '고등학교 1학년', '고등학교 2학년', '고등학교 3학년'];
+    const yearName = yearNames[finishedYear - 1] || `${finishedYear}학년`;
+    const slotsThisYear = state.memorySlots.filter(m => m.year === finishedYear);
+    const milestone = state.milestoneScenes.find(m => m.year === finishedYear);
+    const { advanceFromYearEnd } = useGameStore.getState();
+
+    return (
+      <BgWrapper>
+        <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto', padding: '24px 20px', textAlign: 'center' }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 8 }}>
+            YEAR-END
+          </div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+            {yearName}이 끝났다
+          </div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 28 }}>
+            이 한 해를 조용히 돌아본다
+          </div>
+
+          {/* 해당 학년에 쌓인 memorySlots */}
+          {slotsThisYear.length > 0 && (
+            <div style={{ textAlign: 'left', background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '18px 22px', marginBottom: 16, borderLeft: '2px solid var(--accent-soft)' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.15em', marginBottom: 12, textAlign: 'center' }}>
+                이 해에 남은 장면
+              </div>
+              {slotsThisYear
+                .sort((a, b) => a.week - b.week)
+                .map((slot, i) => (
+                  <div key={slot.id} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: i === slotsThisYear.length - 1 ? 0 : 10, fontStyle: 'italic' }}>
+                    {slot.recallText}
+                  </div>
+                ))}
+            </div>
+          )}
+
+          {/* 해당 학년 milestone 요약 */}
+          {milestone?.summaryText && (
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '16px 20px', marginBottom: 28 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.15em', marginBottom: 10 }}>
+                돌아보면
+              </div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: 1.7 }}>
+                {milestone.summaryText}
+              </div>
+            </div>
+          )}
+
+          {/* 아무 기억도 없으면 조용히 */}
+          {slotsThisYear.length === 0 && !milestone?.summaryText && (
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 28, lineHeight: 1.7 }}>
+              특별히 기억에 남는 일은 없었다.<br />그래도 한 해가 지나갔다.
+            </div>
+          )}
+
+          <button
+            className="btn btn-primary"
+            style={{ maxWidth: 280 }}
+            onClick={advanceFromYearEnd}
+          >
+            다음 학년으로 →
+          </button>
+        </div>
+      </BgWrapper>
+    );
+  }
+
   // ===== 엔딩 =====
   if (state.phase === 'ending') {
     const ending = calculateEnding(state);
@@ -103,12 +172,12 @@ export function GameScreen() {
           {/* 수능 등급 + 진로 카드 */}
           {ending.suneungGrade && (
             <div style={{
-              background: 'rgba(233,69,96,0.1)', border: '1px solid rgba(233,69,96,0.3)',
+              background: 'rgba(224,138,91,0.1)', border: '1px solid rgba(224,138,91,0.3)',
               borderRadius: 12, padding: '12px 16px', margin: '12px auto 16px', maxWidth: 360,
               textAlign: 'center',
             }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 4 }}>수능 결과</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: ending.suneungGrade <= 2 ? '#FFD700' : ending.suneungGrade <= 4 ? '#4CAF50' : ending.suneungGrade <= 6 ? '#2196F3' : '#F44336' }}>
+              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: ending.suneungGrade <= 2 ? 'var(--gold)' : ending.suneungGrade <= 4 ? 'var(--green)' : ending.suneungGrade <= 6 ? 'var(--blue)' : 'var(--red)' }}>
                 {ending.suneungGrade}등급
               </div>
               {trackLabel && (
@@ -147,6 +216,30 @@ export function GameScreen() {
               );
             })}
           </div>
+
+          {/* v1.2 회상 — 결정적 장면들 */}
+          {ending.memorialHighlights && ending.memorialHighlights.length > 0 && (
+            <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '14px 18px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, borderLeft: '2px solid var(--accent-soft)' }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>돌아보면</div>
+              {ending.memorialHighlights.map((h, i) => (
+                <div key={i} style={{ fontSize: '0.82rem', color: h.isFallback ? 'var(--text-muted)' : 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 6, fontStyle: 'italic' }}>
+                  {h.recallText}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* v1.2 7년 요약 — 학년별 클로저 */}
+          {ending.yearClosings && ending.yearClosings.length > 0 && (
+            <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>7년의 마디</div>
+              {ending.yearClosings.map((t, i) => (
+                <div key={i} style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: 4 }}>
+                  <span style={{ color: 'var(--accent-soft)', fontWeight: 600, marginRight: 8 }}>Y{i + 1}</span>{t}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* NPC 근황 */}
           {ending.npcStories.length > 0 && (
@@ -221,20 +314,20 @@ export function GameScreen() {
     const resultLocation = resultEvent?.location;
     const BASE = import.meta.env.BASE_URL;
     const gradients: Record<string, string> = {
-      classroom: 'linear-gradient(180deg, #2a3a5c 0%, #1a2744 100%)',
+      classroom: 'linear-gradient(180deg, #3a2f42 0%, #241a2a 100%)',
       home: 'linear-gradient(180deg, #3d2b1f 0%, #2a1f15 100%)',
-      park: 'linear-gradient(180deg, #1a3a2a 0%, #0f2a1a 100%)',
-      hallway: 'linear-gradient(180deg, #2c3e50 0%, #1a2530 100%)',
-      rooftop: 'linear-gradient(180deg, #4a6fa5 0%, #2a4060 100%)',
+      park: 'linear-gradient(180deg, #1e3a26 0%, #13281a 100%)',
+      hallway: 'linear-gradient(180deg, #3a3342 0%, #241f28 100%)',
+      rooftop: 'linear-gradient(180deg, #4a5a85 0%, #2c3a58 100%)',
       street: 'linear-gradient(180deg, #4a3f5c 0%, #2a2535 100%)',
       gym: 'linear-gradient(180deg, #5c3a2a 0%, #3a2518 100%)',
       school_gate: 'linear-gradient(180deg, #3a5c4a 0%, #1a3a28 100%)',
       cafe: 'linear-gradient(180deg, #5c4a3a 0%, #3a2f20 100%)',
-      music_room: 'linear-gradient(180deg, #3a2a5c 0%, #251a3a 100%)',
+      music_room: 'linear-gradient(180deg, #3a2f5c 0%, #2a1f3a 100%)',
       beach: 'linear-gradient(180deg, #4a8ab5 0%, #2a5a80 100%)',
       auditorium: 'linear-gradient(180deg, #5c4a4a 0%, #3a2a2a 100%)',
     };
-    const bgGradient = resultLocation ? (gradients[resultLocation] || 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)') : 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)';
+    const bgGradient = resultLocation ? (gradients[resultLocation] || 'linear-gradient(180deg, #1f1a25 0%, #17151c 100%)') : 'linear-gradient(180deg, #1f1a25 0%, #17151c 100%)';
     // 배경 이미지: event.background 우선, 없으면 location 기반 폴백
     const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, state.year) : undefined;
     const bgImgCandidates = resolvedEventBg
@@ -258,7 +351,7 @@ export function GameScreen() {
     const eventImgCommon = eventId ? `${BASE}images/events/${eventId}.png` : null;
 
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#0a1428' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#0d0b12' }}>
         {/* 배경 — CG 로드 안 됐을 때 표시 */}
         {!cgLoaded && (
           <div style={{ position: 'absolute', inset: 0, background: bgGradient }}>
@@ -318,7 +411,7 @@ export function GameScreen() {
           )}
           {/* 결과 메시지 */}
           <div style={{
-            background: 'rgba(10,20,40,0.92)', backdropFilter: 'blur(12px)',
+            background: 'rgba(22,19,27,0.92)', backdropFilter: 'blur(12px)',
             borderRadius: 16, padding: '24px 20px', marginBottom: 20,
             border: '1px solid rgba(255,255,255,0.1)',
           }}>
@@ -330,10 +423,10 @@ export function GameScreen() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
             {eventResultData.effects.map((eff, i) => (
               <div key={i} style={{
-                background: eff.text.includes('알게 되었다') ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.08)',
+                background: eff.text.includes('알게 되었다') ? 'rgba(229,192,123,0.15)' : 'rgba(255,255,255,0.08)',
                 borderRadius: 8, padding: '10px 16px', fontSize: eff.text.includes('알게 되었다') ? '1.0rem' : '0.9rem',
                 fontWeight: 600, color: eff.color,
-                border: eff.text.includes('알게 되었다') ? '1px solid rgba(255,215,0,0.3)' : 'none',
+                border: eff.text.includes('알게 되었다') ? '1px solid rgba(229,192,123,0.3)' : 'none',
               }}>
                 {eff.text}
               </div>
@@ -387,15 +480,15 @@ export function GameScreen() {
           padding: '10px 12px', marginBottom: 4, borderRadius: 10,
           cursor: isClickable ? 'pointer' : 'default',
           background: isFixed ? 'rgba(255,255,255,0.03)' :
-                      isEmpty ? 'rgba(233,69,96,0.08)' :
-                      isRoutine ? 'rgba(91,141,239,0.12)' : 'rgba(233,69,96,0.12)',
-          border: isEmpty && !isFixed ? '1px dashed rgba(233,69,96,0.4)' :
-                  isRoutine && routineComboWeeks >= 3 ? '1px solid rgba(255,193,7,0.4)' :
-                  isRoutine ? '1px solid rgba(91,141,239,0.2)' :
-                  !isEmpty && !isFixed ? '1px solid rgba(233,69,96,0.2)' :
+                      isEmpty ? 'rgba(224,138,91,0.08)' :
+                      isRoutine ? 'rgba(125,163,217,0.12)' : 'rgba(224,138,91,0.12)',
+          border: isEmpty && !isFixed ? '1px dashed rgba(224,138,91,0.4)' :
+                  isRoutine && routineComboWeeks >= 3 ? '1px solid rgba(224,179,84,0.4)' :
+                  isRoutine ? '1px solid rgba(125,163,217,0.2)' :
+                  !isEmpty && !isFixed ? '1px solid rgba(224,138,91,0.2)' :
                   '1px solid rgba(255,255,255,0.04)',
-          boxShadow: isRoutine && routineComboWeeks >= 6 ? '0 0 8px rgba(255,193,7,0.2)' :
-                     isEmpty && !isFixed ? '0 0 6px rgba(233,69,96,0.15)' : 'none',
+          boxShadow: isRoutine && routineComboWeeks >= 6 ? '0 0 8px rgba(224,179,84,0.2)' :
+                     isEmpty && !isFixed ? '0 0 6px rgba(224,138,91,0.15)' : 'none',
           transition: 'all 0.15s',
           opacity: isFixed ? 0.6 : 1,
           animation: shouldHighlight ? 'slotPulse 2s ease-in-out infinite' : 'none',
@@ -410,8 +503,8 @@ export function GameScreen() {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activityName}</span>
-                {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(91,141,239,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
-                {isRoutine && routineComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(255,193,7,0.15)', padding: '1px 4px', borderRadius: 3 }}>{routineComboLabel}{routineComboWeeks}주 연속</span>}
+                {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(125,163,217,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
+                {isRoutine && routineComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{routineComboLabel}{routineComboWeeks}주 연속</span>}
               </div>
               {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
@@ -510,7 +603,7 @@ export function GameScreen() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
             <div style={{
-              flex: 1, background: 'rgba(15,52,96,0.9)', backdropFilter: 'blur(6px)',
+              flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
               borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
             }}>
               {state.weekLog.messages.find(m => m.startsWith('📖')) || `"${dialogue}"`}
@@ -526,7 +619,7 @@ export function GameScreen() {
           ))}
 
           {/* 스탯 변화 — 정확한 수치 */}
-          <div style={{ background: 'rgba(15,52,96,0.88)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
+          <div style={{ background: 'rgba(42,34,48,0.88)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
             {(Object.keys(state.stats) as StatKey[]).map(key => {
               const change = state.weekLog?.statChanges[key] || 0;
               const grade = getGrade(state.stats[key]);
@@ -555,7 +648,7 @@ export function GameScreen() {
           {/* 시험 결과 (학교급별 분기) */}
           {state.weekLog?.examResult && (() => {
             const exam = state.weekLog.examResult!;
-            const gradeColors: Record<string, string> = { S: '#FFD700', A: '#4CAF50', B: '#2196F3', C: '#FF9800', D: '#F44336' };
+            const gradeColors: Record<string, string> = { S: '#e5c07b', A: '#8fb573', B: '#7da3d9', C: '#e0a15e', D: '#d96458' };
             const examTitle = exam.examType === 'unit-test' ? '단원평가'
               : exam.examType === 'mock' ? '모의고사'
               : exam.examType === 'suneung' ? '수능'
@@ -564,10 +657,10 @@ export function GameScreen() {
 
             return (
               <div style={{
-                background: isMockOrSuneung ? 'rgba(96,15,52,0.92)' : 'rgba(15,52,96,0.92)',
+                background: isMockOrSuneung ? 'rgba(62,28,42,0.92)' : 'rgba(42,34,48,0.92)',
                 backdropFilter: 'blur(6px)', borderRadius: 14,
                 padding: '16px 16px', marginBottom: 16,
-                border: isMockOrSuneung ? '1px solid rgba(233,150,96,0.3)' : '1px solid rgba(233,69,96,0.2)',
+                border: isMockOrSuneung ? '1px solid rgba(224,138,91,0.35)' : '1px solid rgba(224,138,91,0.2)',
               }}>
                 <div style={{ fontSize: '1rem', fontWeight: 700, textAlign: 'center', marginBottom: 12 }}>
                   {isMockOrSuneung ? '📊' : '📝'} {examTitle} {exam.examType === 'unit-test' ? '결과' : '성적표'}
@@ -576,7 +669,7 @@ export function GameScreen() {
                 {/* 모의고사/수능: 등급 크게 표시 */}
                 {isMockOrSuneung && exam.mockGrade != null && (
                   <div style={{ textAlign: 'center', marginBottom: 12 }}>
-                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: exam.mockGrade <= 2 ? '#FFD700' : exam.mockGrade <= 4 ? '#4CAF50' : exam.mockGrade <= 6 ? '#2196F3' : '#F44336' }}>
+                    <div style={{ fontSize: '2.5rem', fontWeight: 800, color: exam.mockGrade <= 2 ? 'var(--gold)' : exam.mockGrade <= 4 ? 'var(--green)' : exam.mockGrade <= 6 ? 'var(--blue)' : 'var(--red)' }}>
                       {exam.mockGrade}등급
                     </div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>전국 기준</div>
@@ -590,7 +683,7 @@ export function GameScreen() {
                   const s = exam.subjects[key];
                   const isElementary = exam.schoolLevel === 'elementary';
                   const elemGrade = s.elementaryGrade;
-                  const elemColor = elemGrade === '잘함' ? '#4CAF50' : elemGrade === '보통' ? '#2196F3' : '#FF9800';
+                  const elemColor = elemGrade === '잘함' ? '#8fb573' : elemGrade === '보통' ? '#7da3d9' : '#e0a15e';
                   // socialScience 라벨: 고등 + track에 따라 분기
                   const subjectLabel = (key === 'socialScience' && exam.schoolLevel === 'high')
                     ? (state.track === 'humanities' ? '사회탐구' : state.track === 'science' ? '과학탐구' : '탐구')
@@ -654,7 +747,7 @@ export function GameScreen() {
 
           {/* 다음 주 예고 */}
           {upcomingEvents.length > 0 && (
-            <div style={{ background: 'rgba(233,69,96,0.1)', borderRadius: 10, padding: '8px 12px', marginBottom: 16, fontSize: '0.78rem', textAlign: 'center' }}>
+            <div style={{ background: 'rgba(224,138,91,0.1)', borderRadius: 10, padding: '8px 12px', marginBottom: 16, fontSize: '0.78rem', textAlign: 'center' }}>
               📅 {upcomingEvents.join(' · ')}
             </div>
           )}
@@ -694,7 +787,7 @@ export function GameScreen() {
 
       {/* 독백 말풍선 */}
       <div style={{
-        background: 'rgba(15,52,96,0.88)', backdropFilter: 'blur(6px)',
+        background: 'rgba(42,34,48,0.88)', backdropFilter: 'blur(6px)',
         borderRadius: '4px 12px 12px 12px', padding: '8px 14px', marginBottom: 10,
         fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-secondary)',
       }}>
@@ -704,10 +797,10 @@ export function GameScreen() {
       {/* 다가오는 이벤트 배너 */}
       {upcomingEvents.length > 0 && (
         <div style={{
-          background: 'rgba(233,69,96,0.15)', border: '1px solid rgba(233,69,96,0.3)',
+          background: 'rgba(224,138,91,0.15)', border: '1px solid rgba(224,138,91,0.3)',
           borderRadius: 10, padding: '8px 14px', marginBottom: 10,
           fontSize: '0.8rem', fontWeight: 600, textAlign: 'center',
-          color: '#ff6b81',
+          color: 'var(--accent-soft)',
         }}>
           {upcomingEvents.map((e, i) => (
             <div key={i}>📌 {e}</div>
@@ -716,7 +809,7 @@ export function GameScreen() {
       )}
 
       {/* 스탯 (접기/펼치기) */}
-      <div data-tutorial="stats" style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: showStats ? '8px 12px' : '8px 12px', marginBottom: 10 }}>
+      <div data-tutorial="stats" style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: showStats ? '8px 12px' : '8px 12px', marginBottom: 10 }}>
         <div
           onClick={() => setShowStats(!showStats)}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '2px 0' }}
@@ -772,7 +865,7 @@ export function GameScreen() {
 
       {/* ===== 주간 플래너 ===== */}
       <div data-tutorial="routine" style={{
-        background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)',
+        background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)',
         borderRadius: 14, padding: '14px 16px', marginBottom: 12,
         border: routineTooExpensive ? '1px solid var(--red)' : '1px solid rgba(255,255,255,0.05)',
       }}>
@@ -788,7 +881,7 @@ export function GameScreen() {
         {/* 돈 부족 경고 */}
         {routineTooExpensive && (
           <div style={{
-            background: 'rgba(255,87,34,0.15)', border: '1px solid rgba(255,87,34,0.3)',
+            background: 'rgba(217,100,88,0.15)', border: '1px solid rgba(217,100,88,0.3)',
             borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem',
             textAlign: 'center', color: 'var(--red)',
           }}>
@@ -862,8 +955,8 @@ export function GameScreen() {
               {selectedActivities.length === 0 && state.routineSlot2 && (
                 <div style={{
                   marginTop: 8, padding: '8px 10px', borderRadius: 8,
-                  background: 'rgba(255,193,7,0.15)', border: '1px solid rgba(255,193,7,0.3)',
-                  fontSize: '0.72rem', color: '#ffb300', lineHeight: 1.4,
+                  background: 'rgba(224,179,84,0.15)', border: '1px solid rgba(224,179,84,0.3)',
+                  fontSize: '0.72rem', color: 'var(--yellow)', lineHeight: 1.4,
                   textAlign: 'center', animation: 'pulse-soft 2s ease-in-out infinite',
                 }}>
                   <div style={{ fontWeight: 600, marginBottom: 2 }}>주말 활동이 비어있어요!</div>
@@ -902,7 +995,7 @@ export function GameScreen() {
           zIndex: 250,
         }} onClick={() => setEditingSlot(null)}>
           <div onClick={e => e.stopPropagation()} style={{
-            background: 'linear-gradient(180deg, rgba(15,52,96,0.99), rgba(26,26,46,0.99))',
+            background: 'linear-gradient(180deg, rgba(42,34,48,0.99), rgba(23,21,28,0.99))',
             borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
             maxHeight: '92vh', minHeight: '70vh', display: 'flex', flexDirection: 'column',
             boxShadow: '0 -4px 30px rgba(0,0,0,0.5)',
@@ -937,7 +1030,7 @@ export function GameScreen() {
                 }} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
                   borderRadius: 10, cursor: 'pointer',
-                  background: !state.routineSlot3 ? 'rgba(91,141,239,0.15)' : 'rgba(255,255,255,0.04)',
+                  background: !state.routineSlot3 ? 'rgba(125,163,217,0.15)' : 'rgba(255,255,255,0.04)',
                   border: !state.routineSlot3 ? '1px solid var(--blue)' : '1px solid rgba(255,255,255,0.06)',
                 }}>
                   <span style={{ fontSize: '1.1rem' }}>🕊️</span>
@@ -1026,7 +1119,7 @@ export function GameScreen() {
 
       {/* NPC 관계 — 만난 친구만 표시 */}
       {state.npcs.some(n => n.met) && (
-        <div data-tutorial="npc" style={{ background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+        <div data-tutorial="npc" style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
           <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 친구</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {state.npcs.filter(n => n.met).map(n => {
@@ -1118,7 +1211,7 @@ export function GameScreen() {
             background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
           }}>
             <div onClick={e => e.stopPropagation()} style={{
-              background: 'linear-gradient(135deg, rgba(15,52,96,0.98), rgba(26,26,46,0.98))',
+              background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
               borderRadius: 16, padding: 24, width: '85%', maxWidth: 340, textAlign: 'center',
               border: '1px solid rgba(255,255,255,0.1)',
             }}>
@@ -1157,10 +1250,10 @@ export function GameScreen() {
       <div
         onClick={() => { setShowShop(true); setNpcDetailFor(null); setNpcSelectFor(null); }}
         style={{
-          background: 'rgba(15,52,96,0.85)', backdropFilter: 'blur(6px)',
+          background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)',
           borderRadius: 12, padding: '10px 14px', marginBottom: 10,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          cursor: 'pointer', border: '1px solid rgba(255,193,7,0.15)',
+          cursor: 'pointer', border: '1px solid rgba(224,179,84,0.15)',
           transition: 'all 0.15s',
         }}
       >

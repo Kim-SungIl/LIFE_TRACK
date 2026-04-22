@@ -18,6 +18,7 @@ export interface ShopItem {
   requireYear?: number;     // 최소 학년
   requireStat?: { stat: StatKey; min: number }; // 스탯 조건
   seasonal?: boolean;       // 기간 한정
+  purchaseMessage?: string; // 구매 시 커스텀 메시지 (없으면 기본 "구매 완료" 문구)
 }
 
 export interface ItemEffect {
@@ -147,8 +148,12 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'contest-fee', name: '대회 참가비', description: '교내/교외 대회에 참가할 수 있다.',
     price: 3, category: 'opportunity', emoji: '🏆',
-    effects: [{ type: 'event_unlock', eventId: 'contest' }],
+    effects: [
+      { type: 'event_unlock', eventId: 'contest' },
+      { type: 'instant', stat: 'talent', value: 2 },
+    ],
     requireStat: { stat: 'talent', min: 40 },
+    purchaseMessage: '대회 참가 신청 완료! 출전 자격을 얻었다.',
   },
   {
     id: 'camp-fee', name: '캠프 참가비', description: '방학 특별 캠프에 참가한다.',
@@ -159,9 +164,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'portfolio-kit', name: '포트폴리오 준비 패키지', description: '특기자 전형을 위한 준비물.',
     price: 10, category: 'opportunity', emoji: '📂',
-    effects: [{ type: 'event_unlock', eventId: 'portfolio' }],
+    effects: [
+      { type: 'event_unlock', eventId: 'portfolio' },
+      { type: 'instant', stat: 'talent', value: 3 },
+      { type: 'instant', stat: 'academic', value: 2 },
+    ],
     requireYear: 5,
     requireStat: { stat: 'talent', min: 60 },
+    purchaseMessage: '포트폴리오 준비를 시작했다. 특기자 전형에 한 발 다가섰다.',
   },
 ];
 
@@ -188,6 +198,18 @@ export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Reco
   if (item.maxPerWeek) {
     const bought = weekPurchases[item.id] || 0;
     if (bought >= item.maxPerWeek) return { ok: false, reason: '이번 주 구매 한도 초과' };
+  }
+  if (item.seasonal && !state.isVacation) return { ok: false, reason: '방학 기간에만 구매 가능' };
+  if (item.effects.some(e => e.type === 'event_unlock' && e.eventId && state.unlockedEvents?.includes(e.eventId))) {
+    return { ok: false, reason: '이미 해금됨' };
+  }
+  // 동일 buff 활성 중이면 재구매 차단 (덮어쓰기로 남은 기간 손실 방지)
+  const activeBuffIds = new Set((state.activeBuffs || []).map(b => b.id));
+  const clashingBuff = item.effects.find(e => e.type === 'buff' && e.buffId && activeBuffIds.has(e.buffId));
+  if (clashingBuff) {
+    const existing = state.activeBuffs?.find(b => b.id === clashingBuff.buffId);
+    const weeks = existing?.remainingWeeks ?? 0;
+    return { ok: false, reason: `이미 활성 (${weeks}주 남음)` };
   }
   return { ok: true };
 }
@@ -243,14 +265,19 @@ export function applyItemEffects(
         break;
 
       case 'event_unlock':
-        // 이벤트 해금은 별도 처리 (추후)
-        messages.push(`${item.name} 구매 완료!`);
+        if (effect.eventId) {
+          if (!newState.unlockedEvents) newState.unlockedEvents = [];
+          if (!newState.unlockedEvents.includes(effect.eventId)) {
+            newState.unlockedEvents.push(effect.eventId);
+          }
+          messages.push(item.purchaseMessage || `${item.name} 구매 완료! 관련 기회가 열렸다.`);
+        }
         break;
     }
   }
 
   if (messages.length === 0) {
-    messages.push(`${item.name}을(를) 구매했다!`);
+    messages.push(item.purchaseMessage || `${item.name}을(를) 구매했다!`);
   }
 
   return { newState, messages };

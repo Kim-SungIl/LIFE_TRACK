@@ -20,23 +20,23 @@ const NPC_COLORS: Record<string, string> = {
 };
 
 const LOCATION_GRADIENTS: Record<string, string> = {
-  classroom: 'linear-gradient(180deg, #2a3a5c 0%, #1a2744 100%)',
+  classroom: 'linear-gradient(180deg, #3a2f42 0%, #241a2a 100%)',
   home: 'linear-gradient(180deg, #3d2b1f 0%, #2a1f15 100%)',
-  park: 'linear-gradient(180deg, #1a3a2a 0%, #0f2a1a 100%)',
-  hallway: 'linear-gradient(180deg, #2c3e50 0%, #1a2530 100%)',
-  rooftop: 'linear-gradient(180deg, #4a6fa5 0%, #2a4060 100%)',
+  park: 'linear-gradient(180deg, #1e3a26 0%, #13281a 100%)',
+  hallway: 'linear-gradient(180deg, #3a3342 0%, #241f28 100%)',
+  rooftop: 'linear-gradient(180deg, #4a5a85 0%, #2c3a58 100%)',
   street: 'linear-gradient(180deg, #4a3f5c 0%, #2a2535 100%)',
   gym: 'linear-gradient(180deg, #5c3a2a 0%, #3a2518 100%)',
   school_gate: 'linear-gradient(180deg, #3a5c4a 0%, #1a3a28 100%)',
   cafe: 'linear-gradient(180deg, #5c4a3a 0%, #3a2f20 100%)',
-  music_room: 'linear-gradient(180deg, #3a2a5c 0%, #251a3a 100%)',
+  music_room: 'linear-gradient(180deg, #3a2f5c 0%, #2a1f3a 100%)',
   beach: 'linear-gradient(180deg, #4a8ab5 0%, #2a5a80 100%)',
   convenience_store: 'linear-gradient(180deg, #4a5c3a 0%, #2a3a20 100%)',
-  library: 'linear-gradient(180deg, #3a4a5c 0%, #1a2a3a 100%)',
+  library: 'linear-gradient(180deg, #3a3346 0%, #1f1929 100%)',
   auditorium: 'linear-gradient(180deg, #5c4a4a 0%, #3a2a2a 100%)',
 };
 
-const DEFAULT_GRADIENT = 'linear-gradient(180deg, #1a1a2e 0%, #16213e 100%)';
+const DEFAULT_GRADIENT = 'linear-gradient(180deg, #1f1a25 0%, #17151c 100%)';
 
 // ===== Keyframes injection =====
 
@@ -474,7 +474,7 @@ export function EventScene({ event, gender, year, npcs, onChoice }: EventScenePr
         {/* Text box */}
         <div style={{
           flex: 1,
-          background: 'rgba(10, 20, 40, 0.92)',
+          background: 'rgba(22, 19, 27, 0.92)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderTop: '1px solid rgba(255,255,255,0.1)',
@@ -534,7 +534,7 @@ export function EventScene({ event, gender, year, npcs, onChoice }: EventScenePr
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.borderColor = 'var(--accent)';
-                      e.currentTarget.style.background = 'rgba(233,69,96,0.12)';
+                      e.currentTarget.style.background = 'rgba(224,138,91,0.14)';
                     }}
                     onMouseLeave={e => {
                       e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';

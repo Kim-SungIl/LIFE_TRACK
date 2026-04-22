@@ -1,22 +1,23 @@
 /* ===== LIFE TRACK: 선택의 결과 — Global Styles ===== */
 
 :root {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-card: #0f3460;
-  --bg-card-hover: #1a4a7a;
-  --text-primary: #e8e8e8;
-  --text-secondary: #a8a8b8;
-  --text-muted: #6c6c7c;
-  --accent: #e94560;
-  --accent-soft: #ff6b81;
-  --gold: #FFD700;
-  --green: #4CAF50;
-  --yellow: #FFC107;
-  --red: #FF5722;
-  --gray: #9E9E9E;
-  --blue: #5b8def;
-  --purple: #9b59b6;
+  /* "밤 + 따뜻한 조명" — 노스탤지아 톤. 차가운 네이비 대신 warm plum/cocoa 베이스. */
+  --bg-primary: #17151c;
+  --bg-secondary: #1f1a25;
+  --bg-card: #2a2230;
+  --bg-card-hover: #362c3e;
+  --text-primary: #f1e9dc;       /* 종이·크림 톤 off-white */
+  --text-secondary: #b4a89c;     /* warm tan-gray */
+  --text-muted: #7a6f68;
+  --accent: #e08a5b;             /* soft terracotta — 핫핑크 대신 */
+  --accent-soft: #f0a47a;
+  --gold: #e5c07b;               /* antique gold (덜 튀는) */
+  --green: #8fb573;              /* muted sage */
+  --yellow: #e0b354;             /* warm amber */
+  --red: #d96458;                /* terracotta red */
+  --gray: #8a8078;
+  --blue: #7da3d9;               /* dusty blue (정보용만) */
+  --purple: #b08acc;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -107,7 +108,7 @@ body {
 
 .card-selected {
   border-color: var(--accent) !important;
-  background: rgba(233, 69, 96, 0.1);
+  background: rgba(224, 138, 91, 0.12);
 }
 
 /* ===== 스탯 바 ===== */
@@ -172,7 +173,7 @@ body {
 }
 
 .activity-card:hover { border-color: var(--blue); background: var(--bg-card-hover); }
-.activity-card.selected { border-color: var(--accent); background: rgba(233,69,96,0.15); }
+.activity-card.selected { border-color: var(--accent); background: rgba(224,138,91,0.16); }
 .activity-card.disabled { opacity: 0.4; cursor: not-allowed; }
 
 .activity-name {
@@ -210,7 +211,7 @@ body {
 
 /* ===== 메시지 ===== */
 .message-box {
-  background: rgba(233, 69, 96, 0.1);
+  background: rgba(224, 138, 91, 0.12);
   border-left: 3px solid var(--accent);
   padding: 12px 16px;
   border-radius: 0 8px 8px 0;
@@ -220,7 +221,7 @@ body {
 }
 
 .milestone-box {
-  background: rgba(255, 215, 0, 0.1);
+  background: rgba(229, 192, 123, 0.12);
   border-left: 3px solid var(--gold);
   padding: 12px 16px;
   border-radius: 0 8px 8px 0;
@@ -296,7 +297,7 @@ body {
 .title-logo {
   font-size: 2.5rem;
   font-weight: 800;
-  background: linear-gradient(135deg, var(--accent), var(--blue));
+  background: linear-gradient(135deg, var(--accent), var(--gold));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
@@ -327,7 +328,7 @@ body {
 }
 
 .parent-card:hover { border-color: var(--blue); }
-.parent-card.selected { border-color: var(--accent); background: rgba(233,69,96,0.15); }
+.parent-card.selected { border-color: var(--accent); background: rgba(224,138,91,0.16); }
 
 .parent-card-emoji { font-size: 1.5rem; margin-bottom: 4px; }
 .parent-card-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
@@ -435,8 +436,8 @@ body {
 
 /* 튜토리얼 빈 슬롯 펄스 */
 @keyframes slotPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,193,7,0.3); }
-  50% { box-shadow: 0 0 12px 2px rgba(255,193,7,0.4); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(224,179,84,0.3); }
+  50% { box-shadow: 0 0 12px 2px rgba(224,179,84,0.4); }
 }
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }

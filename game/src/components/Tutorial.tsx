@@ -196,8 +196,8 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
           borderRadius: 12,
           border: `2px solid ${isInteractive ? 'var(--yellow)' : 'var(--accent)'}`,
           boxShadow: isInteractive
-            ? '0 0 20px rgba(255,193,7,0.4), 0 0 40px rgba(255,193,7,0.1)'
-            : '0 0 20px rgba(233,69,96,0.3)',
+            ? '0 0 20px rgba(224,179,84,0.4), 0 0 40px rgba(224,179,84,0.1)'
+            : '0 0 20px rgba(224,138,91,0.3)',
           pointerEvents: 'none',
           transition: 'all 0.3s ease',
           animation: isInteractive ? 'tutorial-pulse 1.5s ease-in-out infinite' : 'none',
@@ -214,9 +214,9 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
             : { bottom: window.innerHeight - rect.top + pad + 16 }
           ),
           width: 'calc(100% - 40px)', maxWidth: 360,
-          background: 'linear-gradient(135deg, rgba(15,52,96,0.98), rgba(26,26,46,0.98))',
+          background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
           borderRadius: 16, padding: '18px 20px',
-          border: '1px solid rgba(233,69,96,0.3)',
+          border: '1px solid rgba(224,138,91,0.3)',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
           zIndex: 201,
           pointerEvents: 'auto', // 툴팁은 항상 클릭 가능
@@ -298,9 +298,9 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
       {!rect && (
         <div style={{
           position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(135deg, rgba(15,52,96,0.98), rgba(26,26,46,0.98))',
+          background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
           borderRadius: 16, padding: '24px 28px', maxWidth: 360,
-          border: '1px solid rgba(233,69,96,0.3)', textAlign: 'center',
+          border: '1px solid rgba(224,138,91,0.3)', textAlign: 'center',
           pointerEvents: 'auto',
         }}>
           <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 8 }}>{current.title}</div>

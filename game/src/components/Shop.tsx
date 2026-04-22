@@ -63,7 +63,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
       zIndex: 150,
     }}>
       <div style={{
-        background: 'linear-gradient(180deg, rgba(15,52,96,0.98), rgba(26,26,46,0.99))',
+        background: 'linear-gradient(180deg, rgba(42,34,48,0.98), rgba(23,21,28,0.99))',
         borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
         maxHeight: '92vh', minHeight: '70vh', display: 'flex', flexDirection: 'column',
       }}>
@@ -117,8 +117,8 @@ export function Shop({ state, onBuy, onClose }: Props) {
             return (
               <div key={item.id} style={{
                 padding: '12px 14px', marginBottom: 6, borderRadius: 12,
-                background: activeBuff ? 'rgba(91,141,239,0.08)' : 'rgba(255,255,255,0.05)',
-                border: activeBuff ? '1px solid rgba(91,141,239,0.25)' : check.ok ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.03)',
+                background: activeBuff ? 'rgba(125,163,217,0.08)' : 'rgba(255,255,255,0.05)',
+                border: activeBuff ? '1px solid rgba(125,163,217,0.25)' : check.ok ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(255,255,255,0.03)',
                 opacity: check.ok ? 1 : 0.5,
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -135,7 +135,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                       {activeBuff && (
                         <span style={{
                           fontSize: '0.62rem', padding: '1px 6px', borderRadius: 4,
-                          background: 'rgba(91,141,239,0.2)', color: 'var(--blue)', fontWeight: 600,
+                          background: 'rgba(125,163,217,0.2)', color: 'var(--blue)', fontWeight: 600,
                         }}>
                           적용 중 {activeBuff.remainingWeeks}주 남음
                         </span>
@@ -149,7 +149,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                       {effects.map((e, i) => (
                         <span key={i} style={{
                           fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4,
-                          background: 'rgba(76,175,80,0.1)', color: 'var(--green)',
+                          background: 'rgba(143,181,115,0.1)', color: 'var(--green)',
                         }}>
                           {e}
                         </span>
@@ -188,7 +188,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
               {state.activeBuffs.map(b => (
                 <span key={b.id} style={{
                   fontSize: '0.65rem', padding: '2px 8px', borderRadius: 6,
-                  background: 'rgba(91,141,239,0.15)', color: 'var(--blue)',
+                  background: 'rgba(125,163,217,0.15)', color: 'var(--blue)',
                 }}>
                   {b.name} ({b.remainingWeeks}주)
                 </span>

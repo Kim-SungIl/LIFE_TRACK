@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { GameState, ParentStrength } from './types';
-import { createInitialState, processWeek } from './gameEngine';
+import { createInitialState, processWeek, hashInitialState, getWeekInfo } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek } from './events';
+import { applyMemorySlotFromChoice } from './memorySystem';
 
 const SAVE_KEY = 'lifetrack_save';
 const SAVE_VERSION = 1;
@@ -11,6 +12,22 @@ interface SaveData {
   version: number;
   state: GameState;
   savedAt: string;
+}
+
+// v1.2 로드 시 누락 필드 백필 (processWeek 미경유 경로 보호)
+// SAVE_VERSION을 올리지 않고 부재 필드 초기화로 호환 유지
+function migrateLoadedState(state: GameState): GameState {
+  return {
+    ...state,
+    memorySlots: state.memorySlots || [],
+    socialRipples: state.socialRipples || [],
+    milestoneScenes: state.milestoneScenes || [],
+    rngSeed: (state.rngSeed && state.rngSeed !== 0)
+      ? state.rngSeed
+      : hashInitialState({ gender: state.gender, parents: state.parents }),
+    hardCrisisYears: state.hardCrisisYears || [],
+    unlockedEvents: state.unlockedEvents || [],
+  };
 }
 
 function saveToStorage(state: GameState) {
@@ -49,6 +66,7 @@ interface GameStore {
   setNpcActivityMap: (map: Record<string, string>) => void;
   advanceWeek: () => void;
   resolveEvent: (choiceIndex: number) => void;
+  advanceFromYearEnd: () => void;
   setPhase: (phase: GameState['phase']) => void;
   buyItem: (item: ShopItem, targetNpcId?: string) => string[];
 }
@@ -68,7 +86,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   loadSavedGame: () => {
     const save = loadFromStorage();
     if (!save) return false;
-    set({ state: save.state, history: [] });
+    set({ state: migrateLoadedState(save.state), history: [] });
     return true;
   },
 
@@ -175,8 +193,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.track = choice.trackSelect;
     }
 
-    // 이벤트 기록 (선택 인덱스 + 발생 주차 포함)
-    newState.events.push({ ...newState.currentEvent!, resolvedChoice: choiceIndex, week: newState.week });
+    // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
+    applyMemorySlotFromChoice(newState, newState.currentEvent!, choiceIndex, choice);
+
+    // v1.2 ripple 활성화
+    if (choice.activateRipples) {
+      for (const rid of choice.activateRipples) {
+        // ripple 정의는 이벤트 콘텐츠 측에서 등록 가정. 여기서는 activatedAt만 갱신.
+        const ripple = newState.socialRipples.find(r => r.id === rid);
+        if (ripple && !ripple.activatedAt) ripple.activatedAt = newState.week;
+      }
+    }
+
+    // M4: 버프 추가 (동일 id 있으면 기간 덮어쓰기)
+    if (choice.addBuff) {
+      if (!newState.activeBuffs) newState.activeBuffs = [];
+      newState.activeBuffs = newState.activeBuffs.filter(b => b.id !== choice.addBuff!.id);
+      newState.activeBuffs.push({ ...choice.addBuff });
+    }
+
+    // 이벤트 기록 (선택 인덱스 + 발생 주차 + 연차 + 성별 분기 정보 포함)
+    newState.events.push({
+      ...newState.currentEvent!,
+      resolvedChoice: choiceIndex,
+      week: newState.week,
+      year: newState.year,
+      resolvedFemale: isFemale && !!s.currentEvent!.femaleChoices,
+    });
 
     // weekLog에 메시지 추가
     if (newState.weekLog) {
@@ -200,6 +243,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     if (!s) return;
     set({ state: { ...s, phase } });
+  },
+
+  advanceFromYearEnd: () => {
+    const s = get().state;
+    if (!s || s.phase !== 'year-end') return;
+    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    newState.week = 1;
+    newState.year++;
+    if (newState.year > 7) {
+      newState.phase = 'ending';
+    } else {
+      newState.phase = 'weekday';
+      const nextInfo = getWeekInfo(newState.week);
+      newState.semester = nextInfo.semester;
+      newState.isVacation = nextInfo.isVacation;
+    }
+    set({ state: newState });
   },
 
   buyItem: (item, targetNpcId) => {

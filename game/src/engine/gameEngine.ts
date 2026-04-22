@@ -3,6 +3,11 @@ import { ACTIVITIES } from './activities';
 import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult } from './examSystem';
 import { ExamType } from './types';
+import { seededRandom, hashInitialState } from './rng';
+import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem';
+
+// rng utility re-export (하위 호환)
+export { seededRandom, hashInitialState } from './rng';
 
 // ===== 초기 상태 생성 =====
 export function createInitialState(gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]): GameState {
@@ -70,11 +75,18 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     consecutiveTiredWeeks: 0,
     burnoutCooldown: 0,
     eventTimeCost: 0,
+    unlockedEvents: [],
+    // v1.2 기억 슬롯 시스템
+    memorySlots: [],
+    socialRipples: [],
+    milestoneScenes: [],
+    rngSeed: hashInitialState({ gender, parents }),
+    hardCrisisYears: [],
   };
 }
 
 // ===== 학기 구조 =====
-function getWeekInfo(week: number) {
+export function getWeekInfo(week: number) {
   // 1학기: W1~W19, 여름방학: W20~W24, 2학기: W25~W42, 겨울방학: W43~W48
   if (week <= 19) return { semester: 1 as const, isVacation: false, label: `1학기 ${week}주차` };
   if (week <= 24) return { semester: 1 as const, isVacation: true, label: `여름방학 ${week - 19}주차` };
@@ -468,6 +480,15 @@ export function processWeek(state: GameState): GameState {
   if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
   if (newState.burnoutCooldown == null) newState.burnoutCooldown = 0;
   if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
+  if (!newState.unlockedEvents) newState.unlockedEvents = [];
+  // v1.2 기억 슬롯 시스템 마이그레이션
+  if (!newState.memorySlots) newState.memorySlots = [];
+  if (!newState.socialRipples) newState.socialRipples = [];
+  if (!newState.milestoneScenes) newState.milestoneScenes = [];
+  if (newState.rngSeed == null || newState.rngSeed === 0) {
+    newState.rngSeed = hashInitialState({ gender: newState.gender, parents: newState.parents });
+  }
+  if (!newState.hardCrisisYears) newState.hardCrisisYears = [];
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
@@ -665,17 +686,26 @@ export function processWeek(state: GameState): GameState {
   // 주 진행
   newState.week++;
   if (newState.week > 48) {
-    newState.week = 1;
-    newState.year++;
-    if (newState.year > 7) {
+    // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
+    recordMilestoneForYear(newState, newState.year);
+    if (newState.year >= 7) {
+      // Y7 끝 → 바로 엔딩 (엔딩에 이미 7년 전체 회상 포함)
+      newState.week = 1;
+      newState.year++;
       newState.phase = 'ending';
+    } else {
+      // Y1~Y6 끝 → 학년말 일기장 화면. week는 49 상태로 유지
+      // 사용자가 advanceFromYearEnd 호출하면 정리됨
+      newState.phase = 'year-end';
     }
   }
 
-  // 다음 주의 학기/방학 상태 업데이트
-  const nextInfo = getWeekInfo(newState.week);
-  newState.semester = nextInfo.semester;
-  newState.isVacation = nextInfo.isVacation;
+  // 다음 주의 학기/방학 상태 업데이트 (year-end 상태면 의미 없으니 스킵)
+  if (newState.phase !== 'year-end') {
+    const nextInfo = getWeekInfo(newState.week);
+    newState.semester = nextInfo.semester;
+    newState.isVacation = nextInfo.isVacation;
+  }
 
   // 선택 초기화
   newState.weekendChoices = [];
@@ -817,6 +847,12 @@ export function calculateEnding(state: GameState) {
     description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다. ' + career.detail;
   }
 
+  // v1.2 회상 레이어 (크래시 보험: 빈 배열도 안전)
+  const memorialHighlights = selectMemorialHighlights(state);
+  const yearClosings = [...(state.milestoneScenes || [])]
+    .sort((a, b) => a.year - b.year)
+    .map(ms => ms.summaryText || `${ms.year}학년의 기억.`);
+
   return {
     title,
     description,
@@ -827,5 +863,7 @@ export function calculateEnding(state: GameState) {
     careerDetail: career.detail,
     suneungGrade,
     npcStories,
+    memorialHighlights,
+    yearClosings,
   };
 }
