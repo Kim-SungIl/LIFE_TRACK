@@ -109,6 +109,59 @@ async function main() {
   const stillRendered = await page.evaluate(() => (document.querySelector('#root')?.children.length ?? 0) > 0);
   assert('구세이브 로드 후 UI 렌더링 유지', stillRendered);
 
+  console.log('\n=== 4.5 year-end phase 화면 렌더링 (M3.5) ===');
+  // year-end 상태 세이브 주입
+  await page.evaluate(() => {
+    const yearEndState = {
+      week: 49, year: 2, phase: 'year-end', track: null, gender: 'male',
+      stats: { academic: 45, social: 40, talent: 20, mental: 65, health: 50 },
+      fatigue: 20, money: 15, parents: ['wealth', 'emotional'],
+      mentalState: 'normal', routineSlot2: null, routineSlot3: null, routineWeeks: 0,
+      weekendChoices: [], vacationChoices: [], semester: 2, isVacation: false,
+      weekLog: null, npcs: [], events: [], currentEvent: null,
+      milestones: [], burnoutCount: 0, totalWeeksPlayed: 0,
+      examResults: [], currentExamResult: null, activeBuffs: [], weekPurchases: {},
+      idleWeeks: 0, consecutiveTiredWeeks: 0, burnoutCooldown: 0, eventTimeCost: 0,
+      unlockedEvents: [],
+      memorySlots: [{
+        id: 'growth_2_15_1', category: 'growth', week: 15, year: 2,
+        sourceEventId: 'test-event', choiceIndex: 1,
+        recallText: '중1의 봄, 처음으로 손을 든 날.',
+        importance: 7, phaseTag: 'early',
+      }],
+      socialRipples: [],
+      milestoneScenes: [{
+        year: 2, sceneId: 'milestone-y2',
+        summaryText: '처음으로 입은 교복이 조금 컸던 중1의 봄.',
+        recordedAt: 48,
+      }],
+      rngSeed: 12345, hardCrisisYears: [],
+    };
+    localStorage.setItem('lifetrack_save', JSON.stringify({
+      version: 1, state: yearEndState, savedAt: new Date().toISOString(),
+    }));
+  });
+  consoleErrors.length = 0;
+  pageErrors.length = 0;
+  await page.reload({ waitUntil: 'networkidle' });
+  await sleep(500);
+  // "이어서 하기" 버튼이 있을 수 있으니 타이틀 클릭해야 할 수 있음
+  const loadBtn = await page.$('button');
+  if (loadBtn) {
+    const btnText = await page.evaluate(el => el.textContent, loadBtn);
+    if (btnText && btnText.includes('이어')) await loadBtn.click();
+  }
+  await sleep(500);
+
+  const yearEndText = await page.evaluate(() => document.body.innerText);
+  assert('year-end 화면 "YEAR-END" 표시', yearEndText.includes('YEAR-END'));
+  assert('year-end 화면 "중학교 1학년" 표시', yearEndText.includes('중학교 1학년'));
+  assert('year-end 화면 memorySlot recallText 표시', yearEndText.includes('처음으로 손을 든 날'));
+  assert('year-end 화면 milestone summaryText 표시', yearEndText.includes('처음으로 입은 교복'));
+  assert('year-end 화면 "다음 학년으로" 버튼 표시', yearEndText.includes('다음 학년으로'));
+  assert('year-end 화면 렌더 중 pageerror 없음', pageErrors.length === 0, pageErrors.join(' | '));
+  assert('year-end 화면 렌더 중 console.error 없음', consoleErrors.length === 0, consoleErrors.slice(0, 3).join(' | '));
+
   console.log('\n=== 5. 게임 상태 접근 (Zustand store via window hack) ===');
   // Zustand는 기본적으로 window 노출 안 하지만 번들 소스 기반으로 localStorage 검증은 가능
   // 세이브가 다시 저장되는지만 확인

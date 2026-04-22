@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { GameState, ParentStrength } from './types';
-import { createInitialState, processWeek, hashInitialState } from './gameEngine';
+import { createInitialState, processWeek, hashInitialState, getWeekInfo } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek } from './events';
 import { applyMemorySlotFromChoice } from './memorySystem';
@@ -66,6 +66,7 @@ interface GameStore {
   setNpcActivityMap: (map: Record<string, string>) => void;
   advanceWeek: () => void;
   resolveEvent: (choiceIndex: number) => void;
+  advanceFromYearEnd: () => void;
   setPhase: (phase: GameState['phase']) => void;
   buyItem: (item: ShopItem, targetNpcId?: string) => string[];
 }
@@ -235,6 +236,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     if (!s) return;
     set({ state: { ...s, phase } });
+  },
+
+  advanceFromYearEnd: () => {
+    const s = get().state;
+    if (!s || s.phase !== 'year-end') return;
+    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    newState.week = 1;
+    newState.year++;
+    if (newState.year > 7) {
+      newState.phase = 'ending';
+    } else {
+      newState.phase = 'weekday';
+      const nextInfo = getWeekInfo(newState.week);
+      newState.semester = nextInfo.semester;
+      newState.isVacation = nextInfo.isVacation;
+    }
+    set({ state: newState });
   },
 
   buyItem: (item, targetNpcId) => {

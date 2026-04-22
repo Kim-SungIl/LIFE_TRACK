@@ -86,7 +86,7 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
 }
 
 // ===== 학기 구조 =====
-function getWeekInfo(week: number) {
+export function getWeekInfo(week: number) {
   // 1학기: W1~W19, 여름방학: W20~W24, 2학기: W25~W42, 겨울방학: W43~W48
   if (week <= 19) return { semester: 1 as const, isVacation: false, label: `1학기 ${week}주차` };
   if (week <= 24) return { semester: 1 as const, isVacation: true, label: `여름방학 ${week - 19}주차` };
@@ -688,17 +688,24 @@ export function processWeek(state: GameState): GameState {
   if (newState.week > 48) {
     // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
     recordMilestoneForYear(newState, newState.year);
-    newState.week = 1;
-    newState.year++;
-    if (newState.year > 7) {
+    if (newState.year >= 7) {
+      // Y7 끝 → 바로 엔딩 (엔딩에 이미 7년 전체 회상 포함)
+      newState.week = 1;
+      newState.year++;
       newState.phase = 'ending';
+    } else {
+      // Y1~Y6 끝 → 학년말 일기장 화면. week는 49 상태로 유지
+      // 사용자가 advanceFromYearEnd 호출하면 정리됨
+      newState.phase = 'year-end';
     }
   }
 
-  // 다음 주의 학기/방학 상태 업데이트
-  const nextInfo = getWeekInfo(newState.week);
-  newState.semester = nextInfo.semester;
-  newState.isVacation = nextInfo.isVacation;
+  // 다음 주의 학기/방학 상태 업데이트 (year-end 상태면 의미 없으니 스킵)
+  if (newState.phase !== 'year-end') {
+    const nextInfo = getWeekInfo(newState.week);
+    newState.semester = nextInfo.semester;
+    newState.isVacation = nextInfo.isVacation;
+  }
 
   // 선택 초기화
   newState.weekendChoices = [];
