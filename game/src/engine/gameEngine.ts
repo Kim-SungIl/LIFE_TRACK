@@ -496,8 +496,16 @@ export function migrateLoadedState(state: GameState): GameState {
 }
 
 // ===== 주간 처리 (메인 루프) =====
-export function processWeek(state: GameState): GameState {
+export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
   const newState = migrateLoadedState(JSON.parse(JSON.stringify(state))) as GameState;
+
+  // NPC 선택(activity→npc 매핑)에 따른 친밀도 적용
+  if (npcActivityMap) {
+    for (const npcId of Object.values(npcActivityMap)) {
+      const npc = newState.npcs.find(n => n.id === npcId);
+      if (npc) npc.intimacy = Math.min(100, npc.intimacy + 3);
+    }
+  }
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;

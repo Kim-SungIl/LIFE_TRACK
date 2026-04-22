@@ -102,18 +102,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   advanceWeek: () => {
     const s = get().state;
     if (!s) return;
-    const npcMap = get().npcActivityMap;
-
-    // NPC 선택에 따른 친밀도 적용
-    const newS = JSON.parse(JSON.stringify(s)) as GameState;
-    for (const [, npcId] of Object.entries(npcMap)) {
-      const npc = newS.npcs.find(n => n.id === npcId);
-      if (npc) {
-        npc.intimacy = Math.min(100, npc.intimacy + 3);
-      }
-    }
-
-    const newState = processWeek(newS);
+    const newState = processWeek(s, get().npcActivityMap);
     set({ state: newState, npcActivityMap: {} });
   },
 

@@ -81,22 +81,20 @@ console.log('\n=== 1. minjae-exam-chat: Y1 W17에만 발동 ===');
   assert('minjae 미면식 시 발동 안 됨', !unmet);
 }
 
-console.log('\n=== 2. yuna-pressure: W36~38에만 발동 ===');
+console.log('\n=== 2. yuna-pressure: W30~40 가을학기 발동 (M5 Phase 3 완화) ===');
 {
   let s = setupState();
   s = npcState(s, 'yuna', { met: true, intimacy: 60 });
   s = mutate(s, { year: 2, isVacation: false });
 
-  // W33 → 발동 안 됨 (기존 버그)
-  assert('W33: 발동 안 됨', !canFireAt('yuna-pressure', mutate(s, { week: 33 })));
-  // W35 → 발동 안 됨
-  assert('W35: 발동 안 됨', !canFireAt('yuna-pressure', mutate(s, { week: 35 })));
-  // W36~38 → 발동됨
-  assert('W36: 발동됨', canFireAt('yuna-pressure', mutate(s, { week: 36 })));
-  assert('W37: 발동됨', canFireAt('yuna-pressure', mutate(s, { week: 37 })));
-  assert('W38: 발동됨', canFireAt('yuna-pressure', mutate(s, { week: 38 })));
-  // W39 → 발동 안 됨
-  assert('W39: 발동 안 됨', !canFireAt('yuna-pressure', mutate(s, { week: 39 })));
+  // W29 → 발동 안 됨 (가을 시작 전)
+  assert('W29: 발동 안 됨', !canFireAt('yuna-pressure', mutate(s, { week: 29 })));
+  // W30~40 → 발동됨 (Phase 3에서 확대)
+  assert('W30: 발동됨', canFireAt('yuna-pressure', mutate(s, { week: 30 })));
+  assert('W35: 발동됨', canFireAt('yuna-pressure', mutate(s, { week: 35 })));
+  assert('W40: 발동됨', canFireAt('yuna-pressure', mutate(s, { week: 40 })));
+  // W41 → 발동 안 됨 (가을 끝)
+  assert('W41: 발동 안 됨', !canFireAt('yuna-pressure', mutate(s, { week: 41 })));
 
   // 봄 중간고사 주차 (W7~9) → 발동 안 됨 (가을만 한정)
   assert('W8: 발동 안 됨 (봄 중간고사 주차)', !canFireAt('yuna-pressure', mutate(s, { week: 8 })));

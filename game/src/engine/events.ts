@@ -1066,19 +1066,21 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'haeun-meet',
     title: '도서관의 선배',
     description: '점심시간에 도서관에 갔다.\n창가 자리에 교복 위에 가디건을 걸친 선배가 앉아 있다.\n책을 읽다가 이쪽을 봤다.\n"1학년이지? 여기 자주 와?"',
+    // M5 Phase 3: FOLLOWUP_EVENT라 조건 통과 시 즉시 발동 — week 설정은 무의미
     location: 'library',
     background: 'library_{school}',
     speakers: ['haeun'],
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return s.year === 2 && !haeun?.met && s.week >= 4 && s.week <= 10 && !s.isVacation;
+      return s.year === 2 && !haeun?.met && !s.isVacation;
     },
     choices: [
+      // M5 Phase 3: 첫 만남 intimacyChange 5→10 / 7→12 — decay 상쇄 + 후속 이벤트 진입 문턱 보장
       { text: '"네, 가끔요..." — 어색하게 대답한다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 10 }],
         message: '"야, 존댓말 하지 마. 어색해." 선배가 웃었다. "나 하은이야. 2학년." 무섭지 않은 선배다.' },
       { text: '"선배는 여기 자주 오세요?" — 말을 건다', effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 12 }],
         message: '"시끄러운 데보다 여기가 좋아서." 선배가 자리를 가리켰다. "앉아. 나 하은이야." 편한 선배다.' },
     ],
   },
@@ -1089,10 +1091,11 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'library',
     background: 'library_{school}',
     speakers: ['haeun'],
+    // M5 Phase 3: intimacy 15→8, 발동 주차 확대 ([6,7,15,16] → [6,7,10,15,16,25,30])
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 15 && s.year === 2 && !s.isVacation
-        && [6, 7, 15, 16].includes(s.week);
+      return !!haeun?.met && haeun.intimacy >= 8 && s.year === 2 && !s.isVacation
+        && [6, 7, 10, 15, 16, 25, 30].includes(s.week);
     },
     choices: [
       { text: '"이거 어떻게 정리해요?" — 노트를 보여준다', effects: { academic: 2, mental: 2 },
@@ -1110,9 +1113,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['haeun'],
+    // M5 Phase 3: intimacy 25→15 완화
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 25 && (s.year === 2 || s.year === 3) && !s.isVacation;
+      return !!haeun?.met && haeun.intimacy >= 15 && (s.year === 2 || s.year === 3) && !s.isVacation;
     },
     choices: [
       { text: '"감사합니다— 아니, 고마워!" — 받아 마신다', effects: { mental: 2 },
@@ -1130,9 +1134,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'home',
     background: 'bedroom_night',
     speakers: ['haeun'],
+    // M5 Phase 3: intimacy 40→25 완화
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 40 && (s.year === 2 || s.year === 3) && s.week >= 25 && !s.isVacation;
+      return !!haeun?.met && haeun.intimacy >= 25 && (s.year === 2 || s.year === 3) && s.week >= 25 && !s.isVacation;
     },
     choices: [
       { text: '"힘들었겠다..." — 들어준다', effects: { social: 1, mental: 2 },
@@ -1153,9 +1158,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['haeun'],
+    // M5 Phase 3: intimacy 50→35 완화
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 50 && s.year === 3 && s.week >= 10 && !s.isVacation;
+      return !!haeun?.met && haeun.intimacy >= 35 && s.year === 3 && s.week >= 10 && !s.isVacation;
     },
     choices: [
       { text: '"선배한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 3 },
@@ -1197,9 +1203,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['haeun'],
+    // M5 Phase 3: intimacy 30→15 완화
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return s.year === 5 && !!haeun?.met && haeun.intimacy >= 30 && s.week >= 2 && s.week <= 6;
+      return s.year === 5 && !!haeun?.met && haeun.intimacy >= 15 && s.week >= 2 && s.week <= 6;
     },
     choices: [
       { text: '"선배! 같은 학교였어?!" — 반갑게 인사한다', effects: { social: 3, mental: 4 },
@@ -1401,7 +1408,9 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 20 && !s.isVacation && s.week >= 10;
+      if (!subin?.met || subin.intimacy < 20 || s.isVacation) return false;
+      // Y1은 1학기 밀집 완화로 2학기부터, 그 외 연도는 W10부터
+      return s.year === 1 ? s.week >= 26 : s.week >= 10;
     },
     choices: [
       {
@@ -1549,7 +1558,8 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return s.year === 1 && !!minjae?.met && !s.isVacation && s.week >= 4 && s.week <= 16;
+      // Y1 1학기 밀집 완화: 2학기로 이동 (원래 W4~W16 → W25~W40)
+      return s.year === 1 && !!minjae?.met && !s.isVacation && s.week >= 25 && s.week <= 40;
     },
     choices: [
       {
@@ -1895,7 +1905,9 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['yuna'],
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 10 && s.week >= 8 && !s.isVacation;
+      if (!yuna?.met || yuna.intimacy < 10 || s.isVacation) return false;
+      // Y1은 1학기 밀집 완화로 2학기부터, 그 외 연도는 W8부터
+      return s.year === 1 ? s.week >= 25 : s.week >= 8;
     },
     choices: [
       {
@@ -1924,9 +1936,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['yuna'],
+    // M5 Phase 3: intimacy 25→20, week 18→10 완화
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 25 && s.week >= 18 && !s.isVacation;
+      return !!yuna?.met && yuna.intimacy >= 20 && s.week >= 10 && !s.isVacation;
     },
     choices: [
       {
@@ -1950,9 +1963,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'music_room',
     background: 'music_room',
     speakers: ['yuna'],
+    // M5 Phase 3: intimacy 35→25 완화
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 35 && s.week >= 25 && !s.isVacation;
+      return !!yuna?.met && yuna.intimacy >= 25 && s.week >= 25 && !s.isVacation;
     },
     choices: [
       {
@@ -1982,10 +1996,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['yuna'],
+    // M5 Phase 3: intimacy 50→35, week 범위 30~40 확대, 여러 학년 가능
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      // 가을 기말고사 직전 스트레스 타이밍으로 한정
-      return !!yuna?.met && yuna.intimacy >= 50 && s.week >= 36 && s.week <= 38 && !s.isVacation;
+      return !!yuna?.met && yuna.intimacy >= 35 && s.week >= 30 && s.week <= 40 && !s.isVacation;
     },
     choices: [
       {
@@ -2016,9 +2030,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_sunset',
     speakers: ['yuna'],
+    // M5 Phase 3: intimacy 65→45 완화
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 65;
+      return !!yuna?.met && yuna.intimacy >= 45;
     },
     choices: [
       {
@@ -2438,19 +2453,21 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'junha-transfer',
     title: '전학생이 왔다',
     description: '담임이 말한다. "전학생이다, 잘 지내라."\n키가 크고 좀 어색해 보이는 남자애가 서 있다.\n"안녕하세요, 송준하입니다. 부산에서 왔습니다."\n사투리가 살짝 섞여 있다.',
+    // M5 Phase 3: FOLLOWUP_EVENT라 week 불필요
     location: 'classroom',
     background: 'classroom_{school}',
     speakers: ['junha'],
     condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
-      return s.year === 6 && !junha?.met && s.week >= 6 && s.week <= 10 && !s.isVacation;
+      return s.year === 6 && !junha?.met && !s.isVacation;
     },
     choices: [
+      // M5 Phase 3: 첫 만남 8→12 / 3→5 — decay 상쇄 + 후속 진입 문턱 보장
       { text: '"여기 앉아, 같이 밥 먹자" — 먼저 다가간다', effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 12 }],
         message: '준하가 살짝 놀란 표정을 지었다. "...고맙다. 서울 애들은 좀 무서울 줄 알았는데." 첫날 점심을 같이 먹었다.' },
       { text: '눈인사만 한다', effects: {},
-        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 5 }],
         message: '준하가 점심시간에 혼자 주먹밥을 꺼내 먹고 있었다. 낡은 도시락통이 눈에 들어왔다.' },
     ],
   },
@@ -2461,9 +2478,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['junha'],
+    // M5 Phase 3: intimacy 15→8 완화
     condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
-      return !!junha?.met && junha.intimacy >= 15 && s.year >= 6 && !s.isVacation;
+      return !!junha?.met && junha.intimacy >= 8 && s.year >= 6 && !s.isVacation;
     },
     choices: [
       { text: '"이거 네가 만든 거야? 맛있는데!" — 감탄한다', effects: { mental: 3, health: 1 },
@@ -2482,9 +2500,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'gym',
     background: 'gymnasium',
     speakers: ['junha'],
+    // M5 Phase 3: intimacy 30→20 완화
     condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
-      return !!junha?.met && junha.intimacy >= 30 && s.year >= 6 && !s.isVacation;
+      return !!junha?.met && junha.intimacy >= 20 && s.year >= 6 && !s.isVacation;
     },
     choices: [
       { text: '"사투리 멋있는데? 원래 말투가 더 낫다" — 편하게 말한다', effects: { social: 2, mental: 2 },
@@ -2505,9 +2524,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'home',
     background: 'bedroom_night',
     speakers: ['junha'],
+    // M5 Phase 3: intimacy 50→35 완화
     condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
-      return !!junha?.met && junha.intimacy >= 50 && s.year >= 6 && !s.isVacation;
+      return !!junha?.met && junha.intimacy >= 35 && s.year >= 6 && !s.isVacation;
     },
     choices: [
       { text: '"여기에 네 자리 있잖아" — 위로한다', effects: { social: 2, mental: 3 },
@@ -2528,9 +2548,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['junha'],
+    // M5 Phase 3: intimacy 65→50 완화
     condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
-      return !!junha?.met && junha.intimacy >= 65 && s.year === 7 && s.week >= 8 && !s.isVacation;
+      return !!junha?.met && junha.intimacy >= 50 && s.year === 7 && s.week >= 8 && !s.isVacation;
     },
     choices: [
       { text: '"멋있다. 너한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 4 },
