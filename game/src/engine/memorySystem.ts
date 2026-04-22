@@ -8,10 +8,9 @@ import type {
   PhaseTag, ToneTag, MilestoneScene, MilestoneTheme,
   GameEvent, EventChoice,
 } from './types';
-import { seededRandom } from './rng';
 
 // ===== ANNUAL 이벤트 (슬롯 생성 금지 대상, 부록 B.4) =====
-// events.ts의 ANNUAL_EVENTS Set과 동기 유지
+// 단일 소스 — events.ts의 getEventForWeek도 이 Set을 import해서 사용
 export const ANNUAL_EVENT_IDS = new Set<string>([
   'elementary-graduation', 'middle-school-entrance', 'middle-school-graduation',
   'high-school-entrance', 'suneung-eve', 'suneung-done', 'high-school-graduation',

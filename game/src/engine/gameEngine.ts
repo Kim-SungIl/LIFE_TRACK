@@ -446,9 +446,12 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
 }
 
 // ===== NPC 친밀도 자연 감소 =====
+// M5 Phase 2: 0.5 → 0.2 완화. 이전엔 연간 -24 감소로 이벤트 +5~8 보상을
+// 절반 이상 상쇄해 크라이시스 친밀도 임계값 못 넘김. 0.2는 연간 -9.6으로
+// 이벤트 2회 정도면 순증가 가능.
 function applyNpcDecay(state: GameState): void {
   for (const npc of state.npcs) {
-    npc.intimacy = Math.max(0, npc.intimacy - 0.5);
+    npc.intimacy = Math.max(0, npc.intimacy - 0.2);
   }
 }
 
@@ -470,25 +473,31 @@ function applyNpcBoost(state: GameState, activityIds: string[]): void {
   }
 }
 
+// 구세이브 호환: 누락 필드 백필 (단일 소스 — store 로드와 processWeek 양쪽에서 사용)
+// SAVE_VERSION 비격상 유지 — 새 필드 추가 시 여기 한 곳만 수정
+export function migrateLoadedState(state: GameState): GameState {
+  return {
+    ...state,
+    examResults: state.examResults || [],
+    activeBuffs: state.activeBuffs || [],
+    weekPurchases: state.weekPurchases || {},
+    consecutiveTiredWeeks: state.consecutiveTiredWeeks ?? 0,
+    burnoutCooldown: state.burnoutCooldown ?? 0,
+    eventTimeCost: state.eventTimeCost ?? 0,
+    unlockedEvents: state.unlockedEvents || [],
+    memorySlots: state.memorySlots || [],
+    socialRipples: state.socialRipples || [],
+    milestoneScenes: state.milestoneScenes || [],
+    rngSeed: (state.rngSeed && state.rngSeed !== 0)
+      ? state.rngSeed
+      : hashInitialState({ gender: state.gender, parents: state.parents }),
+    hardCrisisYears: state.hardCrisisYears || [],
+  };
+}
+
 // ===== 주간 처리 (메인 루프) =====
 export function processWeek(state: GameState): GameState {
-  const newState = JSON.parse(JSON.stringify(state)) as GameState;
-  // 구세이브 호환: 누락 필드 초기화
-  if (!newState.examResults) newState.examResults = [];
-  if (!newState.activeBuffs) newState.activeBuffs = [];
-  if (!newState.weekPurchases) newState.weekPurchases = {};
-  if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
-  if (newState.burnoutCooldown == null) newState.burnoutCooldown = 0;
-  if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
-  if (!newState.unlockedEvents) newState.unlockedEvents = [];
-  // v1.2 기억 슬롯 시스템 마이그레이션
-  if (!newState.memorySlots) newState.memorySlots = [];
-  if (!newState.socialRipples) newState.socialRipples = [];
-  if (!newState.milestoneScenes) newState.milestoneScenes = [];
-  if (newState.rngSeed == null || newState.rngSeed === 0) {
-    newState.rngSeed = hashInitialState({ gender: newState.gender, parents: newState.parents });
-  }
-  if (!newState.hardCrisisYears) newState.hardCrisisYears = [];
+  const newState = migrateLoadedState(JSON.parse(JSON.stringify(state))) as GameState;
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
@@ -731,15 +740,26 @@ function determineCareer(state: GameState): { path: string; detail: string } {
     // talent 85~89 + academic 70+ → 특기 + 학업 균형 → 아래 일반 진로 로직에서 +α
   }
 
-  // 번아웃 심각 or 멘탈 붕괴 → 방황
-  if (state.burnoutCount >= 4 || mental < 20) {
+  // 번아웃 심각 AND 멘탈 현재 상태도 바닥일 때만 방황
+  // M5 Phase 2: OR → AND. 이전엔 burnoutCount≥4만으로 재수 확정되어 모든 패턴이 재수로 수렴.
+  // 번아웃 이력이 많아도 졸업 직전 회복했으면 정상 진학 가능해야 함.
+  if (state.burnoutCount >= 4 && mental < 30) {
     return { path: '재수 결심', detail: '올해는 결과가 좋지 않았다. 1년 더 해보기로 했다.' };
+  }
+  if (mental < 15) {
+    return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
   }
 
   // 수능 7등급 이하 — 입시 실패 루트
   if (mockGrade >= 7) {
     if (state.burnoutCount >= 2) return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
     return { path: '전문대 / 재수', detail: '원하는 곳은 못 갔다. 다른 길을 찾아야 한다.' };
+  }
+
+  // M5 Phase 2: mockGrade 5~6 분기 추가 (이전엔 ≥7 또는 ≤4만 있고 5~6은 track 경로에서 지방국립대로 떨어짐)
+  // 5~6등급은 실제로 지방 4년제 or 전문대 중간 지대
+  if (mockGrade >= 5 && !track) {
+    return { path: '지방 4년제', detail: '지방 4년제에 합격했다. 여기서 다시 시작이다.' };
   }
 
   // 문과 진로

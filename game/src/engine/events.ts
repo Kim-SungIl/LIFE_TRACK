@@ -1,5 +1,6 @@
 import { GameEvent, GameState } from './types';
 import { seededRandom } from './rng';
+import { ANNUAL_EVENT_IDS } from './memorySystem';
 
 export const GAME_EVENTS: GameEvent[] = [
   // ===== 초반 이벤트 (W1~W4) =====
@@ -1680,11 +1681,13 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
+    // M5 Phase 2: intimacy 60 → 30, academic 55 → 45로 완화. NPC decay 완화 후에도
+    // 60은 도달 어려움. 소프트 크라이시스 연간 2건 상한(events.ts)이 과잉 발동 방지.
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 60
+      return !!minjae?.met && minjae.intimacy >= 30
         && (s.year === 2 || s.year === 3)
-        && s.stats.academic >= 55
+        && s.stats.academic >= 45
         && !s.isVacation;
     },
     choices: [
@@ -2107,7 +2110,9 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'middle-burnout',
     title: '중2의 긴 겨울',
     description: '책상 앞에 앉아도 펜만 굴러다닌다.\n어제랑 오늘이 구분이 안 간다.\n엄마가 뭐라고 했는데 반쪽은 흘려들었다.\n"나 괜찮은 걸까..."',
-    condition: (s) => s.year === 3 && s.idleWeeks >= 4 && s.stats.mental <= 40,
+    // M5 Phase 2: mental 40 → 55, idleWeeks 4 → 3 완화. Y3 1회 가드(hardCrisisYears)로
+    // 과잉 발동 방지. burnout-event(year !== 3 가드)와 충돌 없음.
+    condition: (s) => s.year === 3 && s.idleWeeks >= 3 && s.stats.mental <= 55,
     location: 'home',
     background: 'bedroom_night',
     choices: [
@@ -3071,22 +3076,13 @@ export const SOFT_CRISIS_IDS = new Set<string>([
   'jihun-envy', 'haeun-distance',
 ]);
 
-// ANNUAL 이벤트 세트 (년도별 재발 허용) — memorySystem.ANNUAL_EVENT_IDS와 동기
-const ANNUAL_EVENTS = new Set([
-  'elementary-graduation','middle-school-entrance','middle-school-graduation',
-  'high-school-entrance','suneung-eve','suneung-done','high-school-graduation',
-  'year-end-reflection',
-  'jihun-birthday','minjae-birthday','subin-birthday',
-  'yuna-birthday','haeun-birthday','junha-birthday',
-]);
-
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
   const fixedEvent = GAME_EVENTS.find(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
-    (ANNUAL_EVENTS.has(e.id) || !state.events.some(prev => prev.id === e.id))
+    (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
   if (fixedEvent) return fixedEvent;
 
