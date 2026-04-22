@@ -205,6 +205,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
 
+    // M4: 버프 추가 (동일 id 있으면 기간 덮어쓰기)
+    if (choice.addBuff) {
+      if (!newState.activeBuffs) newState.activeBuffs = [];
+      newState.activeBuffs = newState.activeBuffs.filter(b => b.id !== choice.addBuff!.id);
+      newState.activeBuffs.push({ ...choice.addBuff });
+    }
+
     // 이벤트 기록 (선택 인덱스 + 발생 주차 + 연차 + 성별 분기 정보 포함)
     newState.events.push({
       ...newState.currentEvent!,

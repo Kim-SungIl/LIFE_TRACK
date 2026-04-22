@@ -168,6 +168,8 @@ export interface EventChoice {
   memorySlotDraft?: MemorySlotDraft;
   // v1.2: 이 선택을 고르면 활성화되는 ripple ID 목록
   activateRipples?: string[];
+  // M4: 이 선택을 고르면 활성 버프에 추가 (상점 버프와 동일 구조)
+  addBuff?: ActiveBuff;
 }
 
 // ===== v1.2 기억 슬롯 시스템 =====
