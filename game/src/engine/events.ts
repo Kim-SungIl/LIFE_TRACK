@@ -1183,9 +1183,10 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'auditorium',
     background: 'auditorium_middle',
     speakers: ['haeun'],
+    // M5 Phase 3-Y: intimacy 20→5 완화 (만난 적만 있으면 졸업식에서 만남)
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return s.year === 3 && !!haeun?.met && haeun.intimacy >= 20;
+      return s.year === 3 && !!haeun?.met && haeun.intimacy >= 5;
     },
     choices: [
       { text: '"졸업 축하해요... 아니, 축하해" — 인사한다', effects: { social: 2, mental: 3 },
@@ -2619,9 +2620,10 @@ export const GAME_EVENTS: GameEvent[] = [
     week: 35,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['haeun'],
+    // M5 Phase 3-Y: intimacy 20→10 완화 (첫만남 직후에도 생일 참석 가능)
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
-      return !!haeun?.met && haeun.intimacy >= 20
+      return !!haeun?.met && haeun.intimacy >= 10
         && (s.year === 2 || s.year === 3 || (s.year >= 5 && s.events.some(e => e.id === 'haeun-reunion')));
     },
     choices: [
@@ -2694,7 +2696,8 @@ export const GAME_EVENTS: GameEvent[] = [
     condition: (s) => s.year === 5 && !s.isVacation,
     location: 'classroom',
     background: 'classroom_high_afternoon',
-    speakers: ['jihun', 'junha'],
+    // M5 Phase 3-Y: 준하는 Y6 전학생이라 Y5 수학여행엔 없음 (met 조기 설정 버그 수정)
+    speakers: ['jihun'],
     choices: [
       {
         text: '"간다" — 마지막 수학여행이니까 (-10만원)',
@@ -2703,7 +2706,6 @@ export const GAME_EVENTS: GameEvent[] = [
         moneyEffect: -10,
         npcEffects: [
           { npcId: 'jihun', intimacyChange: 5 },
-          { npcId: 'junha', intimacyChange: 5 },
         ],
         message: '제주 해변에서 밤까지 놀았다. 파도 소리를 들으면서 "우리 진짜 고3 되면 이런 거 못 해" 누군가가 말했다.',
         memorySlotDraft: {
@@ -2711,13 +2713,13 @@ export const GAME_EVENTS: GameEvent[] = [
           importance: 7,
           toneTag: 'warm',
           recallText: '고1 제주 밤, 파도 소리에 섞여 친구들이 웃었다.',
-          npcIds: ['jihun', 'junha'],
+          npcIds: ['jihun'],
         },
       },
       {
         text: '"공부해야지" — 불참',
         effects: { academic: 2, mental: -4, social: -3 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: -3 }, { npcId: 'junha', intimacyChange: -2 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: -3 }],
         message: '텅 빈 교실에서 참고서를 폈다. 집중은 안 됐지만 "난 나대로 달렸다"고 자신에게 말했다.',
         memorySlotDraft: {
           category: 'failure',

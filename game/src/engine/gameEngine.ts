@@ -446,12 +446,14 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
 }
 
 // ===== NPC 친밀도 자연 감소 =====
-// M5 Phase 2: 0.5 → 0.2 완화. 이전엔 연간 -24 감소로 이벤트 +5~8 보상을
-// 절반 이상 상쇄해 크라이시스 친밀도 임계값 못 넘김. 0.2는 연간 -9.6으로
-// 이벤트 2회 정도면 순증가 가능.
+// M5 Phase 2: 0.5 → 0.2 완화. 이전엔 연간 -24 감소로 이벤트 보상을 절반 이상 상쇄.
+// M5 Phase 3-Y: 차등화 — intimacy ≥ 40 도달 NPC는 0.1로 완화.
+// 이미 친해진 관계는 시간 지나도 덜 퇴색, 스쳐간 관계는 빠르게 희미해지는 자연스러운 거리감.
+// 특히 하은(Y2~3 활동)·준하(Y6~7 활동)처럼 접점 기간 짧은 NPC가 intimacy 축적 후 남은 기간 decay를 버틸 수 있게 함.
 function applyNpcDecay(state: GameState): void {
   for (const npc of state.npcs) {
-    npc.intimacy = Math.max(0, npc.intimacy - 0.2);
+    const rate = npc.intimacy >= 40 ? 0.1 : 0.2;
+    npc.intimacy = Math.max(0, npc.intimacy - rate);
   }
 }
 
