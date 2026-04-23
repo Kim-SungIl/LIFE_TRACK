@@ -10,7 +10,11 @@ import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem
 export { seededRandom, hashInitialState } from './rng';
 
 // ===== 초기 상태 생성 =====
-export function createInitialState(gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]): GameState {
+export function createInitialState(
+  gender: 'male' | 'female',
+  parents: [ParentStrength, ParentStrength],
+  options?: { useReducedRecovery?: boolean },
+): GameState {
   const stats: Stats = {
     academic: 30,
     social: 25,
@@ -82,6 +86,8 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     milestoneScenes: [],
     rngSeed: hashInitialState({ gender, parents }),
     hardCrisisYears: [],
+    // M6: 자연 회복 감소 모드 (도전 모드)
+    useReducedRecovery: options?.useReducedRecovery ?? false,
   };
 }
 
@@ -322,17 +328,21 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
 }
 
 // ===== 피로 자연 회복 =====
+// M6: useReducedRecovery 플래그 시 전체 회복량 × 0.6 (도전 모드).
+// 상점 의존성·의사결정 부담 강화를 위해 플레이어가 옵션으로 선택.
 function applyFatigueRecovery(state: GameState, log: WeekLog): void {
-  // 비례 회복: 15%, 최소 -3, 최대 -12
-  let recovery = Math.max(3, Math.min(12, state.fatigue * 0.15));
+  const mult = state.useReducedRecovery ? 0.6 : 1.0;
+
+  // 비례 회복: 15%, 최소 -3, 최대 -12 (reduced 모드에서는 하한도 -1.8까지)
+  let recovery = Math.max(3, Math.min(12, state.fatigue * 0.15)) * mult;
 
   // 정서적 지지: +2 (멘탈 70+ 시 +1)
   if (state.parents.includes('emotional')) {
-    recovery += state.stats.mental >= 70 ? 1 : 2;
+    recovery += (state.stats.mental >= 70 ? 1 : 2) * mult;
   }
 
   // 방학 추가 회복
-  if (state.isVacation) recovery += 2;
+  if (state.isVacation) recovery += 2 * mult;
 
   state.fatigue = Math.max(0, state.fatigue - recovery);
   log.fatigueChange -= recovery;
@@ -429,26 +439,36 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   }
 
   // v6.4: tired 자동 회복 강화 — 피로 -5 (만성화 방지)
+  // M6: reduced 모드에서는 -3
   if (state.mentalState === 'tired') {
-    state.fatigue = Math.max(0, state.fatigue - 5);
+    const fatDrop = state.useReducedRecovery ? 3 : 5;
+    state.fatigue = Math.max(0, state.fatigue - fatDrop);
     state.stats.mental = Math.min(100, state.stats.mental + 1);
-    log.fatigueChange -= 5;
+    log.fatigueChange -= fatDrop;
     log.statChanges.mental = (log.statChanges.mental || 0) + 1;
   }
 
   // v6.1: 번아웃 자동 회복 — 강화 (활동 피로를 이길 수 있는 수준)
+  // M6: reduced 모드에서는 피로 -8, 멘탈 +3 (탈출 속도 완만)
   if (state.mentalState === 'burnout') {
-    state.fatigue = Math.max(0, state.fatigue - 12);
-    state.stats.mental = Math.min(100, state.stats.mental + 4);
-    log.fatigueChange -= 12;
-    log.statChanges.mental = (log.statChanges.mental || 0) + 4;
+    const fatDrop = state.useReducedRecovery ? 8 : 12;
+    const menUp = state.useReducedRecovery ? 3 : 4;
+    state.fatigue = Math.max(0, state.fatigue - fatDrop);
+    state.stats.mental = Math.min(100, state.stats.mental + menUp);
+    log.fatigueChange -= fatDrop;
+    log.statChanges.mental = (log.statChanges.mental || 0) + menUp;
   }
 }
 
 // ===== NPC 친밀도 자연 감소 =====
+// M5 Phase 2: 0.5 → 0.2 완화. 이전엔 연간 -24 감소로 이벤트 보상을 절반 이상 상쇄.
+// M5 Phase 3-Y: 차등화 — intimacy ≥ 40 도달 NPC는 0.1로 완화.
+// 이미 친해진 관계는 시간 지나도 덜 퇴색, 스쳐간 관계는 빠르게 희미해지는 자연스러운 거리감.
+// 특히 하은(Y2~3 활동)·준하(Y6~7 활동)처럼 접점 기간 짧은 NPC가 intimacy 축적 후 남은 기간 decay를 버틸 수 있게 함.
 function applyNpcDecay(state: GameState): void {
   for (const npc of state.npcs) {
-    npc.intimacy = Math.max(0, npc.intimacy - 0.5);
+    const rate = npc.intimacy >= 40 ? 0.1 : 0.2;
+    npc.intimacy = Math.max(0, npc.intimacy - rate);
   }
 }
 
@@ -470,25 +490,39 @@ function applyNpcBoost(state: GameState, activityIds: string[]): void {
   }
 }
 
+// 구세이브 호환: 누락 필드 백필 (단일 소스 — store 로드와 processWeek 양쪽에서 사용)
+// SAVE_VERSION 비격상 유지 — 새 필드 추가 시 여기 한 곳만 수정
+export function migrateLoadedState(state: GameState): GameState {
+  return {
+    ...state,
+    examResults: state.examResults || [],
+    activeBuffs: state.activeBuffs || [],
+    weekPurchases: state.weekPurchases || {},
+    consecutiveTiredWeeks: state.consecutiveTiredWeeks ?? 0,
+    burnoutCooldown: state.burnoutCooldown ?? 0,
+    eventTimeCost: state.eventTimeCost ?? 0,
+    unlockedEvents: state.unlockedEvents || [],
+    memorySlots: state.memorySlots || [],
+    socialRipples: state.socialRipples || [],
+    milestoneScenes: state.milestoneScenes || [],
+    rngSeed: (state.rngSeed && state.rngSeed !== 0)
+      ? state.rngSeed
+      : hashInitialState({ gender: state.gender, parents: state.parents }),
+    hardCrisisYears: state.hardCrisisYears || [],
+  };
+}
+
 // ===== 주간 처리 (메인 루프) =====
-export function processWeek(state: GameState): GameState {
-  const newState = JSON.parse(JSON.stringify(state)) as GameState;
-  // 구세이브 호환: 누락 필드 초기화
-  if (!newState.examResults) newState.examResults = [];
-  if (!newState.activeBuffs) newState.activeBuffs = [];
-  if (!newState.weekPurchases) newState.weekPurchases = {};
-  if (newState.consecutiveTiredWeeks == null) newState.consecutiveTiredWeeks = 0;
-  if (newState.burnoutCooldown == null) newState.burnoutCooldown = 0;
-  if (newState.eventTimeCost == null) newState.eventTimeCost = 0;
-  if (!newState.unlockedEvents) newState.unlockedEvents = [];
-  // v1.2 기억 슬롯 시스템 마이그레이션
-  if (!newState.memorySlots) newState.memorySlots = [];
-  if (!newState.socialRipples) newState.socialRipples = [];
-  if (!newState.milestoneScenes) newState.milestoneScenes = [];
-  if (newState.rngSeed == null || newState.rngSeed === 0) {
-    newState.rngSeed = hashInitialState({ gender: newState.gender, parents: newState.parents });
+export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
+  const newState = migrateLoadedState(JSON.parse(JSON.stringify(state))) as GameState;
+
+  // NPC 선택(activity→npc 매핑)에 따른 친밀도 적용
+  if (npcActivityMap) {
+    for (const npcId of Object.values(npcActivityMap)) {
+      const npc = newState.npcs.find(n => n.id === npcId);
+      if (npc) npc.intimacy = Math.min(100, npc.intimacy + 3);
+    }
   }
-  if (!newState.hardCrisisYears) newState.hardCrisisYears = [];
 
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
@@ -731,15 +765,26 @@ function determineCareer(state: GameState): { path: string; detail: string } {
     // talent 85~89 + academic 70+ → 특기 + 학업 균형 → 아래 일반 진로 로직에서 +α
   }
 
-  // 번아웃 심각 or 멘탈 붕괴 → 방황
-  if (state.burnoutCount >= 4 || mental < 20) {
+  // 번아웃 심각 AND 멘탈 현재 상태도 바닥일 때만 방황
+  // M5 Phase 2: OR → AND. 이전엔 burnoutCount≥4만으로 재수 확정되어 모든 패턴이 재수로 수렴.
+  // 번아웃 이력이 많아도 졸업 직전 회복했으면 정상 진학 가능해야 함.
+  if (state.burnoutCount >= 4 && mental < 30) {
     return { path: '재수 결심', detail: '올해는 결과가 좋지 않았다. 1년 더 해보기로 했다.' };
+  }
+  if (mental < 15) {
+    return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
   }
 
   // 수능 7등급 이하 — 입시 실패 루트
   if (mockGrade >= 7) {
     if (state.burnoutCount >= 2) return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
     return { path: '전문대 / 재수', detail: '원하는 곳은 못 갔다. 다른 길을 찾아야 한다.' };
+  }
+
+  // M5 Phase 2: mockGrade 5~6 분기 추가 (이전엔 ≥7 또는 ≤4만 있고 5~6은 track 경로에서 지방국립대로 떨어짐)
+  // 5~6등급은 실제로 지방 4년제 or 전문대 중간 지대
+  if (mockGrade >= 5 && !track) {
+    return { path: '지방 4년제', detail: '지방 4년제에 합격했다. 여기서 다시 시작이다.' };
   }
 
   // 문과 진로

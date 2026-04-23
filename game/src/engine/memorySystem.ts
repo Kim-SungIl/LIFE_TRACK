@@ -8,10 +8,9 @@ import type {
   PhaseTag, ToneTag, MilestoneScene, MilestoneTheme,
   GameEvent, EventChoice,
 } from './types';
-import { seededRandom } from './rng';
 
 // ===== ANNUAL 이벤트 (슬롯 생성 금지 대상, 부록 B.4) =====
-// events.ts의 ANNUAL_EVENTS Set과 동기 유지
+// 단일 소스 — events.ts의 getEventForWeek도 이 Set을 import해서 사용
 export const ANNUAL_EVENT_IDS = new Set<string>([
   'elementary-graduation', 'middle-school-entrance', 'middle-school-graduation',
   'high-school-entrance', 'suneung-eve', 'suneung-done', 'high-school-graduation',
@@ -175,10 +174,48 @@ interface MilestonePattern {
   summaryText: string;
 }
 
+// 공용 헬퍼 (패턴 작성 편의)
+const hasCat = (slots: MemorySlot[], c: MemoryCategory) => slots.some(s => s.category === c);
+const hasNpc = (slots: MemorySlot[], npcId: string) => slots.some(s => s.npcIds?.includes(npcId));
+const countCat = (slots: MemorySlot[], c: MemoryCategory) => slots.filter(s => s.category === c).length;
+const countNegative = (slots: MemorySlot[]) => slots.filter(s => s.category === 'betrayal' || s.category === 'failure').length;
+const countPositive = (slots: MemorySlot[]) => slots.filter(s => ['reconciliation', 'courage', 'discovery', 'growth'].includes(s.category)).length;
+
+const Y1_PATTERNS: MilestonePattern[] = [
+  {
+    theme: 'connection',
+    requires: (_ids, slots) => hasCat(slots, 'discovery') && (hasNpc(slots, 'jihun') || hasNpc(slots, 'minjae') || hasNpc(slots, 'yuna') || hasNpc(slots, 'subin')),
+    summaryText: '초6의 봄, 처음으로 누군가의 이름을 교실에서 부르던 순간.',
+  },
+  {
+    theme: 'loss',
+    requires: (_ids, slots) => countNegative(slots) >= 1 && countPositive(slots) === 0,
+    summaryText: '초등학교 마지막 해, 혼자 있는 시간이 많았다.',
+  },
+  {
+    theme: 'growth',
+    requires: (_ids, slots) => hasCat(slots, 'courage'),
+    summaryText: '초6, 처음으로 작게 손을 들어본 해.',
+  },
+];
+
+const Y2_PATTERNS: MilestonePattern[] = [
+  {
+    theme: 'connection',
+    requires: (_ids, slots) => hasCat(slots, 'discovery') && slots.length >= 2,
+    summaryText: '중1의 봄, 교복을 처음 입고 찾은 낯선 친구들.',
+  },
+  {
+    theme: 'pressure',
+    requires: (_ids, slots) => hasCat(slots, 'failure'),
+    summaryText: '처음 본 중학교 시험지. 점수보다 긴장이 먼저 기억난다.',
+  },
+];
+
 const Y3_PATTERNS: MilestonePattern[] = [
   {
     theme: 'growth',
-    requires: (ids, slots) => {
+    requires: (_ids, slots) => {
       const hasReconciliation = slots.some(s => s.category === 'reconciliation' && s.npcIds?.includes('minjae'));
       const hasGrowth = slots.some(s => s.category === 'growth');
       return hasReconciliation && hasGrowth;
@@ -187,21 +224,98 @@ const Y3_PATTERNS: MilestonePattern[] = [
   },
   {
     theme: 'loss',
-    requires: (ids, slots) =>
+    requires: (_ids, slots) =>
       slots.some(s => s.category === 'failure') && !slots.some(s => s.category === 'growth'),
     summaryText: '중2는 조용히 지나갔다. 기억나는 건 피로뿐.',
   },
   {
     theme: 'connection',
-    requires: (ids, slots) => slots.some(s => s.npcIds?.includes('minjae')),
+    requires: (_ids, slots) => slots.some(s => s.npcIds?.includes('minjae')),
     summaryText: '민재와는 다시 얘기했지만, 내 안의 무언가는 돌아오지 않았다.',
   },
   {
     theme: 'identity',
-    requires: (ids, slots) => slots.filter(s => s.category === 'betrayal' || s.category === 'failure').length >= 2,
+    requires: (_ids, slots) => slots.filter(s => s.category === 'betrayal' || s.category === 'failure').length >= 2,
     summaryText: '그해 겨울, 나는 혼자 견디는 법을 먼저 배웠다.',
   },
 ];
+
+const Y4_PATTERNS: MilestonePattern[] = [
+  {
+    theme: 'pressure',
+    requires: (_ids, slots) => countCat(slots, 'failure') >= 1,
+    summaryText: '고입 원서를 쓰는 손이 생각보다 오래 멈춰 있었다.',
+  },
+  {
+    theme: 'identity',
+    requires: (_ids, slots) => hasCat(slots, 'discovery') || hasCat(slots, 'growth'),
+    summaryText: '중3 가을, 내가 뭘 원하는지 처음 스스로에게 물었다.',
+  },
+  {
+    theme: 'connection',
+    requires: (_ids, slots) => countPositive(slots) >= 2,
+    summaryText: '중학교 마지막 해, 함께 걸은 시간이 길었다.',
+  },
+];
+
+const Y5_PATTERNS: MilestonePattern[] = [
+  {
+    theme: 'identity',
+    requires: (_ids, slots) => slots.some(s => s.sourceEventId === 'club-academy-choice-y5'),
+    summaryText: '고1 봄, 내 선택이 하루의 색깔을 바꾸기 시작했다.',
+  },
+  {
+    theme: 'connection',
+    requires: (_ids, slots) => countPositive(slots) >= 1 && hasCat(slots, 'discovery'),
+    summaryText: '낯선 교복이 익숙해질 무렵, 옆자리에 다른 이름이 있었다.',
+  },
+  {
+    theme: 'loss',
+    requires: (_ids, slots) => countNegative(slots) >= 1,
+    summaryText: '고1 여름, 맞지 않는 것 몇 가지를 조용히 내려놓았다.',
+  },
+];
+
+const Y6_PATTERNS: MilestonePattern[] = [
+  {
+    theme: 'pressure',
+    requires: (_ids, slots) => hasCat(slots, 'failure') || hasCat(slots, 'betrayal'),
+    summaryText: '고2의 여름, 입시가 손에 잡힐 거리로 다가왔다.',
+  },
+  {
+    theme: 'growth',
+    requires: (_ids, slots) => hasCat(slots, 'courage') || hasCat(slots, 'growth'),
+    summaryText: '고2, 두려워하면서도 앞을 보던 해.',
+  },
+  {
+    theme: 'connection',
+    requires: (_ids, slots) => countPositive(slots) >= 2,
+    summaryText: '고2의 점심시간마다 들리던 목소리들, 이제야 귀하게 들린다.',
+  },
+];
+
+const Y7_PATTERNS: MilestonePattern[] = [
+  {
+    theme: 'growth',
+    requires: (_ids, slots) => slots.some(s => s.sourceEventId === 'graduation-prep-high'),
+    summaryText: '고3 겨울, 12년을 입고 있던 교복을 마지막으로 걸었다.',
+  },
+  {
+    theme: 'loss',
+    requires: (_ids, slots) => countNegative(slots) >= countPositive(slots),
+    summaryText: '수능 전날 밤, 책상 위에 쌓인 것보다 놓친 것이 더 많아 보였다.',
+  },
+  {
+    theme: 'identity',
+    requires: (_ids, slots) => countPositive(slots) >= 1,
+    summaryText: '수능 전야, 나는 더 이상 누군가의 기대 안에만 서 있지 않았다.',
+  },
+];
+
+const PATTERNS_BY_YEAR: Record<number, MilestonePattern[]> = {
+  1: Y1_PATTERNS, 2: Y2_PATTERNS, 3: Y3_PATTERNS, 4: Y4_PATTERNS,
+  5: Y5_PATTERNS, 6: Y6_PATTERNS, 7: Y7_PATTERNS,
+};
 
 const MILESTONE_FALLBACK: Record<number, { theme: MilestoneTheme; text: string }> = {
   1: { theme: 'connection', text: '초등학교의 마지막 날, 운동장은 여전히 시끄러웠다.' },
@@ -221,15 +335,16 @@ export function recordMilestoneForYear(state: GameState, year: number): void {
   const yearSlots = state.memorySlots.filter(s => s.year === year);
   const sourceMemoryIds = yearSlots.map(s => s.id);
 
-  // Y3 전용 패턴 (추후 학년별 확대)
+  // 학년별 패턴 매칭 (Y1~Y7 모두)
   let summaryText: string | undefined;
   let theme: MilestoneTheme | undefined;
 
-  if (year === 3) {
-    const pattern = Y3_PATTERNS.find(p => p.requires(sourceMemoryIds, yearSlots));
-    if (pattern) {
-      summaryText = pattern.summaryText;
-      theme = pattern.theme;
+  const patterns = PATTERNS_BY_YEAR[year];
+  if (patterns) {
+    const matched = patterns.find(p => p.requires(sourceMemoryIds, yearSlots));
+    if (matched) {
+      summaryText = matched.summaryText;
+      theme = matched.theme;
     }
   }
 

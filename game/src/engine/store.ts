@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { GameState, ParentStrength } from './types';
-import { createInitialState, processWeek, hashInitialState, getWeekInfo } from './gameEngine';
+import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek } from './events';
 import { applyMemorySlotFromChoice } from './memorySystem';
@@ -12,22 +12,6 @@ interface SaveData {
   version: number;
   state: GameState;
   savedAt: string;
-}
-
-// v1.2 로드 시 누락 필드 백필 (processWeek 미경유 경로 보호)
-// SAVE_VERSION을 올리지 않고 부재 필드 초기화로 호환 유지
-function migrateLoadedState(state: GameState): GameState {
-  return {
-    ...state,
-    memorySlots: state.memorySlots || [],
-    socialRipples: state.socialRipples || [],
-    milestoneScenes: state.milestoneScenes || [],
-    rngSeed: (state.rngSeed && state.rngSeed !== 0)
-      ? state.rngSeed
-      : hashInitialState({ gender: state.gender, parents: state.parents }),
-    hardCrisisYears: state.hardCrisisYears || [],
-    unlockedEvents: state.unlockedEvents || [],
-  };
 }
 
 function saveToStorage(state: GameState) {
@@ -55,9 +39,8 @@ export function deleteSave() {
 
 interface GameStore {
   state: GameState | null;
-  history: GameState[];
   npcActivityMap: Record<string, string>; // activityId -> npcId
-  startGame: (gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]) => void;
+  startGame: (gender: 'male' | 'female', parents: [ParentStrength, ParentStrength], options?: { useReducedRecovery?: boolean }) => void;
   loadSavedGame: () => boolean;
   resetGame: () => void;
   setRoutine: (slot2: string | null, slot3: string | null) => void;
@@ -73,12 +56,11 @@ interface GameStore {
 
 export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
-  history: [],
   npcActivityMap: {},
 
-  startGame: (gender, parents) => {
-    const initial = createInitialState(gender, parents);
-    set({ state: initial, history: [] });
+  startGame: (gender, parents, options) => {
+    const initial = createInitialState(gender, parents, options);
+    set({ state: initial });
     saveToStorage(initial);
     localStorage.removeItem('lifetrack_tutorial_done');
   },
@@ -86,13 +68,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   loadSavedGame: () => {
     const save = loadFromStorage();
     if (!save) return false;
-    set({ state: migrateLoadedState(save.state), history: [] });
+    set({ state: migrateLoadedState(save.state) });
     return true;
   },
 
   resetGame: () => {
     deleteSave();
-    set({ state: null, history: [], npcActivityMap: {} });
+    set({ state: null, npcActivityMap: {} });
   },
 
   setRoutine: (slot2, slot3) => {
@@ -120,20 +102,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   advanceWeek: () => {
     const s = get().state;
     if (!s) return;
-    const npcMap = get().npcActivityMap;
-
-    // NPC 선택에 따른 친밀도 적용
-    const newS = JSON.parse(JSON.stringify(s)) as GameState;
-    for (const [, npcId] of Object.entries(npcMap)) {
-      const npc = newS.npcs.find(n => n.id === npcId);
-      if (npc) {
-        npc.intimacy = Math.min(100, npc.intimacy + 3);
-      }
-    }
-
-    const history = [...get().history, s];
-    const newState = processWeek(newS);
-    set({ state: newState, history, npcActivityMap: {} });
+    const newState = processWeek(s, get().npcActivityMap);
+    set({ state: newState, npcActivityMap: {} });
   },
 
   resolveEvent: (choiceIndex) => {
