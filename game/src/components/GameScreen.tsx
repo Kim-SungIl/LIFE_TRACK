@@ -271,7 +271,8 @@ export function GameScreen() {
   }
 
   // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
-  if (state.currentEvent && state.phase === 'event') {
+  // eventResultData가 세팅돼 있으면 결과 화면을 먼저 보여준 뒤, "계속 →" 클릭 후 followup 이벤트로 넘어감
+  if (state.currentEvent && state.phase === 'event' && !eventResultData) {
     return (
       <EventScene
         event={state.currentEvent}
