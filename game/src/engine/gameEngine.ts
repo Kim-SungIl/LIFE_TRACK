@@ -10,7 +10,11 @@ import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem
 export { seededRandom, hashInitialState } from './rng';
 
 // ===== 초기 상태 생성 =====
-export function createInitialState(gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]): GameState {
+export function createInitialState(
+  gender: 'male' | 'female',
+  parents: [ParentStrength, ParentStrength],
+  options?: { useReducedRecovery?: boolean },
+): GameState {
   const stats: Stats = {
     academic: 30,
     social: 25,
@@ -82,6 +86,8 @@ export function createInitialState(gender: 'male' | 'female', parents: [ParentSt
     milestoneScenes: [],
     rngSeed: hashInitialState({ gender, parents }),
     hardCrisisYears: [],
+    // M6: 자연 회복 감소 모드 (도전 모드)
+    useReducedRecovery: options?.useReducedRecovery ?? false,
   };
 }
 
@@ -322,17 +328,21 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
 }
 
 // ===== 피로 자연 회복 =====
+// M6: useReducedRecovery 플래그 시 전체 회복량 × 0.6 (도전 모드).
+// 상점 의존성·의사결정 부담 강화를 위해 플레이어가 옵션으로 선택.
 function applyFatigueRecovery(state: GameState, log: WeekLog): void {
-  // 비례 회복: 15%, 최소 -3, 최대 -12
-  let recovery = Math.max(3, Math.min(12, state.fatigue * 0.15));
+  const mult = state.useReducedRecovery ? 0.6 : 1.0;
+
+  // 비례 회복: 15%, 최소 -3, 최대 -12 (reduced 모드에서는 하한도 -1.8까지)
+  let recovery = Math.max(3, Math.min(12, state.fatigue * 0.15)) * mult;
 
   // 정서적 지지: +2 (멘탈 70+ 시 +1)
   if (state.parents.includes('emotional')) {
-    recovery += state.stats.mental >= 70 ? 1 : 2;
+    recovery += (state.stats.mental >= 70 ? 1 : 2) * mult;
   }
 
   // 방학 추가 회복
-  if (state.isVacation) recovery += 2;
+  if (state.isVacation) recovery += 2 * mult;
 
   state.fatigue = Math.max(0, state.fatigue - recovery);
   log.fatigueChange -= recovery;
@@ -429,19 +439,24 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   }
 
   // v6.4: tired 자동 회복 강화 — 피로 -5 (만성화 방지)
+  // M6: reduced 모드에서는 -3
   if (state.mentalState === 'tired') {
-    state.fatigue = Math.max(0, state.fatigue - 5);
+    const fatDrop = state.useReducedRecovery ? 3 : 5;
+    state.fatigue = Math.max(0, state.fatigue - fatDrop);
     state.stats.mental = Math.min(100, state.stats.mental + 1);
-    log.fatigueChange -= 5;
+    log.fatigueChange -= fatDrop;
     log.statChanges.mental = (log.statChanges.mental || 0) + 1;
   }
 
   // v6.1: 번아웃 자동 회복 — 강화 (활동 피로를 이길 수 있는 수준)
+  // M6: reduced 모드에서는 피로 -8, 멘탈 +3 (탈출 속도 완만)
   if (state.mentalState === 'burnout') {
-    state.fatigue = Math.max(0, state.fatigue - 12);
-    state.stats.mental = Math.min(100, state.stats.mental + 4);
-    log.fatigueChange -= 12;
-    log.statChanges.mental = (log.statChanges.mental || 0) + 4;
+    const fatDrop = state.useReducedRecovery ? 8 : 12;
+    const menUp = state.useReducedRecovery ? 3 : 4;
+    state.fatigue = Math.max(0, state.fatigue - fatDrop);
+    state.stats.mental = Math.min(100, state.stats.mental + menUp);
+    log.fatigueChange -= fatDrop;
+    log.statChanges.mental = (log.statChanges.mental || 0) + menUp;
   }
 }
 

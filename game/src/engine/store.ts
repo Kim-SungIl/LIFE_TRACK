@@ -40,7 +40,7 @@ export function deleteSave() {
 interface GameStore {
   state: GameState | null;
   npcActivityMap: Record<string, string>; // activityId -> npcId
-  startGame: (gender: 'male' | 'female', parents: [ParentStrength, ParentStrength]) => void;
+  startGame: (gender: 'male' | 'female', parents: [ParentStrength, ParentStrength], options?: { useReducedRecovery?: boolean }) => void;
   loadSavedGame: () => boolean;
   resetGame: () => void;
   setRoutine: (slot2: string | null, slot3: string | null) => void;
@@ -58,8 +58,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
   npcActivityMap: {},
 
-  startGame: (gender, parents) => {
-    const initial = createInitialState(gender, parents);
+  startGame: (gender, parents, options) => {
+    const initial = createInitialState(gender, parents, options);
     set({ state: initial });
     saveToStorage(initial);
     localStorage.removeItem('lifetrack_tutorial_done');

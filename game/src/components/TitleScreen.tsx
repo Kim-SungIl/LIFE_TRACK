@@ -51,6 +51,7 @@ export function TitleScreen() {
   const [phase, setPhase] = useState<Phase>('title');
   const [gender, setGender] = useState<Gender | null>(null);
   const [selected, setSelected] = useState<ParentStrength[]>([]);
+  const [useReducedRecovery, setUseReducedRecovery] = useState(false); // M6: 도전 모드
   const startGame = useGameStore(s => s.startGame);
   const loadSavedGame = useGameStore(s => s.loadSavedGame);
   const savedData = loadFromStorage();
@@ -65,7 +66,7 @@ export function TitleScreen() {
 
   const handleStart = () => {
     if (selected.length === 2 && gender) {
-      startGame(gender, selected as [ParentStrength, ParentStrength]);
+      startGame(gender, selected as [ParentStrength, ParentStrength], { useReducedRecovery });
     }
   };
 
@@ -247,6 +248,29 @@ export function TitleScreen() {
             </span>
           </div>
         )}
+
+        {/* M6: 도전 모드 토글 */}
+        {selected.length === 2 && (
+          <label style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            fontSize: '0.78rem', color: 'var(--text-secondary)',
+            marginBottom: 10, padding: '8px 12px',
+            background: 'rgba(224,138,91,0.06)', borderRadius: 10,
+            border: '1px solid rgba(224,138,91,0.2)', cursor: 'pointer',
+          }}>
+            <input
+              type="checkbox"
+              checked={useReducedRecovery}
+              onChange={e => setUseReducedRecovery(e.target.checked)}
+              style={{ cursor: 'pointer' }}
+            />
+            <span>
+              <strong style={{ color: 'var(--accent)' }}>도전 모드</strong> — 자연 회복 감소.
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}> 피로를 더 쉽게 느끼고, 상점·관계에 의지해야 한다.</span>
+            </span>
+          </label>
+        )}
+
         <button
           className="btn btn-primary"
           disabled={selected.length !== 2}

@@ -55,6 +55,8 @@ export interface GameState {
   milestoneScenes: MilestoneScene[]; // 학년별 1개, 최대 7
   rngSeed: number;                  // 결정론적 RNG 시드 (이벤트 선택용)
   hardCrisisYears: number[];        // 하드위기 발동 연도 (연간 1회 가드)
+  // M6: 자연 회복 감소 모드 (도전 모드) — 상점 의존성·의사결정 부담 강화
+  useReducedRecovery?: boolean;
 }
 
 // 활성 버프 (shopSystem에서도 사용)
