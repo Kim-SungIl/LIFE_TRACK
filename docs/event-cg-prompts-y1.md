@@ -234,6 +234,60 @@ Same setting with female protagonist (player_f reference). No other changes.
 
 ---
 
+## 🔴 W3 jihun-call — 지훈이의 전화 (남=농구 / 여=떡볶이)
+
+**Scene**: 저녁에 지훈이한테 전화가 와서 "주말에 같이 놀자" 제안. 남주면 농구, 여주면 떡볶이. 민재도 합류한다고 함.
+선택 결과 씬: c0는 함께 노는 모습, c1은 거절 후 혼자 남은 찝찝함.
+
+**References**:
+- `jihun_elementary_fullbody.png` (농구공) 또는 `jihun_elementary_fullbody_f.png` (배드민턴 — 여주용 레퍼런스)
+- `minjae_elementary_fullbody.png`
+- `player_m_*` or `player_f_*`
+- `home_evening.png` (c1 거절 씬 배경)
+- 장소: 농구 — 야외 공원/동네 농구장 / 떡볶이 — 분식집 내부
+
+### [c0] "가자!" — 함께 놀러 간다
+
+**[male / c0]** `jihun-call_c0_m.png`
+```
+Neighborhood outdoor basketball half-court, late afternoon.
+Three 12-year-old Korean boys playing basketball together.
+Jihun (reference): mid-dribble, huge competitive grin, messy hair flying.
+Minjae (reference): defending with serious focused expression, buzz cut.
+Male protagonist (player_m reference): laughing open-mouthed, reaching for the ball.
+Background: low chain-link fence, apartment buildings in distance, golden hour light, long shadows.
+Mood: weekend freedom, three-friends bonding, sweat and laughter.
+```
+
+**[female / c0]** `jihun-call_c0_f.png`
+```
+Korean tteokbokki snack shop interior, weekend afternoon.
+Three 12-year-old Korean kids sitting at a red plastic table with a steaming pan of tteokbokki,
+fish cakes and odeng cups. Steam rising.
+Jihun (reference): mouth full, cheeks puffed comically, eyes happy.
+Minjae (reference): carefully picking up a rice cake with chopsticks, small smile.
+Female protagonist (player_f reference): mid-laugh, holding a paper cup of odeng broth.
+Background: 2010s Korean 분식집 — handwritten menu on wall, small TV in corner,
+red walls, steam and warm fluorescent lighting.
+Mood: Saturday-afternoon comfort, three-friends chatting, 2012~2015 nostalgia.
+```
+
+### [c1] "미안, 공부해야 해..." — 거절한다
+
+**공통** `jihun-call_c1.png`
+```
+Small Korean apartment living room or bedroom, evening.
+Single 12-year-old Korean child (protagonist, back view or side view, face hidden or downcast)
+sitting on the floor or at a small desk. Old-style 2012-era slide/flip phone just set down
+on the desk, screen still lit showing an ended call.
+Open textbook or notebook in front of them, half-studied. Dim warm table lamp glow.
+Through window: blue evening sky, street lamp just turned on.
+Mood: quiet regret, choosing the "right" thing but feeling lonely, bittersweet discipline.
+Note: gender-neutral framing — use back view or side silhouette so single file works for both.
+```
+
+---
+
 ## 🟠 W5 elementary-spring-picnic — 봄 소풍
 
 **Scene**: 공원에서 벚꽃 아래 반 친구들과 소풍. 민재+지훈 등장.
@@ -751,6 +805,8 @@ visible from behind). No other changes.
 - [ ] `minjae-meet-elementary_c0_m.png`, `_c0_f.png`
 - [ ] `minjae-meet-elementary_c1_m.png`, `_c1_f.png`
 - [ ] `minjae-meet-elementary_c2_m.png`, `_c2_f.png`
+- [ ] `jihun-call_c0_m.png` (농구) / `_c0_f.png` (떡볶이)
+- [ ] `jihun-call_c1.png` (공통: 전화 끊고 혼자, back view/silhouette)
 - [ ] `yuna-meet-elementary_c0_m.png`, `_c0_f.png`
 - [ ] `subin-meet-elementary_c0_m.png`, `_c0_f.png`
 - [ ] `elementary-graduation_c0_m.png`, `_c0_f.png`
