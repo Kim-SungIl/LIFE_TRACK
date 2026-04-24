@@ -24,9 +24,19 @@ no middle school uniform, no high school uniform, no adult features,
 no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/slide phones OK)
 ```
 
-## 📁 파일명 규칙
+## 📁 파일명 규칙 + 디렉토리 구조
 
-이벤트 결과 CG는 다음 형식으로 저장 (GameScreen.tsx 참조):
+이벤트 결과 CG는 학교급별 디렉토리에 저장합니다 (GameScreen.tsx 참조):
+
+```
+public/images/events/
+  elementary/   # Y1 (초6)
+  middle/       # Y2~Y4 (중1~중3)
+  high/         # Y5~Y7 (고1~고3)
+  common/       # 학교급-무관 폴백
+```
+
+파일명 형식:
 
 ```
 {eventId}_c{choiceIndex}_{gender}.png
@@ -35,8 +45,18 @@ no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/s
 - `choiceIndex`: 0부터 시작 (첫 선택지 = c0)
 - `gender`: `m` (남주) / `f` (여주)
 
-**폴백 순서**: `{eventId}_c{ci}_{g}.png` → `{eventId}_{g}.png` → `{eventId}.png`
+**폴백 순서** (학교급 → common, 각 단계마다 4-suffix cascade):
+1. `{schoolLevel}/{eventId}_c{ci}_{g}.png`
+2. `{schoolLevel}/{eventId}_{g}.png`
+3. `{schoolLevel}/{eventId}_c{ci}.png`
+4. `{schoolLevel}/{eventId}.png`
+5. `common/{eventId}_c{ci}_{g}.png`
+6. `common/{eventId}_{g}.png`
+7. `common/{eventId}_c{ci}.png`
+8. `common/{eventId}.png`
 
+→ 같은 이벤트라도 학년대별 시각적 차이(교복·배경·체격)가 필요하면 각 학교급 디렉토리에 별도 이미지 배치
+→ 학교급 무관하게 한 장으로 충분하면 `common/`에만 배치
 → 성별/선택지 차이가 거의 없는 이벤트는 **공통 1장**(`{eventId}.png`)만 만들어도 됨
 
 ## 🗂 레퍼런스 이미지 위치

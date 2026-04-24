@@ -7,7 +7,7 @@ import { Portrait } from './Portrait';
 import { NPC_APPEARANCES } from './CharacterAvatar';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
-import { getBackground, getEventBackground } from '../engine/backgrounds';
+import { getBackground, getEventBackground, getSchoolLevel } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
@@ -39,6 +39,13 @@ export function GameScreen() {
       window.removeEventListener('popstate', handlePopState);
     };
   }, []);
+
+  // 엔딩 도달 시 클리어 플래그 저장 (다음 플레이부터 도전 모드 해금)
+  useEffect(() => {
+    if (state?.phase === 'ending') {
+      try { localStorage.setItem('lifetrack_has_cleared', '1'); } catch { /* storage unavailable */ }
+    }
+  }, [state?.phase]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
@@ -340,15 +347,25 @@ export function GameScreen() {
       ] : [];
     const bgImgUrl = bgImgCandidates.length > 0 ? bgImgCandidates[0] : null;
 
-    // 이벤트 결과 이미지: {eventId}_c{choice}_{gender} → {eventId}_{gender} → {eventId}_c{choice} → {eventId}
+    // 이벤트 결과 이미지 폴백 체인:
+    // {schoolLevel}/{eventId}_c{ci}_{gender} → {sl}/{eventId}_{gender} → {sl}/{eventId}_c{ci} → {sl}/{eventId}
+    //   → common/{eventId}_c{ci}_{gender} → common/{eventId}_{gender} → common/{eventId}_c{ci} → common/{eventId}
+    // 각 학년대별 다른 CG가 가능하도록 schoolLevel 디렉토리 우선, 없으면 학교급-무관 common 폴백.
     const eventId = resultEvent?.id;
     const ci = eventResultData.choiceIndex ?? 0;
     const genderSuffix = state.gender === 'male' ? 'm' : 'f';
-    // 우선순위: 선택지+성별 → 이벤트+성별 → 선택지 공용 → 이벤트 공용
-    const eventImgGendered = eventId ? `${BASE}images/events/${eventId}_c${ci}_${genderSuffix}.png` : null;
-    const eventImgFallback1 = eventId ? `${BASE}images/events/${eventId}_${genderSuffix}.png` : null;
-    const eventImgChoiceCommon = eventId ? `${BASE}images/events/${eventId}_c${ci}.png` : null;
-    const eventImgCommon = eventId ? `${BASE}images/events/${eventId}.png` : null;
+    const schoolLevel = getSchoolLevel(state.year);
+    const buildCandidates = (dir: string): string[] => eventId ? [
+      `${BASE}images/events/${dir}/${eventId}_c${ci}_${genderSuffix}.png`,
+      `${BASE}images/events/${dir}/${eventId}_${genderSuffix}.png`,
+      `${BASE}images/events/${dir}/${eventId}_c${ci}.png`,
+      `${BASE}images/events/${dir}/${eventId}.png`,
+    ] : [];
+    const eventImgCandidates: string[] = [
+      ...buildCandidates(schoolLevel),
+      ...buildCandidates('common'),
+    ];
+    const eventImgPrimary = eventImgCandidates[0] ?? null;
 
     return (
       <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#0d0b12' }}>
@@ -385,23 +402,21 @@ export function GameScreen() {
         )}
         {/* 결과 내용 — CG 있으면 중앙, 없으면 하단 */}
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', justifyContent: cgLoaded ? 'center' : 'flex-end' }} className="fade-in">
-          {/* 이벤트 결과 이미지 (CG) */}
-          {eventImgGendered && (
+          {/* 이벤트 결과 이미지 (CG) — 인덱스 기반 cascade 폴백 */}
+          {eventImgPrimary && (
             <div style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
               <img
-                src={eventImgGendered}
+                src={eventImgPrimary}
                 alt=""
+                data-cg-idx="0"
                 style={{ width: '100%', display: 'block', borderRadius: 12 }}
                 onLoad={() => setCgLoaded(true)}
                 onError={e => {
                   const img = e.target as HTMLImageElement;
-                  // 폴백 체인: 선택지+성별 → 이벤트+성별 → 선택지 공용 → 이벤트 공용 → 숨김
-                  if (eventImgFallback1 && img.src.includes(`_c${ci}_`)) {
-                    img.src = eventImgFallback1;
-                  } else if (eventImgChoiceCommon && img.src.endsWith(`_${genderSuffix}.png`)) {
-                    img.src = eventImgChoiceCommon;
-                  } else if (eventImgCommon && !img.src.endsWith(`${eventId}.png`)) {
-                    img.src = eventImgCommon;
+                  const idx = parseInt(img.dataset.cgIdx || '0') + 1;
+                  if (idx < eventImgCandidates.length) {
+                    img.dataset.cgIdx = String(idx);
+                    img.src = eventImgCandidates[idx];
                   } else {
                     img.style.display = 'none';
                   }
