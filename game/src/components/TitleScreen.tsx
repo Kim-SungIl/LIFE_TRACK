@@ -55,6 +55,10 @@ export function TitleScreen() {
   const startGame = useGameStore(s => s.startGame);
   const loadSavedGame = useGameStore(s => s.loadSavedGame);
   const savedData = loadFromStorage();
+  // 도전 모드는 한 번 엔딩을 본 사람에게만 노출 (신규 유저가 멋모르고 켜는 것 방지)
+  const hasCleared = (() => {
+    try { return localStorage.getItem('lifetrack_has_cleared') === '1'; } catch { return false; }
+  })();
 
   const toggle = (id: ParentStrength) => {
     if (selected.includes(id)) {
@@ -249,8 +253,8 @@ export function TitleScreen() {
           </div>
         )}
 
-        {/* M6: 도전 모드 토글 */}
-        {selected.length === 2 && (
+        {/* M6: 도전 모드 토글 — 1회 엔딩 본 유저에게만 해금 */}
+        {selected.length === 2 && hasCleared && (
           <label style={{
             display: 'flex', alignItems: 'center', gap: 8,
             fontSize: '0.78rem', color: 'var(--text-secondary)',
