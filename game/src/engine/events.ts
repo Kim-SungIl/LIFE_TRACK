@@ -3064,7 +3064,7 @@ function isClassOfficer(s: GameState): boolean {
 }
 
 // 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
-const FOLLOWUP_EVENT_IDS = new Set([
+export const FOLLOWUP_EVENT_IDS = new Set([
   'class-president-win', 'class-president-lose', 'class-president-vice',
   'class-president-2-win', 'class-president-2-lose',
   'class-president-nudge',
