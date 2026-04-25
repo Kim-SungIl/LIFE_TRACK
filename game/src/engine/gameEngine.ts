@@ -13,7 +13,7 @@ export { seededRandom, hashInitialState } from './rng';
 export function createInitialState(
   gender: 'male' | 'female',
   parents: [ParentStrength, ParentStrength],
-  options?: { useReducedRecovery?: boolean },
+  options?: { useReducedRecovery?: boolean; rngSeed?: number },
 ): GameState {
   const stats: Stats = {
     academic: 30,
@@ -84,7 +84,7 @@ export function createInitialState(
     memorySlots: [],
     socialRipples: [],
     milestoneScenes: [],
-    rngSeed: hashInitialState({ gender, parents }),
+    rngSeed: options?.rngSeed ?? hashInitialState({ gender, parents }),
     hardCrisisYears: [],
     // M6: 자연 회복 감소 모드 (도전 모드)
     useReducedRecovery: options?.useReducedRecovery ?? false,
@@ -811,10 +811,9 @@ function determineCareer(state: GameState): { path: string; detail: string } {
     return { path: '지방 국립대 이공계', detail: '지방 국립대 이공계에 합격했다. 길은 여기서부터다.' };
   }
 
-  // track 미선택(Y5~Y6 조기 종료) fallback
+  // track 미선택 fallback. mockGrade ≥5 && !track은 위에서 지방 4년제로 이미 처리됨.
   if (mockGrade <= 2) return { path: '상위권 대학', detail: '좋은 성적으로 상위권 대학에 합격했다.' };
-  if (mockGrade <= 4) return { path: '인서울 대학', detail: '인서울 대학에 합격했다.' };
-  return { path: '대학 진학', detail: '대학에 합격했다. 이제 새로운 시작이다.' };
+  return { path: '인서울 대학', detail: '인서울 대학에 합격했다.' };
 }
 
 // ===== 주요 NPC 근황 =====
