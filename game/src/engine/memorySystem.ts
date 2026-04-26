@@ -17,6 +17,11 @@ export const ANNUAL_EVENT_IDS = new Set<string>([
   'year-end-reflection',
   'jihun-birthday', 'minjae-birthday', 'subin-birthday',
   'yuna-birthday', 'haeun-birthday', 'junha-birthday',
+  // 반장 선거 — 매년 1학기/2학기 발동. 후속 결과/부반장도 매년 재발동
+  'class-president', 'class-president-2',
+  'class-president-win', 'class-president-lose', 'class-president-vice',
+  'class-president-2-win', 'class-president-2-lose',
+  'class-president-nudge',
 ]);
 
 // ===== importance 임계값 (부록 C) =====

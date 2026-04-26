@@ -442,7 +442,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '지훈이의 전화',
     // 남자 버전: 농구
     description: '저녁에 지훈이한테 전화가 왔다.\n"야, 이번 주말에 농구하러 갈래? 민재도 온대."',
-    week: 3,
+    week: 4,
     location: 'home',
     background: 'home_evening',
     speakers: ['jihun', 'minjae'],
@@ -2069,10 +2069,12 @@ export const GAME_EVENTS: GameEvent[] = [
     condition: (s) => {
       const electionEvent = s.events.find(e =>
         (e.id === 'class-president' || e.id === 'class-president-2') &&
+        e.year === s.year &&
         e.resolvedChoice === 1 &&
         s.week - (e.week || 0) <= 4
       );
-      return !!electionEvent && s.stats.social >= 40;
+      const alreadyFiredThisYear = s.events.some(e => e.id === 'class-president-nudge' && e.year === s.year);
+      return !!electionEvent && !alreadyFiredThisYear && s.stats.social >= 40;
     },
   },
   // ===== 랜덤 이벤트 (조건부) =====
@@ -2249,7 +2251,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'class-president', title: '반장 선거',
     description: '반장 선거 시즌이다.\n선생님이 교탁 앞에 서서 말했다.\n"자, 반장 후보 나올 사람 있나요?"',
-    week: 2,
+    week: 3,
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -2263,7 +2265,11 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'class-president-win', title: '반장 당선!',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n반 친구들이 박수를 쳐준다.',
-    condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social >= 30 && !s.events.some(e => e.id === 'class-president-lose'),
+    // 매년 발동: 같은 해 출마(c0) + 같은 해에 -lose/-win 미발동
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
+      && s.stats.social >= 30
+      && !s.events.some(e => e.id === 'class-president-lose' && e.year === s.year)
+      && !s.events.some(e => e.id === 'class-president-win' && e.year === s.year),
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -2274,7 +2280,10 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'class-president-lose', title: '반장 선거 결과',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n가슴이 조금 내려앉았다.',
-    condition: (s) => s.events.some(e => e.id === 'class-president' && e.resolvedChoice === 0) && s.stats.social < 30 && !s.events.some(e => e.id === 'class-president-win'),
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
+      && s.stats.social < 30
+      && !s.events.some(e => e.id === 'class-president-win' && e.year === s.year)
+      && !s.events.some(e => e.id === 'class-president-lose' && e.year === s.year),
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -2285,7 +2294,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'class-president-vice', title: '부반장 제안',
     description: '쉬는 시간에 당선된 반장이 다가온다.\n"야, 부반장 자리 아직 비었는데... 어때?"',
-    condition: (s) => s.events.some(e => e.id === 'class-president-lose'),
+    condition: (s) => s.events.some(e => e.id === 'class-president-lose' && e.year === s.year)
+      && !s.events.some(e => e.id === 'class-president-vice' && e.year === s.year),
     location: 'classroom', background: 'classroom_{school}', speakers: ['minjae'],
     choices: [
       { text: '"좋아, 해볼게" — 부반장을 맡는다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
@@ -2310,7 +2320,10 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'class-president-2-win', title: '2학기 반장 당선!',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n다시 한 번 내 이름이 불렸다!\n2학기도 반장이다!',
-    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social >= 40 && !s.events.some(e => e.id === 'class-president-2-lose'),
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
+      && s.stats.social >= 40
+      && !s.events.some(e => e.id === 'class-president-2-lose' && e.year === s.year)
+      && !s.events.some(e => e.id === 'class-president-2-win' && e.year === s.year),
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -2321,7 +2334,10 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'class-president-2-lose', title: '2학기 반장 선거 결과',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n이번에도 아깝게 졌다.',
-    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.resolvedChoice === 0) && s.stats.social < 40 && !s.events.some(e => e.id === 'class-president-2-win'),
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
+      && s.stats.social < 40
+      && !s.events.some(e => e.id === 'class-president-2-win' && e.year === s.year)
+      && !s.events.some(e => e.id === 'class-president-2-lose' && e.year === s.year),
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -3393,17 +3409,20 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
 ];
 
 // 실제 반장(반장선거 당선) 여부 체크 — 반장 전용 이벤트 조건에 사용
+// 현재 연도 기준 반장 여부 — 매년 선거가 새로 열리므로 같은 해 당선만 카운트
 function isClassPresident(s: GameState): boolean {
   return s.events.some(e =>
-    (e.id === 'class-president-win' || e.id === 'class-president-2-win') && e.resolvedChoice !== undefined
+    (e.id === 'class-president-win' || e.id === 'class-president-2-win')
+    && e.year === s.year
+    && e.resolvedChoice !== undefined
   );
 }
 
-// 반장/부반장 포함 학급 임원 여부 체크 — watching-president(비임원 조건)에 사용
+// 반장/부반장 포함 학급 임원 여부 체크 — 같은 해 기준
 function isClassOfficer(s: GameState): boolean {
   return isClassPresident(s)
-    || s.events.some(e => e.id === 'class-president-nudge' && e.resolvedChoice === 0)
-    || s.events.some(e => e.id === 'class-president-vice' && e.resolvedChoice === 0);
+    || s.events.some(e => e.id === 'class-president-nudge' && e.year === s.year && e.resolvedChoice === 0)
+    || s.events.some(e => e.id === 'class-president-vice' && e.year === s.year && e.resolvedChoice === 0);
 }
 
 // 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
@@ -3421,11 +3440,12 @@ export const FOLLOWUP_EVENT_IDS = new Set([
 ]);
 
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
+// ANNUAL_EVENT_IDS에 등록된 후속(반장 선거 후속 등)은 매년 재발동 허용
 export function getFollowupForWeek(state: GameState, excludeLocation?: string): GameEvent | null {
   return GAME_EVENTS.find(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
-    !state.events.some(prev => prev.id === e.id) &&
+    (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id)) &&
     // 같은 장소 이벤트 연쇄 방지 (농구→축구 같은 어색한 연결 차단)
     (!excludeLocation || e.location !== excludeLocation)
   ) || null;
@@ -3452,11 +3472,11 @@ export function getEventForWeek(state: GameState): GameEvent | null {
   );
   if (fixedEvent) return fixedEvent;
 
-  // 1. 후속 이벤트 체크 (100% 발동)
+  // 1. 후속 이벤트 체크 (100% 발동) — ANNUAL은 매년 재발동 허용
   const followup = GAME_EVENTS.find(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
-    !state.events.some(prev => prev.id === e.id)
+    (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
   if (followup) return followup;
 
