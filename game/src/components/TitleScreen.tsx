@@ -19,7 +19,7 @@ const MEMORIES: { id: ParentStrength; scene: string; detail: string; icon: strin
     detail: '엄마는 항상 뭔가를 조사하고 계셨다. 좋은 학원, 좋은 선생님, 좋은 방법.',
   },
   {
-    id: 'gene',
+    id: 'resilience',
     icon: '⭐',
     scene: '"너는 원래 잘하잖아"',
     detail: '공부를 크게 안 해도 성적이 나쁘지 않았고, 달리기도 반에서 빠른 편이었다.',

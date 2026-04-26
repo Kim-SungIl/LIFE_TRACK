@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES } from '../engine/activities';
+import { getParentMods } from '../engine/parentModifiers';
 import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, ExamResult } from '../engine/types';
 import { Portrait } from './Portrait';
 import { NPC_APPEARANCES } from './CharacterAvatar';
@@ -260,6 +261,46 @@ export function GameScreen() {
             </div>
           )}
 
+          {/* 부모가 7년에 남긴 흔적 (§9-B 시각 앵커, 스탯 금지) */}
+          {(() => {
+            const parentRecallMap: Record<string, { icon: string; label: string; recall: string }> = {
+              emotional:  { icon: '🫂', label: '정서적 지지', recall: '엄마가 현관에서 기다리던 노란 불빛.' },
+              wealth:     { icon: '🏠', label: '여유 있는 집', recall: '책상 위, 말없이 놓여있던 흰 봉투.' },
+              info:       { icon: '📱', label: '정보가 있는 집', recall: '식탁에 펼쳐진, 빨갛게 밑줄 쳐진 신문.' },
+              strict:     { icon: '📐', label: '엄격한 집', recall: '11시, 스탠드를 끄러 오던 슬리퍼 소리.' },
+              resilience: { icon: '⭐', label: '타고난 체질', recall: '감기에도 멀쩡하게 들고 가던 가방끈.' },
+              freedom:    { icon: '🌿', label: '자유로운 집', recall: '"알아서 해" 뒤에 닫히던 안방 문.' },
+            };
+            return (
+              <div style={{
+                maxWidth: 420, margin: '0 auto 16px', padding: '14px 18px',
+                background: 'rgba(224,138,91,0.06)', borderRadius: 10,
+                border: '1px solid rgba(224,138,91,0.2)',
+              }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center', letterSpacing: '0.15em' }}>
+                  부모가 남긴 것
+                </div>
+                {state.parents.map(p => {
+                  const r = parentRecallMap[p];
+                  if (!r) return null;
+                  return (
+                    <div key={p} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+                      <span style={{ fontSize: '1.1rem', lineHeight: '1.4' }}>{r.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--accent-soft)', fontWeight: 600, marginBottom: 2 }}>
+                          {r.label}
+                        </div>
+                        <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.5 }}>
+                          {r.recall}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'center' }}>
             총합 {Math.round(Object.values(state.stats).reduce((a, b) => a + b, 0))}점 · 번아웃 {state.burnoutCount}회
           </div>
@@ -459,7 +500,7 @@ export function GameScreen() {
   // ===== 메인 변수들 =====
   const weekInfo = getWeekLabel(state);
   const month = getMonthLabel(state.week);
-  const maxSlots = state.isVacation ? (state.parents.includes('freedom') ? 6 : 5) : 2;
+  const maxSlots = state.isVacation ? 5 + getParentMods(state.parents).vacationSlotBonus : 2;
   const activities = getAvailableActivities(state, state.isVacation);
   const routineIds = !state.isVacation ? [state.routineSlot2, state.routineSlot3].filter(Boolean) as string[] : [];
   const currentSlots = selectedActivities.reduce((s, aid) => s + (activities.find(x => x.id === aid)?.slots || 0), 0);
@@ -634,6 +675,33 @@ export function GameScreen() {
             <div key={i} className="message-box">{msg}</div>
           ))}
 
+          {/* 부모 보너스 발동 — 인라인 칩 (Step 4A/4C UX) */}
+          {state.weekLog.parentBonusesApplied && state.weekLog.parentBonusesApplied.length > 0 && (
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10,
+              padding: '8px 10px', borderRadius: 10,
+              background: 'rgba(224,138,91,0.06)', border: '1px solid rgba(224,138,91,0.2)',
+            }}>
+              {state.weekLog.parentBonusesApplied.map((b, i) => {
+                const icons: Record<string, string> = {
+                  emotional: '🫂', wealth: '🏠', info: '📱',
+                  strict: '📐', resilience: '⭐', freedom: '🌿',
+                };
+                return (
+                  <div key={i} style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    fontSize: '0.72rem', color: 'var(--text-secondary)',
+                    background: 'rgba(255,255,255,0.04)', padding: '3px 8px', borderRadius: 8,
+                    animation: 'parentBonusPulse 0.6s ease',
+                  }}>
+                    <span style={{ fontSize: '0.85rem' }}>{icons[b.parent] || '🎓'}</span>
+                    <span>{b.what}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* 스탯 변화 — 정확한 수치 */}
           <div style={{ background: 'rgba(42,34,48,0.88)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
             {(Object.keys(state.stats) as StatKey[]).map(key => {
@@ -789,13 +857,35 @@ export function GameScreen() {
               {state.mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}
             </div>
           )}
+          {/* 부모 칩 — 22×22 발동 시 펄스 */}
+          <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+            {state.parents.map(p => {
+              const icons: Record<string, string> = {
+                emotional: '🫂', wealth: '🏠', info: '📱',
+                strict: '📐', resilience: '⭐', freedom: '🌿',
+              };
+              const labels: Record<string, string> = {
+                emotional: '정서', wealth: '여유', info: '정보',
+                strict: '엄격', resilience: '체질', freedom: '자유',
+              };
+              const justFired = state.weekLog?.parentBonusesApplied?.some(b => b.parent === p);
+              return (
+                <span key={p} title={labels[p]} style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: 'rgba(224,138,91,0.12)', border: '1px solid rgba(224,138,91,0.4)',
+                  display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
+                  animation: justFired ? 'parentChipPulse 0.6s ease' : 'none',
+                }}>{icons[p]}</span>
+              );
+            })}
+          </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
           <div onClick={() => { setShowShop(true); setNpcDetailFor(null); setNpcSelectFor(null); }} style={{ cursor: 'pointer' }}>
             💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원 <span style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>🛒</span>
           </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 8 : 3}만원</div>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 6 : 3}만원</div>
         </div>
       </div>
 

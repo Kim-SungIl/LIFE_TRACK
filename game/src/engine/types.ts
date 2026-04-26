@@ -1,7 +1,7 @@
 // ===== LIFE TRACK: 선택의 결과 — Core Types =====
 
 export type Gender = 'male' | 'female';
-export type ParentStrength = 'wealth' | 'info' | 'gene' | 'emotional' | 'freedom' | 'strict';
+export type ParentStrength = 'wealth' | 'info' | 'resilience' | 'emotional' | 'freedom' | 'strict';
 
 export interface Stats {
   academic: number;   // 학업 0~100
@@ -68,6 +68,12 @@ export interface ActiveBuff {
   remainingWeeks: number;
 }
 
+export interface ParentBonusApplied {
+  parent: ParentStrength;
+  /** 한 줄 요약 ("학원 효율 +10%" 같은 표시용) */
+  what: string;
+}
+
 export interface WeekLog {
   statChanges: Partial<Stats>;
   fatigueChange: number;
@@ -76,6 +82,8 @@ export interface WeekLog {
   milestone: string | null;      // 하위호환용 (deprecated)
   milestoneMessages: string[];   // 이번 주 달성한 성장 메시지들
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
+  /** 이번 주 발동한 부모 보너스 (UX 가시화용 — 인라인 스티커, WeekLog 1줄, HUD 펄스) */
+  parentBonusesApplied?: ParentBonusApplied[];
 }
 
 // 시험 시스템
@@ -182,7 +190,9 @@ export type MemoryCategory =
   | 'reconciliation'  // 화해: 사과, 오해 풀기
   | 'failure'         // 실패: 시험 대실수, 낙방
   | 'discovery'       // 깨달음: 진로 결정, 재능 발견
-  | 'growth';         // 성장: 번아웃 극복, 가치관 변화
+  | 'growth'          // 성장: 번아웃 극복, 가치관 변화
+  | 'bypass'          // 우회: 돈으로 건너뛴 순간 (wealth 부모 전용)
+  | 'unspoken_debt';  // 갚을 수 없는 감사: 말없이 놓인 봉투 (wealth 부모 전용)
 
 export type PhaseTag = 'early' | 'mid' | 'late';
 // early: Y1~Y2 (초6~중1)
