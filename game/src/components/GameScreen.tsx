@@ -326,6 +326,7 @@ export function GameScreen() {
         event={state.currentEvent}
         gender={state.gender}
         year={state.year}
+        state={state}
         npcs={state.npcs.map(n => ({ id: n.id, name: n.name, met: n.met }))}
         onChoice={(index: number) => {
           const evt = state.currentEvent!;

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { GameEvent, EventChoice, StatKey, STAT_LABELS, EventLocation } from '../engine/types';
+import { GameEvent, EventChoice, GameState, StatKey, STAT_LABELS, EventLocation } from '../engine/types';
 import { getEventBackground } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 
@@ -71,6 +71,8 @@ export interface EventSceneProps {
   year: number;
   npcs?: { id: string; name: string; met: boolean }[];
   onChoice: (index: number) => void;
+  /** EventChoice.condition 평가용 — 없으면 모든 선택지 노출 */
+  state?: GameState;
 }
 
 // ===== Subcomponents =====
@@ -250,7 +252,7 @@ function renderDescription(
   });
 }
 
-export function EventScene({ event, gender, year, npcs, onChoice }: EventSceneProps) {
+export function EventScene({ event, gender, year, npcs, onChoice, state }: EventSceneProps) {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [bgError, setBgError] = useState(false);
   const [chosenIndex, setChosenIndex] = useState<number | null>(null);
@@ -274,6 +276,10 @@ export function EventScene({ event, gender, year, npcs, onChoice }: EventScenePr
   const isFemale = gender === 'female';
   const eventDesc = (isFemale && event.femaleDescription) ? event.femaleDescription : event.description;
   const eventChoices = (isFemale && event.femaleChoices) ? event.femaleChoices : event.choices;
+  // condition이 있는 선택지는 만족하지 않으면 숨김 — 원본 인덱스 유지
+  const visibleChoices: { choice: EventChoice; originalIndex: number }[] = eventChoices
+    .map((choice, originalIndex) => ({ choice, originalIndex }))
+    .filter(({ choice }) => !choice.condition || (state ? choice.condition(state) : true));
 
   // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
   const speakerIds: string[] = event.speakers && event.speakers.length > 0
@@ -519,10 +525,10 @@ export function EventScene({ event, gender, year, npcs, onChoice }: EventScenePr
                 flex: '1 1 auto',
                 overflowY: 'auto',
               }}>
-                {eventChoices.map((choice, i) => (
+                {visibleChoices.map(({ choice, originalIndex }, i) => (
                   <div
-                    key={i}
-                    onClick={() => handleChoice(i)}
+                    key={originalIndex}
+                    onClick={() => handleChoice(originalIndex)}
                     style={{
                       padding: '12px 16px',
                       borderRadius: 12,
