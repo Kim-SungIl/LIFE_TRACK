@@ -607,29 +607,44 @@ Mood: warm but distant.
 - `player_m_*` or `player_f_*`
 - `gymnasium.png` (또는 스포츠 트랙 배경)
 
-### [c0] 있는 힘껏 달린다
+### [c0] 있는 힘껏 달린다 — 결승선 직후 (2등, 지훈이 어깨 감쌈)
+
+> 이벤트 결과 메시지("결과는 2등. 지훈이가 '수고했다!' 하며 어깨를 감쌌다.")를 살린 컷.
+> 액션 sprint보다 "선택의 결과"가 보이는 결승 직후가 의미상 더 적합.
 
 **[male / c0]** `elementary-sports-day_c0_m.png`
 ```
-School sports day, outdoor track. Dynamic action shot — male protagonist mid-sprint,
-baton in hand, wind blowing hair, determined intense expression. Blurred motion effect.
-Background: cheering classmates on both sides, colorful team flags (blue team), hanging
-"운동회" banner.
-Mood: adrenaline, all-out effort.
+Right after the relay finish line at school sports day. Male protagonist (player_m reference)
+breathing hard, slightly bent over with hands on knees or straightening up, sweaty hair.
+Jihun (jihun_elementary_fullbody.png reference) beside him, arm draped around the
+protagonist's shoulder, big sweaty grin, thumbs up with the other hand. Both wearing
+blue team headbands.
+Background: blurred cheering crowd, results board faintly visible showing "2위", late
+afternoon golden light slanting across the dirt track, "운동회" banner softly out of focus.
+Dialogue cue: Jihun saying "수고했다!" — implied through expression and pose.
+Mood: shared exhaustion and pride. Not first, but together.
 ```
 
 **[female / c0]** `elementary-sports-day_c0_f.png`
 ```
-Same with female protagonist.
+Same setting with female protagonist (player_f reference). Jihun's arm-around-shoulder
+gesture should feel like a buddy/teammate, not romantic — friendly camaraderie. No other changes.
 ```
 
-### [c1] 페이스 유지
+### [c1] 페이스 유지 — 단독 컷
+
+> 결과 메시지("적당히 뛰었다. 순위는 중간쯤. 그래도 즐거웠다.")는 혼자만의 만족감 톤.
+> 지훈이 등장 X — c0와 의도적으로 대비.
 
 **[male / c1]** `elementary-sports-day_c1_m.png`
 ```
-Same track setting but male protagonist (player_m reference) at measured pace, relaxed but
-focused expression. Other runners visible ahead but not too far.
-Mood: steady calm, not about winning.
+Mid-pack relay finish at school sports day. Male protagonist (player_m reference)
+crossing the finish line at moderate pace, neutral relaxed expression, slight smile.
+Other runners visible ahead and behind, motion blur on the back ones. Wearing
+blue team headband.
+Background: outdoor track with blue and white team flags mixed (no clear winner side),
+afternoon light, classmates cheering generally rather than at protagonist.
+Mood: easy effort, no regret no glory — just a Saturday afternoon.
 ```
 
 **[female / c1]** `elementary-sports-day_c1_f.png`
