@@ -51,7 +51,6 @@ export interface GameState {
   unlockedEvents: string[];         // 상점 event_unlock 아이템으로 해금된 이벤트 ID
   // v1.2 기억 슬롯 시스템
   memorySlots: MemorySlot[];        // 최대 12 (카테고리당 2)
-  socialRipples: SocialRipple[];    // NPC 간 관계 전염
   milestoneScenes: MilestoneScene[]; // 학년별 1개, 최대 7
   rngSeed: number;                  // 결정론적 RNG 시드 (이벤트 선택용)
   hardCrisisYears: number[];        // 하드위기 발동 연도 (연간 1회 가드)
@@ -168,8 +167,6 @@ export interface EventChoice {
   trackSelect?: Track; // 문과/이과 선택 (Y6 W1 이벤트 전용)
   // v1.2: 이 선택을 고르면 엔딩 회상 슬롯 생성 후보 (importance ≥3만 실제 생성)
   memorySlotDraft?: MemorySlotDraft;
-  // v1.2: 이 선택을 고르면 활성화되는 ripple ID 목록
-  activateRipples?: string[];
   // M4: 이 선택을 고르면 활성 버프에 추가 (상점 버프와 동일 구조)
   addBuff?: ActiveBuff;
 }
@@ -211,30 +208,6 @@ export interface MemorySlot {
   importance: number;
   phaseTag: PhaseTag;   // year 기반 자동 산출
   toneTag?: ToneTag;
-}
-
-export type RippleType =
-  | 'admiration'    // 감탄
-  | 'jealousy'      // 질투
-  | 'concern'       // 걱정
-  | 'rumor'         // 소문
-  | 'group_unlock'; // 그룹 이벤트 해금
-
-export type RippleSourceCondition =
-  | 'intimacy_high'  // 친밀도 ≥70
-  | 'intimacy_mid'   // 친밀도 ≥50
-  | 'event_resolved' // 특정 이벤트 resolvedChoice 종료
-  | 'drifted';       // 친밀도 ≤20
-
-export interface SocialRipple {
-  id: string;
-  sourceNpcId: string;
-  targetNpcId: string;
-  sourceCondition: RippleSourceCondition;
-  rippleType: RippleType;
-  activatedAt?: number;      // 활성 주차 (없으면 비활성)
-  consumed?: boolean;        // 일회성 소비 후 재활성 금지
-  sourceEventId?: string;
 }
 
 export type MilestoneTheme = 'connection' | 'pressure' | 'identity' | 'loss' | 'growth';

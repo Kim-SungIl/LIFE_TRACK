@@ -5,7 +5,6 @@
 // - 엔딩 memorialHighlights 샘플 (fallback 의존도)
 // - milestoneScene 학년 커버리지
 // - 돈 싱크 실효성 (잔고 분포)
-// - ripple 활성화 빈도
 //
 // 실행: cd game && npx tsx scripts/report-m5-playthrough.ts
 
@@ -152,14 +151,6 @@ async function runPlaythrough(p: Pattern, trajectoryOut?: Trajectory[]): Promise
       // memorySlot 생성 (실제 resolveEvent와 동일한 훅)
       applyMemorySlotFromChoice(s, event, ci, choice);
 
-      // ripple 활성화
-      if (choice.activateRipples) {
-        for (const rid of choice.activateRipples) {
-          const r = s.socialRipples.find(x => x.id === rid);
-          if (r && !r.activatedAt) r.activatedAt = s.week;
-        }
-      }
-
       // addBuff 적용
       if (choice.addBuff) {
         if (!s.activeBuffs) s.activeBuffs = [];
@@ -202,9 +193,6 @@ interface Report {
   milestoneYears: number[];
   milestoneTextSample: { year: number; text: string }[];
   milestonePatternHits: Record<number, string>; // year → pattern theme or 'fallback'
-
-  rippleActivatedCount: number;
-  rippleTotalCount: number;
 
   memorialHighlights: string[];
   memorialFallbackRatio: number;
@@ -302,9 +290,6 @@ function analyze(p: Pattern, s: GameState, trajectory: Trajectory[]): Report {
       .map(m => ({ year: m.year, text: m.summaryText ?? '(텍스트 없음)' })),
     milestonePatternHits,
 
-    rippleActivatedCount: s.socialRipples.filter(r => r.activatedAt).length,
-    rippleTotalCount: s.socialRipples.length,
-
     memorialHighlights: memHighlights.map(h => h.recallText),
     memorialFallbackRatio,
 
@@ -357,8 +342,6 @@ function printReport(r: Report) {
     console.log(`  ${npc}: ${intimacy}`);
   }
 
-  console.log(`\n[ripple] 활성 ${r.rippleActivatedCount}/${r.rippleTotalCount}`);
-
   console.log(`\n[엔딩 회상 ${r.memorialHighlights.length}개] (fallback 비율 ${(r.memorialFallbackRatio * 100).toFixed(0)}%)`);
   r.memorialHighlights.forEach((t, i) => console.log(`  ${i + 1}. ${t}`));
 
@@ -388,7 +371,6 @@ async function main() {
   console.log(`평균 milestone 커버: ${avg(reports.map(r => r.milestoneYears.length))}/7`);
   console.log(`평균 잔고: ${avg(reports.map(r => r.finalMoney))}만원`);
   console.log(`평균 fallback 비율: ${(reports.reduce((a, b) => a + b.memorialFallbackRatio, 0) / reports.length * 100).toFixed(0)}%`);
-  console.log(`평균 ripple 활성: ${avg(reports.map(r => r.rippleActivatedCount))}`);
 
   // 크라이시스 발동률
   console.log('\n[크라이시스 이벤트 발동률 (패턴 5개 중)]');
@@ -429,8 +411,6 @@ async function main() {
   if (highFb.length > 0) console.log(`  ⚠ fallback 30% 초과 패턴 ${highFb.length}개: ${highFb.map(r => r.pattern).join(', ')}`);
   const richMoney = reports.filter(r => r.finalMoney > 500);
   if (richMoney.length > 0) console.log(`  ⚠ 잉여 500만원 초과 패턴 ${richMoney.length}개 (돈 싱크 미흡): ${richMoney.map(r => `${r.pattern}(${r.finalMoney})`).join(', ')}`);
-  const zeroRipple = reports.filter(r => r.rippleActivatedCount === 0);
-  if (zeroRipple.length === PATTERNS.length) console.log(`  ⚠ 모든 패턴에서 ripple 0건 활성 — ripple 콘텐츠 확대 필요 (M7)`);
   const incompleteMilestone = reports.filter(r => r.milestoneYears.length < 7);
   if (incompleteMilestone.length > 0) console.log(`  ⚠ milestone 7학년 미달 패턴 ${incompleteMilestone.length}개`);
   if (endingTitles.size === 1) console.log(`  🔴 모든 패턴이 동일 엔딩 — 엔딩 분기 조건 재검토 필요`);

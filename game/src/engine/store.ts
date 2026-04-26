@@ -170,15 +170,6 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
     applyMemorySlotFromChoice(newState, newState.currentEvent!, choiceIndex, choice);
 
-    // v1.2 ripple 활성화
-    if (choice.activateRipples) {
-      for (const rid of choice.activateRipples) {
-        // ripple 정의는 이벤트 콘텐츠 측에서 등록 가정. 여기서는 activatedAt만 갱신.
-        const ripple = newState.socialRipples.find(r => r.id === rid);
-        if (ripple && !ripple.activatedAt) ripple.activatedAt = newState.week;
-      }
-    }
-
     // M4: 버프 추가 (동일 id 있으면 기간 덮어쓰기)
     if (choice.addBuff) {
       if (!newState.activeBuffs) newState.activeBuffs = [];

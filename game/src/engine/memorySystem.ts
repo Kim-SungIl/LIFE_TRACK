@@ -366,19 +366,3 @@ export function recordMilestoneForYear(state: GameState, year: number): void {
     recordedAt: state.week,
   });
 }
-
-// ===== ripple 유틸 =====
-export function activateRipple(state: GameState, rippleId: string): void {
-  const ripple = state.socialRipples.find(r => r.id === rippleId);
-  if (ripple && !ripple.activatedAt) {
-    ripple.activatedAt = state.week;
-  }
-}
-
-export function ensureRipple(state: GameState, ripple: Omit<import('./types').SocialRipple, 'activatedAt'>): void {
-  if (!state.socialRipples.some(r => r.id === ripple.id)) {
-    state.socialRipples.push({ ...ripple, activatedAt: state.week });
-  } else {
-    activateRipple(state, ripple.id);
-  }
-}

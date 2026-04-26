@@ -204,11 +204,7 @@ async function runAndCollect(p: Pattern): Promise<NpcReport[]> {
         }
       }
 
-      // ripple / addBuff
-      if (choice.activateRipples) for (const rid of choice.activateRipples) {
-        const r = s.socialRipples.find(x => x.id === rid);
-        if (r && !r.activatedAt) r.activatedAt = s.week;
-      }
+      // addBuff
       if (choice.addBuff) {
         if (!s.activeBuffs) s.activeBuffs = [];
         s.activeBuffs = s.activeBuffs.filter(b => b.id !== choice.addBuff!.id);
