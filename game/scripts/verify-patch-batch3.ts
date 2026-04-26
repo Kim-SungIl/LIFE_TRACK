@@ -50,8 +50,8 @@ console.log('\n=== P8. freedom 죽은 코드 정리 ===');
     !/if\s*\(\s*parents\.includes\(['"]freedom['"]\)\s*\)\s*money\s*=\s*3/.test(src));
 
   // freedom 부모 시작 자금이 비-freedom과 동일 (3) — wealth만 다름
-  const sFree = createInitialState('male', ['freedom', 'gene'], { rngSeed: SEED });
-  const sNorm = createInitialState('male', ['gene', 'emotional'], { rngSeed: SEED });
+  const sFree = createInitialState('male', ['freedom', 'resilience'], { rngSeed: SEED });
+  const sNorm = createInitialState('male', ['resilience', 'emotional'], { rngSeed: SEED });
   assert('freedom 시작 자금 = 일반 시작 자금 (3만원)', sFree.money === 3 && sNorm.money === 3);
 }
 
@@ -88,7 +88,7 @@ console.log('\n=== P10. gene: 피로 -15% + 운동 효율 +10% ===');
     weekend: ['jogging', 'basketball'],
     vacation: ['jogging', 'jogging', 'basketball', 'basketball', 'jogging'],
   };
-  const sGene = simulateY1(['gene', 'wealth'], exerciseRoutine);
+  const sGene = simulateY1(['resilience', 'wealth'], exerciseRoutine);
   const sBase = simulateY1(['strict', 'wealth'], exerciseRoutine);
 
   console.log(`  운동 루틴 — gene: health=${sGene.stats.health.toFixed(1)}, fatigue=${sGene.fatigue.toFixed(1)} / 비교군: health=${sBase.stats.health.toFixed(1)}, fatigue=${sBase.fatigue.toFixed(1)}`);
@@ -119,10 +119,10 @@ console.log('\n=== P11. strict: 루틴 보너스 도달 1주 단축 ===');
     sStrict.stats.academic >= sBase.stats.academic,
     `strict=${sStrict.stats.academic.toFixed(1)} base=${sBase.stats.academic.toFixed(1)}`);
 
-  // 코드 상수 검증
+  // 코드 상수 검증 — parentModifiers SSOT 경로 사용 확인
   const src = readFileSync('./src/engine/gameEngine.ts', 'utf8');
-  assert('gameEngine.ts에 strict 루틴 boost 적용 코드 존재',
-    /strict.*\?\s*1\s*:\s*0/.test(src) && /routineWeeks\s*\+\s*strictBoost/.test(src));
+  assert('gameEngine.ts에 strict 루틴 boost 적용 코드 존재 (SSOT)',
+    /getParentMods\([^)]+\)/.test(src) && /routineWeeksBoost/.test(src));
 }
 
 // ============================================================================
@@ -160,7 +160,7 @@ console.log('\n=== 부가 검증: 6개 단일 부모 단독 효과 매트릭스 
     weekend: ['self-study', 'hang-out'],
     vacation: ['self-study', 'self-study', 'jogging', 'hang-out', 'club'],
   };
-  const partners: ParentStrength[] = ['emotional', 'wealth', 'info', 'strict', 'gene', 'freedom'];
+  const partners: ParentStrength[] = ['emotional', 'wealth', 'info', 'strict', 'resilience', 'freedom'];
   const baseline: [ParentStrength, ParentStrength] = ['wealth', 'wealth' as ParentStrength]; // 더미 (실제로는 wealth + 다른 1개)
 
   console.log('  부모     | academic | social | talent | mental | health | fatigue | money');

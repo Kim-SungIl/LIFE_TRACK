@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import { GameState, ParentStrength } from './types';
+import { GameState, GameEvent, ParentStrength } from './types';
 import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
-import { getFollowupForWeek } from './events';
+import { getFollowupForWeek, FOLLOWUP_EVENT_IDS } from './events';
 import { applyMemorySlotFromChoice } from './memorySystem';
 
 const SAVE_KEY = 'lifetrack_save';
@@ -178,8 +178,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
 
     // 이벤트 기록 (선택 인덱스 + 발생 주차 + 연차 + 성별 분기 정보 포함)
+    // condition은 함수라 JSON 직렬화에서 손실되므로 기록 시점에 명시적으로 제거
+    // (저장/로드 후 메모리상 객체 일관성 — events 배열 비교 시 함수 비교 회피)
+    const recordedEvent: Partial<GameEvent> = { ...newState.currentEvent! };
+    delete recordedEvent.condition;
     newState.events.push({
-      ...newState.currentEvent!,
+      ...(recordedEvent as GameEvent),
       resolvedChoice: choiceIndex,
       week: newState.week,
       year: newState.year,
@@ -194,7 +198,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.currentEvent = null;
 
     // 이벤트 해결 후 → 대기 중인 followup 이벤트 즉시 연쇄 발동 (같은 장소 제외)
-    const followup = getFollowupForWeek(newState, s.currentEvent?.location);
+    // 가드: 같은 주(week+year)에 followup이 이미 한 번 발동했으면 추가 발동 안 함
+    // (한 주 3+ 이벤트 누적으로 인한 피로감 방지)
+    const followupFiredThisWeek = newState.events.some(
+      prev => prev.week === newState.week && prev.year === newState.year && FOLLOWUP_EVENT_IDS.has(prev.id),
+    );
+    const followup = followupFiredThisWeek ? null : getFollowupForWeek(newState, s.currentEvent?.location);
     if (followup) {
       newState.currentEvent = followup;
       newState.phase = 'event';

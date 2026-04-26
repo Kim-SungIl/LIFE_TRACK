@@ -4,10 +4,34 @@
 // - milestone 자동 기록 로직
 
 import type {
-  GameState, MemorySlot, MemorySlotDraft, MemoryCategory,
+  GameState, MemorySlot, MemorySlotDraft, MemoryCategory, ParentStrength,
   PhaseTag, ToneTag, MilestoneScene, MilestoneTheme,
   GameEvent, EventChoice,
 } from './types';
+
+// ===== 부모 → 카테고리 bias (tiebreaker, 곱셈 아님) =====
+// importance 동률·근접 시 가산점으로만 작용. 최대 +0.3을 넘지 않도록 설계.
+// 부록 B (parent-strengths-proposal §부록 B) 매핑.
+// wealth: 본래 부록 B는 bypass/unspoken_debt 카테고리를 가정했으나,
+// 현 events.ts에 해당 카테고리 슬롯이 없어 betrayal(돈으로 우회한 거리감)·
+// failure(말 못한 부채)로 매핑 — 콘텐츠 추가 시 부록 B 카테고리로 환원.
+const PARENT_MEMORY_BIAS: Record<ParentStrength, Partial<Record<MemoryCategory, number>>> = {
+  emotional:  { reconciliation: 0.3, growth: 0.2 },
+  wealth:     { betrayal: 0.2, failure: 0.2, reconciliation: -0.1 },
+  info:       { discovery: 0.2 },
+  strict:     { failure: 0.2, growth: 0.3 },
+  resilience: { growth: 0.2 },
+  freedom:    { discovery: 0.3 },
+};
+
+function getCategoryBias(parents: readonly ParentStrength[], cat: MemoryCategory): number {
+  let bias = 0;
+  for (const p of parents) {
+    bias += PARENT_MEMORY_BIAS[p]?.[cat] ?? 0;
+  }
+  // 절대값 0.4 클램프 — bias가 importance 이기지 않도록
+  return Math.max(-0.4, Math.min(0.4, bias));
+}
 
 // ===== ANNUAL 이벤트 (슬롯 생성 금지 대상, 부록 B.4) =====
 // 단일 소스 — events.ts의 getEventForWeek도 이 Set을 import해서 사용
@@ -116,21 +140,39 @@ export interface MemorialHighlight {
 
 export function selectMemorialHighlights(state: GameState): MemorialHighlight[] {
   const slots = state.memorySlots || [];
+  const parents = state.parents || [];
   const result: MemorySlot[] = [];
+
+  // 정렬 키 — importance 우선, 부모 bias는 tiebreaker로만 (곱셈 금지)
+  const effectiveScore = (s: MemorySlot) => s.importance + getCategoryBias(parents, s.category);
+  const compareSlots = (a: MemorySlot, b: MemorySlot) => effectiveScore(b) - effectiveScore(a);
 
   // 1. 카테고리 다양성 — growth/discovery/failure 우선 확보
   const priorityCategories: MemoryCategory[] = ['growth', 'discovery', 'failure'];
   for (const cat of priorityCategories) {
     const candidates = slots
       .filter(s => s.category === cat && !result.includes(s))
-      .sort((a, b) => b.importance - a.importance);
+      .sort(compareSlots);
     if (candidates.length > 0) result.push(candidates[0]);
   }
 
-  // 2. importance 내림차순으로 나머지 추가 (5개까지)
-  const remaining = slots
-    .filter(s => !result.includes(s))
-    .sort((a, b) => b.importance - a.importance);
+  // 1.5 phaseTag 쿼터 — 도달한 학년의 각 phase에서 최소 1개씩 확보
+  // (early Y1-2, mid Y3-4, late Y5-7 — 도달한 phase만 대상)
+  const reachedPhases: PhaseTag[] = [];
+  if (state.year >= 1) reachedPhases.push('early');
+  if (state.year >= 3) reachedPhases.push('mid');
+  if (state.year >= 5) reachedPhases.push('late');
+
+  for (const phase of reachedPhases) {
+    if (result.some(s => s.phaseTag === phase)) continue;
+    const candidates = slots
+      .filter(s => s.phaseTag === phase && !result.includes(s))
+      .sort(compareSlots);
+    if (candidates.length > 0 && result.length < 5) result.push(candidates[0]);
+  }
+
+  // 2. importance(+bias) 내림차순으로 나머지 추가 (5개까지)
+  const remaining = slots.filter(s => !result.includes(s)).sort(compareSlots);
 
   for (const slot of remaining) {
     if (result.length >= 5) break;

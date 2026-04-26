@@ -60,7 +60,7 @@ const PATTERNS: Pattern[] = [
   },
   {
     name: '재능형 (특기 몰빵)',
-    parents: ['gene', 'freedom'], gender: 'male',
+    parents: ['resilience', 'freedom'], gender: 'male',
     routine2: 'basketball', routine3: 'music',
     choicePolicy: (s) => {
       const e = s.currentEvent;

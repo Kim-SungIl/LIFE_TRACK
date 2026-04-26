@@ -5,6 +5,7 @@ import { generateExamResult, generateMockExamResult, generateSuneungResult } fro
 import { ExamType } from './types';
 import { seededRandom, hashInitialState } from './rng';
 import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem';
+import { getParentMods } from './parentModifiers';
 
 // rng utility re-export (하위 호환)
 export { seededRandom, hashInitialState } from './rng';
@@ -23,14 +24,12 @@ export function createInitialState(
     health: 40,
   };
 
-  // 부모 보정
-  if (parents.includes('emotional')) stats.mental += 10;
-  if (parents.includes('gene')) { stats.academic += 5; stats.health += 5; }
-  if (parents.includes('strict')) { stats.academic += 5; stats.mental -= 3; }
-  if (parents.includes('wealth')) { /* 용돈으로 반영 */ }
-
-  let money = 3; // 기본 용돈 3만원
-  if (parents.includes('wealth')) money = 8;
+  // 부모 보정 — 단일 셀렉터(parentModifiers)에서 일괄 산출
+  const mods = getParentMods(parents);
+  if (mods.initStatBonus.academic) stats.academic += mods.initStatBonus.academic;
+  if (mods.initStatBonus.mental) stats.mental += mods.initStatBonus.mental;
+  if (mods.initStatBonus.health) stats.health += mods.initStatBonus.health;
+  const money = mods.weeklyIncome;
   // freedom의 별도 효과는 idle 페널티 완화 + 방학 슬롯 +1로 처리됨
 
   return {
@@ -176,12 +175,21 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
     }
   }
 
-  // v7.2: 부모 강점 활동 효율 보너스
-  // info: 학업 활동 +10% (학원·자습)
-  // gene: 운동 활동 +10%
+  // v7.2: 부모 강점 활동 효율 보너스 (parentModifiers SSOT)
+  const pMods = getParentMods(state.parents);
   let parentEfficiencyBonus = 0;
-  if (state.parents.includes('info') && activity.category === 'study') parentEfficiencyBonus += 0.1;
-  if (state.parents.includes('gene') && activity.category === 'exercise') parentEfficiencyBonus += 0.1;
+  if (activity.category === 'study' && pMods.studyEfficiencyBonus > 0) {
+    parentEfficiencyBonus += pMods.studyEfficiencyBonus;
+    if (!log.parentBonusesApplied?.some(b => b.parent === 'info')) {
+      log.parentBonusesApplied?.push({ parent: 'info', what: '학원·자습 효율 +10%' });
+    }
+  }
+  if (activity.category === 'exercise' && pMods.exerciseEfficiencyBonus > 0) {
+    parentEfficiencyBonus += pMods.exerciseEfficiencyBonus;
+    if (!log.parentBonusesApplied?.some(b => b.parent === 'resilience')) {
+      log.parentBonusesApplied?.push({ parent: 'resilience', what: '운동 효율 +10%' });
+    }
+  }
 
   // v6: 동일 축 중복 스택 효율 감소 (같은 주에 같은 스탯을 여러 번 올리면 효율 하락)
   const statHitCount: Partial<Record<StatKey, number>> = {};
@@ -246,9 +254,12 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   if (fatigueDelta > 0 && state.stats.health < 20) {
     fatigueDelta = Math.round(fatigueDelta * 1.5);
   }
-  // v7.2: gene 부모 — 피로 증가 -15% (타고난 체력)
-  if (fatigueDelta > 0 && state.parents.includes('gene')) {
-    fatigueDelta = Math.max(1, Math.round(fatigueDelta * 0.85));
+  // v7.2: resilience 부모 — 피로 증가 -15% (타고난 체질)
+  if (fatigueDelta > 0 && pMods.fatigueIncreaseMult < 1.0) {
+    fatigueDelta = Math.max(1, Math.round(fatigueDelta * pMods.fatigueIncreaseMult));
+    if (!log.parentBonusesApplied?.some(b => b.parent === 'resilience' && b.what.includes('피로'))) {
+      log.parentBonusesApplied?.push({ parent: 'resilience', what: '체질 — 피로 증가 -15%' });
+    }
   }
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
   log.fatigueChange += fatigueDelta;
@@ -344,13 +355,17 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
 // 상점 의존성·의사결정 부담 강화를 위해 플레이어가 옵션으로 선택.
 function applyFatigueRecovery(state: GameState, log: WeekLog): void {
   const mult = state.useReducedRecovery ? 0.6 : 1.0;
+  const before = state.fatigue;
 
   // 비례 회복: 15%, 최소 -3, 최대 -12 (reduced 모드에서는 하한도 -1.8까지)
   let recovery = Math.max(3, Math.min(12, state.fatigue * 0.15)) * mult;
 
-  // 정서적 지지: +2 (멘탈 70+ 시 +1)
-  if (state.parents.includes('emotional')) {
-    recovery += (state.stats.mental >= 70 ? 1 : 2) * mult;
+  // 정서적 지지: +2 (멘탈 70+ 시 +1) — emotional 부모만 발동
+  const recoveryMods = getParentMods(state.parents);
+  let emoBonus = 0;
+  if (recoveryMods.fatigueRecoveryBonus > 0) {
+    emoBonus = state.stats.mental >= 70 ? 1 : recoveryMods.fatigueRecoveryBonus;
+    recovery += emoBonus * mult;
   }
 
   // 방학 추가 회복
@@ -358,6 +373,11 @@ function applyFatigueRecovery(state: GameState, log: WeekLog): void {
 
   state.fatigue = Math.max(0, state.fatigue - recovery);
   log.fatigueChange -= recovery;
+
+  // 표시는 emotional 보너스가 실효 회복에 기여한 주만 — 피로 0 직전이면 노이즈
+  if (emoBonus > 0 && before >= emoBonus * mult) {
+    log.parentBonusesApplied?.push({ parent: 'emotional', what: `엄마가 물어봐줬다 — 피로 -${emoBonus}` });
+  }
 }
 
 // ===== 학교 수업 효과 (평일 자동) =====
@@ -505,8 +525,13 @@ function applyNpcBoost(state: GameState, activityIds: string[]): void {
 // 구세이브 호환: 누락 필드 백필 (단일 소스 — store 로드와 processWeek 양쪽에서 사용)
 // SAVE_VERSION 비격상 유지 — 새 필드 추가 시 여기 한 곳만 수정
 export function migrateLoadedState(state: GameState): GameState {
+  // 'gene' → 'resilience' 리네임 마이그레이션 (구세이브 호환)
+  const migratedParents = state.parents
+    ? (state.parents.map((p: string) => (p === 'gene' ? 'resilience' : p)) as GameState['parents'])
+    : state.parents;
   return {
     ...state,
+    parents: migratedParents,
     examResults: state.examResults || [],
     activeBuffs: state.activeBuffs || [],
     weekPurchases: state.weekPurchases || {},
@@ -519,7 +544,7 @@ export function migrateLoadedState(state: GameState): GameState {
     milestoneScenes: state.milestoneScenes || [],
     rngSeed: (state.rngSeed && state.rngSeed !== 0)
       ? state.rngSeed
-      : hashInitialState({ gender: state.gender, parents: state.parents }),
+      : hashInitialState({ gender: state.gender, parents: migratedParents }),
     hardCrisisYears: state.hardCrisisYears || [],
   };
 }
@@ -547,6 +572,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     messages: [],
     milestone: null,
     milestoneMessages: [],
+    parentBonusesApplied: [],
   };
 
   // 1. 피로 자연 회복
@@ -567,8 +593,13 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   }
   if (!newState.isVacation) {
     // v7.2: strict 부모 — 루틴 보너스 도달 1주 단축 (3→2, 6→5, 8→7주에 도달)
-    const strictBoost = newState.parents.includes('strict') ? 1 : 0;
-    const rBonus = getRoutineBonus(newState.routineWeeks + strictBoost);
+    const wkMods = getParentMods(newState.parents);
+    const rBonus = getRoutineBonus(newState.routineWeeks + wkMods.routineWeeksBoost);
+    // 표시는 strict 부스트가 실제로 임계값 통과를 앞당긴 주만 (routineWeeks 2/5/7)
+    const baseBonus = getRoutineBonus(newState.routineWeeks);
+    if (wkMods.routineWeeksBoost > 0 && rBonus > baseBonus) {
+      log.parentBonusesApplied?.push({ parent: 'strict', what: '정해진 시간에 책상 — 루틴 +1주' });
+    }
     // timeCost 2: 둘 다 스킵, timeCost 1: 슬롯2는 실행 + 슬롯3 스킵
     if (newState.routineSlot2 && timeCost < 2) {
       const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
@@ -622,12 +653,12 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   // 8. 마일스톤
   checkMilestones(newState, log);
 
-  // 9. 용돈 지급 — 생활비 차감 (v6)
-  let weeklyMoney = 3;
-  if (newState.parents.includes('wealth')) weeklyMoney = 8;
-  // v6: 생활비 자동 차감 (교통비, 간식, 잡비)
-  const livingCost = newState.parents.includes('wealth') ? 2.5 : 1.2;
-  const netMoney = Math.round((weeklyMoney - livingCost) * 10) / 10;
+  // 9. 용돈 지급 — 생활비 차감 (v6, parentModifiers SSOT)
+  const econMods = getParentMods(newState.parents);
+  const netMoney = Math.round((econMods.weeklyIncome - econMods.livingCost) * 10) / 10;
+  if (newState.parents.includes('wealth')) {
+    log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
+  }
   newState.money = Math.round((newState.money + netMoney) * 10) / 10;
   log.moneyChange += netMoney;
 
@@ -643,10 +674,13 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     newState.idleWeeks = 0;
   }
   if ((newState.idleWeeks || 0) >= 3) {
-    // v7.2: freedom 부모 — idle 페널티 절반 (스스로 동기부여 내성)
-    const isFreeSpirit = newState.parents.includes('freedom');
-    const mentalDrain = isFreeSpirit ? 1 : 2;
-    const socialDrain = isFreeSpirit ? 0.5 : 1;
+    // v7.2: freedom 부모 — idle 페널티 배율 (parentModifiers SSOT)
+    const isFreeSpirit = econMods.idlePenaltyMult < 1.0;
+    const mentalDrain = 2 * econMods.idlePenaltyMult;
+    const socialDrain = 1 * econMods.idlePenaltyMult;
+    if (isFreeSpirit) {
+      log.parentBonusesApplied?.push({ parent: 'freedom', what: '"알아서 해" — idle 페널티 -50%' });
+    }
     newState.stats.mental = Math.max(0, newState.stats.mental - mentalDrain);
     newState.stats.social = Math.max(5, newState.stats.social - socialDrain);
     log.statChanges.mental = (log.statChanges.mental || 0) - mentalDrain;
