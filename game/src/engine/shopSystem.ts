@@ -62,9 +62,9 @@ export const SHOP_ITEMS: ShopItem[] = [
     maxPerWeek: 1,
   },
   {
-    id: 'vitamin', name: '종합 비타민', description: '꾸준히 먹으면 체력이 좋아진다.',
+    id: 'vitamin', name: '종합 비타민', description: '꾸준히 먹으면 운동 효율이 오른다.',
     price: 1.5, category: 'consumable', emoji: '💊',
-    effects: [{ type: 'buff', buffId: 'vitamin', buffDuration: 4, buffTarget: 'health', buffAmount: 0.15 }],
+    effects: [{ type: 'buff', buffId: 'vitamin', buffDuration: 4, buffTarget: 'exercise', buffAmount: 0.15 }],
     maxPerWeek: 1,
   },
 
@@ -75,9 +75,10 @@ export const SHOP_ITEMS: ShopItem[] = [
     effects: [{ type: 'buff', buffId: 'study-guide', buffDuration: 3, buffTarget: 'study', buffAmount: 0.15 }],
   },
   {
-    id: 'workbook', name: '문제집 세트', description: '시험 대비에 최적화된 문제집.',
+    id: 'workbook', name: '문제집 세트', description: '단기간에 공부 효율을 크게 끌어올린다.',
     price: 4, category: 'growth', emoji: '📝',
-    effects: [{ type: 'buff', buffId: 'workbook', buffDuration: 2, buffTarget: 'exam', buffAmount: 0.2 }],
+    // study-guide(3주/+15%)보다 짧고 강한 단기 집중형
+    effects: [{ type: 'buff', buffId: 'workbook', buffDuration: 2, buffTarget: 'study', buffAmount: 0.2 }],
   },
   {
     id: 'sports-shoes', name: '운동화', description: '좋은 신발은 운동 효율을 높여준다.',
@@ -145,6 +146,9 @@ export const SHOP_ITEMS: ShopItem[] = [
   },
 
   // ===== 기회 해금 =====
+  // TODO(event_unlock): 'contest'/'portfolio' 이벤트가 events.ts에 아직 없어 unlockedEvents가
+  // getEventForWeek에 반영되지 않음. 현재는 instant 스탯 보너스만 실제 효과. 추후 해당 이벤트
+  // 콘텐츠가 추가되면 unlockedEvents 체크를 getEventForWeek에 연결해 활성화.
   {
     id: 'contest-fee', name: '대회 참가비', description: '교내/교외 대회에 참가할 수 있다.',
     price: 3, category: 'opportunity', emoji: '🏆',
