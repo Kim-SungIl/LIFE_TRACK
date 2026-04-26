@@ -438,9 +438,14 @@ Longer hair visible from behind. No other changes.
 - `minjae_elementary_fullbody.png` + `minjae_elementary_neutral.png`
 - `classroom_elementary_afternoon.png`
 
-### [c0] 선물을 사서 준다
+> ⚠️ 이벤트 선택지가 4개로 확장됨 (말걸기 / 편의점 선물 / 책 선물 / 넘기기). CG는 ci=1에만 매핑.
+> ci=0/2/3은 캐릭터 초상으로 폴백.
 
-**공통** `minjae-birthday_c0.png`
+### [c0] 말을 건다 — CG 없음 (폴백)
+
+### [c1] 편의점에서 작은 선물
+
+**공통** `minjae-birthday_c1.png`
 ```
 Elementary classroom, after school hours. Minjae (reference) holding a small gift box
 with both hands, wide surprised smile showing teeth, cheeks slightly red.
@@ -448,9 +453,21 @@ Blurred classmates in background clapping/watching.
 Mood: heartfelt surprise, childhood friendship milestone.
 ```
 
-### [c1] 카톡으로 축하만
+### [c2] 따로 골라 온 책 한 권 — CG TODO
 
-**공통** `minjae-birthday_c1.png`
+조건부 노출: `state.money >= 10`. 책을 들여다보며 "...너, 날 너무 잘 아는데?" 라고 말 못 잇는 장면.
+프롬프트 후속 추가 예정.
+
+### [c3] 그냥 넘어간다 — CG 없음 (폴백)
+
+---
+
+### 📦 보관용 (현재 이벤트에 매칭 안 됨)
+
+`_archive/minjae-birthday-phone-msg.png` — 원래 "카톡으로 축하만" c1용으로 만들었으나
+이벤트 선택지가 4개로 확장되며 매칭 사라짐. 폰 화면 메시지 컷은 jihun-birthday/subin-birthday/yuna-birthday
+같은 이벤트의 "메시지로만" 선택지가 추가되면 그쪽으로 재사용 가능.
+
 ```
 Close-up of a 2012-era flip phone or slide phone screen showing a Korean messaging app
 chat interface (soft yellow background, white speech bubbles — generic messaging style, no brand name):
@@ -860,7 +877,8 @@ visible from behind). No other changes.
 - [ ] `elementary-graduation_c2_m.png`, `_c2_f.png` (back view, 헤어 구분)
 
 ## 있으면 좋음
-- [ ] `minjae-birthday_c0.png`, `_c1.png` (공통: minjae / phone)
+- [x] `minjae-birthday_c1.png` (편의점 선물)
+- [ ] `minjae-birthday_c2.png` (책 한 권 — TODO 신규 생성)
 - [ ] `jihun-birthday_c0.png`, `_c1.png` (공통: jihun / phone)
 - [ ] `subin-birthday_c0.png`, `_c1.png` (공통: subin / phone)
 - [ ] `yuna-birthday_c0.png`, `_c1.png` (공통: yuna / phone)

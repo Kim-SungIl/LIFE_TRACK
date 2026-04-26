@@ -173,6 +173,8 @@ export interface EventChoice {
   message: string;
   timeCost?: 1 | 2; // 시간 소모: 1=루틴/주말 1슬롯, 2=루틴/주말 2슬롯
   trackSelect?: Track; // 문과/이과 선택 (Y6 W1 이벤트 전용)
+  // 선택지 노출 조건 — 만족 안 하면 UI에서 숨김 (예: 돈/스탯 게이팅)
+  condition?: (state: GameState) => boolean;
   // v1.2: 이 선택을 고르면 엔딩 회상 슬롯 생성 후보 (importance ≥3만 실제 생성)
   memorySlotDraft?: MemorySlotDraft;
   // M4: 이 선택을 고르면 활성 버프에 추가 (상점 버프와 동일 구조)
