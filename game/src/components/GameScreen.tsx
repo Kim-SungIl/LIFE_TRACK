@@ -1333,15 +1333,6 @@ export function GameScreen() {
         onComplete={() => {
           setShowTutorial(false);
           localStorage.setItem('lifetrack_tutorial_done', '1');
-          // 튜토리얼 중 선택한 것 전부 리셋 — 진짜 게임 시작
-          setRoutine(null, null);
-          setRoutineSlot2Pick(null);
-          setRoutineSlot3Pick(null);
-          setSelectedActivities([]);
-          setNpcChoices({});
-          setRoutineConfirmed(false);
-          setRoutineStep(1);
-          setLastReaction(null);
         }}
       />
       </div>
