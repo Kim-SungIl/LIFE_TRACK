@@ -80,7 +80,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setRoutine: (slot2, slot3) => {
     const s = get().state;
     if (!s) return;
-    set({ state: { ...s, routineSlot2: slot2, routineSlot3: slot3, routineWeeks: 0 } });
+    // 슬롯별로 변경 여부 판단 — 안 바뀐 슬롯은 보너스 카운터 유지
+    const slot2Weeks = s.routineSlot2 === slot2 ? s.routineSlot2Weeks : 0;
+    const slot3Weeks = s.routineSlot3 === slot3 ? s.routineSlot3Weeks : 0;
+    set({ state: {
+      ...s, routineSlot2: slot2, routineSlot3: slot3,
+      routineSlot2Weeks: slot2Weeks, routineSlot3Weeks: slot3Weeks,
+    } });
   },
 
   setWeekendChoices: (choices) => {

@@ -28,7 +28,9 @@ export interface GameState {
   mentalState: 'normal' | 'tired' | 'burnout';
   routineSlot2: string | null;  // 방과후 루틴 1
   routineSlot3: string | null;  // 방과후 루틴 2
-  routineWeeks: number;         // 루틴 연속 주수
+  // 슬롯별 루틴 연속 주수 — 슬롯 1개만 변경 시 다른 슬롯 보너스 보전
+  routineSlot2Weeks: number;
+  routineSlot3Weeks: number;
   weekendChoices: string[];     // 이번 주 주말 선택
   vacationChoices: string[];    // 방학 슬롯 선택
   semester: 1 | 2;

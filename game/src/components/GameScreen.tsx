@@ -514,17 +514,19 @@ export function GameScreen() {
     + (state.routineSlot3 ? (ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost || 0) : 0);
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
 
-  // 루틴 콤보 표시
-  const routineComboLabel = !state.isVacation && state.routineWeeks >= 3
-    ? (state.routineWeeks >= 8 ? '🔥 ' : state.routineWeeks >= 6 ? '⭐ ' : '✨ ')
-    : '';
-  const routineComboWeeks = !state.isVacation && state.routineWeeks >= 3 ? state.routineWeeks : 0;
+  // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전)
+  const labelFor = (w: number) => w >= 8 ? '🔥 ' : w >= 6 ? '⭐ ' : w >= 3 ? '✨ ' : '';
+  const slot2ComboWeeks = !state.isVacation && state.routineSlot2Weeks >= 3 ? state.routineSlot2Weeks : 0;
+  const slot3ComboWeeks = !state.isVacation && state.routineSlot3Weeks >= 3 ? state.routineSlot3Weeks : 0;
+  // HUD 헤더 — 둘 중 큰 쪽 기준으로 "보너스 활성" 안내
+  const maxComboWeeks = Math.max(slot2ComboWeeks, slot3ComboWeeks);
+  const routineComboLabel = labelFor(maxComboWeeks);
 
-  // 슬롯 렌더 헬퍼
+  // 슬롯 렌더 헬퍼 — routine 슬롯의 경우 그 슬롯의 카운터를 명시적으로 전달
   const renderSlot = (
     emoji: string, timeLabel: string, activityName: string | null,
     onClick: (() => void) | null, isFixed = false, isRoutine = false,
-    moneyCost?: number, withNpc?: string,
+    moneyCost?: number, withNpc?: string, slotComboWeeks: number = 0,
   ) => {
     const isEmpty = !activityName;
     const isClickable = !isFixed && onClick;
@@ -541,11 +543,11 @@ export function GameScreen() {
                       isEmpty ? 'rgba(224,138,91,0.08)' :
                       isRoutine ? 'rgba(125,163,217,0.12)' : 'rgba(224,138,91,0.12)',
           border: isEmpty && !isFixed ? '1px dashed rgba(224,138,91,0.4)' :
-                  isRoutine && routineComboWeeks >= 3 ? '1px solid rgba(224,179,84,0.4)' :
+                  isRoutine && slotComboWeeks >= 3 ? '1px solid rgba(224,179,84,0.4)' :
                   isRoutine ? '1px solid rgba(125,163,217,0.2)' :
                   !isEmpty && !isFixed ? '1px solid rgba(224,138,91,0.2)' :
                   '1px solid rgba(255,255,255,0.04)',
-          boxShadow: isRoutine && routineComboWeeks >= 6 ? '0 0 8px rgba(224,179,84,0.2)' :
+          boxShadow: isRoutine && slotComboWeeks >= 6 ? '0 0 8px rgba(224,179,84,0.2)' :
                      isEmpty && !isFixed ? '0 0 6px rgba(224,138,91,0.15)' : 'none',
           transition: 'all 0.15s',
           opacity: isFixed ? 0.6 : 1,
@@ -562,7 +564,7 @@ export function GameScreen() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activityName}</span>
                 {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(125,163,217,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
-                {isRoutine && routineComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{routineComboLabel}{routineComboWeeks}주 연속</span>}
+                {isRoutine && slotComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{labelFor(slotComboWeeks)}{slotComboWeeks}주 연속</span>}
               </div>
               {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
@@ -978,7 +980,7 @@ export function GameScreen() {
       }}>
         <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: 10 }}>
           📅 이번 주 일과
-          {!state.isVacation && state.routineWeeks >= 3 && (
+          {!state.isVacation && maxComboWeeks >= 3 && (
             <span style={{ color: 'var(--yellow)', marginLeft: 8, fontSize: '0.68rem' }}>
               {routineComboLabel}루틴 보너스 활성
             </span>
@@ -1011,6 +1013,8 @@ export function GameScreen() {
                 () => setEditingSlot('routine1'),
                 false, true,
                 state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost : undefined,
+                undefined,
+                slot2ComboWeeks,
               )}
               {renderSlot(
                 state.routineSlot3 ? '🌙' : '🕊️',
@@ -1019,6 +1023,8 @@ export function GameScreen() {
                 () => setEditingSlot('routine2'),
                 false, !!state.routineSlot2,
                 state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost : undefined,
+                undefined,
+                slot3ComboWeeks,
               )}
             </div>
 
