@@ -258,7 +258,7 @@ export function applyItemEffects(
         if (targetNpcId && effect.npcBonus) {
           const npc = newState.npcs.find(n => n.id === targetNpcId);
           if (npc) {
-            npc.intimacy = Math.min(100, npc.intimacy + effect.npcBonus);
+            npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + effect.npcBonus));
             messages.push(`${npc.name}에게 ${item.name}을 줬다! 친밀도가 올랐다.`);
           }
         }

@@ -31,7 +31,7 @@ export function createInitialState(
 
   let money = 3; // 기본 용돈 3만원
   if (parents.includes('wealth')) money = 8;
-  if (parents.includes('freedom')) money = 3;
+  // freedom의 별도 효과는 idle 페널티 완화 + 방학 슬롯 +1로 처리됨
 
   return {
     week: 1,
@@ -159,12 +159,13 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   if (!activity) return;
 
   const fatiguemod = getFatigueModifier(state.fatigue);
-  // v6.4: 만성 피로 누적 패널티 (잠깐은 가볍게, 오래되면 심각하게)
+  // v6.4 → v7.1: 만성 피로 누적 패널티 — 임계 늦춤 + 강도 완화
+  // (Y1 W11~12에 ×0.6 발동되던 문제 해결)
   let tiredPenalty = 0.8;  // 기본 피로 배율
   const ctw = state.consecutiveTiredWeeks || 0;
-  if (ctw >= 16) tiredPenalty = 0.4;       // 만성: 거의 성장 불가
-  else if (ctw >= 8) tiredPenalty = 0.6;   // 장기: 루틴 재고 필요
-  const mentalPenalty = state.mentalState === 'burnout' ? 0.2 : state.mentalState === 'tired' ? tiredPenalty : 1.0;
+  if (ctw >= 16) tiredPenalty = 0.5;        // 만성: 거의 성장 불가 (0.4 → 0.5)
+  else if (ctw >= 10) tiredPenalty = 0.75;  // 장기: 루틴 재고 필요 (8주 → 10주, 0.6 → 0.75)
+  const mentalPenalty = state.mentalState === 'burnout' ? 0.35 : state.mentalState === 'tired' ? tiredPenalty : 1.0;
 
   // v5.3: 상점 버프 보너스 계산
   let buffBonus = 0;
@@ -175,6 +176,13 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       }
     }
   }
+
+  // v7.2: 부모 강점 활동 효율 보너스
+  // info: 학업 활동 +10% (학원·자습)
+  // gene: 운동 활동 +10%
+  let parentEfficiencyBonus = 0;
+  if (state.parents.includes('info') && activity.category === 'study') parentEfficiencyBonus += 0.1;
+  if (state.parents.includes('gene') && activity.category === 'exercise') parentEfficiencyBonus += 0.1;
 
   // v6: 동일 축 중복 스택 효율 감소 (같은 주에 같은 스탯을 여러 번 올리면 효율 하락)
   const statHitCount: Partial<Record<StatKey, number>> = {};
@@ -193,7 +201,7 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       }
     } else if (value > 0) {
       // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
-      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus) * efficiency;
+      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus + parentEfficiencyBonus) * efficiency;
 
       // v6.1: 동일 축 중복 효율 감소 — 3단계 (2회 70%, 3회+ 45%)
       const priorGain = log.statChanges[statKey] || 0;
@@ -239,6 +247,10 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   if (fatigueDelta > 0 && state.stats.health < 20) {
     fatigueDelta = Math.round(fatigueDelta * 1.5);
   }
+  // v7.2: gene 부모 — 피로 증가 -15% (타고난 체력)
+  if (fatigueDelta > 0 && state.parents.includes('gene')) {
+    fatigueDelta = Math.max(1, Math.round(fatigueDelta * 0.85));
+  }
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
   log.fatigueChange += fatigueDelta;
 
@@ -272,8 +284,9 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   log.statChanges.academic = (log.statChanges.academic || 0) + academicDecay;
 
   // 인기: 감소 → 학기 중 회복 → floor 적용 (순서 중요)
-  let socialChange = -1.0;
-  if (state.stats.social <= 12) socialChange = -0.2; // 바닥 근처 감소 완화
+  // v7.1: -1.0 → -0.5로 완화 — Y1 누적 -48 → -24로, 활동 보전 가능 수준
+  let socialChange = -0.5;
+  if (state.stats.social <= 12) socialChange = -0.1; // 바닥 근처 감소 완화
   if (!isVacation && state.stats.social < 50) socialChange += 0.3; // 학기 중 미량 회복
   state.stats.social = Math.max(10, state.stats.social + socialChange); // floor 마지막에 적용
   log.statChanges.social = (log.statChanges.social || 0) + socialChange;
@@ -422,7 +435,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   // burnout → tired (회복 시작)
   else if (state.mentalState === 'burnout' && state.stats.mental >= 20 && state.fatigue < 40) {
     state.mentalState = 'tired';
-    state.burnoutCooldown = 4; // 번아웃 회복 후 4주 면역
+    state.burnoutCooldown = 8; // v7.1: 4 → 8주 면역 (Y1 25주 연속 tired 데스 스파이럴 방지)
     log.messages.push('💪 번아웃에서 벗어나는 중...');
   }
 
@@ -501,6 +514,7 @@ export function migrateLoadedState(state: GameState): GameState {
     consecutiveTiredWeeks: state.consecutiveTiredWeeks ?? 0,
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
+    idleWeeks: state.idleWeeks ?? 0,
     unlockedEvents: state.unlockedEvents || [],
     memorySlots: state.memorySlots || [],
     socialRipples: state.socialRipples || [],
@@ -554,7 +568,9 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     newState.eventTimeCost = 0;
   }
   if (!newState.isVacation) {
-    const rBonus = getRoutineBonus(newState.routineWeeks);
+    // v7.2: strict 부모 — 루틴 보너스 도달 1주 단축 (3→2, 6→5, 8→7주에 도달)
+    const strictBoost = newState.parents.includes('strict') ? 1 : 0;
+    const rBonus = getRoutineBonus(newState.routineWeeks + strictBoost);
     // timeCost 2: 둘 다 스킵, timeCost 1: 슬롯2는 실행 + 슬롯3 스킵
     if (newState.routineSlot2 && timeCost < 2) {
       const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
@@ -629,11 +645,17 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     newState.idleWeeks = 0;
   }
   if ((newState.idleWeeks || 0) >= 3) {
-    newState.stats.mental = Math.max(0, newState.stats.mental - 2);
-    newState.stats.social = Math.max(5, newState.stats.social - 1);
-    log.statChanges.mental = (log.statChanges.mental || 0) - 2;
-    log.statChanges.social = (log.statChanges.social || 0) - 1;
-    log.messages.push('😶 무기력... 뭔가 해야 할 것 같은데, 아무것도 하기 싫다.');
+    // v7.2: freedom 부모 — idle 페널티 절반 (스스로 동기부여 내성)
+    const isFreeSpirit = newState.parents.includes('freedom');
+    const mentalDrain = isFreeSpirit ? 1 : 2;
+    const socialDrain = isFreeSpirit ? 0.5 : 1;
+    newState.stats.mental = Math.max(0, newState.stats.mental - mentalDrain);
+    newState.stats.social = Math.max(5, newState.stats.social - socialDrain);
+    log.statChanges.mental = (log.statChanges.mental || 0) - mentalDrain;
+    log.statChanges.social = (log.statChanges.social || 0) - socialDrain;
+    log.messages.push(isFreeSpirit
+      ? '🌿 좀 쉬는 중. 부모님이 별 말씀 안 하셔서 다행이다.'
+      : '😶 무기력... 뭔가 해야 할 것 같은데, 아무것도 하기 싫다.');
   }
 
   // 스탯 범위 보정

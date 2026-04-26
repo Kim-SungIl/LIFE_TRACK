@@ -1,9 +1,11 @@
 import { GameState, ExamResult, SubjectResult, SubjectKey, ExamGrade, ElementaryGrade, ExamType, SchoolLevel } from './types';
+import { seededRandom } from './rng';
 
 // ===== 유틸리티 =====
 
-function rand(range: number): number {
-  return (Math.random() - 0.5) * 2 * range;
+// 결정론적 ±range 노이즈 — state.rngSeed를 mutate하므로 같은 시드면 같은 결과
+function rand(state: GameState, range: number): number {
+  return (seededRandom(state) - 0.5) * 2 * range;
 }
 
 function clamp(v: number, min = 0, max = 100): number {
@@ -97,43 +99,43 @@ function calculateSubjectScores(
   if (schoolLevel === 'elementary') {
     // 초등: 베이스 보너스(+8) + 계수 상향 — academic 70+에서 '잘함' 진입 가능
     const BASE = 8;
-    subjects.korean.score = clamp(academic * 0.88 + talent * 0.12 + commonMod + BASE + rand(4));
-    subjects.english.score = clamp(academic * 0.90 + commonMod + BASE + rand(4));
-    subjects.math.score = clamp(academic * 0.92 + commonMod + BASE + rand(5));
-    subjects.socialScience.score = clamp(academic * 0.82 + social * 0.18 + commonMod + BASE + rand(4));
-    subjects.artsPhysical.score = clamp(talent * 0.70 + health * 0.25 + mental * 0.05 + commonMod + BASE + rand(4));
+    subjects.korean.score = clamp(academic * 0.88 + talent * 0.12 + commonMod + BASE + rand(state, 4));
+    subjects.english.score = clamp(academic * 0.90 + commonMod + BASE + rand(state, 4));
+    subjects.math.score = clamp(academic * 0.92 + commonMod + BASE + rand(state, 5));
+    subjects.socialScience.score = clamp(academic * 0.82 + social * 0.18 + commonMod + BASE + rand(state, 4));
+    subjects.artsPhysical.score = clamp(talent * 0.70 + health * 0.25 + mental * 0.05 + commonMod + BASE + rand(state, 4));
   } else if (schoolLevel === 'middle') {
     // 중등: 계수 1.0 이하 유지 + 살짝 보너스 — academic 85+에서 S 등급 달성 가능
     const BASE = 4;
-    subjects.korean.score = clamp(academic * 0.95 + talent * 0.10 + commonMod + BASE + rand(6));
-    subjects.english.score = clamp(academic * 0.98 + commonMod + BASE + rand(6));
-    subjects.math.score = clamp(academic * 1.00 + commonMod + BASE + rand(8));
-    subjects.socialScience.score = clamp(academic * 0.88 + social * 0.18 + commonMod + BASE + rand(6));
-    subjects.artsPhysical.score = clamp(talent * 0.70 + health * 0.25 + mental * 0.05 + commonMod + BASE + rand(6));
+    subjects.korean.score = clamp(academic * 0.95 + talent * 0.10 + commonMod + BASE + rand(state, 6));
+    subjects.english.score = clamp(academic * 0.98 + commonMod + BASE + rand(state, 6));
+    subjects.math.score = clamp(academic * 1.00 + commonMod + BASE + rand(state, 8));
+    subjects.socialScience.score = clamp(academic * 0.88 + social * 0.18 + commonMod + BASE + rand(state, 6));
+    subjects.artsPhysical.score = clamp(talent * 0.70 + health * 0.25 + mental * 0.05 + commonMod + BASE + rand(state, 6));
   } else {
     // high — soft cap 임계값 80 + 계수 1.0 이하
     const ea = effectiveAcademic(academic);
-    subjects.korean.score = clamp(ea * 0.95 + talent * 0.08 + commonMod + rand(7));
-    subjects.english.score = clamp(ea * 0.98 + commonMod + rand(7));
+    subjects.korean.score = clamp(ea * 0.95 + talent * 0.08 + commonMod + rand(state, 7));
+    subjects.english.score = clamp(ea * 0.98 + commonMod + rand(state, 7));
 
     // 수학: 이과(가형)는 변동성 더 큼 — 난이도 UP
     const isScience = state.track === 'science';
     const mathRand = isScience ? 11 : 9;
-    subjects.math.score = clamp(ea * 1.00 + commonMod + rand(mathRand));
+    subjects.math.score = clamp(ea * 1.00 + commonMod + rand(state, mathRand));
 
     // 사회탐구(문과) vs 과학탐구(이과) 차등
     if (state.track === 'humanities') {
       // 문과 사회탐구: 글쓰기·토론·암기 → social 영향
-      subjects.socialScience.score = clamp(ea * 0.92 + social * 0.15 + commonMod + rand(7));
+      subjects.socialScience.score = clamp(ea * 0.92 + social * 0.15 + commonMod + rand(state, 7));
     } else if (state.track === 'science') {
       // 이과 과학탐구: 실험·논리·계산 → talent 영향, rand 큼
-      subjects.socialScience.score = clamp(ea * 0.94 + talent * 0.10 + commonMod + rand(9));
+      subjects.socialScience.score = clamp(ea * 0.94 + talent * 0.10 + commonMod + rand(state, 9));
     } else {
       // track 미선택 (Y5 고1): 기존 공식 유지
-      subjects.socialScience.score = clamp(ea * 0.90 + social * 0.15 + commonMod + rand(7));
+      subjects.socialScience.score = clamp(ea * 0.90 + social * 0.15 + commonMod + rand(state, 7));
     }
 
-    subjects.artsPhysical.score = clamp(talent * 0.72 + health * 0.22 + mental * 0.05 + commonMod + rand(6));
+    subjects.artsPhysical.score = clamp(talent * 0.72 + health * 0.22 + mental * 0.05 + commonMod + rand(state, 6));
   }
 
   // 등급 부여
@@ -234,7 +236,7 @@ export function generateMockExamResult(
   const fatiguePenalty = state.fatigue < 40 ? 0 : state.fatigue < 60 ? -3 : state.fatigue < 80 ? -6 : -9;
   const mentalStatePenalty = state.mentalState === 'burnout' ? -15 : state.mentalState === 'tired' ? -8 : 0;
 
-  const mockScore = clamp(ea * 0.98 + mental * 0.15 + prepBonus + fatiguePenalty + mentalStatePenalty + rand(12));
+  const mockScore = clamp(ea * 0.98 + mental * 0.15 + prepBonus + fatiguePenalty + mentalStatePenalty + rand(state, 12));
   const mockGrade = toMockGrade(mockScore);
 
   // 과목별 점수 생성 (표시용) — 모의고사는 예체능 제외 (실제 수능에 없음)
@@ -295,7 +297,7 @@ export function generateSuneungResult(state: GameState): ExamResult {
 
   const suneungBase = mock1 * 0.35 + mock2 * 0.45 + internalAvg * 0.20;
   const growthBonus = clamp(Math.round((mock2 - mock1) * 0.15), 0, 3);
-  const suneungScore = clamp(Math.round(suneungBase + growthBonus + rand(3)));
+  const suneungScore = clamp(Math.round(suneungBase + growthBonus + rand(state, 3)));
   const mockGrade = toMockGrade(suneungScore);
 
   // 과목별 (표시용) — 수능도 예체능 제외

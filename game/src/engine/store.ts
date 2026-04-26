@@ -143,8 +143,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
     }
-    // 이벤트에 등장한 모든 NPC도 met 처리 (선택지 관계없이)
-    for (const c of newState.currentEvent!.choices) {
+    // 이벤트에 등장한 모든 NPC도 met 처리 (선택지 관계없이, 남/여 분기 모두 포함)
+    const allBranchChoices = [
+      ...newState.currentEvent!.choices,
+      ...(newState.currentEvent!.femaleChoices || []),
+    ];
+    for (const c of allBranchChoices) {
       if (c.npcEffects) {
         for (const ne of c.npcEffects) {
           const npc = newState.npcs.find(n => n.id === ne.npcId);
