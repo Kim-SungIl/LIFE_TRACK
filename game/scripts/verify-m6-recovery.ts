@@ -78,7 +78,8 @@ interface Metrics {
 }
 
 function simulate(p: Pattern, useReducedRecovery: boolean): Metrics {
-  let s = createInitialState(p.gender, p.parents, { useReducedRecovery });
+  // rngSeed 고정 — Date.now 폴백으로 인한 boundary 변동(burnout 10~11) 제거
+  let s = createInitialState(p.gender, p.parents, { useReducedRecovery, rngSeed: 1234567 });
   s.routineSlot2 = p.routine2;
   s.routineSlot3 = p.routine3;
 

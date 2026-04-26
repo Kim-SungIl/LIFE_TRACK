@@ -24,9 +24,19 @@ no middle school uniform, no high school uniform, no adult features,
 no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/slide phones OK)
 ```
 
-## 📁 파일명 규칙
+## 📁 파일명 규칙 + 디렉토리 구조
 
-이벤트 결과 CG는 다음 형식으로 저장 (GameScreen.tsx 참조):
+이벤트 결과 CG는 학교급별 디렉토리에 저장합니다 (GameScreen.tsx 참조):
+
+```
+public/images/events/
+  elementary/   # Y1 (초6)
+  middle/       # Y2~Y4 (중1~중3)
+  high/         # Y5~Y7 (고1~고3)
+  common/       # 학교급-무관 폴백
+```
+
+파일명 형식:
 
 ```
 {eventId}_c{choiceIndex}_{gender}.png
@@ -35,8 +45,18 @@ no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/s
 - `choiceIndex`: 0부터 시작 (첫 선택지 = c0)
 - `gender`: `m` (남주) / `f` (여주)
 
-**폴백 순서**: `{eventId}_c{ci}_{g}.png` → `{eventId}_{g}.png` → `{eventId}.png`
+**폴백 순서** (학교급 → common, 각 단계마다 4-suffix cascade):
+1. `{schoolLevel}/{eventId}_c{ci}_{g}.png`
+2. `{schoolLevel}/{eventId}_{g}.png`
+3. `{schoolLevel}/{eventId}_c{ci}.png`
+4. `{schoolLevel}/{eventId}.png`
+5. `common/{eventId}_c{ci}_{g}.png`
+6. `common/{eventId}_{g}.png`
+7. `common/{eventId}_c{ci}.png`
+8. `common/{eventId}.png`
 
+→ 같은 이벤트라도 학년대별 시각적 차이(교복·배경·체격)가 필요하면 각 학교급 디렉토리에 별도 이미지 배치
+→ 학교급 무관하게 한 장으로 충분하면 `common/`에만 배치
 → 성별/선택지 차이가 거의 없는 이벤트는 **공통 1장**(`{eventId}.png`)만 만들어도 됨
 
 ## 🗂 레퍼런스 이미지 위치
@@ -641,29 +661,44 @@ Mood: warm but distant.
 - `player_m_*` or `player_f_*`
 - `gymnasium.png` (또는 스포츠 트랙 배경)
 
-### [c0] 있는 힘껏 달린다
+### [c0] 있는 힘껏 달린다 — 결승선 직후 (2등, 지훈이 어깨 감쌈)
+
+> 이벤트 결과 메시지("결과는 2등. 지훈이가 '수고했다!' 하며 어깨를 감쌌다.")를 살린 컷.
+> 액션 sprint보다 "선택의 결과"가 보이는 결승 직후가 의미상 더 적합.
 
 **[male / c0]** `elementary-sports-day_c0_m.png`
 ```
-School sports day, outdoor track. Dynamic action shot — male protagonist mid-sprint,
-baton in hand, wind blowing hair, determined intense expression. Blurred motion effect.
-Background: cheering classmates on both sides, colorful team flags (blue team), hanging
-"운동회" banner.
-Mood: adrenaline, all-out effort.
+Right after the relay finish line at school sports day. Male protagonist (player_m reference)
+breathing hard, slightly bent over with hands on knees or straightening up, sweaty hair.
+Jihun (jihun_elementary_fullbody.png reference) beside him, arm draped around the
+protagonist's shoulder, big sweaty grin, thumbs up with the other hand. Both wearing
+blue team headbands.
+Background: blurred cheering crowd, results board faintly visible showing "2위", late
+afternoon golden light slanting across the dirt track, "운동회" banner softly out of focus.
+Dialogue cue: Jihun saying "수고했다!" — implied through expression and pose.
+Mood: shared exhaustion and pride. Not first, but together.
 ```
 
 **[female / c0]** `elementary-sports-day_c0_f.png`
 ```
-Same with female protagonist.
+Same setting with female protagonist (player_f reference). Jihun's arm-around-shoulder
+gesture should feel like a buddy/teammate, not romantic — friendly camaraderie. No other changes.
 ```
 
-### [c1] 페이스 유지
+### [c1] 페이스 유지 — 단독 컷
+
+> 결과 메시지("적당히 뛰었다. 순위는 중간쯤. 그래도 즐거웠다.")는 혼자만의 만족감 톤.
+> 지훈이 등장 X — c0와 의도적으로 대비.
 
 **[male / c1]** `elementary-sports-day_c1_m.png`
 ```
-Same track setting but male protagonist (player_m reference) at measured pace, relaxed but
-focused expression. Other runners visible ahead but not too far.
-Mood: steady calm, not about winning.
+Mid-pack relay finish at school sports day. Male protagonist (player_m reference)
+crossing the finish line at moderate pace, neutral relaxed expression, slight smile.
+Other runners visible ahead and behind, motion blur on the back ones. Wearing
+blue team headband.
+Background: outdoor track with blue and white team flags mixed (no clear winner side),
+afternoon light, classmates cheering generally rather than at protagonist.
+Mood: easy effort, no regret no glory — just a Saturday afternoon.
 ```
 
 **[female / c1]** `elementary-sports-day_c1_f.png`
