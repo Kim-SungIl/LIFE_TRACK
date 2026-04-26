@@ -1727,7 +1727,6 @@ export const GAME_EVENTS: GameEvent[] = [
           recallText: "사과했더니 민재가 '알아'라고만 했다. 그걸로 충분했다.",
           npcIds: ['minjae'],
         },
-        activateRipples: ['minjae-yuna-admiration'],
       },
       {
         text: '"솔직히 나도 지기 싫어" — 경쟁을 인정한다',

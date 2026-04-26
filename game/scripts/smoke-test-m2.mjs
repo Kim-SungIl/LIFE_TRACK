@@ -93,7 +93,7 @@ async function main() {
       examResults: [], currentExamResult: null, activeBuffs: [], weekPurchases: {},
       idleWeeks: 0, consecutiveTiredWeeks: 0, burnoutCooldown: 0, eventTimeCost: 0,
       unlockedEvents: [],
-      // 의도적으로 v1.2 신규 필드 누락: memorySlots/socialRipples/milestoneScenes/rngSeed/hardCrisisYears
+      // 의도적으로 v1.2 신규 필드 누락: memorySlots/milestoneScenes/rngSeed/hardCrisisYears
     };
     localStorage.setItem('lifetrack_save', JSON.stringify({
       version: 1, state: legacyState, savedAt: new Date().toISOString(),
@@ -129,7 +129,6 @@ async function main() {
         recallText: '중1의 봄, 처음으로 손을 든 날.',
         importance: 7, phaseTag: 'early',
       }],
-      socialRipples: [],
       milestoneScenes: [{
         year: 2, sceneId: 'milestone-y2',
         summaryText: '처음으로 입은 교복이 조금 컸던 중1의 봄.',

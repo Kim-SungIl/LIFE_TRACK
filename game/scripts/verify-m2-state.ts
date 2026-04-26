@@ -21,7 +21,6 @@ console.log('\n=== 1. 초기 상태의 신규 필드 존재 및 초기값 ===');
   const parents: [ParentStrength, ParentStrength] = ['wealth', 'emotional'];
   const s = createInitialState('male', parents);
   assert('memorySlots 빈 배열', Array.isArray(s.memorySlots) && s.memorySlots.length === 0);
-  assert('socialRipples 빈 배열', Array.isArray(s.socialRipples) && s.socialRipples.length === 0);
   assert('milestoneScenes 빈 배열', Array.isArray(s.milestoneScenes) && s.milestoneScenes.length === 0);
   assert('rngSeed 양의 정수', typeof s.rngSeed === 'number' && s.rngSeed > 0 && Number.isInteger(s.rngSeed));
   assert('hardCrisisYears 빈 배열', Array.isArray(s.hardCrisisYears) && s.hardCrisisYears.length === 0);
@@ -61,7 +60,6 @@ console.log('\n=== 3. 336주 풀 플레이 상태 무결성 ===');
   assert(`rngSeed 최소 10회 이상 변화 (실제: ${seedChangeCount})`, seedChangeCount >= 10);
   assert('rngSeed 초기값과 다름', s.rngSeed !== initialSeed);
   assert('memorySlots 여전히 배열', Array.isArray(s.memorySlots));
-  assert('socialRipples 여전히 배열', Array.isArray(s.socialRipples));
   assert('milestoneScenes 여전히 배열', Array.isArray(s.milestoneScenes));
   assert('hardCrisisYears 여전히 배열', Array.isArray(s.hardCrisisYears));
   assert(`슬롯 상한 준수 (memorySlots ≤12, 실제 ${s.memorySlots.length})`, s.memorySlots.length <= 12);
@@ -85,7 +83,6 @@ console.log('\n=== 4. 구세이브 로드 호환성 (신규 필드 제거 후 mi
   // 구세이브 시뮬: 신규 필드 전부 제거
   const legacy = deepClone(s) as Partial<GameState>;
   delete (legacy as Record<string, unknown>).memorySlots;
-  delete (legacy as Record<string, unknown>).socialRipples;
   delete (legacy as Record<string, unknown>).milestoneScenes;
   delete (legacy as Record<string, unknown>).rngSeed;
   delete (legacy as Record<string, unknown>).hardCrisisYears;
@@ -93,7 +90,6 @@ console.log('\n=== 4. 구세이브 로드 호환성 (신규 필드 제거 후 mi
   // processWeek 호출 시 마이그레이션 동작
   const recovered = processWeek(legacy as GameState);
   assert('구세이브 로드 후 memorySlots 자동 생성', Array.isArray(recovered.memorySlots));
-  assert('구세이브 로드 후 socialRipples 자동 생성', Array.isArray(recovered.socialRipples));
   assert('구세이브 로드 후 milestoneScenes 자동 생성', Array.isArray(recovered.milestoneScenes));
   assert('구세이브 로드 후 rngSeed 복원 (>0)', typeof recovered.rngSeed === 'number' && recovered.rngSeed > 0);
   assert('구세이브 로드 후 hardCrisisYears 자동 생성', Array.isArray(recovered.hardCrisisYears));

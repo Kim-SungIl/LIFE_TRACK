@@ -82,7 +82,6 @@ export function createInitialState(
     unlockedEvents: [],
     // v1.2 기억 슬롯 시스템
     memorySlots: [],
-    socialRipples: [],
     milestoneScenes: [],
     rngSeed: options?.rngSeed ?? hashInitialState({ gender, parents }),
     hardCrisisYears: [],
@@ -517,7 +516,6 @@ export function migrateLoadedState(state: GameState): GameState {
     idleWeeks: state.idleWeeks ?? 0,
     unlockedEvents: state.unlockedEvents || [],
     memorySlots: state.memorySlots || [],
-    socialRipples: state.socialRipples || [],
     milestoneScenes: state.milestoneScenes || [],
     rngSeed: (state.rngSeed && state.rngSeed !== 0)
       ? state.rngSeed
