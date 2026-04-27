@@ -45,7 +45,8 @@ export function createInitialState(
     mentalState: 'normal',
     routineSlot2: null,
     routineSlot3: null,
-    routineWeeks: 0,
+    routineSlot2Weeks: 0,
+    routineSlot3Weeks: 0,
     weekendChoices: [],
     vacationChoices: [],
     semester: 1,
@@ -442,7 +443,8 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     } else {
       state.mentalState = 'burnout';
       state.burnoutCount++;
-      state.routineWeeks = 0;
+      state.routineSlot2Weeks = 0;
+      state.routineSlot3Weeks = 0;
       log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
     }
   }
@@ -546,6 +548,11 @@ export function migrateLoadedState(state: GameState): GameState {
       ? state.rngSeed
       : hashInitialState({ gender: state.gender, parents: migratedParents }),
     hardCrisisYears: state.hardCrisisYears || [],
+    // 슬롯별 루틴 카운터 — 구세이브의 단일 routineWeeks 값을 양 슬롯에 복제 (호환)
+    routineSlot2Weeks: state.routineSlot2Weeks
+      ?? (state as unknown as { routineWeeks?: number }).routineWeeks ?? 0,
+    routineSlot3Weeks: state.routineSlot3Weeks
+      ?? (state as unknown as { routineWeeks?: number }).routineWeeks ?? 0,
   };
 }
 
@@ -594,18 +601,22 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   if (!newState.isVacation) {
     // v7.2: strict 부모 — 루틴 보너스 도달 1주 단축 (3→2, 6→5, 8→7주에 도달)
     const wkMods = getParentMods(newState.parents);
-    const rBonus = getRoutineBonus(newState.routineWeeks + wkMods.routineWeeksBoost);
-    // 표시는 strict 부스트가 실제로 임계값 통과를 앞당긴 주만 (routineWeeks 2/5/7)
-    const baseBonus = getRoutineBonus(newState.routineWeeks);
-    if (wkMods.routineWeeksBoost > 0 && rBonus > baseBonus) {
+    const boost = wkMods.routineWeeksBoost;
+    // 슬롯별 rBonus — 한쪽 슬롯만 변경되어도 다른 슬롯 보너스 보전
+    const r2Bonus = getRoutineBonus(newState.routineSlot2Weeks + boost);
+    const r3Bonus = getRoutineBonus(newState.routineSlot3Weeks + boost);
+    // strict 표시 — 어느 슬롯이라도 부스트로 임계값 통과한 주만
+    const r2Base = getRoutineBonus(newState.routineSlot2Weeks);
+    const r3Base = getRoutineBonus(newState.routineSlot3Weeks);
+    if (boost > 0 && (r2Bonus > r2Base || r3Bonus > r3Base)) {
       log.parentBonusesApplied?.push({ parent: 'strict', what: '정해진 시간에 책상 — 루틴 +1주' });
     }
     // timeCost 2: 둘 다 스킵, timeCost 1: 슬롯2는 실행 + 슬롯3 스킵
     if (newState.routineSlot2 && timeCost < 2) {
       const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
       if (r2 && (r2.moneyCost <= 0 || newState.money >= r2.moneyCost)) {
-        applyActivity(newState, newState.routineSlot2, log, rBonus);
-        newState.routineWeeks++;
+        applyActivity(newState, newState.routineSlot2, log, r2Bonus);
+        newState.routineSlot2Weeks++;
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r2?.name || '활동'}을 못 했다...`);
       }
@@ -613,13 +624,17 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     if (newState.routineSlot3 && timeCost < 1) {
       const r3 = ACTIVITIES.find(a => a.id === newState.routineSlot3);
       if (r3 && (r3.moneyCost <= 0 || newState.money >= r3.moneyCost)) {
-        applyActivity(newState, newState.routineSlot3, log, rBonus);
+        applyActivity(newState, newState.routineSlot3, log, r3Bonus);
+        newState.routineSlot3Weeks++;
       } else {
         log.messages.push(`💰 돈이 부족해서 ${r3?.name || '활동'}을 못 했다...`);
       }
     }
-    // timeCost로 스킵해도 routineWeeks는 유지 (습관은 남아있음)
-    if (timeCost >= 2 && newState.routineSlot2) newState.routineWeeks++;
+    // timeCost로 스킵해도 카운터는 유지 (습관은 남아있음)
+    if (timeCost >= 2) {
+      if (newState.routineSlot2) newState.routineSlot2Weeks++;
+      if (newState.routineSlot3) newState.routineSlot3Weeks++;
+    }
   }
 
   // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 슬롯 감소

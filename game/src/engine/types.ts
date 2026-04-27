@@ -28,7 +28,9 @@ export interface GameState {
   mentalState: 'normal' | 'tired' | 'burnout';
   routineSlot2: string | null;  // 방과후 루틴 1
   routineSlot3: string | null;  // 방과후 루틴 2
-  routineWeeks: number;         // 루틴 연속 주수
+  // 슬롯별 루틴 연속 주수 — 슬롯 1개만 변경 시 다른 슬롯 보너스 보전
+  routineSlot2Weeks: number;
+  routineSlot3Weeks: number;
   weekendChoices: string[];     // 이번 주 주말 선택
   vacationChoices: string[];    // 방학 슬롯 선택
   semester: 1 | 2;
@@ -173,6 +175,8 @@ export interface EventChoice {
   message: string;
   timeCost?: 1 | 2; // 시간 소모: 1=루틴/주말 1슬롯, 2=루틴/주말 2슬롯
   trackSelect?: Track; // 문과/이과 선택 (Y6 W1 이벤트 전용)
+  // 선택지 노출 조건 — 만족 안 하면 UI에서 숨김 (예: 돈/스탯 게이팅)
+  condition?: (state: GameState) => boolean;
   // v1.2: 이 선택을 고르면 엔딩 회상 슬롯 생성 후보 (importance ≥3만 실제 생성)
   memorySlotDraft?: MemorySlotDraft;
   // M4: 이 선택을 고르면 활성 버프에 추가 (상점 버프와 동일 구조)
