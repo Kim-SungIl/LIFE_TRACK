@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { GameEvent, EventChoice, GameState, StatKey, STAT_LABELS, EventLocation } from '../engine/types';
+import { GameEvent, EventChoice, GameState, StatKey, STAT_LABELS } from '../engine/types';
 import { getEventBackground } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 

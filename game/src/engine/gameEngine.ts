@@ -192,9 +192,6 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
     }
   }
 
-  // v6: 동일 축 중복 스택 효율 감소 (같은 주에 같은 스탯을 여러 번 올리면 효율 하락)
-  const statHitCount: Partial<Record<StatKey, number>> = {};
-
   // 각 스탯 성장 적용
   for (const [key, baseValue] of Object.entries(activity.effects)) {
     const statKey = key as StatKey;
