@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { GameEvent, EventChoice, GameState, StatKey, STAT_LABELS, STAT_ICONS } from '../engine/types';
+import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { getEventBackground } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 
@@ -159,50 +159,6 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
   );
 }
 
-// ===== Helper: build effect badges =====
-
-interface EffectBadge {
-  text: string;
-  color: string;
-}
-
-function buildEffectBadges(choice: EventChoice, npcNames: Record<string, { name: string; emoji: string }>): EffectBadge[] {
-  const badges: EffectBadge[] = [];
-  for (const [k, v] of Object.entries(choice.effects)) {
-    const val = v as number;
-    if (val !== 0) {
-      badges.push({
-        text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${val > 0 ? '+' + val : val}`,
-        color: val > 0 ? 'var(--green)' : 'var(--red)',
-      });
-    }
-  }
-  if (choice.fatigueEffect) {
-    badges.push({
-      text: `피로 ${choice.fatigueEffect > 0 ? '+' : ''}${choice.fatigueEffect}`,
-      color: choice.fatigueEffect > 0 ? 'var(--red)' : 'var(--green)',
-    });
-  }
-  if (choice.moneyEffect) {
-    badges.push({
-      text: `💰 ${choice.moneyEffect > 0 ? '+' : ''}${choice.moneyEffect}만`,
-      color: choice.moneyEffect > 0 ? 'var(--green)' : 'var(--red)',
-    });
-  }
-  if (choice.npcEffects) {
-    for (const ne of choice.npcEffects) {
-      const npc = npcNames[ne.npcId];
-      if (npc) {
-        badges.push({
-          text: `${npc.emoji} ${npc.name} ${ne.intimacyChange > 0 ? '♥' : '💔'}`,
-          color: ne.intimacyChange > 0 ? 'var(--blue)' : 'var(--red)',
-        });
-      }
-    }
-  }
-  return badges;
-}
-
 // ===== Main Component =====
 
 // ===== 대사 파싱: "..." 부분에 화자 이름 붙이기 =====
@@ -251,8 +207,6 @@ function renderDescription(
 export function EventScene({ event, gender, year, npcs, onChoice, state }: EventSceneProps) {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [bgError, setBgError] = useState(false);
-  const [chosenIndex, setChosenIndex] = useState<number | null>(null);
-  const [showResult, setShowResult] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Inject keyframes on mount
@@ -262,8 +216,6 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
 
   // Reset state when event changes
   useEffect(() => {
-    setChosenIndex(null);
-    setShowResult(false);
     setBgLoaded(false);
     setBgError(false);
   }, [event.id]);
@@ -330,20 +282,11 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const charPositions = getCharacterPositions(speakerIds.length);
   const charHeight = typeof window !== 'undefined' ? window.innerHeight * 0.65 : 500;
 
-  // Handle choice
+  // 부모(GameScreen)가 onChoice 후 eventResultData 세팅 → EventScene 언마운트 → 결과 UI 처리.
+  // 이 컴포넌트는 선택지 표시 전용.
   const handleChoice = (index: number) => {
-    setChosenIndex(index);
-    setShowResult(true);
     onChoice(index);
   };
-
-  // Handle continue after result
-  const handleContinue = () => {
-    // The parent already processed the choice via onChoice
-    // This is handled by the parent component
-  };
-
-  const chosenChoice = chosenIndex !== null ? eventChoices[chosenIndex] : null;
 
   // Build NPC name map for effect badges
   // We don't have access to full NpcState here, so we use IDs and known names
@@ -487,124 +430,65 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
           overflow: 'hidden',
           animation: 'es-fade-in 0.3s ease',
         }}>
-          {!showResult ? (
-            /* ===== Event Content ===== */
-            <>
-              {/* Event title — 작게 */}
-              <div style={{
-                fontSize: '0.78rem',
-                fontWeight: 600,
-                color: 'rgba(255,255,255,0.4)',
-                marginBottom: 6,
-                letterSpacing: '0.5px',
-              }}>
-                {event.title}
-              </div>
+          {/* Event title — 작게 */}
+          <div style={{
+            fontSize: '0.78rem',
+            fontWeight: 600,
+            color: 'rgba(255,255,255,0.4)',
+            marginBottom: 6,
+            letterSpacing: '0.5px',
+          }}>
+            {event.title}
+          </div>
 
-              {/* Description — 대사에 화자 이름 표시, 크게 */}
-              <div style={{
-                fontSize: '1rem',
-                lineHeight: 1.7,
-                maxHeight: '6em',
-                overflowY: 'auto',
-                marginBottom: 12,
-                flex: '0 1 auto',
-              }}>
-                {renderDescription(eventDesc, speakerIds, npcs)}
-              </div>
+          {/* Description — 대사에 화자 이름 표시, 크게 */}
+          <div style={{
+            fontSize: '1rem',
+            lineHeight: 1.7,
+            maxHeight: '6em',
+            overflowY: 'auto',
+            marginBottom: 12,
+            flex: '0 1 auto',
+          }}>
+            {renderDescription(eventDesc, speakerIds, npcs)}
+          </div>
 
-              {/* Choices */}
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 8,
-                flex: '1 1 auto',
-                overflowY: 'auto',
-              }}>
-                {visibleChoices.map(({ choice, originalIndex }, i) => (
-                  <div
-                    key={originalIndex}
-                    onClick={() => handleChoice(originalIndex)}
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: 12,
-                      background: 'rgba(255,255,255,0.06)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      animation: `es-choice-fade-up 0.3s ease ${0.1 + i * 0.08}s both`,
-                    }}
-                    onMouseEnter={e => {
-                      e.currentTarget.style.borderColor = 'var(--accent)';
-                      e.currentTarget.style.background = 'rgba(224,138,91,0.14)';
-                    }}
-                    onMouseLeave={e => {
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                    }}
-                  >
-                    <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff' }}>
-                      {choice.text}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : (
-            /* ===== Result Content ===== */
-            <>
-              {/* Chosen message in italic quotes */}
-              {chosenChoice && (
-                <div style={{
-                  fontSize: '0.92rem',
-                  lineHeight: 1.8,
-                  fontStyle: 'italic',
-                  whiteSpace: 'pre-line',
-                  color: 'rgba(255,255,255,0.9)',
-                  marginBottom: 14,
-                  animation: 'es-fade-in 0.4s ease',
-                }}>
-                  &ldquo;{chosenChoice.message}&rdquo;
-                </div>
-              )}
-
-              {/* Effect badges */}
-              {chosenChoice && (
-                <div style={{
-                  display: 'flex',
-                  flexWrap: 'wrap',
-                  gap: 8,
-                  marginBottom: 14,
-                  animation: 'es-fade-in 0.4s ease 0.1s both',
-                }}>
-                  {buildEffectBadges(chosenChoice, NPC_NAMES).map((eff, i) => (
-                    <div key={i} style={{
-                      background: 'rgba(255,255,255,0.08)',
-                      borderRadius: 8,
-                      padding: '6px 12px',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      color: eff.color,
-                    }}>
-                      {eff.text}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Continue button */}
-              <button
-                onClick={handleContinue}
-                className="btn btn-primary"
+          {/* Choices */}
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 8,
+            flex: '1 1 auto',
+            overflowY: 'auto',
+          }}>
+            {visibleChoices.map(({ choice, originalIndex }, i) => (
+              <div
+                key={originalIndex}
+                onClick={() => handleChoice(originalIndex)}
                 style={{
-                  alignSelf: 'stretch',
-                  animation: 'es-fade-in 0.4s ease 0.2s both',
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  animation: `es-choice-fade-up 0.3s ease ${0.1 + i * 0.08}s both`,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                  e.currentTarget.style.background = 'rgba(224,138,91,0.14)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
                 }}
               >
-                계속 →
-              </button>
-            </>
-          )}
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff' }}>
+                  {choice.text}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

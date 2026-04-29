@@ -14,6 +14,7 @@ import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
 import { ShopItem } from '../engine/shopSystem';
 import { EventScene } from './EventScene';
+import { buildEffectBadges, buildNewMeetMessages } from './effectBadges';
 
 // NPC 동반이 필요한 사회적 활동 — 선택 시 NPC 픽 모달 열림
 const SOCIAL_ACTIVITY_IDS = ['hang-out', 'club', 'study-group'] as const;
@@ -326,26 +327,11 @@ export function GameScreen() {
         onChoice={(index: number) => {
           const evt = state.currentEvent!;
           const choice = ((state.gender === 'female' && evt.femaleChoices) ? evt.femaleChoices : evt.choices)[index];
-          const effects: Record<string, string>[] = [];
-          for (const [k, v] of Object.entries(choice.effects)) {
-            const val = v as number;
-            if (val !== 0) effects.push({ text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${val > 0 ? '+' + val : val}`, color: val > 0 ? 'var(--green)' : 'var(--red)' });
-          }
-          if (choice.fatigueEffect) effects.push({ text: `피로 ${choice.fatigueEffect > 0 ? '+' : ''}${choice.fatigueEffect}`, color: choice.fatigueEffect > 0 ? 'var(--red)' : 'var(--green)' });
-          if (choice.moneyEffect) effects.push({ text: `💰 ${choice.moneyEffect > 0 ? '+' : ''}${choice.moneyEffect}만`, color: choice.moneyEffect > 0 ? 'var(--green)' : 'var(--red)' });
-          // NPC 첫 만남 체크
-          const newMeets: string[] = [];
-          if (choice.npcEffects) for (const ne of choice.npcEffects) {
-            const npc = state.npcs.find(n => n.id === ne.npcId);
-            if (npc) {
-              effects.push({ text: `${npc.emoji} ${npc.name} ${ne.intimacyChange > 0 ? '♥' : '💔'}`, color: ne.intimacyChange > 0 ? 'var(--blue)' : 'var(--red)' });
-              if (!npc.met) newMeets.push(npc.name);
-            }
-          }
-          // 첫 만남 알림 추가
-          for (const name of newMeets) {
-            effects.unshift({ text: `🤝 ${name}와(과) 알게 되었다!`, color: 'var(--yellow)' });
-          }
+          // 첫 만남 알림 → 표준 효과 뱃지 순서로 prepend
+          const effects = [
+            ...buildNewMeetMessages(choice, state.npcs),
+            ...buildEffectBadges(choice, state.npcs),
+          ];
           setEventResultData({ message: choice.message, effects, event: evt, choiceIndex: index });
           resolveEvent(index);
         }}
