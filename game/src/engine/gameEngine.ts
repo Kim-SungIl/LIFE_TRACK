@@ -1,5 +1,5 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
-import { ACTIVITIES } from './activities';
+import { ACTIVITIES, getActivityCost } from './activities';
 import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult } from './examSystem';
 import { ExamType } from './types';
@@ -217,7 +217,7 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       else if (priorGain > 0.5) value *= 0.7;  // 2회째 → 70%
 
       // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감
-      if (activity.moneyCost === 0 && state.stats[statKey] >= 80) {
+      if (getActivityCost(activity, state.year) === 0 && state.stats[statKey] >= 80) {
         value *= 0.1;
       }
     }
@@ -265,10 +265,11 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
   log.fatigueChange += fatigueDelta;
 
-  // 용돈 적용 (음수 방지)
-  state.money = Math.round((state.money - activity.moneyCost) * 10) / 10;
+  // 용돈 적용 (음수 방지) — 학년별 차등 비용 적용
+  const cost = getActivityCost(activity, state.year);
+  state.money = Math.round((state.money - cost) * 10) / 10;
   if (state.money < 0) state.money = 0;
-  log.moneyChange -= activity.moneyCost;
+  log.moneyChange -= cost;
 
   log.messages.push(`${activity.name} 완료`);
 }
@@ -614,7 +615,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     // timeCost 2: 둘 다 스킵, timeCost 1: 슬롯2는 실행 + 슬롯3 스킵
     if (newState.routineSlot2 && timeCost < 2) {
       const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
-      if (r2 && (r2.moneyCost <= 0 || newState.money >= r2.moneyCost)) {
+      const r2Cost = r2 ? getActivityCost(r2, newState.year) : 0;
+      if (r2 && (r2Cost <= 0 || newState.money >= r2Cost)) {
         applyActivity(newState, newState.routineSlot2, log, r2Bonus);
         newState.routineSlot2Weeks++;
       } else {
@@ -623,7 +625,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     }
     if (newState.routineSlot3 && timeCost < 1) {
       const r3 = ACTIVITIES.find(a => a.id === newState.routineSlot3);
-      if (r3 && (r3.moneyCost <= 0 || newState.money >= r3.moneyCost)) {
+      const r3Cost = r3 ? getActivityCost(r3, newState.year) : 0;
+      if (r3 && (r3Cost <= 0 || newState.money >= r3Cost)) {
         applyActivity(newState, newState.routineSlot3, log, r3Bonus);
         newState.routineSlot3Weeks++;
       } else {
@@ -644,7 +647,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   const allActivities = [...choices];
   for (const choice of choices) {
     const act = ACTIVITIES.find(a => a.id === choice);
-    if (act && act.moneyCost > 0 && newState.money < act.moneyCost) {
+    const actCost = act ? getActivityCost(act, newState.year) : 0;
+    if (act && actCost > 0 && newState.money < actCost) {
       log.messages.push(`💰 돈이 부족해서 ${act.name}을 못 했다...`);
       continue;
     }

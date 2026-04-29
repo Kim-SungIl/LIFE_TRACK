@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
-import { getAvailableActivities, ACTIVITIES } from '../engine/activities';
+import { getAvailableActivities, ACTIVITIES, getActivityCost } from '../engine/activities';
 import { getParentMods } from '../engine/parentModifiers';
 import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, ExamResult } from '../engine/types';
 import { Portrait } from './Portrait';
@@ -509,9 +509,12 @@ export function GameScreen() {
   const fatigueLabel = state.fatigue < 20 ? '좋음' : state.fatigue < 35 ? '경미' : state.fatigue < 50 ? '주의' : state.fatigue < 70 ? '위험' : '극한!';
   const fatigueColor = state.fatigue < 20 ? 'var(--green)' : state.fatigue < 35 ? 'var(--yellow)' : state.fatigue < 50 ? 'orange' : 'var(--red)';
 
-  // 루틴 비용 체크 — 돈이 부족하면 루틴 변경 강제
-  const routineCost = (state.routineSlot2 ? (ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost || 0) : 0)
-    + (state.routineSlot3 ? (ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost || 0) : 0);
+  // 루틴 비용 체크 — 돈이 부족하면 루틴 변경 강제. 학년별 차등 비용 적용.
+  const routineCost = (() => {
+    const r2 = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null;
+    const r3 = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null;
+    return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
+  })();
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
 
   // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전)
@@ -1012,7 +1015,7 @@ export function GameScreen() {
                 state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name || null : null,
                 () => setEditingSlot('routine1'),
                 false, true,
-                state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.moneyCost : undefined,
+                (() => { const r = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null; return r ? getActivityCost(r, state.year) : undefined; })(),
                 undefined,
                 slot2ComboWeeks,
               )}
@@ -1022,7 +1025,7 @@ export function GameScreen() {
                 state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name || null : (state.routineSlot2 ? '자유시간' : null),
                 () => setEditingSlot('routine2'),
                 false, !!state.routineSlot2,
-                state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.moneyCost : undefined,
+                (() => { const r = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null; return r ? getActivityCost(r, state.year) : undefined; })(),
                 undefined,
                 slot3ComboWeeks,
               )}
@@ -1044,7 +1047,7 @@ export function GameScreen() {
                   setEditingSlot('weekend1');
                 },
                 false, false,
-                selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.moneyCost : undefined,
+                (() => { const a0 = selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0]) : null; return a0 ? getActivityCost(a0, state.year) : undefined; })(),
                 (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]])
                   ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[0]}:0`] || npcChoices[selectedActivities[0]]))?.name : undefined,
               )}
@@ -1057,7 +1060,7 @@ export function GameScreen() {
                   isSlot0TwoSlot ? '(연속 활동)' : selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.name || null : null,
                   isSlot0TwoSlot ? null : () => setEditingSlot('weekend2'),
                   isSlot0TwoSlot, false,
-                  isSlot0TwoSlot ? undefined : selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.moneyCost : undefined,
+                  isSlot0TwoSlot ? undefined : (() => { const a1 = selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1]) : null; return a1 ? getActivityCost(a1, state.year) : undefined; })(),
                   isSlot0TwoSlot ? undefined :
                     (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]])
                       ? state.npcs.find(n => n.id === (npcChoices[`${selectedActivities[1]}:1`] || npcChoices[selectedActivities[1]]))?.name : undefined,
@@ -1222,7 +1225,10 @@ export function GameScreen() {
                 npcChoices={npcChoices}
                 compact={false}
                 availableMoney={state.money - routineCost -
-                  selectedActivities.reduce((sum, id) => sum + (ACTIVITIES.find(a => a.id === id)?.moneyCost || 0), 0)
+                  selectedActivities.reduce((sum, id) => {
+                    const act = ACTIVITIES.find(a => a.id === id);
+                    return sum + (act ? getActivityCost(act, state.year) : 0);
+                  }, 0)
                 }
               />
             </div>

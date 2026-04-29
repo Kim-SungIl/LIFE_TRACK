@@ -1,5 +1,13 @@
 import { Activity, GameState } from './types';
 
+// 학년별 비용 차등 헬퍼 — 현실 고증 (초등 종합반 < 중등 입시 < 고등 단과)
+// yearlyCost가 정의된 활동만 학년 차등, 그 외는 base moneyCost 그대로.
+export function getActivityCost(activity: Pick<Activity, 'moneyCost' | 'yearlyCost'>, year: number): number {
+  if (!activity.yearlyCost) return activity.moneyCost;
+  const level = year <= 1 ? 'elementary' : year <= 4 ? 'middle' : 'high';
+  return activity.yearlyCost[level] ?? activity.moneyCost;
+}
+
 // v6.2: 활동 기본값 전면 하향 — 7년 장기 레이스에 맞는 Y1 성장 속도
 // 목표: 일반 플레이어 Y1 종료 시 주력 스탯 50~60, 집중형 65~75
 export const ACTIVITIES: Activity[] = [
@@ -13,11 +21,14 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'academy', name: '학원 수업', slots: 1, fatigue: 7,
-    effects: { academic: 1.5 }, moneyCost: 2, category: 'study', // v6.4: 비용 3→2
+    // 학원에서 친구들과 어울리는 부수효과 — 비싼 만큼 social 보너스
+    effects: { academic: 1.5, social: 0.4 }, moneyCost: 3, category: 'study',
+    // 현실 고증 — 초등 종합반 2만 / 중등 입시 3만 / 고등 단과 4만
+    yearlyCost: { elementary: 2, middle: 3, high: 4 },
     description: '학원에서 체계적으로 배운다.',
-    flavor: '학원 셔틀을 타고 간다. 선생님 설명은 빠르지만, 확실히 혼자보단 낫다.',
-    tags: ['체계적', '비용 있음', '고효율'],
-    requires: (s) => s.money >= 2, // v6.4: 비용 3→2
+    flavor: '학원 셔틀을 타고 간다. 같은 반 친구들이랑 떡볶이 먹고 가는 길도 즐겁다.',
+    tags: ['체계적', '비용 있음', '고효율', '친구'],
+    requires: (s) => s.money >= getActivityCost({ moneyCost: 3, yearlyCost: { elementary: 2, middle: 3, high: 4 } }, s.year),
   },
   {
     id: 'study-group', name: '스터디 그룹', slots: 1, fatigue: 4,
@@ -173,6 +184,8 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'part-time', name: '편의점 알바', slots: 1, fatigue: 9,
     effects: { social: 0.5, mental: -1 }, moneyCost: -3,
+    // 학년 올라갈수록 시급 인상 (Y4 중3 -3만, Y5~7 고등 -4만 — 약 33% 인상)
+    yearlyCost: { middle: -3, high: -4 },
     category: 'work',
     description: '편의점에서 일하며 돈을 번다.',
     flavor: '"어서오세요~" 반복되는 인사. 힘들지만 통장 잔고가 올라가는 건 뿌듯하다.',
