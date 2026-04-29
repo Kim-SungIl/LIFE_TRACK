@@ -1,8 +1,7 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
 import { ACTIVITIES, getActivityCost } from './activities';
 import { getEventForWeek } from './events';
-import { generateExamResult, generateMockExamResult, generateSuneungResult } from './examSystem';
-import { ExamType } from './types';
+import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule, EXAM_TYPE_LABELS } from './examSystem';
 import { seededRandom, hashInitialState } from './rng';
 import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
@@ -715,42 +714,18 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   newState.weekLog = log;
   newState.totalWeeksPlayed++;
 
-  // 10. 시험 체크 (학교급별 차등)
-  // 초등(Y1): W17 단원평가, W38 단원평가
-  // 중등(Y2~Y4): W8 중간, W17 기말, W30 중간, W38 기말
-  // 고등(Y5~Y7): 내신 W8/W17/W30/W38 + 모의 W12/W33 + Y7 W35 수능
-  const isY7 = newState.year === 7;
-  let examSchedule: Record<number, ExamType> = {};
-
-  if (newState.year <= 1) {
-    // 초등: 학기말 단원평가만
-    examSchedule = { 17: 'unit-test', 38: 'unit-test' };
-  } else if (newState.year <= 4) {
-    // 중등: 중간+기말
-    examSchedule = { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
-  } else if (isY7) {
-    // 고3: 내신 + 모의 + 수능
-    examSchedule = { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 35: 'suneung' };
-  } else {
-    // 고1~2: 내신 + 모의
-    examSchedule = { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 38: 'final' };
-  }
-
-  const thisWeekExam = examSchedule[newState.week];
+  // 10. 시험 체크 — getExamSchedule(year)이 SSOT
+  const thisWeekExam = getExamSchedule(newState.year)[newState.week];
   if (thisWeekExam) {
     let examResult;
-    let examName: string;
+    const examName = EXAM_TYPE_LABELS[thisWeekExam];
 
     if (thisWeekExam === 'suneung') {
       examResult = generateSuneungResult(newState);
-      examName = '수능';
     } else if (thisWeekExam === 'mock') {
       examResult = generateMockExamResult(newState);
-      examName = '모의고사';
     } else {
       examResult = generateExamResult(newState, thisWeekExam);
-      examName = thisWeekExam === 'unit-test' ? '단원평가'
-        : thisWeekExam === 'midterm' ? '중간고사' : '기말고사';
     }
 
     newState.examResults.push(examResult);

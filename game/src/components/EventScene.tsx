@@ -1,15 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { GameEvent, EventChoice, GameState, StatKey, STAT_LABELS } from '../engine/types';
+import { GameEvent, EventChoice, GameState, StatKey, STAT_LABELS, STAT_ICONS } from '../engine/types';
 import { getEventBackground } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
 // ===== Constants =====
-
-const STAT_ICONS: Record<StatKey, string> = {
-  academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
-};
 
 const NPC_COLORS: Record<string, string> = {
   jihun: '#4A90D9',
@@ -614,5 +610,3 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     </div>
   );
 }
-
-export default EventScene;

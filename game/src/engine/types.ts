@@ -244,6 +244,10 @@ export const STAT_LABELS: Record<StatKey, string> = {
   health: '체력',
 };
 
+export const STAT_ICONS: Record<StatKey, string> = {
+  academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
+};
+
 export const STAT_GRADES = [
   { min: 80, grade: 'A', label: '최상', color: '#e5c07b' },
   { min: 60, grade: 'B', label: '우수', color: '#8fb573' },

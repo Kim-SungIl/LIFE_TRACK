@@ -1,6 +1,32 @@
 import { GameState, ExamResult, SubjectResult, SubjectKey, ExamGrade, ElementaryGrade, ExamType, SchoolLevel } from './types';
 import { seededRandom } from './rng';
 
+// ===== 시험 스케줄 (단일 진리의 원천) =====
+// 초등(Y1): W17 단원평가, W38 단원평가
+// 중등(Y2~Y4): W8 중간, W17 기말, W30 중간, W38 기말
+// 고1~2(Y5~Y6): 내신 + W12/W33 모의
+// 고3(Y7): 내신 + 모의 + W35 수능 (기말 자리에 수능)
+export function getExamSchedule(year: number): Record<number, ExamType> {
+  if (year <= 1) {
+    return { 17: 'unit-test', 38: 'unit-test' };
+  }
+  if (year <= 4) {
+    return { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
+  }
+  if (year === 7) {
+    return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 35: 'suneung' };
+  }
+  return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 38: 'final' };
+}
+
+export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
+  'unit-test': '단원평가',
+  midterm: '중간고사',
+  final: '기말고사',
+  mock: '모의고사',
+  suneung: '수능',
+};
+
 // ===== 유틸리티 =====
 
 // 결정론적 ±range 노이즈 — state.rngSeed를 mutate하므로 같은 시드면 같은 결과
