@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
+import { getActivityCost } from '../engine/activities';
 
 const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = {
   study:    { emoji: '📚', name: '공부',     desc: '학업 성적을 올린다' },
@@ -119,7 +120,8 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                 {catActivities.map(a => {
                   const isSel = selected.includes(a.id);
                   const money = availableMoney !== undefined ? availableMoney : state.money;
-                  const canAfford = (a.moneyCost <= 0 || money >= a.moneyCost) && (!a.requires || a.requires(state));
+                  const cost = getActivityCost(a, state.year);
+                  const canAfford = (cost <= 0 || money >= cost) && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
                   const disabled = !canSelect || !canAfford;
 
@@ -155,14 +157,14 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{a.name}</span>
-                          {a.moneyCost > 0 && (
+                          {cost > 0 && (
                             <span style={{ fontSize: '0.72rem', color: canAfford ? 'var(--yellow)' : 'var(--red)' }}>
-                              ({a.moneyCost}만{compact ? '/주' : ''})
+                              ({cost}만{compact ? '/주' : ''})
                             </span>
                           )}
-                          {a.moneyCost < 0 && (
+                          {cost < 0 && (
                             <span style={{ fontSize: '0.72rem', color: 'var(--green)' }}>
-                              (+{-a.moneyCost}만)
+                              (+{-cost}만)
                             </span>
                           )}
                           {npcChoices[a.id] && (
@@ -173,7 +175,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {a.slots > 1 && <span style={{ fontSize: '0.65rem', color: 'var(--purple)' }}>{a.slots}칸 사용</span>}
-                          {a.moneyCost > 0 && money < a.moneyCost && (
+                          {cost > 0 && money < cost && (
                             <span style={{ fontSize: '0.65rem', color: 'var(--red)', fontWeight: 600 }}>💰부족</span>
                           )}
                           {isSel && <span style={{ fontSize: '0.9rem' }}>✓</span>}

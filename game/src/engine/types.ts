@@ -127,6 +127,8 @@ export interface Activity {
   fatigue: number;
   effects: Partial<Stats>;
   moneyCost: number;
+  // 학년별 비용 차등 (현실 고증 — 학년 올라가면 비싸짐). 미설정 시 moneyCost 사용.
+  yearlyCost?: { elementary?: number; middle?: number; high?: number };
   description: string;
   flavor: string;           // 서사적 설명 한 줄
   tags: string[];           // 분위기 태그
@@ -169,7 +171,6 @@ export interface EventChoice {
   text: string;
   effects: Partial<Stats>;
   fatigueEffect?: number;
-  mentalEffect?: number;
   moneyEffect?: number;
   npcEffects?: { npcId: string; intimacyChange: number }[];
   message: string;

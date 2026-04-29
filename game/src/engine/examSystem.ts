@@ -180,9 +180,10 @@ export function generateExamResult(
   const commonMod = getCommonMod(state, schoolLevel, prep);
   const subjects = calculateSubjectScores(state, schoolLevel, commonMod);
 
-  // 전 시험 대비 변화
+  // 전 시험 대비 변화 — 직전 내신(midterm/final)만 비교 대상
+  // (모의고사는 artsPhysical=0이라 내신과 비교 시 거짓 양수 delta 발생)
   const exams = state.examResults || [];
-  const prevExam = exams.length > 0 ? exams[exams.length - 1] : null;
+  const prevExam = exams.filter(e => e.examType === 'midterm' || e.examType === 'final').slice(-1)[0] || null;
   if (prevExam) {
     for (const key of Object.keys(subjects) as SubjectKey[]) {
       subjects[key].delta = subjects[key].score - prevExam.subjects[key].score;
@@ -248,8 +249,9 @@ export function generateMockExamResult(
   subjects.artsPhysical.delta = 0;
 
   const exams = state.examResults || [];
-  // 직전 내신 시험(midterm/final)만 delta 비교 대상으로 사용
-  const prevExam = exams.filter(e => e.examType === 'mock' || e.examType === 'midterm' || e.examType === 'final').slice(-1)[0] || null;
+  // 직전 모의고사만 delta 비교 대상으로 사용 — 내신과는 점수 분포가 달라 섞이면 부정확
+  // (커밋 4448f848 의도: "delta 계산: 모의→모의, 수능→모의 비교 — 내신-모의 섞임 방지")
+  const prevExam = exams.filter(e => e.examType === 'mock').slice(-1)[0] || null;
   if (prevExam) {
     for (const key of Object.keys(subjects) as SubjectKey[]) {
       if (key === 'artsPhysical') continue;
