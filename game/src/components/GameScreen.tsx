@@ -497,7 +497,7 @@ export function GameScreen() {
   const weekInfo = getWeekLabel(state);
   const month = getMonthLabel(state.week);
   const maxSlots = state.isVacation ? 5 + getParentMods(state.parents).vacationSlotBonus : 2;
-  const activities = getAvailableActivities(state, state.isVacation);
+  const activities = getAvailableActivities(state);
   const routineIds = !state.isVacation ? [state.routineSlot2, state.routineSlot3].filter(Boolean) as string[] : [];
   const currentSlots = selectedActivities.reduce((s, aid) => s + (activities.find(x => x.id === aid)?.slots || 0), 0);
   const dialogue = getCharacterDialogue(state);
