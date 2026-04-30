@@ -453,10 +453,21 @@ Blurred classmates in background clapping/watching.
 Mood: heartfelt surprise, childhood friendship milestone.
 ```
 
-### [c2] 따로 골라 온 책 한 권 — CG TODO
+### [c2] 따로 골라 온 책 한 권 (-5만원, money>=10) — 🆕 신규
 
-조건부 노출: `state.money >= 10`. 책을 들여다보며 "...너, 날 너무 잘 아는데?" 라고 말 못 잇는 장면.
-프롬프트 후속 추가 예정.
+**공통** `minjae-birthday_c2.png`
+```
+Elementary classroom, after school. Minjae (reference) holding a hardcover book with
+both hands, head tilted down reading the title, expression frozen between surprise
+and a smile he's not letting through. The carefully composed "전교 1등" facade is
+visibly cracking — eyes a touch wider than usual, lips slightly parted.
+Book cover should suggest something thoughtful (a literary novel or quiet essay
+collection — not a study guide). Wrapping paper crumpled on the desk beside him.
+Background: empty classroom, late afternoon warm light, blurred chalkboard with
+faint test results still visible.
+Dialogue cue: "...너, 날 너무 잘 아는데?" — first moment his guard fully drops.
+Mood: rival becoming friend — gift that names the unspoken self.
+```
 
 ### [c3] 그냥 넘어간다 — CG 없음 (폴백)
 
@@ -532,30 +543,37 @@ Same setting with female protagonist (player_f reference). No other changes.
 
 ## 🟡 W14 jihun-birthday — 지훈 생일
 
-**Scene**: 교실에서 지훈이 생일 축하받음.
+**Scene**: 교실에서 지훈이 생일 축하받음. 선택지 3종(작은선물 / 농구화끈 / 카톡).
 
 **References**:
 - `jihun_elementary_fullbody.png`
 - `classroom_elementary_afternoon.png`
 
-### [c0] 선물을 사서 준다
+### [c0] 선물을 사서 준다 (-2만원) — 작은 선물
 
-**공통** `jihun-birthday_c0.png`
+**공통** `jihun-birthday_c0.png` ✓
 ```
 Elementary classroom. Jihun (reference) reacting with exaggerated joy to a gift,
 "야 너 최고다!" moment — arms thrown up, huge grin. Small wrapped gift on his desk.
 Mood: pure happy energetic friendship.
 ```
 
-### [c1] 카톡으로 축하만
+### [c1] 좋아하는 농구화 끈 세트를 고른다 (-5만원) — 🆕 신규
 
 **공통** `jihun-birthday_c1.png`
 ```
-Similar to minjae-birthday c1 — 2012 era phone screen, Korean messaging app chat interface
-(soft yellow background, white speech bubbles — generic messaging style, no brand name):
-"생일 축하해" bubble sent, then "고마워" reply.
-Mood: casual but slightly impersonal.
+Elementary classroom. Jihun (reference) holding a set of basketball shoelaces (multiple
+colors — neon green/orange/black) up to the light, mouth agape in genuine awe, eyes wide
+and glassy. Mid-laugh but with a serious moved undertone. Wrapped gift box open on his desk.
+Background: classmates blurred, slanting golden afternoon light through windows.
+Dialogue cue: "야, 이거... 너 진짜 나랑 오래 볼 생각인가 보네." — implied through
+expression, mid-laugh that turned serious.
+Mood: friendship deepening — small gift, big meaning.
 ```
+
+### [c2] 카톡으로 축하만 한다 — 공통 카톡 폴백
+
+`jihun-birthday_c2.png` = 본 문서 하단 [🔗 공통 카톡 컷] 동일 이미지 사본.
 
 ---
 
@@ -646,26 +664,36 @@ Mood: nostalgic contemplation of "last semester here".
 
 ## 🟡 W29 subin-birthday — 수빈 생일
 
-**Scene**: 2학기 9월. 수빈 생일.
+**Scene**: 2학기 9월. 수빈 생일. 선택지 3종(작은선물 / 여행에세이 / 카톡).
 
 **References**: `subin_elementary_fullbody.png`, `classroom_elementary_afternoon.png`
 
-### [c0] 선물을 준비했다
+### [c0] 선물을 준비했다 (-2만원) — 작은 선물
 
-**공통** `subin-birthday_c0.png`
+**공통** `subin-birthday_c0.png` ✓
 ```
 Elementary classroom. Subin (reference) eyes wide in surprise, both hands cupping a small
 gift bag, shy happy smile, cheeks faintly pink. "어... 어떻게 알았어!" feeling.
 Mood: sweet unexpected joy, quiet character's rare delight.
 ```
 
-### [c1] 카톡으로 축하
+### [c1] 여행 에세이 책 한 권을 고른다 (-5만원) — 🆕 신규
 
 **공통** `subin-birthday_c1.png`
 ```
-Phone screen chat close-up — heart emoticon and "고마워~" reply.
-Mood: warm but distant.
+Elementary classroom afternoon. Subin (reference) holding a travel essay book with both
+hands, head slightly down, eyes shadowed by hair, lips parted but no words coming out.
+Long held silence. Book cover should suggest travel/distance — silhouette of distant
+landscape, airplane, or open road imagery (no specific brand text).
+Background: empty classroom, late afternoon golden light from windows, dust motes visible.
+Dialogue cue: "...너, 내가 어디 떠나고 싶어하는 거 알았어?" — moment when she realizes
+the protagonist saw a part of her she rarely shows.
+Mood: quiet revelation, unspoken understanding between two reserved kids.
 ```
+
+### [c2] 카톡으로 축하한다 — 공통 카톡 폴백
+
+`subin-birthday_c2.png` = 본 문서 하단 [🔗 공통 카톡 컷] 동일 이미지 사본.
 
 ---
 
@@ -727,26 +755,36 @@ Same setting with female protagonist (player_f reference). No other changes.
 
 ## 🟡 W37 yuna-birthday — 유나 생일
 
-**Scene**: 2학기 후반 유나 생일. 유나는 조용히 자리에 앉아 있음.
+**Scene**: 2학기 후반 유나 생일. 유나는 조용히 자리에 앉아 있음. 선택지 3종(작은선물 / 머리핀 / 카톡).
 
 **References**: `yuna_elementary_fullbody.png`, `classroom_elementary_afternoon.png`
 
-### [c0] 작은 선물을 준다
+### [c0] 작은 선물을 준다 (-2만원)
 
-**공통** `yuna-birthday_c0.png`
+**공통** `yuna-birthday_c0.png` ✓
 ```
 Classroom afternoon. Yuna (reference) quietly receiving a small gift, hands both holding it,
 looking down, ears and cheeks faintly red. Small genuine smile.
 Mood: subtle deep emotion, quiet character's rare vulnerability.
 ```
 
-### [c1] 카톡으로만 축하
+### [c1] 별 장식 머리핀 세트를 준비한다 (-5만원) — 🆕 신규
 
 **공통** `yuna-birthday_c1.png`
 ```
-Phone screen. Simple "고마워" message, no emoji — minimalist just like yuna.
-Mood: cool and quiet.
+Elementary classroom, late afternoon — sunlight streaming through windows in clear bright
+shafts. Yuna (reference) just put on a small star-shaped hairpin (one of a set, others
+visible in opened gift box on desk). She's looking down quietly examining a second pin
+in her palm, but the corner of her mouth turns up — a private smile rarely shown.
+The protagonist is implied (off-frame). Light catches the metal star on her hair — small
+flare of golden window light reflecting off it.
+Dialogue cue: "...이거, 내가 늘 쓰는 거 알았어?" — a moment of being seen.
+Mood: quiet character finally feeling noticed in a way that matters.
 ```
+
+### [c2] 조용히 카톡으로 축하한다 — 공통 카톡 폴백
+
+`yuna-birthday_c2.png` = 본 문서 하단 [🔗 공통 카톡 컷] 동일 이미지 사본.
 
 ---
 
@@ -848,6 +886,58 @@ visible from behind). No other changes.
 
 ---
 
+# 🔗 공통 카톡 컷 (생일 c2 폴백 자산)
+
+`jihun-birthday`, `subin-birthday`, `yuna-birthday`의 c2(카톡) 선택은 **NPC 묘사가 약화**된
+폰 화면 컷이라 NPC별 차별화 가치가 낮음. **단일 프롬프트로 1개 이미지를 생성**한 뒤
+다음 3개 파일명으로 동일 사본 저장:
+
+```
+public/images/events/elementary/jihun-birthday_c2.png
+public/images/events/elementary/subin-birthday_c2.png
+public/images/events/elementary/yuna-birthday_c2.png
+```
+
+**공통** 카톡 컷 — 🆕 신규
+```
+Close-up of a 2012-era flip phone or slide phone screen showing a Korean messaging app
+chat interface (soft yellow background, white speech bubbles — generic style, no brand name):
+sent bubble "생일 축하해", reply bubble "고마워" — short and minimal.
+Phone is held by a hand in the lower frame, blurred classroom or desk in deep background
+(no specific NPC visible — must be reusable across 3 events).
+Lighting: soft afternoon classroom ambience, slight bokeh on background.
+Mood: casual minimal effort — the safe, distant choice between friends who could be closer.
+```
+
+> **주의**: NPC별 특이 표현·이름·실루엣 없이 generic하게. 단일 이미지가 3개 이벤트
+> (지훈/수빈/유나)에서 모두 사용됨.
+
+---
+
+# 🧭 CG 폴백 정책 (SSOT)
+
+`GameScreen.tsx`의 폴백 cascade는 다음과 같이 동작:
+
+```
+{schoolLevel}/{eventId}_c{ci}_{gender}  →  {schoolLevel}/{eventId}_{gender}
+  →  {schoolLevel}/{eventId}_c{ci}      →  {schoolLevel}/{eventId}
+  →  common/{eventId}_c{ci}_{gender}    →  common/{eventId}_{gender}
+  →  common/{eventId}_c{ci}             →  common/{eventId}
+```
+
+이벤트별 의도 정책:
+
+| 이벤트 | ci=0 | ci=1 | ci=2 | ci=3 |
+|---|---|---|---|---|
+| `jihun-birthday` | 작은 선물 (전용) | 농구화 끈 (전용) | 카톡 (공유 사본) | — |
+| `subin-birthday` | 작은 선물 (전용) | 여행 에세이 (전용) | 카톡 (공유 사본) | — |
+| `yuna-birthday` | 작은 선물 (전용) | 머리핀 (전용) | 카톡 (공유 사본) | — |
+| `minjae-birthday` | 말 건다 (CG 없음, 폴백) | 편의점 선물 (전용) | 책 (전용) | 넘어감 (CG 없음) |
+
+폴백 정책 변경 시 본 표와 `GameScreen.tsx:388` 위 주석을 함께 갱신.
+
+---
+
 # 📊 생성 체크리스트
 
 ## 필수
@@ -878,10 +968,14 @@ visible from behind). No other changes.
 
 ## 있으면 좋음
 - [x] `minjae-birthday_c1.png` (편의점 선물)
-- [ ] `minjae-birthday_c2.png` (책 한 권 — TODO 신규 생성)
-- [ ] `jihun-birthday_c0.png`, `_c1.png` (공통: jihun / phone)
-- [ ] `subin-birthday_c0.png`, `_c1.png` (공통: subin / phone)
-- [ ] `yuna-birthday_c0.png`, `_c1.png` (공통: yuna / phone)
+- [ ] 🆕 `minjae-birthday_c2.png` (책 한 권)
+- [x] `jihun-birthday_c0.png` (작은 선물)
+- [ ] 🆕 `jihun-birthday_c1.png` (농구화 끈)
+- [x] `subin-birthday_c0.png` (작은 선물)
+- [ ] 🆕 `subin-birthday_c1.png` (여행 에세이)
+- [x] `yuna-birthday_c0.png` (작은 선물)
+- [ ] 🆕 `yuna-birthday_c1.png` (별 머리핀)
+- [ ] 🆕 공통 카톡 컷 1개 → `jihun-birthday_c2.png` / `subin-birthday_c2.png` / `yuna-birthday_c2.png` (동일 사본 3개)
 - [ ] `elementary-unit-test_c0_m.png`, `_c0_f.png`
 - [ ] `elementary-unit-test_c1_m.png`, `_c1_f.png`
 - [ ] `elementary-semester2-start_c0_m.png`, `_c0_f.png`
