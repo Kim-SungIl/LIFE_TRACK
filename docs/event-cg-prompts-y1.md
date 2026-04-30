@@ -254,7 +254,7 @@ Same setting with female protagonist (player_f reference). No other changes.
 
 ---
 
-## 🔴 W3 jihun-call — 지훈이의 전화 (남=농구 / 여=떡볶이)
+## 🔴 W4 jihun-call — 지훈이의 전화 (남=농구 / 여=떡볶이)
 
 **Scene**: 저녁에 지훈이한테 전화가 와서 "주말에 같이 놀자" 제안. 남주면 농구, 여주면 떡볶이. 민재도 합류한다고 함.
 선택 결과 씬: c0는 함께 노는 모습, c1은 거절 후 혼자 남은 찝찝함.

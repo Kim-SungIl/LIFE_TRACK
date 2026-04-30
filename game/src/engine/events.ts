@@ -3466,11 +3466,16 @@ export const SOFT_CRISIS_IDS = new Set<string>([
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
-  const fixedEvent = GAME_EVENTS.find(e =>
+  // 같은 주에 여러 fixed 이벤트가 매칭될 수 있음 (예: W37의 단원평가 + 유나생일).
+  // NPC 이벤트(speakers 보유)는 보통 친밀도/met 같은 추가 조건이 붙어 더 희소하므로 우선.
+  // 학교 일정 이벤트는 매년 발동하지만, NPC 생일/관계 이벤트는 한 번 놓치면 끝이라
+  // 후자가 우선되도록 stable 정렬.
+  const fixedCandidates = GAME_EVENTS.filter(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
+  const fixedEvent = fixedCandidates.find(e => (e.speakers?.length ?? 0) > 0) ?? fixedCandidates[0];
   if (fixedEvent) return fixedEvent;
 
   // 1. 후속 이벤트 체크 (100% 발동) — ANNUAL은 매년 재발동 허용
