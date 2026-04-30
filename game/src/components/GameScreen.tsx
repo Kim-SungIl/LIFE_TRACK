@@ -3,9 +3,8 @@ import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost } from '../engine/activities';
 import { getParentMods } from '../engine/parentModifiers';
-import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, ExamResult } from '../engine/types';
+import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS } from '../engine/types';
 import { Portrait } from './Portrait';
-import { NPC_APPEARANCES } from './CharacterAvatar';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
 import { getBackground, getEventBackground, getSchoolLevel } from '../engine/backgrounds';
@@ -50,10 +49,6 @@ export function GameScreen() {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [showNpc, setShowNpc] = useState(false);
-  const [routineSlot2Pick, setRoutineSlot2Pick] = useState<string | null>(null);
-  const [routineSlot3Pick, setRoutineSlot3Pick] = useState<string | null>(null);
-  const [routineConfirmed, setRoutineConfirmed] = useState(false);
-  const [routineStep, setRoutineStep] = useState<1 | 2>(1); // 슬롯 1 먼저, 그 다음 슬롯 2
   const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[]; event?: any; choiceIndex?: number } | null>(null);
   const [cgLoaded, setCgLoaded] = useState(false);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
@@ -67,11 +62,11 @@ export function GameScreen() {
   const [showTutorial, setShowTutorial] = useState(() => {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
+  const [bgImgError, setBgImgError] = useState(false);
 
   if (!state) return null;
 
   const bg = getBackground(state.week, state.isVacation, state.mentalState, state.year);
-  const [bgImgError, setBgImgError] = useState(false);
 
   // 공통 배경 래퍼
   const BgWrapper = ({ children, extraStyle }: { children: React.ReactNode; extraStyle?: React.CSSProperties }) => (
@@ -1140,8 +1135,7 @@ export function GameScreen() {
               {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 */}
               {editingSlot === 'routine2' && (
                 <div onClick={() => {
-                  const slot1 = routineSlot2Pick ?? state.routineSlot2;
-                  if (slot1) { setRoutine(slot1, null); }
+                  if (state.routineSlot2) { setRoutine(state.routineSlot2, null); }
                   setEditingSlot(null);
                 }} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
