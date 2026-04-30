@@ -2033,9 +2033,10 @@ export const GAME_EVENTS: GameEvent[] = [
     background: 'classroom_{school}_sunset',
     speakers: ['yuna'],
     // M5 Phase 3: intimacy 65→45 완화
+    // 졸업/음대 결정 컨텍스트 — Y6+ 후반에만 (subin-farewell과 동일 패턴)
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 45;
+      return !!yuna?.met && yuna.intimacy >= 45 && s.year >= 6 && s.week >= 40 && !s.isVacation;
     },
     choices: [
       {
