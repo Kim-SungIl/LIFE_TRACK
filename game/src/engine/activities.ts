@@ -193,11 +193,10 @@ export const ACTIVITIES: Activity[] = [
   },
 ];
 
-export function getAvailableActivities(state: GameState, forVacation = false): Activity[] {
+export function getAvailableActivities(state: GameState): Activity[] {
   return ACTIVITIES.filter(a => {
     if (a.category === 'parent' && a.requires && !a.requires(state)) return false;
     if (a.category === 'work' && state.year < 4) return false;
-    if (a.id === 'deep-rest' && !forVacation) return true;
     return true;
   });
 }
