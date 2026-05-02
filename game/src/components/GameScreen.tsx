@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../engine/store';
-import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
+import { getWeekLabel, getMonthLabel, calculateEnding, getExamSchedule } from '../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost } from '../engine/activities';
 import { getParentMods } from '../engine/parentModifiers';
-import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS } from '../engine/types';
+import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, EXAM_TYPE_LABELS, GameEvent } from '../engine/types';
 import { Portrait } from './Portrait';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
@@ -12,7 +12,7 @@ import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../en
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
 import { ShopItem } from '../engine/shopSystem';
-import { EventScene } from './EventScene';
+import { EventScene, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from './EventScene';
 
 const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
@@ -48,7 +48,7 @@ export function GameScreen() {
   }, [state?.phase]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
-  const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[]; event?: any; choiceIndex?: number } | null>(null);
+  const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[]; event?: GameEvent; choiceIndex?: number } | null>(null);
   const [cgLoaded, setCgLoaded] = useState(false);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
@@ -357,21 +357,7 @@ export function GameScreen() {
     const resultEvent = eventResultData.event;
     const resultLocation = resultEvent?.location;
     const BASE = import.meta.env.BASE_URL;
-    const gradients: Record<string, string> = {
-      classroom: 'linear-gradient(180deg, #3a2f42 0%, #241a2a 100%)',
-      home: 'linear-gradient(180deg, #3d2b1f 0%, #2a1f15 100%)',
-      park: 'linear-gradient(180deg, #1e3a26 0%, #13281a 100%)',
-      hallway: 'linear-gradient(180deg, #3a3342 0%, #241f28 100%)',
-      rooftop: 'linear-gradient(180deg, #4a5a85 0%, #2c3a58 100%)',
-      street: 'linear-gradient(180deg, #4a3f5c 0%, #2a2535 100%)',
-      gym: 'linear-gradient(180deg, #5c3a2a 0%, #3a2518 100%)',
-      school_gate: 'linear-gradient(180deg, #3a5c4a 0%, #1a3a28 100%)',
-      cafe: 'linear-gradient(180deg, #5c4a3a 0%, #3a2f20 100%)',
-      music_room: 'linear-gradient(180deg, #3a2f5c 0%, #2a1f3a 100%)',
-      beach: 'linear-gradient(180deg, #4a8ab5 0%, #2a5a80 100%)',
-      auditorium: 'linear-gradient(180deg, #5c4a4a 0%, #3a2a2a 100%)',
-    };
-    const bgGradient = resultLocation ? (gradients[resultLocation] || 'linear-gradient(180deg, #1f1a25 0%, #17151c 100%)') : 'linear-gradient(180deg, #1f1a25 0%, #17151c 100%)';
+    const bgGradient = resultLocation ? (LOCATION_GRADIENTS[resultLocation] || DEFAULT_GRADIENT) : DEFAULT_GRADIENT;
     // 배경 이미지: event.background 우선, 없으면 location 기반 폴백
     const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, state.year) : undefined;
     const bgImgCandidates = resolvedEventBg
@@ -590,28 +576,11 @@ export function GameScreen() {
     );
   };
 
-  // 다가오는 이벤트 계산 (학교급별 시험 스케줄)
+  // 다가오는 이벤트 계산 — 시험 스케줄 SSOT(gameEngine.getExamSchedule) 사용
   const upcomingEvents: string[] = [];
-  const examScheduleMap: Record<number, string> = {};
-  if (state.year <= 1) {
-    // 초등: 단원평가
-    examScheduleMap[17] = '단원평가';
-    examScheduleMap[38] = '단원평가';
-  } else if (state.year <= 4) {
-    // 중등
-    examScheduleMap[8] = '중간고사'; examScheduleMap[17] = '기말고사';
-    examScheduleMap[30] = '중간고사'; examScheduleMap[38] = '기말고사';
-  } else {
-    // 고등: 내신 + 모의
-    examScheduleMap[8] = '중간고사'; examScheduleMap[12] = '모의고사';
-    examScheduleMap[17] = '기말고사'; examScheduleMap[30] = '중간고사';
-    examScheduleMap[33] = '모의고사';
-    if (state.year === 7) { examScheduleMap[35] = '수능'; }
-    else { examScheduleMap[38] = '기말고사'; }
-  }
-  for (const [weekStr, name] of Object.entries(examScheduleMap)) {
+  for (const [weekStr, examType] of Object.entries(getExamSchedule(state.year))) {
     const diff = Number(weekStr) - state.week;
-    if (diff > 0 && diff <= 4) upcomingEvents.push(`${name}까지 ${diff}주`);
+    if (diff > 0 && diff <= 4) upcomingEvents.push(`${EXAM_TYPE_LABELS[examType]}까지 ${diff}주`);
   }
   if (state.week >= 18 && state.week < 20) upcomingEvents.push('여름방학이 다가온다');
   if (state.week >= 40 && state.week < 43) upcomingEvents.push('겨울방학이 다가온다');
@@ -1199,8 +1168,7 @@ export function GameScreen() {
                     const slotIdx = editingSlot === 'weekend1' ? 0 :
                                     editingSlot === 'weekend2' ? 1 :
                                     parseInt(editingSlot.replace('weekend', '')) - 1;
-                    const SOCIAL_IDS = ['hang-out', 'club', 'study-group'];
-                    if (SOCIAL_IDS.includes(id)) {
+                    if (SOCIAL_ACTIVITIES.includes(id)) {
                       // NPC 선택 필요 — slotKey 저장 후 NPC 모달 열기
                       setNpcSelectFor(`slot:${slotIdx}:${id}`);
                     } else {

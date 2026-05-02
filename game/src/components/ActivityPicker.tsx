@@ -53,6 +53,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
+  const money = availableMoney !== undefined ? availableMoney : state.money;
   const categories = ['study', 'exercise', 'social', 'talent', 'rest', 'parent', 'work'];
 
   return (
@@ -119,7 +120,6 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
 
                 {catActivities.map(a => {
                   const isSel = selected.includes(a.id);
-                  const money = availableMoney !== undefined ? availableMoney : state.money;
                   const cost = getActivityCost(a, state.year);
                   const canAfford = (cost <= 0 || money >= cost) && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
