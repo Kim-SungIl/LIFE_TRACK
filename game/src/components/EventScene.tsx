@@ -349,7 +349,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       }}>
         {speakerIds.map((npcId, i) => {
           const npc = npcs?.find(n => n.id === npcId);
-          const label = npc ? (npc.met ? npc.name : '???') : (NPC_NAMES[npcId]?.name || npcId);
+          const label = npc ? (npc.met ? npc.name : '???') : npcId;
           const isSpeaking = npcId === primarySpeaker;
           return (
             <div
