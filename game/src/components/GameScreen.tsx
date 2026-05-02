@@ -48,7 +48,6 @@ export function GameScreen() {
   }, [state?.phase]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
-  const [showNpc, setShowNpc] = useState(false);
   const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[]; event?: any; choiceIndex?: number } | null>(null);
   const [cgLoaded, setCgLoaded] = useState(false);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
