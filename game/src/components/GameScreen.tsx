@@ -7,7 +7,7 @@ import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, EXAM_TYPE_L
 import { Portrait } from './Portrait';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
-import { getBackground, getEventBackground, getSchoolLevel } from '../engine/backgrounds';
+import { getBackground, getEventBackground, getSchoolLevel, BgInfo } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
@@ -18,6 +18,36 @@ const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
 };
 
+interface BgWrapperProps {
+  bg: BgInfo;
+  bgImgError: boolean;
+  onImgError: () => void;
+  children: React.ReactNode;
+  extraStyle?: React.CSSProperties;
+}
+
+// 모듈 레벨 컴포넌트 — 부모 렌더마다 새 함수 참조 생성을 피해 자식 트리 unmount/remount 방지
+function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: BgWrapperProps) {
+  return (
+    <div style={{
+      minHeight: '100vh', position: 'relative', overflow: 'hidden',
+      background: bg.gradient,
+      ...extraStyle,
+    }}>
+      {bg.image && !bgImgError && (
+        <img
+          src={`${import.meta.env.BASE_URL}${bg.image.replace(/^\//, '')}`} alt=""
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, pointerEvents: 'none' }}
+          onError={onImgError}
+        />
+      )}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: bg.overlay, pointerEvents: 'none' }} />
+      <div style={{ position: 'relative', zIndex: 1, padding: 20, maxWidth: 600, margin: '0 auto' }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function GameScreen() {
   const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem } = useGameStore();
@@ -66,30 +96,8 @@ export function GameScreen() {
   if (!state) return null;
 
   const bg = getBackground(state.week, state.isVacation, state.mentalState, state.year);
-
-  // 공통 배경 래퍼
-  const BgWrapper = ({ children, extraStyle }: { children: React.ReactNode; extraStyle?: React.CSSProperties }) => (
-    <div style={{
-      minHeight: '100vh', position: 'relative', overflow: 'hidden',
-      background: bg.gradient,
-      ...extraStyle,
-    }}>
-      {/* 배경 이미지 (있으면) */}
-      {bg.image && !bgImgError && (
-        <img
-          src={`${import.meta.env.BASE_URL}${bg.image.replace(/^\//, '')}`} alt=""
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, pointerEvents: 'none' }}
-          onError={() => setBgImgError(true)}
-        />
-      )}
-      {/* 오버레이 */}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: bg.overlay, pointerEvents: 'none' }} />
-      {/* 콘텐츠 */}
-      <div style={{ position: 'relative', zIndex: 1, padding: 20, maxWidth: 600, margin: '0 auto' }}>
-        {children}
-      </div>
-    </div>
-  );
+  const handleBgImgError = () => setBgImgError(true);
+  const bgProps = { bg, bgImgError, onImgError: handleBgImgError };
 
   // ===== v1.2 학년말 일기장 (Y1~Y6) =====
   if (state.phase === 'year-end') {
@@ -101,7 +109,7 @@ export function GameScreen() {
     const { advanceFromYearEnd } = useGameStore.getState();
 
     return (
-      <BgWrapper>
+      <BgWrapper {...bgProps}>
         <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto', padding: '24px 20px', textAlign: 'center' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 8 }}>
             YEAR-END
@@ -165,7 +173,7 @@ export function GameScreen() {
     const ending = calculateEnding(state);
     const trackLabel = state.track === 'humanities' ? '문과' : state.track === 'science' ? '이과' : null;
     return (
-      <BgWrapper>
+      <BgWrapper {...bgProps}>
         <div className="ending-screen fade-in" style={{ minHeight: 'auto', padding: 0 }}>
           <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 8 }}>7년의 여정이 끝났습니다</div>
           <div className="ending-title">{ending.title}</div>
@@ -621,7 +629,7 @@ export function GameScreen() {
   // ===== 주간 결산 =====
   if (showResult && state.weekLog) {
     return (
-      <BgWrapper>
+      <BgWrapper {...bgProps}>
         <div className="fade-in">
           {/* 일기 스타일 결산 */}
           <div style={{ textAlign: 'center', marginBottom: 16, marginTop: 8 }}>
@@ -829,7 +837,7 @@ export function GameScreen() {
   // ===== 메인 게임 화면 =====
   return (
     <>
-    <BgWrapper>
+    <BgWrapper {...bgProps}>
       {/* HUD 상단 */}
       <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
         <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
