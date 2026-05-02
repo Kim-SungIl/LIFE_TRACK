@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>CG 검수 — Y1 생일 이벤트</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --bg: #0d0b12;
+    --card: rgba(42,34,48,0.85);
+    --border: rgba(255,255,255,0.08);
+    --text: #e6e1eb;
+    --muted: #9aa;
+    --accent: #e5c07b;
+    --green: #8fb573;
+    --red: #d96458;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px 24px 80px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6;
+  }
+  h1 { font-size: 1.5rem; margin: 0 0 8px; }
+  h2 { font-size: 1.1rem; margin: 32px 0 12px; color: var(--accent); border-left: 3px solid var(--accent); padding-left: 10px; }
+  h3 { font-size: 0.95rem; margin: 12px 0 8px; color: var(--text); }
+  .intro { color: var(--muted); font-size: 0.85rem; max-width: 880px; margin-bottom: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 16px;
+  }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 0.75rem; color: var(--muted); margin-bottom: 8px; }
+  .badge { background: rgba(255,255,255,0.06); padding: 2px 8px; border-radius: 6px; }
+  .badge.new { background: rgba(229,192,123,0.15); color: var(--accent); }
+  .badge.shared { background: rgba(125,163,217,0.15); color: #7da3d9; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .img-wrap { background: #000; border-radius: 8px; overflow: hidden; position: relative; }
+  .img-wrap img { width: 100%; display: block; }
+  .img-wrap .fail {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--red); font-size: 0.85rem; background: rgba(217,100,88,0.08);
+  }
+  .filename { font-family: ui-monospace, Menlo, monospace; font-size: 0.72rem; color: var(--muted); margin-top: 6px; }
+  .choice-text { font-size: 0.85rem; color: var(--accent); margin: 4px 0 12px; font-weight: 600; }
+  .scene { font-size: 0.82rem; color: var(--muted); margin-bottom: 12px; font-style: italic; }
+  details { margin-top: 8px; font-size: 0.78rem; }
+  details summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+  details summary:hover { color: var(--text); }
+  .prompt-block { margin-top: 8px; }
+  .prompt-block .label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .prompt-block pre {
+    background: rgba(0,0,0,0.3); border-radius: 6px; padding: 10px 12px;
+    font-family: ui-monospace, Menlo, monospace; font-size: 0.78rem; line-height: 1.5;
+    white-space: pre-wrap; word-break: break-word; margin: 0; color: var(--text);
+  }
+  .checks { background: rgba(143,181,115,0.06); border-left: 2px solid var(--green); padding: 8px 12px; border-radius: 0 6px 6px 0; font-size: 0.78rem; margin-top: 10px; }
+  .checks .label { color: var(--green); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; margin-bottom: 4px; }
+  .checks ul { margin: 0; padding-left: 16px; }
+  .checks li { margin-bottom: 2px; }
+  .toolbar { position: sticky; top: 0; background: var(--bg); padding: 8px 0; margin-bottom: 16px; z-index: 10; border-bottom: 1px solid var(--border); }
+  .toolbar button {
+    background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.78rem; margin-right: 6px;
+  }
+  .toolbar button.active { background: var(--accent); color: #1a1620; border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<h1>🎨 CG 검수 — Y1 생일 이벤트</h1>
+<p class="intro">
+  PR #66에서 추가된 신규 자산(c1 전용 4개 + 공통 카톡 사본 3개) + 기존 자산을 프롬프트와 나란히 검수합니다.
+  각 이미지가 (1) 프롬프트의 핵심 요소를 충족하는지, (2) 캐릭터 디자인이 레퍼런스와 일관되는지,
+  (3) 카톡 컷의 한글이 깨지지 않는지 확인하세요.
+</p>
+
+<div class="toolbar">
+  <button class="active" data-filter="all">전체</button>
+  <button data-filter="new">🆕 신규만</button>
+  <button data-filter="shared">🔗 공통 카톡</button>
+</div>
+
+<!-- ============ JIHUN ============ -->
+<h2>🎂 W14 jihun-birthday — 지훈 생일</h2>
+<p class="scene">교실에서 지훈이 생일 축하받음. 단톡방에 생일 축하 메시지가 쏟아진다.</p>
+
+<div class="card" data-tag="existing">
+  <div class="meta">
+    <span class="badge">c0</span>
+    <span class="badge">기존</span>
+  </div>
+  <div class="choice-text">선물을 사서 준다 (-2만원)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Elementary classroom. Jihun (reference) reacting with exaggerated joy to a gift,
+"야 너 최고다!" moment — arms thrown up, huge grin. Small wrapped gift on his desk.
+Mood: pure happy energetic friendship.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>초등학교 교실. 지훈(레퍼런스)이 선물에 과장되게 기뻐하는 모습 —
+"야 너 최고다!" 양팔을 번쩍 들고 활짝 웃음. 책상 위 작게 포장된 선물.
+분위기: 순수하고 에너지 넘치는 우정.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li>지훈이 양팔을 번쩍 든 자세인가</li>
+          <li>책상 위 작은 선물 포장이 보이는가</li>
+          <li>레퍼런스(jihun_elementary_fullbody.png)와 동일 인물</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/jihun-birthday_c0.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/jihun-birthday_c0.png</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-tag="new">
+  <div class="meta">
+    <span class="badge">c1</span>
+    <span class="badge new">🆕 신규</span>
+  </div>
+  <div class="choice-text">좋아하는 농구화 끈 세트를 고른다 (-5만원)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Elementary classroom. Jihun (reference) holding a set of basketball shoelaces (multiple
+colors — neon green/orange/black) up to the light, mouth agape in genuine awe, eyes wide
+and glassy. Mid-laugh but with a serious moved undertone. Wrapped gift box open on his desk.
+Background: classmates blurred, slanting golden afternoon light through windows.
+Dialogue cue: "야, 이거... 너 진짜 나랑 오래 볼 생각인가 보네." — implied through
+expression, mid-laugh that turned serious.
+Mood: friendship deepening — small gift, big meaning.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>초등학교 교실. 지훈(레퍼런스)이 농구화 끈 세트(여러 색 — 네온그린/오렌지/검정)를
+빛에 비춰 들고, 진심으로 감탄하며 입을 벌린 표정. 눈이 커지고 살짝 촉촉.
+웃다가 진지해지는 중간 표정. 책상 위 포장 풀린 선물 상자.
+배경: 흐릿한 반 친구들, 창으로 비스듬히 들어오는 황금빛 오후 햇살.
+대사 힌트: "야, 이거... 너 진짜 나랑 오래 볼 생각인가 보네." — 표정으로 암시.
+분위기: 우정이 깊어지는 순간 — 작은 선물, 큰 의미.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li><strong>농구화 끈</strong>이 보이는가 (여러 색)</li>
+          <li>지훈 표정이 단순 기쁨이 아닌 <strong>감동·진지</strong> 톤</li>
+          <li>오후 황금빛 조명 (c0와 시간대 일관)</li>
+          <li>c0와 동일 인물처럼 보이는가</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/jihun-birthday_c1.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/jihun-birthday_c1.png</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-tag="shared">
+  <div class="meta">
+    <span class="badge">c2</span>
+    <span class="badge shared">🔗 공통 카톡</span>
+  </div>
+  <div class="choice-text">카톡으로 축하만 한다</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt (Shared)</div>
+        <pre>Close-up of a 2012-era flip phone or slide phone screen showing a Korean messaging app
+chat interface (soft yellow background, white speech bubbles — generic style, no brand name):
+sent bubble "생일 축하해", reply bubble "고마워" — short and minimal.
+Phone is held by a hand in the lower frame, blurred classroom or desk in deep background
+(no specific NPC visible — must be reusable across 3 events).
+Lighting: soft afternoon classroom ambience, slight bokeh on background.
+Mood: casual minimal effort — the safe, distant choice between friends who could be closer.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>2012년대 폴더폰/슬라이드폰 화면 클로즈업. 한국어 메시지 앱 채팅 인터페이스
+(부드러운 노란 배경 + 흰색 말풍선 — 브랜드 없는 generic 스타일):
+보낸 말풍선 "생일 축하해", 답장 말풍선 "고마워" — 짧고 미니멀.
+하단 프레임에 폰을 잡은 손, 깊이 들어간 배경에 흐릿한 교실/책상 (특정 NPC 식별 불가 — 3개 이벤트 재사용용).
+조명: 부드러운 오후 교실 분위기, 배경 살짝 보케.
+분위기: 가벼운 성의 — 친해질 수 있었지만 안전하게 거리 두는 선택.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트 (가장 중요)</div>
+        <ul>
+          <li>⚠️ <strong>한글 "생일 축하해" / "고마워"가 정상 글자인가</strong> (생성 AI 자주 깨뜨림)</li>
+          <li>NPC 얼굴/실루엣이 안 보이는가 (3사본 공유 위해)</li>
+          <li>2012년대 폴더폰/슬라이드폰 느낌 (현대 스마트폰 ❌)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/jihun-birthday_c2.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/jihun-birthday_c2.png (= subin/yuna_c2 SHA 동일)</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SUBIN ============ -->
+<h2>🎂 W29 subin-birthday — 수빈 생일</h2>
+<p class="scene">2학기 9월. 수빈이 생일이라는 게 떠올랐다.</p>
+
+<div class="card" data-tag="existing">
+  <div class="meta">
+    <span class="badge">c0</span>
+    <span class="badge">기존</span>
+  </div>
+  <div class="choice-text">선물을 준비했다 (-2만원)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Elementary classroom. Subin (reference) eyes wide in surprise, both hands cupping a small
+gift bag, shy happy smile, cheeks faintly pink. "어... 어떻게 알았어!" feeling.
+Mood: sweet unexpected joy, quiet character's rare delight.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>초등학교 교실. 수빈(레퍼런스)이 놀란 듯 눈이 커지고, 양손으로 작은 선물 가방을
+공손히 받아든 모습. 수줍은 행복한 미소, 볼 살짝 분홍빛.
+"어... 어떻게 알았어!" 같은 분위기.
+분위기: 예상치 못한 달콤한 기쁨, 조용한 캐릭터의 보기 드문 환한 표정.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li>양손으로 선물을 받아드는 자세</li>
+          <li>볼 분홍빛 + 수줍은 미소</li>
+          <li>레퍼런스(subin_elementary_fullbody.png)와 동일 인물</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/subin-birthday_c0.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/subin-birthday_c0.png</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-tag="new">
+  <div class="meta">
+    <span class="badge">c1</span>
+    <span class="badge new">🆕 신규</span>
+  </div>
+  <div class="choice-text">여행 에세이 책 한 권을 고른다 (-5만원)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Elementary classroom afternoon. Subin (reference) holding a travel essay book with both
+hands, head slightly down, eyes shadowed by hair, lips parted but no words coming out.
+Long held silence. Book cover should suggest travel/distance — silhouette of distant
+landscape, airplane, or open road imagery (no specific brand text).
+Background: empty classroom, late afternoon golden light from windows, dust motes visible.
+Dialogue cue: "...너, 내가 어디 떠나고 싶어하는 거 알았어?" — moment when she realizes
+the protagonist saw a part of her she rarely shows.
+Mood: quiet revelation, unspoken understanding between two reserved kids.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>초등학교 교실 오후. 수빈(레퍼런스)이 여행 에세이 책을 양손으로 들고,
+고개를 살짝 숙여 머리카락에 눈이 가려짐. 입은 살짝 벌렸지만 말이 안 나옴.
+길게 유지되는 침묵. 책 표지는 여행/먼 곳을 암시 — 먼 풍경 실루엣, 비행기, 트인 길
+이미지 (특정 브랜드 글자 없음).
+배경: 빈 교실, 창으로 들어오는 늦은 오후 황금빛, 먼지 입자가 보임.
+대사 힌트: "...너, 내가 어디 떠나고 싶어하는 거 알았어?" — 평소 안 보이던 면을 들킨 순간.
+분위기: 조용한 깨달음, 말 없는 두 아이의 무언의 이해.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li><strong>여행을 암시하는 책 표지</strong> (풍경/비행기/길 이미지)</li>
+          <li>수빈이 고개를 숙이고 입을 살짝 벌린 표정 (놀람과 침묵 동시)</li>
+          <li>오후 황금빛 + 먼지 입자 (시각적 정적감)</li>
+          <li>c0와 동일 인물처럼 보이는가</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/subin-birthday_c1.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/subin-birthday_c1.png</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-tag="shared">
+  <div class="meta">
+    <span class="badge">c2</span>
+    <span class="badge shared">🔗 공통 카톡 (사본)</span>
+  </div>
+  <div class="choice-text">카톡으로 축하한다</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">동일 프롬프트</div>
+        <pre>jihun-birthday c2와 동일 이미지 (SHA 일치). 위 카드 참조.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li>jihun-birthday c2와 동일 파일이어야 함 (이미 SHA 검증됨 ✓)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/subin-birthday_c2.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/subin-birthday_c2.png</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ YUNA ============ -->
+<h2>🎂 W37 yuna-birthday — 유나 생일</h2>
+<p class="scene">2학기 후반. 유나는 조용히 자리에 앉아 있다.</p>
+
+<div class="card" data-tag="existing">
+  <div class="meta">
+    <span class="badge">c0</span>
+    <span class="badge">기존</span>
+  </div>
+  <div class="choice-text">작은 선물을 준다 (-2만원)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Classroom afternoon. Yuna (reference) quietly receiving a small gift, hands both holding it,
+looking down, ears and cheeks faintly red. Small genuine smile.
+Mood: subtle deep emotion, quiet character's rare vulnerability.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>오후의 교실. 유나(레퍼런스)가 조용히 선물을 받아든 모습, 양손으로 잡고
+시선은 아래로, 귀와 볼이 살짝 빨갛다. 작지만 진심 어린 미소.
+분위기: 은은하지만 깊은 감정, 조용한 캐릭터의 보기 드문 약한 모습.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li>시선이 아래로 향한 차분한 자세</li>
+          <li>귀·볼 빨간 표시 (감정 노출 신호)</li>
+          <li>레퍼런스(yuna_elementary_fullbody.png)와 동일 인물</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/yuna-birthday_c0.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/yuna-birthday_c0.png</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-tag="new">
+  <div class="meta">
+    <span class="badge">c1</span>
+    <span class="badge new">🆕 신규</span>
+  </div>
+  <div class="choice-text">별 장식 머리핀 세트를 준비한다 (-5만원)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Elementary classroom, late afternoon — sunlight streaming through windows in clear bright
+shafts. Yuna (reference) just put on a small star-shaped hairpin (one of a set, others
+visible in opened gift box on desk). She's looking down quietly examining a second pin
+in her palm, but the corner of her mouth turns up — a private smile rarely shown.
+The protagonist is implied (off-frame). Light catches the metal star on her hair — small
+flare of golden window light reflecting off it.
+Dialogue cue: "...이거, 내가 늘 쓰는 거 알았어?" — a moment of being seen.
+Mood: quiet character finally feeling noticed in a way that matters.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>초등학교 교실, 늦은 오후 — 창으로 또렷한 햇살이 들어옴.
+유나(레퍼런스)가 막 작은 별 모양 머리핀을 꽂은 모습 (세트 중 하나, 나머지는
+책상 위 열린 선물 상자에 보임). 시선은 아래로, 손바닥 위 두 번째 핀을 조용히 살피지만
+입꼬리가 살짝 올라감 — 거의 보여주지 않는 사적인 미소.
+주인공은 프레임 밖에서 암시. 머리에 꽂힌 금속 별에 황금빛이 반사되어 작은 플레어.
+대사 힌트: "...이거, 내가 늘 쓰는 거 알았어?" — 알아봐주는 순간.
+분위기: 조용한 캐릭터가 마침내 의미 있게 알아봐졌다고 느끼는 순간.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li><strong>별 모양 머리핀</strong>이 머리에 꽂혀 있는가</li>
+          <li>책상 위 열린 선물 상자 (나머지 핀들 보임)</li>
+          <li>입꼬리만 올라간 절제된 미소 (활짝 웃음 ❌)</li>
+          <li>금속 별에 빛 반사 디테일</li>
+          <li>c0와 동일 인물처럼 보이는가</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/yuna-birthday_c1.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/yuna-birthday_c1.png</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-tag="shared">
+  <div class="meta">
+    <span class="badge">c2</span>
+    <span class="badge shared">🔗 공통 카톡 (사본)</span>
+  </div>
+  <div class="choice-text">조용히 카톡으로 축하한다</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">동일 프롬프트</div>
+        <pre>jihun-birthday c2와 동일 이미지 (SHA 일치). 위 카드 참조.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li>jihun/subin과 동일 파일이어야 함 (이미 SHA 검증됨 ✓)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/yuna-birthday_c2.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/yuna-birthday_c2.png</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MINJAE ============ -->
+<h2>🎂 W7 minjae-birthday — 민재 생일</h2>
+<p class="scene">교실에서 누군가 "야 민재 생일이래!" 외쳤다. 민재가 살짝 당황하면서도 웃는다.</p>
+
+<div class="card" data-tag="existing">
+  <div class="meta">
+    <span class="badge">c1</span>
+    <span class="badge">기존</span>
+  </div>
+  <div class="choice-text">편의점에서 작은 선물을 사온다 (-1만원)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Elementary classroom, after school hours. Minjae (reference) holding a small gift box
+with both hands, wide surprised smile showing teeth, cheeks slightly red.
+Blurred classmates in background clapping/watching.
+Mood: heartfelt surprise, childhood friendship milestone.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>초등학교 교실, 방과후. 민재(레퍼런스)가 작은 선물 상자를 양손으로 들고,
+이를 드러내며 환하게 놀란 듯 웃는 표정, 볼이 살짝 빨갛다.
+배경에 흐릿한 반 친구들이 박수치며 지켜봄.
+분위기: 진심에서 우러난 놀람, 어린 시절 우정의 한 장면.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li>양손으로 작은 선물을 들고 있는가</li>
+          <li>이가 보이는 환한 미소 (c2 책 컷과 표정 톤 차별화)</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/minjae-birthday_c1.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/minjae-birthday_c1.png</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" data-tag="new">
+  <div class="meta">
+    <span class="badge">c2</span>
+    <span class="badge new">🆕 신규</span>
+  </div>
+  <div class="choice-text">따로 골라 온 책 한 권을 준다 (-5만원, money≥10)</div>
+  <div class="grid">
+    <div>
+      <div class="prompt-block">
+        <div class="label">English Prompt</div>
+        <pre>Elementary classroom, after school. Minjae (reference) holding a hardcover book with
+both hands, head tilted down reading the title, expression frozen between surprise
+and a smile he's not letting through. The carefully composed "전교 1등" facade is
+visibly cracking — eyes a touch wider than usual, lips slightly parted.
+Book cover should suggest something thoughtful (a literary novel or quiet essay
+collection — not a study guide). Wrapping paper crumpled on the desk beside him.
+Background: empty classroom, late afternoon warm light, blurred chalkboard with
+faint test results still visible.
+Dialogue cue: "...너, 날 너무 잘 아는데?" — first moment his guard fully drops.
+Mood: rival becoming friend — gift that names the unspoken self.</pre>
+      </div>
+      <div class="prompt-block">
+        <div class="label">한국어 번역</div>
+        <pre>초등학교 교실, 방과후. 민재(레퍼런스)가 양장본 책을 양손으로 들고,
+고개를 살짝 숙여 제목을 읽는 모습. 표정은 놀람과 흘리지 않으려는 미소 사이에서 멈춤.
+"전교 1등" 으로 정성껏 다듬은 가면이 눈에 띄게 금이 가는 순간 —
+평소보다 조금 커진 눈, 살짝 벌어진 입술.
+책 표지는 사색적인 분위기 (문학 소설 또는 조용한 에세이집 — 학습 참고서 ❌).
+옆 책상에 구겨진 포장지.
+배경: 빈 교실, 늦은 오후 따뜻한 빛, 칠판에 흐릿한 시험 결과가 살짝 보임.
+대사 힌트: "...너, 날 너무 잘 아는데?" — 가드를 완전히 내리는 첫 순간.
+분위기: 라이벌이 친구가 되는 — 말하지 않은 자신을 짚어준 선물.</pre>
+      </div>
+      <div class="checks">
+        <div class="label">체크포인트</div>
+        <ul>
+          <li><strong>책 표지가 사색적/문학적</strong>인가 (학습 참고서가 아닌)</li>
+          <li>민재 표정이 c1(환한 미소)과 <strong>다른 톤</strong> — 절제·놀람·내면 균열</li>
+          <li>책상 옆 구겨진 포장지</li>
+          <li>칠판에 시험 결과 (라이벌 컨텍스트)</li>
+          <li>c1과 동일 인물처럼 보이는가</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="img-wrap">
+        <img src="images/events/elementary/minjae-birthday_c2.png" onerror="this.parentNode.innerHTML='<div class=fail>이미지 로드 실패</div>'">
+      </div>
+      <div class="filename">events/elementary/minjae-birthday_c2.png</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 필터 토글
+  const buttons = document.querySelectorAll('.toolbar button');
+  const cards = document.querySelectorAll('.card');
+  buttons.forEach(b => b.addEventListener('click', () => {
+    buttons.forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    const f = b.dataset.filter;
+    cards.forEach(c => {
+      if (f === 'all') c.style.display = '';
+      else c.style.display = c.dataset.tag === f ? '' : 'none';
+    });
+  }));
+</script>
+
+</body>
+</html>
