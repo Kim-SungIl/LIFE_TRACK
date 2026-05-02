@@ -97,6 +97,13 @@ export type ExamGrade = 'S' | 'A' | 'B' | 'C' | 'D';
 export type ElementaryGrade = '잘함' | '보통' | '노력필요';
 export type SchoolLevel = 'elementary' | 'middle' | 'high';
 export type ExamType = 'unit-test' | 'midterm' | 'final' | 'mock' | 'suneung';
+export const EXAM_TYPE_LABELS: Record<ExamType, string> = {
+  'unit-test': '단원평가',
+  'midterm': '중간고사',
+  'final': '기말고사',
+  'mock': '모의고사',
+  'suneung': '수능',
+};
 
 export interface SubjectResult {
   score: number;        // 0~100 원점수

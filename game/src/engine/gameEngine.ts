@@ -10,6 +10,20 @@ import { getParentMods } from './parentModifiers';
 // rng utility re-export (하위 호환)
 export { seededRandom, hashInitialState } from './rng';
 
+// ===== 시험 스케줄 SSOT =====
+// 학교급별 시험 주차. UI(GameScreen 다가오는 이벤트)와 로직(advanceWeek)이 동일한 출처를 공유한다.
+export function getExamSchedule(year: number): Record<number, ExamType> {
+  if (year <= 1) {
+    return { 17: 'unit-test', 38: 'unit-test' };
+  } else if (year <= 4) {
+    return { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
+  } else if (year === 7) {
+    return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 35: 'suneung' };
+  } else {
+    return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 38: 'final' };
+  }
+}
+
 // ===== 초기 상태 생성 =====
 export function createInitialState(
   gender: 'male' | 'female',
@@ -715,28 +729,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   newState.weekLog = log;
   newState.totalWeeksPlayed++;
 
-  // 10. 시험 체크 (학교급별 차등)
-  // 초등(Y1): W17 단원평가, W38 단원평가
-  // 중등(Y2~Y4): W8 중간, W17 기말, W30 중간, W38 기말
-  // 고등(Y5~Y7): 내신 W8/W17/W30/W38 + 모의 W12/W33 + Y7 W35 수능
-  const isY7 = newState.year === 7;
-  let examSchedule: Record<number, ExamType> = {};
-
-  if (newState.year <= 1) {
-    // 초등: 학기말 단원평가만
-    examSchedule = { 17: 'unit-test', 38: 'unit-test' };
-  } else if (newState.year <= 4) {
-    // 중등: 중간+기말
-    examSchedule = { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
-  } else if (isY7) {
-    // 고3: 내신 + 모의 + 수능
-    examSchedule = { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 35: 'suneung' };
-  } else {
-    // 고1~2: 내신 + 모의
-    examSchedule = { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 38: 'final' };
-  }
-
-  const thisWeekExam = examSchedule[newState.week];
+  // 10. 시험 체크 — 스케줄은 getExamSchedule SSOT 사용
+  const thisWeekExam = getExamSchedule(newState.year)[newState.week];
   if (thisWeekExam) {
     let examResult;
     let examName: string;
