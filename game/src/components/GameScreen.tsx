@@ -388,6 +388,10 @@ export function GameScreen() {
     // {schoolLevel}/{eventId}_c{ci}_{gender} → {sl}/{eventId}_{gender} → {sl}/{eventId}_c{ci} → {sl}/{eventId}
     //   → common/{eventId}_c{ci}_{gender} → common/{eventId}_{gender} → common/{eventId}_c{ci} → common/{eventId}
     // 각 학년대별 다른 CG가 가능하도록 schoolLevel 디렉토리 우선, 없으면 학교급-무관 common 폴백.
+    //
+    // 자산 의도 SSOT는 docs/event-cg-prompts-y1.md 의 [🧭 CG 폴백 정책] 표 참조.
+    // 변경 시 양쪽 동기화. 특히 생일 c2(카톡)는 jihun/subin/yuna 동일 이미지를
+    // 각 이벤트 파일명으로 사본 저장하는 정책.
     const eventId = resultEvent?.id;
     const ci = eventResultData.choiceIndex ?? 0;
     const genderSuffix = state.gender === 'male' ? 'm' : 'f';
