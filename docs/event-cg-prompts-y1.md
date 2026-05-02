@@ -438,10 +438,22 @@ Longer hair visible from behind. No other changes.
 - `minjae_elementary_fullbody.png` + `minjae_elementary_neutral.png`
 - `classroom_elementary_afternoon.png`
 
-> ⚠️ 이벤트 선택지가 4개로 확장됨 (말걸기 / 편의점 선물 / 책 선물 / 넘기기). CG는 ci=1에만 매핑.
-> ci=0/2/3은 캐릭터 초상으로 폴백.
+> 이벤트 선택지가 4개 (말걸기 / 편의점 선물 / 책 선물 / 넘기기). 모든 ci에 전용 CG 매핑.
 
-### [c0] 말을 건다 — CG 없음 (폴백)
+### [c0] "생일 축하해!" — 말을 건다 — 🆕 신규
+
+**공통** `minjae-birthday_c0.png`
+```
+Elementary classroom, after school. Minjae (reference) caught off-guard at his desk,
+turning his head toward the camera with a small, surprised half-smile — the kind that
+slips out before he can compose himself. No gift, no wrapped box — just the words
+hanging in the air. One hand still resting on an open notebook, the other half-raised
+as if he was about to say something.
+Cheeks faintly flushed. Eyes warmer than his usual cool composure allows.
+Background: blurred classmates in the distance, late afternoon light through the
+windows, simple chalkboard.
+Mood: a quiet beat of unguarded warmth — "고마워" said softly.
+```
 
 ### [c1] 편의점에서 작은 선물
 
@@ -469,7 +481,19 @@ Dialogue cue: "...너, 날 너무 잘 아는데?" — first moment his guard ful
 Mood: rival becoming friend — gift that names the unspoken self.
 ```
 
-### [c3] 그냥 넘어간다 — CG 없음 (폴백)
+### [c3] 그냥 넘어간다 — 🆕 신규
+
+**공통** `minjae-birthday_c3.png`
+```
+Elementary classroom, after school. Wide shot from the protagonist's seat — the
+back of an empty desk in the foreground (the player's POV, no figure shown).
+In the middle distance, Minjae (reference) is surrounded by a small cluster of
+classmates laughing and clapping; he wears a polite, slightly stiff smile —
+the practiced "전교 1등" composure back in place, accepting attention without
+returning warmth. Late afternoon light, soft and a bit cold.
+Mood: distance — watching from the outside, a small ache of not-quite-belonging.
+No direct eye contact between Minjae and the camera.
+```
 
 ---
 
@@ -932,7 +956,7 @@ Mood: casual minimal effort — the safe, distant choice between friends who cou
 | `jihun-birthday` | 작은 선물 (전용) | 농구화 끈 (전용) | 카톡 (공유 사본) | — |
 | `subin-birthday` | 작은 선물 (전용) | 여행 에세이 (전용) | 카톡 (공유 사본) | — |
 | `yuna-birthday` | 작은 선물 (전용) | 머리핀 (전용) | 카톡 (공유 사본) | — |
-| `minjae-birthday` | 말 건다 (CG 없음, 폴백) | 편의점 선물 (전용) | 책 (전용) | 넘어감 (CG 없음) |
+| `minjae-birthday` | 말 건다 (전용) | 편의점 선물 (전용) | 책 (전용) | 넘어감 (전용) |
 
 폴백 정책 변경 시 본 표와 `GameScreen.tsx:388` 위 주석을 함께 갱신.
 
@@ -967,8 +991,10 @@ Mood: casual minimal effort — the safe, distant choice between friends who cou
 - [ ] `elementary-graduation_c2_m.png`, `_c2_f.png` (back view, 헤어 구분)
 
 ## 있으면 좋음
+- [ ] `minjae-birthday_c0.png` (말 건다) 🆕
 - [x] `minjae-birthday_c1.png` (편의점 선물)
 - [x] `minjae-birthday_c2.png` (책 한 권)
+- [ ] `minjae-birthday_c3.png` (그냥 넘어감) 🆕
 - [x] `jihun-birthday_c0.png` (작은 선물)
 - [x] `jihun-birthday_c1.png` (농구화 끈)
 - [x] `subin-birthday_c0.png` (작은 선물)
