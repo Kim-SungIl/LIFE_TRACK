@@ -75,38 +75,35 @@ export function TitleScreen() {
   };
 
   // 타이틀 화면
+  // 시각 순서(브랜드보다 정서 진입 우선): 캐릭터 → 로고 → 서브 → 카피 → CTA → 저장 메타
+  // 포트레이트는 장식이 아니라 게임 정체성·성별 선택 예고 요소.
   if (phase === 'title') {
     return (
-      <div className="title-screen fade-in">
-        {/* 남녀 캐릭터 나란히 */}
-        <div style={{ display: 'flex', gap: 20, marginBottom: 32, alignItems: 'flex-end' }}>
+      <div className="title-screen">
+        <div className="title-screen__portraits" aria-hidden="true">
           <Portrait characterId="player_m" size={100} expression="neutral" year={1} />
           <Portrait characterId="player_f" size={100} expression="neutral" year={1} />
         </div>
 
         <div className="title-logo">LIFE TRACK</div>
         <div className="title-sub">선택의 결과</div>
-        <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 40, lineHeight: 1.6 }}>
+        <div className="title-screen__pitch">
           초등학교 6학년부터 고등학교 3학년까지.<br />
           7년간의 선택이 인생을 만든다.
         </div>
         {savedData && (
           <>
-            <button
-              className="btn btn-primary"
-              style={{ maxWidth: 280, marginBottom: 10 }}
-              onClick={() => loadSavedGame()}
-            >
-              이어하기 — {savedData.state.year}년차 {savedData.state.week}주차
+            <button className="btn btn-primary" onClick={() => loadSavedGame()}>
+              이어하기
+              <span className="btn__sub">{savedData.state.year}년차 {savedData.state.week}주차</span>
             </button>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: 16 }}>
+            <div className="title-screen__save-meta">
               {new Date(savedData.savedAt).toLocaleString('ko-KR')} 저장됨
             </div>
           </>
         )}
         <button
-          className="btn btn-primary"
-          style={{ maxWidth: 280, ...(savedData ? { background: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border)' } : {}) }}
+          className={`btn ${savedData ? 'btn-secondary' : 'btn-primary'}`}
           onClick={() => setPhase('gender')}
         >
           새 게임
