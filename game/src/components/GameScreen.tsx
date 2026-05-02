@@ -642,7 +642,7 @@ export function GameScreen() {
     // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
     setNpcActivityMap(npcChoices);
     advanceWeek();
-    setSelectedActivities([]); setNpcChoices({}); setShowResult(true); setRoutineConfirmed(false); setLastReaction(null);
+    setSelectedActivities([]); setNpcChoices({}); setShowResult(true); setLastReaction(null);
   };
 
   // ===== 주간 결산 =====
@@ -657,15 +657,26 @@ export function GameScreen() {
           </div>
 
           {/* 주인공 + 독백 */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
             <div style={{
               flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
               borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
             }}>
-              {state.weekLog.messages.find(m => m.startsWith('📖')) || `"${dialogue}"`}
+              {`"${dialogue}"`}
             </div>
           </div>
+
+          {/* 이번 주에 있었던 일 — 이벤트 내레이션 (3인칭) */}
+          {state.weekLog.messages.filter(m => m.startsWith('📖')).map((msg, i) => (
+            <div key={i} style={{
+              background: 'rgba(255,255,255,0.04)', borderLeft: '2px solid rgba(229,192,123,0.4)',
+              borderRadius: '0 8px 8px 0', padding: '10px 14px', marginBottom: 12,
+              fontSize: '0.82rem', lineHeight: 1.6, color: 'var(--text-secondary)',
+            }}>
+              {msg}
+            </div>
+          ))}
 
           {/* 성장 달성 — 여러 개 동시 지원 */}
           {(state.weekLog.milestoneMessages || []).map((msg, i) => (
