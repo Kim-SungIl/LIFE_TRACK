@@ -968,14 +968,14 @@ Mood: casual minimal effort — the safe, distant choice between friends who cou
 
 ## 있으면 좋음
 - [x] `minjae-birthday_c1.png` (편의점 선물)
-- [ ] 🆕 `minjae-birthday_c2.png` (책 한 권)
+- [x] `minjae-birthday_c2.png` (책 한 권)
 - [x] `jihun-birthday_c0.png` (작은 선물)
-- [ ] 🆕 `jihun-birthday_c1.png` (농구화 끈)
+- [x] `jihun-birthday_c1.png` (농구화 끈)
 - [x] `subin-birthday_c0.png` (작은 선물)
-- [ ] 🆕 `subin-birthday_c1.png` (여행 에세이)
+- [x] `subin-birthday_c1.png` (여행 에세이)
 - [x] `yuna-birthday_c0.png` (작은 선물)
-- [ ] 🆕 `yuna-birthday_c1.png` (별 머리핀)
-- [ ] 🆕 공통 카톡 컷 1개 → `jihun-birthday_c2.png` / `subin-birthday_c2.png` / `yuna-birthday_c2.png` (동일 사본 3개)
+- [x] `yuna-birthday_c1.png` (별 머리핀)
+- [x] 공통 카톡 컷 → `jihun-birthday_c2.png` / `subin-birthday_c2.png` / `yuna-birthday_c2.png` (동일 SHA 사본 3개 확인)
 - [ ] `elementary-unit-test_c0_m.png`, `_c0_f.png`
 - [ ] `elementary-unit-test_c1_m.png`, `_c1_f.png`
 - [ ] `elementary-semester2-start_c0_m.png`, `_c0_f.png`
