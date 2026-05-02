@@ -995,3 +995,127 @@ Mood: casual minimal effort — the safe, distant choice between friends who cou
 3. 이미 만든 CG 하나를 "same style as this" 레퍼런스로 다음 작업에 활용
 4. 선택지 간 차이는 구도·표정·배경만 바꾸고 캐릭터 디자인은 그대로 유지 요청
 5. 생성 후 `game/public/images/events/` 폴더에 정확한 파일명으로 저장
+
+---
+
+# 🔁 재생성/신규 생성 큐 (2026-05-02 검증 반영)
+
+PNG 비전 검증으로 의도된 서사와 어긋난 컷 + 누락분. 아래 강화 프롬프트로 처리.
+기존 위 섹션의 동일 파일명 프롬프트보다 **이쪽이 우선** (negative prompt·강조 추가).
+
+---
+
+## 🆕 1. `elementary-graduation_c2_m.png` — 신규 생성 (누락)
+
+폴더에 미존재. 위 W46 [c2 / male] 프롬프트 그대로 사용:
+
+```
+Male protagonist (player_m reference) walking out of school gate, back view, short
+boy's haircut, looking forward with confident stride. Elementary school building fades
+behind. Cherry blossom buds (pre-bloom) on trees hint at spring ahead.
+Mood: forward-facing hope, end as new beginning.
+```
+
+---
+
+## 🔁 2. `elementary-sports-day_c1_f.png` — 재생성
+
+**문제**: 현재 PNG가 여주가 결승선 테이프를 끊고 1등으로 들어오는 모습 → 결과 메시지 "순위는 중간쯤"과 정면 충돌.
+(c1_m은 텐션은 있으나 결승선·다툼 없음 → 보류 가능. 일관성 위해 같이 재생성하면 더 좋음.)
+
+**강화 프롬프트** (c1 공통, 성별만 reference 교체):
+
+```
+Mid-race relay scene at school sports day — RUNNERS STILL IN MOTION, NOT a finish.
+ABSOLUTELY NO finish line tape, NO ribbon being broken, NO 1st-place winning pose,
+NO podium, NO victory expression.
+
+Female protagonist (player_f reference) running mid-pack on the dirt track,
+surrounded by 2~3 other runners on BOTH sides at similar pace (not ahead of them).
+Holding the relay baton casually. Neutral relaxed expression with the faintest
+small smile — "그저 그런 정도", easy effort, no glory.
+Wearing blue team headband.
+
+Background: outdoor track, blue and white team flags mixed (no clear winner side),
+afternoon light, classmates cheering generally rather than aimed at protagonist,
+"운동회" banner softly out of focus.
+
+Mood: easy effort, no regret no glory — just a Saturday afternoon mid-pack run.
+
+Negative prompt: no finish line tape, no breaking ribbon, no winning pose,
+no 1st place podium, no triumphant arms-up gesture.
+```
+
+---
+
+## 🔁 3. `yuna-meet-elementary_c2_m.png` & `_c2_f.png` — 재생성
+
+**문제**: 현재 PNG에서 유나가 **정면 응시 + 미소** 짓고 있어 거절 후 어색한 톤이 완전히 사라짐. 프롬프트의 "back to reading her book / slightly awkward" 의도가 안 살아남.
+
+**강화 프롬프트** (c2_m / c2_f 공통 — 주인공 reference만 교체):
+
+```
+Elementary library window seat, afternoon. Yuna (reference) ALREADY returned to
+reading her book — EYES DOWN ON THE BOOK, head tilted slightly down, fingers on
+the page mid-turn. Her face seen mostly from a SIDE/THREE-QUARTER angle, NOT
+frontal. Polite "oh, that's okay" smile visible only as a soft mouth corner —
+NO direct eye contact with the protagonist, NO frontal beaming smile.
+
+Star hair clip in caramel wavy hair. Piano bag with sheet music beside her chair.
+
+Protagonist (player_m reference [for c2_m] / player_f reference [for c2_f]) shown
+in BACK VIEW, face fully hidden, body slightly stepping away from the desk —
+mild awkward retreat posture. For c2_m: short boy's haircut visible. For c2_f:
+longer hair visible from behind.
+
+Mood: gentle awkwardness, missed connection but not hostile. Emotional distance
+quietly restored.
+
+Negative prompt: no frontal smile from Yuna, no direct eye contact between them,
+no inviting expression, no protagonist face visible.
+```
+
+---
+
+## 🔁 4. `minjae-meet-elementary_c1_m.png` & `_c1_f.png` — 재생성
+
+**문제**: 현재 PNG가 **마주 앉은(across)** 구도 → c0와 구도가 똑같고 프롬프트의 "side by side" 의도 위배. c0 "같이 점심" vs c1 "옆에서 대화" 차별화가 사라짐.
+
+**강화 프롬프트** (c1_m / c1_f 공통 — 주인공 reference만 교체):
+
+```
+Elementary school cafeteria, lunch time. Two 12-year-old Korean kids sitting
+SIDE BY SIDE on the SAME SIDE of a long cafeteria table — shoulder to shoulder,
+both bodies facing the SAME direction. Camera angle: from across the EMPTY
+opposite side of the table, looking at both of them together.
+Both trays placed in front of them on the same side of the table.
+
+ABSOLUTELY NOT facing each other across the table. NOT a face-to-face composition.
+
+Minjae (reference, on one side): buzz cut, tanned skin, chopsticks pausing
+mid-air, head turned slightly TOWARD the protagonist beside him, animated
+explaining gesture, eyes engaged.
+Protagonist (player_m reference [c1_m] / player_f reference [c1_f]) seated
+RIGHT NEXT TO Minjae on the same bench/side, head turned slightly toward him,
+engaged listener posture, leaning in with curious "아 그래?" expression.
+
+Background: bright cafeteria, other students blurred at distant tables.
+Mood: deeper conversation while eating, friendship warming up beyond casual
+first-meeting chat — visibly more intimate than c0 "across the table" composition.
+
+Negative prompt: no across-the-table seating, no face-to-face composition,
+no two trays facing each other.
+```
+
+---
+
+## 📋 GPT에 던질 때 체크리스트
+
+- [ ] `elementary-graduation_c2_m.png` (신규)
+- [ ] `elementary-sports-day_c1_f.png` (재생성)
+- [ ] `yuna-meet-elementary_c2_m.png` (재생성)
+- [ ] `yuna-meet-elementary_c2_f.png` (재생성)
+- [ ] `minjae-meet-elementary_c1_m.png` (재생성)
+- [ ] `minjae-meet-elementary_c1_f.png` (재생성)
+
+생성 완료 후 `game/public/images/events/elementary/`에 동일 파일명으로 덮어쓰기.
