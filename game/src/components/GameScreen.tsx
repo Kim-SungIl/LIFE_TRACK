@@ -402,48 +402,56 @@ export function GameScreen() {
     ];
     const eventImgPrimary = eventImgCandidates[0] ?? null;
 
+    // CG가 있는 이벤트는 배경/주인공을 처음부터 안 보여주고 — 그라데이션만 깔고 CG 로드 후 페이드인.
+    // 모바일은 이미지 디코딩이 느려 "배경+주인공이 잠깐 보였다 CG로 휙 전환"되는 버벅임이 두드러짐.
+    const hasCg = !!eventImgPrimary;
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: '#0d0b12' }}>
-        {/* 배경 — CG 로드 안 됐을 때 표시 */}
-        {!cgLoaded && (
-          <div style={{ position: 'absolute', inset: 0, background: bgGradient }}>
-            {bgImgUrl && <img src={bgImgUrl} alt="" data-bg-idx="0" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} onError={e => {
-              const img = e.target as HTMLImageElement;
-              const idx = parseInt(img.dataset.bgIdx || '0') + 1;
-              if (idx < bgImgCandidates.length) {
-                img.dataset.bgIdx = String(idx);
-                img.src = bgImgCandidates[idx];
-              } else {
-                img.style.display = 'none';
-              }
-            }} />}
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
-          </div>
-        )}
-        {/* CG 없을 때: 화면 중앙에 주인공 전신 */}
-        {!cgLoaded && (
-          <div style={{
-            position: 'absolute', top: '5%', left: 0, right: 0, bottom: '35%',
-            display: 'flex', justifyContent: 'center', alignItems: 'center',
-            zIndex: 5, pointerEvents: 'none',
-          }}>
-            <img
-              src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}${state.year === 1 ? '_elementary' : ''}_fullbody.png`}
-              alt=""
-              style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-            />
-          </div>
+      <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: bgGradient }}>
+        {/* 배경 이미지 + 주인공 — CG가 없는 이벤트에서만 표시 (CG 있으면 그라데이션만) */}
+        {!hasCg && (
+          <>
+            <div style={{ position: 'absolute', inset: 0 }}>
+              {bgImgUrl && <img src={bgImgUrl} alt="" data-bg-idx="0" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} onError={e => {
+                const img = e.target as HTMLImageElement;
+                const idx = parseInt(img.dataset.bgIdx || '0') + 1;
+                if (idx < bgImgCandidates.length) {
+                  img.dataset.bgIdx = String(idx);
+                  img.src = bgImgCandidates[idx];
+                } else {
+                  img.style.display = 'none';
+                }
+              }} />}
+              <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} />
+            </div>
+            <div style={{
+              position: 'absolute', top: '5%', left: 0, right: 0, bottom: '35%',
+              display: 'flex', justifyContent: 'center', alignItems: 'center',
+              zIndex: 5, pointerEvents: 'none',
+            }}>
+              <img
+                src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}${state.year === 1 ? '_elementary' : ''}_fullbody.png`}
+                alt=""
+                style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
+            </div>
+          </>
         )}
         {/* 결과 내용 — CG 있으면 중앙, 없으면 하단 */}
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', justifyContent: cgLoaded ? 'center' : 'flex-end' }} className="fade-in">
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', justifyContent: hasCg ? 'center' : 'flex-end' }} className="fade-in">
           {/* 이벤트 결과 이미지 (CG) — 인덱스 기반 cascade 폴백 */}
           {eventImgPrimary && (
-            <div style={{ marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
+            <div style={{
+              marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)',
+              opacity: cgLoaded ? 1 : 0, transition: 'opacity 0.25s ease',
+            }}>
               <img
                 src={eventImgPrimary}
                 alt=""
                 data-cg-idx="0"
+                decoding="async"
+                loading="eager"
+                fetchPriority="high"
                 style={{ width: '100%', display: 'block', borderRadius: 12 }}
                 onLoad={() => setCgLoaded(true)}
                 onError={e => {
