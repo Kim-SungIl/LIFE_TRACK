@@ -3442,6 +3442,13 @@ export const FOLLOWUP_EVENT_IDS = new Set([
   'junha-transfer', 'junha-riceball', 'junha-dialect', 'junha-homesick', 'junha-cook', 'junha-minjae',
 ]);
 
+// 직접 후속 이벤트 — 같은 장소에서 자연스럽게 이어지는 결과 (예: 선거→결과 발표)
+// excludeLocation 필터를 우회해 같은 주에 즉시 발동되도록 허용
+const DIRECT_SEQUEL_IDS = new Set<string>([
+  'class-president-win', 'class-president-lose', 'class-president-vice',
+  'class-president-2-win', 'class-president-2-lose',
+]);
+
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
 // ANNUAL_EVENT_IDS에 등록된 후속(반장 선거 후속 등)은 매년 재발동 허용
 export function getFollowupForWeek(state: GameState, excludeLocation?: string): GameEvent | null {
@@ -3450,7 +3457,8 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
     e.condition && e.condition(state) &&
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id)) &&
     // 같은 장소 이벤트 연쇄 방지 (농구→축구 같은 어색한 연결 차단)
-    (!excludeLocation || e.location !== excludeLocation)
+    // DIRECT_SEQUEL_IDS는 자연스러운 직접 후속이라 같은 장소도 허용 (선거→결과 등)
+    (!excludeLocation || e.location !== excludeLocation || DIRECT_SEQUEL_IDS.has(e.id))
   ) || null;
 }
 

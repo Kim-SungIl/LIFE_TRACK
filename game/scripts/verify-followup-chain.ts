@@ -175,6 +175,46 @@ console.log('\n=== 5. resolveEvent 상태 전이 계약 ===');
 }
 
 // ========================================
+// 6. DIRECT_SEQUEL — 선거→결과 같은 주 발동 (excludeLocation 우회)
+// ========================================
+console.log('\n=== 6. DIRECT_SEQUEL: 선거 결과 동일주차 발동 ===');
+{
+  // 다른 NPC followup이 가로채지 않도록 모든 NPC를 미만남 상태로 설정
+  function isolated(year: number, week: number, social: number): GameState {
+    let s = mkState({ year, week, stats: { academic: 30, social, talent: 20, mental: 60, health: 60 } });
+    for (const id of ['jihun', 'minjae', 'subin', 'yuna', 'haeun', 'junha']) {
+      s = setNpc(s, id, { met: false, intimacy: 0 });
+    }
+    return s;
+  }
+
+  // Y1 W3 class-president(c0=출마) 해결 직후, 같은 classroom인 win/lose가 즉시 발동되어야 함
+  const sWin = isolated(1, 3, 35);
+  sWin.events.push({ id: 'class-president', title: '', description: '', choices: [], resolvedChoice: 0, week: 3, year: 1 });
+  // excludeLocation='classroom'으로 호출해도 win/lose는 우회되어야 함
+  const fuWin = getFollowupForWeek(sWin, 'classroom');
+  assert('class-president(출마, social≥30) 직후 같은 주 win 발동', fuWin?.id === 'class-president-win');
+
+  const sLose = isolated(1, 3, 25);
+  sLose.events.push({ id: 'class-president', title: '', description: '', choices: [], resolvedChoice: 0, week: 3, year: 1 });
+  const fuLose = getFollowupForWeek(sLose, 'classroom');
+  assert('class-president(출마, social<30) 직후 같은 주 lose 발동', fuLose?.id === 'class-president-lose');
+
+  // 2학기 동일 케이스
+  const s2Win = isolated(1, 25, 45);
+  s2Win.events.push({ id: 'class-president-2', title: '', description: '', choices: [], resolvedChoice: 0, week: 25, year: 1 });
+  const fu2Win = getFollowupForWeek(s2Win, 'classroom');
+  assert('class-president-2(출마, social≥40) 직후 같은 주 2-win 발동', fu2Win?.id === 'class-president-2-win');
+
+  // 일반 followup(non-direct-sequel)은 여전히 location 필터 적용
+  // junha-transfer는 DIRECT_SEQUEL_IDS에 없으므로 excludeLocation=classroom으로 막혀야 함
+  let sJunha = mkState({ year: 6, week: 5, isVacation: false });
+  sJunha = setNpc(sJunha, 'junha', { met: false });
+  const fuJunha = getFollowupForWeek(sJunha, 'classroom');
+  assert('junha-transfer는 DIRECT_SEQUEL 아니라 classroom 필터에 막힘', fuJunha?.id !== 'junha-transfer');
+}
+
+// ========================================
 // 결과
 // ========================================
 console.log(`\n=== 결과: ${passed} passed / ${failed} failed ===`);
