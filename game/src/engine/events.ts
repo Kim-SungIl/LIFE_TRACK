@@ -2448,7 +2448,8 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'yuna-birthday', title: '유나의 생일',
     description: '오늘이 유나 생일인 걸 단톡에서 알게 됐다.\n유나는 조용히 자리에 앉아 있다.',
-    week: 37,
+    // W38 (W37 단원평가/기말 알림과 충돌 회피 — speakers 우선 규칙으로 시험 알림이 영구 손실되던 문제)
+    week: 38,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['yuna'],
     condition: (s) => {

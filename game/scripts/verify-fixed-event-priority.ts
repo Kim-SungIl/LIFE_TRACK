@@ -27,27 +27,52 @@ function meetNpc(state: GameState, npcId: string, intimacy: number) {
   npc.intimacy = intimacy;
 }
 
-console.log('=== 1. W37 yuna-birthday: 단원평가/기말고사보다 우선 ===');
+console.log('=== 1. W37 시험 알림 / W38 yuna-birthday — 충돌 회피 검증 ===');
+// 설계 변경: yuna-birthday를 W37→W38로 이동하여 시험 알림과 충돌 제거.
+// W37은 단원평가(Y1)/기말(Y2+) 알림 전용, W38은 yuna 생일 전용.
 {
-  // Y1 W37: elementary-unit-test-2 (year===1) vs yuna-birthday
+  // Y1 W37: yuna 친밀도와 무관하게 elementary-unit-test-2 발동
   const s = setupAt(37, 1);
   meetNpc(s, 'yuna', 50);
   const ev = getEventForWeek(s);
-  assert(ev?.id === 'yuna-birthday', `Y1 W37 yuna 친밀도 50 → yuna-birthday (실제: ${ev?.id})`);
+  assert(ev?.id === 'elementary-unit-test-2', `Y1 W37 → elementary-unit-test-2 (실제: ${ev?.id})`);
 }
 {
-  // Y2 W37: final-exam-2 (year>=2) vs yuna-birthday (intimacy>=30)
+  // Y2 W37: yuna 친밀도와 무관하게 final-exam-2 발동
   const s = setupAt(37, 2);
+  meetNpc(s, 'yuna', 50);
+  const ev = getEventForWeek(s);
+  assert(ev?.id === 'final-exam-2', `Y2 W37 → final-exam-2 (실제: ${ev?.id})`);
+}
+{
+  // Y1 W38: yuna-birthday 발동 (Y1 조건: yuna.met)
+  const s = setupAt(38, 1);
+  meetNpc(s, 'yuna', 10);
+  const ev = getEventForWeek(s);
+  assert(ev?.id === 'yuna-birthday', `Y1 W38 yuna.met → yuna-birthday (실제: ${ev?.id})`);
+}
+{
+  // Y2 W38: 친밀도 30 이상 → yuna-birthday
+  const s = setupAt(38, 2);
   meetNpc(s, 'yuna', 30);
   const ev = getEventForWeek(s);
-  assert(ev?.id === 'yuna-birthday', `Y2 W37 yuna 친밀도 30 → yuna-birthday (실제: ${ev?.id})`);
+  assert(ev?.id === 'yuna-birthday', `Y2 W38 yuna 친밀도 30 → yuna-birthday (실제: ${ev?.id})`);
 }
 {
-  // 친밀도 부족 → fallback to schedule event
-  const s = setupAt(37, 2);
+  // Y2 W38: 친밀도 부족 → yuna-birthday 발동 안 됨 (확률 NPC 이벤트로 폴백 가능)
+  const s = setupAt(38, 2);
   meetNpc(s, 'yuna', 20);
   const ev = getEventForWeek(s);
-  assert(ev?.id === 'final-exam-2', `Y2 W37 yuna 친밀도 20 → final-exam-2 (실제: ${ev?.id})`);
+  assert(ev?.id !== 'yuna-birthday', `Y2 W38 yuna 친밀도 20 → not yuna-birthday (실제: ${ev?.id})`);
+}
+
+console.log('\n=== 1-bis. final-exam-2 매년 발동 (ANNUAL_EVENT_IDS) ===');
+{
+  // Y3 W37: 이전에 final-exam-2가 발동된 적 있어도 ANNUAL이라 다시 발동
+  const s = setupAt(37, 3);
+  s.events.push({ id: 'final-exam-2', year: 2, week: 37, choiceIndex: 0 });
+  const ev = getEventForWeek(s);
+  assert(ev?.id === 'final-exam-2', `Y3 W37 (Y2에 발동 이력 있음) → final-exam-2 (실제: ${ev?.id})`);
 }
 
 console.log('\n=== 2. W20 junha-birthday: summer-start보다 우선 ===');
