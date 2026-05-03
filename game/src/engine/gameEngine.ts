@@ -249,6 +249,29 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
     log.statChanges[statKey]! += value;
   }
 
+  // Phase 1: catch-up 보너스 — 방학에만 트리거, 낮은 스탯에 한정
+  if (state.isVacation && activity.catchupBonus) {
+    const cb = activity.catchupBonus;
+    if (cb.bonus > 0 && state.stats[cb.targetStat] < cb.threshold) {
+      const before = state.stats[cb.targetStat];
+      state.stats[cb.targetStat] = Math.max(0, Math.min(100, before + cb.bonus));
+      if (!log.statChanges[cb.targetStat]) log.statChanges[cb.targetStat] = 0;
+      log.statChanges[cb.targetStat]! += cb.bonus;
+    }
+  }
+  // Phase 1: do-nothing 특수 처리 — 피로 70+ 시 추가 회복 -5
+  if (state.isVacation && activity.id === 'do-nothing' && state.fatigue >= 70) {
+    log.messages.push('많이 지쳐 있었던 만큼, 푹 쉬니 더 회복됐다.');
+    state.fatigue = Math.max(0, state.fatigue - 5);
+    log.fatigueChange -= 5;
+  }
+
+  // Phase 1: 방학 활동 횟수 카운트 (vacationLimit 추적)
+  if (state.isVacation && activity.seasonGate === 'vacation-only') {
+    if (!state.vacationActivityCounts) state.vacationActivityCounts = {};
+    state.vacationActivityCounts[activity.id] = (state.vacationActivityCounts[activity.id] ?? 0) + 1;
+  }
+
   // 피로 적용
   let fatigueDelta = activity.fatigue;
   // v6.3: tired/burnout 중 활동 피로 감소 (tired 함정 방지)
@@ -583,6 +606,12 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   const info = getWeekInfo(newState.week);
   newState.semester = info.semester;
   newState.isVacation = info.isVacation;
+
+  // Phase 1: 학기 중에는 방학 활동 카운터 자동 초기화
+  // (방학 동안만 누적, 학기 진입 시 비워짐 — 다음 방학에 다시 0부터)
+  if (!newState.isVacation) {
+    newState.vacationActivityCounts = {};
+  }
 
   const log: WeekLog = {
     statChanges: {},

@@ -26,6 +26,7 @@ export const ACTIVITIES: Activity[] = [
     // 현실 고증 — 초등 종합반 2만 / 중등 입시 3만 / 고등 단과 4만
     yearlyCost: { elementary: 2, middle: 3, high: 4 },
     description: '학원에서 체계적으로 배운다.',
+    vacationDescription: '학원에서 방학 단기특강을 듣는다.',
     flavor: '학원 셔틀을 타고 간다. 같은 반 친구들이랑 떡볶이 먹고 가는 길도 즐겁다.',
     tags: ['체계적', '비용 있음', '고효율', '친구'],
     requires: (s) => s.money >= getActivityCost({ moneyCost: 3, yearlyCost: { elementary: 2, middle: 3, high: 4 } }, s.year),
@@ -191,12 +192,136 @@ export const ACTIVITIES: Activity[] = [
     flavor: '"어서오세요~" 반복되는 인사. 힘들지만 통장 잔고가 올라가는 건 뿌듯하다.',
     tags: ['수입', '고피로', '자립'],
   },
+
+  // ===== Phase 1: 방학 전용 활동 9종 =====
+  // 무료 4개 (가난한 가정 보장)
+  {
+    id: 'vacation-library',
+    name: '방학 도서관 몰입', slots: 2, fatigue: 3,
+    effects: { academic: 3, mental: 1 }, moneyCost: 0,
+    category: 'study',
+    seasonGate: 'vacation-only',
+    catchupBonus: { targetStat: 'academic', threshold: 50, bonus: 1 },
+    description: '도서관에서 종일 자습한다.',
+    flavor: '에어컨 시원한 자리, 교재 한 권. 방학에만 가능한 호흡.',
+    tags: ['방학', '학업', '무료'],
+  },
+  {
+    id: 'creative-project',
+    name: '장기 창작 프로젝트', slots: 2, fatigue: 5,
+    effects: { talent: 3, mental: 1 }, moneyCost: 0,
+    category: 'talent',
+    seasonGate: 'vacation-only',
+    catchupBonus: { targetStat: 'talent', threshold: 50, bonus: 1 },
+    description: '시간이 필요한 작품을 끝까지 밀어붙인다.',
+    flavor: '학기 중에는 시작도 못 하던 일. 방학에만 가능한 깊이.',
+    tags: ['방학', '재능', '몰입', '무료'],
+  },
+  {
+    id: 'countryside',
+    name: '시골/할머니댁', slots: 2, fatigue: -15,
+    effects: { mental: 5, health: 3 }, moneyCost: 0,
+    category: 'rest',
+    seasonGate: 'vacation-only',
+    vacationLimit: 1,
+    description: '시골 친척집에서 시간을 보낸다.',
+    flavor: '평상에 누우면 바람 소리만 들린다. 도시에서 잊고 있던 박자.',
+    tags: ['방학', '회복', '추억', '무료', '1회'],
+  },
+  {
+    id: 'do-nothing',
+    name: '집에서 푹 쉬기', slots: 2, fatigue: -20,
+    effects: { mental: 4 }, moneyCost: 0,
+    category: 'rest',
+    seasonGate: 'vacation-only',
+    vacationLimit: 1,
+    catchupBonus: { targetStat: 'mental', threshold: 0, bonus: 0 }, // 사용 안 함, fatigue 추가 회복은 gameEngine에서 특수 처리
+    description: '아무것도 하지 않는 며칠.',
+    flavor: '늦잠. 멍하니 천장. 죄책감과 평화 사이 어디쯤.',
+    tags: ['방학', '회복', '무료', '1회'],
+  },
+
+  // 저비용 사회성 1개
+  {
+    id: 'neighborhood-hangout',
+    name: '동네 친구와 보내는 방학', slots: 1, fatigue: 3,
+    effects: { social: 3, mental: 1 }, moneyCost: 0,
+    category: 'social',
+    seasonGate: 'vacation-only',
+    catchupBonus: { targetStat: 'social', threshold: 50, bonus: 1 },
+    description: '동네에서 친구들과 시간을 보낸다.',
+    flavor: '특별한 일 없이도, 방학이라 보낼 수 있는 시간.',
+    tags: ['방학', '관계', '무료'],
+  },
+
+  // 유료 3개
+  {
+    id: 'intensive-academy',
+    name: '학원 단기특강', slots: 2, fatigue: 12,
+    effects: { academic: 4 }, moneyCost: -6,
+    category: 'study',
+    seasonGate: 'vacation-only',
+    vacationLimit: 2,
+    catchupBonus: { targetStat: 'academic', threshold: 50, bonus: 1 },
+    description: '방학 한정 단기특강에 집중 등록한다.',
+    flavor: '하루 8시간 강의실. 학기 학원과는 다른 밀도.',
+    tags: ['방학', '학업', '집중', '유료'],
+  },
+  {
+    id: 'sports-camp',
+    name: '스포츠 캠프', slots: 2, fatigue: 8,
+    effects: { health: 4, talent: 1, social: 2 }, moneyCost: -5,
+    category: 'exercise',
+    seasonGate: 'vacation-only',
+    vacationLimit: 1,
+    catchupBonus: { targetStat: 'health', threshold: 50, bonus: 1 },
+    description: '며칠간 합숙 스포츠 캠프에 참가한다.',
+    flavor: '아침 구보, 낮 훈련, 저녁 라면. 캠프 끝나면 다리가 후들거린다.',
+    tags: ['방학', '체력', '관계', '유료', '1회'],
+  },
+  {
+    id: 'family-trip',
+    name: '가족 여행', slots: 2, fatigue: -5,
+    effects: { mental: 5, social: 2, health: 1 }, moneyCost: -8,
+    category: 'parent',
+    seasonGate: 'vacation-only',
+    vacationLimit: 1,
+    description: '가족과 함께 여행을 다녀온다.',
+    flavor: '낯선 도시의 호텔 침대. 평소엔 안 하던 대화가 자연스러워진다.',
+    tags: ['방학', '가족', '추억', '유료', '1회'],
+  },
+
+  // 알바 1개 (Y4+)
+  {
+    id: 'short-term-job',
+    name: '방학 단기 일손 돕기', slots: 2, fatigue: 12,
+    effects: { social: 1 }, moneyCost: 8,
+    category: 'work',
+    seasonGate: 'vacation-only',
+    vacationLimit: 2,
+    requires: (s) => s.year >= 4,
+    description: '며칠짜리 단기 일자리. 손에 쥐는 돈은 평소보다 크다.',
+    flavor: '어른들 사이에서 종일 일했다. 시급은 짜지만 그래도 내 손으로 번 돈.',
+    tags: ['방학', '수입', '자립', 'Y4+'],
+  },
 ];
+
+// 활동의 vacationLimit 도달 여부
+export function isVacationLimitReached(activity: Activity, state: GameState): boolean {
+  if (!activity.vacationLimit || !state.isVacation) return false;
+  const used = state.vacationActivityCounts?.[activity.id] ?? 0;
+  return used >= activity.vacationLimit;
+}
 
 export function getAvailableActivities(state: GameState): Activity[] {
   return ACTIVITIES.filter(a => {
     if (a.category === 'parent' && a.requires && !a.requires(state)) return false;
     if (a.category === 'work' && state.year < 4) return false;
+    // Phase 1: 학기/방학 게이팅
+    if (a.seasonGate === 'vacation-only' && !state.isVacation) return false;
+    if (a.seasonGate === 'semester-only' && state.isVacation) return false;
+    // requires 함수 (방학 알바 등 추가 조건)
+    if (a.requires && !a.requires(state)) return false;
     return true;
   });
 }

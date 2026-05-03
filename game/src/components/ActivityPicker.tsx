@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
-import { getActivityCost } from '../engine/activities';
+import { getActivityCost, isVacationLimitReached } from '../engine/activities';
 
 const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = {
   study:    { emoji: '📚', name: '공부',     desc: '학업 성적을 올린다' },
@@ -123,7 +123,13 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   const cost = getActivityCost(a, state.year);
                   const canAfford = (cost <= 0 || money >= cost) && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
-                  const disabled = !canSelect || !canAfford;
+                  // Phase 1: vacationLimit 도달 시 새 선택 불가 (이미 선택돼 있으면 그대로 유지)
+                  const vacLimitReached = !isSel && isVacationLimitReached(a, state);
+                  const disabled = !canSelect || !canAfford || vacLimitReached;
+                  // Phase 1: 방학 한정 활동 표시 + 남은 횟수
+                  const isVacationOnly = a.seasonGate === 'vacation-only';
+                  const vacUsed = state.vacationActivityCounts?.[a.id] ?? 0;
+                  const showVacLimit = state.isVacation && a.vacationLimit !== undefined;
 
                   // 서술형 태그 생성
                   const hintTags: { text: string; color: string }[] = [];
@@ -157,6 +163,16 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{a.name}</span>
+                          {isVacationOnly && (
+                            <span style={{
+                              fontSize: '0.62rem', fontWeight: 600,
+                              color: 'var(--accent)',
+                              background: 'rgba(224,138,91,0.15)',
+                              padding: '1px 6px', borderRadius: 4,
+                            }}>
+                              🏖 방학
+                            </span>
+                          )}
                           {cost > 0 && (
                             <span style={{ fontSize: '0.72rem', color: canAfford ? 'var(--yellow)' : 'var(--red)' }}>
                               ({cost}만{compact ? '/주' : ''})
@@ -175,6 +191,15 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           {a.slots > 1 && <span style={{ fontSize: '0.65rem', color: 'var(--purple)' }}>{a.slots}칸 사용</span>}
+                          {showVacLimit && (
+                            <span style={{
+                              fontSize: '0.65rem',
+                              color: vacLimitReached ? 'var(--red)' : 'var(--text-muted)',
+                              fontWeight: vacLimitReached ? 600 : 400,
+                            }}>
+                              {vacLimitReached ? '이번 방학 사용 완료' : `방학당 ${a.vacationLimit}회 (${vacUsed}/${a.vacationLimit})`}
+                            </span>
+                          )}
                           {cost > 0 && money < cost && (
                             <span style={{ fontSize: '0.65rem', color: 'var(--red)', fontWeight: 600 }}>💰부족</span>
                           )}
@@ -182,10 +207,10 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                         </div>
                       </div>
 
-                      {/* flavor 텍스트 */}
+                      {/* flavor 텍스트 — 방학 시 vacationDescription 우선 */}
                       {!compact && (
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.5 }}>
-                          {a.flavor}
+                          {state.isVacation && a.vacationDescription ? a.vacationDescription : a.flavor}
                         </div>
                       )}
 

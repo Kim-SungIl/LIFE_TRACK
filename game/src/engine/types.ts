@@ -58,6 +58,8 @@ export interface GameState {
   hardCrisisYears: number[];        // 하드위기 발동 연도 (연간 1회 가드)
   // M6: 자연 회복 감소 모드 (도전 모드) — 상점 의존성·의사결정 부담 강화
   useReducedRecovery?: boolean;
+  // Phase 1 방학 시스템 — 활동별 방학 내 사용 횟수 (방학 진입 시 리셋)
+  vacationActivityCounts?: Record<string, number>;
 }
 
 // 활성 버프 (shopSystem에서도 사용)
@@ -141,6 +143,15 @@ export interface Activity {
   tags: string[];           // 분위기 태그
   requires?: (state: GameState) => boolean;
   category: 'study' | 'exercise' | 'social' | 'talent' | 'rest' | 'work' | 'parent';
+  // Phase 1 방학 시스템
+  seasonGate?: 'vacation-only' | 'semester-only';   // 학기/방학 게이팅
+  vacationLimit?: number;                           // 방학당 최대 선택 횟수 (없으면 무제한)
+  catchupBonus?: {                                  // 낮은 스탯 보정 (방학에만 트리거)
+    targetStat: StatKey;
+    threshold: number;                              // 이 값 미만이면 적용
+    bonus: number;                                  // 추가 효과량
+  };
+  vacationDescription?: string;                     // 방학 시 description 오버라이드 (academy → 단기특강 등)
 }
 
 export interface NpcState {
