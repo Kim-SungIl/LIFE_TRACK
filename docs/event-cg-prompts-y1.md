@@ -964,37 +964,39 @@ Mood: casual minimal effort — the safe, distant choice between friends who cou
 
 # 📊 생성 체크리스트
 
+> 체크 기준: **디스크 파일 존재 여부**. "재생성 강화 프롬프트" 반영도(시각적 품질)는 사람 눈 검수 필요 — `cg-review.html`로 확인하세요.
+
 ## 필수
-- [ ] `first-week_c0_m.png`, `_c0_f.png`
-- [ ] `first-week_c1_m.png`, `_c1_f.png`
-- [ ] `first-week_c2_m.png`, `_c2_f.png`
-- [ ] `minjae-meet-elementary_c0_m.png`, `_c0_f.png`
-- [ ] `minjae-meet-elementary_c1_m.png`, `_c1_f.png`
-- [ ] `minjae-meet-elementary_c2_m.png`, `_c2_f.png`
-- [ ] `jihun-call_c0_m.png` (농구) / `_c0_f.png` (떡볶이)
-- [ ] `jihun-call_c1.png` (공통: 전화 끊고 혼자, back view/silhouette)
-- [ ] `yuna-meet-elementary_c0_m.png`, `_c0_f.png`
-- [ ] `subin-meet-elementary_c0_m.png`, `_c0_f.png`
-- [ ] `elementary-graduation_c0_m.png`, `_c0_f.png`
+- [x] `first-week_c0_m.png`, `_c0_f.png`
+- [x] `first-week_c1_m.png`, `_c1_f.png`
+- [x] `first-week_c2_m.png`, `_c2_f.png`
+- [x] `minjae-meet-elementary_c0_m.png`, `_c0_f.png`
+- [x] `minjae-meet-elementary_c1_m.png`, `_c1_f.png`
+- [x] `minjae-meet-elementary_c2_m.png`, `_c2_f.png`
+- [x] `jihun-call_c0_m.png` (농구) / `_c0_f.png` (떡볶이)
+- [x] `jihun-call_c1.png` (공통: 전화 끊고 혼자, back view/silhouette)
+- [x] `yuna-meet-elementary_c0_m.png`, `_c0_f.png`
+- [x] `subin-meet-elementary_c0_m.png`, `_c0_f.png`
+- [x] `elementary-graduation_c0_m.png`, `_c0_f.png`
 
 ## 중요
-- [ ] `elementary-spring-picnic_c0_m.png`, `_c0_f.png`
-- [ ] `elementary-spring-picnic_c1_m.png`, `_c1_f.png`
-- [ ] `elementary-spring-picnic_c2_m.png`, `_c2_f.png` (back view, 실루엣/헤어 구분)
-- [ ] `yuna-meet-elementary_c1_m.png`, `_c1_f.png` (피아노 reaction)
-- [ ] `yuna-meet-elementary_c2_m.png`, `_c2_f.png` (back view, 실루엣/헤어 구분)
-- [ ] `subin-meet-elementary_c1.png` (공통: hand only)
-- [ ] `subin-meet-elementary_c2_m.png`, `_c2_f.png`
-- [ ] `elementary-sports-day_c0_m.png`, `_c0_f.png`
-- [ ] `elementary-sports-day_c1_m.png`, `_c1_f.png`
-- [ ] `elementary-graduation_c1_m.png`, `_c1_f.png` (silhouette/back view, 헤어 구분)
-- [ ] `elementary-graduation_c2_m.png`, `_c2_f.png` (back view, 헤어 구분)
+- [x] `elementary-spring-picnic_c0_m.png`, `_c0_f.png`
+- [x] `elementary-spring-picnic_c1_m.png`, `_c1_f.png`
+- [x] `elementary-spring-picnic_c2_m.png`, `_c2_f.png` (back view, 실루엣/헤어 구분)
+- [x] `yuna-meet-elementary_c1_m.png`, `_c1_f.png` (피아노 reaction)
+- [x] `yuna-meet-elementary_c2_m.png`, `_c2_f.png` (back view, 실루엣/헤어 구분)
+- [x] `subin-meet-elementary_c1.png` (공통: hand only)
+- [x] `subin-meet-elementary_c2_m.png`, `_c2_f.png`
+- [x] `elementary-sports-day_c0_m.png`, `_c0_f.png`
+- [x] `elementary-sports-day_c1_m.png`, `_c1_f.png`
+- [x] `elementary-graduation_c1_m.png`, `_c1_f.png` (silhouette/back view, 헤어 구분)
+- [x] `elementary-graduation_c2_m.png`, `_c2_f.png` (back view, 헤어 구분)
 
 ## 있으면 좋음
-- [ ] `minjae-birthday_c0.png` (말 건다) 🆕
+- [x] `minjae-birthday_c0.png` (말 건다) 🆕
 - [x] `minjae-birthday_c1.png` (편의점 선물)
 - [x] `minjae-birthday_c2.png` (책 한 권)
-- [ ] `minjae-birthday_c3.png` (그냥 넘어감) 🆕
+- [x] `minjae-birthday_c3.png` (그냥 넘어감) 🆕
 - [x] `jihun-birthday_c0.png` (작은 선물)
 - [x] `jihun-birthday_c1.png` (농구화 끈)
 - [x] `subin-birthday_c0.png` (작은 선물)
@@ -1002,13 +1004,13 @@ Mood: casual minimal effort — the safe, distant choice between friends who cou
 - [x] `yuna-birthday_c0.png` (작은 선물)
 - [x] `yuna-birthday_c1.png` (별 머리핀)
 - [x] 공통 카톡 컷 → `jihun-birthday_c2.png` / `subin-birthday_c2.png` / `yuna-birthday_c2.png` (동일 SHA 사본 3개 확인)
-- [ ] `elementary-unit-test_c0_m.png`, `_c0_f.png`
-- [ ] `elementary-unit-test_c1_m.png`, `_c1_f.png`
-- [ ] `elementary-semester2-start_c0_m.png`, `_c0_f.png`
-- [ ] `elementary-semester2-start_c1_m.png`, `_c1_f.png`
-- [ ] `elementary-semester2-start_c2.png` (공통: POV view)
-- [ ] `elementary-unit-test-2_c0_m.png`, `_c0_f.png`
-- [ ] `elementary-unit-test-2_c1_m.png`, `_c1_f.png`
+- [x] `elementary-unit-test_c0_m.png`, `_c0_f.png`
+- [x] `elementary-unit-test_c1_m.png`, `_c1_f.png`
+- [x] `elementary-semester2-start_c0_m.png`, `_c0_f.png`
+- [x] `elementary-semester2-start_c1_m.png`, `_c1_f.png`
+- [x] `elementary-semester2-start_c2.png` (공통: POV view)
+- [x] `elementary-unit-test-2_c0_m.png`, `_c0_f.png`
+- [x] `elementary-unit-test-2_c1_m.png`, `_c1_f.png`
 
 ---
 
@@ -1137,11 +1139,11 @@ no two trays facing each other.
 
 ## 📋 GPT에 던질 때 체크리스트
 
-- [ ] `elementary-graduation_c2_m.png` (신규)
-- [ ] `elementary-sports-day_c1_f.png` (재생성)
-- [ ] `yuna-meet-elementary_c2_m.png` (재생성)
-- [ ] `yuna-meet-elementary_c2_f.png` (재생성)
-- [ ] `minjae-meet-elementary_c1_m.png` (재생성)
-- [ ] `minjae-meet-elementary_c1_f.png` (재생성)
+- [x] `elementary-graduation_c2_m.png` (신규)
+- [x] `elementary-sports-day_c1_f.png` (재생성)
+- [x] `yuna-meet-elementary_c2_m.png` (재생성)
+- [x] `yuna-meet-elementary_c2_f.png` (재생성)
+- [x] `minjae-meet-elementary_c1_m.png` (재생성)
+- [x] `minjae-meet-elementary_c1_f.png` (재생성)
 
 생성 완료 후 `game/public/images/events/elementary/`에 동일 파일명으로 덮어쓰기.
