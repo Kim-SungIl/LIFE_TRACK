@@ -1080,6 +1080,38 @@ export function GameScreen() {
         {/* 방학: 자유 슬롯 */}
         {state.isVacation && (
           <>
+            {/* Phase 1: 방학 시작/마무리 안내문 (학교급별 톤) */}
+            {(() => {
+              const isStart = state.week === 20 || state.week === 43;
+              const isEnd = state.week === 24 || state.week === 48;
+              if (!isStart && !isEnd) return null;
+              const schoolLevel: 'elementary' | 'middle' | 'high' =
+                state.year === 1 ? 'elementary' : state.year <= 4 ? 'middle' : 'high';
+              const startMessages: Record<typeof schoolLevel, string> = {
+                elementary: '방학식이 끝났다. 가방이 평소보다 가볍게 느껴졌다.',
+                middle: '방학이 시작됐지만, 숙제와 학원 일정표가 먼저 눈에 들어왔다.',
+                high: '방학이라는 말이 예전처럼 가볍게 들리지는 않았다.',
+              };
+              const endMessages: Record<typeof schoolLevel, string> = {
+                elementary: '방학의 마지막 날. 일기장에 적을 게 평소보다 많았다.',
+                middle: '개학이 코앞이다. 정신을 차려보니 방학이 다 갔다.',
+                high: '이번 방학도 끝이다. 다음 학기는 또 한 단계 무거워질 것 같다.',
+              };
+              const msg = isStart ? startMessages[schoolLevel] : endMessages[schoolLevel];
+              const label = isStart ? '🏖️ 방학 시작' : '🍂 방학 마무리';
+              return (
+                <div style={{
+                  background: 'rgba(224,138,91,0.12)',
+                  border: '1px solid rgba(224,138,91,0.25)',
+                  borderRadius: 10,
+                  padding: '10px 12px',
+                  marginBottom: 10,
+                }}>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 600, marginBottom: 4 }}>{label}</div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.55 }}>{msg}</div>
+                </div>
+              );
+            })()}
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, fontWeight: 600 }}>
               🏖️ 방학 — 자유 시간
             </div>
