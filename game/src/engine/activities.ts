@@ -258,7 +258,7 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'intensive-academy',
     name: '학원 단기특강', slots: 2, fatigue: 12,
-    effects: { academic: 4 }, moneyCost: -6,
+    effects: { academic: 4 }, moneyCost: 6,
     category: 'study',
     seasonGate: 'vacation-only',
     vacationLimit: 2,
@@ -270,7 +270,7 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'sports-camp',
     name: '스포츠 캠프', slots: 2, fatigue: 8,
-    effects: { health: 4, talent: 1, social: 2 }, moneyCost: -5,
+    effects: { health: 4, talent: 1, social: 2 }, moneyCost: 5,
     category: 'exercise',
     seasonGate: 'vacation-only',
     vacationLimit: 1,
@@ -282,7 +282,7 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'family-trip',
     name: '가족 여행', slots: 2, fatigue: -5,
-    effects: { mental: 5, social: 2, health: 1 }, moneyCost: -8,
+    effects: { mental: 5, social: 2, health: 1 }, moneyCost: 8,
     category: 'parent',
     seasonGate: 'vacation-only',
     vacationLimit: 1,
@@ -292,10 +292,12 @@ export const ACTIVITIES: Activity[] = [
   },
 
   // 알바 1개 (Y4+)
+  // moneyCost 컨벤션: 양수 = 비용 / 음수 = 수입 (gameEngine.ts:281 state.money - cost)
+  // 따라서 +8만 수입을 표현하려면 moneyCost: -8
   {
     id: 'short-term-job',
     name: '방학 단기 일손 돕기', slots: 2, fatigue: 12,
-    effects: { social: 1 }, moneyCost: 8,
+    effects: { social: 1 }, moneyCost: -8,
     category: 'work',
     seasonGate: 'vacation-only',
     vacationLimit: 2,

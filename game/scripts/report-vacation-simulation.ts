@@ -55,7 +55,7 @@ const PATTERNS: Pattern[] = [
   {
     name: '인기형',
     parents: ['emotional', 'freedom'], gender: 'female',
-    routine2: 'club-activity', routine3: 'part-time-job',
+    routine2: 'club', routine3: 'part-time',
     vacationPriority: [
       'neighborhood-hangout', 'sports-camp', 'family-trip',
       'creative-project', 'short-term-job', 'vacation-library', 'do-nothing', 'countryside',
@@ -150,12 +150,14 @@ function pickVacationChoices(state: GameState, pattern: Pattern): string[] {
     if (a.vacationLimit && (counts[id] ?? 0) >= a.vacationLimit) continue;
     // 슬롯
     if (a.slots > slotsLeft) continue;
-    // 비용 — 돈이 모자라면 스킵 (나중에 무료 대체로 채워짐)
+    // 비용/수입 — moneyCost 컨벤션: 양수 = 비용 / 음수 = 수입
+    // 돈이 모자라면 스킵 (나중에 무료 대체로 채워짐)
     const cost = getActivityCost(a, state.year);
     if (cost > 0 && moneyLeft < cost) continue;
     picks.push(id);
     slotsLeft -= a.slots;
     if (cost > 0) moneyLeft -= cost;
+    else if (cost < 0) moneyLeft += -cost;  // 알바 수입 → 같은 방학 안에서 유료 활동 선택 가능
   }
 
   // 슬롯이 남았으면 무료 fallback으로 채움 — 우선순위 안에서 무료 후보 다시 시도
