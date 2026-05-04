@@ -485,8 +485,8 @@ export function GameScreen() {
             borderRadius: 16, padding: '24px 20px', marginBottom: 20,
             border: '1px solid rgba(255,255,255,0.1)',
           }}>
-            <div style={{ fontSize: '1.15rem', lineHeight: 1.8, fontStyle: 'italic', whiteSpace: 'pre-line', color: 'rgba(255,255,255,0.95)', textAlign: 'center' }}>
-              "{eventResultData.message}"
+            <div style={{ fontSize: '1.15rem', lineHeight: 1.8, fontStyle: 'italic', whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word', color: 'rgba(255,255,255,0.95)', textAlign: 'center' }}>
+              {eventResultData.message}
             </div>
           </div>
           {/* 효과 배지 */}
