@@ -84,7 +84,7 @@ export const GAME_EVENTS: GameEvent[] = [
         },
       },
       {
-        text: '"나도 네 옆자리야" — 이야기 나눈다',
+        text: '"...응, 잘 부탁해" — 같이 가며 이야기한다',
         effects: { social: 1, academic: 1, mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
         message: '급식실에서 같이 먹으며 이야기 나눴다. 조용한데 막상 얘기해보면 은근 디테일에 꼼꼼한 애다.',
@@ -975,7 +975,6 @@ export const GAME_EVENTS: GameEvent[] = [
     condition: (s) => s.year === 7,
     location: 'home',
     background: 'bedroom_night',
-    speakers: ['jihun'],
     choices: [
       {
         text: '일찍 잠자리에 든다',
@@ -1221,7 +1220,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 지훈 이벤트 체인 =====
   {
     id: 'jihun-basketball',
-    title: '방과후 농구',
+    title: '방과후 한 판',
     description: '지훈이가 체육관 앞에서 손짓한다.\n"야, 오늘 방과후에 농구 안 할래? 3대3 하려는데 한 명 모자라."',
     location: 'gym',
     background: 'gymnasium',
@@ -1552,7 +1551,7 @@ export const GAME_EVENTS: GameEvent[] = [
   // ===== 민재 이벤트 체인 =====
   {
     id: 'minjae-sports',
-    title: '체육시간 같은 팀',
+    title: '체육시간의 민재',
     description: '체육시간. 축구를 하는데 민재가 같은 팀이 됐다.\n민재가 공을 받자마자 두 명을 제치고 슛을 넣었다.\n"...걔 공부만 하는 줄 알았는데?"',
     location: 'gym',
     background: 'gymnasium',
@@ -1713,7 +1712,7 @@ export const GAME_EVENTS: GameEvent[] = [
           category: 'betrayal',
           importance: 5,
           toneTag: 'regret',
-          recallText: '중2 가을, 민재의 눈을 피해 먼저 교실을 나섰다.',
+          recallText: '그 가을, 민재의 눈을 피해 먼저 교실을 나섰다.',
           npcIds: ['minjae'],
         },
       },
@@ -1748,9 +1747,9 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'minjae-effort',
     title: '새벽의 비밀',
-    description: '학원 가려고 가방을 가지러 교실에 왔다.\n불이 꺼진 줄 알았는데, 구석 자리에 민재가 앉아 있다.\n스탠드 하나 켜놓고 노트를 펼치고 있다.\n학원원장 아들이 학원도 안 가고 여기서...? "하나도 안 했는데"라고 했던 애가?',
+    description: '학원 가려고 가방을 가지러 교실에 왔다.\n불이 꺼진 줄 알았는데, 구석 자리에 민재가 앉아 있다.\n스탠드 하나 켜놓고 노트를 펼치고 있다.\n학원장 아들이 학원도 안 가고 여기서...? "하나도 안 했는데"라고 했던 애가?',
     location: 'classroom',
-    background: 'classroom_{school}_afternoon',
+    background: 'classroom_{school}_sunset',
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
@@ -2380,7 +2379,7 @@ export const GAME_EVENTS: GameEvent[] = [
     background: 'classroom_{school}',
     choices: [
       { text: '결과를 받아들인다', effects: { social: 1, mental: -1 },
-        message: '인기를 더 쌓아야겠다는 생각이 든다. 민재가 "고마워" 하며 웃었다.' },
+        message: '인기를 더 쌓아야겠다는 생각이 든다. 옆자리 친구가 "다음 학기엔 될 거야" 하며 어깨를 두드렸다.' },
     ],
   },
   // ===== 반장 전용 이벤트 =====
@@ -2734,7 +2733,7 @@ export const GAME_EVENTS: GameEvent[] = [
         },
       },
       {
-        text: '"참가만 한다" — 돈은 아낀다 불가',
+        text: '"좀 더 생각해볼게" — 결정을 미룬다',
         effects: { mental: -1 },
         moneyEffect: 0,
         message: '신청서를 들고만 있다가 버렸다. 결국 결정을 미룬 것이다.',
@@ -3000,7 +2999,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'identity-crisis',
     title: '내가 뭘 하고 싶은 거지',
-    description: '야자 끝나고 운동장 벤치에 혼자 앉아 있다.\n친구들은 다 꿈을 말하는데, 나는 아무것도 떠오르지 않는다.\n"...나 뭐 하고 있는 거지."\n하늘이 이상하게 멀어 보였다.',
+    description: '야자 끝나고 옥상에 혼자 올라왔다.\n친구들은 다 꿈을 말하는데, 나는 아무것도 떠오르지 않는다.\n"...나 뭐 하고 있는 거지."\n하늘이 이상하게 멀어 보였다.',
     condition: (s) => (s.year === 5 || s.year === 6) && s.stats.mental <= 55 && !s.events.some(e => e.id === 'identity-crisis'),
     location: 'rooftop',
     background: 'rooftop_sunset',
@@ -3106,7 +3105,7 @@ export const GAME_EVENTS: GameEvent[] = [
         && !s.isVacation;
     },
     location: 'hallway',
-    background: 'classroom_{school}_afternoon',
+    background: 'hallway_{school}',
     speakers: ['subin'],
     choices: [
       {
@@ -3203,7 +3202,7 @@ export const GAME_EVENTS: GameEvent[] = [
         && !s.isVacation;
     },
     location: 'hallway',
-    background: 'classroom_{school}_afternoon',
+    background: 'hallway_{school}',
     choices: [
       {
         text: '답장을 길게 써서 학교 우편함에 넣는다',
@@ -3296,7 +3295,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     background: 'school_gate_{school}_rain',
     choices: [
       { text: '그냥 뛰어간다!', effects: { health: -1, mental: 1 }, message: '흠뻑 젖었지만 왠지 상쾌하다.' },
-      { text: '편의점에서 우산을 산다', effects: {}, moneyEffect: -1, message: '1000원짜리 투명 우산. 어른이 된 기분.' },
+      { text: '편의점에서 우산을 산다', effects: {}, moneyEffect: -1, message: '편의점 비닐 우산. 어른이 된 기분.' },
     ],
     condition: (s) => !s.isVacation,
   },
@@ -3336,7 +3335,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
   },
   {
     id: 'sick-day', title: '컨디션 난조',
-    description: '아침부터 머리가 아프고 열이 나는 것 같다.\n"오늘 쉴까..."',
+    description: '이불 속에서 눈을 떴는데 머리가 아프고 열이 나는 것 같다.\n"오늘 쉴까..."',
     location: 'home',
     background: 'bedroom_night',
     choices: [
