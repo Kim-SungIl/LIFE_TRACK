@@ -3480,8 +3480,9 @@ export const FOLLOWUP_EVENT_IDS = new Set([
 ]);
 
 // 직접 후속 이벤트 — 같은 장소에서 자연스럽게 이어지는 결과 (예: 선거→연설→결과 발표)
-// excludeLocation 필터를 우회해 같은 주에 즉시 발동되도록 허용
-const DIRECT_SEQUEL_IDS = new Set<string>([
+// excludeLocation 필터를 우회 + store.resolveEvent의 followupFiredThisWeek 가드도 우회
+// (선거→연설→결과 같은 자연 chain은 같은 주에 모두 보이는 게 의도)
+export const DIRECT_SEQUEL_IDS = new Set<string>([
   'class-president-speech', 'class-president-2-speech',
   'class-president-win', 'class-president-lose', 'class-president-vice',
   'class-president-2-win', 'class-president-2-lose',
