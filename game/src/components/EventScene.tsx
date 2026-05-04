@@ -438,6 +438,8 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
             overflowY: 'auto',
             marginBottom: 12,
             flex: '0 1 auto',
+            wordBreak: 'keep-all',
+            overflowWrap: 'break-word',
           }}>
             {renderDescription(eventDesc, speakerIds, npcs)}
           </div>
@@ -472,7 +474,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                   e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
                 }}
               >
-                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
                   {choice.text}
                 </div>
               </div>
