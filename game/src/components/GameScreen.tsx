@@ -13,6 +13,7 @@ import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
 import { ShopItem } from '../engine/shopSystem';
 import { EventScene, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from './EventScene';
+import { CG_MANIFEST } from '../cg-manifest.generated';
 
 const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
@@ -399,16 +400,20 @@ export function GameScreen() {
     const ci = eventResultData.choiceIndex ?? 0;
     const genderSuffix = state.gender === 'male' ? 'm' : 'f';
     const schoolLevel = getSchoolLevel(state.year);
+    // manifest 키는 BASE prefix 없는 events/ 이하 상대경로 (예: 'elementary/foo_c0_m.png').
+    // 후보를 manifest로 1차 필터링해 자산 부재 시 8개 직렬 404 비용을 제거.
     const buildCandidates = (dir: string): string[] => eventId ? [
-      `${BASE}images/events/${dir}/${eventId}_c${ci}_${genderSuffix}.png`,
-      `${BASE}images/events/${dir}/${eventId}_${genderSuffix}.png`,
-      `${BASE}images/events/${dir}/${eventId}_c${ci}.png`,
-      `${BASE}images/events/${dir}/${eventId}.png`,
+      `${dir}/${eventId}_c${ci}_${genderSuffix}.png`,
+      `${dir}/${eventId}_${genderSuffix}.png`,
+      `${dir}/${eventId}_c${ci}.png`,
+      `${dir}/${eventId}.png`,
     ] : [];
     const eventImgCandidates: string[] = [
       ...buildCandidates(schoolLevel),
       ...buildCandidates('common'),
-    ];
+    ]
+      .filter(rel => CG_MANIFEST.has(rel))
+      .map(rel => `${BASE}images/events/${rel}`);
     const eventImgPrimary = eventImgCandidates[0] ?? null;
 
     // CG 정상: 그라데이션 → CG 페이드인 (PR #76 — 모바일에서 fallback 깜빡임 회피)
