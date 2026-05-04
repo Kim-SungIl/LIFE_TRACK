@@ -2265,6 +2265,24 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
   },
   {
+    id: 'class-president-speech', title: '선거 연설',
+    description: '교탁 앞에 섰다.\n반 친구들의 시선이 모인다.\n무슨 말을 해야 할까?',
+    // 같은 해 출마(c0) 후 + 연설/win/lose 미발동
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
+      && !s.events.some(e => e.id === 'class-president-speech' && e.year === s.year)
+      && !s.events.some(e => (e.id === 'class-president-win' || e.id === 'class-president-lose') && e.year === s.year),
+    location: 'classroom',
+    background: 'classroom_{school}',
+    choices: [
+      { text: '"열심히 하겠습니다!" — 진심을 담아 외친다', effects: { social: 3, mental: 1 }, fatigueEffect: 2,
+        message: '떨리는 목소리지만 진심이 닿았다. 박수 소리가 들린다.' },
+      { text: '"여러분의 의견을 듣겠습니다" — 차분하게 약속한다', effects: { social: 2, mental: 2 }, fatigueEffect: 2,
+        message: '담담했지만 어른스러운 인상을 남겼다. 몇몇이 고개를 끄덕였다.' },
+      { text: '"...잘 부탁드립니다" — 짧게 끝낸다', effects: { social: 1 }, fatigueEffect: 1,
+        message: '짧게 마쳤다. 무난했지만 인상에 남지 않았다.' },
+    ],
+  },
+  {
     id: 'class-president-win', title: '반장 당선!',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n반 친구들이 박수를 쳐준다.',
     // 매년 발동: 같은 해 출마(c0) + 같은 해에 -lose/-win 미발동
@@ -2317,6 +2335,24 @@ export const GAME_EVENTS: GameEvent[] = [
       { text: '가만히 있는다...', effects: { mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '민재가 다시 손을 들었다. "할 사람 없으면 제가 하죠." 2학기도 민재가 반장. 책임감이 대단하다.' },
+    ],
+  },
+  {
+    id: 'class-president-2-speech', title: '2학기 선거 연설',
+    description: '다시 교탁 앞에 섰다.\n이번엔 조금 덜 떨린다. 어떤 말을 할까.',
+    // 같은 해 2학기 출마(c0) 후 + 2학기 연설/win/lose 미발동
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
+      && !s.events.some(e => e.id === 'class-president-2-speech' && e.year === s.year)
+      && !s.events.some(e => (e.id === 'class-president-2-win' || e.id === 'class-president-2-lose') && e.year === s.year),
+    location: 'classroom',
+    background: 'classroom_{school}',
+    choices: [
+      { text: '"이번 학기엔 더 잘 해보겠습니다" — 1학기 경험을 살려 다짐한다', effects: { social: 3, mental: 1 }, fatigueEffect: 2,
+        message: '경험에서 우러난 말이라 무게가 달랐다. 호응이 좋았다.' },
+      { text: '"새로운 계획을 준비했습니다" — 구체적인 약속을 한다', effects: { social: 2, mental: 2, academic: 1 }, fatigueEffect: 2,
+        message: '준비한 만큼 차분하게 전했다. "오, 진심이네" 누군가가 작게 말했다.' },
+      { text: '"잘 부탁드립니다" — 짧게 마무리한다', effects: { social: 1 }, fatigueEffect: 1,
+        message: '담담히 끝냈다. 평이했다.' },
     ],
   },
   {
@@ -3430,6 +3466,7 @@ function isClassOfficer(s: GameState): boolean {
 
 // 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
 export const FOLLOWUP_EVENT_IDS = new Set([
+  'class-president-speech', 'class-president-2-speech',
   'class-president-win', 'class-president-lose', 'class-president-vice',
   'class-president-2-win', 'class-president-2-lose',
   'class-president-nudge',
@@ -3442,9 +3479,10 @@ export const FOLLOWUP_EVENT_IDS = new Set([
   'junha-transfer', 'junha-riceball', 'junha-dialect', 'junha-homesick', 'junha-cook', 'junha-minjae',
 ]);
 
-// 직접 후속 이벤트 — 같은 장소에서 자연스럽게 이어지는 결과 (예: 선거→결과 발표)
+// 직접 후속 이벤트 — 같은 장소에서 자연스럽게 이어지는 결과 (예: 선거→연설→결과 발표)
 // excludeLocation 필터를 우회해 같은 주에 즉시 발동되도록 허용
 const DIRECT_SEQUEL_IDS = new Set<string>([
+  'class-president-speech', 'class-president-2-speech',
   'class-president-win', 'class-president-lose', 'class-president-vice',
   'class-president-2-win', 'class-president-2-lose',
 ]);
