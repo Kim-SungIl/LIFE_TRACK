@@ -82,6 +82,13 @@ export function GameScreen() {
   const [cgLoaded, setCgLoaded] = useState(false);
   // CG 후보 cascade가 모두 실패하면 true → 배경+주인공 fallback 다시 표시
   const [cgError, setCgError] = useState(false);
+  // CG가 1500ms 안에 로드 안 되면 onError cascade와 무관하게 강제 fallback (빈 화면 회피)
+  // 일부 환경에서 cascade onError가 마지막까지 트리거되지 않아 영원히 빈 화면이던 케이스 보호
+  useEffect(() => {
+    if (!eventResultData || cgLoaded || cgError) return;
+    const timer = setTimeout(() => setCgError(true), 1500);
+    return () => clearTimeout(timer);
+  }, [eventResultData, cgLoaded, cgError]);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>({});
@@ -404,14 +411,14 @@ export function GameScreen() {
     ];
     const eventImgPrimary = eventImgCandidates[0] ?? null;
 
-    // CG가 있는 이벤트는 배경/주인공을 처음부터 안 보여주고 — 그라데이션만 깔고 CG 로드 후 페이드인.
-    // 모바일은 이미지 디코딩이 느려 "배경+주인공이 잠깐 보였다 CG로 휙 전환"되는 버벅임이 두드러짐.
-    // 단 CG 후보가 모두 실패한 경우(cgError) 배경+주인공 fallback을 복원해 빈 화면 회피.
+    // CG 정상: 그라데이션 → CG 페이드인 (PR #76 — 모바일에서 fallback 깜빡임 회피)
+    // CG 실패: cgError로 fallback 복원. cascade onError + 타임아웃 1500ms 둘 중 빠른 쪽 트리거.
+    //   (일부 환경에서 8개 후보 onError가 끝까지 호출되지 않아 빈 화면으로 남던 문제 회피)
     const hasCg = !!eventImgPrimary;
     const showFallback = !hasCg || cgError;
     return (
       <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: bgGradient }}>
-        {/* 배경 이미지 + 주인공 — CG가 없거나 모든 CG 후보가 실패한 경우 표시 */}
+        {/* 배경 이미지 + 주인공 — CG 없거나 모든 후보 실패한 경우만 표시 */}
         {showFallback && (
           <>
             <div style={{ position: 'absolute', inset: 0 }}>
@@ -441,7 +448,7 @@ export function GameScreen() {
             </div>
           </>
         )}
-        {/* 결과 내용 — CG 있으면 중앙, 없으면 하단 */}
+        {/* 결과 내용 — CG 있고 로드 성공 시 중앙, 그 외(없음/실패) 하단 */}
         <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', justifyContent: hasCg && !cgError ? 'center' : 'flex-end' }} className="fade-in">
           {/* 이벤트 결과 이미지 (CG) — 인덱스 기반 cascade 폴백. 모두 실패(cgError)면 박스 자체 숨김 */}
           {eventImgPrimary && !cgError && (
