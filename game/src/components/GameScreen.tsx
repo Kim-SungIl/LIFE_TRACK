@@ -80,6 +80,8 @@ export function GameScreen() {
   const [showResult, setShowResult] = useState(false);
   const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[]; event?: GameEvent; choiceIndex?: number } | null>(null);
   const [cgLoaded, setCgLoaded] = useState(false);
+  // CG 후보 cascade가 모두 실패하면 true → 배경+주인공 fallback 다시 표시
+  const [cgError, setCgError] = useState(false);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>({});
@@ -404,11 +406,13 @@ export function GameScreen() {
 
     // CG가 있는 이벤트는 배경/주인공을 처음부터 안 보여주고 — 그라데이션만 깔고 CG 로드 후 페이드인.
     // 모바일은 이미지 디코딩이 느려 "배경+주인공이 잠깐 보였다 CG로 휙 전환"되는 버벅임이 두드러짐.
+    // 단 CG 후보가 모두 실패한 경우(cgError) 배경+주인공 fallback을 복원해 빈 화면 회피.
     const hasCg = !!eventImgPrimary;
+    const showFallback = !hasCg || cgError;
     return (
       <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: bgGradient }}>
-        {/* 배경 이미지 + 주인공 — CG가 없는 이벤트에서만 표시 (CG 있으면 그라데이션만) */}
-        {!hasCg && (
+        {/* 배경 이미지 + 주인공 — CG가 없거나 모든 CG 후보가 실패한 경우 표시 */}
+        {showFallback && (
           <>
             <div style={{ position: 'absolute', inset: 0 }}>
               {bgImgUrl && <img src={bgImgUrl} alt="" data-bg-idx="0" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} onError={e => {
@@ -438,9 +442,9 @@ export function GameScreen() {
           </>
         )}
         {/* 결과 내용 — CG 있으면 중앙, 없으면 하단 */}
-        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', justifyContent: hasCg ? 'center' : 'flex-end' }} className="fade-in">
-          {/* 이벤트 결과 이미지 (CG) — 인덱스 기반 cascade 폴백 */}
-          {eventImgPrimary && (
+        <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, zIndex: 10, padding: '20px 24px 24px', display: 'flex', flexDirection: 'column', justifyContent: hasCg && !cgError ? 'center' : 'flex-end' }} className="fade-in">
+          {/* 이벤트 결과 이미지 (CG) — 인덱스 기반 cascade 폴백. 모두 실패(cgError)면 박스 자체 숨김 */}
+          {eventImgPrimary && !cgError && (
             <div style={{
               marginBottom: 16, borderRadius: 12, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)',
               opacity: cgLoaded ? 1 : 0, transition: 'opacity 0.25s ease',
@@ -462,6 +466,7 @@ export function GameScreen() {
                     img.src = eventImgCandidates[idx];
                   } else {
                     img.style.display = 'none';
+                    setCgError(true);
                   }
                 }}
               />
@@ -490,7 +495,7 @@ export function GameScreen() {
               </div>
             ))}
           </div>
-          <button className="btn btn-primary" onClick={() => { setEventResultData(null); setCgLoaded(false); setShowResult(true); }}>
+          <button className="btn btn-primary" onClick={() => { setEventResultData(null); setCgLoaded(false); setCgError(false); setShowResult(true); }}>
             계속 →
           </button>
         </div>
