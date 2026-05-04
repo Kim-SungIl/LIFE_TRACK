@@ -1163,7 +1163,8 @@ export function GameScreen() {
               }}>✕ 닫기</span>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
-              {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 */}
+              {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 — 디폴트 상태(routineSlot3=null)도 강조하지 않음.
+                 사용자가 명시적으로 다른 활동을 고르기 전까지 "자동 선택된" 인상 회피. */}
               {editingSlot === 'routine2' && (
                 <div onClick={() => {
                   if (state.routineSlot2) { setRoutine(state.routineSlot2, null); }
@@ -1171,8 +1172,8 @@ export function GameScreen() {
                 }} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
                   borderRadius: 10, cursor: 'pointer',
-                  background: !state.routineSlot3 ? 'rgba(125,163,217,0.15)' : 'rgba(255,255,255,0.04)',
-                  border: !state.routineSlot3 ? '1px solid var(--blue)' : '1px solid rgba(255,255,255,0.06)',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.06)',
                 }}>
                   <span style={{ fontSize: '1.1rem' }}>🕊️</span>
                   <div style={{ flex: 1 }}>
@@ -1182,6 +1183,7 @@ export function GameScreen() {
                 </div>
               )}
               <ActivityPicker
+                key={editingSlot}
                 activities={
                   editingSlot === 'routine1' || editingSlot === 'routine2'
                     ? activities.filter(a => a.slots === 1 && a.category !== 'rest' &&
