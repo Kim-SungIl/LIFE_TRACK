@@ -40,7 +40,7 @@ function simulate(parents: [ParentStrength, ParentStrength], seed: number): Resu
   let state = createInitialState('male', parents);
   state.rngSeed = seed;
   state.routineSlot2 = 'self-study';
-  state.routineSlot3 = 'club-activity';
+  state.routineSlot3 = 'club';
 
   let totalIncome = 0;
   let totalSpent = 0;
@@ -99,7 +99,7 @@ function simulate(parents: [ParentStrength, ParentStrength], seed: number): Resu
     if (state.phase === 'weekday') {
       state.weekendChoices = ['rest']; // 주말은 휴식
     } else if (state.phase === 'vacation') {
-      state.vacationChoices = ['self-study', 'rest', 'club-activity'];
+      state.vacationChoices = ['self-study', 'rest', 'club'];
     }
 
     state = processWeek(state);

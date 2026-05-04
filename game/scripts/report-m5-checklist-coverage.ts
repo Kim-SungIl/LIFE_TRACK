@@ -14,7 +14,7 @@ import type { GameState, ParentStrength, GameEvent, Choice } from '../src/engine
 async function runStandard(): Promise<GameState> {
   let s = createInitialState('female', ['emotional', 'info']);
   s.routineSlot2 = 'self-study';
-  s.routineSlot3 = 'club-activity';
+  s.routineSlot3 = 'club';
 
   for (let i = 0; i < 400 && s.year <= 7; i++) {
     s = processWeek(s);

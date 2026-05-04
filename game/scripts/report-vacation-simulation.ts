@@ -55,7 +55,7 @@ const PATTERNS: Pattern[] = [
   {
     name: '인기형',
     parents: ['emotional', 'freedom'], gender: 'female',
-    routine2: 'club-activity', routine3: 'part-time-job',
+    routine2: 'club', routine3: 'part-time',
     vacationPriority: [
       'neighborhood-hangout', 'sports-camp', 'family-trip',
       'creative-project', 'short-term-job', 'vacation-library', 'do-nothing', 'countryside',

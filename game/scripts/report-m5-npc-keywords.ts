@@ -39,7 +39,7 @@ const PATTERNS: Pattern[] = [
   {
     name: '인기형 (사교 중시)',
     parents: ['emotional', 'freedom'], gender: 'female',
-    routine2: 'club-activity', routine3: 'part-time-job',
+    routine2: 'club', routine3: 'part-time',
     choicePolicy: (s) => {
       const e = s.currentEvent; if (!e) return 0;
       const choices = s.gender === 'female' && e.femaleChoices ? e.femaleChoices : e.choices;
