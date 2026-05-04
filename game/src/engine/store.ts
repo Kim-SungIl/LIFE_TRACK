@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { GameState, GameEvent, ParentStrength } from './types';
 import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
-import { getFollowupForWeek, FOLLOWUP_EVENT_IDS } from './events';
+import { getFollowupForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice } from './memorySystem';
 
 const SAVE_KEY = 'lifetrack_save';
@@ -206,8 +206,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 이벤트 해결 후 → 대기 중인 followup 이벤트 즉시 연쇄 발동 (같은 장소 제외)
     // 가드: 같은 주(week+year)에 followup이 이미 한 번 발동했으면 추가 발동 안 함
     // (한 주 3+ 이벤트 누적으로 인한 피로감 방지)
+    // 단 DIRECT_SEQUEL_IDS(선거→연설→결과 같은 자연 chain)는 가드에서 제외 — 같은 주에 모두 보이는 게 의도
     const followupFiredThisWeek = newState.events.some(
-      prev => prev.week === newState.week && prev.year === newState.year && FOLLOWUP_EVENT_IDS.has(prev.id),
+      prev => prev.week === newState.week && prev.year === newState.year
+        && FOLLOWUP_EVENT_IDS.has(prev.id) && !DIRECT_SEQUEL_IDS.has(prev.id),
     );
     const followup = followupFiredThisWeek ? null : getFollowupForWeek(newState, s.currentEvent?.location);
     if (followup) {
