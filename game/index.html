@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>LIFE TRACK: 선택의 결과</title>
+    <!-- Critical 자산 preload — JS 번들과 병렬 다운로드해 첫 게임 진입 검은 화면 단축.
+         첫 게임은 항상 1년차(초6) 봄 교실에서 시작하므로 그 한 장 + 플레이어 fullbody 두 장.
+         (도전 모드 등 다른 학년 시작은 GameScreen 마운트 시 prefetch가 보충) -->
+    <link rel="preload" as="image" href="./images/backgrounds/classroom_elementary_spring.png" />
+    <link rel="preload" as="image" href="./images/characters/player_m_elementary_fullbody.png" />
+    <link rel="preload" as="image" href="./images/characters/player_f_elementary_fullbody.png" />
     <style>
       body { margin: 0; background: #1a1a2e; }
     </style>

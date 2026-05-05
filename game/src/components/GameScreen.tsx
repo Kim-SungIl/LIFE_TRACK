@@ -14,6 +14,7 @@ import { Shop } from './Shop';
 import { ShopItem } from '../engine/shopSystem';
 import { EventScene, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from './EventScene';
 import { CG_MANIFEST } from '../cg-manifest.generated';
+import { prefetchAssets } from '../engine/assetPrefetch';
 
 const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
@@ -77,6 +78,28 @@ export function GameScreen() {
       try { localStorage.setItem('lifetrack_has_cleared', '1'); } catch { /* storage unavailable */ }
     }
   }, [state?.phase]);
+
+  // 자주 쓰는 자산 prefetch — 학년/성별 결정되면 그 학교급의 자주 쓰는 배경과
+  // 플레이어 fullbody를 미리 캐시에 적재. 화면 전환 시 즉시 표시.
+  useEffect(() => {
+    if (!state) return;
+    const level = getSchoolLevel(state.year);
+    const gender = state.gender === 'male' ? 'm' : 'f';
+    const elementarySuffix = state.year === 1 ? '_elementary' : '';
+    prefetchAssets([
+      `images/characters/player_${gender}${elementarySuffix}_fullbody.png`,
+      `images/backgrounds/classroom_${level}.png`,
+      `images/backgrounds/classroom_${level}_spring.png`,
+      `images/backgrounds/classroom_${level}_afternoon.png`,
+      `images/backgrounds/classroom_${level}_sunset.png`,
+      `images/backgrounds/hallway_${level}.png`,
+      `images/backgrounds/library_${level}.png`,
+      `images/backgrounds/gymnasium.png`,
+      `images/backgrounds/school_road_morning.png`,
+      `images/backgrounds/home_evening.png`,
+      `images/backgrounds/bedroom_night.png`,
+    ]);
+  }, [state?.gender, state?.year]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [showResult, setShowResult] = useState(false);
   const [eventResultData, setEventResultData] = useState<{ message: string; effects: Record<string, string>[]; event?: GameEvent; choiceIndex?: number } | null>(null);
