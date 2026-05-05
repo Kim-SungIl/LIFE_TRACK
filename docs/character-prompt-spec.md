@@ -385,27 +385,31 @@ Same boy at age 11-12. Even more bright and pure energy.
 
 ---
 
-#### haeun (김하은) — Transfer student, creative, sketch artist
+#### haeun (김하은) — Transfer student, quiet reader, thoughtful
 
-**Actual Image:** medium-length wavy light brown (caramel) hair, star hair clip on right side, bright curious brown eyes, colorful scrunchie bracelet on wrist. Navy blazer, white shirt, red ribbon, plaid skirt, black loafers, dark knee socks. One hand holding sketchbook with doodles, other hand waving.
+**Actual Image:** dark brown straight bob cut slightly above the shoulders with natural flyaway hairs, black-framed round-rectangle glasses, warm brown eyes, shy thoughtful smile. Navy blazer neatly buttoned, white shirt with large red ribbon, plaid skirt, black knee socks, black loafers. Holding a red-covered book close to chest with both hands.
 
 **Full Body (middle school)**
 ```
-Anime-style creative Korean middle school girl, expressive and lively.
-- Hair: medium-length wavy brown hair (lighter caramel brown), star-shaped hair clip on right side
-- Eyes: warm brown eyes, curious and lively expression
-- Build: average height, expressive body language
-- Outfit: navy blazer, white shirt with red ribbon, plaid skirt, black loafers, dark knee socks
-- Accessory: star hair clip, colorful scrunchie bracelet on wrist, sketchbook with doodles held casually
-- Pose: one hand holding sketchbook at side, other hand waving or gesturing cheerfully
-- Expression: bright cheerful smile, curious and open
+Anime-style quiet Korean middle school girl, thoughtful transfer student.
+- Hair: dark brown straight bob cut slightly above the shoulders, natural flyaway hairs, NO caramel, NO wavy texture
+- Eyes: warm brown eyes, shy and thoughtful expression
+- Build: average height and build, gentle body language
+- Outfit: navy blazer neatly buttoned, white shirt with large red ribbon, plaid skirt, black knee socks, black loafers
+- Accessory: black-framed round-rectangle glasses, NO star hair clip
+- Item: red-covered book held close to chest with both hands, NOT sketchbook
+- Pose: shy straight standing pose, both hands hugging the red book at chest, gaze slightly downward, NO waving
+- Expression: calm and slightly shy transfer student tone, careful and bookish
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
+
+IMPORTANT: Must NOT look like yuna.
+Differentiation from yuna: haeun has dark brown straight bob hair, black-framed glasses, red book, shy bookish posture. Yuna has caramel wavy hair, star clip, no glasses, bright waving pose, sketchbook/bracelet cues.
 ```
 
 **Portrait**
 ```
-Same character, chest-up. Cheerful lively smile, star hair clip visible, holding sketchbook.
+Same character, chest-up. Shy thoughtful smile, round glasses visible, red book held near chest.
 Background: soft pastel pink-blue gradient.
 ```
 
@@ -533,7 +537,7 @@ Background: soft pastel pink-blue gradient.
 | minjae | 박민재 | M | All | Buzz cut, tanned skin, wide grin | jihun: shorter hair, darker skin, stockier |
 | yuna | 유나 | F | All | Caramel wavy hair, star clip, bright smile, no glasses | subin: lighter hair, more energetic, star clip vs star earrings |
 | doyun | 박도윤 | M | Elem~Mid | Neat black side-part, soccer keychain, leader aura | jihun: neat vs messy, composed vs playful |
-| haeun | 김하은 | F | Mid | Caramel wavy hair, star clip, sketchbook, bracelet | subin: lighter hair, colorful accessories |
+| haeun | 김하은 | F | Mid | Dark brown bob, round glasses, red book, shy smile | yuna: darker bob + glasses + red book vs caramel wave + star clip |
 | seoa | 윤서아 | F | Mid | Long straight brown, hair clip, earphones, notebook | yuna: no glasses, longer hair, dreamy vs studious |
 | junha | 김준하 | M | High | Dark brown messy, thick eyebrows, sturdy, ill-fitting blazer | player_m: sharper jaw, broader, more rugged |
 | siwoo | 한시우 | M | High | Medium brown covering forehead, tall lean, slouched, tumbler | junha: leaner, taller, more reserved |
