@@ -134,9 +134,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + choice.fatigueEffect));
     }
 
-    // 용돈 효과
+    // 용돈 효과 — 음수 방지 (gameEngine/shopSystem과 동일 클램프)
     if (choice.moneyEffect) {
       newState.money = Math.round((newState.money + choice.moneyEffect) * 10) / 10;
+      if (newState.money < 0) newState.money = 0;
     }
 
     // NPC 친밀도 효과 + 만남 처리
