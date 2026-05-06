@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
-import { getEventBackground } from '../engine/backgrounds';
+import { getEventBackground, getSchoolLevel } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
+import { prefetchAssets } from '../engine/assetPrefetch';
+import { CG_MANIFEST } from '../cg-manifest.generated';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -219,6 +221,31 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     setBgLoaded(false);
     setBgError(false);
   }, [event.id]);
+
+  // 선택지 결과 CG prefetch — 사용자가 선택지 보는 동안 manifest에 존재하는
+  // 모든 선택지의 결과 CG 후보를 백그라운드 로드. 결과 화면 진입 시 캐시 적중.
+  useEffect(() => {
+    const level = getSchoolLevel(year);
+    const genderSuffix = gender === 'male' ? 'm' : 'f';
+    const choiceCount = (gender === 'female' && event.femaleChoices)
+      ? event.femaleChoices.length
+      : event.choices.length;
+    const candidates: string[] = [];
+    for (let ci = 0; ci < choiceCount; ci++) {
+      for (const dir of [level, 'common']) {
+        const rels = [
+          `${dir}/${event.id}_c${ci}_${genderSuffix}.png`,
+          `${dir}/${event.id}_${genderSuffix}.png`,
+          `${dir}/${event.id}_c${ci}.png`,
+          `${dir}/${event.id}.png`,
+        ];
+        for (const rel of rels) {
+          if (CG_MANIFEST.has(rel)) candidates.push(`images/events/${rel}`);
+        }
+      }
+    }
+    prefetchAssets(candidates);
+  }, [event.id, gender, year]);
 
   // Gender-specific description/choices
   const isFemale = gender === 'female';
@@ -452,24 +479,31 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
             flex: '1 1 auto',
             overflowY: 'auto',
           }}>
-            {visibleChoices.map(({ choice, originalIndex }, i) => (
+            {visibleChoices.map(({ choice, originalIndex }, i) => {
+              // 돈 부족 시 비활성화 — moneyEffect가 음수인데 잔돈이 모자라면 잠금
+              const cost = choice.moneyEffect && choice.moneyEffect < 0 ? -choice.moneyEffect : 0;
+              const insufficient = cost > 0 && state ? state.money < cost : false;
+              return (
               <div
                 key={originalIndex}
-                onClick={() => handleChoice(originalIndex)}
+                onClick={() => { if (!insufficient) handleChoice(originalIndex); }}
                 style={{
                   padding: '12px 16px',
                   borderRadius: 12,
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  cursor: 'pointer',
+                  background: insufficient ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${insufficient ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.1)'}`,
+                  cursor: insufficient ? 'not-allowed' : 'pointer',
+                  opacity: insufficient ? 0.45 : 1,
                   transition: 'all 0.2s',
                   animation: `es-choice-fade-up 0.3s ease ${0.1 + i * 0.08}s both`,
                 }}
                 onMouseEnter={e => {
+                  if (insufficient) return;
                   e.currentTarget.style.borderColor = 'var(--accent)';
                   e.currentTarget.style.background = 'rgba(224,138,91,0.14)';
                 }}
                 onMouseLeave={e => {
+                  if (insufficient) return;
                   e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
                   e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
                 }}
@@ -477,8 +511,14 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
                   {choice.text}
                 </div>
+                {insufficient && (
+                  <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--red, #d96a6a)', marginTop: 4 }}>
+                    💰 돈이 부족합니다 (보유 {state?.money ?? 0}만 / 필요 {cost}만)
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
