@@ -47,8 +47,8 @@ export const ANNUAL_EVENT_IDS = new Set<string>([
   'class-president-win', 'class-president-lose', 'class-president-vice',
   'class-president-2-win', 'class-president-2-lose',
   'class-president-nudge',
-  // 정기 시험 — 중/고 매년 발동 (year>=2 가드는 이벤트 자체에 있음)
-  'final-exam-2',
+  // 정기 시험 — 중/고 매년 발동 (year 가드는 이벤트 자체에 있음)
+  'midterm-1', 'mock-exam-prep', 'mock-exam-prep-2', 'final-exam-2',
 ]);
 
 // ===== importance 임계값 (부록 C) =====

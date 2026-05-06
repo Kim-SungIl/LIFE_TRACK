@@ -263,7 +263,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '일단 자리에 앉아서 주변을 살핀다',
         effects: { mental: 2 },
-        message: '낯선 얼굴들 사이에서 아는 얼굴을 찾았다. 지훈이가 손을 흔들었다. 다행이다.',
+        message: '낯선 얼굴들 사이에서 아는 얼굴을 찾았다. 옆에선 수빈이가 신나서 두리번거리고 있다. 다행이다.',
       },
       {
         text: '"교복 좋은데?" — 거울을 본다',
@@ -1873,7 +1873,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['minjae'],
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 65 && s.year >= 6;
+      return !!minjae?.met && minjae.intimacy >= 65 && s.year >= 6 && !s.isVacation;
     },
     choices: [
       {
@@ -2457,6 +2457,17 @@ export const GAME_EVENTS: GameEvent[] = [
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
         message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
     ],
+    femaleChoices: [
+      { text: '선물을 사서 준다 (-2만원)', effects: { social: 3, mental: 2 }, moneyEffect: -2,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        message: '지훈이가 진짜 좋아했다. "야 너 최고다!" 돈 아깝지 않다.' },
+      { text: '배드민턴 라켓 그립테이프 세트를 고른다 (-5만원)', effects: { social: 4, mental: 4 }, moneyEffect: -5,
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 12 }],
+        message: '지훈이가 그립테이프를 보더니 입이 쩍 벌어졌다. "야, 이거... 너 진짜 나랑 오래 칠 생각인가 보네." 웃으며 말했지만 진지한 눈이었다.' },
+      { text: '카톡으로 축하만 한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
+        message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
+    ],
   },
   {
     id: 'subin-birthday', title: '수빈이 생일',
@@ -2563,7 +2574,7 @@ export const GAME_EVENTS: GameEvent[] = [
     choices: [
       { text: '"사투리 멋있는데? 원래 말투가 더 낫다" — 편하게 말한다', effects: { social: 2, mental: 2 },
         npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
-        message: '준하가 멈칫했다가 웃었다. "...진짜? 여기서 사투리 쓰면 좀 눈치 보여서." "쓰지 마." "야 뭐라카노!" 같이 웃었다.' },
+        message: '준하가 멈칫했다가 웃었다. "...진짜? 여기서 사투리 쓰면 좀 눈치 보여서." "신경 쓰지 마." "야 뭐라카노!" 같이 웃었다.' },
       { text: '같이 웃는다 — 자연스럽게 넘긴다', effects: { social: 1 },
         npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
         message: '준하가 "아 진짜..." 하면서 머리를 긁었다. 분위기는 나쁘지 않았다. 오히려 반 분위기가 좀 풀렸다.' },
@@ -2735,7 +2746,6 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"좀 더 생각해볼게" — 결정을 미룬다',
         effects: { mental: -1 },
-        moneyEffect: 0,
         message: '신청서를 들고만 있다가 버렸다. 결국 결정을 미룬 것이다.',
       },
     ],
@@ -3190,6 +3200,40 @@ export const GAME_EVENTS: GameEvent[] = [
         },
       },
     ],
+    femaleChoices: [
+      {
+        text: '"무슨 소리야, 너가 더 잘하잖아" — 진심으로 말한다',
+        effects: { social: 2, mental: 2 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        message: '지훈이 눈이 커졌다가, "야, 닭살이야" 하고 웃었다. 근데 그 웃음은 진짜였다.',
+        memorySlotDraft: {
+          category: 'reconciliation',
+          importance: 5,
+          toneTag: 'warm',
+          recallText: "편의점에서 지훈이한테 '너가 더 잘하잖아' 했던 오후.",
+          npcIds: ['jihun'],
+        },
+      },
+      {
+        text: '"뭐야 갑자기" — 쿨하게 넘긴다',
+        effects: { mental: -1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: -3 }],
+        message: '지훈이가 "그래그래" 하고 컵라면만 후루룩 먹었다. 뭐가 남은 느낌이었다.',
+      },
+      {
+        text: '"우리 토요일에 배드민턴 치자" — 화제 돌리며 제안한다',
+        effects: { social: 1, health: 1 },
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        message: '지훈이 "콜" 하고 활짝 웃었다. 컵라면 국물 마시면서 토요일 얘기만 했다.',
+        memorySlotDraft: {
+          category: 'reconciliation',
+          importance: 4,
+          toneTag: 'warm',
+          recallText: '편의점에서 지훈이랑 토요일 배드민턴 약속을 정한 오후.',
+          npcIds: ['jihun'],
+        },
+      },
+    ],
   },
   {
     id: 'haeun-distance',
@@ -3198,7 +3242,7 @@ export const GAME_EVENTS: GameEvent[] = [
     condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 40 && haeun.intimacy <= 80
-        && (s.year === 3 || s.year === 4)
+        && s.year === 4
         && !s.isVacation;
     },
     location: 'hallway',
@@ -3372,6 +3416,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     location: 'cafe',
     background: 'cafe_study',
     speakers: ['subin'],
+    condition: (s) => !!s.npcs.find(n => n.id === 'subin')?.met,
     choices: [
       { text: '수빈이랑 같이 공부한다', effects: { academic: 2, social: 1 }, moneyEffect: -1,
         npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
@@ -3395,6 +3440,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     description: '방과후 집에 가는 길. 하늘이 유난히 예쁘다.\n발걸음이 느려진다.',
     location: 'street',
     background: 'sunset_walk',
+    condition: (s) => !s.isVacation,
     choices: [
       { text: '사진 찍고 잠시 앉아있는다', effects: { mental: 4 }, message: '아무 생각 없이 하늘을 봤다. 마음이 편해졌다.' },
       { text: '빨리 집에 간다 (할 일이 많아)', effects: { academic: 1 }, message: '집에 와서 공부를 시작했다. 하늘이 좀 아쉽다.' },
