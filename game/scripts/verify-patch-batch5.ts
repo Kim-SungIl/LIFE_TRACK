@@ -158,5 +158,30 @@ console.log('\n=== P21. (회귀) followup이 정상 1회는 여전히 발동 ===
 }
 
 // ============================================================================
+console.log('\n=== P22. speakers met 처리 — 대사 전용 등장 NPC도 만남 인정 ===');
+// ============================================================================
+{
+  const src = readFileSync('./src/engine/store.ts', 'utf8');
+  assert('store.ts resolveEvent가 speakers 순회로 met 처리',
+    /currentEvent!?\.speakers/.test(src) && /npc\.met\s*=\s*true/.test(src));
+
+  // 콘텐츠 일관성: 현재 모든 speakers NPC는 어떤 분기에서든 npcEffects 로 등장
+  // → 현재 콘텐츠 기준 픽스 영향 0건. 픽스는 미래 콘텐츠 보호용 방어 가드.
+  // 0건이 깨지는 순간(speakers-only NPC 등장) 픽스가 그 NPC를 자동으로 met 처리.
+  const speakerOnlyEvents = GAME_EVENTS.filter(e => {
+    if (!e.speakers || e.speakers.length === 0) return false;
+    const allChoices = [...e.choices, ...(e.femaleChoices ?? [])];
+    const npcsInEffects = new Set<string>();
+    for (const c of allChoices) {
+      for (const ne of c.npcEffects ?? []) npcsInEffects.add(ne.npcId);
+    }
+    return e.speakers.some(s => !npcsInEffects.has(s));
+  });
+  console.log(`     (참고) speakers 사용 이벤트=${GAME_EVENTS.filter(e => e.speakers?.length).length}, speakers-only NPC 등장=${speakerOnlyEvents.length}`);
+  assert('콘텐츠 일관성: speakers의 모든 NPC가 npcEffects에서도 등장 (현재 0건이 정상)',
+    speakerOnlyEvents.length === 0);
+}
+
+// ============================================================================
 console.log(`\n=== 결과: ${passed} passed / ${failed} failed ===`);
 if (failed > 0) process.exit(1);

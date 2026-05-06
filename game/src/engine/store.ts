@@ -163,6 +163,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
       }
     }
+    // speakers 에 등장한 NPC도 met 처리 (npcEffects 없는 대사 전용 등장도 만남으로 인정)
+    if (newState.currentEvent!.speakers) {
+      for (const npcId of newState.currentEvent!.speakers) {
+        const npc = newState.npcs.find(n => n.id === npcId);
+        if (npc) npc.met = true;
+      }
+    }
 
     // 시간 소모 이벤트: 다음 주 루틴/주말 슬롯 감소
     if (choice.timeCost) {
