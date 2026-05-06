@@ -3557,6 +3557,13 @@ export const SOFT_CRISIS_IDS = new Set<string>([
   'jihun-envy', 'haeun-distance',
 ]);
 
+// 절대 주차 (학년 경계에서 음수가 안 나오도록) — 쿨다운 비교용
+function weeksSince(state: GameState, prev: GameEvent): number {
+  const curAbs = (state.year - 1) * 48 + state.week;
+  const prevAbs = ((prev.year ?? state.year) - 1) * 48 + (prev.week ?? 0);
+  return curAbs - prevAbs;
+}
+
 // 이번 주에 발동할 이벤트 가져오기
 export function getEventForWeek(state: GameState): GameEvent | null {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
@@ -3615,7 +3622,7 @@ export function getEventForWeek(state: GameState): GameEvent | null {
     !FOLLOWUP_EVENT_IDS.has(e.id) &&
     !HARD_CRISIS_IDS.has(e.id) &&
     !SOFT_CRISIS_IDS.has(e.id) &&
-    !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 10)
+    !state.events.some(prev => prev.id === e.id && weeksSince(state, prev) < 10)
   );
   if (conditionalEvents.length > 0 && seededRandom(state) < 0.5) {
     return conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)];
@@ -3624,7 +3631,7 @@ export function getEventForWeek(state: GameState): GameEvent | null {
   // 5. 학교생활 랜덤 이벤트 — 70% 확률
   const availableSchoolEvents = SCHOOL_LIFE_EVENTS.filter(e =>
     (!e.condition || e.condition(state)) &&
-    !state.events.some(prev => prev.id === e.id && state.week - (prev.week || 0) < 6)
+    !state.events.some(prev => prev.id === e.id && weeksSince(state, prev) < 6)
   );
   if (availableSchoolEvents.length > 0 && seededRandom(state) < 0.7) {
     return availableSchoolEvents[Math.floor(seededRandom(state) * availableSchoolEvents.length)];
