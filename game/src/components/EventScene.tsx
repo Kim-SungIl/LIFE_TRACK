@@ -84,21 +84,23 @@ interface CharacterImageProps {
 
 function CharacterImage({ npcId, height, isActive, delay, year, gender }: CharacterImageProps) {
   const isElementary = year === 1;
-  const prefix = isElementary ? `${npcId}_elementary` : npcId;
+  const isHigh = year !== undefined && year >= 5;
+  const isStaged = isElementary || isHigh;
+  const prefix = isElementary ? `${npcId}_elementary` : isHigh ? `${npcId}_high` : npcId;
   const g = gender === 'female' ? 'f' : 'm';
-  // 여자 주인공 전용 NPC 이미지 (지훈 배드민턴 버전 등) — _f 접미사
-  // 남자 주인공은 기본 이미지 사용
-  const elemFullbodyGendered = gender === 'female'
+  // 학년 분기 자산: elementary(Y1) / high(Y5+) — 둘 다 _f gendered 변주 가능
+  // middle(Y2~Y4)은 base 자산 그대로 사용
+  const stagedFullbodyGendered = gender === 'female'
     ? `${BASE_URL}images/characters/${prefix}_fullbody_${g}.png`
     : null;
-  const elemFullbody = `${BASE_URL}images/characters/${prefix}_fullbody.png`;
-  const elemNeutral = `${BASE_URL}images/characters/${prefix}_neutral.png`;
+  const stagedFullbody = `${BASE_URL}images/characters/${prefix}_fullbody.png`;
+  const stagedNeutral = `${BASE_URL}images/characters/${prefix}_neutral.png`;
   const baseFullbodyGendered = gender === 'female'
     ? `${BASE_URL}images/characters/${npcId}_fullbody_${g}.png`
     : null;
   const baseFullbody = `${BASE_URL}images/characters/${npcId}_fullbody.png`;
   const baseNeutral = `${BASE_URL}images/characters/${npcId}_neutral.png`;
-  const [src, setSrc] = useState(elemFullbodyGendered || elemFullbody);
+  const [src, setSrc] = useState(stagedFullbodyGendered || stagedFullbody);
   const [useFallback, setUseFallback] = useState(false);
 
   if (!useFallback) {
@@ -118,14 +120,14 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
             display: 'block',
           }}
           onError={() => {
-            // 폴백 순서:
-            // (여자면) elem gendered → elem fullbody → elem neutral → base gendered → base fullbody → base neutral → CSS
-            // (남자면) elem fullbody → elem neutral → base fullbody → base neutral → CSS
-            if (isElementary && elemFullbodyGendered && src === elemFullbodyGendered) {
-              setSrc(elemFullbody);
-            } else if (src === elemFullbody && isElementary) {
-              setSrc(elemNeutral);
-            } else if (src === elemNeutral && isElementary) {
+            // 폴백 순서 (staged = elementary 또는 high):
+            // (여자면) staged gendered → staged fullbody → staged neutral → base gendered → base fullbody → base neutral → CSS
+            // (남자면) staged fullbody → staged neutral → base fullbody → base neutral → CSS
+            if (isStaged && stagedFullbodyGendered && src === stagedFullbodyGendered) {
+              setSrc(stagedFullbody);
+            } else if (isStaged && src === stagedFullbody) {
+              setSrc(stagedNeutral);
+            } else if (isStaged && src === stagedNeutral) {
               setSrc(baseFullbodyGendered || baseFullbody);
             } else if (baseFullbodyGendered && src === baseFullbodyGendered) {
               setSrc(baseFullbody);
