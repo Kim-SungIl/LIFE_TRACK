@@ -514,3 +514,33 @@ year == 1:
 4. **`getNpcImage` 분기 추가 작업 (별도 PR)**: §6-1 폴백 순서 구현
    - high 자산이 모든 캐릭터에 갖춰지지 않은 시점에도 `{id}_fullbody.png` 폴백으로 안전 동작
    - 그룹 1(junha/siwoo/yerin)은 high 전용이라 `_high_` 없이 `_fullbody.png`만 보유 → 폴백 자체로 정상 동작
+
+## 9. Promotion 현황 (2026-05-06 기준)
+
+### ✅ 채택 완료 — production 반영
+
+| 자산 | PR | 비고 |
+|---|---|---|
+| `jihun_elementary_fullbody_f.png` | #90 | 여자 주인공 전용 변주 |
+| `_high_fullbody.png` × 9 (jihun/subin/minjae/yuna/haeun + doyun/seoa + player_m/player_f) | #92 | EventScene/GameScreen `year>=5` 분기 추가 포함 |
+| `_high_neutral.png` × 7 (jihun/subin/minjae/yuna/haeun + player_m/player_f) | #94 | 풀바디와 톤 통일 |
+| `junha_fullbody.png` / `junha_neutral.png` (base) | (현재) | 그룹 1 정책에 따라 `_high_` 없이 base만 보유 (Y5+ 폴백으로 동작) |
+
+### 🟡 보류 (검토 필요)
+
+- `minjae_elementary_fullbody.png` / `minjae_elementary_neutral.png` — Y1 컷에서 다른 elementary(jihun base / subin / yuna anime 톤)와 같이 등장 시 톤 mismatch 우려. 다른 elementary 일괄 realistic 통일 결정 시 함께 처리.
+
+### 📦 archive 보존 (미사용 자산 — 향후 NPC 추가 대비)
+
+`game/public/images/characters/_archive/2026-05-04-character-regeneration-realistic/`
+- doyun (elementary/base/high) — 게임 NPC 아님
+- seoa (base/high) — 게임 NPC 아님
+- siwoo (base) — 게임 NPC 아님
+- yerin (base) — 게임 NPC 아님
+
+향후 이 NPC들이 게임에 추가되면 archive에서 promote 가능.
+
+### ❌ 폐기
+
+- `haeun_high_fullbody_REJECTED_v1.png` (Yuna-like 톤 잘못 생성) — 삭제 완료
+- `haeun_high_fullbody_source_magenta_REJECTED_v1.png` — 삭제 완료
