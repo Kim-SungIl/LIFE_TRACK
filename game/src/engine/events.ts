@@ -1,6 +1,7 @@
 import { GameEvent, GameState } from './types';
 import { seededRandom } from './rng';
 import { ANNUAL_EVENT_IDS } from './memorySystem';
+import { isExamPeriod } from './examSystem';
 
 export const GAME_EVENTS: GameEvent[] = [
   // ===== 초반 이벤트 (W1~W4) =====
@@ -1531,7 +1532,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 70 && s.week >= 40 && !s.isVacation && s.year >= 6;
+      return !!subin?.met && subin.intimacy >= 70 && s.week >= 40 && !s.isVacation && s.year === 7;
     },
     choices: [
       {
@@ -2032,10 +2033,10 @@ export const GAME_EVENTS: GameEvent[] = [
     background: 'classroom_{school}_sunset',
     speakers: ['yuna'],
     // M5 Phase 3: intimacy 65→45 완화
-    // 졸업/음대 결정 컨텍스트 — Y6+ 후반에만 (subin-farewell과 동일 패턴)
+    // 졸업/음대 결정 컨텍스트 — Y7 후반에만 (subin-farewell과 동일 패턴)
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 45 && s.year >= 6 && s.week >= 40 && !s.isVacation;
+      return !!yuna?.met && yuna.intimacy >= 45 && s.year === 7 && s.week >= 40 && !s.isVacation;
     },
     choices: [
       {
@@ -2356,7 +2357,7 @@ export const GAME_EVENTS: GameEvent[] = [
   },
   {
     id: 'class-president-2-win', title: '2학기 반장 당선!',
-    description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n다시 한 번 내 이름이 불렸다!\n2학기도 반장이다!',
+    description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n2학기 반장이다.',
     condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
       && s.stats.social >= 40
       && !s.events.some(e => e.id === 'class-president-2-lose' && e.year === s.year)
@@ -3416,7 +3417,10 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     location: 'cafe',
     background: 'cafe_study',
     speakers: ['subin'],
-    condition: (s) => !!s.npcs.find(n => n.id === 'subin')?.met,
+    // 시험 직전 주 또는 시험 주에만 발동 — "시험 기간이라 만석" 본문과 정합 (중·고만)
+    condition: (s) => !s.isVacation && s.year >= 2
+      && isExamPeriod(s.year, s.week)
+      && !!s.npcs.find(n => n.id === 'subin')?.met,
     choices: [
       { text: '수빈이랑 같이 공부한다', effects: { academic: 2, social: 1 }, moneyEffect: -1,
         npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
