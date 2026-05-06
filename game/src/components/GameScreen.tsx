@@ -468,7 +468,7 @@ export function GameScreen() {
               zIndex: 5, pointerEvents: 'none',
             }}>
               <img
-                src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}${state.year === 1 ? '_elementary' : ''}_fullbody.png`}
+                src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}${state.year === 1 ? '_elementary' : state.year >= 5 ? '_high' : ''}_fullbody.png`}
                 alt=""
                 style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
