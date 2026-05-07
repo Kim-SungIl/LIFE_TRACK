@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../engine/store';
-import { getWeekLabel, getMonthLabel, calculateEnding, getExamSchedule } from '../engine/gameEngine';
+import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
+import { getExamSchedule } from '../engine/examSystem';
 import { getAvailableActivities, ACTIVITIES, getActivityCost } from '../engine/activities';
 import { getParentMods } from '../engine/parentModifiers';
 import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, EXAM_TYPE_LABELS, GameEvent } from '../engine/types';
@@ -8,7 +9,7 @@ import { Portrait } from './Portrait';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
 import { getBackground, getEventBackground, getSchoolLevel, BgInfo } from '../engine/backgrounds';
-import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../engine/dialogues';
+import { getCharacterDialogue, getActivityReaction, getNpcDialogue, getResultDialogue, getFatigueLabel } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
 import { ShopItem } from '../engine/shopSystem';
@@ -740,30 +741,52 @@ export function GameScreen() {
             <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: 4 }}>이번 주의 기록</div>
           </div>
 
+          {/* Hero — 이번 주의 핵심 한 줄 */}
+          {heroMsg && (
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(229,192,123,0.18), rgba(224,138,91,0.10))',
+              border: '1px solid rgba(229,192,123,0.32)',
+              borderRadius: 14,
+              padding: '14px 16px',
+              marginBottom: 14,
+              textAlign: 'center',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+              lineHeight: 1.5,
+              color: '#f3d99e',
+              wordBreak: 'keep-all',
+              overflowWrap: 'break-word',
+            }}>
+              {heroMsg}
+            </div>
+          )}
+
           {/* 주인공 + 독백 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
             <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
             <div style={{
               flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
               borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
+              wordBreak: 'keep-all', overflowWrap: 'break-word',
             }}>
-              {`"${dialogue}"`}
+              {`"${resultDialogue}"`}
             </div>
           </div>
 
-          {/* 이번 주에 있었던 일 — 이벤트 내레이션 (3인칭) */}
-          {state.weekLog.messages.filter(m => m.startsWith('📖')).map((msg, i) => (
+          {/* 이번 주에 있었던 일 — 이벤트 내레이션 (hero에 올라간 한 줄은 제외) */}
+          {narrationToShow.map((msg, i) => (
             <div key={i} style={{
               background: 'rgba(255,255,255,0.04)', borderLeft: '2px solid rgba(229,192,123,0.4)',
               borderRadius: '0 8px 8px 0', padding: '10px 14px', marginBottom: 12,
               fontSize: '0.82rem', lineHeight: 1.6, color: 'var(--text-secondary)',
+              wordBreak: 'keep-all', overflowWrap: 'break-word',
             }}>
               {msg}
             </div>
           ))}
 
-          {/* 성장 달성 — 여러 개 동시 지원 */}
-          {(state.weekLog.milestoneMessages || []).map((msg, i) => (
+          {/* 성장 달성 — hero로 올라간 첫 항목 제외 */}
+          {milestonesToShow.map((msg, i) => (
             <div key={i} className="milestone-box">⭐ 성장! — {msg}</div>
           ))}
           {state.weekLog.messages.filter(m => m.includes('⚠') || m.includes('🔥') || m.includes('💪')).map((msg, i) => (
@@ -804,6 +827,26 @@ export function GameScreen() {
               </div>
             );
           })()}
+
+          {/* 잃은 것 — 큰 음수 변화 / 피로 누적. 부모 보너스가 "얻은 것"이면 이 줄이 트레이드오프의 반대편 */}
+          {losses.length > 0 && (
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10,
+              padding: '8px 10px', borderRadius: 10,
+              background: 'rgba(217,100,88,0.06)', border: '1px solid rgba(217,100,88,0.2)',
+            }}>
+              {losses.map((loss, i) => (
+                <div key={i} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                  fontSize: '0.72rem', color: 'var(--text-secondary)',
+                  background: 'rgba(255,255,255,0.04)', padding: '3px 8px', borderRadius: 8,
+                }}>
+                  <span style={{ fontSize: '0.85rem' }}>{loss.icon}</span>
+                  <span>{loss.text}</span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* 스탯 변화 — 정확한 수치 */}
           <div style={{ background: 'rgba(42,34,48,0.88)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>

@@ -2,8 +2,7 @@ import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
 import { ACTIVITIES, getActivityCost } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
-import { generateExamResult, generateMockExamResult, generateSuneungResult } from './examSystem';
-import { ExamType } from './types';
+import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState } from './rng';
 import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
@@ -11,19 +10,7 @@ import { getParentMods } from './parentModifiers';
 // rng utility re-export (하위 호환)
 export { seededRandom, hashInitialState } from './rng';
 
-// ===== 시험 스케줄 SSOT =====
-// 학교급별 시험 주차. UI(GameScreen 다가오는 이벤트)와 로직(advanceWeek)이 동일한 출처를 공유한다.
-export function getExamSchedule(year: number): Record<number, ExamType> {
-  if (year <= 1) {
-    return { 17: 'unit-test', 38: 'unit-test' };
-  } else if (year <= 4) {
-    return { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
-  } else if (year === 7) {
-    return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 35: 'suneung' };
-  } else {
-    return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 38: 'final' };
-  }
-}
+// 시험 스케줄 SSOT는 examSystem.ts로 이동 (events.ts circular import 회피)
 
 // ===== 초기 상태 생성 =====
 export function createInitialState(
