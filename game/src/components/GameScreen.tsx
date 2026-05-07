@@ -1094,7 +1094,7 @@ export function GameScreen() {
               </span>
             )}
           </div>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{state.parents.includes('wealth') ? 6 : 3}만원 입금</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{getParentMods(state.parents).weeklyIncome - getParentMods(state.parents).livingCost}만원 입금</div>
         </div>
       </div>
 
