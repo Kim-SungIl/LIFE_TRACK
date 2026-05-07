@@ -233,8 +233,9 @@ function paginateDescription(text: string, maxCharsPerPage = 80): string[] {
 export function EventScene({ event, gender, year, npcs, onChoice, state }: EventSceneProps) {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [bgError, setBgError] = useState(false);
-  // 긴 description의 페이지 분할 — 마지막 페이지에서만 선택지 노출
+  // 긴 description의 페이지 분할 — 한 번이라도 마지막 페이지에 도달했으면 선택지 영구 노출
   const [pageIndex, setPageIndex] = useState(0);
+  const [maxPageReached, setMaxPageReached] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Inject keyframes on mount
@@ -247,6 +248,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     setBgLoaded(false);
     setBgError(false);
     setPageIndex(0);
+    setMaxPageReached(0);
   }, [event.id]);
 
   // 선택지 결과 CG prefetch — 사용자가 선택지 보는 동안 manifest에 존재하는
@@ -290,8 +292,16 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const isMultiPage = pages.length > 1;
   const isLastPage = safePageIndex >= pages.length - 1;
   const isFirstPage = safePageIndex <= 0;
+  // 한 번이라도 마지막 페이지에 도달했으면 true — 이후 ◀ 이전으로 돌아가도 선택지 유지.
+  // 단일 페이지 이벤트는 maxPageReached(0) >= pages.length-1(0)이라 즉시 true.
+  const hasReachedEnd = maxPageReached >= pages.length - 1;
   const advancePage = () => {
-    if (!isLastPage) setPageIndex(p => p + 1);
+    if (!isLastPage) {
+      const next = safePageIndex + 1;
+      setPageIndex(next);
+      // 같은 핸들러에서 함께 set → React가 배치, flicker 없이 동시 반영
+      setMaxPageReached(prev => Math.max(prev, next));
+    }
   };
   const retreatPage = () => {
     if (!isFirstPage) setPageIndex(p => p - 1);
@@ -560,9 +570,9 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
             </div>
           )}
 
-          {/* Choices — 마지막 페이지(또는 단일 페이지)일 때만 노출 */}
+          {/* Choices — 한 번이라도 마지막 페이지 도달 후 영구 노출 (재읽기 시 사라지지 않게) */}
           <div style={{
-            display: isLastPage ? 'flex' : 'none',
+            display: hasReachedEnd ? 'flex' : 'none',
             flexDirection: 'column',
             gap: 8,
             flex: '1 1 auto',
