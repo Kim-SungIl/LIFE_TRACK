@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getExamSchedule } from '../engine/examSystem';
@@ -118,6 +118,8 @@ export function GameScreen() {
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>({});
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
+  // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글
+  const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [showShop, setShowShop] = useState(false);
@@ -126,6 +128,18 @@ export function GameScreen() {
     return !localStorage.getItem('lifetrack_tutorial_done');
   });
   const [bgImgError, setBgImgError] = useState(false);
+
+  // useMemo는 모든 early return 위에 둬야 hooks order가 안 깨진다.
+  // state가 null이면 빈 문자열을 캐시 — 정상 진입 시 다시 계산됨.
+  // 의존: weekLog/week/year — 한 주가 진행될 때만 새 라인 뽑고, hover 같은 로컬 state 변경에는 고정.
+  const dialogue = useMemo(
+    () => state ? getCharacterDialogue(state) : '',
+    [state?.weekLog, state?.week, state?.year],
+  );
+  const resultDialogue = useMemo(
+    () => state?.weekLog ? getResultDialogue(state, state.weekLog) : '',
+    [state?.weekLog],
+  );
 
   if (!state) return null;
 
@@ -546,7 +560,6 @@ export function GameScreen() {
   const activities = getAvailableActivities(state);
   const routineIds = !state.isVacation ? [state.routineSlot2, state.routineSlot3].filter(Boolean) as string[] : [];
   const currentSlots = selectedActivities.reduce((s, aid) => s + (activities.find(x => x.id === aid)?.slots || 0), 0);
-  const dialogue = getCharacterDialogue(state);
   const fatigueLabel = state.fatigue < 20 ? '좋음' : state.fatigue < 35 ? '경미' : state.fatigue < 50 ? '주의' : state.fatigue < 70 ? '위험' : '극한!';
   const fatigueColor = state.fatigue < 20 ? 'var(--green)' : state.fatigue < 35 ? 'var(--yellow)' : state.fatigue < 50 ? 'orange' : 'var(--red)';
 
@@ -557,6 +570,14 @@ export function GameScreen() {
     return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
   })();
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
+
+  // 이번 주 누적 활동 비용 — 루틴 + 사용자가 고른 활동들 (HUD 잔액 옆 실시간 표시용)
+  const selectedActivityCost = selectedActivities.reduce((sum, id) => {
+    const act = ACTIVITIES.find(a => a.id === id);
+    return sum + (act ? Math.max(0, getActivityCost(act, state.year)) : 0);
+  }, 0);
+  const weeklyActivityCost = routineCost + selectedActivityCost;
+  const weeklyOverBudget = weeklyActivityCost > state.money;
 
   // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전)
   const labelFor = (w: number) => w >= 8 ? '🔥 ' : w >= 6 ? '⭐ ' : w >= 3 ? '✨ ' : '';
@@ -678,14 +699,18 @@ export function GameScreen() {
   // ===== 주간 결산 =====
   if (showResult && state.weekLog) {
     const wlog = state.weekLog;
-    // Hero — 이번 주의 핵심 한 줄. milestone[0] > 마지막 📖 순.
+    // Hero — 이번 주의 핵심 한 줄. 마지막 📖 > milestone[0] 순.
+    // 이벤트가 그 주의 "사건"이고 milestone은 누적 스탯 임계치 이벤트라 사건 우선이 자연스러움.
+    // milestone은 어차피 아래 ⭐ 성장 영역에 따로 표시되므로 hero에서 빠져도 정보 손실 없음.
     // examResult는 별도 성적표 블록이 있어서 hero에 또 넣으면 중복이라 제외.
     const narrationMsgs = wlog.messages.filter(m => m.startsWith('📖'));
-    const heroFromMilestone = (wlog.milestoneMessages?.[0]) || null;
-    const heroFromNarration = !heroFromMilestone && narrationMsgs.length > 0
+    const heroFromNarration = narrationMsgs.length > 0
       ? narrationMsgs[narrationMsgs.length - 1].replace(/^📖\s*/, '')
       : null;
-    const heroMsg = heroFromMilestone || heroFromNarration;
+    const heroFromMilestone = !heroFromNarration && (wlog.milestoneMessages?.[0])
+      ? wlog.milestoneMessages[0]
+      : null;
+    const heroMsg = heroFromNarration || heroFromMilestone;
     // hero에 들어간 narration/milestone은 아래 영역에서 빼서 중복 방지
     const narrationToShow = heroFromNarration
       ? narrationMsgs.slice(0, -1)
@@ -705,7 +730,6 @@ export function GameScreen() {
     }
     if ((wlog.fatigueChange ?? 0) >= 25) losses.push({ icon: '🥱', text: '피로 누적' });
 
-    const resultDialogue = getResultDialogue(state, wlog);
     const resultFatigueLabel = getFatigueLabel(state.fatigue);
 
     return (
@@ -769,19 +793,27 @@ export function GameScreen() {
             <div key={i} className="message-box">{msg}</div>
           ))}
 
-          {/* 부모 보너스 발동 — 인라인 칩 (Step 4A/4C UX) */}
-          {state.weekLog.parentBonusesApplied && state.weekLog.parentBonusesApplied.length > 0 && (
-            <div style={{
-              display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10,
-              padding: '8px 10px', borderRadius: 10,
-              background: 'rgba(224,138,91,0.06)', border: '1px solid rgba(224,138,91,0.2)',
-            }}>
-              {state.weekLog.parentBonusesApplied.map((b, i) => {
-                const icons: Record<string, string> = {
-                  emotional: '🫂', wealth: '🏠', info: '📱',
-                  strict: '📐', resilience: '⭐', freedom: '🌿',
-                };
-                return (
+          {/* 부모 보너스 발동 — 상황 발동형만 표시.
+              wealth("용돈이 넉넉했다")와 resilience-체질("피로 증가 -15%")은 부모 strength가 있는 한
+              매주 동일하게 발동되어 결산 칩으로는 노이즈라 제외. 항시형은 HUD 부모 칩 + 툴팁으로 노출. */}
+          {(() => {
+            const applied = state.weekLog.parentBonusesApplied || [];
+            const filtered = applied.filter(b =>
+              !(b.parent === 'wealth' && b.what === '용돈이 넉넉했다')
+              && !(b.parent === 'resilience' && b.what === '체질 — 피로 증가 -15%'),
+            );
+            if (filtered.length === 0) return null;
+            const icons: Record<string, string> = {
+              emotional: '🫂', wealth: '🏠', info: '📱',
+              strict: '📐', resilience: '⭐', freedom: '🌿',
+            };
+            return (
+              <div style={{
+                display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10,
+                padding: '8px 10px', borderRadius: 10,
+                background: 'rgba(224,138,91,0.06)', border: '1px solid rgba(224,138,91,0.2)',
+              }}>
+                {filtered.map((b, i) => (
                   <div key={i} style={{
                     display: 'inline-flex', alignItems: 'center', gap: 4,
                     fontSize: '0.72rem', color: 'var(--text-secondary)',
@@ -791,10 +823,10 @@ export function GameScreen() {
                     <span style={{ fontSize: '0.85rem' }}>{icons[b.parent] || '🎓'}</span>
                     <span>{b.what}</span>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                ))}
+              </div>
+            );
+          })()}
 
           {/* 잃은 것 — 큰 음수 변화 / 피로 누적. 부모 보너스가 "얻은 것"이면 이 줄이 트레이드오프의 반대편 */}
           {losses.length > 0 && (
@@ -839,7 +871,20 @@ export function GameScreen() {
             })}
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.72rem', paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
               <span style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {resultFatigueLabel}</span>
-              <span>💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원</span>
+              <span>
+                💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원
+                {(() => {
+                  const delta = wlog.moneyChange ?? 0;
+                  if (Math.abs(delta) < 0.05) return null;
+                  const isPositive = delta > 0;
+                  const formatted = Math.round(delta * 10) / 10;
+                  return (
+                    <span style={{ marginLeft: 6, color: isPositive ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
+                      ({isPositive ? '+' : ''}{formatted})
+                    </span>
+                  );
+                })()}
+              </span>
             </div>
           </div>
 
@@ -971,35 +1016,79 @@ export function GameScreen() {
               {state.mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}
             </div>
           )}
-          {/* 부모 칩 — 22×22 발동 시 펄스 */}
-          <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
-            {state.parents.map(p => {
-              const icons: Record<string, string> = {
-                emotional: '🫂', wealth: '🏠', info: '📱',
-                strict: '📐', resilience: '⭐', freedom: '🌿',
-              };
-              const labels: Record<string, string> = {
-                emotional: '정서', wealth: '여유', info: '정보',
-                strict: '엄격', resilience: '체질', freedom: '자유',
-              };
-              const justFired = state.weekLog?.parentBonusesApplied?.some(b => b.parent === p);
-              return (
-                <span key={p} title={labels[p]} style={{
-                  width: 22, height: 22, borderRadius: '50%',
-                  background: 'rgba(224,138,91,0.12)', border: '1px solid rgba(224,138,91,0.4)',
-                  display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
-                  animation: justFired ? 'parentChipPulse 0.6s ease' : 'none',
-                }}>{icons[p]}</span>
-              );
-            })}
+          {/* 부모 칩 — 22×22 발동 시 펄스. 호버/탭하면 absolute popover로 설명 노출 (layout shift 방지) */}
+          <div style={{ marginTop: 4, position: 'relative' }}>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {state.parents.map(p => {
+                const icons: Record<string, string> = {
+                  emotional: '🫂', wealth: '🏠', info: '📱',
+                  strict: '📐', resilience: '⭐', freedom: '🌿',
+                };
+                const justFired = state.weekLog?.parentBonusesApplied?.some(b => b.parent === p);
+                const isActive = activeParentTip === p;
+                return (
+                  <span
+                    key={p}
+                    onMouseEnter={() => setActiveParentTip(p)}
+                    onMouseLeave={() => setActiveParentTip(prev => prev === p ? null : prev)}
+                    onClick={() => setActiveParentTip(prev => prev === p ? null : p)}
+                    style={{
+                      width: 22, height: 22, borderRadius: '50%',
+                      background: isActive ? 'rgba(224,138,91,0.28)' : 'rgba(224,138,91,0.12)',
+                      border: '1px solid rgba(224,138,91,0.4)',
+                      display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
+                      cursor: 'pointer', userSelect: 'none',
+                      animation: justFired ? 'parentChipPulse 0.6s ease' : 'none',
+                    }}
+                  >{icons[p]}</span>
+                );
+              })}
+            </div>
+            {activeParentTip && state.parents.includes(activeParentTip as any) && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 20,
+                padding: '5px 8px', borderRadius: 6,
+                background: 'rgba(20,16,28,0.92)', backdropFilter: 'blur(4px)',
+                border: '1px solid rgba(224,138,91,0.35)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+                fontSize: '0.66rem', lineHeight: 1.4, color: 'var(--text-secondary)',
+                width: 'max-content', maxWidth: 240,
+                wordBreak: 'keep-all', overflowWrap: 'break-word',
+                pointerEvents: 'none',
+              }}>
+                <strong style={{ color: 'var(--accent-soft)' }}>
+                  {({
+                    emotional: '🫂 정서', wealth: '🏠 여유', info: '📱 정보',
+                    strict: '📐 엄격', resilience: '⭐ 체질', freedom: '🌿 자유',
+                  } as Record<string, string>)[activeParentTip]}
+                </strong>
+                {' — '}
+                {({
+                  emotional: '엄마/아빠가 자주 물어봐주고 안아준다. 지친 주에 피로 회복 보조.',
+                  wealth: '용돈이 풍족해 학원·도구를 부담 없이 쓸 수 있다. 매주 용돈 +6만원.',
+                  info: '엄마가 학원·인강 정보를 잘 안다. 학원·자습 효율 +10%.',
+                  strict: '정해진 시간에 책상 — 루틴이 한 주 더 길게 유지된다.',
+                  resilience: '타고난 체력 — 피로 증가 -15%.',
+                  freedom: '"알아서 해" 분위기 — 노는 주의 idle 페널티 -50%.',
+                } as Record<string, string>)[activeParentTip]}
+              </div>
+            )}
           </div>
         </div>
         <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
           <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
-          <div onClick={() => { setShowShop(true); setNpcDetailFor(null); setNpcSelectFor(null); }} style={{ cursor: 'pointer' }}>
-            💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원 <span style={{ fontSize: '0.6rem', color: 'var(--blue)' }}>🛒</span>
+          <div>
+            💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원
+            {weeklyActivityCost > 0 && (
+              <span style={{
+                marginLeft: 6, fontSize: '0.66rem', fontWeight: 600,
+                color: weeklyOverBudget ? 'var(--red)' : 'var(--text-secondary)',
+              }}>
+                (이번 주 -{weeklyActivityCost})
+              </span>
+            )}
           </div>
-          <div style={{ color: 'var(--text-muted)', fontSize: '0.65rem' }}>매주 용돈 +{state.parents.includes('wealth') ? 6 : 3}만원</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{state.parents.includes('wealth') ? 6 : 3}만원 입금</div>
         </div>
       </div>
 
