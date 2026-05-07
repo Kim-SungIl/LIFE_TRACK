@@ -1106,8 +1106,9 @@ export function GameScreen() {
         background: 'rgba(42,34,48,0.88)', backdropFilter: 'blur(6px)',
         borderRadius: '4px 12px 12px 12px', padding: '8px 14px', marginBottom: 10,
         fontSize: '0.82rem', fontStyle: 'italic', color: 'var(--text-secondary)',
+        whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word',
       }}>
-        {lastReaction ? `"${lastReaction}"` : `"${dialogue}"`}
+        {lastReaction ? `"${breakSentences(lastReaction)}"` : `"${breakSentences(dialogue)}"`}
       </div>
 
       {/* 다가오는 이벤트 배너 */}
@@ -1580,8 +1581,9 @@ export function GameScreen() {
               <div style={{
                 background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 14px',
                 marginTop: 14, fontStyle: 'italic', fontSize: '0.85rem', lineHeight: 1.6,
+                whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word',
               }}>
-                "{getNpcDialogue(npc.id, npc.intimacy, state)}"
+                "{breakSentences(getNpcDialogue(npc.id, npc.intimacy, state))}"
               </div>
 
               {/* 친밀도 */}

@@ -1,5 +1,6 @@
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
 import { GameState, WeekLog } from './types';
+import { isExamPeriod } from './examSystem';
 
 interface DialoguePool {
   condition: (s: GameState) => boolean;
@@ -35,8 +36,8 @@ const DIALOGUE_POOLS: DialoguePool[] = [
     '하... 언제 끝나지.',
     '그냥 시간이 빨리 갔으면.',
   ]},
-  // 시험 기간 (W7~8, W16~17, W33~34, W37~38)
-  { priority: 70, condition: s => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
+  // 시험 기간 — 시험 주 또는 직전 주 (학년별 examSchedule SSOT 사용 — Y1은 W17/W38만)
+  { priority: 70, condition: s => isExamPeriod(s.year, s.week), lines: [
     '시험이 다가온다... 긴장된다.',
     '공부를 더 해야 하는데...',
     '이번엔 잘 볼 수 있을까?',
@@ -169,7 +170,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '오랜만이다.',
     ]},
     // 시험 기간
-    { priority: 90, condition: (_, s) => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
+    { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '야, 시험 범위 뭐야? 하나도 모르겠어...',
       '아 시험 싫다... 같이 공부할래?',
       '너는 공부 잘하잖아, 좀 알려줘!',
@@ -205,7 +206,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '아, 우리 같은 동네잖아~',
       '...바쁜 듯?',
     ]},
-    { priority: 90, condition: (_, s) => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
+    { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '시험이다~ 카페에서 같이 공부할래?',
       '나 혼자 하면 집중이 안 돼. 같이 하자!',
       '시험 끝나면 놀자. 약속이다!',
@@ -240,7 +241,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '...어, 안녕.',
       '(노트 필기에 집중하고 있다)',
     ]},
-    { priority: 90, condition: (_, s) => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
+    { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '시험? 하나도 안 했는데. (눈 밑에 다크서클이 있다)',
       '이번엔 좀 어려울 것 같다... 아 아니, 그냥 그런 느낌.',
       '너 몇 등 나올 것 같아? ...아무것도 아니야, 그냥 물어본 거야.',
@@ -286,7 +287,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '나 요즘 피아노 다시 치기 시작했어! 예전 감각 돌아오더라~',
       '너는 변하지 않는 것 같아. 좋은 의미로!',
     ]},
-    { priority: 90, condition: (_, s) => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
+    { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '시험 준비 되고 있어? 나는... 좀 걱정이야.',
       '이번 범위 노트 정리한 거 있는데 볼래? 같이 하자!',
       '같이 공부하면 더 잘 될 것 같은데!',
@@ -326,7 +327,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '...어, 안녕.',
       '(도서관에서 창밖을 보고 있다)',
     ]},
-    { priority: 90, condition: (_, s) => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
+    { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '시험 기간이지? 이 단원은 이렇게 정리하면 돼.',
       '너무 무리하지 마. 멘탈이 더 중요해.',
       '시험 끝나면 같이 뭐 맛있는 거 먹자.',
@@ -366,7 +367,7 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '(가방이 좀 낡았다)',
       '...안녕.',
     ]},
-    { priority: 90, condition: (_, s) => [7,8,16,17,33,34,37,38].includes(s.week), lines: [
+    { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '나 수시는 아예 못 쓸 것 같아. 정시 올인이다.',
       '야, 이 단원 어떻게 외워? 부산에서 안 배운 건데...',
       '도서관에서 인강 들을래. 무료 강의 괜찮은 거 있더라.',
