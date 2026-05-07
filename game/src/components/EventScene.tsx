@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { getEventBackground, getSchoolLevel } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
@@ -208,9 +208,33 @@ function renderDescription(
   });
 }
 
+// 긴 description을 페이지로 분할 — 한 페이지가 maxCharsPerPage를 넘기 전까지 source 줄(`\n`)을 누적.
+// 짧은 description(단일 페이지 분량)은 그대로 1페이지로 반환되어 기존 동작 보존.
+function paginateDescription(text: string, maxCharsPerPage = 80): string[] {
+  const lines = text.split('\n');
+  const pages: string[][] = [];
+  let current: string[] = [];
+  let currentLen = 0;
+  for (const line of lines) {
+    const lineLen = line.length;
+    if (currentLen + lineLen > maxCharsPerPage && current.length > 0) {
+      pages.push(current);
+      current = [line];
+      currentLen = lineLen;
+    } else {
+      current.push(line);
+      currentLen += lineLen;
+    }
+  }
+  if (current.length > 0) pages.push(current);
+  return pages.map(p => p.join('\n'));
+}
+
 export function EventScene({ event, gender, year, npcs, onChoice, state }: EventSceneProps) {
   const [bgLoaded, setBgLoaded] = useState(false);
   const [bgError, setBgError] = useState(false);
+  // 긴 description의 페이지 분할 — 마지막 페이지에서만 선택지 노출
+  const [pageIndex, setPageIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Inject keyframes on mount
@@ -222,6 +246,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   useEffect(() => {
     setBgLoaded(false);
     setBgError(false);
+    setPageIndex(0);
   }, [event.id]);
 
   // 선택지 결과 CG prefetch — 사용자가 선택지 보는 동안 manifest에 존재하는
@@ -257,6 +282,16 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const visibleChoices: { choice: EventChoice; originalIndex: number }[] = eventChoices
     .map((choice, originalIndex) => ({ choice, originalIndex }))
     .filter(({ choice }) => !choice.condition || (state ? choice.condition(state) : true));
+
+  // description 페이지 분할 — 짧으면 1페이지, 길면 여러 페이지로 자동 분할
+  const pages = useMemo(() => paginateDescription(eventDesc), [eventDesc]);
+  const safePageIndex = Math.min(pageIndex, pages.length - 1);
+  const currentPageText = pages[safePageIndex] ?? eventDesc;
+  const isMultiPage = pages.length > 1;
+  const isLastPage = safePageIndex >= pages.length - 1;
+  const advancePage = () => {
+    if (!isLastPage) setPageIndex(p => p + 1);
+  };
 
   // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
   const speakerIds: string[] = event.speakers && event.speakers.length > 0
@@ -459,23 +494,45 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
             {event.title}
           </div>
 
-          {/* Description — 대사에 화자 이름 표시, 크게 */}
-          <div style={{
-            fontSize: '1rem',
-            lineHeight: 1.7,
-            maxHeight: '6em',
-            overflowY: 'auto',
-            marginBottom: 12,
-            flex: '0 1 auto',
-            wordBreak: 'keep-all',
-            overflowWrap: 'break-word',
-          }}>
-            {renderDescription(eventDesc, speakerIds, npcs)}
+          {/* Description — 대사에 화자 이름 표시. 길면 페이지 분할, 마지막 페이지에서만 선택지 노출 */}
+          <div
+            onClick={isMultiPage && !isLastPage ? advancePage : undefined}
+            style={{
+              fontSize: '1rem',
+              lineHeight: 1.7,
+              maxHeight: '6em',
+              overflowY: 'auto',
+              marginBottom: isMultiPage && !isLastPage ? 6 : 12,
+              flex: '0 1 auto',
+              wordBreak: 'keep-all',
+              overflowWrap: 'break-word',
+              cursor: isMultiPage && !isLastPage ? 'pointer' : 'default',
+            }}
+          >
+            {renderDescription(currentPageText, speakerIds, npcs)}
           </div>
 
-          {/* Choices */}
+          {/* 페이지 인디케이터 — 마지막 페이지가 아닐 때만 ▼ 다음 표시 */}
+          {isMultiPage && !isLastPage && (
+            <div
+              onClick={advancePage}
+              style={{
+                fontSize: '0.78rem',
+                color: 'rgba(255,255,255,0.6)',
+                textAlign: 'center',
+                marginBottom: 12,
+                cursor: 'pointer',
+                userSelect: 'none',
+                animation: 'es-fade-in 0.4s ease',
+              }}
+            >
+              ▼ 다음 ({safePageIndex + 1}/{pages.length})
+            </div>
+          )}
+
+          {/* Choices — 마지막 페이지(또는 단일 페이지)일 때만 노출 */}
           <div style={{
-            display: 'flex',
+            display: isLastPage ? 'flex' : 'none',
             flexDirection: 'column',
             gap: 8,
             flex: '1 1 auto',

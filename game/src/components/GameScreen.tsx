@@ -21,6 +21,12 @@ const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
 };
 
+// 결과 메시지 자동 줄바꿈 — 문장 끝(`.` `?` `!`, 따옴표 포함) 다음 공백에서 줄바꿈.
+// 말줄임표(`...`)는 문장 경계가 아니므로 앞이 `[.!?]`인 경우 분할 제외.
+function breakSentences(text: string): string {
+  return text.replace(/(?<![.!?])([.!?]"?)\s+(?=\S)/g, '$1\n');
+}
+
 interface BgWrapperProps {
   bg: BgInfo;
   bgImgError: boolean;
@@ -529,7 +535,7 @@ export function GameScreen() {
             border: '1px solid rgba(255,255,255,0.1)',
           }}>
             <div style={{ fontSize: '1.15rem', lineHeight: 1.8, fontStyle: 'italic', whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word', color: 'rgba(255,255,255,0.95)', textAlign: 'center' }}>
-              {eventResultData.message}
+              {breakSentences(eventResultData.message)}
             </div>
           </div>
           {/* 효과 배지 */}
