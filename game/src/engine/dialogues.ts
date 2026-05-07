@@ -1,5 +1,5 @@
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
-import { GameState } from './types';
+import { GameState, WeekLog } from './types';
 
 interface DialoguePool {
   condition: (s: GameState) => boolean;
@@ -389,6 +389,121 @@ export function getNpcDialogue(npcId: string, intimacy: number, state: GameState
     }
   }
   return '...';
+}
+
+// 결산 독백 — weekLog의 실제 사건/스탯 변화에 맞춰 골라 줌.
+// getCharacterDialogue는 상태 풀(피로/멘탈/방학 등)에서 무작위로 뽑기 때문에
+// 선거 당선 같은 강한 이벤트 직후에도 "날씨가 좋다"가 나올 수 있어 결산에서는 위화감이 큼.
+// 우선순위: 시험 결과 > 마일스톤 > 큰 변화 > 이벤트 발생 → 그래도 안 잡히면 기본 풀로 fallback.
+interface ResultDialoguePool {
+  condition: (s: GameState, w: WeekLog) => boolean;
+  lines: string[];
+  priority: number;
+}
+
+const RESULT_POOLS: ResultDialoguePool[] = [
+  // 모의/수능 — 등급 기반
+  { priority: 100,
+    condition: (_, w) => w.examResult?.mockGrade != null && w.examResult.mockGrade <= 2,
+    lines: [
+      '...해냈다. 진짜로.',
+      '이번엔 손이 떨릴 정도로 잘 봤다.',
+      '준비한 게 결과로 나왔다.',
+    ],
+  },
+  { priority: 100,
+    condition: (_, w) => w.examResult?.mockGrade != null && w.examResult.mockGrade >= 6,
+    lines: [
+      '...많이 부족했다.',
+      '망했다... 다음엔 진짜 더 해야지.',
+      '시험지를 보는 순간 머리가 하얘졌다.',
+    ],
+  },
+  // 내신 시험 — 평균 기반
+  { priority: 95,
+    condition: (_, w) => w.examResult != null && w.examResult.mockGrade == null && w.examResult.average >= 85,
+    lines: [
+      '이번엔 정말 잘 본 것 같다.',
+      '책상 앞에 앉아 있던 시간이 보상받은 기분.',
+      '성적표를 받자마자 혼자 웃었다.',
+    ],
+  },
+  { priority: 95,
+    condition: (_, w) => w.examResult != null && w.examResult.mockGrade == null && w.examResult.average < 60,
+    lines: [
+      '...집에 가는 길이 멀게 느껴졌다.',
+      '준비를 더 했어야 했다.',
+      '점수표를 가방 깊숙이 넣었다.',
+    ],
+  },
+  // 성장 마일스톤
+  { priority: 80,
+    condition: (_, w) => (w.milestoneMessages?.length ?? 0) > 0,
+    lines: [
+      '뭔가 한 단계 올라간 기분이다.',
+      '내가 변하고 있는 게 느껴진다.',
+      '이번 주는 의미가 있었다.',
+      '거울을 봤더니 표정이 좀 달라 보였다.',
+    ],
+  },
+  // 큰 양수 변화
+  { priority: 60,
+    condition: (_, w) => (w.statChanges.academic ?? 0) >= 2,
+    lines: ['공부가 손에 잡힌 한 주였다.', '머리가 잘 돌아간 느낌이야.', '문제집 한 권을 끝낸 기분.'],
+  },
+  { priority: 60,
+    condition: (_, w) => (w.statChanges.social ?? 0) >= 2,
+    lines: ['친구들과 가까워진 느낌이다.', '이번 주는 사람 사이의 온도가 좋았어.', '단톡방 알림이 많아진 게 좋다.'],
+  },
+  { priority: 60,
+    condition: (_, w) => (w.statChanges.talent ?? 0) >= 2,
+    lines: ['내가 좋아하는 게 손에 익는다.', '이거 진짜 내 길인지도 모르겠다.', '연습한 만큼 늘었다.'],
+  },
+  { priority: 55,
+    condition: (_, w) => (w.statChanges.mental ?? 0) >= 3,
+    lines: ['마음이 한결 가볍다.', '오랜만에 숨이 잘 쉬어진다.', '괜찮은 한 주였다.'],
+  },
+  { priority: 55,
+    condition: (_, w) => (w.statChanges.health ?? 0) >= 2,
+    lines: ['몸이 가벼워졌다.', '체력이 붙는 게 느껴진다.', '계단을 올라가는 게 덜 힘들다.'],
+  },
+  // 큰 음수 변화 (어떤 스탯이든)
+  { priority: 50,
+    condition: (_, w) => Object.values(w.statChanges).some(v => (v ?? 0) <= -1.5),
+    lines: [
+      '이번 주는 좀 무리했나...',
+      '몸도 마음도 따라오질 않는다.',
+      '많이 깎였다... 다음 주는 잘 챙겨야지.',
+      '뭔가 어긋난 한 주였다.',
+    ],
+  },
+  // 이벤트 발생 (📖)
+  { priority: 30,
+    condition: (_, w) => w.messages.some(m => m.startsWith('📖')),
+    lines: [
+      '이번 주는 평소랑 좀 달랐다.',
+      '뭔가 일이 많았던 한 주.',
+      '생각할 게 많았다.',
+    ],
+  },
+];
+
+export function getResultDialogue(state: GameState, weekLog: WeekLog): string {
+  const sorted = [...RESULT_POOLS].sort((a, b) => b.priority - a.priority);
+  for (const pool of sorted) {
+    if (pool.condition(state, weekLog)) {
+      return pool.lines[Math.floor(Math.random() * pool.lines.length)];
+    }
+  }
+  return getCharacterDialogue(state);
+}
+
+// 피로 수치 → 한 단어 라벨. UX에서 22 vs 48의 의미 차를 즉시 잡아주기 위함.
+export function getFatigueLabel(fatigue: number): string {
+  if (fatigue >= 70) return '한계';
+  if (fatigue >= 50) return '쉬어야 할 때';
+  if (fatigue >= 30) return '괜찮음';
+  return '가뿐함';
 }
 
 // 활동 선택 시 반응 독백
