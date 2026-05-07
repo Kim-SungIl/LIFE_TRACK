@@ -760,10 +760,11 @@ export function GameScreen() {
               fontWeight: 600,
               lineHeight: 1.5,
               color: '#f3d99e',
+              whiteSpace: 'pre-line',
               wordBreak: 'keep-all',
               overflowWrap: 'break-word',
             }}>
-              {heroMsg}
+              {breakSentences(heroMsg)}
             </div>
           )}
 
@@ -773,9 +774,9 @@ export function GameScreen() {
             <div style={{
               flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
               borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
-              wordBreak: 'keep-all', overflowWrap: 'break-word',
+              whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word',
             }}>
-              {`"${resultDialogue}"`}
+              {`"${breakSentences(resultDialogue)}"`}
             </div>
           </div>
 
@@ -785,9 +786,9 @@ export function GameScreen() {
               background: 'rgba(255,255,255,0.04)', borderLeft: '2px solid rgba(229,192,123,0.4)',
               borderRadius: '0 8px 8px 0', padding: '10px 14px', marginBottom: 12,
               fontSize: '0.82rem', lineHeight: 1.6, color: 'var(--text-secondary)',
-              wordBreak: 'keep-all', overflowWrap: 'break-word',
+              whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word',
             }}>
-              {msg}
+              {breakSentences(msg)}
             </div>
           ))}
 
