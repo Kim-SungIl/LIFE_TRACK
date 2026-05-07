@@ -1,6 +1,26 @@
 import { GameState, ExamResult, SubjectResult, SubjectKey, ExamGrade, ElementaryGrade, ExamType, SchoolLevel } from './types';
 import { seededRandom } from './rng';
 
+// ===== 시험 스케줄 SSOT =====
+// 학교급별 시험 주차. UI(GameScreen 다가오는 이벤트), 로직(advanceWeek), 이벤트 가드(study-cafe 등)가 동일한 출처를 공유한다.
+export function getExamSchedule(year: number): Record<number, ExamType> {
+  if (year <= 1) {
+    return { 17: 'unit-test', 38: 'unit-test' };
+  } else if (year <= 4) {
+    return { 8: 'midterm', 17: 'final', 30: 'midterm', 38: 'final' };
+  } else if (year === 7) {
+    return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 35: 'suneung' };
+  } else {
+    return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 38: 'final' };
+  }
+}
+
+// 시험 주 또는 시험 직전 주(준비 기간) 여부 — "시험 기간" 컨텍스트 가드
+export function isExamPeriod(year: number, week: number): boolean {
+  const examWeeks = Object.keys(getExamSchedule(year)).map(Number);
+  return examWeeks.some(w => week === w - 1 || week === w);
+}
+
 // ===== 유틸리티 =====
 
 // 결정론적 ±range 노이즈 — state.rngSeed를 mutate하므로 같은 시드면 같은 결과
