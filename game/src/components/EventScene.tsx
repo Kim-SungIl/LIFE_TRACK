@@ -289,8 +289,12 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const currentPageText = pages[safePageIndex] ?? eventDesc;
   const isMultiPage = pages.length > 1;
   const isLastPage = safePageIndex >= pages.length - 1;
+  const isFirstPage = safePageIndex <= 0;
   const advancePage = () => {
     if (!isLastPage) setPageIndex(p => p + 1);
+  };
+  const retreatPage = () => {
+    if (!isFirstPage) setPageIndex(p => p - 1);
   };
 
   // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
@@ -512,21 +516,47 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
             {renderDescription(currentPageText, speakerIds, npcs)}
           </div>
 
-          {/* 페이지 인디케이터 — 마지막 페이지가 아닐 때만 ▼ 다음 표시 */}
-          {isMultiPage && !isLastPage && (
+          {/* 페이지 네비게이션 — 다중 페이지일 때 노출. ◀ 이전(실수 클릭 복구) / 카운터 / 다음 ▶ */}
+          {isMultiPage && (
             <div
-              onClick={advancePage}
               style={{
-                fontSize: '0.78rem',
-                color: 'rgba(255,255,255,0.6)',
+                fontSize: '0.82rem',
+                color: 'rgba(255,255,255,0.7)',
                 textAlign: 'center',
                 marginBottom: 12,
-                cursor: 'pointer',
                 userSelect: 'none',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 18,
                 animation: 'es-fade-in 0.4s ease',
               }}
             >
-              ▼ 다음 ({safePageIndex + 1}/{pages.length})
+              <span
+                onClick={isFirstPage ? undefined : retreatPage}
+                style={{
+                  cursor: isFirstPage ? 'not-allowed' : 'pointer',
+                  opacity: isFirstPage ? 0.3 : 1,
+                  padding: '4px 8px',
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                ◀ 이전
+              </span>
+              <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>
+                {safePageIndex + 1} / {pages.length}
+              </span>
+              <span
+                onClick={isLastPage ? undefined : advancePage}
+                style={{
+                  cursor: isLastPage ? 'not-allowed' : 'pointer',
+                  opacity: isLastPage ? 0.3 : 1,
+                  padding: '4px 8px',
+                  transition: 'opacity 0.15s',
+                }}
+              >
+                다음 ▶
+              </span>
             </div>
           )}
 
