@@ -19,9 +19,9 @@ export interface ParentMods {
   fatigueRecoveryBonus: number;
   /** 루틴 보너스 도달 가속 (strict: +1주) */
   routineWeeksBoost: number;
-  /** 주간 용돈 (wealth: 8 / 그 외: 3) */
+  /** 주간 용돈 (wealth: 5 / 그 외: 3) — net으로 한 번에 지급 */
   weeklyIncome: number;
-  /** 주간 생활비 (wealth: 2.5 / 그 외: 1.2) */
+  /** 주간 생활비 — v8.1에서 0으로 통합 (UI 노출 없는 자동 차감이 사용자 혼란 유발) */
   livingCost: number;
   /** idleWeeks 페널티 배율 (freedom: 0.5 → 절반) */
   idlePenaltyMult: number;
@@ -48,10 +48,12 @@ export function getParentMods(parents: readonly ParentStrength[]): ParentMods {
     fatigueIncreaseMult: has('resilience') ? 0.85 : 1.0,
     fatigueRecoveryBonus: has('emotional') ? 2 : 0,
     routineWeeksBoost: has('strict') ? 1 : 0,
-    // wealth 주당 8 → 6 하향 (v8.0): 7년 누적 격차를 1,243만 → ~840만으로 축소
-    // (밸런스 시뮬에서 control 대비 +1,198만 측정 — 다른 부모의 6배라 OP 판정)
-    weeklyIncome: has('wealth') ? 6 : 3,
-    livingCost: has('wealth') ? 2.5 : 1.2,
+    // 용돈 변동 이력:
+    //   v8.0: wealth 8→6 하향 (시뮬상 OP)
+    //   v8.1: livingCost 제거 + wealth 6→5 — 생활비 자동차감이 UI에 안 보여 사용자 혼란.
+    //         net 입금: wealth 5만/주, 기본 3만/주 (이전 net 3.5/1.8 대비 +1.5/+1.2 완화)
+    weeklyIncome: has('wealth') ? 5 : 3,
+    livingCost: 0,
     idlePenaltyMult: has('freedom') ? 0.5 : 1.0,
     vacationSlotBonus: has('freedom') ? 1 : 0,
   };
