@@ -407,6 +407,13 @@ export function recordMilestoneForYear(state: GameState, year: number): void {
     }
   }
 
+  // Phase 2.1 — 부모 친밀도 톤 한 줄 append (숨겨진 누적이 회고에 드러남)
+  const pi = state.parentIntimacy ?? 50;
+  if (summaryText) {
+    if (pi < 30) summaryText += '\n엄마와는 조금 멀어진 한 해였다.';
+    else if (pi >= 70) summaryText += '\n엄마와의 시간이 많았던 한 해였다.';
+  }
+
   state.milestoneScenes.push({
     year,
     sceneId: `milestone-y${year}`,

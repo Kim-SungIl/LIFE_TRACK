@@ -89,6 +89,13 @@ export function createInitialState(
     hardCrisisYears: [],
     // M6: 자연 회복 감소 모드 (도전 모드)
     useReducedRecovery: options?.useReducedRecovery ?? false,
+    // Phase 2.1 말걸기 미니 이벤트
+    talkEventPressure: 0,
+    parentTalkPressure: 0,
+    parentIntimacy: 50,
+    talkEventsFired: [],
+    weekTalkRolledForNpc: false,
+    weekTalkRolledForParent: false,
   };
 }
 
@@ -583,6 +590,13 @@ export function migrateLoadedState(state: GameState): GameState {
       ?? (state as unknown as { routineWeeks?: number }).routineWeeks ?? 0,
     routineSlot3Weeks: state.routineSlot3Weeks
       ?? (state as unknown as { routineWeeks?: number }).routineWeeks ?? 0,
+    // Phase 2.1 말걸기 백필
+    talkEventPressure: state.talkEventPressure ?? 0,
+    parentTalkPressure: state.parentTalkPressure ?? 0,
+    parentIntimacy: state.parentIntimacy ?? 50,
+    talkEventsFired: state.talkEventsFired ?? [],
+    weekTalkRolledForNpc: state.weekTalkRolledForNpc ?? false,
+    weekTalkRolledForParent: state.weekTalkRolledForParent ?? false,
   };
 }
 
@@ -607,6 +621,17 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   if (!newState.isVacation) {
     newState.vacationActivityCounts = {};
   }
+
+  // Phase 2.1 말걸기 누적 확률 — 매주 차오름, 굴림 소비 플래그 리셋
+  newState.talkEventPressure = Math.min(1, (newState.talkEventPressure ?? 0) + 0.1);
+  newState.parentTalkPressure = Math.min(1, (newState.parentTalkPressure ?? 0) + 0.05);
+  newState.weekTalkRolledForNpc = false;
+  newState.weekTalkRolledForParent = false;
+  // 부모 친밀도 자연 변화 — emotional은 +0.1/주, strict는 -0.1/주 (강점 톤 반영)
+  let parentIntimacyDelta = 0;
+  if (newState.parents.includes('emotional')) parentIntimacyDelta += 0.1;
+  if (newState.parents.includes('strict')) parentIntimacyDelta -= 0.1;
+  newState.parentIntimacy = Math.max(0, Math.min(100, (newState.parentIntimacy ?? 50) + parentIntimacyDelta));
 
   const log: WeekLog = {
     statChanges: {},

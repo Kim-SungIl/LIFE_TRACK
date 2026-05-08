@@ -60,6 +60,13 @@ export interface GameState {
   useReducedRecovery?: boolean;
   // Phase 1 방학 시스템 — 활동별 방학 내 사용 횟수 (방학 진입 시 리셋)
   vacationActivityCounts?: Record<string, number>;
+  // Phase 2.1 말걸기 미니 이벤트 시스템
+  talkEventPressure: number;        // 0~1, NPC 미니 이벤트 누적 확률 (매주 +0.1)
+  parentTalkPressure: number;       // 0~1, 부모 미니 이벤트 누적 확률 (매주 +0.05)
+  parentIntimacy: number;           // 0~100, 숨겨진 부모 친밀도 (UI 미표시, 회고 톤에 영향)
+  talkEventsFired: string[];        // 발동된 미니 이벤트 ID — 1회 발동 보장(A안)
+  weekTalkRolledForNpc: boolean;    // 이번 주 NPC 굴림 소비 여부
+  weekTalkRolledForParent: boolean; // 이번 주 부모 굴림 소비 여부
 }
 
 // 활성 버프 (shopSystem에서도 사용)
