@@ -89,9 +89,9 @@ export function createInitialState(
     hardCrisisYears: [],
     // M6: 자연 회복 감소 모드 (도전 모드)
     useReducedRecovery: options?.useReducedRecovery ?? false,
-    // Phase 2.1 말걸기 미니 이벤트
-    talkEventPressure: 0,
-    parentTalkPressure: 0,
+    // Phase 2.1 말걸기 미니 이벤트 — 초기값으로 첫 인상 보장(이후 매주 차오름)
+    talkEventPressure: 0.3,
+    parentTalkPressure: 0.2,
     parentIntimacy: 50,
     talkEventsFired: [],
     weekTalkRolledForNpc: false,

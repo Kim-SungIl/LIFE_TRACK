@@ -4,7 +4,13 @@ import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice } from './memorySystem';
-import { rollNpcTalk, rollParentTalk, MiniTalkEvent } from './talkSystem';
+import { rollNpcTalk, rollParentTalk, MiniTalkEvent, getNpcMissNote, getParentMissNote } from './talkSystem';
+
+// 말걸기 결과 — 발동(event) / 미스(miss-note) / 무반응(static, intimacy 미달 등)
+export type TalkActionResult =
+  | { kind: 'event'; event: MiniTalkEvent }
+  | { kind: 'miss'; note: string }
+  | { kind: 'static' };
 
 const SAVE_KEY = 'lifetrack_save';
 const SAVE_VERSION = 1;
@@ -53,9 +59,9 @@ interface GameStore {
   advanceFromYearEnd: () => void;
   setPhase: (phase: GameState['phase']) => void;
   buyItem: (item: ShopItem, targetNpcId?: string) => string[];
-  // Phase 2.1 말걸기 — 발동된 미니 이벤트(또는 null) 반환, 효과는 즉시 적용
-  talkToNpc: (npcId: string) => MiniTalkEvent | null;
-  talkToParent: (strength: ParentStrength) => MiniTalkEvent | null;
+  // Phase 2.1 말걸기 — 결과(event/miss/static) 반환, 효과는 즉시 적용
+  talkToNpc: (npcId: string) => TalkActionResult;
+  talkToParent: (strength: ParentStrength) => TalkActionResult;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -270,17 +276,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ===== Phase 2.1 말걸기 액션 =====
   talkToNpc: (npcId) => {
     const s = get().state;
-    if (!s) return null;
-    const result = rollNpcTalk(s, npcId);
-    // 굴림이 일어난 경우(친밀도 ≥30 + 미사용 + 풀 비어있지 않음) 플래그 표시
+    if (!s) return { kind: 'static' };
     const npc = s.npcs.find(n => n.id === npcId);
-    const wasRollAttempt = !!npc && npc.intimacy >= 30 && !s.weekTalkRolledForNpc;
+    if (!npc) return { kind: 'static' };
+    // 친밀도 미달 → 정적 대사 (사실 UI에서 버튼 자체가 안 보이므로 방어)
+    if (npc.intimacy < 30) return { kind: 'static' };
+
+    const result = rollNpcTalk(s, npcId);
     if (!result.miniEvent) {
-      // 정적 대사 분기 — 굴림 시도였다면 플래그만 소비, 효과는 없음
-      if (wasRollAttempt) {
-        set({ state: { ...s, weekTalkRolledForNpc: true } });
-      }
-      return null;
+      // 미스: 굴림 시도 플래그 + RNG 진행 보존을 위해 set으로 새 객체 푸시
+      // 단, 이번 주 이미 굴림 소비된 경우엔 정적(다음 주에 시도)으로 안내
+      if (s.weekTalkRolledForNpc) return { kind: 'static' };
+      const newState = JSON.parse(JSON.stringify(s)) as GameState;
+      const note = getNpcMissNote(newState, npcId);  // RNG 진행 (newState.rngSeed mutate)
+      newState.weekTalkRolledForNpc = true;
+      set({ state: newState });
+      return { kind: 'miss', note };
     }
     // 미니 이벤트 발동 — 효과 적용 + pressure 리셋 + fired 기록 + 플래그 표시
     const newState = JSON.parse(JSON.stringify(s)) as GameState;
@@ -306,19 +317,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.talkEventPressure = 0;
     newState.weekTalkRolledForNpc = true;
     set({ state: newState });
-    return ev;
+    return { kind: 'event', event: ev };
   },
 
   talkToParent: (strength) => {
     const s = get().state;
-    if (!s) return null;
-    if (!s.parents.includes(strength)) return null;
+    if (!s) return { kind: 'static' };
+    if (!s.parents.includes(strength)) return { kind: 'static' };
+
     const result = rollParentTalk(s, strength);
     if (!result.miniEvent) {
-      if (!s.weekTalkRolledForParent) {
-        set({ state: { ...s, weekTalkRolledForParent: true } });
-      }
-      return null;
+      if (s.weekTalkRolledForParent) return { kind: 'static' };
+      const newState = JSON.parse(JSON.stringify(s)) as GameState;
+      const note = getParentMissNote(newState, strength);
+      newState.weekTalkRolledForParent = true;
+      set({ state: newState });
+      return { kind: 'miss', note };
     }
     const newState = JSON.parse(JSON.stringify(s)) as GameState;
     const ev = result.miniEvent;
@@ -342,7 +356,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.parentTalkPressure = 0;
     newState.weekTalkRolledForParent = true;
     set({ state: newState });
-    return ev;
+    return { kind: 'event', event: ev };
   },
 }));
 

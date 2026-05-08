@@ -219,11 +219,13 @@ console.log('\n=== P23. Phase 2.1 말걸기 미니 이벤트 시스템 ===');
     new Set([...NPC_MINI_EVENTS, ...PARENT_MINI_EVENTS].map(e => e.id)).size
     === NPC_MINI_EVENTS.length + PARENT_MINI_EVENTS.length);
 
-  // 3. 누적 확률 — pressure가 매주 차오르고, 발동 시 0으로 리셋
+  // 3. 누적 확률 — 초기 0.3에서 시작, 매주 +0.1, cap 1.0
   let s = createInitialState('male', ['emotional', 'wealth']);
+  assert(`초기 pressure 0.3 (첫 인상 보장 — 실제 ${s.talkEventPressure})`,
+    Math.abs(s.talkEventPressure - 0.3) < 0.001);
   s = processWeek(s);
-  assert(`초기 pressure 0 → 1주 후 0.1 (실제 ${s.talkEventPressure.toFixed(2)})`,
-    Math.abs(s.talkEventPressure - 0.1) < 0.001);
+  assert(`1주 후 0.4 (실제 ${s.talkEventPressure.toFixed(2)})`,
+    Math.abs(s.talkEventPressure - 0.4) < 0.001);
   for (let i = 0; i < 12; i++) s = processWeek(s);
   assert(`pressure 1.0 cap (13주 후 ${s.talkEventPressure})`, s.talkEventPressure === 1);
 

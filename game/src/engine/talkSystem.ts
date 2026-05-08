@@ -133,6 +133,40 @@ export function getParentStaticDialogue(state: GameState, strength: ParentStreng
   return pool[idx];
 }
 
+// ===== 미스 폴백 대사 (말 걸었으나 이벤트 미발동 시) =====
+// 캐릭터 톤 유지하면서 "오늘은 별 일 없네" 느낌의 짧은 한 줄.
+const NPC_MISS_NOTES: Record<string, string[]> = {
+  jihun:  ['하이파이브만 하고 헤어졌다.', '"내일 또 보자!" 그게 다였다.'],
+  subin:  ['별 다른 얘기 없이 같이 책장만 정리했다.', '같이 잠깐 말없이 앉아 있었다.'],
+  minjae: ['"별 일 없지?" 한 마디만 듣고 헤어졌다.', '잠깐 눈만 마주치고 지나갔다.'],
+  yuna:   ['오늘은 그냥 잡담만 하고 끝났다.', '"바빠?"라고 묻길래 그냥 웃었다.'],
+  haeun:  ['"어..." 한 마디만 하고 자판기 콜라만 마셨다.', '말없이 같이 계단을 내려갔다.'],
+  junha:  ['말없이 같이 점심을 먹었다.', '잠깐 인사만 하고 지나갔다.'],
+};
+
+const PARENT_MISS_NOTES: Record<ParentStrength, string[]> = {
+  emotional:  ['엄마는 뉴스만 보다가 "잘 자라"고 했다.', '"밥 먹었어?" 한 마디뿐이었다.'],
+  wealth:     ['"용돈 부족하면 말해." 그게 다였다.', '아빠는 신문만 보고 있었다.'],
+  info:       ['엄마는 말없이 학원 전단지만 정리했다.', '"오늘 뉴스 봤어?" 그게 다였다.'],
+  strict:     ['"숙제 했냐"는 한 마디만 들었다.', '"일찍 자라"는 말만 듣고 방에 들어갔다.'],
+  resilience: ['엄마는 "어"라고만 했다.', '"평소대로 해" 한 마디뿐이었다.'],
+  freedom:    ['"알아서 해" 그게 다였다.', '눈만 한 번 마주치고 지나갔다.'],
+};
+
+function pickMissNote(state: GameState, pool: string[]): string {
+  if (pool.length === 0) return '오늘은 별 다른 일 없이 지나갔다.';
+  const idx = Math.floor(seededRandom(state) * pool.length);
+  return pool[idx];
+}
+
+export function getNpcMissNote(state: GameState, npcId: string): string {
+  return pickMissNote(state, NPC_MISS_NOTES[npcId] ?? []);
+}
+
+export function getParentMissNote(state: GameState, strength: ParentStrength): string {
+  return pickMissNote(state, PARENT_MISS_NOTES[strength] ?? []);
+}
+
 // ===== 미니 이벤트 풀 필터 — 친밀도/연차/이미 발동 여부 =====
 function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalkEvent[] {
   const npc = state.npcs.find(n => n.id === npcId);
