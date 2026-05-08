@@ -173,15 +173,18 @@ console.log('\n=== 3. SOFT 크라이시스 condition 정합성 ===');
     assert('jihun-envy: 스탯 미달 → false', !cond(noStat));
   }
 
-  // haeun-distance: haeun.met + intimacy 40~80 + (Y3 || Y4) + !isVacation
+  // haeun-distance: haeun.met + intimacy 40~80 + Y4 only + !isVacation
   {
     const cond = sc('haeun-distance')!;
-    let yes = mkState({ year: 3, isVacation: false });
+    let yes = mkState({ year: 4, isVacation: false });
     yes = setNpc(yes, 'haeun', { met: true, intimacy: 60 });
-    let noYear = mkState({ year: 5, isVacation: false });
-    noYear = setNpc(noYear, 'haeun', { met: true, intimacy: 60 });
-    assert('haeun-distance: met + intimacy 60 + Y3 → true', cond(yes));
-    assert('haeun-distance: Y5 → false', !cond(noYear));
+    let noY3 = mkState({ year: 3, isVacation: false });
+    noY3 = setNpc(noY3, 'haeun', { met: true, intimacy: 60 });
+    let noY5 = mkState({ year: 5, isVacation: false });
+    noY5 = setNpc(noY5, 'haeun', { met: true, intimacy: 60 });
+    assert('haeun-distance: met + intimacy 60 + Y4 → true', cond(yes));
+    assert('haeun-distance: Y3 → false', !cond(noY3));
+    assert('haeun-distance: Y5 → false', !cond(noY5));
   }
 }
 
