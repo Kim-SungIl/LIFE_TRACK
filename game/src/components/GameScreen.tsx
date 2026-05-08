@@ -130,6 +130,9 @@ export function GameScreen() {
   // 잡담 한 줄 — 비-pending 주에 클릭 시 캐릭터 톤의 잡담 라인 표시 (클릭마다 새로 픽)
   const [npcSmalltalk, setNpcSmalltalk] = useState<string | null>(null);
   const [homeSmalltalk, setHomeSmalltalk] = useState<string | null>(null);
+  // 모달 전환 시 잡담 상태 리셋 — NPC 갈아탈 때 이전 잡담이 남아있는 상태 누수 방지
+  useEffect(() => { setNpcSmalltalk(null); }, [npcDetailFor]);
+  useEffect(() => { if (!showHomeModal) setHomeSmalltalk(null); }, [showHomeModal]);
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
@@ -144,10 +147,11 @@ export function GameScreen() {
 
   // useMemo는 모든 early return 위에 둬야 hooks order가 안 깨진다.
   // state가 null이면 빈 문자열을 캐시 — 정상 진입 시 다시 계산됨.
-  // 의존: weekLog/week/year — 한 주가 진행될 때만 새 라인 뽑고, hover 같은 로컬 state 변경에는 고정.
+  // 의존: week/year/totalWeeksPlayed (primitives) — 한 주가 진행될 때만 새 라인 뽑고,
+  // 말걸기 같은 로컬 state 변경(weekLog 객체 ref 변경)에는 영향 안 받게 한다.
   const dialogue = useMemo(
     () => state ? getCharacterDialogue(state) : '',
-    [state?.weekLog, state?.week, state?.year],
+    [state?.week, state?.year, state?.totalWeeksPlayed],
   );
   const resultDialogue = useMemo(
     () => state?.weekLog ? getResultDialogue(state, state.weekLog) : '',
@@ -1593,13 +1597,15 @@ export function GameScreen() {
                 {npc.intimacy >= 30 ? npc.description : '같은 학교 친구'}
               </div>
 
-              {/* 인사말 — 친밀도/상황에 따라 다양한 대사 */}
+              {/* 인사말 — 친밀도/상황에 따라 다양한 대사. 말 걸기 클릭 시 잡담 라인으로 교체됨. */}
               <div style={{
                 background: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 14px',
                 marginTop: 14, fontStyle: 'italic', fontSize: '0.85rem', lineHeight: 1.6,
                 whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word',
               }}>
-                "{breakSentences(getNpcDialogue(npc.id, npc.intimacy, state))}"
+                {npcSmalltalk
+                  ? npcSmalltalk
+                  : `"${breakSentences(getNpcDialogue(npc.id, npc.intimacy, state))}"`}
               </div>
 
               {/* 친밀도 */}
@@ -1613,17 +1619,7 @@ export function GameScreen() {
                 </div>
               </div>
 
-              {/* Phase 2.1 말걸기 — 잡담 라인은 인라인, 미니 이벤트는 별도 모달 */}
-              {npcSmalltalk && (
-                <div style={{
-                  marginTop: 14, padding: '10px 14px',
-                  background: 'rgba(255,255,255,0.04)', borderRadius: 10,
-                  fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic',
-                  lineHeight: 1.6, wordBreak: 'keep-all', overflowWrap: 'break-word',
-                }}>{npcSmalltalk}</div>
-              )}
-
-              {/* 말 걸기는 항상 활성 — 사전 결정 모델 */}
+              {/* 말 걸기는 항상 활성 — 사전 결정 모델. 클릭 시 상단 인사말 영역이 잡담 라인으로 교체. */}
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
                 <button
                   className="btn btn-primary"
