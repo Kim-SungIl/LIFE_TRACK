@@ -1698,7 +1698,7 @@ export function GameScreen() {
                     if (r.kind === 'event') { setMiniTalkResult(r.event); setHomeSmalltalk(null); }
                     else { setHomeSmalltalk(r.line); }
                   }}
-                >엄마와 대화하기</button>
+                >부모와 대화하기</button>
                 <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setShowHomeModal(false); setHomeSmalltalk(null); }}>닫기</button>
               </div>
             </div>
