@@ -89,13 +89,13 @@ export function createInitialState(
     hardCrisisYears: [],
     // M6: 자연 회복 감소 모드 (도전 모드)
     useReducedRecovery: options?.useReducedRecovery ?? false,
-    // Phase 2.1 말걸기 미니 이벤트 — 초기값으로 첫 인상 보장(이후 매주 차오름)
-    talkEventPressure: 0.3,
-    parentTalkPressure: 0.2,
+    // Phase 2.1 말걸기 — 첫 주는 NPC/가정 둘 다 이벤트 보장 (첫 인상)
+    talkEventPressure: 0,
+    parentTalkPressure: 0,
     parentIntimacy: 50,
     talkEventsFired: [],
-    weekTalkRolledForNpc: false,
-    weekTalkRolledForParent: false,
+    npcEventPendingThisWeek: true,
+    parentEventPendingThisWeek: true,
   };
 }
 
@@ -595,8 +595,8 @@ export function migrateLoadedState(state: GameState): GameState {
     parentTalkPressure: state.parentTalkPressure ?? 0,
     parentIntimacy: state.parentIntimacy ?? 50,
     talkEventsFired: state.talkEventsFired ?? [],
-    weekTalkRolledForNpc: state.weekTalkRolledForNpc ?? false,
-    weekTalkRolledForParent: state.weekTalkRolledForParent ?? false,
+    npcEventPendingThisWeek: state.npcEventPendingThisWeek ?? false,
+    parentEventPendingThisWeek: state.parentEventPendingThisWeek ?? false,
   };
 }
 
@@ -622,11 +622,12 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     newState.vacationActivityCounts = {};
   }
 
-  // Phase 2.1 말걸기 누적 확률 — 매주 차오름, 굴림 소비 플래그 리셋
+  // Phase 2.1 말걸기 — 매주 시작 시 pressure 차오름 + 사전 결정(이번 주 이벤트 발동 여부)
+  // pressure는 fire 시점에 0으로 리셋(놓친 주는 누적 유지 → 오래 안 만나면 100% 보장)
   newState.talkEventPressure = Math.min(1, (newState.talkEventPressure ?? 0) + 0.1);
   newState.parentTalkPressure = Math.min(1, (newState.parentTalkPressure ?? 0) + 0.05);
-  newState.weekTalkRolledForNpc = false;
-  newState.weekTalkRolledForParent = false;
+  newState.npcEventPendingThisWeek = seededRandom(newState) < newState.talkEventPressure;
+  newState.parentEventPendingThisWeek = seededRandom(newState) < newState.parentTalkPressure;
   // 부모 친밀도 자연 변화 — emotional은 +0.1/주, strict는 -0.1/주 (강점 톤 반영)
   let parentIntimacyDelta = 0;
   if (newState.parents.includes('emotional')) parentIntimacyDelta += 0.1;

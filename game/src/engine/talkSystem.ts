@@ -133,42 +133,46 @@ export function getParentStaticDialogue(state: GameState, strength: ParentStreng
   return pool[idx];
 }
 
-// ===== 미스 폴백 대사 (말 걸었으나 이벤트 미발동 시) =====
-// 캐릭터 톤 유지하면서 "오늘은 별 일 없네" 느낌의 짧은 한 줄.
-const NPC_MISS_NOTES: Record<string, string[]> = {
-  jihun:  ['하이파이브만 하고 헤어졌다.', '"내일 또 보자!" 그게 다였다.'],
-  subin:  ['별 다른 얘기 없이 같이 책장만 정리했다.', '같이 잠깐 말없이 앉아 있었다.'],
-  minjae: ['"별 일 없지?" 한 마디만 듣고 헤어졌다.', '잠깐 눈만 마주치고 지나갔다.'],
-  yuna:   ['오늘은 그냥 잡담만 하고 끝났다.', '"바빠?"라고 묻길래 그냥 웃었다.'],
-  haeun:  ['"어..." 한 마디만 하고 자판기 콜라만 마셨다.', '말없이 같이 계단을 내려갔다.'],
-  junha:  ['말없이 같이 점심을 먹었다.', '잠깐 인사만 하고 지나갔다.'],
+// ===== 짧은 잡담 폴백 (말 걸었으나 이번 주 이벤트가 사전 결정에서 미발동 시) =====
+// 사전 결정 모델 — 미스가 아니라 "이번 주는 별 일 없는 평범한 만남". 클릭마다 캐릭터 톤의 다른 한 줄.
+const NPC_SMALLTALK: Record<string, string[]> = {
+  jihun:  ['하이파이브만 하고 헤어졌다.', '"내일 또 보자!" 그게 다였다.', '"오늘 야자 째자!" 그러더니 또 사라졌다.'],
+  subin:  ['별 다른 얘기 없이 같이 책장만 정리했다.', '같이 잠깐 말없이 앉아 있었다.', '"수학 너무 어렵다." 그게 다였다.'],
+  minjae: ['"별 일 없지?" 한 마디만 듣고 헤어졌다.', '잠깐 눈만 마주치고 지나갔다.', '"공부해." 한 마디만 들었다.'],
+  yuna:   ['오늘은 그냥 잡담만 하고 끝났다.', '"바빠?"라고 묻길래 그냥 웃었다.', '"이번 주 너무 졸려." 라고 했다.'],
+  haeun:  ['"어..." 한 마디만 하고 자판기 콜라만 마셨다.', '말없이 같이 계단을 내려갔다.', '잠깐 머리를 헝클어주고 갔다.'],
+  junha:  ['말없이 같이 점심을 먹었다.', '잠깐 인사만 하고 지나갔다.', '"오늘 김치찌개야." 그러고는 식판을 들고 갔다.'],
 };
 
-const PARENT_MISS_NOTES: Record<ParentStrength, string[]> = {
-  emotional:  ['엄마는 뉴스만 보다가 "잘 자라"고 했다.', '"밥 먹었어?" 한 마디뿐이었다.'],
-  wealth:     ['"용돈 부족하면 말해." 그게 다였다.', '아빠는 신문만 보고 있었다.'],
-  info:       ['엄마는 말없이 학원 전단지만 정리했다.', '"오늘 뉴스 봤어?" 그게 다였다.'],
-  strict:     ['"숙제 했냐"는 한 마디만 들었다.', '"일찍 자라"는 말만 듣고 방에 들어갔다.'],
-  resilience: ['엄마는 "어"라고만 했다.', '"평소대로 해" 한 마디뿐이었다.'],
-  freedom:    ['"알아서 해" 그게 다였다.', '눈만 한 번 마주치고 지나갔다.'],
+const PARENT_SMALLTALK: Record<ParentStrength, string[]> = {
+  emotional:  ['엄마는 뉴스만 보다가 "잘 자라"고 했다.', '"밥 먹었어?" 한 마디뿐이었다.', '엄마가 어깨를 한 번 토닥였다.'],
+  wealth:     ['"용돈 부족하면 말해." 그게 다였다.', '아빠는 신문만 보고 있었다.', '식탁 위에 봉투가 놓여 있었다.'],
+  info:       ['엄마는 말없이 학원 전단지만 정리했다.', '"오늘 뉴스 봤어?" 그게 다였다.', '"이 책 한번 읽어봐." 라며 책을 내밀었다.'],
+  strict:     ['"숙제 했냐"는 한 마디만 들었다.', '"일찍 자라"는 말만 듣고 방에 들어갔다.', '책상 정리 안 했다고 잔소리만 들었다.'],
+  resilience: ['엄마는 "어"라고만 했다.', '"평소대로 해" 한 마디뿐이었다.', '"피곤해 보인다. 자." 그게 다였다.'],
+  freedom:    ['"알아서 해" 그게 다였다.', '눈만 한 번 마주치고 지나갔다.', '"네 결정이야" 라며 미소만 지었다.'],
 };
 
-function pickMissNote(state: GameState, pool: string[]): string {
+function pickRandomLine(state: GameState, pool: string[]): string {
   if (pool.length === 0) return '오늘은 별 다른 일 없이 지나갔다.';
   const idx = Math.floor(seededRandom(state) * pool.length);
   return pool[idx];
 }
 
-export function getNpcMissNote(state: GameState, npcId: string): string {
-  return pickMissNote(state, NPC_MISS_NOTES[npcId] ?? []);
+export function getNpcSmalltalk(state: GameState, npcId: string): string {
+  return pickRandomLine(state, NPC_SMALLTALK[npcId] ?? []);
 }
 
-export function getParentMissNote(state: GameState, strength: ParentStrength): string {
-  return pickMissNote(state, PARENT_MISS_NOTES[strength] ?? []);
+export function getHomeSmalltalk(state: GameState): string {
+  // 가정은 단일 엔티티 — 두 부모 강점 풀에서 RNG로 한 줄 픽
+  const pools = state.parents
+    .map(p => PARENT_SMALLTALK[p] ?? [])
+    .flat();
+  return pickRandomLine(state, pools);
 }
 
-// ===== 미니 이벤트 풀 필터 — 친밀도/연차/이미 발동 여부 =====
-function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalkEvent[] {
+// ===== 풀 필터 — store에서 사전 결정 결과로 미니 이벤트 픽업 =====
+export function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalkEvent[] {
   const npc = state.npcs.find(n => n.id === npcId);
   if (!npc) return [];
   return NPC_MINI_EVENTS.filter(e =>
@@ -178,57 +182,13 @@ function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalkEvent[]
   );
 }
 
-function getAvailableParentEvents(state: GameState, strength: ParentStrength): MiniTalkEvent[] {
+export function getAvailableHomeEvents(state: GameState): MiniTalkEvent[] {
+  // 가정은 두 부모 강점 풀 합집합에서 픽업
   return PARENT_MINI_EVENTS.filter(e =>
-    e.parentStrength === strength
+    e.parentStrength
+    && state.parents.includes(e.parentStrength)
     && !state.talkEventsFired.includes(e.id),
   );
-}
-
-// ===== 결과 타입 =====
-export interface TalkResult {
-  miniEvent: MiniTalkEvent | null;   // null이면 정적 대사
-  staticDialogue?: string;           // 정적 대사 fallback (UI에서 표시)
-}
-
-// ===== NPC 말걸기 처리 =====
-// - 친밀도 <30: 굴림 소비 X, 정적 대사
-// - 이미 이번 주 굴림 소비: 정적 대사
-// - 굴림: rng < pressure → 미니 이벤트 발동(풀에서 첫 자격), 발동 시 pressure=0
-// - 미발동: 정적 대사
-export function rollNpcTalk(state: GameState, npcId: string): TalkResult {
-  const npc = state.npcs.find(n => n.id === npcId);
-  if (!npc) return { miniEvent: null };
-  // 친밀도 미달 → 굴림 소비 X, 정적 대사
-  if (npc.intimacy < 30) return { miniEvent: null };
-  // 이번 주 이미 굴림 소비 → 정적 대사
-  if (state.weekTalkRolledForNpc) return { miniEvent: null };
-  // 풀 비어있음 → 굴림 소비 X (정적 폴백, A안 풀 소진 자연 처리)
-  const available = getAvailableNpcEvents(state, npcId);
-  if (available.length === 0) return { miniEvent: null };
-
-  // 굴림 — 단, pressure 0이어도 첫 클릭은 굴림 소비 (이번 주 시도)
-  const r = seededRandom(state);
-  const fired = r < state.talkEventPressure;
-  if (!fired) return { miniEvent: null };
-
-  // 발동: 첫 자격 이벤트 선택 (결정론 — 같은 시드에서 같은 결과)
-  return { miniEvent: available[0] };
-}
-
-// ===== 부모 말걸기 처리 (강점별) =====
-// 부모는 두 강점이 있으므로 호출 측에서 strength를 지정.
-// 친밀도 게이팅 없음 (부모는 항상 만날 수 있음).
-export function rollParentTalk(state: GameState, strength: ParentStrength): TalkResult {
-  if (state.weekTalkRolledForParent) return { miniEvent: null };
-  const available = getAvailableParentEvents(state, strength);
-  if (available.length === 0) return { miniEvent: null };
-
-  const r = seededRandom(state);
-  const fired = r < state.parentTalkPressure;
-  if (!fired) return { miniEvent: null };
-
-  return { miniEvent: available[0] };
 }
 
 // ===== 부모 친밀도 회고 톤 (학년말 일기장 변주) =====

@@ -60,7 +60,7 @@ function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: BgWrapp
 }
 
 export function GameScreen() {
-  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToParent } = useGameStore();
+  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome } = useGameStore();
 
   // 뒤로가기/새로고침 방지
   useEffect(() => {
@@ -124,13 +124,12 @@ export function GameScreen() {
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>({});
-  // Phase 2.1 말걸기 — 부모 모달 + 미니 이벤트 결과 표시
-  const [parentDetailFor, setParentDetailFor] = useState<ParentStrength | null>(null);
-  const [showHomePicker, setShowHomePicker] = useState(false);  // 두 부모 중 선택
+  // Phase 2.1 말걸기 — 사전 결정 모델, 가정은 단일 엔티티
+  const [showHomeModal, setShowHomeModal] = useState(false);
   const [miniTalkResult, setMiniTalkResult] = useState<MiniTalkEvent | null>(null);
-  // 미스 피드백 — 말 걸었으나 이벤트 미발동 시 인라인으로 폴백 대사 노출
-  const [npcMissNote, setNpcMissNote] = useState<string | null>(null);
-  const [parentMissNote, setParentMissNote] = useState<string | null>(null);
+  // 잡담 한 줄 — 비-pending 주에 클릭 시 캐릭터 톤의 잡담 라인 표시 (클릭마다 새로 픽)
+  const [npcSmalltalk, setNpcSmalltalk] = useState<string | null>(null);
+  const [homeSmalltalk, setHomeSmalltalk] = useState<string | null>(null);
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
@@ -1047,7 +1046,7 @@ export function GameScreen() {
                     key={p}
                     onMouseEnter={() => setActiveParentTip(p)}
                     onMouseLeave={() => setActiveParentTip(prev => prev === p ? null : prev)}
-                    onClick={() => { setActiveParentTip(null); setParentDetailFor(p); }}
+                    onClick={() => { setActiveParentTip(null); setShowHomeModal(true); }}
                     style={{
                       width: 22, height: 22, borderRadius: '50%',
                       background: isActive ? 'rgba(224,138,91,0.28)' : 'rgba(224,138,91,0.12)',
@@ -1061,7 +1060,7 @@ export function GameScreen() {
               })}
               {/* 클릭 가능 affordance — "💬 가정" 라벨로 진입점 명시 */}
               <span
-                onClick={() => { setActiveParentTip(null); setShowHomePicker(true); }}
+                onClick={() => { setActiveParentTip(null); setShowHomeModal(true); }}
                 style={{
                   marginLeft: 4, fontSize: '0.65rem', color: 'var(--accent-soft)',
                   cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
@@ -1614,39 +1613,36 @@ export function GameScreen() {
                 </div>
               </div>
 
-              {/* Phase 2.1 말걸기 — 미스 노트 인라인 표시 (이벤트는 별도 모달) */}
-              {npcMissNote && (
+              {/* Phase 2.1 말걸기 — 잡담 라인은 인라인, 미니 이벤트는 별도 모달 */}
+              {npcSmalltalk && (
                 <div style={{
                   marginTop: 14, padding: '10px 14px',
                   background: 'rgba(255,255,255,0.04)', borderRadius: 10,
                   fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic',
                   lineHeight: 1.6, wordBreak: 'keep-all', overflowWrap: 'break-word',
-                }}>{npcMissNote}</div>
+                }}>{npcSmalltalk}</div>
               )}
 
-              {/* 친밀도 30+ 일 때만 "말 걸기" 버튼 노출 */}
+              {/* 말 걸기는 항상 활성 — 사전 결정 모델 */}
               <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                {npc.intimacy >= 30 && (
-                  <button
-                    className="btn btn-primary"
-                    style={{ flex: 1, opacity: state.weekTalkRolledForNpc ? 0.5 : 1 }}
-                    disabled={state.weekTalkRolledForNpc}
-                    onClick={() => {
-                      const r = talkToNpc(npc.id);
-                      if (r.kind === 'event') { setMiniTalkResult(r.event); setNpcMissNote(null); }
-                      else if (r.kind === 'miss') { setNpcMissNote(r.note); }
-                    }}
-                  >{state.weekTalkRolledForNpc ? '다음 주에' : '말 걸기'}</button>
-                )}
-                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setNpcDetailFor(null); setNpcMissNote(null); }}>닫기</button>
+                <button
+                  className="btn btn-primary"
+                  style={{ flex: 1 }}
+                  onClick={() => {
+                    const r = talkToNpc(npc.id);
+                    if (r.kind === 'event') { setMiniTalkResult(r.event); setNpcSmalltalk(null); }
+                    else { setNpcSmalltalk(r.line); }
+                  }}
+                >말 걸기</button>
+                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setNpcDetailFor(null); setNpcSmalltalk(null); }}>닫기</button>
               </div>
             </div>
           </div>
         );
       })()}
 
-      {/* Phase 2.1 — 가정 picker (두 부모 중 선택) */}
-      {showHomePicker && (() => {
+      {/* Phase 2.1 — 가정 모달 (단일 엔티티 — 두 부모 강점은 가정 분위기) */}
+      {showHomeModal && (() => {
         const labels: Record<ParentStrength, { icon: string; label: string }> = {
           emotional:  { icon: '🫂', label: '정서적 지지' },
           wealth:     { icon: '🏠', label: '여유 있는 집' },
@@ -1656,7 +1652,7 @@ export function GameScreen() {
           freedom:    { icon: '🌿', label: '자유로운 집' },
         };
         return (
-          <div onClick={() => setShowHomePicker(false)} style={{
+          <div onClick={() => { setShowHomeModal(false); setHomeSmalltalk(null); }} style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
           }}>
@@ -1665,84 +1661,49 @@ export function GameScreen() {
               borderRadius: 16, padding: 24, width: '85%', maxWidth: 360, textAlign: 'center',
               border: '1px solid rgba(224,138,91,0.25)',
             }}>
-              <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 6 }}>🏠 가정</div>
-              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: 16 }}>누구와 대화할까요?</div>
-              {state.parents.map(p => {
-                const m = labels[p];
-                return (
-                  <div
-                    key={p}
-                    onClick={() => { setShowHomePicker(false); setParentDetailFor(p); }}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 12,
-                      background: 'rgba(255,255,255,0.04)', borderRadius: 10,
-                      padding: '12px 14px', marginBottom: 8, cursor: 'pointer',
+              <div style={{ fontSize: '2.2rem', marginBottom: 6 }}>🏠</div>
+              <div style={{ fontSize: '1rem', fontWeight: 700 }}>가정</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                엄마와 아빠가 만든 우리 집 분위기
+              </div>
+
+              {/* 두 강점을 분위기 카드로 표시 */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'center' }}>
+                {state.parents.map(p => {
+                  const m = labels[p];
+                  return (
+                    <div key={p} style={{
+                      flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 8px',
                       border: '1px solid rgba(224,138,91,0.15)',
-                    }}
-                  >
-                    <span style={{ fontSize: '1.6rem' }}>{m.icon}</span>
-                    <span style={{ fontSize: '0.88rem', fontWeight: 600 }}>{m.label}</span>
-                  </div>
-                );
-              })}
-              <button className="btn btn-secondary" style={{ width: '100%', marginTop: 8 }} onClick={() => setShowHomePicker(false)}>닫기</button>
-            </div>
-          </div>
-        );
-      })()}
+                    }}>
+                      <span style={{ fontSize: '1.4rem' }}>{m.icon}</span>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{m.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
 
-      {/* Phase 2.1 — 부모 모달 */}
-      {parentDetailFor && state.parents.includes(parentDetailFor) && (() => {
-        const strength = parentDetailFor;
-        const labels: Record<ParentStrength, { icon: string; label: string; desc: string }> = {
-          emotional:  { icon: '🫂', label: '정서적 지지', desc: '엄마/아빠가 자주 물어봐주고 안아준다.' },
-          wealth:     { icon: '🏠', label: '여유 있는 집', desc: '용돈이 풍족해 학원·도구를 부담 없이 쓸 수 있다.' },
-          info:       { icon: '📱', label: '정보가 있는 집', desc: '엄마가 학원·인강 정보를 잘 안다.' },
-          strict:     { icon: '📐', label: '엄격한 집', desc: '정해진 시간에 책상 — 루틴이 길게 유지된다.' },
-          resilience: { icon: '⭐', label: '타고난 체질', desc: '타고난 체력 — 잘 지치지 않는다.' },
-          freedom:    { icon: '🌿', label: '자유로운 집', desc: '"알아서 해" 분위기 — 선택의 자유.' },
-        };
-        const meta = labels[strength];
-        return (
-          <div onClick={() => setParentDetailFor(null)} style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-          }}>
-            <div onClick={e => e.stopPropagation()} style={{
-              background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
-              borderRadius: 16, padding: 24, width: '85%', maxWidth: 340, textAlign: 'center',
-              border: '1px solid rgba(224,138,91,0.25)',
-            }}>
-              <div style={{ fontSize: '2.4rem', marginBottom: 8 }}>{meta.icon}</div>
-              <div style={{ fontSize: '1rem', fontWeight: 700 }}>{meta.label}</div>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>가정</div>
-              <div style={{
-                fontSize: '0.78rem', color: 'var(--text-secondary)',
-                marginTop: 14, lineHeight: 1.6, fontStyle: 'italic',
-                wordBreak: 'keep-all', overflowWrap: 'break-word',
-              }}>{meta.desc}</div>
-
-              {parentMissNote && (
+              {homeSmalltalk && (
                 <div style={{
                   marginTop: 14, padding: '10px 14px',
                   background: 'rgba(255,255,255,0.04)', borderRadius: 10,
                   fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic',
                   lineHeight: 1.6, wordBreak: 'keep-all', overflowWrap: 'break-word',
-                }}>{parentMissNote}</div>
+                }}>{homeSmalltalk}</div>
               )}
 
               <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
                 <button
                   className="btn btn-primary"
-                  style={{ flex: 1, opacity: state.weekTalkRolledForParent ? 0.5 : 1 }}
-                  disabled={state.weekTalkRolledForParent}
+                  style={{ flex: 1 }}
                   onClick={() => {
-                    const r = talkToParent(strength);
-                    if (r.kind === 'event') { setMiniTalkResult(r.event); setParentMissNote(null); }
-                    else if (r.kind === 'miss') { setParentMissNote(r.note); }
+                    const r = talkToHome();
+                    if (r.kind === 'event') { setMiniTalkResult(r.event); setHomeSmalltalk(null); }
+                    else { setHomeSmalltalk(r.line); }
                   }}
-                >{state.weekTalkRolledForParent ? '다음 주에' : '대화하기'}</button>
-                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setParentDetailFor(null); setParentMissNote(null); }}>닫기</button>
+                >엄마와 대화하기</button>
+                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => { setShowHomeModal(false); setHomeSmalltalk(null); }}>닫기</button>
               </div>
             </div>
           </div>
@@ -1771,7 +1732,7 @@ export function GameScreen() {
             <button className="btn btn-primary" style={{ marginTop: 18, width: '100%' }} onClick={() => {
               setMiniTalkResult(null);
               setNpcDetailFor(null);
-              setParentDetailFor(null);
+              setShowHomeModal(false);
             }}>닫기</button>
           </div>
         </div>

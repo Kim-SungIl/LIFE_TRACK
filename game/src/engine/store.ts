@@ -4,13 +4,14 @@ import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice } from './memorySystem';
-import { rollNpcTalk, rollParentTalk, MiniTalkEvent, getNpcMissNote, getParentMissNote } from './talkSystem';
+import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 
-// 말걸기 결과 — 발동(event) / 미스(miss-note) / 무반응(static, intimacy 미달 등)
+// 말걸기 결과 — 사전 결정 모델
+// - 'event': 이번 주 사전 결정에서 발동 + 풀에 가용 이벤트 있음 → 미니 이벤트 발동
+// - 'smalltalk': 그 외 모든 경우 → 잠깐의 잡담 한 줄 (클릭마다 다른 라인)
 export type TalkActionResult =
   | { kind: 'event'; event: MiniTalkEvent }
-  | { kind: 'miss'; note: string }
-  | { kind: 'static' };
+  | { kind: 'smalltalk'; line: string };
 
 const SAVE_KEY = 'lifetrack_save';
 const SAVE_VERSION = 1;
@@ -59,9 +60,10 @@ interface GameStore {
   advanceFromYearEnd: () => void;
   setPhase: (phase: GameState['phase']) => void;
   buyItem: (item: ShopItem, targetNpcId?: string) => string[];
-  // Phase 2.1 말걸기 — 결과(event/miss/static) 반환, 효과는 즉시 적용
+  // Phase 2.1 말걸기 — 결과(event/smalltalk) 반환, 효과는 즉시 적용
+  // 무한 클릭 가능 — 사전 결정에 따라 이벤트가 떨어지거나 잡담 한 줄
   talkToNpc: (npcId: string) => TalkActionResult;
-  talkToParent: (strength: ParentStrength) => TalkActionResult;
+  talkToHome: () => TalkActionResult;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -273,90 +275,92 @@ export const useGameStore = create<GameStore>((set, get) => ({
     return messages;
   },
 
-  // ===== Phase 2.1 말걸기 액션 =====
+  // ===== Phase 2.1 말걸기 (사전 결정 모델) =====
+  // 사전 결정: processWeek에서 npcEventPendingThisWeek/parentEventPendingThisWeek 굴림.
+  // 클릭은 결과 보는 행위 — 무한 가능. pending+풀 가용시 fire, 그 외엔 잡담.
+  // pressure는 fire 시점에만 0 리셋 (놓친 주는 누적 유지 → 오래 안 만나면 자연스럽게 100% 보장).
   talkToNpc: (npcId) => {
     const s = get().state;
-    if (!s) return { kind: 'static' };
+    if (!s) return { kind: 'smalltalk', line: '' };
     const npc = s.npcs.find(n => n.id === npcId);
-    if (!npc) return { kind: 'static' };
-    // 친밀도 미달 → 정적 대사 (사실 UI에서 버튼 자체가 안 보이므로 방어)
-    if (npc.intimacy < 30) return { kind: 'static' };
+    if (!npc) return { kind: 'smalltalk', line: '' };
 
-    const result = rollNpcTalk(s, npcId);
-    if (!result.miniEvent) {
-      // 미스: 굴림 시도 플래그 + RNG 진행 보존을 위해 set으로 새 객체 푸시
-      // 단, 이번 주 이미 굴림 소비된 경우엔 정적(다음 주에 시도)으로 안내
-      if (s.weekTalkRolledForNpc) return { kind: 'static' };
-      const newState = JSON.parse(JSON.stringify(s)) as GameState;
-      const note = getNpcMissNote(newState, npcId);  // RNG 진행 (newState.rngSeed mutate)
-      newState.weekTalkRolledForNpc = true;
-      set({ state: newState });
-      return { kind: 'miss', note };
-    }
-    // 미니 이벤트 발동 — 효과 적용 + pressure 리셋 + fired 기록 + 플래그 표시
-    const newState = JSON.parse(JSON.stringify(s)) as GameState;
-    const ev = result.miniEvent;
-    if (ev.effects.stats) {
-      for (const [k, v] of Object.entries(ev.effects.stats)) {
-        const key = k as keyof typeof newState.stats;
-        newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (v as number)));
+    // 친밀도 30+ 일 때만 미니 이벤트 후보 — 그 외엔 잡담 한 줄
+    const eligible = npc.intimacy >= 30 && s.npcEventPendingThisWeek;
+    if (eligible) {
+      const available = getAvailableNpcEvents(s, npcId);
+      if (available.length > 0) {
+        // fire — 효과 적용 + pressure 리셋 + pending 소비 + fired 기록
+        const newState = JSON.parse(JSON.stringify(s)) as GameState;
+        const ev = available[0];
+        if (ev.effects.stats) {
+          for (const [k, v] of Object.entries(ev.effects.stats)) {
+            const key = k as keyof typeof newState.stats;
+            newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (v as number)));
+          }
+        }
+        if (ev.effects.fatigue) {
+          newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
+        }
+        if (ev.effects.money) {
+          newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
+          if (newState.money < 0) newState.money = 0;
+        }
+        if (ev.effects.intimacy && ev.npcId) {
+          const target = newState.npcs.find(n => n.id === ev.npcId);
+          if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
+        }
+        newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
+        newState.talkEventPressure = 0;
+        newState.npcEventPendingThisWeek = false;
+        set({ state: newState });
+        return { kind: 'event', event: ev };
       }
+      // pending이지만 이 NPC 풀 비어있음 → 잡담 (pending은 다른 NPC를 위해 보존)
     }
-    if (ev.effects.fatigue) {
-      newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
-    }
-    if (ev.effects.money) {
-      newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
-      if (newState.money < 0) newState.money = 0;
-    }
-    if (ev.effects.intimacy && ev.npcId) {
-      const target = newState.npcs.find(n => n.id === ev.npcId);
-      if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
-    }
-    newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
-    newState.talkEventPressure = 0;
-    newState.weekTalkRolledForNpc = true;
+    // 잡담 한 줄 — RNG 진행 위해 새 state로 push
+    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    const line = getNpcSmalltalk(newState, npcId);
     set({ state: newState });
-    return { kind: 'event', event: ev };
+    return { kind: 'smalltalk', line };
   },
 
-  talkToParent: (strength) => {
+  talkToHome: () => {
     const s = get().state;
-    if (!s) return { kind: 'static' };
-    if (!s.parents.includes(strength)) return { kind: 'static' };
+    if (!s) return { kind: 'smalltalk', line: '' };
 
-    const result = rollParentTalk(s, strength);
-    if (!result.miniEvent) {
-      if (s.weekTalkRolledForParent) return { kind: 'static' };
-      const newState = JSON.parse(JSON.stringify(s)) as GameState;
-      const note = getParentMissNote(newState, strength);
-      newState.weekTalkRolledForParent = true;
-      set({ state: newState });
-      return { kind: 'miss', note };
-    }
-    const newState = JSON.parse(JSON.stringify(s)) as GameState;
-    const ev = result.miniEvent;
-    if (ev.effects.stats) {
-      for (const [k, v] of Object.entries(ev.effects.stats)) {
-        const key = k as keyof typeof newState.stats;
-        newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (v as number)));
+    if (s.parentEventPendingThisWeek) {
+      const available = getAvailableHomeEvents(s);
+      if (available.length > 0) {
+        const newState = JSON.parse(JSON.stringify(s)) as GameState;
+        const ev = available[0];
+        if (ev.effects.stats) {
+          for (const [k, v] of Object.entries(ev.effects.stats)) {
+            const key = k as keyof typeof newState.stats;
+            newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (v as number)));
+          }
+        }
+        if (ev.effects.fatigue) {
+          newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
+        }
+        if (ev.effects.money) {
+          newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
+          if (newState.money < 0) newState.money = 0;
+        }
+        if (ev.effects.parentIntimacy) {
+          newState.parentIntimacy = Math.max(0, Math.min(100, newState.parentIntimacy + ev.effects.parentIntimacy));
+        }
+        newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
+        newState.parentTalkPressure = 0;
+        newState.parentEventPendingThisWeek = false;
+        set({ state: newState });
+        return { kind: 'event', event: ev };
       }
     }
-    if (ev.effects.fatigue) {
-      newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
-    }
-    if (ev.effects.money) {
-      newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
-      if (newState.money < 0) newState.money = 0;
-    }
-    if (ev.effects.parentIntimacy) {
-      newState.parentIntimacy = Math.max(0, Math.min(100, newState.parentIntimacy + ev.effects.parentIntimacy));
-    }
-    newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
-    newState.parentTalkPressure = 0;
-    newState.weekTalkRolledForParent = true;
+    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    const line = getHomeSmalltalk(newState);
     set({ state: newState });
-    return { kind: 'event', event: ev };
+    return { kind: 'smalltalk', line };
   },
 }));
 
