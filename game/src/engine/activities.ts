@@ -308,6 +308,36 @@ export const ACTIVITIES: Activity[] = [
   },
 ];
 
+/**
+ * 2슬롯 이상 활동이 같은 id로 인접 슬롯에 중복 저장된 배열을, 한 인스턴스 = 한 항목으로 collapse.
+ *
+ * UI(슬롯 인덱스 = 배열 인덱스)와 엔진(applyActivity 인스턴스당 1회) 사이의 변환 레이어.
+ * 사용 안 하면 가족 여행(2칸 -8만원)이 -16만원으로 차감되는 등 데이터 표기와 실제가 어긋남.
+ *
+ * 꼬리 잘림(timeCost로 2칸 활동의 마지막 칸이 잘린 케이스)은 push만 하고 skip 없음 → 1회만 적용.
+ *
+ * 예시:
+ *   [countryside, countryside, study-group] → [countryside, study-group]
+ *   [intensive, intensive, intensive, intensive] → [intensive, intensive] (인스턴스 2개)
+ *   [trip, trip] timeCost=1 후 [trip] → [trip] (꼬리 잘림 1회만)
+ */
+export function collapseActivityChoices(ids: string[]): string[] {
+  const result: string[] = [];
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    if (!id) continue;
+    const act = ACTIVITIES.find(a => a.id === id);
+    if (!act) continue;
+    result.push(id);
+    if (act.slots >= 2) {
+      let skip = 0;
+      for (let k = 1; k < act.slots && ids[i + k] === id; k++) skip++;
+      i += skip;
+    }
+  }
+  return result;
+}
+
 // 활동의 vacationLimit 도달 여부
 export function isVacationLimitReached(activity: Activity, state: GameState): boolean {
   if (!activity.vacationLimit || !state.isVacation) return false;

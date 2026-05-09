@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getExamSchedule } from '../engine/examSystem';
-import { getAvailableActivities, ACTIVITIES, getActivityCost } from '../engine/activities';
+import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../engine/activities';
 import { getParentMods } from '../engine/parentModifiers';
 import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, EXAM_TYPE_LABELS, GameEvent, ParentStrength } from '../engine/types';
 import { MiniTalkEvent } from '../engine/talkSystem';
@@ -577,18 +577,10 @@ export function GameScreen() {
   const activities = getAvailableActivities(state);
   const routineIds = !state.isVacation ? [state.routineSlot2, state.routineSlot3].filter(Boolean) as string[] : [];
   // 2칸 활동은 onToggle에서 같은 id로 인접 슬롯에 중복 저장됨. 슬롯/비용 계산 시 한 인스턴스로 collapse.
-  const selectedInstances = (() => {
-    const result: typeof activities = [];
-    for (let i = 0; i < selectedActivities.length; i++) {
-      const aid = selectedActivities[i];
-      if (!aid) continue;
-      const act = activities.find(x => x.id === aid);
-      if (!act) continue;
-      result.push(act);
-      if (act.slots >= 2 && selectedActivities[i + 1] === aid) i++;
-    }
-    return result;
-  })();
+  // 엔진의 vacationChoices 처리(gameEngine.ts:711)와 동일한 헬퍼 사용 — SSOT.
+  const selectedInstances = collapseActivityChoices(selectedActivities)
+    .map(id => activities.find(a => a.id === id))
+    .filter((a): a is typeof activities[number] => !!a);
   const currentSlots = selectedInstances.reduce((s, act) => s + act.slots, 0);
   const fatigueLabel = state.fatigue < 20 ? '좋음' : state.fatigue < 35 ? '경미' : state.fatigue < 50 ? '주의' : state.fatigue < 70 ? '위험' : '극한!';
   const fatigueColor = state.fatigue < 20 ? 'var(--green)' : state.fatigue < 35 ? 'var(--yellow)' : state.fatigue < 50 ? 'orange' : 'var(--red)';

@@ -1,5 +1,5 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
-import { ACTIVITIES, getActivityCost } from './activities';
+import { ACTIVITIES, getActivityCost, collapseActivityChoices } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
@@ -708,7 +708,10 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 슬롯 감소
   const rawChoices = newState.isVacation ? newState.vacationChoices : newState.weekendChoices;
   // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개 제거, 2=마지막 2개 제거)
-  const choices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
+  // → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push 됨 ("이벤트로 일정 잘려서 시골 반쯤만")
+  const slicedChoices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
+  // 2칸 활동의 같은 id 인접 중복을 1 인스턴스로 collapse — applyActivity / vacationLimit 카운트는 인스턴스당 1회
+  const choices = collapseActivityChoices(slicedChoices);
   const allActivities = [...choices];
   for (const choice of choices) {
     const act = ACTIVITIES.find(a => a.id === choice);
