@@ -576,7 +576,20 @@ export function GameScreen() {
   const maxSlots = state.isVacation ? 5 + getParentMods(state.parents).vacationSlotBonus : 2;
   const activities = getAvailableActivities(state);
   const routineIds = !state.isVacation ? [state.routineSlot2, state.routineSlot3].filter(Boolean) as string[] : [];
-  const currentSlots = selectedActivities.reduce((s, aid) => s + (activities.find(x => x.id === aid)?.slots || 0), 0);
+  // 2칸 활동은 onToggle에서 같은 id로 인접 슬롯에 중복 저장됨. 슬롯/비용 계산 시 한 인스턴스로 collapse.
+  const selectedInstances = (() => {
+    const result: typeof activities = [];
+    for (let i = 0; i < selectedActivities.length; i++) {
+      const aid = selectedActivities[i];
+      if (!aid) continue;
+      const act = activities.find(x => x.id === aid);
+      if (!act) continue;
+      result.push(act);
+      if (act.slots >= 2 && selectedActivities[i + 1] === aid) i++;
+    }
+    return result;
+  })();
+  const currentSlots = selectedInstances.reduce((s, act) => s + act.slots, 0);
   const fatigueLabel = state.fatigue < 20 ? '좋음' : state.fatigue < 35 ? '경미' : state.fatigue < 50 ? '주의' : state.fatigue < 70 ? '위험' : '극한!';
   const fatigueColor = state.fatigue < 20 ? 'var(--green)' : state.fatigue < 35 ? 'var(--yellow)' : state.fatigue < 50 ? 'orange' : 'var(--red)';
 
@@ -591,10 +604,10 @@ export function GameScreen() {
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
 
   // 이번 주 누적 활동 비용 — 루틴 + 사용자가 고른 활동들 (HUD 잔액 옆 실시간 표시용)
-  const selectedActivityCost = selectedActivities.reduce((sum, id) => {
-    const act = ACTIVITIES.find(a => a.id === id);
-    return sum + (act ? Math.max(0, getActivityCost(act, state.year)) : 0);
-  }, 0);
+  const selectedActivityCost = selectedInstances.reduce(
+    (sum, act) => sum + Math.max(0, getActivityCost(act, state.year)),
+    0,
+  );
   const weeklyActivityCost = routineCost + selectedActivityCost;
   const weeklyOverBudget = weeklyActivityCost > state.money;
 
@@ -1493,10 +1506,7 @@ export function GameScreen() {
                 npcChoices={npcChoices}
                 compact={false}
                 availableMoney={state.money - routineCost -
-                  selectedActivities.reduce((sum, id) => {
-                    const act = ACTIVITIES.find(a => a.id === id);
-                    return sum + (act ? getActivityCost(act, state.year) : 0);
-                  }, 0)
+                  selectedInstances.reduce((sum, act) => sum + getActivityCost(act, state.year), 0)
                 }
               />
             </div>
