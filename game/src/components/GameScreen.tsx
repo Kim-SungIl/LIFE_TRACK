@@ -581,7 +581,9 @@ export function GameScreen() {
   const fatigueColor = state.fatigue < 20 ? 'var(--green)' : state.fatigue < 35 ? 'var(--yellow)' : state.fatigue < 50 ? 'orange' : 'var(--red)';
 
   // 루틴 비용 체크 — 돈이 부족하면 루틴 변경 강제. 학년별 차등 비용 적용.
+  // 방학 중에는 엔진이 루틴을 가동하지 않으므로 (gameEngine.ts:667) 비용 0.
   const routineCost = (() => {
+    if (state.isVacation) return 0;
     const r2 = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null;
     const r3 = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null;
     return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
@@ -1352,7 +1354,15 @@ export function GameScreen() {
                   selectedActivities[i] ? '🌟' : '☀️',
                   `활동 ${i + 1}`,
                   selectedActivities[i] ? ACTIVITIES.find(a => a.id === selectedActivities[i])?.name || null : null,
-                  () => setEditingSlot(`weekend${i + 1}` as any),
+                  () => {
+                    // 2칸 활동이 점유 중이면 해당 활동만 배열에서 제거 (사용자가 다시 고를 수 있도록)
+                    const cur = selectedActivities[i];
+                    const act = cur ? ACTIVITIES.find(a => a.id === cur) : null;
+                    if (act && act.slots >= 2) {
+                      setSelectedActivities(selectedActivities.filter(a => a !== cur));
+                    }
+                    setEditingSlot(`weekend${i + 1}` as any);
+                  },
                 )}
               </div>
             ))}
@@ -1456,8 +1466,9 @@ export function GameScreen() {
                       const act = ACTIVITIES.find(a => a.id === id);
                       const newArr = [...selectedActivities];
                       if (act && act.slots >= 2) {
-                        // slots=2 활동: 모든 슬롯을 채움
-                        for (let i = 0; i < maxSlots; i++) newArr[i] = id;
+                        // slots=N 활동: slotIdx부터 N개만 채움. 끝 근처 클릭이면 시작점을 앞으로 클립.
+                        const startIdx = Math.min(slotIdx, maxSlots - act.slots);
+                        for (let i = 0; i < act.slots; i++) newArr[startIdx + i] = id;
                         setSelectedActivities(newArr.slice(0, maxSlots));
                       } else {
                         newArr[slotIdx] = id;
