@@ -225,3 +225,53 @@ anime background style, no characters
 13. 나머지 캐릭터 표정 전부
 14. 나머지 배경 전부
 15. 계절/시간대 변형
+
+---
+
+## 8. 누락 배경 추가 작업 (2026-05)
+
+> `events.ts`에서 참조하지만 `public/images/backgrounds/`에 PNG가 없는 2장.
+> 검증 스크립트: `cd game && npx tsx scripts/check-background-assets.ts` → MISSING 0개여야 함.
+
+권장 해상도: **960x540** (기존 배경 동일).
+공통 스타일 앵커(L10–15)와 네거티브 프롬프트(L19–23)를 함께 사용하세요.
+
+---
+
+### 8-1. `backgrounds/rooftop_sunset.png`
+
+**참조 이벤트**: `identity-crisis` (고1~2, 야자 끝나고 옥상 혼자, 진로 막막함).
+**톤 키워드**: 적막, 멜랑콜리, 멀어 보이는 하늘, 혼자.
+
+```
+korean high school rooftop at sunset, empty rooftop with metal safety railing,
+rooftop water tank and ventilation pipes in the background,
+distant cityscape silhouette of low-rise apartment buildings,
+deep orange and pink twilight sky with soft cloud streaks,
+long shadows stretched across the concrete floor,
+quiet melancholic atmosphere, sense of solitude and contemplation,
+anime background style, no characters, soft cel-shading,
+[스타일 앵커]
+```
+
+---
+
+### 8-2. `backgrounds/convenience_store.png`
+
+**참조 이벤트**: `jihun-envy` (방과 후 지훈이와 컵라면, 미묘한 정적).
+**톤 키워드**: 일상, 형광등, 창밖 어둑함, 따뜻하지만 가벼운 긴장.
+
+```
+korean convenience store interior in early evening,
+bright fluorescent ceiling lights, snack and instant ramen shelves,
+drink cooler with soft blue glow on the side wall,
+small standing counter by the window with two stools and a microwave,
+window view of dim outdoor street with warm orange streetlight glow,
+clean tiled floor, quiet ambient atmosphere,
+anime background style, no characters, soft cel-shading,
+[스타일 앵커]
+```
+
+---
+
+**저장 경로**: `game/public/images/backgrounds/<파일명>.png`
