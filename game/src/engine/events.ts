@@ -360,7 +360,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"중학교 달라도 자주 보자" — 진심으로 적는다',
         effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 8 }],
-        message: '도윤이가 "오 진짜? 약속이다 ㅋㅋ" 하며 자기 사인 옆에 작은 축구공을 그렸다. "나중에 만나면 모른 척하지 마라."',
+        message: '도윤이가 "오 진짜? 약속이다!!!" 하며 자기 사인 옆에 작은 축구공을 그렸다. "나중에 만나면 모른 척하지 마라."',
         memorySlotDraft: {
           category: 'reconciliation',
           importance: 6,
@@ -373,7 +373,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '장난스럽게 짧게 적는다',
         effects: { social: 1, mental: 1 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
-        message: '"야 이게 뭐야 ㅋㅋ" 도윤이가 웃으면서 똑같이 짧게 적었다. 둘 다 이게 마지막인 줄 모르는 척.',
+        message: '"야 이게 뭐야!!!" 도윤이가 웃으면서 똑같이 짧게 적었다. 둘 다 이게 마지막인 줄 모르는 척.',
         memorySlotDraft: {
           category: 'discovery',
           importance: 4,
@@ -506,7 +506,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'doyun-school-split',
     title: '도윤이는 다른 학교',
-    description: '입학 둘째 주. 카톡으로 도윤이한테서 메시지가 왔다.\n"야, 나 다른 중학교 가게 됐어. 학군 때문에 이사 가더라고. 미리 말 못해서 미안 ㅋㅋ"\n읽고 한참을 가만히 있었다.',
+    description: '입학 둘째 주. 카톡으로 도윤이한테서 메시지가 왔다.\n"야, 나 다른 중학교 가게 됐어. 학군 때문에 이사 가더라고. 미리 말 못해서 미안~~"\n읽고 한참을 가만히 있었다.',
     week: 2,
     condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
@@ -520,7 +520,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"야 진짜야? 우리 만나서 밥이라도 먹자" — 약속을 잡으려 한다',
         effects: { mental: -1, social: 1 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: -8 }],
-        message: '도윤이가 "오 진짜? 좋지 ㅋㅋ" 답했지만, 약속은 결국 잡히지 않았다. 학교가 다르면 시간이 안 맞는 게 이런 거구나.',
+        message: '도윤이가 "오 진짜? 좋지!!!" 답했지만, 약속은 결국 잡히지 않았다. 학교가 다르면 시간이 안 맞는 게 이런 거구나.',
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -533,7 +533,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"잘 가" — 짧게 답한다',
         effects: { mental: -3 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: -12 }],
-        message: '"ㅇㅇ 너도 잘 지내" 도윤이의 답도 짧았다. 그렇게 카톡 창이 닫혔다.',
+        message: '"응. 너도 잘 지내." 도윤이의 답도 짧았다. 그렇게 카톡 창이 닫혔다.',
         memorySlotDraft: {
           category: 'failure',
           importance: 7,
@@ -1276,7 +1276,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '친구에게 연락한다',
         effects: { mental: 5, social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
-        message: '"야, 긴장돼?" "ㅇㅇ 미치겠어." "...내일 끝나고 치킨 먹자." "...그래."',
+        message: '"야, 긴장돼?" "응. 미치겠어." "...내일 끝나고 치킨 먹자." "...그래."',
       },
     ],
   },
@@ -2740,7 +2740,7 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '지훈이가 신발끈을 보더니 입이 쩍 벌어졌다. "야, 이거... 너 진짜 나랑 오래 볼 생각인가 보네." 웃으며 말했지만 진지한 눈이었다.' },
       { text: '카톡으로 축하만 한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
-        message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
+        message: '"축하해~" 보냈다. 지훈이가 "고마워~" 했다. 좀 성의없었나?' },
     ],
     femaleChoices: [
       { text: '선물을 사서 준다 (-2만원)', effects: { social: 3, mental: 2 }, moneyEffect: -2,
@@ -2751,7 +2751,7 @@ export const GAME_EVENTS: GameEvent[] = [
         message: '지훈이가 그립테이프를 보더니 입이 쩍 벌어졌다. "야, 이거... 너 진짜 나랑 오래 칠 생각인가 보네." 웃으며 말했지만 진지한 눈이었다.' },
       { text: '카톡으로 축하만 한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
-        message: '"ㅊㅋ~" 보냈다. 지훈이가 "ㄱㅅ" 했다. 좀 성의없었나?' },
+        message: '"축하해~" 보냈다. 지훈이가 "고마워~" 했다. 좀 성의없었나?' },
     ],
   },
   {
