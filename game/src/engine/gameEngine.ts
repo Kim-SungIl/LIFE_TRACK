@@ -486,7 +486,8 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     }
   }
   // 회복: tired → normal
-  else if (state.mentalState === 'tired' && state.stats.mental >= 50 && state.fatigue < 40) {
+  // v7.2: 임계 완화 (50/40 → 45/50) — Y1 만성 진입 39% / 회복률 38% 데스 스파이럴 완화
+  else if (state.mentalState === 'tired' && state.stats.mental >= 45 && state.fatigue < 50) {
     state.mentalState = 'normal';
     log.messages.push('✨ 회복! — 다시 일상으로 돌아왔다.');
   }
@@ -514,9 +515,10 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   if (state.mentalState === 'tired') {
     const fatDrop = state.useReducedRecovery ? 3 : 5;
     state.fatigue = Math.max(0, state.fatigue - fatDrop);
-    state.stats.mental = Math.min(100, state.stats.mental + 1);
+    // v7.2: 자동 mental 회복 +1 → +2 (임계 완화와 함께 burnout 재진입 차단)
+    state.stats.mental = Math.min(100, state.stats.mental + 2);
     log.fatigueChange -= fatDrop;
-    log.statChanges.mental = (log.statChanges.mental || 0) + 1;
+    log.statChanges.mental = (log.statChanges.mental || 0) + 2;
   }
 
   // v6.1: 번아웃 자동 회복 — 강화 (활동 피로를 이길 수 있는 수준)
