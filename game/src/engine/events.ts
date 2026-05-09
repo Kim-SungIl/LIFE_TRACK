@@ -272,7 +272,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['doyun'],
     choices: [
       {
-        text: '"고마워" — 솔직하게 말한다',
+        text: '"멋있다" — 솔직하게 말한다',
         effects: { social: 2, mental: 2 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
         message: '도윤이가 "어, 별거 아닌데" 하면서도 어깨가 살짝 으쓱해졌다. 반에서 인기 있는 이유를 알 것 같다.',
@@ -346,7 +346,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'doyun-graduation-sign',
     title: '졸업앨범 뒤에 사인',
-    description: '졸업식 끝나고 운동장. 도윤이가 졸업앨범 한 권을 들고 너에게 다가온다.\n"야, 사인 하나 해줘. 나도 너 거 해줄게."\n매직펜을 손에 쥐어 준다.',
+    description: '졸업식 며칠 뒤. 학교에 잠깐 들렀다가 운동장에서 도윤이를 만났다.\n도윤이가 졸업앨범 한 권을 들고 다가온다.\n"야, 사인 하나 해줘. 나도 너 거 해줄게."\n매직펜을 손에 쥐어 준다.',
     week: 47,
     condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
@@ -397,7 +397,7 @@ export const GAME_EVENTS: GameEvent[] = [
       },
     ],
     // 여자 버전: 거리감 호감 톤 — 무리에 둘러싸여 있던 도윤이가 너에게만 잠깐 와서 부탁하는 결
-    femaleDescription: '졸업식 끝나고 운동장. 도윤이가 졸업앨범 한 권을 든 채 너 쪽으로 슬쩍 다가온다.\n무리에서 잠깐 빠져나온 듯한 모양새다.\n"...사인, 한 줄만 해줄래?"\n매직펜이 너에게 건네진다.',
+    femaleDescription: '졸업식 며칠 뒤. 학교에 잠깐 들렀다가 운동장에서 도윤이를 마주쳤다.\n무리에 둘러싸여 있던 도윤이가 졸업앨범 한 권을 든 채 너 쪽으로 슬쩍 다가온다.\n"...사인, 한 줄만 해줄래?"\n매직펜이 너에게 건네진다.',
     femaleChoices: [
       {
         text: '잠깐 펜을 멈췄다가, 한 줄 진심으로 적는다',
@@ -772,7 +772,7 @@ export const GAME_EVENTS: GameEvent[] = [
   {
     id: 'elementary-spring-picnic',
     title: '봄 소풍',
-    description: '오늘은 봄 소풍 날. 김밥 도시락에 간식까지 든 가방이 묵직하다.\n공원에 도착하니 벚꽃잎이 바람에 흩날린다.\n민재가 손을 흔든다. "야 너도 여기 앉아!"',
+    description: '오늘은 봄 소풍 날. 김밥 도시락에 간식까지 든 가방이 묵직하다.\n공원에 도착하니 벚꽃잎이 바람에 흩날린다.\n민재가 손을 흔든다. "야 너도 여기 앉아!"\n한쪽에서는 선생님이 장기자랑 신청을 받고 있다.',
     week: 5,
     condition: (s) => s.year === 1,
     location: 'park',
@@ -935,7 +935,10 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '수빈이와 학원',
     description: '학원 복도에서 수빈이가 다른 반 아이들과 웃으며 얘기하고 있다.\n나를 발견하자 "야, 너도 김쌤 반이야? 김쌤 숙제 진짜 많지 않아? 쉬는 시간에 편의점 가자~"',
     week: 5,
-    condition: (s) => s.routineSlot2 === 'academy' || s.routineSlot3 === 'academy',
+    condition: (s) => {
+      const subin = s.npcs.find(n => n.id === 'subin');
+      return !!subin?.met && (s.routineSlot2 === 'academy' || s.routineSlot3 === 'academy');
+    },
     location: 'street',
     background: 'hagwon_front',
     speakers: ['subin'],
@@ -1046,6 +1049,7 @@ export const GAME_EVENTS: GameEvent[] = [
     title: '학교 축제',
     description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n수빈이가 "야, 홍보는 내가 할게! 누가 같이 하자~" 하며 손을 든다.',
     week: 30,
+    condition: (s) => s.year >= 2,
     location: 'classroom',
     background: 'festival_classroom',
     speakers: ['subin'],
@@ -1227,6 +1231,14 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { mental: -1 },
         moneyEffect: 5,
         message: '크리스마스에도 일했다. 돈은 벌었는데... 좀 씁쓸하다.',
+        condition: (s) => s.year >= 4,
+      },
+      {
+        text: '엄마 심부름 — 용돈 받기',
+        effects: { mental: 1 },
+        moneyEffect: 1,
+        message: '엄마 부탁으로 마트 심부름. 거스름돈에서 천 원짜리 한 장을 슬쩍 챙겼다. 작은 용돈이지만 기분이 좋다.',
+        condition: (s) => s.year < 4,
       },
     ],
   },
@@ -1557,7 +1569,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['jihun'],
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
-      return !!jihun?.met && jihun.intimacy >= 30 && s.week >= 20 && !s.isVacation;
+      return !!jihun?.met && jihun.intimacy >= 30 && s.year >= 2 && s.week >= 20 && !s.isVacation;
     },
     choices: [
       {
@@ -2200,7 +2212,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"무슨 책 읽어?" — 말을 건다',
         effects: { social: 1, mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
-        message: '"무라카미 하루키! 이거 진짜 좋아, 너도 읽어봐." 유나가 신나서 책을 보여줬다. 의외로 소설 취향이 있다.',
+        message: '"요즘 빠진 소설인데, 진짜 좋아. 너도 읽어봐!" 유나가 신나서 책을 보여줬다. 의외로 소설 취향이 있다.',
       },
       {
         text: '조용히 옆에 앉아서 공부한다',
