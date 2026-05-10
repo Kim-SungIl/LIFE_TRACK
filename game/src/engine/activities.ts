@@ -219,12 +219,12 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'countryside',
-    name: '시골/할머니댁', slots: 2, fatigue: -15,
+    name: '시골/할머니댁', slots: 3, fatigue: -15,
     effects: { mental: 5, health: 3 }, moneyCost: 0,
     category: 'rest',
     seasonGate: 'vacation-only',
     vacationLimit: 1,
-    description: '시골 친척집에서 시간을 보낸다.',
+    description: '시골 친척집에서 며칠을 보낸다.',
     flavor: '평상에 누우면 바람 소리만 들린다. 도시에서 잊고 있던 박자.',
     tags: ['방학', '회복', '추억', '무료', '1회'],
   },
@@ -245,7 +245,7 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'neighborhood-hangout',
     name: '동네 친구와 보내는 방학', slots: 1, fatigue: 3,
-    effects: { social: 3, mental: 1 }, moneyCost: 0,
+    effects: { social: 2, mental: 1 }, moneyCost: 0,
     category: 'social',
     seasonGate: 'vacation-only',
     catchupBonus: { targetStat: 'social', threshold: 50, bonus: 1 },
