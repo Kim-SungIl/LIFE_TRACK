@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { GameState, GameEvent, ParentStrength } from './types';
 import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
-import { getFollowupForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
+import { getFollowupForWeek, getConditionalForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 
@@ -236,7 +236,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.currentEvent = followup;
       newState.phase = 'event';
     } else {
-      newState.phase = 'weekday';
+      // followup이 없으면 conditional 이벤트 chain 시도 — 한 주에 fixed + conditional 동시 발동 허용
+      // (자율 이벤트는 우선순위 마지막이라 chain에서 픽 안 됨 — 사용자 요구대로)
+      // chain cap: 한 주에 이벤트 누적 2개까지 (UX 부담 방지)
+      const eventsThisWeek = newState.events.filter(
+        prev => prev.week === newState.week && prev.year === newState.year,
+      ).length;
+      const chainConditional = eventsThisWeek >= 2 ? null : getConditionalForWeek(newState);
+      if (chainConditional) {
+        newState.currentEvent = chainConditional;
+        newState.phase = 'event';
+      } else {
+        newState.phase = 'weekday';
+      }
     }
     set({ state: newState });
   },

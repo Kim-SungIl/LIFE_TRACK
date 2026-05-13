@@ -27,4 +27,5 @@ dist-ssr
 # 로컬 전용 Y1 시뮬·QA 도구
 scripts/sim-y1-balance.ts
 scripts/sim-y1-qa-matrix.ts
+scripts/sim-phase22-firing.ts
 scripts/lib/y1-sim-resolve.ts
