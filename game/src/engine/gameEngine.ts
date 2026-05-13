@@ -247,14 +247,15 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   }
 
   // Phase 1: catch-up 보너스 — 방학에만 트리거, 낮은 스탯에 한정
-  // 학교급별 발동선 차등: 초 30 / 중 40 / 고 50 (활동 데이터의 threshold는 high 기준 base로 둠)
+  // 학교급별 발동선 차등: 초 25 / 중 35 / 고 50 (활동 데이터의 threshold는 high 기준 base로 둠)
   // 의도: Y1 시작 스탯 분포(30/25/15...)에서 모든 활동이 catchup 발동되어 "안전망"이 일반 부스트로
   // 변질되던 문제 해소. 진짜 뒤처진 학생만 보호하도록 발동선을 학교급에 맞춤.
+  // v8.x: 초 30→25 / 중 40→35 추가 너프 — sim에서 Y1 5.30회/방학(임계 3 초과)으로 발동 빈도 과다.
   if (state.isVacation && activity.catchupBonus) {
     const cb = activity.catchupBonus;
     if (cb.bonus > 0) {
       const level = getSchoolLevel(state.year);
-      const adjustedThreshold = level === 'elementary' ? 30 : level === 'middle' ? 40 : cb.threshold;
+      const adjustedThreshold = level === 'elementary' ? 25 : level === 'middle' ? 35 : cb.threshold;
       if (state.stats[cb.targetStat] < adjustedThreshold) {
         const before = state.stats[cb.targetStat];
         state.stats[cb.targetStat] = Math.max(0, Math.min(100, before + cb.bonus));
