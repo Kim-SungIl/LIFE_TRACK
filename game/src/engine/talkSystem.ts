@@ -89,6 +89,49 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     effects: { intimacy: 2, stats: { social: 1, mental: 1 }, fatigue: 1 },
     message: '도윤이와 책상 옮기기 — 사회 +1, 멘탈 +1, 친밀도 +2',
   },
+  // ===== 친밀도 50 단계 (Phase 2.2 — 두 사람만의 일상 코드) =====
+  {
+    id: 'talk_jihun_50_topping',
+    npcId: 'jihun', intimacyMin: 50,
+    description: '"네 거 떡볶이에 계란 추가했어. 너 이거 꼭 국물에 부셔 먹잖아."\n지훈이가 당연하다는 듯 일회용 수저를 챙겨 건넨다. 말하지 않아도 내 식성을 꿰고 있는 그의 모습이 익숙하면서도 새삼스럽다.',
+    effects: { intimacy: 3, stats: { social: 1 }, fatigue: -2, money: -1 },
+    message: '지훈이의 떡볶이 — 사회 +1, 피로 -2, 돈 -1만원, 친밀도 +3',
+  },
+  {
+    id: 'talk_subin_50_sentence',
+    npcId: 'subin', intimacyMin: 50,
+    description: '"이 문장, 너 생각나서 접어놨어."\n수빈이가 책갈피 대신 살짝 접힌 페이지를 보여준다. 밑줄은 하나뿐인데, 이상하게 그 문장만 오래 눈에 남는다.',
+    effects: { intimacy: 3, stats: { academic: 1, mental: 1 } },
+    message: '수빈이의 문장 — 학업 +1, 멘탈 +1, 친밀도 +3',
+  },
+  {
+    id: 'talk_minjae_50_wrong_answer_mark',
+    npcId: 'minjae', intimacyMin: 50,
+    description: '"이 표시 보이면 나중에 다시 보라는 뜻이야." 민재가 오답노트 귀퉁이에 그린 작은 세모를 보여준다.\n"남한텐 안 보여줘. 좀 유치해서."',
+    effects: { intimacy: 3, stats: { academic: 1, mental: 1 }, fatigue: 1 },
+    message: '민재의 표시법 — 학업 +1, 멘탈 +1, 피로 +1, 친밀도 +3',
+  },
+  {
+    id: 'talk_yuna_50_humming',
+    npcId: 'yuna', intimacyMin: 50,
+    description: '"방금 이 선율 어때? 너랑 떠들다 보니까 갑자기 생각났어."\n유나가 흥얼거리던 콧노래를 멈추고 연습장에 급히 악보를 그려 넣는다. 그녀의 머릿속에서 막 태어난 멜로디를 가장 먼저 듣는 관객이 된다.',
+    effects: { intimacy: 3, stats: { talent: 1, social: 1 } },
+    message: '유나의 멜로디 — 재능 +1, 사회 +1, 친밀도 +3',
+  },
+  {
+    id: 'talk_haeun_50_window',
+    npcId: 'haeun', intimacyMin: 50,
+    description: '"오늘은 대답 안 해도 되는 날."\n하은 선배가 복도 끝 창문을 조금 열어 둔다. 바람이 들어오면, 둘 사이에선 잠깐 쉬어도 된다는 신호가 된다.',
+    effects: { intimacy: 3, stats: { mental: 1, social: 1 }, fatigue: -1 },
+    message: '하은 선배의 창문 — 멘탈 +1, 사회 +1, 피로 -1, 친밀도 +3',
+  },
+  {
+    id: 'talk_junha_50_seabreeze',
+    npcId: 'junha', intimacyMin: 50,
+    description: '"이 바람은 좀 부산 같다. 진짜로."\n준하가 교실 창문 틈으로 들어오는 바람을 맡고는 작게 웃는다. 이제 너도 그 말이 그리움인지 농담인지 대충 알아듣는다.',
+    effects: { intimacy: 3, stats: { social: 1, mental: 1 }, fatigue: -1 },
+    message: '준하의 바람 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +3',
+  },
 ];
 
 // ===== 부모 미니 이벤트 풀 (Phase 2.1 시드 — 강점별 1개) =====
