@@ -1137,8 +1137,249 @@ no two trays facing each other.
 
 ---
 
+---
+
+## 🌸 Phase 2.2: 친밀도 도달형 이벤트 (Y1 한정)
+
+> 친밀도 30/40/50/60/70/90 도달 시 발동되는 1회성 이벤트.
+> 모든 이벤트 `s.year === 1` 한정. **week 없음** → 친밀도 조건 충족 후 매주 RNG 픽.
+> 컨셉이 일상~정점이라 각 이벤트당 **NPC 중심 1장**만 만들면 폴백으로 c0/c1/c2 모두 커버 가능.
+> 90 슬롯(yuna-window-promise / subin-paper-airplane)만 성별 분기 권장.
+
+### 우선순위
+
+- **P0 (정점, 성별별 2장 권장)**: yuna-window-promise (90), subin-paper-airplane (90)
+- **P1 (핵심 70 슬롯, 1장)**: yuna-perfect-smile, doyun-window-school, minjae-crumbled-note
+- **P2 (중간 50 슬롯, 1장)**: yuna-sticker-plan, subin-keychain, doyun-secret-spot
+- **P3 (가벼운 30 슬롯, 1장)**: yuna-milk-duty, subin-reading-marathon, doyun-comic-share(정비)
+
+→ subin-night-light(70)는 단톡 메시지 장면이라 일반 CG보다 **스마트폰 화면 일러스트**가 자연스러움 (P1 별도 처리).
+
+---
+
+## 🌸 [도달형 intimacy>=30] yuna-milk-duty — 우유 당번 (P3)
+
+> 결과: 유나가 "고마워, 사실 좀 무거웠어" 하고 웃는다.
+
+**`yuna-milk-duty.png`** (공통 1장, 성별/선택지 폴백)
+```
+Korean elementary classroom doorway, early morning spring light. A 12-year-old girl
+Yuna (reference) standing at the door holding one handle of a square milk crate.
+Her fingertips slightly red from the cold metal handle, bright smile but a tiny shy hint.
+Another small figure (player, silhouette/back view, gender-neutral) holding the other handle.
+Background: morning hallway through the open door, soft sunrise glow on tile floor.
+Mood: small-shared-effort, springtime classroom warmth, "we're carrying this together".
+```
+
+---
+
+## 🌸 [도달형 intimacy>=50] yuna-sticker-plan — 별 스티커 계획표 (P2)
+
+> 결과: 유나가 계획표 귀퉁이를 만지작거린다. "나 이거 다 채우면 괜히 안심돼."
+
+**`yuna-sticker-plan.png`** (공통 1장)
+```
+Elementary classroom desk during break time, mid-day light. Close shot on Yuna's
+(reference) hand-drawn weekly planner spread on the desk — handwritten columns
+(국어/수학/피아노) covered in tiny gold/silver star stickers, some still
+half-peeled. Yuna sitting beside the planner, slightly embarrassed expression,
+fingertips touching the corner of the page as if to hide it. Player (back view,
+gender-neutral) leaning over to look.
+Mood: a small private ritual gently revealed, slight vulnerability behind brightness.
+```
+
+---
+
+## 🌸 [도달형 intimacy>=70] yuna-perfect-smile — 칠판 옆 웃음 (P1)
+
+> 결과: 유나가 칠판 손잡이를 놓았다. "…고마워. 진짜." 말끝이 떨리다가 또 웃음으로 감춰진다.
+
+**`yuna-perfect-smile.png`** (공통 1장)
+```
+Korean elementary classroom before class, sunlit chalkboard area. Yuna (reference)
+standing beside the green chalkboard, one hand frozen mid-erase with chalk dust
+floating in slanted morning sunlight. Her expression: half-smile that doesn't reach
+the eyes, vulnerable question hovering in the air. Chalk dust drifting like tiny
+particles in the sunbeam. Player (silhouette/back) at the desk in foreground, blurred.
+Mood: a brave honest moment behind the role of "always smiling", quiet vulnerability,
+chalk dust shimmer.
+```
+
+---
+
+## 🌸 [도달형 intimacy>=90] yuna-window-promise — 창문 옆 약속 (P0, 성별 분기)
+
+> 결과: 유나가 창문에 그린 별을 손바닥으로 지운다. "그 말, 오래 기억할 것 같아."
+
+**[male]** `yuna-window-promise_m.png`
+```
+Elementary classroom at dusk, deep winter light. Empty classroom, soft golden-blue
+hour. Yuna (reference) standing at a frosted window, fingertip drawing a tiny star
+on the cold glass — small star shape visible in the fog of her breath. Male
+protagonist (player_m reference) standing a step behind her, hands in coat pockets,
+soft uncertain warm expression.
+Background: empty desks in shadow, winter trees outside through the misted window.
+Mood: pre-graduation winter quietness, "is it okay to just be me?" weight of friendship.
+```
+
+**[female]** `yuna-window-promise_f.png`
+```
+Same scene with female protagonist (player_f reference). Slight pose difference:
+both girls' silhouettes against the misted window, both quiet, gentle parallel energy.
+Mood: same — pre-graduation winter, vulnerable confidence between two girls.
+```
+
+---
+
+## 🌸 [도달형 intimacy>=30] subin-reading-marathon — 독서 마라톤 종이 (P3)
+
+> 결과: 수빈이가 책등 세 권을 집어 준다. "이 중에 하나만 같이 읽어도 돼."
+
+**`subin-reading-marathon.png`** (공통 1장)
+```
+Elementary school library corner, afternoon sun through tall windows. Small
+bulletin board with a handmade "이번 주 책 세 권 읽기" paper notice pinned with
+a single thumbtack. Subin (reference) standing beside the shelf, three slim
+children's books cradled in her arms, gentle smile that pretends not to need
+an answer. Player (back view, gender-neutral) in foreground reading the notice.
+Mood: quiet bookish friendship, "no pressure" softness, library hush.
+```
+
+---
+
+## 🌸 [도달형 intimacy>=50] subin-keychain — 책갈피 대신 열쇠고리 (P2)
+
+> 결과: 수빈이가 "잘 쓸 거지?" 하고 웃는다. 열쇠고리가 가벼운데 주머니 한쪽은 왠지 무겁다.
+
+**`subin-keychain.png`** (공통 1장)
+```
+Elementary school hallway after lunch. Subin (reference) standing by the wall,
+her open palm extended showing a small mart-promo keychain (cheap plastic fruit
+or character mascot, slightly worn). Soft smile, eyes a little distant as if
+giving away something small but personal. Player's hand (gender-neutral, partial)
+reaching to receive it. Hallway windows behind, midday light.
+Mood: a tiny token passed between friends, slight bittersweet undertone of
+"things mom brings home".
+```
+
+---
+
+## 🌸 [도달형 intimacy>=70] subin-night-light — 늦은 밤 불빛 얘기 (P1, 폰 화면 일러스트)
+
+> 결과: 답장이 늦게 왔다. "…그렇구나. 나만 그런 줄 알았어." 이모티콘 하나 없는 대화가 이상하게 따뜻하다.
+
+**`subin-night-light.png`** (폰 화면 또는 야경 1장)
+```
+Late-night scene from player's perspective. A small smartphone (2010s-style)
+glowing in a dim bedroom, screen showing a Korean chat (KakaoTalk-like UI)
+with messages: "너 아직 깨어 있어? …괜찮으면 잠깐만." "우리 집 거실 불, 밤새
+켜두는 날이 있어. 그냥." The phone illuminates a corner of a blanket and a
+sleeping desk lamp. Outside the bedroom window, a single warm light glowing
+from an apartment window across the street (suggesting Subin's living room).
+Mood: quiet midnight, gentle solitude shared across a screen, soft warm glow.
+```
+
+(폰 화면 일러스트가 어려우면 대안: 어두운 거실 창문 밖에서 보이는 한 칸 노란 불빛, 인물 등장 없음)
+
+---
+
+## 🌸 [도달형 intimacy>=90] subin-paper-airplane — 종이비행기 (P0, 성별 분기)
+
+> 결과: 종이비행기가 교실 앞문까지 미끄러진다. 수빈이가 "생각보다 멀리 갔다" 하고 오래 바라본다.
+
+**[male]** `subin-paper-airplane_m.png`
+```
+Empty elementary classroom on the day before graduation, late afternoon winter sun.
+Subin (reference) sitting on top of a desk, hands holding a finished paper airplane
+with two tiny handwritten names on the wings (just barely visible). Male protagonist
+(player_m reference) sitting on the adjacent desk, both looking at the plane between
+them. Empty rows of desks behind, faint golden particles of dust in the sunbeam.
+Mood: pre-graduation last quiet moment, names-on-wings dream, "anywhere we could go".
+```
+
+**[female]** `subin-paper-airplane_f.png`
+```
+Same scene with female protagonist (player_f reference). Both girls perched on
+desks, same paper airplane, same names on wings.
+Mood: parallel friendship quietness, same wistful dream.
+```
+
+---
+
+## 🌸 [도달형 intimacy>=30] doyun-comic-share — 쉬는 시간 만화책 (P3, 정비)
+
+> 결과: 도윤이가 "다 보면 다음 사람한테 넘겨줘" 하며 자연스럽게 순서를 정한다.
+> ※ 기존 W22 고정에서 도달형으로 정비. CG 컨셉은 동일.
+
+**`doyun-comic-share.png`** (공통 1장 — 성별 무관, 도윤 단독+책)
+```
+Korean elementary classroom during break time. Doyun (reference, gender depends
+on player) walking between desks holding a slightly worn comic book volume out
+with one hand toward viewer, casual confident smile, classmates in background
+already reading other volumes of the same series. Mid-day classroom light.
+Mood: friendly book-sharing ritual, "you next" easygoing camaraderie.
+```
+
+(남주 플레이 → male doyun, 여주 플레이 → female doyun. 기존 doyun 캐릭터 시트의 성별별 버전 사용)
+
+---
+
+## 🌸 [도달형 intimacy>=40] doyun-secret-spot — 운동장 스탠드 뒤편 (P2)
+
+> 결과: "저건 축구공 모양인데? 야, 넌 먹는 것만 생각하냐?" 도윤이가 웃자 그늘 안 공기가 같이 흔들린다.
+
+**`doyun-secret-spot.png`** (공통 1장)
+```
+A quiet shaded spot behind the schoolyard bleachers / under the gym's outer
+stairs. Doyun (reference) leaning back against the concrete wall, looking up
+at the sky through a gap with a lazy grin, one knee bent. Player (silhouette
+beside doyun, gender-neutral) sitting too, looking up. Afternoon golden light
+filtered through the structure overhead, dust motes floating.
+Mood: secret-hideout childhood feeling, "no one knows about this place",
+cool-shade relief from the schoolyard noise.
+```
+
+---
+
+## 🌸 [도달형 intimacy>=60] doyun-window-school — 창문 너머 말 (P1)
+
+> 결과: 도윤이가 고개를 끄덕이고 창문에 손을 댄다. 유리가 따뜻해서 김이 서린다.
+
+**`doyun-window-school.png`** (공통 1장)
+```
+Elementary classroom after school, noisy classmates blurred in background.
+Doyun (reference) leaning against a sunlit window, palm pressed to the warm
+glass — a small misted handprint forming on the inside of the window. Looking
+out toward distant rooftops where another school is faintly visible. Eyes
+unfocused, faint sadness behind a casual posture. Player (silhouette/back)
+in foreground out of focus.
+Mood: pre-separation quiet, "we won't be at the same school next year",
+warm glass and cold horizon.
+```
+
+---
+
+## 🌸 [도달형 intimacy>=70] minjae-crumbled-note — 구겨진 만점 (P1)
+
+> 결과: 민재가 한참 만에 "실수하면 안 된대" 하고 낮게 말했다. 구겨진 종이만 조금 펴진다.
+
+**`minjae-crumbled-note.png`** (공통 1장)
+```
+Empty corner of an elementary classroom, late afternoon. Minjae (reference)
+sitting at his desk, head slightly bowed, an open desk drawer in front of him
+revealing a crumpled paper note in his palm — a small "100점" (100 score)
+written in red visible on the wrinkled note. His other hand resting limp on
+the desk. Expression: trying to seem casual but losing the mask. Empty
+chairs around, evening light slanting through windows.
+Mood: hidden pressure visible for a moment, "it's nothing" said too quickly,
+gold-light loneliness.
+```
+
+---
+
 ## 📋 GPT에 던질 때 체크리스트
 
+### 기존 (완료)
 - [x] `elementary-graduation_c2_m.png` (신규)
 - [x] `elementary-sports-day_c1_f.png` (재생성)
 - [x] `yuna-meet-elementary_c2_m.png` (재생성)
@@ -1146,4 +1387,27 @@ no two trays facing each other.
 - [x] `minjae-meet-elementary_c1_m.png` (재생성)
 - [x] `minjae-meet-elementary_c1_f.png` (재생성)
 
-생성 완료 후 `game/public/images/events/elementary/`에 동일 파일명으로 덮어쓰기.
+### Phase 2.2 도달형 — P0 (정점, 우선)
+- [ ] `yuna-window-promise_m.png`
+- [ ] `yuna-window-promise_f.png`
+- [ ] `subin-paper-airplane_m.png`
+- [ ] `subin-paper-airplane_f.png`
+
+### Phase 2.2 도달형 — P1 (핵심 70)
+- [ ] `yuna-perfect-smile.png`
+- [ ] `doyun-window-school.png`
+- [ ] `minjae-crumbled-note.png`
+- [ ] `subin-night-light.png` (폰 화면 일러스트 또는 야경)
+
+### Phase 2.2 도달형 — P2 (중간 50)
+- [ ] `yuna-sticker-plan.png`
+- [ ] `subin-keychain.png`
+- [ ] `doyun-secret-spot.png`
+
+### Phase 2.2 도달형 — P3 (가벼운 30, 후순위)
+- [ ] `yuna-milk-duty.png`
+- [ ] `subin-reading-marathon.png`
+- [ ] `doyun-comic-share.png` (정비)
+
+생성 완료 후 `game/public/images/events/elementary/`에 동일 파일명으로 저장.
+파일이 없으면 GameScreen.tsx의 폴백 cascade가 자동으로 처리 (`{eventId}_c{ci}_{g}` → `{eventId}_{g}` → `{eventId}_c{ci}` → `{eventId}` → common).
