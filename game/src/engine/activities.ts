@@ -269,7 +269,7 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'sports-camp',
-    name: '스포츠 캠프', slots: 2, fatigue: 8,
+    name: '스포츠 캠프', slots: 3, fatigue: 8,
     effects: { health: 4, talent: 1, social: 2 }, moneyCost: 5,
     category: 'exercise',
     seasonGate: 'vacation-only',
@@ -281,7 +281,7 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'family-trip',
-    name: '가족 여행', slots: 2, fatigue: -5,
+    name: '가족 여행', slots: 3, fatigue: -5,
     effects: { mental: 5, social: 2, health: 1 }, moneyCost: 8,
     category: 'parent',
     seasonGate: 'vacation-only',
