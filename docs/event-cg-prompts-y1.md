@@ -24,6 +24,25 @@ no middle school uniform, no high school uniform, no adult features,
 no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/slide phones OK)
 ```
 
+### 🍃 계절 의상 주의 (중요)
+
+캐릭터 레퍼런스 시트(`*_elementary_fullbody.png`)는 **봄·여름 평상복 기준**.
+이 시트만 그대로 따라가면 겨울 장면에도 반팔/반바지가 나옴 → 계절감 깨짐.
+**겨울/늦가을 이벤트는 반드시 의상을 명시적으로 오버라이드**해야 합니다.
+
+| 계절 | 의상 가이드 |
+|---|---|
+| **봄/초가을** (W1~W30 일반): 레퍼런스 시트 그대로 (long-sleeve T or light hoodie) |
+| **늦가을** (W31~W40, 운동회 이후): 가디건·후드 + 긴바지, 살짝 두꺼운 outerwear |
+| **겨울** (W41~W48, 졸업 직전): puffy down jacket / 두꺼운 코트 / 목도리 / 장갑 / 입김, 빨개진 볼·코끝 가능 |
+
+각 winter/late-autumn scene prompt 끝에 다음 항목 추가:
+```
+Outfit override: winter clothing — puffy down jacket or thick coat over long-sleeve,
+scarf, gloves if outdoor; flushed cheeks/nose from cold; visible breath if cold enough.
+Keep face, hair, height, and overall character design identical to the reference.
+```
+
 ## 📁 파일명 규칙 + 디렉토리 구조
 
 이벤트 결과 CG는 학교급별 디렉토리에 저장합니다 (GameScreen.tsx 참조):
@@ -1220,6 +1239,11 @@ protagonist (player_m reference) standing a step behind her, hands in coat pocke
 soft uncertain warm expression.
 Background: empty desks in shadow, winter trees outside through the misted window.
 Mood: pre-graduation winter quietness, "is it okay to just be me?" weight of friendship.
+
+Outfit override (winter, 졸업 직전): Yuna and player both wearing puffy down jackets
+or thick winter coats over long-sleeve tops; scarves around their necks; flushed
+pink cheeks and nose tips from cold; visible breath fog at the window. Keep face,
+hair, height, and overall character design identical to the references.
 ```
 
 **[female]** `yuna-window-promise_f.png`
@@ -1227,6 +1251,11 @@ Mood: pre-graduation winter quietness, "is it okay to just be me?" weight of fri
 Same scene with female protagonist (player_f reference). Slight pose difference:
 both girls' silhouettes against the misted window, both quiet, gentle parallel energy.
 Mood: same — pre-graduation winter, vulnerable confidence between two girls.
+
+Outfit override (winter, 졸업 직전): both girls in puffy down jackets or thick
+winter coats over long-sleeve tops; scarves around their necks; flushed pink cheeks
+and nose tips from cold; visible breath fog at the window. Keep face/hair/build
+identical to the references.
 ```
 
 ---
@@ -1295,6 +1324,11 @@ with two tiny handwritten names on the wings (just barely visible). Male protago
 (player_m reference) sitting on the adjacent desk, both looking at the plane between
 them. Empty rows of desks behind, faint golden particles of dust in the sunbeam.
 Mood: pre-graduation last quiet moment, names-on-wings dream, "anywhere we could go".
+
+Outfit override (winter, 졸업 직전): Subin and player both in thick winter sweaters
+or puffy down jackets over long-sleeve shirts; scarves loose around necks; classroom
+heater suggested by warm tones but their cheeks slightly pink. Keep face/hair/build
+identical to the references.
 ```
 
 **[female]** `subin-paper-airplane_f.png`
@@ -1302,6 +1336,10 @@ Mood: pre-graduation last quiet moment, names-on-wings dream, "anywhere we could
 Same scene with female protagonist (player_f reference). Both girls perched on
 desks, same paper airplane, same names on wings.
 Mood: parallel friendship quietness, same wistful dream.
+
+Outfit override (winter, 졸업 직전): both girls in thick winter sweaters or puffy
+down jackets over long-sleeve shirts; scarves loose around necks; cheeks slightly
+pink. Keep face/hair/build identical to references.
 ```
 
 ---
@@ -1355,6 +1393,11 @@ unfocused, faint sadness behind a casual posture. Player (silhouette/back)
 in foreground out of focus.
 Mood: pre-separation quiet, "we won't be at the same school next year",
 warm glass and cold horizon.
+
+Outfit override (winter, 졸업 직전 겨울): Doyun in a thick winter sweater or
+zip-up fleece over long-sleeve, optional puffy jacket draped on chair; bare
+trees visible outside the misted window; warm interior tone vs. cold exterior.
+Keep face/hair/build identical to the doyun reference (gender follows player).
 ```
 
 ---
@@ -1373,6 +1416,11 @@ the desk. Expression: trying to seem casual but losing the mask. Empty
 chairs around, evening light slanting through windows.
 Mood: hidden pressure visible for a moment, "it's nothing" said too quickly,
 gold-light loneliness.
+
+Outfit override (late autumn ~ early winter, around W30~W40): Minjae wearing
+a long-sleeve school sweater or cardigan over collar shirt, long pants; no
+short sleeves. Indoor warm tone; trees outside the window with sparse remaining
+leaves or bare branches. Keep face/hair/build identical to the minjae reference.
 ```
 
 ---
