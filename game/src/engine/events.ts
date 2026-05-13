@@ -3739,7 +3739,7 @@ export const GAME_EVENTS: GameEvent[] = [
       },
       {
         text: '"나도 잘 모르지만, 같이 찾아보자"',
-        effects: { social: 2, creativity: 1, mental: 2 },
+        effects: { social: 2, talent: 1, mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
         message: '유나가 웃는다. 답이 없어서 더 솔직한 말이라는 걸 둘 다 안다.',
         timeCost: 1,
@@ -3877,7 +3877,7 @@ export const GAME_EVENTS: GameEvent[] = [
     choices: [
       {
         text: '"같이 날려보자"',
-        effects: { social: 2, creativity: 1, mental: 3 },
+        effects: { social: 2, talent: 1, mental: 3 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
         message: '종이비행기가 교실 앞문까지 미끄러진다. 수빈이가 "생각보다 멀리 갔다" 하고 오래 바라본다.',
         timeCost: 1,
