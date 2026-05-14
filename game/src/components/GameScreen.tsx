@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
 import { getExamSchedule } from '../engine/examSystem';
@@ -705,13 +705,18 @@ export function GameScreen() {
     }
   };
 
+  // A-3: 확정 버튼 더블탭 락 — 렌더 갱신 사이 빠른 두 번째 클릭으로 processWeek가 두 번 도는 것 차단
+  const confirmLockRef = useRef(false);
   const handleConfirm = () => {
+    if (confirmLockRef.current) return;
     // 주말 활동 미선택 시 확인 팝업
     if (!state.isVacation && selectedActivities.length === 0) {
       if (!window.confirm('주말 활동을 선택하지 않았어요!\n정말 이번 주말은 쉴까요?')) {
         return;
       }
     }
+    confirmLockRef.current = true;
+    setTimeout(() => { confirmLockRef.current = false; }, 500);
     if (state.isVacation) setVacationChoices(selectedActivities);
     else setWeekendChoices(selectedActivities);
     // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
