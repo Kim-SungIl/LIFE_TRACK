@@ -125,15 +125,14 @@ export function getMonthLabel(week: number): string {
   return `${months[week - 1] || 3}월`;
 }
 
-// ===== 구간 감쇠 (v6.4: 50~60 소폭 하향) =====
+// ===== 구간 감쇠 (문서 §1-3 표 기준) =====
 function getDiminishingReturn(value: number): number {
-  if (value < 30) return 1.0;
-  if (value < 50) return 0.8;
-  if (value < 60) return 0.50;   // v6.4: 0.55→0.50
-  if (value < 70) return 0.35;
-  if (value < 85) return 0.18;   // v6.3: 0.35→0.18
-  if (value < 95) return 0.08;   // v6.3: 0.18→0.08
-  return 0.03;
+  if (value < 30) return 1.2;  // 0~29 초반 가속
+  if (value < 50) return 1.0;  // 30~49 기본
+  if (value < 70) return 0.8;  // 50~69
+  if (value < 85) return 0.5;  // 70~84
+  if (value < 95) return 0.3;  // 85~94
+  return 0.1;                  // 95~100
 }
 
 // ===== 멘탈 회복 감쇠 =====
@@ -362,13 +361,13 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   // v5.2: 체력 < 20 패널티 — 허약 → 피로 증가량 1.5배 (applyActivity에서 적용)
   // (체력 패널티는 getFatigueModifier 계열에서 처리)
 
-  // v6.2: 멘탈 자연감소 강화 (멘탈이 자원이 되도록)
+  // 멘탈 자연감소 (문서 §4-5 기준: 80 진입에 비용 발생, 100 고정 방지)
   if (state.stats.mental >= 90) {
-    state.stats.mental -= 4;
-    log.statChanges.mental = (log.statChanges.mental || 0) - 4;
-  } else if (state.stats.mental >= 80) {
     state.stats.mental -= 2;
     log.statChanges.mental = (log.statChanges.mental || 0) - 2;
+  } else if (state.stats.mental >= 80) {
+    state.stats.mental -= 1;
+    log.statChanges.mental = (log.statChanges.mental || 0) - 1;
   }
 
   // v5.1: 고피로 → 멘탈 침식 (피로가 높으면 멘탈이 추가 감소)

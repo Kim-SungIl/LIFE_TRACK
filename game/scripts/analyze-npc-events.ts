@@ -6,7 +6,7 @@
 
 import { GAME_EVENTS } from '../src/engine/events';
 
-const NPC_IDS = ['jihun', 'subin', 'minjae', 'yuna', 'haeun', 'junha'];
+const NPC_IDS = ['jihun', 'subin', 'minjae', 'yuna', 'doyun', 'haeun', 'junha'];
 
 interface NpcEventInfo {
   id: string;

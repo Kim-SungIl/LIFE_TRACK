@@ -120,6 +120,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   advanceWeek: () => {
     const s = get().state;
     if (!s) return;
+    if (s.phase === 'event' || s.phase === 'year-end' || s.phase === 'ending') return;
     const newState = processWeek(s, get().npcActivityMap);
     set({ state: newState, npcActivityMap: {} });
   },
@@ -130,8 +131,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 성별 분기 적용
     const isFemale = s.gender === 'female';
     const choices = (isFemale && s.currentEvent.femaleChoices) ? s.currentEvent.femaleChoices : s.currentEvent.choices;
-    const choice = choices[choiceIndex];
-    if (!choice) return;
+    // B-2 안전망: 모든 선택지가 비용 부족으로 잠겼을 때 EventScene이 sentinel(-1)을 보내면
+    // 효과 0인 "지나친다"로 처리해 이벤트만 닫고 다음 주로 진행 가능하게 한다.
+    const choice = choices[choiceIndex] ?? {
+      text: '지나친다',
+      effects: {},
+      message: '잠시 머뭇거리다 자리를 떴다.',
+    };
 
     const newState = JSON.parse(JSON.stringify(s)) as typeof s;
 
@@ -265,6 +271,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const newState = JSON.parse(JSON.stringify(s)) as GameState;
     newState.week = 1;
     newState.year++;
+    newState.currentEvent = null;
     if (newState.year > 7) {
       newState.phase = 'ending';
     } else {

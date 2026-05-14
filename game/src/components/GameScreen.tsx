@@ -141,7 +141,7 @@ export function GameScreen() {
   const [showShop, setShowShop] = useState(false);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
-    return !localStorage.getItem('lifetrack_tutorial_done');
+    try { return !localStorage.getItem('lifetrack_tutorial_done'); } catch { return false; }
   });
   const [bgImgError, setBgImgError] = useState(false);
 
@@ -658,7 +658,7 @@ export function GameScreen() {
               {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
                   {moneyCost !== undefined && moneyCost > 0 && <span style={{ color: 'var(--yellow)' }}>{moneyCost}만원 </span>}
-                  {withNpc && <span style={{ color: 'var(--accent-soft)' }}>with {withNpc}</span>}
+                  {withNpc && <span style={{ color: 'var(--accent-soft)' }}>{withNpc} 동행</span>}
                 </div>
               )}
             </div>
@@ -1513,7 +1513,7 @@ export function GameScreen() {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
             {state.npcs.filter(n => n.met).map(n => {
               const intimacyColor = n.intimacy >= 70 ? 'var(--accent-soft)' : n.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
-              const intimacyLabel = n.intimacy >= 70 ? '친함' : n.intimacy >= 40 ? '보통' : '어색';
+              const intimacyLabel = n.intimacy >= 70 ? '절친' : n.intimacy >= 40 ? '친구' : '아는 사이';
               return (
                 <div key={n.id}
                   onClick={() => setNpcDetailFor(n.id)}
@@ -1817,7 +1817,7 @@ export function GameScreen() {
         routineSet={!!state.routineSlot2}
         onComplete={() => {
           setShowTutorial(false);
-          localStorage.setItem('lifetrack_tutorial_done', '1');
+          try { localStorage.setItem('lifetrack_tutorial_done', '1'); } catch { /* storage unavailable */ }
         }}
       />
       </div>
