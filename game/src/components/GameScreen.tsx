@@ -144,6 +144,9 @@ export function GameScreen() {
     try { return !localStorage.getItem('lifetrack_tutorial_done'); } catch { return false; }
   });
   const [bgImgError, setBgImgError] = useState(false);
+  // A-3: 확정 버튼 더블탭 락 — 렌더 갱신 사이 빠른 두 번째 클릭으로 processWeek가 두 번 도는 것 차단
+  // (early return 아래에서 useRef를 호출하면 hooks order가 깨져 "Rendered fewer hooks" 에러가 난다)
+  const confirmLockRef = useRef(false);
 
   // useMemo는 모든 early return 위에 둬야 hooks order가 안 깨진다.
   // state가 null이면 빈 문자열을 캐시 — 정상 진입 시 다시 계산됨.
@@ -705,8 +708,6 @@ export function GameScreen() {
     }
   };
 
-  // A-3: 확정 버튼 더블탭 락 — 렌더 갱신 사이 빠른 두 번째 클릭으로 processWeek가 두 번 도는 것 차단
-  const confirmLockRef = useRef(false);
   const handleConfirm = () => {
     if (confirmLockRef.current) return;
     // 주말 활동 미선택 시 확인 팝업
