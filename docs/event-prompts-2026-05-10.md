@@ -187,7 +187,7 @@ events.ts에는 이미 두 가지 발동 패턴이 있음:
 |---|---|---|---|---|
 | jihun | 1 | 4 | 0 (이미 충족) | 5 |
 | minjae | 1 | 3 | 1 (70 도달) | 5 |
-| doyun | 1 | 1 (W47) | 3 (30/50/70) ※ W22 정비 | 5 |
+| doyun | 1 | 1 (W47) | 3 (30/40/60) ※ W22 정비 | 5 |
 | yuna | 1 | 0 | 4 (30/50/70/90) | 5 |
 | subin | 1 | 0 | 4 (30/50/70/90) | 5 |
 
@@ -213,7 +213,7 @@ export interface GameEvent {
 
 export interface EventChoice {
   text: string;                    // 선택지 텍스트
-  effects: Partial<Stats>;         // 스탯 변화 (academic/social/health/mental/creativity)
+  effects: Partial<Stats>;         // 스탯 변화 (academic/social/talent/mental/health)
   fatigueEffect?: number;          // 피로도 변화
   moneyEffect?: number;            // 돈 변화
   npcEffects?: { npcId: string; intimacyChange: number }[];  // NPC 친밀도 변화
@@ -268,7 +268,7 @@ export interface MemorySlotDraft {
 |---|---|---|
 | yuna | 30 / 50 / 70 / 90 | 4 |
 | subin | 30 / 50 / 70 / 90 | 4 |
-| doyun | 30 / 50 / 70 (Part A 제안 따름) | 3 |
+| doyun | 30 / 40 / 60 (Part A 제안 따름) | 3 |
 | minjae | 70 | 1 |
 
 **조건:**

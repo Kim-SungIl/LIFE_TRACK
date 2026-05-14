@@ -14,7 +14,7 @@ const STEPS: TutorialStep[] = [
   {
     target: 'hud',
     title: '내 상태',
-    desc: '캐릭터, 날짜, 피로, 용돈이 표시돼요.\n💰을 누르면 상점에서 물건을 살 수 있어요.',
+    desc: '캐릭터, 날짜, 피로, 용돈이 표시돼요.',
     position: 'bottom',
   },
   {

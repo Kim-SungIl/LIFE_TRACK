@@ -285,6 +285,12 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     .map((choice, originalIndex) => ({ choice, originalIndex }))
     .filter(({ choice }) => !choice.condition || (state ? choice.condition(state) : true));
 
+  // B-2 안전망: 모든 보이는 선택지가 비용 부족으로 잠겼는지 체크 → "지나친다" fallback 노출
+  const allInsufficient = visibleChoices.length > 0 && visibleChoices.every(({ choice }) => {
+    const c = choice.moneyEffect && choice.moneyEffect < 0 ? -choice.moneyEffect : 0;
+    return c > 0 && state ? state.money < c : false;
+  });
+
   // description 페이지 분할 — 짧으면 1페이지, 길면 여러 페이지로 자동 분할
   const pages = useMemo(() => paginateDescription(eventDesc), [eventDesc]);
   const safePageIndex = Math.min(pageIndex, pages.length - 1);
@@ -618,6 +624,33 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
               </div>
               );
             })}
+            {allInsufficient && (
+              <div
+                onClick={() => handleChoice(-1)}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: 12,
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  animation: `es-choice-fade-up 0.3s ease ${0.1 + visibleChoices.length * 0.08}s both`,
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = 'var(--accent)';
+                  e.currentTarget.style.background = 'rgba(224,138,91,0.14)';
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                }}
+              >
+                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff' }}>지나친다</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                  지금은 감당하기 어렵다. 조용히 자리를 뜬다.
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

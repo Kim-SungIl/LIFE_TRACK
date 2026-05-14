@@ -4326,11 +4326,28 @@ function pickConditionalCandidates(state: GameState): GameEvent[] {
   );
 }
 
+// E-2: 친밀도 도달형 자동 판별 — condition 함수 소스에서 npc.intimacy >= N 패턴 검사.
+// 스토리 핵심 컷이라 일반 풀과 섞이지 않고 별도 풀로 우선 노출되도록 분리한다.
+function isIntimacyMilestone(e: GameEvent): boolean {
+  if (!e.condition) return false;
+  return /\.intimacy\s*>=/.test(e.condition.toString());
+}
+
 // fixed/followup 이벤트 resolve 후 chain용 — conditional 이벤트 1개 추가 픽
 // 같은 주(week+year)에 한 번만 호출되도록 호출자가 가드
 export function getConditionalForWeek(state: GameState): GameEvent | null {
   const candidates = pickConditionalCandidates(state);
-  if (candidates.length > 0 && seededRandom(state) < 0.5) {
+  if (candidates.length === 0) return null;
+
+  // 친밀도 도달형 후보가 있으면 일반 풀과 섞지 않고 그중에서 무조건 1개 노출.
+  // (도달형이 일반 이벤트와 1/N 경쟁해 묻히면 다음 노출까지 10주 쿨다운에 걸려 답답해진다.)
+  const milestone = candidates.filter(isIntimacyMilestone);
+  if (milestone.length > 0) {
+    return milestone[Math.floor(seededRandom(state) * milestone.length)];
+  }
+
+  // 일반 조건부 풀: 기존 동작 유지 (50% 게이트)
+  if (seededRandom(state) < 0.5) {
     return candidates[Math.floor(seededRandom(state) * candidates.length)];
   }
   return null;
