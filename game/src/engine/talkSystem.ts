@@ -94,8 +94,8 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     id: 'talk_jihun_50_topping',
     npcId: 'jihun', intimacyMin: 50,
     description: '"네 거 떡볶이에 계란 추가했어. 너 이거 꼭 국물에 부셔 먹잖아."\n지훈이가 당연하다는 듯 일회용 수저를 챙겨 건넨다. 말하지 않아도 내 식성을 꿰고 있는 그의 모습이 익숙하면서도 새삼스럽다.',
-    effects: { intimacy: 3, stats: { social: 1 }, fatigue: -2, money: -1 },
-    message: '지훈이의 떡볶이 — 사회 +1, 피로 -2, 돈 -1만원, 친밀도 +3',
+    effects: { intimacy: 3, stats: { social: 1 }, fatigue: -1, money: -1 },
+    message: '지훈이의 떡볶이 — 사회 +1, 피로 -1, 돈 -1만원, 친밀도 +3',
   },
   {
     id: 'talk_subin_50_sentence',
