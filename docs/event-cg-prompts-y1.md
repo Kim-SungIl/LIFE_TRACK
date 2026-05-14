@@ -1436,26 +1436,26 @@ leaves or bare branches. Keep face/hair/build identical to the minjae reference.
 - [x] `minjae-meet-elementary_c1_f.png` (재생성)
 
 ### Phase 2.2 도달형 — P0 (정점, 우선)
-- [ ] `yuna-window-promise_m.png`
-- [ ] `yuna-window-promise_f.png`
-- [ ] `subin-paper-airplane_m.png`
-- [ ] `subin-paper-airplane_f.png`
+- [x] `yuna-window-promise_m.png`
+- [x] `yuna-window-promise_f.png`
+- [x] `subin-paper-airplane_m.png`
+- [x] `subin-paper-airplane_f.png`
 
 ### Phase 2.2 도달형 — P1 (핵심 70)
-- [ ] `yuna-perfect-smile.png`
-- [ ] `doyun-window-school.png`
-- [ ] `minjae-crumbled-note.png`
-- [ ] `subin-night-light.png` (폰 화면 일러스트 또는 야경)
+- [x] `yuna-perfect-smile.png`
+- [x] `doyun-window-school.png`
+- [x] `minjae-crumbled-note.png`
+- [x] `subin-night-light.png` (폰 화면 일러스트 또는 야경)
 
 ### Phase 2.2 도달형 — P2 (중간 50)
-- [ ] `yuna-sticker-plan.png`
-- [ ] `subin-keychain.png`
-- [ ] `doyun-secret-spot.png`
+- [x] `yuna-sticker-plan.png`
+- [x] `subin-keychain.png`
+- [x] `doyun-secret-spot.png`
 
 ### Phase 2.2 도달형 — P3 (가벼운 30, 후순위)
-- [ ] `yuna-milk-duty.png`
-- [ ] `subin-reading-marathon.png`
-- [ ] `doyun-comic-share.png` (정비)
+- [x] `yuna-milk-duty.png`
+- [x] `subin-reading-marathon.png`
+- [x] `doyun-comic-share.png` (정비)
 
 생성 완료 후 `game/public/images/events/elementary/`에 동일 파일명으로 저장.
 파일이 없으면 GameScreen.tsx의 폴백 cascade가 자동으로 처리 (`{eventId}_c{ci}_{g}` → `{eventId}_{g}` → `{eventId}_c{ci}` → `{eventId}` → common).
