@@ -3,7 +3,7 @@
 // 누적 확률(pressure) 시스템 — 안 만나면 점점 차오르고, 한 번 발동하면 0으로 리셋.
 // 1회만 발동(A안) — 이미 발동한 이벤트는 talkEventsFired에 기록되어 풀에서 제외.
 
-import { GameState, Gender, ParentStrength, Stats } from './types';
+import { GameState, Gender, MemorySlotDraft, ParentStrength, Stats } from './types';
 import { seededRandom } from './rng';
 
 // ===== 미니 이벤트 타입 =====
@@ -22,6 +22,7 @@ export interface MiniTalkEvent {
     money?: number;
   };
   message: string;                       // 효과 한 줄 요약 (UI 노출)
+  memorySlotDraft?: MemorySlotDraft;     // 70+ 단계: 회상 슬롯 후보 (importance ≥3만 실제 생성)
 }
 
 // ===== NPC 미니 이벤트 풀 (Phase 2.1 시드) =====
@@ -131,6 +132,63 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     description: '"이 바람은 좀 부산 같다. 진짜로."\n준하가 교실 창문 틈으로 들어오는 바람을 맡고는 작게 웃는다. 이제 너도 그 말이 그리움인지 농담인지 대충 알아듣는다.',
     effects: { intimacy: 3, stats: { social: 1, mental: 1 }, fatigue: -1 },
     message: '준하의 바람 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +3',
+  },
+  // ===== 친밀도 70 단계 (Phase 2.3 — 속마음 한 조각) =====
+  {
+    id: 'talk_jihun_70_locker',
+    npcId: 'jihun', intimacyMin: 70,
+    description: '"나 운동 좋아하는 거랑 공부 싫어하는 거랑 같은 말은 아닌데."\n지훈이가 사물함 문을 괜히 두 번 닫는다. 평소처럼 웃으려다 말고, "가끔은 나도 잘하고 싶은 게 많아" 하고 작게 덧붙인다.',
+    effects: { intimacy: 4, stats: { mental: 2 }, fatigue: 1 },
+    message: '지훈이의 사물함 앞 말 — 멘탈 +2, 피로 +1, 친밀도 +4',
+  },
+  {
+    id: 'talk_subin_70_night_light',
+    npcId: 'subin', intimacyMin: 70,
+    description: '"우리 집 거실 불, 밤새 켜두는 날이 있어. 그냥."\n수빈이의 답장이 평소보다 늦게 도착한다. 이모티콘 하나 없는 말풍선인데, 이상하게 오래 꺼지지 않는 불빛 같다.',
+    effects: { intimacy: 4, stats: { mental: 2 }, fatigue: -1 },
+    message: '수빈이의 늦은 답장 — 멘탈 +2, 피로 -1, 친밀도 +4',
+    memorySlotDraft: {
+      category: 'reconciliation',
+      importance: 3,
+      toneTag: 'warm',
+      recallText: '수빈이의 늦은 답장과 꺼지지 않던 거실 불빛.',
+      npcIds: ['subin'],
+    },
+  },
+  {
+    id: 'talk_minjae_70_phone_call',
+    npcId: 'minjae', intimacyMin: 70,
+    description: '"별일 아니야. 집에서 전화 온 거야."\n민재가 휴대폰 화면을 뒤집어 놓고 물컵만 만지작거린다. "나 가끔은... 기대받는 거 되게 시끄러워." 자랑처럼 말하던 목소리가 처음으로 작아진다.',
+    effects: { intimacy: 4, stats: { mental: -1, social: 1 }, fatigue: 1 },
+    message: '민재의 뒤집힌 휴대폰 — 사회 +1, 멘탈 -1, 피로 +1, 친밀도 +4',
+    memorySlotDraft: {
+      category: 'discovery',
+      importance: 3,
+      toneTag: 'regret',
+      recallText: '민재가 휴대폰을 뒤집고 기대가 시끄럽다던 순간.',
+      npcIds: ['minjae'],
+    },
+  },
+  {
+    id: 'talk_yuna_70_chalk_dust',
+    npcId: 'yuna', intimacyMin: 70,
+    description: '"잘한다는 말, 좋긴 한데 무서울 때도 있어."\n유나가 칠판 지우개를 털다 말고 손끝의 분필가루를 본다. 곧 다시 웃지만, 그 웃음이 평소보다 조금 늦게 올라온다.',
+    effects: { intimacy: 4, stats: { talent: 1, mental: 1 }, fatigue: 1 },
+    message: '유나의 분필가루 — 재능 +1, 멘탈 +1, 피로 +1, 친밀도 +4',
+  },
+  {
+    id: 'talk_haeun_70_direction',
+    npcId: 'haeun', intimacyMin: 70,
+    description: '"후배들이 자꾸 나한테 길을 물어보는데, 사실 나도 여기가 어딘지 모르겠어."\n하은 선배가 복도 끝 창밖을 보며 짧게 읊조린다. "선배라고 다 아는 건 아닌데... 그냥 아는 척하는 게 가끔은 너무 지쳐."',
+    effects: { intimacy: 4, stats: { mental: 1, social: -1 }, fatigue: -1 },
+    message: '하은 선배의 흔들림 — 멘탈 +1, 사회 -1, 피로 -1, 친밀도 +4',
+  },
+  {
+    id: 'talk_junha_70_speech',
+    npcId: 'junha', intimacyMin: 70,
+    description: '"내 말투 고치면 애들이 덜 쳐다보긴 하거든."\n준하가 급식판 모서리를 젓가락으로 톡톡 친다. "근데 그라면 내가 좀 없어지는 것 같아서, 그게 좀 웃기제." 농담처럼 말하지만 눈은 식판에 남아 있다.',
+    effects: { intimacy: 4, stats: { social: 1, mental: 1 }, fatigue: -1 },
+    message: '준하의 말투 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +4',
   },
 ];
 
