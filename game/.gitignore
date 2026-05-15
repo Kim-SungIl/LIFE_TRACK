@@ -24,8 +24,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# 로컬 전용 Y1 시뮬·QA 도구
-scripts/sim-y1-balance.ts
-scripts/sim-y1-qa-matrix.ts
-scripts/sim-phase22-firing.ts
+# 로컬 전용 시뮬·QA 도구 (scripts/sim/)
+# 회귀 검증(scripts/verify/), Playwright(scripts/smoke/), 밸런스 테스트(scripts/test/),
+# 보고/체크(scripts/tools/)는 모두 커밋. sim/ 만 일회성 로컬 위주라 선별 gitignore.
+scripts/sim/sim-y1-balance.ts
+scripts/sim/sim-y1-qa-matrix.ts
+scripts/sim/sim-phase22-firing.ts
+scripts/sim/sim-tier70-ingame.ts
 scripts/lib/y1-sim-resolve.ts
