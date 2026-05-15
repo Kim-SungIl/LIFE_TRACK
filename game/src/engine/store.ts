@@ -3,7 +3,7 @@ import { GameState, GameEvent, ParentStrength } from './types';
 import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
-import { applyMemorySlotFromChoice } from './memorySystem';
+import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 
 // 말걸기 결과 — 사전 결정 모델
@@ -329,6 +329,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const target = newState.npcs.find(n => n.id === ev.npcId);
           if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
         }
+        applyMemorySlotFromMiniTalk(newState, ev.id, ev.memorySlotDraft);
         newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
         newState.talkEventPressure = 0;
         newState.npcEventPendingThisWeek = false;

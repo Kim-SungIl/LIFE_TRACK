@@ -128,6 +128,57 @@ export function applyMemorySlotFromChoice(
   }
 }
 
+// ===== 미니 이벤트(talkSystem) 발동 시 슬롯 생성 (store.talkToNpc 훅) =====
+// applyMemorySlotFromChoice와 동일 정책: importance ≥3, 중복 방지, 카테고리당 최대 2.
+// 차이점: 미니 이벤트는 선택지가 없어 choiceIndex 고정 0.
+export function applyMemorySlotFromMiniTalk(
+  state: GameState,
+  eventId: string,
+  draft: MemorySlotDraft | undefined,
+): void {
+  if (!draft) return;
+  if (draft.importance < MIN_IMPORTANCE_TO_SLOT) return;
+
+  // 같은 sourceEventId로 이미 슬롯 있으면 스킵
+  if (state.memorySlots.some(s => s.sourceEventId === eventId)) return;
+
+  // 개발 모드 린트
+  const lintErrors = lintRecallText(draft.recallText);
+  if (lintErrors.length > 0 && typeof console !== 'undefined') {
+    console.warn(`[memorySlot lint] ${eventId} (miniTalk):`, lintErrors);
+  }
+
+  const newSlot: MemorySlot = {
+    id: `${draft.category}_${state.year}_${state.week}_${eventId}`,
+    category: draft.category,
+    week: state.week,
+    year: state.year,
+    sourceEventId: eventId,
+    choiceIndex: 0,
+    recallText: draft.recallText,
+    npcIds: draft.npcIds,
+    importance: draft.importance,
+    phaseTag: yearToPhaseTag(state.year),
+    toneTag: draft.toneTag,
+  };
+
+  const sameCategory = state.memorySlots.filter(s => s.category === draft.category);
+  if (sameCategory.length < 2) {
+    state.memorySlots.push(newSlot);
+    return;
+  }
+
+  const weakest = [...sameCategory].sort((a, b) => {
+    if (a.importance !== b.importance) return a.importance - b.importance;
+    return a.year - b.year;
+  })[0];
+
+  if (newSlot.importance > weakest.importance) {
+    state.memorySlots = state.memorySlots.filter(s => s.id !== weakest.id);
+    state.memorySlots.push(newSlot);
+  }
+}
+
 // ===== 폴백 기본 시드 풀 (부록 D.2) =====
 const FALLBACK_SEEDS: Record<number, string> = {
   1: '초등학교의 마지막 날, 운동장은 여전히 시끄러웠다.',
