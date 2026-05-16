@@ -535,33 +535,33 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   }
 }
 
-// ===== NPC 친밀도 자연 감소 =====
-// M5 Phase 2: 0.5 → 0.2 완화. 이전엔 연간 -24 감소로 이벤트 보상을 절반 이상 상쇄.
-// M5 Phase 3-Y: 차등화 — intimacy ≥ 40 도달 NPC는 0.1로 완화.
-// 이미 친해진 관계는 시간 지나도 덜 퇴색, 스쳐간 관계는 빠르게 희미해지는 자연스러운 거리감.
-// 특히 하은(Y2~3 활동)·준하(Y6~7 활동)처럼 접점 기간 짧은 NPC가 intimacy 축적 후 남은 기간 decay를 버틸 수 있게 함.
-function applyNpcDecay(state: GameState): void {
-  for (const npc of state.npcs) {
-    const rate = npc.intimacy >= 40 ? 0.1 : 0.2;
-    npc.intimacy = Math.max(0, npc.intimacy - rate);
-  }
+// ===== NPC 친밀도 변화량 구간별 감쇠 =====
+// 원본 +10 이상(현재 +9 이상)인 큰 이벤트와 음수는 면제. 그 외 양수만 친밀도 구간별 효율 적용.
+// 0~39: 100% (낯선이 → 친구, 진입은 빠르게)
+// 40~59: 80%  (친구 → 친한 친구)
+// 60~79: 60%  (친한 친구 → 절친 직전)
+// 80~100: 25% (절친 plateau — 천장 효과)
+// floor + max(1): 효율 누수 차단하되 양수 효과는 최소 +1 보장 (0 소멸 방지).
+export function scaleIntimacyChange(delta: number, currentIntimacy: number): number {
+  if (delta <= 0) return delta;
+  if (delta >= 9) return delta;
+  let multiplier: number;
+  if (currentIntimacy < 40) multiplier = 1.0;
+  else if (currentIntimacy < 60) multiplier = 0.8;
+  else if (currentIntimacy < 80) multiplier = 0.6;
+  else multiplier = 0.25;
+  return Math.max(1, Math.floor(delta * multiplier));
 }
 
-// NPC 친밀도 증가 (친구놀기 등)
-function applyNpcBoost(state: GameState, activityIds: string[]): void {
-  const socialActivities = ['hang-out', 'club', 'study-group'];
-  const socialCount = activityIds.filter(id => socialActivities.includes(id)).length;
-  if (socialCount > 0 && state.npcs.length > 0) {
-    // 만난 NPC 전체에 소량 + 가장 친한 NPC에 추가
-    const metNpcs = state.npcs.filter(n => n.met);
-    for (const npc of metNpcs) {
-      npc.intimacy = Math.min(100, npc.intimacy + 0.5 * socialCount);
-    }
-    // 가장 친한 NPC에게 추가 보너스
-    if (metNpcs.length > 0) {
-      const sorted = [...metNpcs].sort((a, b) => b.intimacy - a.intimacy);
-      sorted[0].intimacy = Math.min(100, sorted[0].intimacy + 1 * socialCount);
-    }
+// ===== NPC 친밀도 자연 감소 =====
+// M5 Phase 4: 80 초과 -0.2 / 20~80 -0.15 / 20 미만 0 (floor 20).
+// 자연 감소는 20에서 멈추고, 그 아래는 이벤트에서 관계를 해치는 선택지를 골라야 도달.
+// 친구 활동 안 해도 친밀도 100 수렴하던 문제 차단 — 상한 근처는 더 빨리 식고, 바닥은 이벤트 책임.
+function applyNpcDecay(state: GameState): void {
+  for (const npc of state.npcs) {
+    if (npc.intimacy < 20) continue;
+    const rate = npc.intimacy > 80 ? 0.2 : 0.15;
+    npc.intimacy = Math.max(20, npc.intimacy - rate);
   }
 }
 
@@ -732,7 +732,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 6. NPC
   applyNpcDecay(newState);
-  applyNpcBoost(newState, allActivities);
+  // 친밀도 증가는 npcActivityMap(UI에서 선택한 친구)에만 적용 — 광역 보정 제거
 
   // 7. 멘탈 상태 전환
   checkMentalStateTransition(newState, log);

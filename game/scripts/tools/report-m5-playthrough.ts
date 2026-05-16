@@ -8,7 +8,7 @@
 //
 // 실행: cd game && npx tsx scripts/report-m5-playthrough.ts
 
-import { createInitialState, processWeek, calculateEnding } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek, calculateEnding, scaleIntimacyChange } from '../../src/engine/gameEngine';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import { getFollowupForWeek } from '../../src/engine/events';
 import type { GameState, ParentStrength, MemoryCategory } from '../../src/engine/types';
@@ -21,6 +21,9 @@ interface Pattern {
   routine2: string;
   routine3: string;
   choicePolicy: (state: GameState) => number; // 이벤트 선택 인덱스 정책
+  // 실제 게임의 친구 선택 UI 시뮬: 매주 어떤 친구와 친구놀기/스터디를 했는지
+  // (activityId → npcId 매핑). 빈 객체면 친구 활동 안 함.
+  npcPolicy?: (state: GameState) => Record<string, string>;
 }
 
 // "학업형"은 academic 중시 선택, "인기형"은 social, "밸런스"는 0번 무난 선택
@@ -41,6 +44,8 @@ const PATTERNS: Pattern[] = [
       });
       return best;
     },
+    // 학업형: 격주로 민재(공부 잘하는 친구)와 스터디그룹
+    npcPolicy: (s) => (s.week % 2 === 0 ? { 'study-group': 'minjae' } : {}),
   },
   {
     name: '인기형 (사교 우선)',
@@ -56,6 +61,13 @@ const PATTERNS: Pattern[] = [
         if (sc > bestScore) { bestScore = sc; best = i; }
       });
       return best;
+    },
+    // 인기형: 매주 친구놀기 + 만난 NPC 중 순환 (사교적, 골고루)
+    npcPolicy: (s) => {
+      const met = s.npcs.filter(n => n.met && n.id !== 'doyun');
+      if (met.length === 0) return {};
+      const pick = met[s.week % met.length];
+      return { 'hang-out': pick.id };
     },
   },
   {
@@ -73,12 +85,16 @@ const PATTERNS: Pattern[] = [
       });
       return best;
     },
+    // 재능형: 격주로 지훈(운동 친구)과 친구놀기
+    npcPolicy: (s) => (s.week % 2 === 0 ? { 'hang-out': 'jihun' } : {}),
   },
   {
     name: '밸런스 (첫 선택지 고정)',
     parents: ['wealth', 'emotional'], gender: 'male',
     routine2: 'self-study', routine3: 'basketball',
     choicePolicy: () => 0,
+    // 밸런스: 4주마다 지훈(가장 친한 첫 친구) 고정 — 무난한 선택
+    npcPolicy: (s) => (s.week % 4 === 0 ? { 'hang-out': 'jihun' } : {}),
   },
   {
     name: '회피형 (시간 절약 / 돈 아낌)',
@@ -97,6 +113,8 @@ const PATTERNS: Pattern[] = [
       });
       return best;
     },
+    // 회피형: 친구 안 만남 (시간/돈 아낌)
+    npcPolicy: () => ({}),
   },
 ];
 
@@ -113,7 +131,8 @@ async function runPlaythrough(p: Pattern, trajectoryOut?: Trajectory[]): Promise
 
   // 336주 (7년 × 48주) — 실제 store.resolveEvent 동작 재현
   for (let i = 0; i < 400 && s.year <= 7; i++) {
-    s = processWeek(s);
+    const npcMap = p.npcPolicy ? p.npcPolicy(s) : {};
+    s = processWeek(s, npcMap);
 
     // 10주마다 스탯 궤적 기록
     if (trajectoryOut && (s.week % 10 === 0 || (s.week === 1 && s.year > 1))) {
@@ -144,7 +163,11 @@ async function runPlaythrough(p: Pattern, trajectoryOut?: Trajectory[]): Promise
       if (choice.npcEffects) {
         for (const ne of choice.npcEffects) {
           const npc = s.npcs.find(n => n.id === ne.npcId);
-          if (npc) { npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + ne.intimacyChange)); npc.met = true; }
+          if (npc) {
+            const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
+            npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
+            npc.met = true;
+          }
         }
       }
 
