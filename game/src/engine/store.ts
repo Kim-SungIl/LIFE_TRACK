@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { GameState, GameEvent, ParentStrength } from './types';
-import { createInitialState, processWeek, getWeekInfo, migrateLoadedState } from './gameEngine';
+import { createInitialState, processWeek, getWeekInfo, migrateLoadedState, scaleIntimacyChange } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
-import { getFollowupForWeek, getConditionalForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
+import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 
@@ -158,12 +158,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       if (newState.money < 0) newState.money = 0;
     }
 
-    // NPC 친밀도 효과 + 만남 처리
+    // NPC 친밀도 효과 + 만남 처리 (구간별 감쇠 적용 — scaleIntimacyChange)
     if (choice.npcEffects) {
       for (const ne of choice.npcEffects) {
         const npc = newState.npcs.find(n => n.id === ne.npcId);
         if (npc) {
-          npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + ne.intimacyChange));
+          const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
+          npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
           npc.met = true;
         }
       }
@@ -244,13 +245,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } else {
       // followup이 없으면 conditional 이벤트 chain 시도 — 한 주에 fixed + conditional 동시 발동 허용
       // (자율 이벤트는 우선순위 마지막이라 chain에서 픽 안 됨 — 사용자 요구대로)
-      // chain cap: 한 주에 이벤트 누적 2개까지 (UX 부담 방지)
+      // chain cap: 일반은 누적 2개, 단 milestone(도달형) 잔여가 있으면 3개까지 허용.
+      // 학년 한정 도달형이 졸업 직전에 누락되는 걸 막기 위한 안전판 — 일반 conditional은 3번째 자리에 못 들어옴.
       const eventsThisWeek = newState.events.filter(
         prev => prev.week === newState.week && prev.year === newState.year,
       ).length;
-      const chainConditional = eventsThisWeek >= 2 ? null : getConditionalForWeek(newState);
-      if (chainConditional) {
-        newState.currentEvent = chainConditional;
+      let chainPick: ReturnType<typeof getConditionalForWeek> = null;
+      if (eventsThisWeek < 2) {
+        chainPick = getConditionalForWeek(newState);
+      } else if (eventsThisWeek < 3) {
+        chainPick = getMilestoneForWeek(newState);
+      }
+      if (chainPick) {
+        newState.currentEvent = chainPick;
         newState.phase = 'event';
       } else {
         newState.phase = 'weekday';

@@ -20,19 +20,19 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"좋아! 운동장에서 보자"',
         effects: { social: 2, health: 2, mental: 3 },
         fatigueEffect: 3,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
         message: '방과 후에 운동장에서 뛰었다. 지훈이랑 같이 놀면 항상 편하다. "넌 역시 최고야!"',
       },
       {
         text: '"오늘은 좀 피곤해..." — 다음에 하자고 한다',
         effects: { mental: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
         message: '지훈이가 "알겠어, 그럼 내일!" 쿨하게 넘겼다. 소꿉친구라 이런 게 편하다.',
       },
       {
         text: '"대신 같이 숙제 하자" — 공부 제안',
         effects: { academic: 2, social: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
         message: '지훈이가 "으, 숙제? ...알겠어, 같이 하면 그나마 낫겠지." 공부는 싫어하지만 친구 부탁은 못 거절한다.',
       },
     ],
@@ -43,19 +43,19 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"좋아! 체육관에서 보자"',
         effects: { social: 2, health: 2, mental: 3 },
         fatigueEffect: 3,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
         message: '방과 후에 체육관에서 배드민턴 쳤다. 지훈이랑 놀면 항상 편하다. "야 너 잘 치네!"',
       },
       {
         text: '"오늘은 좀 피곤해..." — 다음에 하자고 한다',
         effects: { mental: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
         message: '지훈이가 "알겠어, 그럼 내일!" 쿨하게 넘겼다. 소꿉친구라 이런 게 편하다.',
       },
       {
         text: '"대신 같이 숙제 하자" — 공부 제안',
         effects: { academic: 2, social: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
         message: '지훈이가 "으, 숙제? ...알겠어, 같이 하면 그나마 낫겠지." 공부는 싫어하지만 친구 부탁은 못 거절한다.',
       },
     ],
@@ -74,7 +74,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"좋아!" — 같이 먹으러 간다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '민재와 점심을 먹었다. 조용한 줄 알았는데 의외로 유쾌한 애다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -87,7 +87,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"...응, 잘 부탁해" — 같이 가며 이야기한다',
         effects: { social: 1, academic: 1, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
         message: '급식실에서 같이 먹으며 이야기 나눴다. 조용한데 막상 얘기해보면 은근 디테일에 꼼꼼한 애다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -125,7 +125,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"응, 나도 가끔 읽어" — 같이 책 얘기한다',
         effects: { academic: 1, social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
         message: '유나랑 책 얘기했다. 유나가 추천해 준 책이 있는데, 재밌어 보인다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -138,7 +138,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"피아노 배워? 멋있다!"',
         effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '유나가 "엄마가 시켜서 하는 건데..." 하면서도 입가에 웃음. 피아노 연주회 얘기도 해줬다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -151,7 +151,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"난 책 잘 안 봐" — 솔직히 말한다',
         effects: { mental: 0 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 "괜찮아, 그럴 수도 있지" 하며 다시 책으로 돌아갔다. 약간 어색했다.',
         memorySlotDraft: {
           category: 'betrayal',
@@ -177,7 +177,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"어, 이거 나도 어렵더라" — 같이 푼다',
         effects: { academic: 2, social: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
         message: '수빈이랑 같이 문제를 풀었다. 조용한데 꼼꼼한 애다. 모르는 걸 솔직히 말할 줄 안다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -190,7 +190,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"이거? 이렇게 푸는 거야" — 설명해준다',
         effects: { academic: 1, social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '수빈이가 "아, 그렇구나! 고마워" 하며 노트에 꼼꼼히 적었다. 누굴 도와주는 게 생각보다 뿌듯하다.',
         memorySlotDraft: {
           category: 'courage',
@@ -203,7 +203,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"나도 막혔어..." — 같이 고민한다',
         effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '같이 끙끙대다가 둘 다 모른다는 걸 깨닫고 웃었다. 그래도 이상하게 친해진 기분이다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -229,7 +229,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"좋아!" — 같이 뛴다',
         effects: { health: 2, social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 6 }],
         message: '도윤이가 패스를 정확하게 줬다. 한 골 넣고 같이 웃었다. "너 진짜 들어와서 다행이야."',
         memorySlotDraft: {
           category: 'discovery',
@@ -242,7 +242,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"잠깐만, 가방만 두고 갈게"',
         effects: { social: 1, health: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
         message: '교실에 가방 두고 운동장으로 뛰었다. 도윤이가 "왜 이렇게 늦어!" 하면서도 자리를 만들어줬다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -274,7 +274,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"멋있다" — 솔직하게 말한다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
         message: '도윤이가 "어, 별거 아닌데" 하면서도 어깨가 살짝 으쓱해졌다. 반에서 인기 있는 이유를 알 것 같다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -287,7 +287,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '눈이 마주치자 살짝 웃어준다',
         effects: { mental: 2 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 3 }],
         message: '도윤이가 살짝 끄덕이고 다시 청소를 한다. 별 말 안 했는데 뭔가 통한 기분이다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -322,7 +322,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"오, 고마워!" — 받아 본다',
         effects: { mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 3 }],
         message: '쉬는 시간이 짧아서 한 페이지밖에 못 봤는데, 도윤이가 "다 보면 다음 사람한테 넘겨줘" 하며 자연스럽게 다음 사람을 정해준다. 이 흐름이 도윤다웠다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -335,7 +335,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"이거 봤어. 다음 사람 줘"',
         effects: { social: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 1 }],
         message: '도윤이가 "아 그래? 빠르네" 하고 옆 사람한테 넘겼다. 별 일 아닌데 묘하게 어색했다.',
       },
     ],
@@ -358,7 +358,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"중학교 달라도 자주 보자" — 진심으로 적는다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 7 }],
         message: '도윤이가 "오 진짜? 약속이다!!!" 하며 자기 사인 옆에 작은 축구공을 그렸다. "나중에 만나면 모른 척하지 마라."',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -371,7 +371,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '장난스럽게 짧게 적는다',
         effects: { social: 1, mental: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
         message: '"야 이게 뭐야!!!" 도윤이가 웃으면서 똑같이 짧게 적었다. 둘 다 이게 마지막인 줄 모르는 척.',
         memorySlotDraft: {
           category: 'discovery',
@@ -384,7 +384,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '뭐라고 적을지 한참 고민하다 평범하게 마무리',
         effects: { mental: -1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 2 }],
         message: '"잘 지내" 정도로 적었다. 도윤이도 비슷하게 적었다. 그게 어떤 뜻인지는 그때 몰랐다.',
         memorySlotDraft: {
           category: 'failure',
@@ -401,7 +401,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '잠깐 펜을 멈췄다가, 한 줄 진심으로 적는다',
         effects: { mental: 3, social: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
         message: '"중학교 가서도, 잘 지내" 정도로 적었다. 도윤이가 페이지를 살짝 보더니 "...너답다" 하고 자기 것도 짧게 적어줬다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -414,7 +414,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '살짝 웃고 짧게 한 줄 적는다',
         effects: { social: 1, mental: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 3 }],
         message: '도윤이도 별 말 없이 짧게 적었다. 페이지를 닫는 손이 평소보다 조심스러웠다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -427,7 +427,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"...뭐 적지" 하다가 평범하게 마무리',
         effects: { mental: -1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 1 }],
         message: '결국 "잘 지내" 정도로 끝냈다. 도윤이도 비슷하게 적었다. 그게 어떤 뜻인지는 그땐 몰랐다.',
         memorySlotDraft: {
           category: 'failure',
@@ -453,7 +453,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '친구들과 사진을 찍는다',
         effects: { social: 3, mental: 4 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }, { npcId: 'minjae', intimacyChange: 2 }],
         message: '"중학교 가서도 연락하자!" 지훈이가 웃으며 말했다. 좀 울컥했다.',
       },
       {
@@ -482,7 +482,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '옆자리 아이에게 먼저 말을 건다',
         effects: { social: 3, mental: 3 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '"야, 여기 진짜 크다! 같이 다니자~" 수빈이가 팔짱을 끼며 웃었다. 나만 긴장한 건가.',
       },
       {
@@ -620,10 +620,10 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '친구들과 마지막 사진을 찍는다',
         effects: { social: 4, mental: 3 },
         npcEffects: [
-          { npcId: 'jihun', intimacyChange: 3 },
-          { npcId: 'subin', intimacyChange: 3 },
-          { npcId: 'minjae', intimacyChange: 3 },
-          { npcId: 'yuna', intimacyChange: 3 },
+          { npcId: 'jihun', intimacyChange: 2 },
+          { npcId: 'subin', intimacyChange: 2 },
+          { npcId: 'minjae', intimacyChange: 2 },
+          { npcId: 'yuna', intimacyChange: 2 },
         ],
         message: '단체 사진을 찍었다. 다들 웃고 있지만 눈이 좀 빨갛다. 이 순간을 잊지 말자.',
       },
@@ -663,7 +663,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '중학교 친구에게 연락한다',
         effects: { mental: 4, social: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
         message: '"야, 고등학교 어때?" 지훈이가 물었다. "아직 모르겠어. 근데 좀 무섭다." "...나도."',
       },
     ],
@@ -711,7 +711,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"...무섭다" — 솔직하게 느낀다',
         effects: { mental: 2 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
         message: '"나도 무서워." 지훈이가 옆에서 말했다. "근데 같이 하면 괜찮을 거야."',
       },
       {
@@ -735,7 +735,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"가자!" — 주말에 농구하러 간다',
         effects: { health: 2, social: 2, mental: 3 },
         fatigueEffect: 3,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }, { npcId: 'minjae', intimacyChange: 2 }],
         message: '지훈이, 민재와 농구를 했다. 오랜만에 신나게 뛰었다!',
         timeCost: 1,
       },
@@ -754,7 +754,7 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { social: 3, mental: 4 },
         fatigueEffect: 1,
         moneyEffect: -1,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }, { npcId: 'minjae', intimacyChange: 2 }],
         message: '지훈이, 민재와 분식집에서 떡볶이를 먹었다. 수다 떨다 보니 시간 가는 줄 몰랐다!',
         timeCost: 1,
       },
@@ -781,7 +781,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '친구들이랑 같이 먹는다',
         effects: { social: 3, mental: 3 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }, { npcId: 'jihun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }, { npcId: 'jihun', intimacyChange: 2 }],
         message: '김밥 나눠 먹으면서 웃고 떠들었다. 이런 게 학교 다니는 맛이지.',
       },
       {
@@ -838,7 +838,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '있는 힘껏 달린다',
         effects: { health: 3, social: 2, mental: 2 },
         fatigueEffect: 8,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
         message: '바람이 귀를 스친다. 결과는 2등. 지훈이가 "수고했다!" 하며 어깨를 감쌌다.',
       },
       {
@@ -896,7 +896,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '친구들이랑 같이 공부한다 — 혼자는 지루해',
         effects: { academic: 2, social: 2 },
         fatigueEffect: 5,
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
         message: '유나랑 같이 공부했다. 유나가 모르는 거 잘 알려준다.',
       },
     ],
@@ -946,7 +946,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"그래!" — 같이 간다',
         effects: { social: 1, mental: 2 },
         moneyEffect: -1,
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '수빈이랑 편의점에서 아이스크림을 먹었다. 수빈이는 벌써 편의점 누나랑도 친해져 있었다. 이 애는 어디서든 금방 친해진다.',
       },
       {
@@ -1027,9 +1027,9 @@ export const GAME_EVENTS: GameEvent[] = [
         fatigueEffect: 3,
         moneyEffect: -3,
         npcEffects: [
-          { npcId: 'jihun', intimacyChange: 8 },
-          { npcId: 'minjae', intimacyChange: 5 },
-          { npcId: 'subin', intimacyChange: 5 },
+          { npcId: 'jihun', intimacyChange: 7 },
+          { npcId: 'minjae', intimacyChange: 4 },
+          { npcId: 'subin', intimacyChange: 4 },
         ],
         message: '바다에서 하루를 보냈다. 지훈이가 수박을 사왔고, 민재는 모래성을 만들다 무너뜨렸다. 최고의 하루.',
         timeCost: 2,
@@ -1057,7 +1057,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"나도 할게!" — 수빈이랑 홍보 담당',
         effects: { social: 4, talent: 3, mental: 2 },
         fatigueEffect: 5,
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '수빈이랑 같이 포스터를 만들었다. 수빈이가 옆 반 애들까지 불러와서 반응이 폭발! "너네 반 축제 진짜 기대된다!"',
         memorySlotDraft: {
           category: 'courage',
@@ -1106,7 +1106,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"그래, 같이 하자" — 가르쳐준다',
         effects: { academic: 1, social: 2, mental: 2 },
         fatigueEffect: 3,
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 10 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 9 }],
         message: '유나에게 수학을 가르쳤다. 가르치면서 나도 더 잘 이해하게 됐다. 유나가 "오 대박, 이거였어? 천재 아냐?" 했다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -1215,8 +1215,8 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { social: 3, mental: 4 },
         moneyEffect: -2,
         npcEffects: [
-          { npcId: 'jihun', intimacyChange: 5 },
-          { npcId: 'subin', intimacyChange: 3 },
+          { npcId: 'jihun', intimacyChange: 4 },
+          { npcId: 'subin', intimacyChange: 2 },
         ],
         message: '친구들과 선물을 교환하고 케이크를 먹었다. 따뜻한 하루.',
       },
@@ -1286,7 +1286,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '친구에게 연락한다',
         effects: { mental: 5, social: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
         message: '"야, 긴장돼?" "응. 미치겠어." "...내일 끝나고 치킨 먹자." "...그래."',
       },
     ],
@@ -1305,7 +1305,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '친구들과 치킨을 먹으러 간다',
         effects: { social: 4, mental: 5 },
         moneyEffect: -2,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }, { npcId: 'minjae', intimacyChange: 2 }],
         message: '"야, 우리 해냈다!" 치킨이 이렇게 맛있었던 적이 있었나. 다 같이 웃고 울었다.',
         timeCost: 1,
       },
@@ -1336,11 +1336,11 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '친구들과 마지막 인사를 나눈다',
         effects: { social: 5, mental: 5 },
         npcEffects: [
-          { npcId: 'jihun', intimacyChange: 5 },
-          { npcId: 'subin', intimacyChange: 5 },
-          { npcId: 'minjae', intimacyChange: 5 },
-          { npcId: 'yuna', intimacyChange: 5 },
-          { npcId: 'junha', intimacyChange: 5 },
+          { npcId: 'jihun', intimacyChange: 4 },
+          { npcId: 'subin', intimacyChange: 4 },
+          { npcId: 'minjae', intimacyChange: 4 },
+          { npcId: 'yuna', intimacyChange: 4 },
+          { npcId: 'junha', intimacyChange: 4 },
         ],
         message: '서로 안아주고, 사진 찍고, 연락처를 확인했다. "꼭 다시 만나자." 눈물이 났다.',
       },
@@ -1372,10 +1372,10 @@ export const GAME_EVENTS: GameEvent[] = [
     choices: [
       // M5 Phase 3: 첫 만남 intimacyChange 5→10 / 7→12 — decay 상쇄 + 후속 이벤트 진입 문턱 보장
       { text: '"네, 가끔요..." — 어색하게 대답한다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 10 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 9 }],
         message: '"야, 존댓말 하지 마. 어색해." 선배가 웃었다. "나 하은이야. 2학년." 무섭지 않은 선배다.' },
       { text: '"선배는 여기 자주 오세요?" — 말을 건다', effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 11 }],
         message: '"시끄러운 데보다 여기가 좋아서." 선배가 자리를 가리켰다. "앉아. 나 하은이야." 편한 선배다.' },
     ],
   },
@@ -1394,10 +1394,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"이거 어떻게 정리해요?" — 노트를 보여준다', effects: { academic: 2, mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
         message: '하은 선배가 노트를 쓱 훑더니 "이거 이렇게 묶으면 외우기 쉬워" 하고 정리해줬다. 확실히 1년 먼저 산 사람이다.' },
       { text: '"괜찮아요, 혼자 해볼게요" — 사양한다', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 1 }],
         message: '"그래? 막히면 말해." 선배가 자기 자리로 돌아갔다. 도움 받을걸 그랬나.' },
     ],
   },
@@ -1415,10 +1415,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"감사합니다— 아니, 고마워!" — 받아 마신다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }],
         message: '자판기 옆에 기대서 같이 음료를 마셨다. 별 대화는 아닌데, 이 시간이 편하다. "시험 끝나면 뭐 할 거야?" "몰라요." "나도 몰라." 웃었다.' },
       { text: '"제가— 내가 살게!" — 먼저 산다', effects: { social: 1, mental: 2 }, moneyEffect: -1,
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
         message: '"어? 후배가 선배한테?" 하은이가 놀란 척했다. "고마워. 다음엔 내가 살게." 자판기 앞에서 웃으며 수다를 떨었다.' },
     ],
   },
@@ -1436,13 +1436,13 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"힘들었겠다..." — 들어준다', effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
         message: '"오빠가 방에서 안 나오더라. 몇 달째." 한참 뒤에 메시지가 왔다. "너한테 처음 말했다. 고마워."' },
       { text: '"선배 오빠도 다시 괜찮아질 거예요" — 위로한다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
         message: '"...그랬으면 좋겠다." 마지막 메시지 뒤로 한참 동안 답이 없었다. 나중에 "잘 자" 한 마디가 왔다.' },
       { text: '화제를 돌린다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }],
         message: '하은이가 "갑자기 무거운 얘기해서 미안" 하고 이모티콘을 보냈다. 웃는 이모티콘인데 왠지 씁쓸했다.' },
     ],
   },
@@ -1460,13 +1460,13 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"선배한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
         message: '하은이가 웃었다. "진짜? 엄마는 뭔 상담사냐고 했는데..." "선배가 저한테 그랬잖아요. 들어주는 것만으로도 다르다고." 하은이 눈이 살짝 젖었다.' },
       { text: '"밥은 되는 거야?" — 현실적으로 묻는다', effects: { mental: -1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }],
         message: '하은이가 잠깐 멈칫했다. "...부모님이랑 똑같은 말 하네." 웃었지만 좀 쓸쓸해 보였다.' },
       { text: '"같이 고민해보자" — 진지하게 말한다', effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 6 }],
         message: '"너한테 이런 얘기 하는 거 보면 나도 나이 먹었나 봐." 하은이가 바람을 맞으며 웃었다. "고마워. 진짜로."' },
     ],
   },
@@ -1485,10 +1485,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"졸업 축하해요... 아니, 축하해" — 인사한다', effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
         message: '"고등학교 가면 처음엔 다 낯설어. 근데 한 달만 버텨. 그럼 괜찮아져." 하은이가 웃었다. "네가 걱정돼서 그래." 도서관에서 처음 만났을 때와 같은 웃음이다. 근데 왜 이렇게 아쉽지.' },
       { text: '"선배 없으면 누가 조언해줘요" — 솔직하게 말한다', effects: { mental: 4 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 10 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 9 }],
         message: '하은이가 잠깐 말을 잃었다. "...야, 그런 말 하지 마. 울 것 같잖아." 웃으면서 눈을 비볐다. "카톡은 계속 하자. 약속이다." 멘토가 떠나는 건, 생각보다 많이 아프다.' },
     ],
   },
@@ -1506,10 +1506,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"선배! 같은 학교였어?!" — 반갑게 인사한다', effects: { social: 3, mental: 4 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 7 }],
         message: '"야, 반말해! 이제 같은 학교잖아." 하은이가 웃었다. 1년 만인데 하나도 안 변했다. 아니, 좀 더 어른스러워졌나. 멘토가 아니라 동료가 된 기분이다.' },
       { text: '"어, 안녕..." — 어색하게 인사한다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }],
         message: '"뭐야, 1년 만에 보는 건데 그렇게 시큰둥해?" 하은이가 어깨를 쳤다. "점심 같이 먹자. 급식 맛있는 거 알려줄게." 여전히 선배다.' },
     ],
   },
@@ -1530,7 +1530,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"좋아, 나 넣어!" — 같이 농구한다',
         effects: { health: 3, social: 2, mental: 2 },
         fatigueEffect: 5,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '땀 뻘뻘 흘리면서 뛰었다. 지훈이 패스가 기가 막힌다. "야, 너 생각보다 잘하는데?"',
         timeCost: 1,
       },
@@ -1547,7 +1547,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"좋아!" — 같이 배드민턴 친다',
         effects: { health: 3, social: 2, mental: 2 },
         fatigueEffect: 4,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '배드민턴 재밌다! 지훈이 스매시가 무섭다. "야, 너 은근 잘 치는데?"',
         timeCost: 1,
       },
@@ -1574,19 +1574,19 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"네가 하고 싶은 거 해야지" — 지훈이 편을 든다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
         message: '지훈이 눈이 빛났다. "...고마워. 너한테 말하길 잘했다." 진지한 지훈이는 처음 본다.',
       },
       {
         text: '"부모님 말도 한 번 생각해봐" — 현실적으로 조언한다',
         effects: { mental: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
         message: '"...그것도 맞는 말이긴 해." 지훈이가 한숨을 쉬었다. 쉬운 문제가 아니다.',
       },
       {
         text: '"둘 다 해보면 안 돼?" — 절충안을 제시한다',
         effects: { social: 1, mental: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '"둘 다...? 힘들겠지만 해볼 만할까?" 지훈이가 고민하기 시작했다.',
       },
     ],
@@ -1606,7 +1606,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"미안, 내가 신경을 못 썼다" — 솔직하게 사과한다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
         message: '"...나도 미안. 좀 예민했어." 지훈이가 머리를 긁적였다. 싸우고 나니 오히려 가까워진 느낌.',
       },
       {
@@ -1618,7 +1618,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"잠깐 시간 좀 줘" — 거리를 둔다',
         effects: { mental: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
         message: '며칠 후 지훈이가 먼저 연락했다. "야... 그때 내가 좀 심했다." 시간이 필요했던 것 같다.',
       },
     ],
@@ -1640,7 +1640,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"당연히 가야지!" — 응원하러 간다',
         effects: { social: 3, mental: 3 },
         fatigueEffect: 3,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
         message: '관중석에서 목이 터져라 응원했다. 지훈이가 3점슛을 넣고 이쪽을 봤다. 눈이 마주쳤다. 최고의 순간.',
         timeCost: 1,
       },
@@ -1656,7 +1656,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"당연히 가야지!" — 응원하러 간다',
         effects: { social: 3, mental: 3 },
         fatigueEffect: 3,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
         message: '관중석에서 목이 터져라 응원했다. 지훈이가 결정적인 스매시를 넣고 이쪽을 봤다. 눈이 마주쳤다. 최고의 순간.',
         timeCost: 1,
       },
@@ -1683,13 +1683,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"앞으로도 계속 친구하자" — 약속한다',
         effects: { social: 3, mental: 5 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
         message: '"당연하지, 바보야." 지훈이가 웃었다. 바람에 눈이 좀 매웠다. ...바람 때문이다.',
       },
       {
         text: '"너 없었으면 학교생활 재미없었을 거야" — 고마움을 전한다',
         effects: { mental: 5, social: 2 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
         message: '"야, 갑자기 왜 이래..." 지훈이가 웃으면서도 눈이 빨개졌다. "...나도."',
       },
     ],
@@ -1712,13 +1712,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"안녕!" — 밝게 인사한다',
         effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
         message: '수빈이 덕분에 새로운 친구가 생겼다. 수빈이는 이런 걸 참 잘한다. 어디서든 사람을 이어주는 애.',
       },
       {
         text: '"아... 안녕" — 어색하게 인사한다',
         effects: { social: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
         message: '수빈이가 중간에서 분위기를 풀어줬다. "걔 좀 낯가리는데 원래 재밌어~" 하면서.',
       },
     ],
@@ -1738,13 +1738,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"같이 있자" — 옆에 앉는다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '수빈이가 잠깐 놀란 표정을 지었다가 웃었다. "...고마워." 친구가 많은 애인 줄만 알았는데, 이런 순간도 있구나.',
       },
       {
         text: '"괜찮아?" — 물어본다',
         effects: { social: 1, mental: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
         message: '"응, 진짜 괜찮아~ 나 혼자 있는 거 좋아해." 밝게 웃었지만, 아까 핸드폰을 보던 표정이 자꾸 생각난다.',
       },
       {
@@ -1769,19 +1769,19 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '조용히 들어준다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '"별 거 아니라고 했지만... 사실 아빠가 보고 싶을 때 있어." 수빈이가 아이스크림을 녹이고 있었다. 처음 보는 표정이다.',
       },
       {
         text: '"말해줘서 고마워" — 짧게 위로한다',
         effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
         message: '"야, 진짜 별 거 아니라니까~ 분위기 왜 이래." 수빈이가 웃었지만 눈이 빨개져 있었다.',
       },
       {
         text: '"그래서 그랬구나..." — 수빈이의 밝음이 이해가 된다',
         effects: { mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
         message: '수빈이가 잠깐 멈칫했다. "...뭐가?" "항상 밝은 거." 한참 침묵. "...너 은근 무섭다." 수빈이가 코를 훌쩍였다.',
       },
     ],
@@ -1801,19 +1801,19 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"수빈이답다. 어울린다" — 응원한다',
         effects: { social: 3, mental: 4 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '"진짜? 엄마는 대학 가라고 하는데..." 수빈이 눈이 반짝였다. "너한테 먼저 말하고 싶었어. 나 이거 진지해."',
       },
       {
         text: '"왜 떠나고 싶어?" — 물어본다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
         message: '"...잠깐 만나고 스쳐지나가는 거, 그게 나한테는 오히려 편해." 수빈이가 조용히 말했다. 밝은 수빈이 안에 이런 마음이 있었다.',
       },
       {
         text: '"멀리 가면 외롭지 않아?" — 걱정한다',
         effects: { mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '"지금도 외로운 건 마찬가지야." 수빈이가 웃었다. "근데 비행기 위에서 외로운 게 여기서 외로운 것보단 나을 것 같아."',
       },
     ],
@@ -1833,13 +1833,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"수빈아, 꼭 되길 바라. 너 비행기에서 완전 잘 어울릴 거야"',
         effects: { social: 3, mental: 5 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '"야... 나 울 것 같잖아." 수빈이가 눈을 비볐다. "너한테 먼저 말하길 잘했어." 학원 앞 가로등 아래에서 인사를 했다. 각자의 하늘로.',
       },
       {
         text: '"좀 아쉽다... 근데 멋있다" — 솔직하게 말한다',
         effects: { mental: 3, social: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
         message: '"나도 아쉬워. 근데 이게 내 길이야." 수빈이가 단단하게 말했다. "어디 가든 연락할게. 진짜야."',
       },
     ],
@@ -1861,13 +1861,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"야, 운동도 잘하네!" — 하이파이브한다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '민재가 웃으며 손바닥을 쳤다. "축구는 좀 해." 의외의 모습이다. 공부만 하는 애가 아니었어.',
       },
       {
         text: '"패스!" — 같이 플레이한다',
         effects: { health: 2, social: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '민재에게 패스했더니 골로 연결됐다. "야, 너 패스 잘하는데?" 같은 팀이 되니 말이 트인다.',
       },
     ],
@@ -1876,13 +1876,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"야, 운동도 잘하네!" — 말을 건다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '민재가 웃으며 "배구도 좀 해" 했다. 의외의 모습이다. 공부만 하는 애가 아니었어.',
       },
       {
         text: '"고마워!" — 가볍게 인사한다',
         effects: { social: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '민재가 손을 흔들었다. 체육시간에 처음 말을 섞었다. 생각보다 편한 애다.',
       },
     ],
@@ -1902,13 +1902,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"와, 대단하다" — 솔직하게 감탄한다',
         effects: { social: 1, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
         message: '민재가 시험지를 가방에 넣으며 "뭐, 그냥 외운 거지" 했다. 대수롭지 않은 척하는데, 왠지 무리해서 웃는 것 같았다.',
       },
       {
         text: '"나도 다음엔 더 해봐야지" — 자극을 받는다',
         effects: { academic: 1, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '민재가 잠깐 나를 봤다. "...같이 공부할래? 모르는 거 있으면 알려줄게." 의외로 친절한 면이 있다.',
       },
     ],
@@ -1929,14 +1929,14 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"생일 축하해!" — 말을 건다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '민재가 살짝 놀란 표정이었다가 웃었다. "고마워." 의외로 수줍게 웃는다.',
       },
       {
         text: '편의점에서 작은 선물을 사온다 (-1만원)',
         effects: { social: 3, mental: 3 },
         moneyEffect: -1,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
         message: '"이걸 왜... 아 고마워." 민재가 진짜로 기뻐하는 것 같다. 전교 1등도 생일 선물은 좋은가 보다.',
       },
       {
@@ -1945,7 +1945,7 @@ export const GAME_EVENTS: GameEvent[] = [
         condition: (s) => s.money >= 10,
         effects: { social: 3, mental: 4 },
         moneyEffect: -5,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 11 }],
         message: '민재가 책 제목을 한참 보더니 "...너, 날 너무 잘 아는데?" 처음으로 태연한 척이 완전히 벗겨진 순간이었다.',
       },
       {
@@ -1970,7 +1970,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"야, 1등이네? 대단하다" — 말을 건다',
         effects: { social: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '"어... 뭐, 운이 좋았어." 민재가 태연한 척했지만 귀가 살짝 빨개졌다. 운이 아닌 걸 나도 안다.',
       },
       {
@@ -2015,7 +2015,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"미안, 너 덕분에 자극 받았어" — 솔직히 말한다',
         effects: { social: 3, mental: 3 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
         message: '민재가 잠깐 말을 잃더니 "...알아" 하고 고개를 돌렸다. 그래도 어깨의 힘이 조금 풀린 것 같았다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -2028,7 +2028,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"솔직히 나도 지기 싫어" — 경쟁을 인정한다',
         effects: { social: 2, academic: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
         message: '"...그래?" 민재가 피식 웃었다. 처음으로 "지는 게 싫다"고 민재가 직접 말해줬다. 경쟁이지만, 같은 편 같기도 한.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -2056,7 +2056,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"너... 공부 많이 하는구나" — 솔직하게 말한다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
         message: '민재가 굳었다. 한참 만에 "...들켰네." 웃지 않는 민재. 처음으로 가면이 벗겨진 순간이다. "이거 아무한테도 말하지 마."',
         memorySlotDraft: {
           category: 'discovery',
@@ -2069,7 +2069,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"뭐야, 너도 벼락치기?" — 가볍게 넘긴다',
         effects: { social: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '"그래, 나도 사람이지 뭐." 민재가 웃었다. 하지만 그 웃음이 평소와 좀 달랐다.',
         memorySlotDraft: {
           category: 'betrayal',
@@ -2096,20 +2096,20 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '못 들은 척 지나간다',
         effects: { mental: -1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '민재가 전화를 끊고 잠시 서 있다가 교실로 돌아갔다. 평소와 같은 표정으로. 아까 전화를 떠올리니 복잡하다.',
       },
       {
         text: '전화가 끝날 때까지 기다렸다가 다가간다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
         message: '"...들었어?" "조금." 민재가 한참 아무 말 안 하다가 작게 말했다. "우리 엄마 학원 원장이야. 아빠는 교사고. 나한테 지는 게 없어."',
       },
       {
         text: '"야, 매점 가자" — 화제를 돌린다',
         effects: { social: 1, mental: 1 },
         moneyEffect: -1,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '민재가 잠깐 멈칫하다가 따라왔다. 아이스크림을 먹으면서 아무 말 안 했지만, 돌아갈 때 "...고마워" 했다.',
       },
     ],
@@ -2129,7 +2129,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '아무 말 없이 옆에 앉는다',
         effects: { mental: 3, social: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
         message: '한참 침묵이 흘렀다. "나 이거 왜 하는 건지 모르겠어." 민재가 펜을 내려놓았다. "1등 해도 아무것도 안 달라져. 엄마는 더 하래, 아빠는 당연하대." 처음 듣는 민재의 진짜 목소리다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -2142,7 +2142,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"집에 안 가?" — 가볍게 묻는다',
         effects: { social: 1, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
         message: '"...좀 있다가." 민재가 웃었지만 평소와 달랐다. 뭔가 말하고 싶은 게 있는 것 같았는데, 타이밍이 지나갔다.',
       },
       {
@@ -2175,19 +2175,19 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"그럼 뭘 하고 싶어?" — 물어본다',
         effects: { social: 3, mental: 4 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
         message: '"...모르겠어. 그걸 모르는 게 제일 무서워." 민재가 처음으로 완전히 솔직했다. "근데 너한테는 말할 수 있어서 다행이다."',
       },
       {
         text: '"일단 가서 생각해도 되지 않아?" — 현실적으로 답한다',
         effects: { mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '"...그것도 맞는 말이긴 해." 민재가 쓸쓸하게 웃었다. "그게 안 되니까 문제지."',
       },
       {
         text: '"네가 정하는 거야. 네 인생이잖아" — 단호하게 말한다',
         effects: { social: 2, mental: 5 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
         message: '민재가 한참 동안 아무 말 안 했다. 그러다 "야... 그 말 진짜 좋다." 주먹을 내밀었다. 쿵. 라이벌이자, 유일하게 진짜를 보여줄 수 있는 사이.',
       },
     ],
@@ -2210,13 +2210,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"무슨 책 읽어?" — 말을 건다',
         effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
         message: '"요즘 빠진 소설인데, 진짜 좋아. 너도 읽어봐!" 유나가 신나서 책을 보여줬다. 의외로 소설 취향이 있다.',
       },
       {
         text: '조용히 옆에 앉아서 공부한다',
         effects: { academic: 1, mental: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
         message: '옆에서 공부했다. 유나가 가끔 소설 구절을 읽어줬다. 돌아갈 때 "다음에도 같이 오자!" 했다.',
       },
       {
@@ -2242,13 +2242,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"같이 먹어도 돼?" — 옆에 앉는다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '유나가 신나서 자리를 만들어줬다. 바람이 좋았다. "여기 비밀이야? 아무한테도 말하면 안 돼!" 하며 새끼손가락을 내밀었다.',
       },
       {
         text: '"아, 미안. 나갈게" — 자리를 비켜준다',
         effects: { mental: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '"에이, 같이 먹자!" 유나가 뒤늦게 외쳤지만 이미 문을 닫은 뒤였다.',
       },
     ],
@@ -2269,19 +2269,19 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"진짜 잘 친다... 피아노 배웠어?" — 관심을 보인다',
         effects: { talent: 2, mental: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
         message: '"초등학교 때부터 쳤어! 그만뒀는데 가끔 치고 싶을 때가 있거든." 유나가 환하게 웃었다. "너한테 들킨 건 처음이야. 비밀이다?"',
       },
       {
         text: '"한 곡만 더 쳐줘" — 부탁한다',
         effects: { mental: 4, talent: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '"그래? 그럼 이거 들어봐!" 유나가 신나서 다시 건반에 손을 올렸다. 드뷔시. 저녁 햇살이 음악실을 물들였다. 아름다운 시간이었다.',
       },
       {
         text: '"미안, 실수로 들었어" — 물러난다',
         effects: {},
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '"아 괜찮아~ 다음에 제대로 들려줄게!" 유나가 뚜껑을 닫았다. 다음이 기대된다.',
       },
     ],
@@ -2302,20 +2302,20 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"2등이면 어때, 유나는 유나야" — 있는 그대로를 인정해준다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
         message: '유나가 눈물을 참고 있었다. 항상 웃기만 하던 유나가. "...아무도 그런 말 안 해줬어." 작게 "고마워" 하고 교실로 돌아갔다.',
       },
       {
         text: '"같이 공부하자. 내가 도와줄게" — 실질적으로 돕는다',
         effects: { academic: 1, social: 1, mental: 1 },
         fatigueEffect: 3,
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '같이 도서관에서 공부했다. 유나가 조금씩 원래 모습을 되찾았다. "너랑 공부하면 덜 무서워. 진짜야."',
       },
       {
         text: '"힘들면 쉬어도 돼" — 쉬는 것도 괜찮다고 말해준다',
         effects: { mental: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
         message: '"쉬는 거... 나한테는 사치야." 유나가 평소와 다르게 힘없이 웃었다. 마음이 아팠다.',
       },
     ],
@@ -2337,13 +2337,13 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"잘했다, 유나. 네 피아노 진짜 좋았어" — 진심을 말한다',
         effects: { social: 3, mental: 5 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
         message: '유나가 웃었다. 평소의 밝은 웃음이 아니라, 뭔가를 이겨낸 사람의 웃음이었다.\n"고마워. 네가 그때 들어줘서, 내가 여기까지 온 거야."',
       },
       {
         text: '"나중에 연주회 하면 꼭 갈게" — 약속한다',
         effects: { mental: 4, social: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
         message: '"꼭 와야 해! 약속!" 유나가 새끼손가락을 내밀었다. 약속.',
       },
     ],
@@ -2357,10 +2357,10 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['minjae'],
     choices: [
       { text: '"...해볼까?" — 민재 말에 용기를 낸다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '부반장이 됐다! 민재가 "내 눈은 틀리지 않지" 하며 웃었다.' },
       { text: '"아니야, 난 괜찮아" — 정중하게 거절한다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '"알겠어, 근데 너 진짜 잘할 수 있었을 텐데." 민재 말에 기분이 나쁘진 않았다.' },
     ],
     condition: (s) => {
@@ -2414,7 +2414,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '같은 반 아이에게 말을 걸어본다',
         effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '"같이 먹어도 돼?" "어, 그래!" 용기를 냈더니 생각보다 쉬웠다.',
       },
     ],
@@ -2458,7 +2458,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '지훈이에게 전화한다 — 힘들다고 말한다',
         effects: { mental: 6, social: 2 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '"...힘들어." 지훈이가 오래 들어줬다. 뭐라고 조언해준 건 아닌데, 그게 더 좋았다.',
         memorySlotDraft: {
           category: 'growth',
@@ -2494,7 +2494,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '지훈이에게 전화한다',
         effects: { mental: 5, social: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
         message: '"야, 나 요즘 좀 힘들어..." 지훈이가 아무 말 없이 들어줬다. 좀 나아졌다.',
       },
     ],
@@ -2555,7 +2555,7 @@ export const GAME_EVENTS: GameEvent[] = [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 2, mental: 1 },
         message: '손을 들었다. 교실이 술렁인다. 이제 선거 연설을 해야 한다.' },
       { text: '가만히 있는다...', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '민재가 조용히 손을 들었다. "아무도 안 하면 제가 할게요." 민재가 반장이 됐다. 의외로 차분하게 나서는 타입이다.' },
     ],
   },
@@ -2614,7 +2614,7 @@ export const GAME_EVENTS: GameEvent[] = [
     location: 'classroom', background: 'classroom_{school}', speakers: ['minjae'],
     choices: [
       { text: '"좋아, 해볼게" — 부반장을 맡는다', effects: { social: 4, mental: 2 }, fatigueEffect: 2,
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '부반장이 됐다! 민재가 "우리 잘 해보자!" 하며 주먹을 내밀었다.' },
       { text: '"아니, 괜찮아..." — 정중히 거절한다', effects: { mental: 1 },
         message: '다음에 기회가 있을 거다. 지금은 조용히 지내자.' },
@@ -2628,7 +2628,7 @@ export const GAME_EVENTS: GameEvent[] = [
       { text: '"제가 할게요!" — 손을 든다', effects: { social: 2, mental: 1 },
         message: '손을 들었다. 올해는 조금 더 자신 있게.' },
       { text: '가만히 있는다...', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '민재가 다시 손을 들었다. "할 사람 없으면 제가 하죠." 2학기도 민재가 반장. 책임감이 대단하다.' },
     ],
   },
@@ -2723,7 +2723,7 @@ export const GAME_EVENTS: GameEvent[] = [
     speakers: ['minjae'],
     choices: [
       { text: '"괜찮아? 뭐 도와줄까?" — 다가간다', effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '"진짜? 고마워..." 민재가 노트를 덮었다. 반장 일에 성적까지, 혼자 다 하려는 애다.' },
       { text: '조용히 지나간다', effects: { mental: 1 },
         message: '민재도 버거운 거구나. 전교 1등이 쉬운 게 아니라는 걸 처음 느꼈다.' },
@@ -2744,10 +2744,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '선물을 사서 준다 (-2만원)', effects: { social: 3, mental: 2 }, moneyEffect: -2,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
         message: '지훈이가 진짜 좋아했다. "야 너 최고다!" 돈 아깝지 않다.' },
       { text: '좋아하는 농구화 끈 세트를 고른다 (-5만원)', effects: { social: 4, mental: 4 }, moneyEffect: -5,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 11 }],
         message: '지훈이가 신발끈을 보더니 입이 쩍 벌어졌다. "야, 이거... 너 진짜 나랑 오래 볼 생각인가 보네." 웃으며 말했지만 진지한 눈이었다.' },
       { text: '카톡으로 축하만 한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
@@ -2755,10 +2755,10 @@ export const GAME_EVENTS: GameEvent[] = [
     ],
     femaleChoices: [
       { text: '선물을 사서 준다 (-2만원)', effects: { social: 3, mental: 2 }, moneyEffect: -2,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 7 }],
         message: '지훈이가 진짜 좋아했다. "야 너 최고다!" 돈 아깝지 않다.' },
       { text: '배드민턴 라켓 그립테이프 세트를 고른다 (-5만원)', effects: { social: 4, mental: 4 }, moneyEffect: -5,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 11 }],
         message: '지훈이가 그립테이프를 보더니 입이 쩍 벌어졌다. "야, 이거... 너 진짜 나랑 오래 칠 생각인가 보네." 웃으며 말했지만 진지한 눈이었다.' },
       { text: '카톡으로 축하만 한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
@@ -2777,10 +2777,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '선물을 준비했다 (-2만원)', effects: { social: 2, mental: 2 }, moneyEffect: -2,
-        npcEffects: [{ npcId: 'subin', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
         message: '수빈이가 "어, 어떻게 알았어!" 하며 눈이 커졌다. "고마워..." 수줍게 웃었다.' },
       { text: '여행 에세이 책 한 권을 고른다 (-5만원)', effects: { social: 3, mental: 4 }, moneyEffect: -5,
-        npcEffects: [{ npcId: 'subin', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 11 }],
         message: '수빈이가 책을 받아 들고 한참 아무 말도 안 했다. "...너, 내가 어디 떠나고 싶어하는 거 알았어?" 목소리가 살짝 떨렸다.' },
       { text: '카톡으로 축하한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
@@ -2800,10 +2800,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '작은 선물을 준다 (-2만원)', effects: { social: 2, mental: 2 }, moneyEffect: -2,
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
         message: '유나가 조용히 받아들었다. "...고마워." 살짝 붉어진 귀가 보였다.' },
       { text: '별 장식 머리핀 세트를 준비한다 (-5만원)', effects: { social: 3, mental: 4 }, moneyEffect: -5,
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 11 }],
         message: '유나가 머리핀을 한참 보더니 말했다. "...이거, 내가 늘 쓰는 거 알았어?" 그리고 바로 꽂았다. 교실이 창문 빛에 빛났다.' },
       { text: '조용히 카톡으로 축하한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
@@ -2826,10 +2826,10 @@ export const GAME_EVENTS: GameEvent[] = [
     choices: [
       // M5 Phase 3: 첫 만남 8→12 / 3→5 — decay 상쇄 + 후속 진입 문턱 보장
       { text: '"여기 앉아, 같이 밥 먹자" — 먼저 다가간다', effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 11 }],
         message: '준하가 살짝 놀란 표정을 지었다. "...고맙다. 서울 애들은 좀 무서울 줄 알았는데." 첫날 점심을 같이 먹었다.' },
       { text: '눈인사만 한다', effects: {},
-        npcEffects: [{ npcId: 'junha', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
         message: '준하가 점심시간에 혼자 주먹밥을 꺼내 먹고 있었다. 낡은 도시락통이 눈에 들어왔다.' },
     ],
   },
@@ -2847,10 +2847,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"이거 네가 만든 거야? 맛있는데!" — 감탄한다', effects: { mental: 3, health: 1 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 6 }],
         message: '준하 얼굴이 환해졌다. "진짜? 참치마요 넣었거든. 나 이거 좀 자신 있어." 말하는 표정이 지금까지 본 것 중 제일 밝다.' },
       { text: '"고마워, 잘 먹을게" — 조용히 받는다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
         message: '맛있다. 집에서 만든 느낌이 난다. 준하가 반응을 기다리는 눈치다. "...맛있어." 준하 얼굴이 환해졌다. "그렇지?"' },
     ],
   },
@@ -2869,10 +2869,10 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"사투리 멋있는데? 원래 말투가 더 낫다" — 편하게 말한다', effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 7 }],
         message: '준하가 멈칫했다가 웃었다. "...진짜? 여기서 사투리 쓰면 좀 눈치 보여서." "신경 쓰지 마." "야 뭐라카노!" 같이 웃었다.' },
       { text: '같이 웃는다 — 자연스럽게 넘긴다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
         message: '준하가 "아 진짜..." 하면서 머리를 긁었다. 분위기는 나쁘지 않았다. 오히려 반 분위기가 좀 풀렸다.' },
       { text: '"부산 사람 맞네" — 놀린다', effects: { social: -1 },
         npcEffects: [{ npcId: 'junha', intimacyChange: -2 }],
@@ -2893,13 +2893,13 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"여기에 네 자리 있잖아" — 위로한다', effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 7 }],
         message: '한참 뒤에 답이 왔다. "...고맙다. 서울 와서 이런 말 처음 들었다." 그 뒤로 준하가 좀 더 편해진 것 같다.' },
       { text: '"새 친구 있잖아, 여기서 만든 거" — 격려한다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 5 }],
         message: '"...맞나?" 잠깐 뒤에 "맞는 것 같기도 하다" 답이 왔다. 이모티콘 하나. 그래도 좀 나아 보인다.' },
       { text: '그냥 들어준다', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
         message: '한참 동안 대화가 이어졌다. 부산 이야기, 친구 이야기, 전학 이야기. 마지막에 "들어줘서 고맙다" 했다.' },
     ],
   },
@@ -2917,13 +2917,13 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"멋있다. 너한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 4 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 10 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 9 }],
         message: '준하가 웃었다. "진짜? 아빠는 뭔 요리사냐고 했는데... 엄마는 응원해줘." "네 주먹밥 먹어본 사람은 다 응원할걸." 준하가 주먹밥을 하나 더 건넸다. "이거 새 메뉴야. 먹어봐."' },
       { text: '"대학은 어떻게 할 거야?" — 현실적으로 묻는다', effects: { mental: 1 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
         message: '"조리학과 갈 거야. 수시는 힘들고 정시로." 준하가 담담하게 말했다. 이미 다 생각해둔 눈빛이었다.' },
       { text: '"언젠가 네 가게에 갈게" — 약속한다', effects: { social: 3, mental: 3 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 9 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
         message: '준하가 잠깐 멈칫했다가 웃었다. "약속이다. 첫 번째 손님." 바람이 불었다. 옥상에서 먹는 주먹밥이 유난히 맛있었다.' },
     ],
   },
@@ -2943,13 +2943,13 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '지켜본다 — 흥미롭다', effects: { mental: 2 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 2 }, { npcId: 'minjae', intimacyChange: 1 }],
         message: '민재가 처음으로 말을 잃었다. 준하의 직설 앞에서 여유로운 척이 안 먹힌 거다. "...알겠어. 좀 한다." 민재가 웃으면서 인정했다. 교실 분위기가 묘하게 달라졌다.' },
       { text: '"준하 말이 맞긴 해" — 준하 편을 든다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: -1 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 4 }, { npcId: 'minjae', intimacyChange: -1 }],
         message: '민재가 살짝 당황했다. "야, 너까지..." 준하가 "역시 내 말이 맞지" 했다. 민재가 한숨을 쉬었다. "...좀 하는 거 맞아."' },
       { text: '"민재는 원래 그래" — 민재를 감싸준다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }, { npcId: 'junha', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }, { npcId: 'junha', intimacyChange: 1 }],
         message: '준하가 "그래? 서울 애들은 다 그런 건가" 했다. 민재가 고마운 듯 쳐다봤다. 하지만 준하의 말이 머릿속에 남았다.' },
     ],
   },
@@ -2965,13 +2965,13 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '"생일 축하해! 근데 생일인 사람이 왜 음식을 해와" — 웃으며 말한다', effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 7 }],
         message: '"부산에서는 원래 이래." 준하가 웃었다. 주먹밥이 정말 맛있었다. 반 애들이 "야, 매주 해와라" 했다.' },
       { text: '요리책 + 앞치마를 선물한다 (-5만원)', effects: { social: 3, mental: 4 }, moneyEffect: -5,
-        npcEffects: [{ npcId: 'junha', intimacyChange: 12 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 11 }],
         message: '준하가 앞치마를 받아 들고 잠깐 말을 잃었다. "...니, 내 꿈 기억하고 있었나." 그 뒤로 복도에서 마주치면 먼저 웃어줬다.' },
       { text: '카톡으로 축하한다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'junha', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'junha', intimacyChange: 2 }],
         message: '"고맙다~" 준하가 답장을 보냈다. 이모티콘이 부산 사투리였다.' },
     ],
   },
@@ -2989,13 +2989,13 @@ export const GAME_EVENTS: GameEvent[] = [
     },
     choices: [
       { text: '직접 찾아가서 축하한다 (-1만원)', effects: { social: 2, mental: 3 }, moneyEffect: -1,
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 9 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 8 }],
         message: '"야, 어떻게 알았어?" 하은이가 웃었다. "후배가 이렇게까지 해주니까 감동인데?"' },
       { text: '꽃다발과 편지를 준비한다 (-5만원)', effects: { social: 3, mental: 5 }, moneyEffect: -5,
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 13 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 12 }],
         message: '하은이가 편지를 읽고 한참 아무 말 안 했다. "...야, 나 지금 울면 이상한 거야?" 눈이 빨개진 채로 웃었다.' },
       { text: '카톡으로 축하한다', effects: { social: 1 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }],
         message: '"고마워~ 넌 진짜 챙김이 남다르다?" 하은이가 답장을 보냈다.' },
     ],
   },
@@ -3017,7 +3017,7 @@ export const GAME_EVENTS: GameEvent[] = [
         effects: { social: 4, mental: 5, talent: 1 },
         fatigueEffect: 6,
         moneyEffect: -10,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }, { npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }, { npcId: 'minjae', intimacyChange: 2 }],
         message: '경주 밤, 숙소 복도에서 지훈이랑 몰래 라면을 끓였다. 걸려서 혼났지만 그게 더 웃겼다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -3065,7 +3065,7 @@ export const GAME_EVENTS: GameEvent[] = [
         fatigueEffect: 7,
         moneyEffect: -10,
         npcEffects: [
-          { npcId: 'jihun', intimacyChange: 5 },
+          { npcId: 'jihun', intimacyChange: 4 },
         ],
         message: '제주 해변에서 밤까지 놀았다. 파도 소리를 들으면서 "우리 진짜 고3 되면 이런 거 못 해" 누군가가 말했다.',
         memorySlotDraft: {
@@ -3105,7 +3105,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '신청한다 — 남길 건 남기자 (-5만원)',
         effects: { social: 3, mental: 4 },
         moneyEffect: -5,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 2 }, { npcId: 'minjae', intimacyChange: 1 }],
         message: '사진관에서 반 전체가 웃으면서 찍었다. 롤링페이퍼에 "우리 중학교 가서도 보자"가 여러 장 적혔다.',
         memorySlotDraft: {
           category: 'discovery',
@@ -3338,7 +3338,7 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '지훈이한테 전화해서 같이 밤까지 얘기한다',
         effects: { mental: 5, social: 2 },
         fatigueEffect: 5,
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '지훈이도 별 답은 없었다. 근데 같이 "아 몰라, 졸업이나 하자" 웃었다. 그거면 됐다.',
         memorySlotDraft: {
           category: 'growth',
@@ -3369,7 +3369,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"유나야, 나한테 뭐 서운한 거 있어?" — 먼저 묻는다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '유나가 잠깐 놀라더니 한숨을 쉬었다. "...아니, 내가 괜히 예민했어." 오해를 풀었다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -3417,7 +3417,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '방과 후 편의점에서 먼저 말 건다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '수빈이가 살짝 놀라더니 "어, 오랜만이다" 했다. 예전만큼은 아니지만, 끈이 다시 이어진 느낌이다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -3430,7 +3430,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '수빈이 새 친구 그룹에 같이 낀다',
         effects: { social: 3 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
         message: '어색했지만 수빈이 친구들도 괜찮은 애들이었다. 수빈이랑은 예전 같진 않아도, 그룹으로는 어울렸다.',
       },
       {
@@ -3466,7 +3466,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"무슨 소리야, 너가 더 잘하잖아" — 진심으로 말한다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '지훈이 눈이 커졌다가, "야, 닭살이야" 하고 웃었다. 근데 그 웃음은 진짜였다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -3485,7 +3485,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"우리 토요일에 농구 하자" — 화제 돌리며 제안한다',
         effects: { social: 1, health: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
         message: '지훈이 "콜" 하고 활짝 웃었다. 컵라면 국물 마시면서 토요일 얘기만 했다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -3500,7 +3500,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"무슨 소리야, 너가 더 잘하잖아" — 진심으로 말한다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }],
         message: '지훈이 눈이 커졌다가, "야, 닭살이야" 하고 웃었다. 근데 그 웃음은 진짜였다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -3519,7 +3519,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"우리 토요일에 배드민턴 치자" — 화제 돌리며 제안한다',
         effects: { social: 1, health: 1 },
-        npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }],
         message: '지훈이 "콜" 하고 활짝 웃었다. 컵라면 국물 마시면서 토요일 얘기만 했다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -3547,7 +3547,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '답장을 길게 써서 학교 우편함에 넣는다',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }],
         message: '한 시간 동안 답장을 썼다. "선배 덕분에 중학교 버텼어요." 우편함에 넣고 돌아오는 길, 이상하게 후련했다.',
         memorySlotDraft: {
           category: 'reconciliation',
@@ -3608,14 +3608,14 @@ export const GAME_EVENTS: GameEvent[] = [
         text: '"같이 들자" — 한쪽 손잡이를 잡는다',
         effects: { social: 1, health: 1, mental: 1 },
         fatigueEffect: 2,
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
         message: '유나가 "고마워, 사실 좀 무거웠어" 하고 웃는다. 교실까지 가는 복도가 짧게 느껴진다.',
         timeCost: 1,
       },
       {
         text: '"넌 명단 불러줘, 내가 나눠줄게"',
         effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 번호를 또박또박 불러준다. 둘이 맞춰 움직이니 반 애들이 금방 우유를 받아 간다.',
         timeCost: 1,
       },
@@ -3638,14 +3638,14 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"아니, 멋진데?" — 진심으로 말한다',
         effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
         message: '유나가 계획표 귀퉁이를 만지작거린다. "나 이거 다 채우면 괜히 안심돼."',
         timeCost: 1,
       },
       {
         text: '"나도 하나 만들어볼까" — 따라 해본다',
         effects: { academic: 2, mental: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 빈 종이를 찢어 건넨다. 별 모양은 삐뚤빼뚤하지만 둘이 만든 계획표가 나란히 놓인다.',
         timeCost: 1,
       },
@@ -3675,7 +3675,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"지금도 충분히 너야" — 말한다',
         effects: { mental: 3, social: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '유나가 칠판 손잡이를 놓았다. "…고마워. 진짜." 말끝이 떨리다가 또 웃음으로 감춰진다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3689,7 +3689,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"나도 가짜 웃음 있어" — 털어놓는다',
         effects: { mental: 2, social: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
         message: '유나가 나를 봤다가 옆으로 시선을 돌린다. "그래? …우리 비슷하네." 칠판 지우개 가루가 햇살에 떠다닌다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3703,7 +3703,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '주제를 돌린다',
         effects: { social: 1 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 "응 그럼 수업 들어가자" 하고 평소로 돌아갔다. 평소가 힘들어 보이는 날이 있다는 걸 그때 처음 알았다.',
         timeCost: 1,
       },
@@ -3726,7 +3726,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"너는 이미 충분히 너야"',
         effects: { social: 2, mental: 3 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
         message: '유나가 창문에 그린 별을 손바닥으로 지운다. "그 말, 오래 기억할 것 같아."',
         timeCost: 1,
         memorySlotDraft: {
@@ -3740,7 +3740,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"나도 잘 모르지만, 같이 찾아보자"',
         effects: { social: 2, talent: 1, mental: 2 },
-        npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }],
         message: '유나가 웃는다. 답이 없어서 더 솔직한 말이라는 걸 둘 다 안다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3769,14 +3769,14 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"어떤 책?" — 관심을 보인다',
         effects: { academic: 1, social: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
         message: '수빈이가 책등 세 권을 집어 준다. "이 중에 하나만 같이 읽어도 돼." 표지가 손에 닿는 감촉이 이상하게 고맙다.',
         timeCost: 1,
       },
       {
         text: '"바쁜데… 다음에" — 미룬다',
         effects: { mental: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
         message: '수빈이가 "그래, 무리하지 마" 하고 고개를 끄덕인다. 아쉬움이 남지만 부담은 없다.',
         timeCost: 1,
       },
@@ -3798,14 +3798,14 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '고맙다고 받는다',
         effects: { mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '수빈이가 "잘 쓸 거지?" 하고 웃는다. 열쇠고리가 가벼운데 주머니 한쪽은 왠지 무겁다.',
         timeCost: 1,
       },
       {
         text: '"너는?" — 돌려줄까 망설인다',
         effects: { social: 1, mental: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
         message: '수빈이가 손을 저었다. "나는 또 생겨. 엄마가 자주 그 마트 가거든." 말끝이 잠깐 가벼워졌다가 다시 조용해진다.',
         timeCost: 1,
       },
@@ -3827,7 +3827,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"나도 가끔 불 켜고 자" — 맞장구친다',
         effects: { mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
         message: '답장이 늦게 왔다. "…그렇구나. 나만 그런 줄 알았어." 이모티콘 하나 없는 대화가 이상하게 따뜻하다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3841,7 +3841,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"힘들면 내일 학교에서 말해" — 적는다',
         effects: { social: 2, mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 6 }],
         message: '"응. 오늘은… 이걸로 됐어." 수빈이가 마지막에 작은 하트 하나만 보냈다. 잠이 오는 속도가 조금 달라진다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3855,7 +3855,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '읽씹하지 않고 이모티콘만 보낸다',
         effects: { mental: 1 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
         message: '수빈이가 "ㅋㅋ 고마워" 하고 잤다는 메시지를 남겼다. 말이 많지 않아도 된다는 걸 배운 밤이다.',
         timeCost: 1,
       },
@@ -3878,7 +3878,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"같이 날려보자"',
         effects: { social: 2, talent: 1, mental: 3 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '종이비행기가 교실 앞문까지 미끄러진다. 수빈이가 "생각보다 멀리 갔다" 하고 오래 바라본다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3892,7 +3892,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"날개에 내 이름도 써도 돼?"',
         effects: { social: 3, mental: 2 },
-        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
         message: '수빈이가 연필을 건넨다. 두 이름이 나란히 적힌 비행기가 책상 위에서 잠깐 쉬고 있다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3921,14 +3921,14 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '나란히 앉아 구름의 모양을 맞춘다',
         effects: { mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 6 }],
         message: '"저건 축구공 모양인데? 야, 넌 먹는 것만 생각하냐?" 도윤이가 웃자 그늘 안 공기가 같이 흔들린다.',
         timeCost: 1,
       },
       {
         text: '"여기 어떻게 알았어?" — 묻는다',
         effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
         message: '도윤이가 어깨를 으쓱한다. "그냥. 혼자 있고 싶을 때." 한 박자 늦게 덧붙인다. "근데 너는 같이 있어도 돼."',
         timeCost: 1,
       },
@@ -3951,7 +3951,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"들었어" — 짧게 말한다',
         effects: { mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
         message: '도윤이가 고개를 끄덕이고 창문에 손을 댄다. 유리가 따뜻해서 김이 서린다. "말 안 해도 된다"는 뜻이 통한 것 같아서, 마음이 조금 내려앉는다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3965,7 +3965,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"아직 여기잖아" — 지금만 말한다',
         effects: { social: 1, mental: 3 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 6 }],
         message: '도윤이가 작게 웃었다. "…그래, 지금." 그 한마디가 앞날을 막는 말이 아니라 붙들어 주는 말처럼 들려서, 나중에 생각해도 가슴 한쪽이 무겁다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -3979,7 +3979,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '모른 척 칠판 쪽으로 눈을 돌린다',
         effects: { academic: 1, mental: -1 },
-        npcEffects: [{ npcId: 'doyun', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'doyun', intimacyChange: 1 }],
         message: '도윤이도 더 이상 말하지 않았다. 시끄러움 속에서만 서로의 간격이 조금 벌어진 느낌이 들었다.',
         timeCost: 1,
       },
@@ -4001,7 +4001,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '말없이 옆에 선다',
         effects: { mental: 2, social: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
         message: '민재가 한참 만에 "실수하면 안 된대" 하고 낮게 말했다. 부모 얘기인지 스스로 얘기인지 구분이 안 간다. 구겨진 종이만 조금 펴진다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -4015,7 +4015,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"나한텐 그게 별거 같아" — 말한다',
         effects: { social: 2, mental: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 7 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
         message: '민재가 나를 봤다가 시선을 내린다. "…바보처럼 보이지?" 묻는데 답이 필요한 질문은 아니다. 창밖에서는 종소리만 멀게 들린다.',
         timeCost: 1,
         memorySlotDraft: {
@@ -4029,7 +4029,7 @@ export const GAME_EVENTS: GameEvent[] = [
       {
         text: '"다른 애들한테도 잘하잖아" — 분위기 돌린다',
         effects: { social: 1 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
         message: '민재가 억지로 웃었다. "그런가." 웃음이 얇아서 오히려 마음이 더 쓰인다.',
         timeCost: 1,
       },
@@ -4058,7 +4058,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     speakers: ['minjae'],
     choices: [
       { text: '고맙게 받아 먹는다', effects: { social: 1, mental: 2 },
-        npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }],
+        npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '맛있다. 민재가 의외로 이런 건 잘 챙긴다.' },
       { text: '"괜찮아, 고마워" — 거절한다', effects: {}, message: '"그래? 알겠어." 민재가 담담하게 넘겼다.' },
     ],
@@ -4168,7 +4168,7 @@ const SCHOOL_LIFE_EVENTS: GameEvent[] = [
       && !!s.npcs.find(n => n.id === 'subin')?.met,
     choices: [
       { text: '수빈이랑 같이 공부한다', effects: { academic: 2, social: 1 }, moneyEffect: -1,
-        npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
+        npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '수빈이랑 같이 하니까 집중이 잘 됐다. 모르는 거 서로 알려주면서.' },
       { text: '이어폰 끼고 혼자 집중한다', effects: { academic: 2, mental: 1 }, moneyEffect: -1, message: '나만의 시간. 효율적이었다. 수빈이가 살짝 아쉬운 표정을 지었다.' },
     ],
@@ -4351,6 +4351,15 @@ export function getConditionalForWeek(state: GameState): GameEvent | null {
     return candidates[Math.floor(seededRandom(state) * candidates.length)];
   }
   return null;
+}
+
+// 옵션 C: chain cap 초과 시 milestone-only 추가 픽용. 일반 조건부는 픽하지 않는다.
+// 학년 한정 도달형(예: Y1 한정)이 학년 마감 직전에 발동 못 하고 사라지는 문제 완화.
+export function getMilestoneForWeek(state: GameState): GameEvent | null {
+  const candidates = pickConditionalCandidates(state);
+  const milestone = candidates.filter(isIntimacyMilestone);
+  if (milestone.length === 0) return null;
+  return milestone[Math.floor(seededRandom(state) * milestone.length)];
 }
 
 // 이번 주에 발동할 이벤트 가져오기
