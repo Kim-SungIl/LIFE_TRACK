@@ -536,7 +536,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
 }
 
 // ===== NPC 친밀도 변화량 구간별 감쇠 =====
-// 원본 +10 이상(현재 +9 이상)인 큰 이벤트와 음수는 면제. 그 외 양수만 친밀도 구간별 효율 적용.
+// 원본 +10 이상(현재 +8 이상)인 큰 이벤트와 음수는 면제. 그 외 양수만 친밀도 구간별 효율 적용.
 // 0~39: 100% (낯선이 → 친구, 진입은 빠르게)
 // 40~59: 80%  (친구 → 친한 친구)
 // 60~79: 60%  (친한 친구 → 절친 직전)
@@ -544,7 +544,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
 // floor + max(1): 효율 누수 차단하되 양수 효과는 최소 +1 보장 (0 소멸 방지).
 export function scaleIntimacyChange(delta: number, currentIntimacy: number): number {
   if (delta <= 0) return delta;
-  if (delta >= 9) return delta;
+  if (delta >= 8) return delta;
   let multiplier: number;
   if (currentIntimacy < 40) multiplier = 1.0;
   else if (currentIntimacy < 60) multiplier = 0.8;
