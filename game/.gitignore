@@ -31,4 +31,6 @@ scripts/sim/sim-y1-balance.ts
 scripts/sim/sim-y1-qa-matrix.ts
 scripts/sim/sim-phase22-firing.ts
 scripts/sim/sim-tier70-ingame.ts
+scripts/sim/sim-milestone-chain.ts
+scripts/sim/_analyze-npc-effects.ts
 scripts/lib/y1-sim-resolve.ts
