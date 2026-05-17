@@ -171,6 +171,11 @@ async function runPlaythrough(p: Pattern, trajectoryOut?: Trajectory[]): Promise
         }
       }
 
+      // 문/이과 선택 (Y6 W1 이벤트 전용) — store.ts:199-201과 동일 로직
+      if (choice.trackSelect) {
+        s.track = choice.trackSelect;
+      }
+
       // memorySlot 생성 (실제 resolveEvent와 동일한 훅)
       applyMemorySlotFromChoice(s, event, ci, choice);
 
@@ -226,6 +231,7 @@ interface Report {
   dominantCareer: string;
   suneungGrade: number | null;
   suneungScore: number | null;
+  finalTrack: 'humanities' | 'science' | null;
 
   // 신규 진단 지표
   trajectory: Trajectory[];
@@ -264,6 +270,7 @@ function analyze(p: Pattern, s: GameState, trajectory: Trajectory[]): Report {
     'school-trip-middle': !!s.events.find(e => e.id === 'school-trip-middle'),
     'school-trip-high': !!s.events.find(e => e.id === 'school-trip-high'),
     'club-academy-choice-y5': !!s.events.find(e => e.id === 'club-academy-choice-y5'),
+    'high2-track-select': !!s.events.find(e => e.id === 'high2-track-select'),
     'graduation-prep-elementary': !!s.events.find(e => e.id === 'graduation-prep-elementary'),
     'graduation-prep-high': !!s.events.find(e => e.id === 'graduation-prep-high'),
   };
@@ -321,6 +328,7 @@ function analyze(p: Pattern, s: GameState, trajectory: Trajectory[]): Report {
     dominantCareer: ending.career,
     suneungGrade: ending.suneungGrade,
     suneungScore,
+    finalTrack: s.track,
 
     trajectory,
     eventFireCounts,
@@ -413,10 +421,21 @@ async function main() {
   for (const [g, n] of Object.entries(gradeDistribution)) console.log(`  ${g}: ${n}`);
   console.log(`[수능 원점수 평균/최대/최소]: avg=${avg(reports.filter(r => r.suneungScore).map(r => r.suneungScore!))} max=${Math.max(...reports.map(r => r.suneungScore ?? 0))} min=${Math.min(...reports.filter(r => r.suneungScore).map(r => r.suneungScore!))}`);
 
+  // 진로 트랙 분포
+  const trackDist: Record<string, number> = {};
+  for (const r of reports) {
+    const k = r.finalTrack ?? '(미선택)';
+    trackDist[k] = (trackDist[k] || 0) + 1;
+  }
+  console.log('\n[진로 트랙 분포]');
+  for (const [t, n] of Object.entries(trackDist)) console.log(`  ${t}: ${n}`);
+
   // 엔딩 다양성
   const endingTitles = new Set(reports.map(r => r.endingTitle));
   console.log(`\n[엔딩 다양성] 서로 다른 엔딩 ${endingTitles.size}종 / 패턴 ${reports.length}개`);
-  for (const t of endingTitles) console.log(`  - ${t}`);
+  for (const r of reports) {
+    console.log(`  ${r.pattern}: track=${r.finalTrack ?? '-'} / ${r.endingTitle}`);
+  }
 
   // milestone 패턴 개인화율
   console.log('\n[milestone 개인화율 (fallback 아닌 비율)]');
