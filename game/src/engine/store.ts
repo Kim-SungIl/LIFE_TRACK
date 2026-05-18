@@ -3,7 +3,7 @@ import { GameState, GameEvent, ParentStrength } from './types';
 import { createInitialState, processWeek, getWeekInfo, migrateLoadedState, scaleIntimacyChange } from './gameEngine';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
-import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from './memorySystem';
+import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 
 // 말걸기 결과 — 사전 결정 모델
@@ -64,6 +64,10 @@ interface GameStore {
   // 무한 클릭 가능 — 사전 결정에 따라 이벤트가 떨어지거나 잡담 한 줄
   talkToNpc: (npcId: string) => TalkActionResult;
   talkToHome: () => TalkActionResult;
+  // ===== 개발 환경 한정 디버그 메서드 (DebugPanel에서 호출) =====
+  debugAdvanceToYearEnd: () => void;
+  debugSkipToEnding: () => void;
+  debugSetStat: (key: 'academic' | 'social' | 'talent' | 'mental' | 'health', value: number) => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -388,6 +392,44 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const line = getHomeSmalltalk(newState);
     set({ state: newState });
     return { kind: 'smalltalk', line };
+  },
+
+  // ===== 디버그 메서드 (DebugPanel에서 호출, import.meta.env.DEV 가드는 컴포넌트 쪽에서) =====
+  debugAdvanceToYearEnd: () => {
+    const s = get().state;
+    if (!s || s.phase === 'ending') return;
+    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    // milestone 미생성 시 생성 (학년말 카드 fallback 막기 위함)
+    if (!newState.milestoneScenes.find(m => m.year === newState.year)) {
+      recordMilestoneForYear(newState, newState.year);
+    }
+    newState.phase = 'year-end';
+    newState.currentEvent = null;
+    set({ state: newState });
+  },
+
+  debugSkipToEnding: () => {
+    const s = get().state;
+    if (!s) return;
+    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    // Y1~현재까지 누락된 milestone 채우기 (엔딩 회상 fallback 방지)
+    for (let y = 1; y <= 7; y++) {
+      if (!newState.milestoneScenes.find(m => m.year === y)) {
+        recordMilestoneForYear(newState, y);
+      }
+    }
+    newState.year = 8;
+    newState.week = 1;
+    newState.phase = 'ending';
+    newState.currentEvent = null;
+    set({ state: newState });
+  },
+
+  debugSetStat: (key, value) => {
+    const s = get().state;
+    if (!s) return;
+    const clamped = Math.max(0, Math.min(100, value));
+    set({ state: { ...s, stats: { ...s.stats, [key]: clamped } } });
   },
 }));
 
