@@ -103,6 +103,52 @@ Same uniform as middle school, but:
 
 ---
 
+## 4.5 Cross-Stage Face Consistency (CRITICAL)
+
+**같은 캐릭터의 모든 학년 단계(elementary / middle / high) 이미지는 단일 face base를 공유해야 한다.**
+2026-05-18 발견: `player_m_high_fullbody.png`가 다른 모델로 생성되어 face proportion/art style이 `player_m_fullbody.png` 및 `player_m_high_neutral.png`와 어긋남. 이런 화풍 분리를 막기 위한 규칙.
+
+### Reference 우선순위 (재생성·신규 생성 모두)
+
+1. **얼굴 absolute reference**: 같은 캐릭터의 `*_fullbody.png` (Middle School 단계)
+   - 모든 신규 stage(elementary, high)는 이 얼굴을 1픽셀도 안 바꾼다는 가정으로 생성
+2. **의상/구도 reference**: 같은 캐릭터의 다른 stage 이미지 (의상 규칙 따라 변경)
+
+### 학년 간 허용 변경 / 금지 변경
+
+```
+✅ ALLOWED across stages:
+- Slightly more mature body proportions (jaw line, shoulders)
+- Slightly more composed / mature expression tone
+- Outfit details per Section 4 (elementary casual / middle uniform / high uniform with marks)
+- Yuna-style intentional growth (e.g., hair length change) ONLY if narratively justified
+
+❌ FORBIDDEN across stages:
+- Face shape change (round → elongated, etc.)
+- Eye shape change (large → narrow, etc.)
+- Art style drift (soft anime → semi-realistic, etc.)
+- Hair cut change (unless intentional growth narrative)
+- Skin tone shift
+```
+
+### Prompt에 반드시 명시할 문장
+
+```
+Maintain EXACT same face proportions, eye shape, jawline, art style, and skin tone
+as in [reference filename]. Only allowed differences: slight maturity in body proportions,
+slightly more composed expression, stage-appropriate outfit per Section 4.
+```
+
+### Negative prompt 예시
+
+```
+different face shape, different eye shape, photorealistic style,
+different art style, mature face on young character,
+inconsistent character design
+```
+
+---
+
 ## 5. Character Prompts
 
 ---
