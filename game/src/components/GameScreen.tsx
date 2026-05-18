@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../engine/store';
-import { getWeekLabel, getMonthLabel, calculateEnding } from '../engine/gameEngine';
+import { getWeekLabel, getMonthLabel, calculateEnding, calculateHappinessGrade, HAPPINESS_LABELS } from '../engine/gameEngine';
 import { getExamSchedule } from '../engine/examSystem';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../engine/activities';
 import { getParentMods } from '../engine/parentModifiers';
-import { StatKey, STAT_LABELS, getGrade, SubjectKey, SUBJECT_LABELS, EXAM_TYPE_LABELS, GameEvent, ParentStrength } from '../engine/types';
+import { StatKey, STAT_LABELS, getGrade, STAT_FLAVOR_LABELS, SubjectKey, SUBJECT_LABELS, EXAM_TYPE_LABELS, GameEvent, ParentStrength } from '../engine/types';
 import { MiniTalkEvent } from '../engine/talkSystem';
 import { Portrait } from './Portrait';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
@@ -174,6 +174,8 @@ export function GameScreen() {
     const yearName = yearNames[finishedYear - 1] || `${finishedYear}학년`;
     const slotsThisYear = state.memorySlots.filter(m => m.year === finishedYear);
     const milestone = state.milestoneScenes.find(m => m.year === finishedYear);
+    const happinessGrade = calculateHappinessGrade(state.stats.mental, state.stats.social);
+    const happinessInfo = HAPPINESS_LABELS[happinessGrade];
     const { advanceFromYearEnd } = useGameStore.getState();
 
     return (
@@ -207,7 +209,7 @@ export function GameScreen() {
 
           {/* 해당 학년 milestone 요약 */}
           {milestone?.summaryText && (
-            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '16px 20px', marginBottom: 28 }}>
+            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.15em', marginBottom: 10 }}>
                 돌아보면
               </div>
@@ -216,6 +218,19 @@ export function GameScreen() {
               </div>
             </div>
           )}
+
+          {/* 올해의 행복 등급 (mental + social 기반) */}
+          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '16px 20px', marginBottom: 28, borderLeft: '2px solid var(--accent-soft)' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.15em', marginBottom: 8 }}>
+              올해의 행복
+            </div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+              {happinessInfo.title}
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontStyle: 'italic' }}>
+              {happinessInfo.desc}
+            </div>
+          </div>
 
           {/* 아무 기억도 없으면 조용히 */}
           {slotsThisYear.length === 0 && !milestone?.summaryText && (
@@ -1197,6 +1212,7 @@ export function GameScreen() {
                       <div style={{ height: '100%', width: `${Math.round(state.stats[key])}%`, background: grade.color, borderRadius: 5, transition: 'width 0.3s' }} />
                     </div>
                     <span style={{ width: 16, fontSize: '0.68rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
+                    <span style={{ minWidth: 56, fontSize: '0.6rem', color: grade.color, opacity: 0.85, marginLeft: 4 }}>{STAT_FLAVOR_LABELS[key][grade.grade]}</span>
                     <span style={{ width: 22, fontSize: '0.62rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(state.stats[key])}</span>
                   </div>
                   {isExp && (
