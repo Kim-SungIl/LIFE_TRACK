@@ -535,6 +535,27 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   }
 }
 
+// ===== 행복 등급 산출 (학년말·엔딩 공통 SSOT) =====
+// mental + social 조합으로 한 해/일생의 행복도를 5단계로 분류.
+// calculateEnding(엔딩 누적)과 학년말 카드 둘 다 동일 산식 — 일관된 시그널.
+export type HappinessGrade = 'S' | 'A' | 'B' | 'C' | 'D';
+
+export function calculateHappinessGrade(mental: number, social: number): HappinessGrade {
+  if (mental >= 80 && social >= 60) return 'S';
+  if (mental >= 60 && social >= 40) return 'A';
+  if (mental >= 40) return 'B';
+  if (mental >= 25) return 'C';
+  return 'D';
+}
+
+export const HAPPINESS_LABELS: Record<HappinessGrade, { title: string; desc: string }> = {
+  S: { title: '🌟 빛났던 한 해', desc: '마음도 단단했고, 곁에 사람도 많았다.' },
+  A: { title: '😊 따뜻한 한 해', desc: '걱정도 있었지만, 같이 웃을 사람이 있었다.' },
+  B: { title: '🙂 평범한 한 해', desc: '특별한 일은 없었지만 무탈했다.' },
+  C: { title: '😐 외로운 한 해', desc: '마음이 자주 비어 있던 한 해.' },
+  D: { title: '😔 힘들었던 한 해', desc: '돌아보면 버티는 것만으로 벅찼다.' },
+};
+
 // ===== NPC 친밀도 변화량 구간별 감쇠 =====
 // 원본 +10 이상(현재 +8 이상)인 큰 이벤트와 음수는 면제. 그 외 양수만 친밀도 구간별 효율 적용.
 // 0~39: 100% (낯선이 → 친구, 진입은 빠르게)
@@ -978,12 +999,7 @@ export function calculateEnding(state: GameState) {
   if (hasCollapse && achievement === 'S') achievement = 'B';
 
   // 행복 지수
-  let happiness = 'C';
-  if (mental >= 80 && social >= 60) happiness = 'S';
-  else if (mental >= 60 && social >= 40) happiness = 'A';
-  else if (mental >= 40) happiness = 'B';
-  else if (mental >= 25) happiness = 'C';
-  else happiness = 'D';
+  const happiness = calculateHappinessGrade(mental, social);
 
   // 진로 판정
   const career = determineCareer(state);

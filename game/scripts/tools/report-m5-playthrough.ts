@@ -8,7 +8,7 @@
 //
 // 실행: cd game && npx tsx scripts/report-m5-playthrough.ts
 
-import { createInitialState, processWeek, calculateEnding, scaleIntimacyChange } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek, calculateEnding, scaleIntimacyChange, calculateHappinessGrade, HAPPINESS_LABELS } from '../../src/engine/gameEngine';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import { getFollowupForWeek } from '../../src/engine/events';
 import type { GameState, ParentStrength, MemoryCategory } from '../../src/engine/types';
@@ -420,6 +420,14 @@ async function main() {
   }
   for (const [g, n] of Object.entries(gradeDistribution)) console.log(`  ${g}: ${n}`);
   console.log(`[수능 원점수 평균/최대/최소]: avg=${avg(reports.filter(r => r.suneungScore).map(r => r.suneungScore!))} max=${Math.max(...reports.map(r => r.suneungScore ?? 0))} min=${Math.min(...reports.filter(r => r.suneungScore).map(r => r.suneungScore!))}`);
+
+  // 행복 등급 분포 (mental + social 기반)
+  console.log('\n[행복 등급 분포 — 학년말 카드 시뮬]');
+  for (const r of reports) {
+    const grade = calculateHappinessGrade(r.finalStats.mental, r.finalStats.social);
+    const info = HAPPINESS_LABELS[grade];
+    console.log(`  ${r.pattern.padEnd(20)} mental=${r.finalStats.mental} social=${r.finalStats.social} → ${grade} ${info.title}`);
+  }
 
   // 진로 트랙 분포
   const trackDist: Record<string, number> = {};

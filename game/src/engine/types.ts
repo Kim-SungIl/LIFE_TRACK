@@ -282,3 +282,13 @@ export const STAT_GRADES = [
 export function getGrade(value: number) {
   return STAT_GRADES.find(g => value >= g.min) || STAT_GRADES[STAT_GRADES.length - 1];
 }
+
+// 스탯별 등급 라벨 — STAT_GRADES의 일반 라벨(최상/우수/보통/부족/매우 부족) 대신
+// 각 스탯의 의미를 즉시 알 수 있는 짧은 표현. HUD 펼쳐진 상태에서 표시.
+export const STAT_FLAVOR_LABELS: Record<StatKey, Record<string, string>> = {
+  academic: { A: '상위권',     B: '준상위권', C: '평범',     D: '하위권',     E: '바닥권' },
+  social:   { A: '인기 많음',  B: '친구 많음', C: '평범',     D: '소수와 친함', E: '외톨이' },
+  talent:   { A: '재능 있음',  B: '특기 있음', C: '평범',     D: '특기 없음',  E: '무관심' },
+  mental:   { A: '단단함',     B: '안정적',   C: '평범',     D: '불안',       E: '무너지기 직전' },
+  health:   { A: '튼튼함',     B: '건강',     C: '보통',     D: '허약',       E: '병약' },
+};
