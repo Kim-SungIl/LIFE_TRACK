@@ -309,37 +309,39 @@ Same girl at age 11-12. Rounder face, bob cut slightly shorter.
 
 ---
 
-#### minjae (박민재) — Class energizer, outgoing, confident
+#### minjae (박민재) — Quiet top student, hidden effort, composed
 
-**Actual Image:** very short buzz cut dark brown hair, bright expressive eyes, wide smile showing teeth, slightly tanned skin. Navy blazer open/casual, white shirt, dark pants, trendy white sneakers. Arms crossed confidently.
+> **Narrative alignment note:** game's `events.ts` portrays minjae as a quiet top-scorer who deflects attention ("이번엔 좀 쉬웠어"), keeps his desk neat ("필통을 가지런히 꺼내놓고"), and hides effort behind composure ("구겨진 만점 쪽지" — minjae-crumbled-note). He's also good at sports (`minjae-sports`) but never self-promotes. Visual must read as *composed, modest, focused* — not class energizer.
+
+**Actual Image:** neat short hair (clean side-part or short undercut, NOT buzz cut), thoughtful brown eyes, composed half-smile (NOT wide grin showing teeth), average pale skin tone. Navy blazer worn properly buttoned, white shirt, dark pants, simple plain sneakers. Holding a notebook or hands relaxed at sides (NOT arms crossed).
 
 **Full Body (middle school)**
 ```
-Anime-style outgoing Korean middle school boy, confident and charismatic.
-- Hair: very short buzz cut, dark brown
-- Eyes: bright expressive brown eyes, wide and lively
-- Skin: slightly tanned compared to other characters
-- Build: average height, energetic body language
-- Outfit: navy blazer worn casually (open, slightly loose), white shirt, dark pants, trendy white sneakers
-- Pose: arms crossed confidently, standing tall, radiating energy
-- Expression: big confident grin showing teeth, charismatic
+Anime-style quiet top-student Korean middle school boy, composed and modest.
+- Hair: neat short side-part or clean short cut, dark brown (NO buzz cut, NO messiness)
+- Eyes: thoughtful brown eyes, focused expression with slight tension
+- Skin: average pale skin tone (NOT tanned)
+- Build: average height, composed body language (no big gestures)
+- Outfit: navy blazer worn properly (buttoned), white shirt, dark pants, simple plain sneakers
+- Pose: standing composed, one hand holding a notebook, the other relaxed at side
+- Expression: composed half-smile or thoughtful neutral (NO wide grin, NO teeth showing)
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
 ```
 
 **Portrait**
 ```
-Same character, chest-up. Wide charismatic smile, arms crossed.
+Same character, chest-up. Composed half-smile or thoughtful expression, notebook visible in one hand or at chest level.
 Background: soft pastel pink-blue gradient.
 ```
 
 **Full Body (elementary)**
 ```
-Same boy at age 11-12. Same buzz cut, rounder face.
-- Hair: same short buzz cut
-- Outfit: bright red hoodie, shorts, sporty sneakers
-- Pose: arms crossed or hands on hips, confident stance
-- Expression: big cheerful grin, class clown energy
+Same boy at age 11-12. Rounder face but same composed energy.
+- Hair: same neat short cut
+- Outfit: simple plain hoodie (navy or grey, NOT bright red), dark pants, plain sneakers (no flashy colors)
+- Pose: standing composed, one hand holding a notebook
+- Expression: faint smile, focused (NO big cheerful grin, NO class clown energy)
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
 ```
@@ -580,7 +582,7 @@ Background: soft pastel pink-blue gradient.
 | player_f | 주인공 (여) | F | All | Dark brown straight hair, plain | Baseline female |
 | jihun | 한지훈 | M | All | Messy black hair, athletic, basketball keychain | player_m: messier, taller, more muscular |
 | subin | 오수빈 | F | All | Black bob, star earrings, notebook | player_f: shorter hair, earrings |
-| minjae | 박민재 | M | All | Buzz cut, tanned skin, wide grin | jihun: shorter hair, darker skin, stockier |
+| minjae | 박민재 | M | All | Neat short cut, composed, notebook in hand | jihun: neat composed vs messy playful, modest vs energetic |
 | yuna | 유나 | F | All | Caramel wavy hair, star clip, bright smile, no glasses | subin: lighter hair, more energetic, star clip vs star earrings |
 | doyun | 박도윤 | M | Elem~Mid | Neat black side-part, soccer keychain, leader aura | jihun: neat vs messy, composed vs playful |
 | haeun | 김하은 | F | Mid | Dark brown bob, round glasses, red book, shy smile | yuna: darker bob + glasses + red book vs caramel wave + star clip |
