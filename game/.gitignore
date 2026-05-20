@@ -34,3 +34,6 @@ scripts/sim/sim-tier70-ingame.ts
 scripts/sim/sim-milestone-chain.ts
 scripts/sim/_analyze-npc-effects.ts
 scripts/lib/y1-sim-resolve.ts
+
+# 캐릭터 이미지 아카이브 (디스크 보관 전용 — 재생성 이전 버전 등)
+public/images/characters/_archive/
