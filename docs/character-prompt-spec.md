@@ -313,17 +313,24 @@ Same girl at age 11-12. Rounder face, bob cut slightly shorter.
 
 > **Narrative alignment note:** game's `events.ts` portrays minjae as a quiet top-scorer who deflects attention ("이번엔 좀 쉬웠어"), keeps his desk neat ("필통을 가지런히 꺼내놓고"), and hides effort behind composure ("구겨진 만점 쪽지" — minjae-crumbled-note). He's also good at sports (`minjae-sports`) but never self-promotes. Visual must read as *composed, modest, focused* — not class energizer.
 
-**Actual Image:** neat short hair (clean side-part or short undercut, NOT buzz cut), thoughtful brown eyes, composed half-smile (NOT wide grin showing teeth), average pale skin tone. Navy blazer worn properly buttoned, white shirt, dark pants, simple plain sneakers. Holding a notebook or hands relaxed at sides (NOT arms crossed).
+> **Differentiation from player_m (CRITICAL):** player_m is intentionally the "everyman" baseline (neat short hair, navy blazer, hand in pocket, soft approachable smile). minjae MUST visually stand apart with two distinctive markers:
+> 1. **Thin square or rimless glasses** (NOT round — round is haeun's marker). This is the strongest visual cue and signals "studious top student" instantly.
+> 2. **Always holding a notebook or notebook held against chest** (core identity prop, never just hand-in-pocket).
+>
+> Without these two markers, minjae and player_m look like the same person.
+
+**Actual Image:** neat short hair (clean side-part or short undercut, NOT buzz cut), **thin rimless or thin silver square-frame glasses** (NOT round frame), thoughtful brown eyes behind glasses, composed half-smile (NOT wide grin showing teeth), average pale skin tone. Navy blazer worn properly buttoned, white shirt, dark pants, simple plain sneakers. **Always holding a notebook in one hand** (NOT hand in pocket, NOT arms crossed).
 
 **Full Body (middle school)**
 ```
 Anime-style quiet top-student Korean middle school boy, composed and modest.
 - Hair: neat short side-part or clean short cut, dark brown (NO buzz cut, NO messiness)
-- Eyes: thoughtful brown eyes, focused expression with slight tension
+- Eyewear: thin rimless or thin silver square-frame glasses (NOT round frame — round is reserved for haeun). Glasses are a defining identity marker.
+- Eyes: thoughtful brown eyes behind glasses, focused expression with slight tension
 - Skin: average pale skin tone (NOT tanned)
 - Build: average height, composed body language (no big gestures)
-- Outfit: navy blazer worn properly (buttoned), white shirt, dark pants, simple plain sneakers
-- Pose: standing composed, one hand holding a notebook, the other relaxed at side
+- Outfit: navy blazer worn properly (buttoned all the way), white shirt, dark pants, simple plain sneakers
+- Pose: standing composed, one hand holding a notebook (notebook clearly visible — this is core identity), the other relaxed at side
 - Expression: composed half-smile or thoughtful neutral (NO wide grin, NO teeth showing)
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
@@ -331,7 +338,7 @@ Anime-style quiet top-student Korean middle school boy, composed and modest.
 
 **Portrait**
 ```
-Same character, chest-up. Composed half-smile or thoughtful expression, notebook visible in one hand or at chest level.
+Same character, chest-up. Thin square/rimless glasses clearly visible, composed half-smile or thoughtful expression, notebook held at chest level (NOT just hand prop — must read as a daily-carried essential).
 Background: soft pastel pink-blue gradient.
 ```
 
@@ -339,8 +346,9 @@ Background: soft pastel pink-blue gradient.
 ```
 Same boy at age 11-12. Rounder face but same composed energy.
 - Hair: same neat short cut
+- Eyewear: same thin square/rimless glasses (slightly child-sized frame, NOT round)
 - Outfit: simple plain hoodie (navy or grey, NOT bright red), dark pants, plain sneakers (no flashy colors)
-- Pose: standing composed, one hand holding a notebook
+- Pose: standing composed, one hand holding a notebook (or small textbook)
 - Expression: faint smile, focused (NO big cheerful grin, NO class clown energy)
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
@@ -582,7 +590,7 @@ Background: soft pastel pink-blue gradient.
 | player_f | 주인공 (여) | F | All | Dark brown straight hair, plain | Baseline female |
 | jihun | 한지훈 | M | All | Messy black hair, athletic, basketball keychain | player_m: messier, taller, more muscular |
 | subin | 오수빈 | F | All | Black bob, star earrings, notebook | player_f: shorter hair, earrings |
-| minjae | 박민재 | M | All | Neat short cut, composed, notebook in hand | jihun: neat composed vs messy playful, modest vs energetic |
+| minjae | 박민재 | M | All | Thin square/rimless glasses, neat short cut, always with notebook | player_m: glasses + notebook (vs no glasses, hand in pocket); jihun: neat composed vs messy playful; haeun: square/rimless vs round glasses |
 | yuna | 유나 | F | All | Caramel wavy hair, star clip, bright smile, no glasses | subin: lighter hair, more energetic, star clip vs star earrings |
 | doyun | 박도윤 | M | Elem~Mid | Neat black side-part, soccer keychain, leader aura | jihun: neat vs messy, composed vs playful |
 | haeun | 김하은 | F | Mid | Dark brown bob, round glasses, red book, shy smile | yuna: darker bob + glasses + red book vs caramel wave + star clip |
