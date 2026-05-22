@@ -2371,7 +2371,7 @@ export const GAME_EVENTS: GameEvent[] = [
         s.week - (e.week || 0) <= 4
       );
       const alreadyFiredThisYear = s.events.some(e => e.id === 'class-president-nudge' && e.year === s.year);
-      return !!electionEvent && !alreadyFiredThisYear && s.stats.social >= 40;
+      return !!electionEvent && !alreadyFiredThisYear && s.stats.social >= 55;
     },
   },
   // ===== 랜덤 이벤트 (조건부) =====
@@ -2401,7 +2401,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'mental-low',
     title: '혼자인 점심시간',
     description: '점심시간. 친구들이 다 어디 갔는지 주변에 아무도 없다.\n혼자 밥을 먹으며 핸드폰을 본다.',
-    condition: (s) => s.stats.social < 25 && s.week > 8,
+    condition: (s) => s.stats.social < 30 && s.week > 8,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     // speakers 제거 — description에는 아직 아무도 등장하지 않음 (choices에서만 등장)
@@ -2582,7 +2582,7 @@ export const GAME_EVENTS: GameEvent[] = [
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n반 친구들이 박수를 쳐준다.',
     // 매년 발동: 같은 해 출마(c0) + 같은 해에 -lose/-win 미발동
     condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
-      && s.stats.social >= 30
+      && s.stats.social >= 40
       && !s.events.some(e => e.id === 'class-president-lose' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-win' && e.year === s.year),
     location: 'classroom',
@@ -2596,7 +2596,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'class-president-lose', title: '반장 선거 결과',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n가슴이 조금 내려앉았다.',
     condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
-      && s.stats.social < 30
+      && s.stats.social < 40
       && !s.events.some(e => e.id === 'class-president-win' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-lose' && e.year === s.year),
     location: 'classroom',
@@ -2654,7 +2654,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'class-president-2-win', title: '2학기 반장 당선!',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n2학기 반장이다.',
     condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
-      && s.stats.social >= 40
+      && s.stats.social >= 50
       && !s.events.some(e => e.id === 'class-president-2-lose' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-2-win' && e.year === s.year),
     location: 'classroom',
@@ -2668,7 +2668,7 @@ export const GAME_EVENTS: GameEvent[] = [
     id: 'class-president-2-lose', title: '2학기 반장 선거 결과',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n이번에도 아깝게 졌다.',
     condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
-      && s.stats.social < 40
+      && s.stats.social < 50
       && !s.events.some(e => e.id === 'class-president-2-win' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-2-lose' && e.year === s.year),
     location: 'classroom',
@@ -2701,7 +2701,7 @@ export const GAME_EVENTS: GameEvent[] = [
       { text: '"선생님 오실 때까지 기다리자" — 넘긴다', effects: { social: -1, mental: 1 },
         message: '결국 담임이 와서 해결했다. "반장이 좀 나섰어야지..." 누군가가 작게 말했다.' },
     ],
-    condition: (s) => isClassPresident(s) && !s.isVacation && s.stats.social >= 30,
+    condition: (s) => isClassPresident(s) && !s.isVacation && s.stats.social >= 40,
   },
   {
     id: 'president-speech', title: '조회 시간 발표',
@@ -2728,7 +2728,7 @@ export const GAME_EVENTS: GameEvent[] = [
       { text: '조용히 지나간다', effects: { mental: 1 },
         message: '민재도 버거운 거구나. 전교 1등이 쉬운 게 아니라는 걸 처음 느꼈다.' },
     ],
-    condition: (s) => !isClassOfficer(s) && !s.isVacation && s.week > 6 && s.stats.social >= 25,
+    condition: (s) => !isClassOfficer(s) && !s.isVacation && s.week > 6 && s.stats.social >= 35,
   },
 
   // ===== 생일 이벤트 (매년 고정 주차 발동) =====
