@@ -85,7 +85,7 @@ const DIALOGUE_POOLS: DialoguePool[] = [
     '학교 오는 게 재밌어졌다.',
   ]},
   // 인기 낮음
-  { priority: 45, condition: s => s.stats.social < 25, lines: [
+  { priority: 45, condition: s => s.stats.social < 30, lines: [
     '오늘도 조용한 하루.',
     '누가 먼저 말 걸어줬으면...',
     '점심시간이 좀 외롭다.',

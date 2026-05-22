@@ -273,6 +273,10 @@ function analyze(p: Pattern, s: GameState, trajectory: Trajectory[]): Report {
     'high2-track-select': !!s.events.find(e => e.id === 'high2-track-select'),
     'graduation-prep-elementary': !!s.events.find(e => e.id === 'graduation-prep-elementary'),
     'graduation-prep-high': !!s.events.find(e => e.id === 'graduation-prep-high'),
+    // social 임계점 위기·도달감 측정 (옵션 4 검증)
+    'mental-low': !!s.events.find(e => e.id === 'mental-low'),  // 외톨이 위기 (<30)
+    'class-president-win': !!s.events.find(e => e.id === 'class-president-win'),  // 회장 당선 (≥40)
+    'class-president-2-win': !!s.events.find(e => e.id === 'class-president-2-win'),  // 2학기 회장 (≥50)
   };
 
   // NPC 친밀도 최종

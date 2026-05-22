@@ -333,12 +333,13 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
   state.stats.academic = Math.max(12, state.stats.academic + academicDecay); // v6.4: floor 12 (학교 다니는데 0은 과함)
   log.statChanges.academic = (log.statChanges.academic || 0) + academicDecay;
 
-  // 인기: 감소 → 학기 중 회복 → floor 적용 (순서 중요)
-  // v7.1: -1.0 → -0.5로 완화 — Y1 누적 -48 → -24로, 활동 보전 가능 수준
-  let socialChange = -0.5;
-  if (state.stats.social <= 12) socialChange = -0.1; // 바닥 근처 감소 완화
-  if (!isVacation && state.stats.social < 50) socialChange += 0.3; // 학기 중 미량 회복
-  state.stats.social = Math.max(10, state.stats.social + socialChange); // floor 마지막에 적용
+  // 인기: 감소 → 학기 중 미세 회복 → floor 적용 (순서 중요)
+  // v7.2: -0.5 → -0.8 강화. <50 자동 회복 폐지(→ <30만 약하게). floor 10 → 0.
+  // 이유: m5 5/5 패턴 social=99 수렴, 외톨이 위기(<25) 0/5 발동. 자동 회복이 모든 임계점을 자동 충족.
+  let socialChange = -0.8;
+  if (state.stats.social <= 12) socialChange = -0.2; // 바닥 근처 감소 약간 완화
+  if (!isVacation && state.stats.social < 30) socialChange += 0.2; // 학기 중 최저 30 미만일 때만 미세 회복
+  state.stats.social = Math.max(0, state.stats.social + socialChange); // floor 0 (외톨이 위기 도달 가능)
   log.statChanges.social = (log.statChanges.social || 0) + socialChange;
 
   // v5.2: 인기 < 20 패널티 — 사회적 고립 → 멘탈 추가 감소
