@@ -329,11 +329,13 @@ Same girl at age 11-12. Rounder face, bob cut slightly shorter.
 
 > **Differentiation from player_m (CRITICAL):** player_m is intentionally the "everyman" baseline (neat short hair, navy blazer, hand in pocket, soft approachable smile). minjae MUST visually stand apart with two distinctive markers:
 > 1. **Thin square or rimless glasses** (NOT round — round is haeun's marker). This is the strongest visual cue and signals "studious top student" instantly.
-> 2. **Always holding a notebook or notebook held against chest** (core identity prop, never just hand-in-pocket).
+> 2. **Notebook as signature prop — context-dependent placement.**
+>    - **Portrait / classroom / study scenes**: holding notebook in hand or against chest (core identity prop, NOT just hand-in-pocket).
+>    - **Sports / meals / picnics / ceremonies / outdoor scenes**: notebook should be set aside naturally (on bench / desk / picnic mat / table edge in frame) or omitted entirely. DO NOT force notebook into hands during basketball, dining, picnics, graduation photos, etc. — the prop must serve the scene, not violate it.
 >
-> Without these two markers, minjae and player_m look like the same person.
+> Without the glasses marker (and the notebook where contextually appropriate), minjae and player_m look like the same person.
 
-**Actual Image:** neat short hair (clean side-part or short undercut, NOT buzz cut), **thin rimless or thin silver square-frame glasses** (NOT round frame), thoughtful brown eyes behind glasses, composed half-smile (NOT wide grin showing teeth), average pale skin tone. Navy blazer worn properly buttoned, white shirt, dark pants, simple plain sneakers. **Always holding a notebook in one hand** (NOT hand in pocket, NOT arms crossed).
+**Actual Image:** neat short hair (clean side-part or short undercut, NOT buzz cut), **thin rimless or thin silver square-frame glasses** (NOT round frame), thoughtful brown eyes behind glasses, composed half-smile (NOT wide grin showing teeth), average pale skin tone. Navy blazer worn properly buttoned, white shirt, dark pants, simple plain sneakers. **Portrait/classroom/study context: holding a notebook in one hand. Sports/meals/outdoor context: notebook set aside or omitted.**
 
 **Full Body (middle school)**
 ```
