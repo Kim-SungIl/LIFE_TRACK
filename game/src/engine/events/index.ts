@@ -2,6 +2,20 @@ import { GameEvent, GameState } from '../types';
 import { seededRandom } from '../rng';
 import { ANNUAL_EVENT_IDS } from '../memorySystem';
 import { isExamPeriod } from '../examSystem';
+import {
+  FOLLOWUP_EVENT_IDS,
+  DIRECT_SEQUEL_IDS,
+  HARD_CRISIS_IDS,
+  SOFT_CRISIS_IDS,
+} from './constants';
+
+// 외부 호환 re-export — store.ts, gameEngine.ts 등 기존 `from './events'` import 경로 유지
+export {
+  FOLLOWUP_EVENT_IDS,
+  DIRECT_SEQUEL_IDS,
+  HARD_CRISIS_IDS,
+  SOFT_CRISIS_IDS,
+};
 
 export const GAME_EVENTS: GameEvent[] = [
   // ===== 초반 이벤트 (W1~W4) =====
@@ -4258,30 +4272,6 @@ function isClassOfficer(s: GameState): boolean {
     || s.events.some(e => e.id === 'class-president-vice' && e.year === s.year && e.resolvedChoice === 0);
 }
 
-// 후속 이벤트 ID — 이전 선택에 연결된 이벤트 (100% 확정 발동)
-export const FOLLOWUP_EVENT_IDS = new Set([
-  'class-president-speech', 'class-president-2-speech',
-  'class-president-win', 'class-president-lose', 'class-president-vice',
-  'class-president-2-win', 'class-president-2-lose',
-  'class-president-nudge',
-  'haeun-meet', 'haeun-advice', 'haeun-vending', 'haeun-brother', 'haeun-counselor', 'haeun-reunion',
-  'jihun-basketball', 'jihun-secret', 'jihun-fight', 'jihun-support', 'jihun-promise',
-  'subin-bridge', 'subin-lonely', 'subin-divorce', 'subin-dream', 'subin-farewell',
-  'minjae-sports', 'minjae-exam-chat',
-  'minjae-ranking', 'minjae-effort', 'minjae-pressure', 'minjae-honest', 'minjae-dream',
-  'yuna-library', 'yuna-lunch', 'yuna-hobby', 'yuna-pressure', 'yuna-smile',
-  'junha-transfer', 'junha-riceball', 'junha-dialect', 'junha-homesick', 'junha-cook', 'junha-minjae',
-]);
-
-// 직접 후속 이벤트 — 같은 장소에서 자연스럽게 이어지는 결과 (예: 선거→연설→결과 발표)
-// excludeLocation 필터를 우회 + store.resolveEvent의 followupFiredThisWeek 가드도 우회
-// (선거→연설→결과 같은 자연 chain은 같은 주에 모두 보이는 게 의도)
-export const DIRECT_SEQUEL_IDS = new Set<string>([
-  'class-president-speech', 'class-president-2-speech',
-  'class-president-win', 'class-president-lose', 'class-president-vice',
-  'class-president-2-win', 'class-president-2-lose',
-]);
-
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
 // ANNUAL_EVENT_IDS에 등록된 후속(반장 선거 후속 등)은 매년 재발동 허용
 export function getFollowupForWeek(state: GameState, excludeLocation?: string): GameEvent | null {
@@ -4294,17 +4284,6 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
     (!excludeLocation || e.location !== excludeLocation || DIRECT_SEQUEL_IDS.has(e.id))
   ) || null;
 }
-
-// v1.2 하드/소프트 위기 ID 세트 (§4.3 우선순위 레이어)
-// 하드: 연간 1회 상한 (state.hardCrisisYears 가드)
-// 소프트: 연간 2건 상한
-export const HARD_CRISIS_IDS = new Set<string>([
-  'middle-burnout', 'high-panic', 'family-strain', 'identity-crisis',
-]);
-export const SOFT_CRISIS_IDS = new Set<string>([
-  'minjae-jealousy', 'yuna-misunderstanding', 'subin-drift',
-  'jihun-envy', 'haeun-distance',
-]);
 
 // 절대 주차 (학년 경계에서 음수가 안 나오도록) — 쿨다운 비교용
 function weeksSince(state: GameState, prev: GameEvent): number {
