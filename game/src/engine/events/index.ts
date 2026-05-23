@@ -1,7 +1,7 @@
-import { GameEvent, GameState } from './types';
-import { seededRandom } from './rng';
-import { ANNUAL_EVENT_IDS } from './memorySystem';
-import { isExamPeriod } from './examSystem';
+import { GameEvent, GameState } from '../types';
+import { seededRandom } from '../rng';
+import { ANNUAL_EVENT_IDS } from '../memorySystem';
+import { isExamPeriod } from '../examSystem';
 
 export const GAME_EVENTS: GameEvent[] = [
   // ===== 초반 이벤트 (W1~W4) =====
