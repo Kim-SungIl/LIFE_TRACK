@@ -1,7 +1,7 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
 import { ACTIVITIES, getActivityCost, collapseActivityChoices } from './activities';
 import { getSchoolLevel } from './backgrounds';
-import { getEventForWeek } from './events';
+import { getEventForWeek, GAME_EVENTS } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState } from './rng';
 import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem';
@@ -594,7 +594,7 @@ export function migrateLoadedState(state: GameState): GameState {
   const migratedParents = state.parents
     ? (state.parents.map((p: string) => (p === 'gene' ? 'resilience' : p)) as GameState['parents'])
     : state.parents;
-  return {
+  const result: GameState = {
     ...state,
     parents: migratedParents,
     examResults: state.examResults || [],
@@ -624,6 +624,18 @@ export function migrateLoadedState(state: GameState): GameState {
     npcEventPendingThisWeek: state.npcEventPendingThisWeek ?? false,
     parentEventPendingThisWeek: state.parentEventPendingThisWeek ?? false,
   };
+
+  // 직렬화/clone에서 손실된 currentEvent의 함수 필드(condition 등) 복원
+  // EventChoice.condition이 살아 있어야 EventScene 선택지 게이팅이 정상 동작 —
+  // 이벤트 도중 새로고침 시 돈 부족 선택지가 잠금 풀려 보이던 버그 차단
+  if (result.currentEvent && result.currentEvent.id) {
+    const fresh = GAME_EVENTS.find(e => e.id === result.currentEvent!.id);
+    result.currentEvent = fresh
+      ? { ...fresh, week: result.week }
+      : null;  // 카탈로그에서 사라진 ID → 안전 fallback
+  }
+
+  return result;
 }
 
 // ===== 주간 처리 (메인 루프) =====
