@@ -5,6 +5,62 @@
 
 ---
 
+## ⚠️ 캐릭터 외형 강제 마커 (모든 CG 프롬프트 공통)
+
+> 아래 마커는 `docs/character-prompt-spec.md` 정본과의 일치를 강제하기 위함.
+> CG 프롬프트 인라인 기술이 spec과 어긋나면 spec이 우선.
+> 신규 minjae/haeun CG 프롬프트 작성 시 반드시 아래 마커 박스를 인용/참조할 것.
+
+### minjae (박민재) — spec L326-365
+```
+[REQUIRED visual markers — must be visible in every minjae image]
+- Thin rimless OR thin silver square-frame glasses (NOT round, NOT none)
+  → defining identity marker, must be clearly visible
+- Always holding a notebook (NOT hand in pocket, NOT chopsticks-only,
+  NOT arms crossed) — daily-carried essential
+- Neat short hair: clean side-part or short undercut
+  (NEVER buzz cut, NEVER shaved head)
+- Composed half-smile (NEVER wide grin showing teeth,
+  NEVER overly energetic expression)
+- Average pale skin tone (NOT tanned)
+- Outfit:
+  - elementary: navy hoodie + dark pants (NOT red hoodie)
+  - mid/high: navy school blazer worn properly buttoned + white shirt
+- Differentiation from player_m: player_m has NO glasses, NO notebook;
+  without these markers minjae and player_m look like the same person.
+```
+
+### haeun (김하은) — spec L460-475
+```
+[REQUIRED visual markers]
+- Black-framed round-rectangle glasses (round is haeun's marker —
+  vs minjae's square/rimless)
+- Holding a red-covered book close to chest with both hands
+- Dark brown straight bob cut slightly above shoulders with natural flyaways
+- Shy thoughtful smile (NOT wide grin, NOT excited)
+- Navy blazer + white shirt + large red ribbon + plaid skirt + knee socks
+- NO star hair clip (yuna's marker)
+```
+
+### yuna (유나) — spec L375-381
+```
+- Light brown (caramel) wavy hair
+- Star hair clip on right side
+- NO glasses (haeun's marker)
+- Sketchbook + colorful scrunchie bracelet
+- Bright curious expression, lively waving pose
+```
+
+### player_m — spec L162-164
+```
+- Natural medium-length black hair, soft center part
+- NO glasses, NO hand prop
+- Soft approachable slightly mature half-smile
+- (high stage only) navy tie + chest crest
+```
+
+---
+
 ## 🎨 공통 스타일 가이드
 
 모든 Y1 CG에 공통 적용:
@@ -221,11 +277,14 @@ Same as c2 male with female protagonist.
 ```
 Elementary school cafeteria, lunch time. Two 12-year-old Korean boys sitting across
 from each other at a school cafeteria table with trays.
-Minjae (reference): buzz cut, tanned skin, wide genuine grin, chopsticks in hand,
-leaning forward slightly with animated expression.
+Minjae (reference): neat short hair (clean side-part, NOT buzz cut), average pale
+skin tone, thin rimless or silver square-frame glasses clearly visible, composed
+half-smile slightly warmer than usual, chopsticks in one hand, a notebook resting
+on the table beside his tray.
 Male protagonist: laughing at something minjae said, relaxed shoulders.
 Background: bright cafeteria, other students blurred in background.
-Mood: first-friendship spark, warm and cheerful.
+Mood: first-friendship spark, warm and cheerful (minjae's warmth shows as quiet
+softness, not a wide grin).
 ```
 
 **[female / c0]** `minjae-meet-elementary_c0_f.png`
@@ -243,8 +302,11 @@ Same setting with female protagonist. No other changes.
 ```
 Elementary school cafeteria, lunch time. Two 12-year-old Korean boys sitting side by side
 at cafeteria table, trays with lunch in front of them.
-Minjae (reference): buzz cut, tanned skin, mid-speaking expression with chopsticks pausing,
-eyes animated, explaining something enthusiastically.
+Minjae (reference): neat short hair (clean side-part, NOT buzz cut), average pale
+skin tone, thin rimless or silver square-frame glasses clearly visible, composed
+expression mid-speaking with chopsticks pausing, eyes thoughtful behind glasses,
+explaining something quietly but earnestly. A notebook visible on the table near
+his tray.
 Male protagonist turned toward minjae, engaged listener posture, leaning forward slightly
 with curious "아 그래?" face.
 Background: bright cafeteria, trays/food on table, blurred students in background.
@@ -292,7 +354,9 @@ Same setting with female protagonist (player_f reference). No other changes.
 Neighborhood outdoor basketball half-court, late afternoon.
 Three 12-year-old Korean boys playing basketball together.
 Jihun (reference): mid-dribble, huge competitive grin, messy hair flying.
-Minjae (reference): defending with serious focused expression, buzz cut.
+Minjae (reference): defending with serious focused expression, neat short hair
+(NOT buzz cut), thin rimless/square-frame glasses (sports-band strap optional
+to keep them in place during play).
 Male protagonist (player_m reference): laughing open-mouthed, reaching for the ball.
 Background: low chain-link fence, apartment buildings in distance, golden hour light, long shadows.
 Mood: weekend freedom, three-friends bonding, sweat and laughter.
@@ -304,7 +368,8 @@ Korean tteokbokki snack shop interior, weekend afternoon.
 Three 12-year-old Korean kids sitting at a red plastic table with a steaming pan of tteokbokki,
 fish cakes and odeng cups. Steam rising.
 Jihun (reference): mouth full, cheeks puffed comically, eyes happy.
-Minjae (reference): carefully picking up a rice cake with chopsticks, small smile.
+Minjae (reference): neat short hair (NOT buzz cut), thin rimless/square-frame
+glasses, carefully picking up a rice cake with chopsticks, composed small smile.
 Female protagonist (player_f reference): mid-laugh, holding a paper cup of odeng broth.
 Background: 2010s Korean 분식집 — handwritten menu on wall, small TV in corner,
 red walls, steam and warm fluorescent lighting.
@@ -343,7 +408,9 @@ Note: gender-neutral framing — use back view or side silhouette so single file
 Public park in spring, cherry blossom petals falling. Three 12-year-old Korean
 elementary students sitting on a picnic mat with gimbap boxes and snacks.
 Jihun (reference): excited grin, mouth full of gimbap.
-Minjae (reference): laughing, arm raised in animated gesture.
+Minjae (reference): neat short hair (NOT buzz cut), thin rimless/square-frame
+glasses, warm half-laugh (NOT wide grin showing teeth), gentle gesture toward
+the picnic spread.
 Male protagonist (player_m reference): mid-laugh.
 Background: blooming cherry trees, other picnic groups scattered in distance.
 Mood: warm spring day, pure childhood joy.
@@ -463,12 +530,14 @@ Longer hair visible from behind. No other changes.
 
 **공통** `minjae-birthday_c0.png`
 ```
-Elementary classroom, after school. Minjae (reference) caught off-guard at his desk,
+Elementary classroom, after school. Minjae (reference — neat short hair NOT buzz cut,
+thin rimless/square-frame glasses clearly visible) caught off-guard at his desk,
 turning his head toward the camera with a small, surprised half-smile — the kind that
 slips out before he can compose himself. No gift, no wrapped box — just the words
-hanging in the air. One hand still resting on an open notebook, the other half-raised
-as if he was about to say something.
-Cheeks faintly flushed. Eyes warmer than his usual cool composure allows.
+hanging in the air. One hand still resting on an open notebook (his daily-carried
+essential), the other half-raised as if he was about to say something.
+Cheeks faintly flushed. Eyes warmer than his usual cool composure allows, glasses
+catching a soft glint of late afternoon light.
 Background: blurred classmates in the distance, late afternoon light through the
 windows, simple chalkboard.
 Mood: a quiet beat of unguarded warmth — "고마워" said softly.
@@ -478,22 +547,28 @@ Mood: a quiet beat of unguarded warmth — "고마워" said softly.
 
 **공통** `minjae-birthday_c1.png`
 ```
-Elementary classroom, after school hours. Minjae (reference) holding a small gift box
-with both hands, wide surprised smile showing teeth, cheeks slightly red.
+Elementary classroom, after school hours. Minjae (reference — neat short hair NOT
+buzz cut, thin rimless/square-frame glasses clearly visible) holding a small gift box
+with both hands, surprised composed half-smile (NOT wide grin showing teeth), cheeks
+slightly red. His notebook visible on the desk behind him.
 Blurred classmates in background clapping/watching.
-Mood: heartfelt surprise, childhood friendship milestone.
+Mood: heartfelt surprise that breaks through his composure but doesn't break it
+fully — childhood friendship milestone.
 ```
 
 ### [c2] 따로 골라 온 책 한 권 (-5만원, money>=10) — 🆕 신규
 
 **공통** `minjae-birthday_c2.png`
 ```
-Elementary classroom, after school. Minjae (reference) holding a hardcover book with
+Elementary classroom, after school. Minjae (reference — neat short hair NOT buzz
+cut, thin rimless/square-frame glasses clearly visible) holding a hardcover book with
 both hands, head tilted down reading the title, expression frozen between surprise
-and a smile he's not letting through. The carefully composed "전교 1등" facade is
-visibly cracking — eyes a touch wider than usual, lips slightly parted.
+and a composed half-smile he's not letting through (NOT wide grin). The carefully
+composed "전교 1등" facade is visibly cracking — eyes a touch wider than usual
+behind the glasses, lips slightly parted.
 Book cover should suggest something thoughtful (a literary novel or quiet essay
-collection — not a study guide). Wrapping paper crumpled on the desk beside him.
+collection — not a study guide). Wrapping paper crumpled on the desk beside him,
+his usual notebook pushed slightly aside.
 Background: empty classroom, late afternoon warm light, blurred chalkboard with
 faint test results still visible.
 Dialogue cue: "...너, 날 너무 잘 아는데?" — first moment his guard fully drops.
@@ -506,9 +581,11 @@ Mood: rival becoming friend — gift that names the unspoken self.
 ```
 Elementary classroom, after school. Wide shot from the protagonist's seat — the
 back of an empty desk in the foreground (the player's POV, no figure shown).
-In the middle distance, Minjae (reference) is surrounded by a small cluster of
-classmates laughing and clapping; he wears a polite, slightly stiff smile —
-the practiced "전교 1등" composure back in place, accepting attention without
+In the middle distance, Minjae (reference — neat short hair NOT buzz cut, thin
+rimless/square-frame glasses visible even at distance, notebook held in one hand)
+is surrounded by a small cluster of classmates laughing and clapping; he wears a
+polite, slightly stiff composed half-smile (NOT wide grin showing teeth) — the
+practiced "전교 1등" composure back in place, accepting attention without
 returning warmth. Late afternoon light, soft and a bit cold.
 Mood: distance — watching from the outside, a small ache of not-quite-belonging.
 No direct eye contact between Minjae and the camera.
@@ -683,8 +760,11 @@ Same setting with female protagonist (player_f reference). No other changes.
 **[male / c1]** `elementary-semester2-start_c1_m.png`
 ```
 Classroom break time cluster shot. Male protagonist (player_m reference) + 2~3 classmates
-(minjae, jihun in reference style) gathered at a desk laughing, one showing a photo on a flip phone.
-Tan lines visible on some faces.
+gathered at a desk laughing, one showing a photo on a flip phone.
+Minjae (reference — neat short hair NOT buzz cut, thin rimless/square-frame glasses
+clearly visible, notebook on desk nearby) wears a composed half-smile (NOT wide
+grin); Jihun (reference) laughs more openly beside him.
+Tan lines visible on some faces (minjae remains average pale skin tone, NOT tanned).
 Mood: happy post-vacation chatter, summer tan vibes.
 ```
 
@@ -883,8 +963,11 @@ Same setting with female protagonist (player_f reference). No other changes.
 Elementary school auditorium or outside of school gate after graduation ceremony.
 Three 12-year-old Korean kids in graduation attire/school uniform posing for a photo.
 Jihun (reference) center, arm around male protagonist's shoulder, big brave smile with
-slightly wet eyes. Male protagonist beside him, emotional smile. Minjae on the other side,
-thumbs-up. Graduation flowers in hand. Snow or cold-looking light (winter/february feel).
+slightly wet eyes. Male protagonist beside him, emotional smile. Minjae (reference —
+neat short hair NOT buzz cut, thin rimless/square-frame glasses clearly visible) on
+the other side, composed half-smile (NOT wide grin showing teeth), one hand giving a
+small thumbs-up, other hand holding his notebook tucked under his arm. Graduation
+flowers in hand. Snow or cold-looking light (winter/february feel).
 Background: graduation banner "졸업식", other families in background.
 Mood: bittersweet joy, true friendship milestone, tears just held back.
 ```
@@ -1139,9 +1222,11 @@ Both trays placed in front of them on the same side of the table.
 
 ABSOLUTELY NOT facing each other across the table. NOT a face-to-face composition.
 
-Minjae (reference, on one side): buzz cut, tanned skin, chopsticks pausing
-mid-air, head turned slightly TOWARD the protagonist beside him, animated
-explaining gesture, eyes engaged.
+Minjae (reference, on one side): neat short hair (clean side-part, NOT buzz
+cut), average pale skin tone, thin rimless or silver square-frame glasses
+clearly visible, chopsticks pausing mid-air, head turned slightly TOWARD the
+protagonist beside him, quietly engaged explaining gesture, eyes thoughtful
+behind glasses. A notebook visible on the table near his tray.
 Protagonist (player_m reference [c1_m] / player_f reference [c1_f]) seated
 RIGHT NEXT TO Minjae on the same bench/side, head turned slightly toward him,
 engaged listener posture, leaning in with curious "아 그래?" expression.
@@ -1408,19 +1493,23 @@ Keep face/hair/build identical to the doyun reference (gender follows player).
 
 **`minjae-crumbled-note.png`** (공통 1장)
 ```
-Empty corner of an elementary classroom, late afternoon. Minjae (reference)
-sitting at his desk, head slightly bowed, an open desk drawer in front of him
-revealing a crumpled paper note in his palm — a small "100점" (100 score)
-written in red visible on the wrinkled note. His other hand resting limp on
-the desk. Expression: trying to seem casual but losing the mask. Empty
-chairs around, evening light slanting through windows.
+Empty corner of an elementary classroom, late afternoon. Minjae (reference —
+neat short hair NOT buzz cut, thin rimless/square-frame glasses clearly visible
+in 3/4 view, average pale skin) sitting at his desk, head slightly bowed, an
+open desk drawer in front of him revealing a crumpled paper note in his palm
+— a small "100점" (100 score) written in red visible on the wrinkled note.
+His other hand resting limp on the desk near his closed notebook. Expression:
+composed half-smile trying to seem casual but losing the mask, eyes hidden
+behind glasses catching the evening light. Empty chairs around, evening light
+slanting through windows.
 Mood: hidden pressure visible for a moment, "it's nothing" said too quickly,
 gold-light loneliness.
 
 Outfit override (late autumn ~ early winter, around W30~W40): Minjae wearing
 a long-sleeve school sweater or cardigan over collar shirt, long pants; no
 short sleeves. Indoor warm tone; trees outside the window with sparse remaining
-leaves or bare branches. Keep face/hair/build identical to the minjae reference.
+leaves or bare branches. Keep face/hair/build identical to the minjae reference
+(thin glasses must remain visible).
 ```
 
 ---
