@@ -1,3 +1,8 @@
+// 도윤은 다른 NPC 와 달리 학교 진입 영역(Y1 W4, W22, W47, Y2 W2) 에 분산되어 있어
+// 원래 순서를 보존하려면 단일 array 가 아닌 5 sub-array 로 분리하고
+// events/data.ts 에서 GAME_EVENTS 의 정확한 위치에 각각 spread 한다.
+// (지훈/민재/유나/수빈 첫만남은 학교 첫날 컨텍스트와 강결합되어 school.ts 에 잔류)
+
 import { GameEvent, GameState } from '../../types';
 
 export const DOYUN_FIRST_MEET_M: GameEvent[] = [
