@@ -78,8 +78,17 @@ export function getMilestoneForWeek(state: GameState): GameEvent | null {
   return milestone[Math.floor(seededRandom(state) * milestone.length)];
 }
 
-// 이번 주에 발동할 이벤트 가져오기
-export function getEventForWeek(state: GameState): GameEvent | null {
+// getEventForWeek 결과 — 선택된 이벤트 + state patch (사이드이펙트를 호출자에 위임)
+// patch 가 null 이 아니면 호출자가 명시적으로 newState 에 적용해야 함.
+export type EventSelection = {
+  event: GameEvent | null;
+  patch: Pick<GameState, 'hardCrisisYears'> | null;
+};
+
+const noPatch = (event: GameEvent | null): EventSelection => ({ event, patch: null });
+
+// 이번 주에 발동할 이벤트 가져오기 — 순수 함수 (state mutation 없음)
+export function getEventForWeek(state: GameState): EventSelection {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
   // 같은 주에 여러 fixed 이벤트가 매칭될 수 있음 (예: W37의 단원평가 + 유나생일).
   // NPC 이벤트(speakers 보유)는 보통 친밀도/met 같은 추가 조건이 붙어 더 희소하므로 우선.
@@ -91,7 +100,7 @@ export function getEventForWeek(state: GameState): GameEvent | null {
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
   const fixedEvent = fixedCandidates.find(e => (e.speakers?.length ?? 0) > 0) ?? fixedCandidates[0];
-  if (fixedEvent) return fixedEvent;
+  if (fixedEvent) return noPatch(fixedEvent);
 
   // 1. 후속 이벤트 체크 (100% 발동) — ANNUAL은 매년 재발동 허용
   const followup = GAME_EVENTS.find(e =>
@@ -99,7 +108,7 @@ export function getEventForWeek(state: GameState): GameEvent | null {
     e.condition && e.condition(state) &&
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
-  if (followup) return followup;
+  if (followup) return noPatch(followup);
 
   // v1.2 (§4.3): 2. 하드 위기 — 연간 1회 가드 (state.hardCrisisYears)
   if (!state.hardCrisisYears.includes(state.year)) {
@@ -109,8 +118,11 @@ export function getEventForWeek(state: GameState): GameEvent | null {
       !state.events.some(prev => prev.id === e.id)
     );
     if (hardCrisis) {
-      state.hardCrisisYears.push(state.year);
-      return hardCrisis;
+      // 발동 시 연간 가드 갱신을 patch 로 반환 (호출자가 적용)
+      return {
+        event: hardCrisis,
+        patch: { hardCrisisYears: [...state.hardCrisisYears, state.year] },
+      };
     }
   }
 
@@ -124,14 +136,14 @@ export function getEventForWeek(state: GameState): GameEvent | null {
       e.condition && e.condition(state) &&
       !state.events.some(prev => prev.id === e.id)
     );
-    if (softCrisis) return softCrisis;
+    if (softCrisis) return noPatch(softCrisis);
   }
 
   // 4. 조건부 상태 이벤트 (피로/멘탈 등) — 50% 확률
   // 위기 ID는 위에서 이미 처리했으므로 중복 제거
   const conditionalEvents = pickConditionalCandidates(state);
   if (conditionalEvents.length > 0 && seededRandom(state) < 0.5) {
-    return conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)];
+    return noPatch(conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)]);
   }
 
   // 5. 학교생활 랜덤 이벤트 — 70% 확률
@@ -140,8 +152,8 @@ export function getEventForWeek(state: GameState): GameEvent | null {
     !state.events.some(prev => prev.id === e.id && weeksSince(state, prev) < 6)
   );
   if (availableSchoolEvents.length > 0 && seededRandom(state) < 0.7) {
-    return availableSchoolEvents[Math.floor(seededRandom(state) * availableSchoolEvents.length)];
+    return noPatch(availableSchoolEvents[Math.floor(seededRandom(state) * availableSchoolEvents.length)]);
   }
 
-  return null;
+  return noPatch(null);
 }
