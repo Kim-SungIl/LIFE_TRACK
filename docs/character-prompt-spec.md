@@ -161,6 +161,20 @@ inconsistent character design
 
 > **Differentiation from minjae:** player_m is the "everyman" baseline — NO glasses, NO notebook prop, soft approachable but slightly mature smile. Hair has clear soft center part (vs minjae's side-part). minjae 항목 참조.
 
+> **Differentiation from jihun (CRITICAL — 단체씬에서 자주 혼동):** 둘 다 elementary에서 hoodie를 입어 시각 차이가 약함. 다음 마커로 명확히 분리:
+>
+> | 마커 | player_m | jihun |
+> |---|---|---|
+> | Hoodie 색 | **Navy (짙은 파랑)** | **Royal blue (밝은 파랑) + 흰 sleeve stripe** |
+> | 안에 입은 옷 | Grey/연한 무지 T-shirt | 흰 T-shirt |
+> | 하의 | **검정 진(jeans)** | **검정 트랙팬츠 + 흰 side stripe** |
+> | 운동화 | Plain white (NO color accent) | Sporty (color accent 허용) |
+> | 헤어 | Soft center part, neat | Messy bangs |
+> | Prop | NO prop, 손 자유 또는 포켓 | 농구공(남주) 또는 배드민턴 라켓(여주) — 식사·졸업·실내 정적씬 제외하고 거의 휴대 |
+> | 표정/포즈 | 차분 baseline | 활발 energy |
+>
+> 단체씬(first-week, jihun-call, spring-picnic, graduation 등)에서 두 캐릭터를 그릴 때 위 마커가 시각적으로 모두 살아 있어야 함.
+
 **Actual Image:** natural medium-length black hair with soft center part (slightly fuller bangs covering part of forehead, NOT closely cropped), warm brown eyes, soft jawline, gentle and slightly mature half-smile. Navy blazer, white shirt, dark pants, black loafers. NO glasses, NO hand prop.
 
 **Full Body (middle school)**
@@ -197,13 +211,17 @@ Same character at age 16-18. Slightly taller and more mature proportions.
 **Full Body (elementary)**
 ```
 Same boy at age 11-12. Rounder face, slightly shorter.
-- Hair: same natural medium-length black with soft center part, slightly messier and shorter
-- Outfit: navy zip-up hoodie, white t-shirt, dark jeans, white sneakers (NO crest, NO tie)
-- Pose: natural standing, hands at sides
-- Expression: brighter, more innocent smile
+- Hair: same natural medium-length black with soft center part, slightly messier and shorter (NOT messy bangs — that is jihun's marker)
+- Outfit: navy (DARK blue, NOT royal blue) zip-up hoodie, grey or light muted T-shirt underneath
+  (NOT pure white — pure white T is jihun's marker), dark indigo jeans (NOT track pants — track
+  pants are jihun's marker), plain white sneakers with NO color accent (NO crest, NO tie).
+- Pose: natural standing, hands at sides or one hand in pocket (NO prop, NO ball, NO racket)
+- Expression: brighter, more innocent smile but composed (less energetic than jihun)
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
 ```
+
+> 차별화 마커는 위 player_m 섹션 상단의 "Differentiation from jihun" 표 참조.
 
 ---
 
@@ -274,14 +292,23 @@ Background: soft pastel pink-blue gradient.
 **Full Body (elementary)**
 ```
 Same boy at age 11-12. Slightly shorter, rounder face, even more carefree.
-- Hair: same messy black hair, slightly longer
-- Outfit: blue athletic hoodie, white t-shirt, track pants, worn sneakers
-- Accessory: basketball tucked under one arm
-- Pose: casual standing, free hand waving
-- Expression: big innocent grin, full of energy
+- Hair: same messy black hair, slightly longer, messy bangs that fall over forehead
+  (NOT center part — center part is player_m's marker)
+- Outfit: ROYAL BLUE (bright/saturated blue, NOT dark navy — dark navy is player_m's marker)
+  athletic zip-up hoodie with WHITE SLEEVE STRIPE running down each arm, pure WHITE t-shirt
+  visible at collar (NOT grey — grey is player_m's marker), BLACK TRACK PANTS with WHITE
+  SIDE STRIPE (NOT jeans — jeans are player_m's marker), worn sporty sneakers (color accent
+  on stripes acceptable).
+- Accessory: basketball tucked under one arm OR basketball keychain on bag strap visible
+  in frame. Female-protagonist scenario variant: badminton racket replaces basketball.
+- Pose: casual standing, free hand waving, weight shifted (NOT static neutral stance)
+- Expression: big innocent grin, full of energy (clearly more energetic than player_m's
+  composed half-smile)
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
 ```
+
+> 차별화 마커는 player_m 섹션의 "Differentiation from jihun" 표 참조. 단체씬 prompt에서는 위 마커가 모두 살아 있어야 함.
 
 ---
 

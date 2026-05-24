@@ -55,7 +55,43 @@
 - Bright curious expression, lively waving pose
 ```
 
-### player_m — spec L162-164
+### player_m vs jihun (CRITICAL — 단체씬에서 자주 혼동) — spec L164-176
+```
+둘 다 elementary에서 hoodie를 입어 시각 차이가 약함. 단체씬에서는 반드시 아래
+마커가 모두 살아 있어야 함.
+
+[player_m] — "everyman baseline"
+- Hoodie color: NAVY (dark blue, NOT royal blue)
+- T-shirt underneath: grey or muted light color visible at collar (NOT pure white)
+- Bottom: dark indigo JEANS (NOT track pants)
+- Sneakers: plain WHITE with NO color accent
+- Hair: soft CENTER PART, neat (NOT messy bangs)
+- Prop: NO prop, hand free or in pocket
+- Pose/expression: composed baseline, less energetic than jihun
+
+[jihun] — "athletic energy"
+- Hoodie color: ROYAL BLUE (bright/saturated, NOT dark navy)
+  + WHITE SLEEVE STRIPE running down each arm
+- T-shirt underneath: PURE WHITE visible at collar
+- Bottom: BLACK TRACK PANTS with white side stripe (NOT jeans)
+- Sneakers: sporty (color accent OK)
+- Hair: MESSY BANGS falling over forehead (NOT center part)
+- Prop: basketball (male protagonist scenario) OR badminton racket
+  (female protagonist scenario) — carried in most scenes; for dining/
+  graduation/quiet indoor scenes, may be set aside (basketball keychain
+  on bag strap as fallback identifier)
+- Pose/expression: lively, weight shifted, energetic grin
+
+영향 단체씬 (이 마커 강제 적용):
+- W1 first-week_c0/c1/c2 (player_m + jihun)
+- W4 jihun-call_c0_m/f (jihun + minjae + player)
+- W5 elementary-spring-picnic_c0_m/f (3인)
+- W14 jihun-birthday_c0/c1
+- W46 elementary-graduation_c0_m/f (3인)
+- W25 elementary-semester2-start_c1_m/f (cluster, jihun 등장)
+```
+
+### player_m (단독) — spec L162-164, 위 비교 박스 우선
 ```
 - Natural medium-length black hair, soft center part
 - NO glasses, NO hand prop
