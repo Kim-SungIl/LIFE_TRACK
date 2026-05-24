@@ -55,7 +55,46 @@
 - Bright curious expression, lively waving pose
 ```
 
-### player_m — spec L162-164
+### player_m vs jihun (CRITICAL — 단체씬에서 자주 혼동) — spec L164-176
+```
+후드티 색만 다르게 해서 차별화하면 단체씬에서 결국 비슷해 보임.
+의상 카테고리 자체를 분리하고, prop은 맥락에 맞을 때만 사용.
+
+[player_m] — "casual everyday wear" baseline
+- Outfit category: 일상 캐주얼 (T+청바지, 카디건, 셔츠, 가벼운 코트)
+  NOT athletic/sportswear (그건 jihun의 코드)
+- Color tone: muted (grey, navy, beige, dark)
+- Hair: soft CENTER PART, neat (NOT messy bangs)
+- Build: average
+- Prop: NO prop, hand free or in pocket
+- Pose/expression: composed baseline, less energetic than jihun
+
+[jihun] — "sportswear" / "athletic energy"
+- Outfit category: 운동복 라인 (athletic zip-up, track jacket, jersey,
+  athletic T+트랙쇼츠) NOT 일상 캐주얼 (그건 player_m의 코드)
+- Color tone: bright/saturated (royal blue, white, red accent)
+- Hair: MESSY BANGS falling over forehead (NOT center part)
+- Build: athletic, 약간 더 큰 키, 넓은 어깨
+- Prop (맥락 의존): basketball/racket carried only in outdoor sports or
+  walking-to-school scenes. For dining/indoor static/graduation scenes,
+  set aside OR omitted. Basketball keychain on bag strap as fallback ID cue.
+  ⚠️ DO NOT force ball/racket into hands in every scene — that repeats
+  the minjae notebook over-force issue (PR #164).
+
+핵심: 둘 다 "후드티 + 청바지" default가 사라져야 함. 후드를 입어야 하는
+서늘한 계절에도 jihun=athletic zip-up, player_m=모직/캐주얼 외투로 자연 분리.
+
+영향 단체씬 (이 마커 강제 적용):
+- W1 first-week_c0/c1/c2 (player_m + jihun)
+- W4 jihun-call_c0_m/f (jihun + minjae + player)
+- W5 elementary-spring-picnic_c0_m/f (3인)
+- W14 jihun-birthday_c0/c1
+- W32 elementary-sports-day (둘 다 운동복 자연, 차별화 쉬움)
+- W46 elementary-graduation_c0_m/f (3인)
+- W25 elementary-semester2-start_c1_m/f (cluster, jihun 등장)
+```
+
+### player_m (단독) — spec L162-164, 위 비교 박스 우선
 ```
 - Natural medium-length black hair, soft center part
 - NO glasses, NO hand prop
@@ -86,20 +125,38 @@ no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/s
 
 ### 🍃 계절 의상 주의 (중요)
 
-캐릭터 레퍼런스 시트(`*_elementary_fullbody.png`)는 **봄·여름 평상복 기준**.
-이 시트만 그대로 따라가면 겨울 장면에도 반팔/반바지가 나옴 → 계절감 깨짐.
-**겨울/늦가을 이벤트는 반드시 의상을 명시적으로 오버라이드**해야 합니다.
+캐릭터 레퍼런스 시트(`*_elementary_fullbody.png`)는 **봄/초가을 기준 (hoodie or zip-up)**.
+이 시트만 그대로 따라가면 한여름에 후드 입고 있거나 겨울에 반팔/반바지 나옴 → 계절감 깨짐.
+**여름/늦가을/겨울 이벤트는 반드시 의상을 명시적으로 오버라이드**해야 합니다.
 
-| 계절 | 의상 가이드 |
-|---|---|
-| **봄/초가을** (W1~W30 일반): 레퍼런스 시트 그대로 (long-sleeve T or light hoodie) |
-| **늦가을** (W31~W40, 운동회 이후): 가디건·후드 + 긴바지, 살짝 두꺼운 outerwear |
-| **겨울** (W41~W48, 졸업 직전): puffy down jacket / 두꺼운 코트 / 목도리 / 장갑 / 입김, 빨개진 볼·코끝 가능 |
+| 계절 | 시기 | 의상 가이드 |
+|---|---|---|
+| **봄/초가을** | W1~W10, W31 | 레퍼런스 시트 그대로 (가벼운 zip-up / 카디건 / 트랙 jacket) |
+| **여름** | W11~W30 | **반드시 hoodie 금지**. 반팔 T + 반바지/쇼츠. 땀, 햇살, 매미 소리 등 여름 분위기 |
+| **늦가을** | W32~W40 | 카디건·후드 + 긴바지, 살짝 두꺼운 outerwear |
+| **겨울** | W41~W48 | 두꺼운 코트 / 패딩 / 목도리 / 장갑 / 입김, 빨개진 볼·코끝 가능 |
+
+#### 캐릭터별 계절 의상 분기 (player_m, jihun, minjae 핵심)
+
+| 시기 | player_m (casual) | jihun (sportswear) | minjae (modest student) |
+|---|---|---|---|
+| 봄/초가을 | 가벼운 zip-up + T + 청바지 | royal blue athletic zip-up + 흰 T + 트랙팬츠 | navy hoodie + T + dark pants |
+| **여름** | **무지 T + 청 반바지 또는 면 반바지** | **athletic 단색 T (royal blue/red accent) + 트랙쇼츠** | **무지 T (navy/grey) + 무지 반바지** (안경 + 차분) |
+| 늦가을 | 카디건/오버셔츠 + T + 긴바지 | athletic zip-up 또는 트랙 jacket + 긴 트랙팬츠 | 가디건/스웨터 + 셔츠 + 긴바지 |
+| 겨울 | 모직 코트 또는 더플코트 + 머플러 | athletic 패딩 + 모자/머플러 | 단정 더플코트/카멜 코트 + 머플러 |
+
+각 summer scene prompt 끝에 다음 항목 추가:
+```
+Outfit override: summer clothing — short-sleeve T-shirt + shorts/jeans-shorts,
+NO hoodie, NO long sleeves. Subtle sweat sheen, bright sunlight feel.
+Keep face, hair, build identical to the reference (only outfit changes per season).
+```
 
 각 winter/late-autumn scene prompt 끝에 다음 항목 추가:
 ```
-Outfit override: winter clothing — puffy down jacket or thick coat over long-sleeve,
+Outfit override: winter clothing — heavy coat or padding over long-sleeve,
 scarf, gloves if outdoor; flushed cheeks/nose from cold; visible breath if cold enough.
+player_m: 모직 코트 계열 (NOT athletic padding) / jihun: athletic padding (NOT 모직 코트)
 Keep face, hair, height, and overall character design identical to the reference.
 ```
 
