@@ -16,8 +16,12 @@
 [REQUIRED visual markers — must be visible in every minjae image]
 - Thin rimless OR thin silver square-frame glasses (NOT round, NOT none)
   → defining identity marker, must be clearly visible
-- Always holding a notebook (NOT hand in pocket, NOT chopsticks-only,
-  NOT arms crossed) — daily-carried essential
+- Notebook is signature prop — **context-dependent placement**:
+  · Classroom / desk / study scenes → in hand OR on desk (must be visible)
+  · Sports / meals / picnics / ceremonies / outdoor → set aside in frame
+    (bench / desk / picnic mat / table edge) OR omitted entirely
+  · DO NOT force notebook into hands during basketball, dining, picnics,
+    graduation photos. The prop must serve the scene, not violate it.
 - Neat short hair: clean side-part or short undercut
   (NEVER buzz cut, NEVER shaved head)
 - Composed half-smile (NEVER wide grin showing teeth,
@@ -279,8 +283,9 @@ Elementary school cafeteria, lunch time. Two 12-year-old Korean boys sitting acr
 from each other at a school cafeteria table with trays.
 Minjae (reference): neat short hair (clean side-part, NOT buzz cut), average pale
 skin tone, thin rimless or silver square-frame glasses clearly visible, composed
-half-smile slightly warmer than usual, chopsticks in one hand, a notebook resting
-on the table beside his tray.
+half-smile slightly warmer than usual, chopsticks in one hand. A closed notebook
+sits naturally on the table beside his tray (NOT in his hands — this is a meal
+scene; hands hold chopsticks/spoon, notebook is just a quiet desk-side prop).
 Male protagonist: laughing at something minjae said, relaxed shoulders.
 Background: bright cafeteria, other students blurred in background.
 Mood: first-friendship spark, warm and cheerful (minjae's warmth shows as quiet
@@ -305,8 +310,8 @@ at cafeteria table, trays with lunch in front of them.
 Minjae (reference): neat short hair (clean side-part, NOT buzz cut), average pale
 skin tone, thin rimless or silver square-frame glasses clearly visible, composed
 expression mid-speaking with chopsticks pausing, eyes thoughtful behind glasses,
-explaining something quietly but earnestly. A notebook visible on the table near
-his tray.
+explaining something quietly but earnestly. A closed notebook rests on the table
+beside his tray (NOT in his hands — meal scene; hands engaged with chopsticks).
 Male protagonist turned toward minjae, engaged listener posture, leaning forward slightly
 with curious "아 그래?" face.
 Background: bright cafeteria, trays/food on table, blurred students in background.
@@ -355,8 +360,10 @@ Neighborhood outdoor basketball half-court, late afternoon.
 Three 12-year-old Korean boys playing basketball together.
 Jihun (reference): mid-dribble, huge competitive grin, messy hair flying.
 Minjae (reference): defending with serious focused expression, neat short hair
-(NOT buzz cut), thin rimless/square-frame glasses (sports-band strap optional
-to keep them in place during play).
+(NOT buzz cut), thin rimless/square-frame glasses clearly visible (sports-band
+strap optional to keep them in place during play). NO notebook in hand —
+this is a basketball scene; notebook may rest on the courtside bench in
+background OR be omitted entirely.
 Male protagonist (player_m reference): laughing open-mouthed, reaching for the ball.
 Background: low chain-link fence, apartment buildings in distance, golden hour light, long shadows.
 Mood: weekend freedom, three-friends bonding, sweat and laughter.
@@ -369,7 +376,9 @@ Three 12-year-old Korean kids sitting at a red plastic table with a steaming pan
 fish cakes and odeng cups. Steam rising.
 Jihun (reference): mouth full, cheeks puffed comically, eyes happy.
 Minjae (reference): neat short hair (NOT buzz cut), thin rimless/square-frame
-glasses, carefully picking up a rice cake with chopsticks, composed small smile.
+glasses clearly visible, carefully picking up a rice cake with chopsticks,
+composed small smile. NO notebook in hand — this is a dining scene; both
+hands occupied with chopsticks or cup.
 Female protagonist (player_f reference): mid-laugh, holding a paper cup of odeng broth.
 Background: 2010s Korean 분식집 — handwritten menu on wall, small TV in corner,
 red walls, steam and warm fluorescent lighting.
@@ -409,8 +418,10 @@ Public park in spring, cherry blossom petals falling. Three 12-year-old Korean
 elementary students sitting on a picnic mat with gimbap boxes and snacks.
 Jihun (reference): excited grin, mouth full of gimbap.
 Minjae (reference): neat short hair (NOT buzz cut), thin rimless/square-frame
-glasses, warm half-laugh (NOT wide grin showing teeth), gentle gesture toward
-the picnic spread.
+glasses clearly visible, warm half-laugh (NOT wide grin showing teeth), holding
+a piece of gimbap or chopsticks. NO notebook in hand — this is a picnic dining
+scene; both hands engaged with food. (A notebook may peek from his backpack
+or sit on the picnic mat edge if natural, but never in hand.)
 Male protagonist (player_m reference): mid-laugh.
 Background: blooming cherry trees, other picnic groups scattered in distance.
 Mood: warm spring day, pure childhood joy.
@@ -961,20 +972,44 @@ Same setting with female protagonist (player_f reference). No other changes.
 **[male / c0]** `elementary-graduation_c0_m.png`
 ```
 Elementary school auditorium or outside of school gate after graduation ceremony.
-Three 12-year-old Korean kids in graduation attire/school uniform posing for a photo.
-Jihun (reference) center, arm around male protagonist's shoulder, big brave smile with
-slightly wet eyes. Male protagonist beside him, emotional smile. Minjae (reference —
-neat short hair NOT buzz cut, thin rimless/square-frame glasses clearly visible) on
-the other side, composed half-smile (NOT wide grin showing teeth), one hand giving a
-small thumbs-up, other hand holding his notebook tucked under his arm. Graduation
-flowers in hand. Snow or cold-looking light (winter/february feel).
-Background: graduation banner "졸업식", other families in background.
-Mood: bittersweet joy, true friendship milestone, tears just held back.
+Three 12-year-old Korean BOYS in graduation attire/school uniform posing for a photo.
+ALL THREE characters are BOYS (NOT girls) — confirm gender carefully for each.
+
+Jihun (reference — 12-year-old Korean BOY with messy short black hair, navy school
+blazer, athletic build): center, arm around male protagonist's shoulder, big bright
+joyful smile showing teeth, eyes sparkling with happiness (NOT teary, NOT wet,
+NOT sad).
+
+Male protagonist (player_m reference — 12-year-old Korean BOY): beside Jihun, wide
+happy grin, eyes bright and clear.
+
+Minjae (reference — 12-year-old Korean BOY, neat short hair NOT buzz cut, thin
+rimless/square-frame glasses clearly visible) on the other side, composed half-smile
+(softer than Jihun's grin but clearly happy), one hand giving a small thumbs-up,
+other hand holding a rolled graduation diploma (졸업장) with a red ribbon.
+NO notebook in this scene — graduation photo context; the rolled diploma is the
+appropriate prop.
+
+All three holding graduation flowers AND/OR rolled diplomas. Bright winter sunlight
+(sunny february feel — NOT gloomy, NOT cold-toned).
+Background: graduation banner "졸업식", other families celebrating in background.
+Mood: pure joyful celebration, friendship milestone — three boys proudly closing
+elementary chapter together, NO tears, NO bittersweet undertone.
 ```
 
 **[female / c0]** `elementary-graduation_c0_f.png`
 ```
-Same composition with female protagonist. No other changes.
+Same composition as _c0_m but with ONE change only: male protagonist is replaced
+by female protagonist (player_f reference — 12-year-old Korean GIRL with shoulder-
+length black hair, navy school blazer with red ribbon, plaid skirt).
+
+CRITICAL: ONLY player_m → player_f changes. Jihun MUST remain a 12-year-old Korean
+BOY (NOT a girl, NOT feminized). Minjae MUST remain a 12-year-old Korean BOY.
+Final composition: BOY (Jihun) + GIRL (player_f) + BOY (Minjae) — 2 boys + 1 girl.
+
+All other elements identical to _c0_m: same bright joyful mood, same poses, same
+background, same outfits for Jihun/Minjae, same flowers, same diplomas, same sunny
+winter light. Minjae holds rolled graduation diploma (NOT notebook).
 ```
 
 ### [c1] 조용히 교실을 둘러본다
@@ -1226,7 +1261,8 @@ Minjae (reference, on one side): neat short hair (clean side-part, NOT buzz
 cut), average pale skin tone, thin rimless or silver square-frame glasses
 clearly visible, chopsticks pausing mid-air, head turned slightly TOWARD the
 protagonist beside him, quietly engaged explaining gesture, eyes thoughtful
-behind glasses. A notebook visible on the table near his tray.
+behind glasses. A closed notebook rests on the table edge beside his tray
+(NOT in his hands — meal scene).
 Protagonist (player_m reference [c1_m] / player_f reference [c1_f]) seated
 RIGHT NEXT TO Minjae on the same bench/side, head turned slightly toward him,
 engaged listener posture, leaning in with curious "아 그래?" expression.
