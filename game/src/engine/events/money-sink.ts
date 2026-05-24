@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../types';
+import { GameEvent } from '../types';
 
-export const MONEY_SINK_EVENTS: GameEvent[] = [
+export const MONEY_SINK_EVENTS = [
   // ===== M4: 돈 싱크 이벤트 =====
   // 수학여행 — 중1 가을 (Y2 W28) — 경주
   {
@@ -8,7 +8,7 @@ export const MONEY_SINK_EVENTS: GameEvent[] = [
     title: '수학여행 신청서',
     description: '담임이 종이 한 장을 나눠준다.\n"다음 달 수학여행이다. 경주 2박 3일, 참가비 10만원. 내일까지 제출."\n책상에 신청서가 놓인다.\n옆자리에서 "같이 가야지?" 하는 목소리가 들린다.',
     week: 28,
-    condition: (s: GameState) => s.year === 2 && !s.isVacation,
+    condition: (s) => s.year === 2 && !s.isVacation,
     location: 'classroom',
     background: 'classroom_middle_afternoon',
     speakers: ['jihun'],
@@ -54,7 +54,7 @@ export const MONEY_SINK_EVENTS: GameEvent[] = [
     title: '제주 수학여행',
     description: '고등학교 첫 수학여행이다.\n"제주 3박 4일, 참가비 10만원. 이게 마지막일 거다."\n담임이 신청서를 나눠준다.\n단톡방에서 이미 "너 갈 거지?" 확인이 돌고 있다.',
     week: 28,
-    condition: (s: GameState) => s.year === 5 && !s.isVacation,
+    condition: (s) => s.year === 5 && !s.isVacation,
     location: 'classroom',
     background: 'classroom_high_afternoon',
     // M5 Phase 3-Y: 준하는 Y6 전학생이라 Y5 수학여행엔 없음 (met 조기 설정 버그 수정)
@@ -98,7 +98,7 @@ export const MONEY_SINK_EVENTS: GameEvent[] = [
     title: '졸업 앨범',
     description: '졸업식 전주. 교실 뒤에 졸업 앨범 신청서가 붙었다.\n"사진관 촬영 + 앨범 + 롤링페이퍼 세트 5만원."\n반 애들이 하나씩 줄을 선다.\n신청할까, 말까.',
     week: 45,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'classroom',
     background: 'classroom_elementary_afternoon',
     choices: [
@@ -130,7 +130,7 @@ export const MONEY_SINK_EVENTS: GameEvent[] = [
     title: '졸업 준비',
     description: '수능도 끝났고, 졸업식이 다음 주다.\n"졸업 정장 대여 + 앨범 + 꽃다발 세트 5만원, 학교에서 단체 신청 받는다."\n마지막이라는 말이 유난히 묵직하다.',
     week: 45,
-    condition: (s: GameState) => s.year === 7,
+    condition: (s) => s.year === 7,
     location: 'classroom',
     background: 'classroom_high_afternoon',
     choices: [
@@ -160,7 +160,7 @@ export const MONEY_SINK_EVENTS: GameEvent[] = [
     title: '방과 후, 뭐 할래',
     description: '고등학교 둘째 주. 방과 후 활동 배정이 시작됐다.\n게시판에 붙은 종이 — "동아리 활동 10만원 / 학원 등록 10만원 / 자율".\n옆반에서는 이미 다 정한 듯 빠르게 움직인다.\n"너는 어떻게 할 거야?" 누군가가 묻는다.',
     week: 2,
-    condition: (s: GameState) => s.year === 5 && !s.isVacation,
+    condition: (s) => s.year === 5 && !s.isVacation,
     location: 'classroom',
     background: 'classroom_high',
     choices: [
@@ -209,4 +209,4 @@ export const MONEY_SINK_EVENTS: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];

@@ -17,7 +17,7 @@ function isClassOfficer(s: GameState): boolean {
     || s.events.some(e => e.id === 'class-president-vice' && e.year === s.year && e.resolvedChoice === 0);
 }
 
-export const PRESIDENT_FOLLOWUP: GameEvent[] = [
+export const PRESIDENT_FOLLOWUP = [
   // ===== 반장 후속 이벤트 =====
   {
     id: 'class-president-nudge', title: '민재의 추천',
@@ -33,7 +33,7 @@ export const PRESIDENT_FOLLOWUP: GameEvent[] = [
         npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '"알겠어, 근데 너 진짜 잘할 수 있었을 텐데." 민재 말에 기분이 나쁘진 않았다.' },
     ],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const electionEvent = s.events.find(e =>
         (e.id === 'class-president' || e.id === 'class-president-2') &&
         e.year === s.year &&
@@ -44,9 +44,9 @@ export const PRESIDENT_FOLLOWUP: GameEvent[] = [
       return !!electionEvent && !alreadyFiredThisYear && s.stats.social >= 55;
     },
   },
-];
+] satisfies readonly GameEvent[];
 
-export const PRESIDENT_ELECTION: GameEvent[] = [
+export const PRESIDENT_ELECTION = [
   // ===== 반장 선거 이벤트 =====
   {
     id: 'class-president', title: '반장 선거',
@@ -66,7 +66,7 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
     id: 'class-president-speech', title: '선거 연설',
     description: '교탁 앞에 섰다.\n반 친구들의 시선이 모인다.\n무슨 말을 해야 할까?',
     // 같은 해 출마(c0) 후 + 연설/win/lose 미발동
-    condition: (s: GameState) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
       && !s.events.some(e => e.id === 'class-president-speech' && e.year === s.year)
       && !s.events.some(e => (e.id === 'class-president-win' || e.id === 'class-president-lose') && e.year === s.year),
     location: 'classroom',
@@ -84,7 +84,7 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
     id: 'class-president-win', title: '반장 당선!',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n반 친구들이 박수를 쳐준다.',
     // 매년 발동: 같은 해 출마(c0) + 같은 해에 -lose/-win 미발동
-    condition: (s: GameState) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
       && s.stats.social >= 40
       && !s.events.some(e => e.id === 'class-president-lose' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-win' && e.year === s.year),
@@ -98,7 +98,7 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
   {
     id: 'class-president-lose', title: '반장 선거 결과',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n가슴이 조금 내려앉았다.',
-    condition: (s: GameState) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
+    condition: (s) => s.events.some(e => e.id === 'class-president' && e.year === s.year && e.resolvedChoice === 0)
       && s.stats.social < 40
       && !s.events.some(e => e.id === 'class-president-win' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-lose' && e.year === s.year),
@@ -112,7 +112,7 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
   {
     id: 'class-president-vice', title: '부반장 제안',
     description: '쉬는 시간에 당선된 반장이 다가온다.\n"야, 부반장 자리 아직 비었는데... 어때?"',
-    condition: (s: GameState) => s.events.some(e => e.id === 'class-president-lose' && e.year === s.year)
+    condition: (s) => s.events.some(e => e.id === 'class-president-lose' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-vice' && e.year === s.year),
     location: 'classroom', background: 'classroom_{school}', speakers: ['minjae'],
     choices: [
@@ -139,7 +139,7 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
     id: 'class-president-2-speech', title: '2학기 선거 연설',
     description: '다시 교탁 앞에 섰다.\n이번엔 조금 덜 떨린다. 어떤 말을 할까.',
     // 같은 해 2학기 출마(c0) 후 + 2학기 연설/win/lose 미발동
-    condition: (s: GameState) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
       && !s.events.some(e => e.id === 'class-president-2-speech' && e.year === s.year)
       && !s.events.some(e => (e.id === 'class-president-2-win' || e.id === 'class-president-2-lose') && e.year === s.year),
     location: 'classroom',
@@ -156,7 +156,7 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
   {
     id: 'class-president-2-win', title: '2학기 반장 당선!',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 불렸다!\n2학기 반장이다.',
-    condition: (s: GameState) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
       && s.stats.social >= 50
       && !s.events.some(e => e.id === 'class-president-2-lose' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-2-win' && e.year === s.year),
@@ -170,7 +170,7 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
   {
     id: 'class-president-2-lose', title: '2학기 반장 선거 결과',
     description: '선생님이 교탁 위 종이를 펼친다.\n교실이 조용해졌다.\n"이번 학기 반장은..."\n내 이름이 아니다.\n이번에도 아깝게 졌다.',
-    condition: (s: GameState) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
+    condition: (s) => s.events.some(e => e.id === 'class-president-2' && e.year === s.year && e.resolvedChoice === 0)
       && s.stats.social < 50
       && !s.events.some(e => e.id === 'class-president-2-win' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-2-lose' && e.year === s.year),
@@ -181,9 +181,9 @@ export const PRESIDENT_ELECTION: GameEvent[] = [
         message: '인기를 더 쌓아야겠다는 생각이 든다. 옆자리 친구가 "다음 학기엔 될 거야" 하며 어깨를 두드렸다.' },
     ],
   },
-];
+] satisfies readonly GameEvent[];
 
-export const PRESIDENT_ONLY: GameEvent[] = [
+export const PRESIDENT_ONLY = [
   // ===== 반장 전용 이벤트 =====
   {
     id: 'president-errand', title: '반장의 심부름',
@@ -195,7 +195,7 @@ export const PRESIDENT_ONLY: GameEvent[] = [
       { text: '"아... 네..." — 좀 귀찮지만 한다', effects: { social: 1 }, fatigueEffect: 2,
         message: '시킨 건 했지만 의욕은 없었다. 반장이 이렇게 피곤한 거였나.' },
     ],
-    condition: (s: GameState) => isClassPresident(s) && !s.isVacation && s.week > 4,
+    condition: (s) => isClassPresident(s) && !s.isVacation && s.week > 4,
   },
   {
     id: 'president-mediate', title: '반장의 중재',
@@ -207,7 +207,7 @@ export const PRESIDENT_ONLY: GameEvent[] = [
       { text: '"선생님 오실 때까지 기다리자" — 넘긴다', effects: { social: -1, mental: 1 },
         message: '결국 담임이 와서 해결했다. "반장이 좀 나섰어야지..." 누군가가 작게 말했다.' },
     ],
-    condition: (s: GameState) => isClassPresident(s) && !s.isVacation && s.stats.social >= 40,
+    condition: (s) => isClassPresident(s) && !s.isVacation && s.stats.social >= 40,
   },
   {
     id: 'president-speech', title: '조회 시간 발표',
@@ -219,11 +219,11 @@ export const PRESIDENT_ONLY: GameEvent[] = [
       { text: '후다닥 빨리 끝낸다', effects: { social: 1, mental: -1 },
         message: '우물우물 빨리 끝냈다. 아무도 뭐라 안 했지만... 좀 창피하다.' },
     ],
-    condition: (s: GameState) => isClassPresident(s) && !s.isVacation,
+    condition: (s) => isClassPresident(s) && !s.isVacation,
   },
-];
+] satisfies readonly GameEvent[];
 
-export const PRESIDENT_NON: GameEvent[] = [
+export const PRESIDENT_NON = [
   // ===== 비반장: 반장을 지켜보는 이벤트 =====
   {
     id: 'watching-president', title: '민재가 지쳐 보인다',
@@ -237,7 +237,7 @@ export const PRESIDENT_NON: GameEvent[] = [
       { text: '조용히 지나간다', effects: { mental: 1 },
         message: '민재도 버거운 거구나. 전교 1등이 쉬운 게 아니라는 걸 처음 느꼈다.' },
     ],
-    condition: (s: GameState) => !isClassOfficer(s) && !s.isVacation && s.week > 6 && s.stats.social >= 35,
+    condition: (s) => !isClassOfficer(s) && !s.isVacation && s.week > 6 && s.stats.social >= 35,
   },
 
-];
+] satisfies readonly GameEvent[];

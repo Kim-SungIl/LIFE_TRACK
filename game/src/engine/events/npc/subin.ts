@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../../types';
+import { GameEvent } from '../../types';
 
-export const SUBIN_EVENTS: GameEvent[] = [
+export const SUBIN_EVENTS = [
   // ===== 수빈 이벤트 체인 =====
   {
     id: 'subin-bridge',
@@ -9,7 +9,7 @@ export const SUBIN_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['subin'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       if (!subin?.met || subin.intimacy < 20 || s.isVacation) return false;
       // Y1은 1학기 밀집 완화로 2학기부터, 그 외 연도는 W10부터
@@ -37,7 +37,7 @@ export const SUBIN_EVENTS: GameEvent[] = [
     location: 'school_gate',
     background: 'school_gate_{school}',
     speakers: ['subin'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 35 && !s.isVacation && s.year >= 2;
     },
@@ -68,7 +68,7 @@ export const SUBIN_EVENTS: GameEvent[] = [
     location: 'street',
     background: 'hagwon_front',
     speakers: ['subin'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 50 && !s.isVacation && s.year >= 3;
     },
@@ -100,7 +100,7 @@ export const SUBIN_EVENTS: GameEvent[] = [
     location: 'cafe',
     background: 'cafe_study',
     speakers: ['subin'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 60 && !s.isVacation && s.year >= 5;
     },
@@ -132,7 +132,7 @@ export const SUBIN_EVENTS: GameEvent[] = [
     location: 'street',
     background: 'hagwon_front',
     speakers: ['subin'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 70 && s.week >= 40 && !s.isVacation && s.year === 7;
     },
@@ -151,4 +151,4 @@ export const SUBIN_EVENTS: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];

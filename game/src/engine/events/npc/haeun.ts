@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../../types';
+import { GameEvent } from '../../types';
 
-export const HAEUN_EVENTS: GameEvent[] = [
+export const HAEUN_EVENTS = [
   // ===== 하은 이벤트 체인 (중학교 선배 멘토) =====
   {
     id: 'haeun-meet',
@@ -10,7 +10,7 @@ export const HAEUN_EVENTS: GameEvent[] = [
     location: 'library',
     background: 'library_{school}',
     speakers: ['haeun'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return s.year === 2 && !haeun?.met && !s.isVacation;
     },
@@ -32,7 +32,7 @@ export const HAEUN_EVENTS: GameEvent[] = [
     background: 'library_{school}',
     speakers: ['haeun'],
     // M5 Phase 3: intimacy 15→8, 발동 주차 확대 ([6,7,15,16] → [6,7,10,15,16,25,30])
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 8 && s.year === 2 && !s.isVacation
         && [6, 7, 10, 15, 16, 25, 30].includes(s.week);
@@ -54,7 +54,7 @@ export const HAEUN_EVENTS: GameEvent[] = [
     background: 'hallway_{school}',
     speakers: ['haeun'],
     // M5 Phase 3: intimacy 25→15 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 15 && (s.year === 2 || s.year === 3) && !s.isVacation;
     },
@@ -75,7 +75,7 @@ export const HAEUN_EVENTS: GameEvent[] = [
     background: 'bedroom_night',
     speakers: ['haeun'],
     // M5 Phase 3: intimacy 40→25 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 25 && (s.year === 2 || s.year === 3) && s.week >= 25 && !s.isVacation;
     },
@@ -99,7 +99,7 @@ export const HAEUN_EVENTS: GameEvent[] = [
     background: 'rooftop',
     speakers: ['haeun'],
     // M5 Phase 3: intimacy 50→35 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 35 && s.year === 3 && s.week >= 10 && !s.isVacation;
     },
@@ -124,7 +124,7 @@ export const HAEUN_EVENTS: GameEvent[] = [
     background: 'auditorium_middle',
     speakers: ['haeun'],
     // M5 Phase 3-Y: intimacy 20→5 완화 (만난 적만 있으면 졸업식에서 만남)
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return s.year === 3 && !!haeun?.met && haeun.intimacy >= 5;
     },
@@ -145,7 +145,7 @@ export const HAEUN_EVENTS: GameEvent[] = [
     background: 'hallway_{school}',
     speakers: ['haeun'],
     // M5 Phase 3: intimacy 30→15 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return s.year === 5 && !!haeun?.met && haeun.intimacy >= 15 && s.week >= 2 && s.week <= 6;
     },
@@ -158,4 +158,4 @@ export const HAEUN_EVENTS: GameEvent[] = [
         message: '"뭐야, 1년 만에 보는 건데 그렇게 시큰둥해?" 하은이가 어깨를 쳤다. "점심 같이 먹자. 급식 맛있는 거 알려줄게." 여전히 선배다.' },
     ],
   },
-];
+] satisfies readonly GameEvent[];

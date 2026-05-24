@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../types';
+import { GameEvent } from '../types';
 
-export const BIRTHDAY_EVENTS: GameEvent[] = [
+export const BIRTHDAY_EVENTS = [
   // ===== 생일 이벤트 (매년 고정 주차 발동) =====
   {
     id: 'jihun-birthday', title: '지훈이 생일',
@@ -8,7 +8,7 @@ export const BIRTHDAY_EVENTS: GameEvent[] = [
     week: 14,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['jihun'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && (s.year === 1 || jihun.intimacy >= 30);
     },
@@ -41,7 +41,7 @@ export const BIRTHDAY_EVENTS: GameEvent[] = [
     week: 29,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['subin'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && (s.year === 1 || subin.intimacy >= 30);
     },
@@ -64,7 +64,7 @@ export const BIRTHDAY_EVENTS: GameEvent[] = [
     week: 38,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['yuna'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && (s.year === 1 || yuna.intimacy >= 30);
     },
@@ -80,4 +80,4 @@ export const BIRTHDAY_EVENTS: GameEvent[] = [
         message: '"고마워" 짧은 답장이 왔다. 유나답다.' },
     ],
   },
-];
+] satisfies readonly GameEvent[];

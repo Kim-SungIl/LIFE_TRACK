@@ -1,13 +1,18 @@
-import { GameEvent, GameState } from '../../types';
+// 도윤은 다른 NPC 와 달리 학교 진입 영역(Y1 W4, W22, W47, Y2 W2) 에 분산되어 있어
+// 원래 순서를 보존하려면 단일 array 가 아닌 5 sub-array 로 분리하고
+// events/data.ts 에서 GAME_EVENTS 의 정확한 위치에 각각 spread 한다.
+// (지훈/민재/유나/수빈 첫만남은 학교 첫날 컨텍스트와 강결합되어 school.ts 에 잔류)
 
-export const DOYUN_FIRST_MEET_M: GameEvent[] = [
+import { GameEvent } from '../../types';
+
+export const DOYUN_FIRST_MEET_M = [
   // ===== 도윤 첫 만남 — 남주 (Y1 W4) — 점심 축구 =====
   {
     id: 'doyun-meet-elementary',
     title: '운동장 한 명 모자라',
     description: '점심시간. 운동장 쪽에서 누가 손을 흔든다.\n같은 반 체육부장 박도윤. 축구공을 한 손으로 튕기며 가까이 온다.\n"야! 한 명 모자라는데, 너 들어올래? 너 발 빠르잖아."',
     week: 4,
-    condition: (s: GameState) => s.year === 1 && s.gender === 'male',
+    condition: (s) => s.year === 1 && s.gender === 'male',
     location: 'gym',
     background: 'gymnasium',
     speakers: ['doyun'],
@@ -46,16 +51,16 @@ export const DOYUN_FIRST_MEET_M: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
 
-export const DOYUN_FIRST_MEET_F: GameEvent[] = [
+export const DOYUN_FIRST_MEET_F = [
   // ===== 도윤 첫 만남 — 여주 (Y1 W4) — 청소시간 관찰 =====
   {
     id: 'doyun-meet-elementary-f',
     title: '청소시간',
     description: '청소시간. 양동이가 무겁다는 애한테 도윤이가 슥 다가간다.\n"내가 들게. 별것도 아니야."\n반 분위기가 살짝 풀어진다. 정리하던 도윤이 시선이 너에게 잠깐 와 닿더니, 살짝 웃는다.',
     week: 4,
-    condition: (s: GameState) => s.year === 1 && s.gender === 'female',
+    condition: (s) => s.year === 1 && s.gender === 'female',
     location: 'classroom',
     background: 'classroom_elementary',
     speakers: ['doyun'],
@@ -94,16 +99,16 @@ export const DOYUN_FIRST_MEET_F: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
 
-export const DOYUN_DAILY: GameEvent[] = [
+export const DOYUN_DAILY = [
   // ===== 도윤 일상 (Y1 W22) — 만화책 돌려보기 =====
   {
     id: 'doyun-comic-share',
     title: '쉬는 시간 만화책',
     description: '쉬는 시간. 도윤이가 책상 사이를 돌며 만화책을 한 권씩 돌리고 있다.\n반 애들이 "다음 권 누가 봐?" 하며 줄을 선다.\n도윤이가 너 앞에 서서 책을 쓱 내민다.\n"이거, 너 아직 안 봤지?"',
     // Phase 2.2: 고정 주차(W22) → 도달형(intimacy >= 30) 변환
-    condition: (s: GameState) => {
+    condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
       return s.year === 1 && !!doyun?.met && doyun.intimacy >= 30;
     },
@@ -132,9 +137,9 @@ export const DOYUN_DAILY: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
 
-export const DOYUN_GRADUATION: GameEvent[] = [
+export const DOYUN_GRADUATION = [
   // ===== 도윤 졸업식 사인 (Y1 W47) — 같이 사인 교환 =====
   // 여주 분기는 거리감 호감 톤 (femaleDescription/femaleChoices) — W4 청소시간 관찰자 톤과 일관
   {
@@ -142,7 +147,7 @@ export const DOYUN_GRADUATION: GameEvent[] = [
     title: '졸업앨범 뒤에 사인',
     description: '졸업식 며칠 뒤. 학교에 잠깐 들렀다가 운동장에서 도윤이를 만났다.\n도윤이가 졸업앨범 한 권을 들고 다가온다.\n"야, 사인 하나 해줘. 나도 너 거 해줄게."\n매직펜을 손에 쥐어 준다.',
     week: 47,
-    condition: (s: GameState) => {
+    condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
       return s.year === 1 && !!doyun?.met;
     },
@@ -234,9 +239,9 @@ export const DOYUN_GRADUATION: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
 
-export const DOYUN_SCHOOL_SPLIT: GameEvent[] = [
+export const DOYUN_SCHOOL_SPLIT = [
   // ===== 도윤 학군 이사 (Y2 W2) — 첫 관계 상실 =====
   // 친밀도 변화량 (-8/-12/-15): 사용자 의도 "절반 하락"의 근사값.
   // 이벤트만으로 누적되는 평균 친밀도(~17~19) 기준으로 -20 이상이면 0 클램프에 부딪혀
@@ -247,7 +252,7 @@ export const DOYUN_SCHOOL_SPLIT: GameEvent[] = [
     title: '도윤이는 다른 학교',
     description: '입학 둘째 주. 카톡으로 도윤이한테서 메시지가 왔다.\n"야, 나 다른 중학교 가게 됐어. 학군 때문에 이사 가더라고. 미리 말 못해서 미안~~"\n읽고 한참을 가만히 있었다.',
     week: 2,
-    condition: (s: GameState) => {
+    condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
       return s.year === 2 && !!doyun?.met && !s.events.some(e => e.id === 'doyun-school-split');
     },
@@ -296,4 +301,4 @@ export const DOYUN_SCHOOL_SPLIT: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
