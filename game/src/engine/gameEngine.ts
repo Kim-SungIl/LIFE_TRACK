@@ -858,9 +858,14 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   }
 
   // 11. 이벤트 체크
-  const event = getEventForWeek(newState);
-  if (event) {
-    newState.currentEvent = { ...event, week: newState.week };
+  // getEventForWeek 은 순수 함수 — 사이드이펙트(예: 하드 위기 연간 가드)는
+  // patch 로 받아 호출자(여기)에서 명시적으로 적용한다.
+  const selection = getEventForWeek(newState);
+  if (selection.patch) {
+    newState.hardCrisisYears = selection.patch.hardCrisisYears;
+  }
+  if (selection.event) {
+    newState.currentEvent = { ...selection.event, week: newState.week };
     newState.phase = 'event';
   }
 

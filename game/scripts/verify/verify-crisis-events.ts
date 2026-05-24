@@ -194,7 +194,7 @@ console.log('\n=== 3. SOFT 크라이시스 condition 정합성 ===');
 console.log('\n=== 4. HARD 1회/년 상한 ===');
 {
   const s = mkState({ year: 5, week: 20, hardCrisisYears: [5], stats: { academic: 60, social: 50, talent: 40, mental: 40, health: 55 } });
-  const ev = getEventForWeek(s);
+  const ev = getEventForWeek(s).event;
   assert(`hardCrisisYears에 Y5 기록됐으면 HARD 크라이시스 선별 안 됨 (got "${ev?.id}")`, !ev || !HARD_CRISIS_IDS.has(ev.id));
 }
 
@@ -211,7 +211,7 @@ console.log('\n=== 5. SOFT 2건/년 상한 ===');
   s.events.push({ id: 'yuna-misunderstanding', title: '', description: '', choices: [], resolvedChoice: 0, week: 5, year: 4 });
   s.events.push({ id: 'subin-drift', title: '', description: '', choices: [], resolvedChoice: 0, week: 12, year: 4 });
 
-  const ev = getEventForWeek(s);
+  const ev = getEventForWeek(s).event;
   assert(`같은 해 SOFT 2건 기록됐으면 세 번째 SOFT는 선별 안 됨 (got "${ev?.id}")`, !ev || !SOFT_CRISIS_IDS.has(ev.id));
 }
 
