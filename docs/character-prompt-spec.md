@@ -161,19 +161,25 @@ inconsistent character design
 
 > **Differentiation from minjae:** player_m is the "everyman" baseline — NO glasses, NO notebook prop, soft approachable but slightly mature smile. Hair has clear soft center part (vs minjae's side-part). minjae 항목 참조.
 
-> **Differentiation from jihun (CRITICAL — 단체씬에서 자주 혼동):** 둘 다 elementary에서 hoodie를 입어 시각 차이가 약함. 다음 마커로 명확히 분리:
+> **Differentiation from jihun (CRITICAL — 단체씬에서 자주 혼동):** 후드티 색만 다르게 해서 차별화하면 단체씬에서 결국 비슷하게 묶임. **의상 카테고리 자체를 분리**하고, prop은 맥락에 맞을 때만 사용:
 >
 > | 마커 | player_m | jihun |
 > |---|---|---|
-> | Hoodie 색 | **Navy (짙은 파랑)** | **Royal blue (밝은 파랑) + 흰 sleeve stripe** |
-> | 안에 입은 옷 | Grey/연한 무지 T-shirt | 흰 T-shirt |
-> | 하의 | **검정 진(jeans)** | **검정 트랙팬츠 + 흰 side stripe** |
-> | 운동화 | Plain white (NO color accent) | Sporty (color accent 허용) |
+> | **의상 카테고리** | **Casual everyday wear** (T+청바지, 카디건, 셔츠, 가벼운 코트) | **Sportswear** (athletic/track 라인) |
+> | 의상 색조 | Muted (grey, navy, beige, dark) | Bright/saturated (royal blue, white, red accent) |
 > | 헤어 | Soft center part, neat | Messy bangs |
-> | Prop | NO prop, 손 자유 또는 포켓 | 농구공(남주) 또는 배드민턴 라켓(여주) — 식사·졸업·실내 정적씬 제외하고 거의 휴대 |
-> | 표정/포즈 | 차분 baseline | 활발 energy |
+> | 체형 | Average | Athletic, 약간 더 큰 키, 넓은 어깨 |
+> | Prop | **NO prop** (손 자유 또는 포켓) | **맥락 의존** — 야외 운동·등하교 등에서 농구공(남주)/배드민턴 라켓(여주). 식사·실내 정적·졸업 등에서는 옆에 두거나 생략 (가방 strap의 농구공 keychain이 fallback 식별 cue) |
+> | 분위기 | 차분 baseline | 활발 energetic |
+>
+> **핵심**: 둘 다 "후드티 + 청바지"라는 default가 사라져야 함. 후드티를 입어야만 하는 경우(쌀쌀한 계절)에도 jihun은 athletic zip-up, player_m은 모직/캐주얼 외투가 자연.
 >
 > 단체씬(first-week, jihun-call, spring-picnic, graduation 등)에서 두 캐릭터를 그릴 때 위 마커가 시각적으로 모두 살아 있어야 함.
+>
+> **계절 의상 분기 (둘 다)** — 자세한 규칙은 `event-cg-prompts-y1.md` "계절 의상 주의" 섹션 참조:
+> - 봄/초가을 (선선): 가벼운 zip-up / 카디건 / 트랙 jacket
+> - **여름 (더움)**: **반드시 T-shirt + 반바지/쇼츠** (후드티 금지)
+> - 늦가을/겨울: 두꺼운 외투 (player_m=모직 코트, jihun=패딩)
 
 **Actual Image:** natural medium-length black hair with soft center part (slightly fuller bangs covering part of forehead, NOT closely cropped), warm brown eyes, soft jawline, gentle and slightly mature half-smile. Navy blazer, white shirt, dark pants, black loafers. NO glasses, NO hand prop.
 
@@ -208,17 +214,26 @@ Same character at age 16-18. Slightly taller and more mature proportions.
 - Size: 800x1400px
 ```
 
-**Full Body (elementary)**
+**Full Body (elementary) — character sheet baseline**
 ```
 Same boy at age 11-12. Rounder face, slightly shorter.
-- Hair: same natural medium-length black with soft center part, slightly messier and shorter (NOT messy bangs — that is jihun's marker)
-- Outfit: navy (DARK blue, NOT royal blue) zip-up hoodie, grey or light muted T-shirt underneath
-  (NOT pure white — pure white T is jihun's marker), dark indigo jeans (NOT track pants — track
-  pants are jihun's marker), plain white sneakers with NO color accent (NO crest, NO tie).
+- Hair: same natural medium-length black with soft center part, slightly messier and shorter
+  (NOT messy bangs — that is jihun's marker)
+- Outfit category: CASUAL EVERYDAY WEAR (NOT sportswear — sportswear is jihun's marker)
+- Baseline outfit: grey or beige crewneck T-shirt + dark indigo jeans + plain white sneakers
+  (이게 sheet 표준. 실제 CG에서는 계절에 맞춰 변형 — 아래 참조).
 - Pose: natural standing, hands at sides or one hand in pocket (NO prop, NO ball, NO racket)
 - Expression: brighter, more innocent smile but composed (less energetic than jihun)
 - Background: solid white (#FFFFFF)
 - Size: 800x1400px
+```
+
+**계절별 의상 (CG 생성 시 적용)**
+```
+- 봄/초가을 (W1-W10, W31): light grey/navy zip-up over T + 청바지
+- 여름 (W11-W30): muted-color crewneck T-shirt + 청 반바지 또는 면 반바지 (반드시 hoodie 금지)
+- 늦가을 (W32-W40): 카디건 또는 셔츠 + T + 긴바지
+- 겨울 (W41-W48): 모직 코트 또는 더플코트 + 머플러 + 긴바지 (NOT 패딩 — 패딩은 jihun athletic 마커)
 ```
 
 > 차별화 마커는 위 player_m 섹션 상단의 "Differentiation from jihun" 표 참조.
@@ -289,18 +304,19 @@ Same character, chest-up. Bright energetic grin, basketball visible on bag strap
 Background: soft pastel pink-blue gradient.
 ```
 
-**Full Body (elementary)**
+**Full Body (elementary) — character sheet baseline**
 ```
 Same boy at age 11-12. Slightly shorter, rounder face, even more carefree.
 - Hair: same messy black hair, slightly longer, messy bangs that fall over forehead
   (NOT center part — center part is player_m's marker)
-- Outfit: ROYAL BLUE (bright/saturated blue, NOT dark navy — dark navy is player_m's marker)
-  athletic zip-up hoodie with WHITE SLEEVE STRIPE running down each arm, pure WHITE t-shirt
-  visible at collar (NOT grey — grey is player_m's marker), BLACK TRACK PANTS with WHITE
-  SIDE STRIPE (NOT jeans — jeans are player_m's marker), worn sporty sneakers (color accent
-  on stripes acceptable).
-- Accessory: basketball tucked under one arm OR basketball keychain on bag strap visible
-  in frame. Female-protagonist scenario variant: badminton racket replaces basketball.
+- Outfit category: SPORTSWEAR (athletic/track 라인 — NOT casual everyday;
+  casual everyday is player_m's marker)
+- Baseline outfit: royal blue athletic zip-up hoodie with white sleeve stripe + pure white
+  T-shirt + black track pants with white side stripe + sporty sneakers
+  (이게 sheet 표준. 실제 CG에서는 계절에 맞춰 변형 — 아래 참조).
+- Accessory (맥락 의존): 야외 운동·등하교 등에서 농구공(남주 시나리오) 또는 배드민턴 라켓
+  (여주 시나리오). 식사·실내 정적·졸업 등에서는 옆에 두거나 생략. 가방 strap의 농구공
+  keychain이 fallback 식별 cue.
 - Pose: casual standing, free hand waving, weight shifted (NOT static neutral stance)
 - Expression: big innocent grin, full of energy (clearly more energetic than player_m's
   composed half-smile)
@@ -308,7 +324,17 @@ Same boy at age 11-12. Slightly shorter, rounder face, even more carefree.
 - Size: 800x1400px
 ```
 
-> 차별화 마커는 player_m 섹션의 "Differentiation from jihun" 표 참조. 단체씬 prompt에서는 위 마커가 모두 살아 있어야 함.
+**계절별 의상 (CG 생성 시 적용)**
+```
+- 봄/초가을 (W1-W10, W31): royal blue athletic zip-up + 흰 T + 트랙팬츠
+- 여름 (W11-W30): athletic 단색 T-shirt (royal blue, red 등 sporty accent) + 트랙 쇼츠
+  또는 운동용 반바지 (반드시 hoodie 금지). 농구 jersey 옵션도 OK.
+- 늦가을 (W32-W40): athletic zip-up 또는 트랙 jacket + 긴 트랙팬츠
+- 겨울 (W41-W48): athletic 패딩 (sporty 디자인) + 모자/머플러 + 트랙팬츠
+  (NOT 모직 코트 — 모직 코트는 player_m casual 마커)
+```
+
+> 차별화 마커는 player_m 섹션의 "Differentiation from jihun" 표 참조. 단체씬 prompt에서는 위 마커가 모두 살아 있어야 함. **농구공/라켓은 맥락 의존이지 항상 휴대 아님** — minjae 노트 항상 휴대로 부자연이 생긴 사례 참고 (PR #164).
 
 ---
 
