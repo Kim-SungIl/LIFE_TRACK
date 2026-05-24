@@ -4,11 +4,11 @@
 // 단 ID 가 다른 GAME_EVENTS 와 충돌하면 안 되므로 verify-events-split.ts
 // 가 import 해서 함께 검증한다 (P0-2-fix-B).
 
-import { GameEvent, GameState } from '../types';
+import { GameEvent } from '../types';
 import { isExamPeriod } from '../examSystem';
 
 // ===== 학교생활 랜덤 이벤트 풀 (매주 1개씩 발생) =====
-export const SCHOOL_LIFE_EVENTS: GameEvent[] = [
+export const SCHOOL_LIFE_EVENTS = [
   {
     id: 'random-quiz', title: '깜짝 퀴즈!',
     description: '선생님이 갑자기 "자, 퀴즈 보자" 하셨다.\n교실이 술렁인다.',
@@ -209,4 +209,4 @@ export const SCHOOL_LIFE_EVENTS: GameEvent[] = [
     ],
     condition: (s) => s.fatigue >= 30 && !s.isVacation,
   },
-];
+] satisfies readonly GameEvent[];

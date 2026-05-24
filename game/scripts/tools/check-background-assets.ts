@@ -22,7 +22,6 @@ function readAllEventsText(dir: string): string {
   return out.join('\n');
 }
 const GAME_SCREEN = path.join(ROOT, 'src/components/GameScreen.tsx');
-const INDEX_HTML = path.join(ROOT, 'index.html');
 const BG_DIR = path.join(ROOT, 'public/images/backgrounds');
 
 const LEVELS = ['elementary', 'middle', 'high'] as const;
@@ -121,6 +120,11 @@ function main() {
   console.log('\n=== On disk but not referenced by scan (possible orphans / legacy) ===');
   if (orphans.length === 0) console.log('(none)');
   else orphans.forEach((f) => console.log(f));
+
+  // CI/검증 활용을 위한 종료 코드 — missing 은 fail, orphan 은 경고만
+  if (missing.length > 0) {
+    process.exitCode = 1;
+  }
 }
 
 main();

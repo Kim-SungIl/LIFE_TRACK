@@ -1,7 +1,6 @@
 import { GameEvent, GameState } from '../types';
 import { seededRandom } from '../rng';
 import { ANNUAL_EVENT_IDS } from '../memorySystem';
-import { isExamPeriod } from '../examSystem';
 import {
   FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, HARD_CRISIS_IDS, SOFT_CRISIS_IDS,
 } from './constants';

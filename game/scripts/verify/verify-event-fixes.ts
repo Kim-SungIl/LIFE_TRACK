@@ -76,7 +76,7 @@ console.log('\n=== 1. minjae-exam-chat: Y1 W17에만 발동 ===');
   assert('Y2 W17: 발동 안 됨', !y2W17);
 
   // minjae.met 없으면 발동 안 됨
-  let s2 = setupState();
+  const s2 = setupState();
   const unmet = canFireAt('minjae-exam-chat', mutate(s2, { week: 17, year: 1 }));
   assert('minjae 미면식 시 발동 안 됨', !unmet);
 }
