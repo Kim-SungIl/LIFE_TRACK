@@ -1,13 +1,13 @@
-import { GameEvent, GameState } from '../types';
+import { GameEvent } from '../types';
 
-export const CRISIS_EVENTS: GameEvent[] = [
+export const CRISIS_EVENTS = [
   // ===== HARD 크라이시스 이벤트 (연간 1회 상한, hardCrisisYears 가드) =====
   // v1.2 §4.3 — middle-burnout 외 3종. 각 학년대 변곡점에 배치.
   {
     id: 'high-panic',
     title: '새벽 세 시, 숨이 막혔다',
     description: '문제집 펴놓고 졸다가 깼다.\n시계를 보니 새벽 세 시.\n갑자기 심장이 빠르게 뛰고, 숨을 쉬어도 들이마신 느낌이 안 든다.\n"...뭐지, 이거."',
-    condition: (s: GameState) => s.year >= 5 && s.year <= 7 && s.stats.mental <= 55 && s.stats.academic >= 50,
+    condition: (s) => s.year >= 5 && s.year <= 7 && s.stats.mental <= 55 && s.stats.academic >= 50,
     location: 'home',
     background: 'bedroom_night',
     choices: [
@@ -53,7 +53,7 @@ export const CRISIS_EVENTS: GameEvent[] = [
     id: 'family-strain',
     title: '식탁 위 침묵',
     description: '저녁 식탁. 오늘따라 공기가 묵직하다.\n아빠가 수저를 놓으며 말한다.\n"요즘 너, 뭐 하는 거니?"\n엄마는 나를 안 보신다. 그게 더 서늘했다.',
-    condition: (s: GameState) => s.year >= 3 && s.year <= 6 && (s.idleWeeks >= 4 || (s.stats.mental <= 45 && s.stats.academic <= 55)),
+    condition: (s) => s.year >= 3 && s.year <= 6 && (s.idleWeeks >= 4 || (s.stats.mental <= 45 && s.stats.academic <= 55)),
     location: 'home',
     background: 'dinner_table',
     choices: [
@@ -99,7 +99,7 @@ export const CRISIS_EVENTS: GameEvent[] = [
     id: 'identity-crisis',
     title: '내가 뭘 하고 싶은 거지',
     description: '야자 끝나고 옥상에 혼자 올라왔다.\n친구들은 다 꿈을 말하는데, 나는 아무것도 떠오르지 않는다.\n"...나 뭐 하고 있는 거지."\n하늘이 이상하게 멀어 보였다.',
-    condition: (s: GameState) => (s.year === 5 || s.year === 6) && s.stats.mental <= 55 && !s.events.some(e => e.id === 'identity-crisis'),
+    condition: (s) => (s.year === 5 || s.year === 6) && s.stats.mental <= 55 && !s.events.some(e => e.id === 'identity-crisis'),
     location: 'rooftop',
     background: 'rooftop_sunset',
     choices: [
@@ -149,7 +149,7 @@ export const CRISIS_EVENTS: GameEvent[] = [
     id: 'yuna-misunderstanding',
     title: '유나의 차가운 인사',
     description: '아침에 유나랑 눈이 마주쳤는데 평소와 다르다.\n웃지 않았다. 짧게 고개만 까딱하고 지나갔다.\n쉬는 시간에 다가가려 하니, 유나가 다른 친구랑만 얘기한다.\n"...뭐지."',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 40 && yuna.intimacy <= 75
         && s.year >= 2 && s.year <= 5
@@ -197,7 +197,7 @@ export const CRISIS_EVENTS: GameEvent[] = [
     id: 'subin-drift',
     title: '수빈이 멀어진다',
     description: '점심시간, 수빈이가 다른 반 애들이랑 웃으며 지나간다.\n예전엔 자연스럽게 내 쪽으로 왔을 텐데, 눈도 안 마주쳤다.\n"...우리 아직 친한 거 맞나?"',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 30 && subin.intimacy <= 65
         && s.year >= 3 && s.year <= 5
@@ -245,7 +245,7 @@ export const CRISIS_EVENTS: GameEvent[] = [
     id: 'jihun-envy',
     title: '지훈이 말끝에 남은 것',
     description: '방과 후 지훈이랑 편의점에서 컵라면 먹는 중.\n지훈이가 씩 웃으며 말한다.\n"너 요즘 진짜 잘나가네." 농담 같긴 한데, 끝이 살짝 내려갔다.\n잠깐 정적.',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 45 && jihun.intimacy <= 75
         && s.year >= 2 && s.year <= 5
@@ -328,7 +328,7 @@ export const CRISIS_EVENTS: GameEvent[] = [
     id: 'haeun-distance',
     title: '하은 선배의 편지',
     description: '사물함에 접힌 종이가 끼어 있다.\n하은 선배 글씨다.\n"잘 지내지? 나 고등학교 가서 정신없어. 이제 자주는 못 볼 것 같아.\n네가 중학교 잘 다니면 그걸로 됐어."\n짧은 편지 아래에, 작게 이름이 쓰여 있었다.',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 40 && haeun.intimacy <= 80
         && s.year === 4
@@ -379,4 +379,4 @@ export const CRISIS_EVENTS: GameEvent[] = [
     ],
   },
 
-];
+] satisfies readonly GameEvent[];

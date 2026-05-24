@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../../types';
+import { GameEvent } from '../../types';
 
-export const JUNHA_EVENTS: GameEvent[] = [
+export const JUNHA_EVENTS = [
   // ===== 준하 이벤트 체인 (고2 전학생, 후반부 변수) =====
   {
     id: 'junha-transfer',
@@ -10,7 +10,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}',
     speakers: ['junha'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
       return s.year === 6 && !junha?.met && !s.isVacation;
     },
@@ -32,7 +32,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     background: 'classroom_{school}_afternoon',
     speakers: ['junha'],
     // M5 Phase 3: intimacy 15→8 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
       return !!junha?.met && junha.intimacy >= 8 && s.year >= 6 && !s.isVacation;
     },
@@ -54,7 +54,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     background: 'gymnasium',
     speakers: ['junha'],
     // M5 Phase 3: intimacy 30→20 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
       return !!junha?.met && junha.intimacy >= 20 && s.year >= 6 && !s.isVacation;
     },
@@ -78,7 +78,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     background: 'bedroom_night',
     speakers: ['junha'],
     // M5 Phase 3: intimacy 50→35 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
       return !!junha?.met && junha.intimacy >= 35 && s.year >= 6 && !s.isVacation;
     },
@@ -102,7 +102,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     background: 'rooftop',
     speakers: ['junha'],
     // M5 Phase 3: intimacy 65→50 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
       return !!junha?.met && junha.intimacy >= 50 && s.year === 7 && s.week >= 8 && !s.isVacation;
     },
@@ -126,7 +126,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}',
     speakers: ['junha', 'minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!junha?.met && !!minjae?.met && junha.intimacy >= 25 && minjae.intimacy >= 30
@@ -150,7 +150,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     week: 20,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['junha'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
       return !!junha?.met && junha.intimacy >= 10 && s.year >= 6;
     },
@@ -173,7 +173,7 @@ export const JUNHA_EVENTS: GameEvent[] = [
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['haeun'],
     // M5 Phase 3-Y: intimacy 20→10 완화 (첫만남 직후에도 생일 참석 가능)
-    condition: (s: GameState) => {
+    condition: (s) => {
       const haeun = s.npcs.find(n => n.id === 'haeun');
       return !!haeun?.met && haeun.intimacy >= 10
         && (s.year === 2 || s.year === 3 || (s.year >= 5 && s.events.some(e => e.id === 'haeun-reunion')));
@@ -190,4 +190,4 @@ export const JUNHA_EVENTS: GameEvent[] = [
         message: '"고마워~ 넌 진짜 챙김이 남다르다?" 하은이가 답장을 보냈다.' },
     ],
   },
-];
+] satisfies readonly GameEvent[];

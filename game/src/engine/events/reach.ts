@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../types';
+import { GameEvent } from '../types';
 
-export const REACH_EVENTS: GameEvent[] = [
+export const REACH_EVENTS = [
   // ===== Phase 2.2: Y1 친밀도 도달형 이벤트 =====
   // 친밀도 게이트(30/50/70/90)로 5명 NPC를 Y1에 5개씩 균등화.
   // week 없음 + condition으로 도달 시 conditionalEvents 풀 진입 (1회성 자동 보장).
@@ -14,7 +14,7 @@ export const REACH_EVENTS: GameEvent[] = [
     speakers: ['yuna'],
     location: 'classroom',
     background: 'classroom_elementary_spring',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 30 && s.year === 1;
     },
@@ -45,7 +45,7 @@ export const REACH_EVENTS: GameEvent[] = [
     speakers: ['yuna'],
     location: 'classroom',
     background: 'classroom_elementary',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 50 && s.year === 1;
     },
@@ -82,7 +82,7 @@ export const REACH_EVENTS: GameEvent[] = [
     speakers: ['yuna'],
     location: 'classroom',
     background: 'classroom_elementary',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 70 && s.year === 1;
     },
@@ -133,7 +133,7 @@ export const REACH_EVENTS: GameEvent[] = [
     speakers: ['yuna'],
     location: 'classroom',
     background: 'classroom_elementary_winter',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 90 && s.year === 1;
     },
@@ -176,7 +176,7 @@ export const REACH_EVENTS: GameEvent[] = [
     description: '도서코너 앞 게시판에 작은 종이가 붙어 있다.\n"이번 주 책 세 권 읽기"\n수빈이가 옆에서 말한다.\n"나도 할 건데, 너도 할래? 안 해도 되고."\n부담 없어 보이는 척하는 목소리가 오히려 수빈 같다.',
     speakers: ['subin'],
     location: 'library',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 30 && s.year === 1;
     },
@@ -205,7 +205,7 @@ export const REACH_EVENTS: GameEvent[] = [
     description: '점심 후 복도. 수빈이가 작은 열쇠고리를 꺼낸다.\n"엄마가 과일 사 오실 때 마트에서 주던 거… 나 하나 남았어."\n손바닥에 올려준다.\n"책갈피 대신 써도 되고, 그냥 가지고 있어도 돼."',
     speakers: ['subin'],
     location: 'hallway',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 50 && s.year === 1;
     },
@@ -234,7 +234,7 @@ export const REACH_EVENTS: GameEvent[] = [
     description: '단톡 창이 밤늦게 떴다. 수빈이다.\n"너 아직 깨어 있어? …괜찮으면 잠깐만."\n잠깐 뒤 메시지가 이어진다.\n"우리 집 거실 불, 밤새 켜두는 날이 있어. 그냥."',
     speakers: ['subin'],
     location: 'home',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 70 && s.year === 1;
     },
@@ -285,7 +285,7 @@ export const REACH_EVENTS: GameEvent[] = [
     speakers: ['subin'],
     location: 'classroom',
     background: 'classroom_elementary_winter',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 90 && s.year === 1;
     },
@@ -328,7 +328,7 @@ export const REACH_EVENTS: GameEvent[] = [
     description: '도윤이가 조용히 손짓해.\n"야, 여기 와봐. 여기 앉아서 보면 하늘이 진짜 잘 보여. 선생님들도 몰라."',
     speakers: ['doyun'],
     location: 'gym',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
       return !!doyun?.met && doyun.intimacy >= 40 && s.year === 1;
     },
@@ -358,7 +358,7 @@ export const REACH_EVENTS: GameEvent[] = [
     speakers: ['doyun'],
     location: 'classroom',
     background: 'classroom_elementary',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
       return !!doyun?.met && doyun.intimacy >= 60 && s.year === 1;
     },
@@ -408,7 +408,7 @@ export const REACH_EVENTS: GameEvent[] = [
     description: '교실 구석. 민재가 책상 서랍을 열었다 닫는다.\n손 안에는 말없이 구겨진 쪽지 하나.\n"…별거 아니야."\n말끝을 잘라 버리는 게 별거 같다는 걸 알고 있어서 더 말이 안 나온다.',
     speakers: ['minjae'],
     location: 'classroom',
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 70 && s.year === 1;
     },
@@ -450,4 +450,4 @@ export const REACH_EVENTS: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];

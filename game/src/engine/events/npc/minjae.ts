@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../../types';
+import { GameEvent } from '../../types';
 
-export const MINJAE_EVENTS: GameEvent[] = [
+export const MINJAE_EVENTS = [
   // ===== 민재 이벤트 체인 =====
   {
     id: 'minjae-sports',
@@ -9,7 +9,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'gym',
     background: 'gymnasium',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       // Y1 1학기 밀집 완화: 2학기로 이동 (원래 W4~W16 → W25~W40)
       return s.year === 1 && !!minjae?.met && !s.isVacation && s.week >= 25 && s.week <= 40;
@@ -51,7 +51,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return s.year === 1 && !!minjae?.met && s.week === 17;
     },
@@ -78,7 +78,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && (s.year === 1 || minjae.intimacy >= 25);
     },
@@ -99,7 +99,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
       {
         text: '따로 골라 온 책 한 권을 준다 (-5만원)',
         // 책 한 권 정성 선물: 여유 있는 상태에서만 — 5만원만 있으면 다 털어 사는 느낌이라 부자연스러움
-        condition: (s: GameState) => s.money >= 10,
+        condition: (s) => s.money >= 10,
         effects: { social: 3, mental: 4 },
         moneyEffect: -5,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 10 }],
@@ -119,7 +119,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return s.year >= 2 && !!minjae?.met && minjae.intimacy >= 15 && [8, 17].includes(s.week);
     },
@@ -148,7 +148,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     speakers: ['minjae'],
     // M5 Phase 2: intimacy 60 → 30, academic 55 → 45로 완화. NPC decay 완화 후에도
     // 60은 도달 어려움. 소프트 크라이시스 연간 2건 상한(events.ts)이 과잉 발동 방지.
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 30
         && (s.year === 2 || s.year === 3)
@@ -204,7 +204,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_sunset',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 25 && !s.isVacation && s.year >= 2
         && s.events.some(e => e.id === 'minjae-ranking');
@@ -245,7 +245,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 40 && !s.isVacation && s.year >= 2 && [9, 18, 35, 39].includes(s.week);
     },
@@ -278,7 +278,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 55 && !s.isVacation && s.year >= 4;
     },
@@ -324,7 +324,7 @@ export const MINJAE_EVENTS: GameEvent[] = [
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['minjae'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 65 && s.year >= 6 && !s.isVacation;
     },
@@ -349,4 +349,4 @@ export const MINJAE_EVENTS: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];

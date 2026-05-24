@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../../types';
+import { GameEvent } from '../../types';
 
-export const YUNA_EVENTS: GameEvent[] = [
+export const YUNA_EVENTS = [
   // ===== 유나 이벤트 체인 =====
   {
     id: 'yuna-library',
@@ -9,7 +9,7 @@ export const YUNA_EVENTS: GameEvent[] = [
     location: 'library',
     background: 'library_{school}',
     speakers: ['yuna'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       if (!yuna?.met || yuna.intimacy < 10 || s.isVacation) return false;
       // Y1은 1학기 밀집 완화로 2학기부터, 그 외 연도는 W8부터
@@ -43,7 +43,7 @@ export const YUNA_EVENTS: GameEvent[] = [
     background: 'rooftop',
     speakers: ['yuna'],
     // M5 Phase 3: intimacy 25→20, week 18→10 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 20 && s.week >= 10 && !s.isVacation;
     },
@@ -70,7 +70,7 @@ export const YUNA_EVENTS: GameEvent[] = [
     background: 'music_room',
     speakers: ['yuna'],
     // M5 Phase 3: intimacy 35→25 완화
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 25 && s.week >= 25 && !s.isVacation;
     },
@@ -103,7 +103,7 @@ export const YUNA_EVENTS: GameEvent[] = [
     background: 'hallway_{school}',
     speakers: ['yuna'],
     // M5 Phase 3: intimacy 50→35, week 범위 30~40 확대, 여러 학년 가능
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 35 && s.week >= 30 && s.week <= 40 && !s.isVacation;
     },
@@ -138,7 +138,7 @@ export const YUNA_EVENTS: GameEvent[] = [
     speakers: ['yuna'],
     // M5 Phase 3: intimacy 65→45 완화
     // 졸업/음대 결정 컨텍스트 — Y7 후반에만 (subin-farewell과 동일 패턴)
-    condition: (s: GameState) => {
+    condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
       return !!yuna?.met && yuna.intimacy >= 45 && s.year === 7 && s.week >= 40 && !s.isVacation;
     },
@@ -157,4 +157,4 @@ export const YUNA_EVENTS: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];

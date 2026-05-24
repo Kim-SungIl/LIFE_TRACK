@@ -1,12 +1,12 @@
-import { GameEvent, GameState } from '../types';
+import { GameEvent } from '../types';
 
-export const RANDOM_EVENTS: GameEvent[] = [
+export const RANDOM_EVENTS = [
   // ===== 랜덤 이벤트 (조건부) =====
   {
     id: 'fatigue-warning',
     title: '몸이 무겁다',
     description: '아침에 일어나기가 힘들다. 몸이 천근만근이다.\n"오늘 학교 가기 싫다..."',
-    condition: (s: GameState) => s.fatigue >= 60 && s.week > 5,
+    condition: (s) => s.fatigue >= 60 && s.week > 5,
     location: 'home',
     background: 'bedroom_night',
     choices: [
@@ -28,7 +28,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     id: 'mental-low',
     title: '혼자인 점심시간',
     description: '점심시간. 친구들이 다 어디 갔는지 주변에 아무도 없다.\n혼자 밥을 먹으며 핸드폰을 본다.',
-    condition: (s: GameState) => s.stats.social < 30 && s.week > 8,
+    condition: (s) => s.stats.social < 30 && s.week > 8,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     // speakers 제거 — description에는 아직 아무도 등장하지 않음 (choices에서만 등장)
@@ -54,7 +54,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     description: '책상 앞에 앉아도 펜만 굴러다닌다.\n어제랑 오늘이 구분이 안 간다.\n엄마가 뭐라고 했는데 반쪽은 흘려들었다.\n"나 괜찮은 걸까..."',
     // M5 Phase 2: mental 40 → 55, idleWeeks 4 → 3 완화. Y3 1회 가드(hardCrisisYears)로
     // 과잉 발동 방지. burnout-event(year !== 3 가드)와 충돌 없음.
-    condition: (s: GameState) => s.year === 3 && s.idleWeeks >= 3 && s.stats.mental <= 55,
+    condition: (s) => s.year === 3 && s.idleWeeks >= 3 && s.stats.mental <= 55,
     location: 'home',
     background: 'bedroom_night',
     choices: [
@@ -101,7 +101,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     id: 'burnout-event',
     title: '한계',
     description: '아무것도 하고 싶지 않다. 책상 앞에 앉아도 글자가 안 읽힌다.\n창밖만 멍하니 바라본다.',
-    condition: (s: GameState) => s.mentalState === 'burnout' && s.year !== 3,  // v1.2: Y3는 middle-burnout이 선점
+    condition: (s) => s.mentalState === 'burnout' && s.year !== 3,  // v1.2: Y3는 middle-burnout이 선점
     location: 'home',
     background: 'bedroom_night',
     // speakers 제거 — 집에서 혼자인 장면. 지훈은 choices[2]에서만 등장
@@ -130,7 +130,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     id: 'good-grade',
     title: '성적 상승!',
     description: '요즘 공부 흐름이 좋다.\n쉬는 시간에 담임 선생님이 지나가다 "요즘 꽤 열심히 하더라? 이대로만 계속 해" 하고 말씀하셨다.',
-    condition: (s: GameState) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1,
+    condition: (s) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     choices: [
@@ -150,7 +150,7 @@ export const RANDOM_EVENTS: GameEvent[] = [
     id: 'parent-pressure',
     title: '부모님의 한마디',
     description: '저녁 식사 중. 부모님이 성적 이야기를 꺼내신다.\n"요즘 공부는 잘 되니?"',
-    condition: (s: GameState) => s.week === 15 || s.week === 36,
+    condition: (s) => s.week === 15 || s.week === 36,
     location: 'home',
     background: 'dinner_table',
     choices: [
@@ -171,4 +171,4 @@ export const RANDOM_EVENTS: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];

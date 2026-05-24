@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../../types';
+import { GameEvent } from '../../types';
 
-export const JIHUN_EVENTS: GameEvent[] = [
+export const JIHUN_EVENTS = [
   // ===== 지훈 이벤트 체인 =====
   {
     id: 'jihun-basketball',
@@ -9,7 +9,7 @@ export const JIHUN_EVENTS: GameEvent[] = [
     location: 'gym',
     background: 'gymnasium',
     speakers: ['jihun'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 15 && s.week >= 10 && !s.isVacation;
     },
@@ -54,7 +54,7 @@ export const JIHUN_EVENTS: GameEvent[] = [
     location: 'park',
     background: 'sunset_walk',
     speakers: ['jihun'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 30 && s.year >= 2 && s.week >= 20 && !s.isVacation;
     },
@@ -86,7 +86,7 @@ export const JIHUN_EVENTS: GameEvent[] = [
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['jihun'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 40 && s.week >= 28 && !s.isVacation;
     },
@@ -119,7 +119,7 @@ export const JIHUN_EVENTS: GameEvent[] = [
     location: 'gym',
     background: 'gymnasium',
     speakers: ['jihun'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 55 && s.week >= 35 && !s.isVacation;
     },
@@ -163,7 +163,7 @@ export const JIHUN_EVENTS: GameEvent[] = [
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['jihun'],
-    condition: (s: GameState) => {
+    condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
       return !!jihun?.met && jihun.intimacy >= 70 && s.week >= 40 && !s.isVacation;
     },
@@ -182,4 +182,4 @@ export const JIHUN_EVENTS: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];

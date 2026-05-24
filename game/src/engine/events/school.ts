@@ -1,6 +1,6 @@
-import { GameEvent, GameState } from '../types';
+import { GameEvent } from '../types';
 
-export const SCHOOL_Y1_INTRO: GameEvent[] = [
+export const SCHOOL_Y1_INTRO = [
   // ===== 초반 이벤트 (W1~W4) =====
   // ===== 초6 첫날 (Y1 W1) — 소꿉친구 지훈이랑 또 같은 반 =====
   {
@@ -8,7 +8,7 @@ export const SCHOOL_Y1_INTRO: GameEvent[] = [
     title: '새 학기 첫날',
     description: '새 학기 첫날. 교실에 들어서자마자 뒤에서 "야!" 하는 소리.\n돌아보니 지훈이가 농구공을 옆구리에 낀 채 달려온다.\n"우리 또 같은 반이다? 3년 연속이야!"\n싱글벙글 웃는 얼굴이 어릴 때랑 똑같다.\n"방과 후에 한 판 어때? 오랜만에 뛰자."',
     week: 1,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'classroom',
     background: 'classroom_elementary_spring',
     speakers: ['jihun'],
@@ -63,7 +63,7 @@ export const SCHOOL_Y1_INTRO: GameEvent[] = [
     title: '새 짝꿍',
     description: '새 자리 배치. 옆자리에 처음 보는 애가 앉았다.\n필통을 가지런히 꺼내놓고, 노트에 오늘 날짜를 정자로 적는다.\n쉬는 시간에 조심스럽게 말을 건다.\n"야, 점심 같이 먹을래? 나 박민재."',
     week: 2,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'classroom',
     background: 'classroom_elementary_spring',
     speakers: ['minjae'],
@@ -114,7 +114,7 @@ export const SCHOOL_Y1_INTRO: GameEvent[] = [
     title: '도서관 창가 자리',
     description: '쉬는 시간에 도서관에 갔다. 창가 자리에 같은 반 여자애가 혼자 책을 읽고 있다.\n머리핀에 작은 별 장식. 피아노 학원 가방이 의자에 걸려 있다.\n나를 보더니 살짝 웃어준다.\n"아, 너도 책 좋아해?"',
     week: 6,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'library',
     background: 'library_elementary',
     speakers: ['yuna'],
@@ -166,7 +166,7 @@ export const SCHOOL_Y1_INTRO: GameEvent[] = [
     title: '학원 뒷자리',
     description: '학원 쉬는 시간. 뒷자리 여자애가 내 책을 힐끔 본다.\n단정한 단발머리, 작은 별 귀걸이. 손에는 작은 노트를 들고 있다.\n"너도 이 문제집 풀어? 나 여기 막혔는데..."\n공책을 살며시 내밀어 보인다.',
     week: 10,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'classroom',
     background: 'hagwon_front',
     speakers: ['subin'],
@@ -212,16 +212,16 @@ export const SCHOOL_Y1_INTRO: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
 
-export const SCHOOL_ELEM_TO_MIDDLE: GameEvent[] = [
+export const SCHOOL_ELEM_TO_MIDDLE = [
   // ===== 초등학교 졸업 (Y1 W46) =====
   {
     id: 'elementary-graduation',
     title: '초등학교 졸업식',
     description: '졸업식 날이다. 강당에 모인 아이들 표정이 다 다르다.\n웃는 애, 우는 애, 멍한 애.\n6년간 다니던 학교를 떠난다.\n교문을 나서며 뒤를 돌아본다.',
     week: 46,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'auditorium',
     background: 'auditorium_elementary',
     speakers: ['jihun', 'minjae'],
@@ -250,7 +250,7 @@ export const SCHOOL_ELEM_TO_MIDDLE: GameEvent[] = [
     title: '중학교 입학식',
     description: '새 교복을 입고 교문을 들어선다. 모든 게 다르다.\n건물도 크고, 선배도 있고, 교실 번호도 낯설다.\n심장이 빨리 뛴다. 긴장되면서도 설렌다.\n"...나 여기서 잘 할 수 있겠지?"',
     week: 1,
-    condition: (s: GameState) => s.year === 2,
+    condition: (s) => s.year === 2,
     location: 'auditorium',
     background: 'school_gate_middle',
     speakers: ['subin'],
@@ -273,16 +273,16 @@ export const SCHOOL_ELEM_TO_MIDDLE: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
 
-export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
+export const SCHOOL_MIDDLE_HIGH = [
   // ===== 중2 개학 (Y3 W1) =====
   {
     id: 'middle2-start',
     title: '중2, 시작',
     description: '2학년이 됐다. 이제 이 학교에 완전히 익숙하다.\n후배가 생겼다. 복도에서 마주치면 인사하는 게 좀 어색하면서도 뿌듯하다.\n교실 창밖으로 벚꽃이 보인다.',
     week: 1,
-    condition: (s: GameState) => s.year === 3,
+    condition: (s) => s.year === 3,
     location: 'classroom',
     background: 'classroom_{school}_spring',
     choices: [
@@ -304,7 +304,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '중3, 마지막 해',
     description: '중학교 마지막 해다. 선생님이 첫날부터 말씀하신다.\n"올해는 고등학교 진학이 있으니까 정신 차려야 해."\n교실 분위기가 작년과 좀 다르다. 다들 뭔가 진지해졌다.',
     week: 1,
-    condition: (s: GameState) => s.year === 4,
+    condition: (s) => s.year === 4,
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -331,7 +331,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '중학교 졸업식',
     description: '졸업장을 받았다. 3년이 이렇게 빨리 갈 줄 몰랐다.\n교실에서 친구들과 마지막 시간을 보내고 있다.\n누군가가 "우리 고등학교 가서도 만나자" 했다.\n정말 만날 수 있을까?',
     week: 46,
-    condition: (s: GameState) => s.year === 4,
+    condition: (s) => s.year === 4,
     location: 'auditorium',
     background: 'auditorium_middle',
     speakers: ['jihun', 'subin', 'minjae', 'yuna'],
@@ -365,7 +365,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '고등학교 입학식',
     description: '고등학생이 됐다.\n교문 앞에서 한 번 멈춘다. 여기서 3년을 보내게 되는 거다.\n새 교복, 새 학교, 새 교실. 모든 게 처음부터 다시.\n"수능까지 3년..." 누군가가 중얼거렸다.\n\n...본격적인 시작이다.',
     week: 1,
-    condition: (s: GameState) => s.year === 5,
+    condition: (s) => s.year === 5,
     location: 'auditorium',
     background: 'school_gate_high',
     speakers: ['jihun'],
@@ -394,7 +394,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '고2, 문·이과를 고르다',
     description: '고2가 됐다. 담임이 종이 한 장을 나눠준다.\n"이번 주까지 문·이과 결정해서 내. 나중에 바꾸기 어려워."\n\n주변 애들이 웅성거린다.\n"나 그냥 이과 갈래, 취업 잘 된다잖아."\n"난 수학 못 해서 문과..."\n\n한 번 정하면 돌이킬 수 없는 선택이다.',
     week: 1,
-    condition: (s: GameState) => s.year === 6 && s.track === null,
+    condition: (s) => s.year === 6 && s.track === null,
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
@@ -418,7 +418,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '고3, 마지막 시작',
     description: '마지막 학년이다.\n교실에 들어서는데 분위기가 무겁다. 칠판 위에 "D-xxx" 카운트다운이 적혀 있다.\n12년의 학교생활이 이 한 해로 끝난다.\n\n...복잡한 감정이 든다.',
     week: 1,
-    condition: (s: GameState) => s.year === 7,
+    condition: (s) => s.year === 7,
     location: 'classroom',
     background: 'classroom_{school}',
     speakers: ['jihun'],
@@ -493,7 +493,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '봄 소풍',
     description: '오늘은 봄 소풍 날. 김밥 도시락에 간식까지 든 가방이 묵직하다.\n공원에 도착하니 벚꽃잎이 바람에 흩날린다.\n민재가 손을 흔든다. "야 너도 여기 앉아!"\n한쪽에서는 선생님이 장기자랑 신청을 받고 있다.',
     week: 5,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'park',
     background: 'park_spring',
     speakers: ['minjae', 'jihun'],
@@ -522,7 +522,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '2학기 시작',
     description: '여름방학이 끝나고 2학기가 시작됐다.\n반 애들이 햇빛에 탄 얼굴로 돌아왔다.\n칠판에는 "곧 졸업이다!" 라고 선생님이 큰 글씨로 써놓았다.\n벌써 마지막 학기라니.',
     week: 25,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'classroom',
     background: 'classroom_elementary_afternoon',
     choices: [
@@ -549,7 +549,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '가을 운동회',
     description: '가을 운동회다. 선선한 바람에 깃발이 펄럭이고, 청팀·백팀 응원 소리가 운동장을 가득 메운다.\n이어달리기 순서가 돌아왔다.\n지훈이가 바통을 건넨다. "야, 우리 청팀이 이길 수 있어!"',
     week: 32,
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     location: 'gym',
     background: 'gymnasium',
     speakers: ['jihun'],
@@ -577,7 +577,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     week: 16,
     location: 'classroom',
     background: 'classroom_{school}',
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     choices: [
       {
         text: '집에 가서 복습한다',
@@ -599,7 +599,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     week: 7,
     location: 'classroom',
     background: 'classroom_{school}',
-    condition: (s: GameState) => s.year >= 2,
+    condition: (s) => s.year >= 2,
     choices: [
       {
         text: '시험공부에 올인한다 — 이번만큼은 잘 보고 싶다',
@@ -629,7 +629,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     week: 11,
     location: 'classroom',
     background: 'classroom_{school}',
-    condition: (s: GameState) => s.year >= 5,
+    condition: (s) => s.year >= 5,
     choices: [
       {
         text: '기출문제를 풀며 감을 잡는다',
@@ -654,7 +654,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '수빈이와 학원',
     description: '학원 복도에서 수빈이가 다른 반 아이들과 웃으며 얘기하고 있다.\n나를 발견하자 "야, 너도 김쌤 반이야? 김쌤 숙제 진짜 많지 않아? 쉬는 시간에 편의점 가자~"',
     week: 5,
-    condition: (s: GameState) => {
+    condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && (s.routineSlot2 === 'academy' || s.routineSlot3 === 'academy');
     },
@@ -768,7 +768,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '학교 축제',
     description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n수빈이가 "야, 홍보는 내가 할게! 누가 같이 하자~" 하며 손을 든다.',
     week: 30,
-    condition: (s: GameState) => s.year >= 2,
+    condition: (s) => s.year >= 2,
     location: 'classroom',
     background: 'festival_classroom',
     speakers: ['subin'],
@@ -817,7 +817,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '유나의 부탁',
     description: '유나가 씩 웃으며 다가온다.\n"야, 나 수학 7번 도저히 모르겠거든? 너 잘하잖아, 좀 알려줘!"',
     week: 34,
-    condition: (s: GameState) => s.stats.academic >= 50 && s.year !== 7, // Y7 W34는 수능 전날
+    condition: (s) => s.stats.academic >= 50 && s.year !== 7, // Y7 W34는 수능 전날
     location: 'library',
     background: 'library_{school}',
     speakers: ['yuna'],
@@ -859,7 +859,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     week: 37,
     location: 'classroom',
     background: 'classroom_{school}',
-    condition: (s: GameState) => s.year === 1,
+    condition: (s) => s.year === 1,
     choices: [
       {
         text: '열심히 복습한다 — 마지막이니까!',
@@ -881,7 +881,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     week: 37,
     location: 'classroom',
     background: 'classroom_{school}',
-    condition: (s: GameState) => s.year >= 2,
+    condition: (s) => s.year >= 2,
     choices: [
       {
         text: '이번엔 진짜 최선을 다한다',
@@ -905,7 +905,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     week: 32,
     location: 'classroom',
     background: 'classroom_{school}',
-    condition: (s: GameState) => s.year >= 5,
+    condition: (s) => s.year >= 5,
     choices: [
       {
         text: '이번엔 제대로 준비한다',
@@ -950,14 +950,14 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
         effects: { mental: -1 },
         moneyEffect: 5,
         message: '크리스마스에도 일했다. 돈은 벌었는데... 좀 씁쓸하다.',
-        condition: (s: GameState) => s.year >= 4,
+        condition: (s) => s.year >= 4,
       },
       {
         text: '엄마 심부름 — 용돈 받기',
         effects: { mental: 1 },
         moneyEffect: 1,
         message: '엄마 부탁으로 마트 심부름. 거스름돈에서 천 원짜리 한 장을 슬쩍 챙겼다. 작은 용돈이지만 기분이 좋다.',
-        condition: (s: GameState) => s.year < 4,
+        condition: (s) => s.year < 4,
       },
     ],
   },
@@ -966,7 +966,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '새해 전날',
     description: '12월 31일 밤. 올 한 해를 돌아본다.\n창밖으로 불꽃놀이 소리가 들린다.',
     week: 47,
-    condition: (s: GameState) => s.year !== 1 && s.year !== 4 && s.year !== 7, // 졸업 해에는 졸업 이벤트가 W46에 뜸
+    condition: (s) => s.year !== 1 && s.year !== 4 && s.year !== 7, // 졸업 해에는 졸업 이벤트가 W46에 뜸
     location: 'home',
     background: 'night_sky_fireworks',
     choices: [
@@ -988,7 +988,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '수능 전날',
     description: '내일이 수능이다.\n방에 앉아 있는데 아무것도 손에 잡히지 않는다.\n12년을 달려온 끝이 내일이라니.\n엄마가 방문을 열고 들어오셨다. "...잘 할 수 있어."',
     week: 34,
-    condition: (s: GameState) => s.year === 7,
+    condition: (s) => s.year === 7,
     location: 'home',
     background: 'bedroom_night',
     choices: [
@@ -1016,7 +1016,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '수능이 끝났다',
     description: '시험장을 나온다. 하늘이 유난히 맑다.\n12년의 공부가 끝났다. 주변에서 우는 애도, 웃는 애도, 멍하니 서 있는 애도 있다.\n\n...끝났다. 정말로.',
     week: 36,
-    condition: (s: GameState) => s.year === 7,
+    condition: (s) => s.year === 7,
     location: 'street',
     background: 'clear_sky',
     speakers: ['jihun', 'minjae'],
@@ -1047,7 +1047,7 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
     title: '졸업',
     description: '졸업식 날이다.\n12년간의 학교생활이 오늘로 끝난다.\n\n강당에서 졸업장을 받고, 교실로 돌아왔다.\n칠판에 누군가가 적어놨다.\n\n"졸업 축하해. 우리 모두 수고했어."',
     week: 46,
-    condition: (s: GameState) => s.year === 7,
+    condition: (s) => s.year === 7,
     location: 'auditorium',
     background: 'auditorium_high',
     speakers: ['jihun', 'subin', 'minjae', 'yuna', 'junha'],
@@ -1076,4 +1076,4 @@ export const SCHOOL_MIDDLE_HIGH: GameEvent[] = [
       },
     ],
   },
-];
+] satisfies readonly GameEvent[];
