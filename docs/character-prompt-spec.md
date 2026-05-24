@@ -166,7 +166,7 @@ inconsistent character design
 > | 마커 | player_m | jihun |
 > |---|---|---|
 > | **의상 카테고리** | **Casual everyday wear** (T+청바지, 카디건, 셔츠, 가벼운 코트) | **Sportswear** (athletic/track 라인) |
-> | 의상 색조 | Muted (grey, navy, beige, dark) | Bright/saturated (royal blue, white, red accent) |
+> | 의상 색조 | **Muted GREY/BEIGE/dark neutral 우선** (NOT navy/blue 톤 — navy/blue는 jihun royal blue와 색조 겹침 위험) | Bright/saturated (royal blue, white, red accent) |
 > | 헤어 | Soft center part, neat | Messy bangs |
 > | 체형 | Average | Athletic, 약간 더 큰 키, 넓은 어깨 |
 > | Prop | **NO prop** (손 자유 또는 포켓) | **맥락 의존** — 야외 운동·등하교 등에서 농구공(남주)/배드민턴 라켓(여주). 식사·실내 정적·졸업 등에서는 옆에 두거나 생략 (가방 strap의 농구공 keychain이 fallback 식별 cue) |
@@ -220,8 +220,10 @@ Same boy at age 11-12. Rounder face, slightly shorter.
 - Hair: same natural medium-length black with soft center part, slightly messier and shorter
   (NOT messy bangs — that is jihun's marker)
 - Outfit category: CASUAL EVERYDAY WEAR (NOT sportswear — sportswear is jihun's marker)
-- Baseline outfit: grey or beige crewneck T-shirt + dark indigo jeans + plain white sneakers
-  (이게 sheet 표준. 실제 CG에서는 계절에 맞춰 변형 — 아래 참조).
+- Baseline outfit (시트 표준): **LIGHT GREY or BEIGE zip-up hoodie** (NOT navy, NOT blue tones
+  — navy/blue는 jihun의 royal blue와 색조 겹침 위험) over **white or light grey T-shirt**,
+  dark indigo jeans, plain white sneakers.
+  (CG에서는 계절에 맞춰 outer를 변형 — 아래 참조).
 - Pose: natural standing, hands at sides or one hand in pocket (NO prop, NO ball, NO racket)
 - Expression: brighter, more innocent smile but composed (less energetic than jihun)
 - Background: solid white (#FFFFFF)
@@ -230,10 +232,13 @@ Same boy at age 11-12. Rounder face, slightly shorter.
 
 **계절별 의상 (CG 생성 시 적용)**
 ```
-- 봄/초가을 (W1-W10, W31): light grey/navy zip-up over T + 청바지
-- 여름 (W11-W30): muted-color crewneck T-shirt + 청 반바지 또는 면 반바지 (반드시 hoodie 금지)
-- 늦가을 (W32-W40): 카디건 또는 셔츠 + T + 긴바지
-- 겨울 (W41-W48): 모직 코트 또는 더플코트 + 머플러 + 긴바지 (NOT 패딩 — 패딩은 jihun athletic 마커)
+- 봄/초가을 (W1-W10, W31): light grey or beige zip-up over 흰/light grey T + 청바지
+  (NOT navy zip-up — color clash with jihun's royal blue)
+- 여름 (W11-W30): muted grey/beige crewneck T-shirt + 청 반바지 또는 면 반바지
+  (반드시 hoodie 금지)
+- 늦가을 (W32-W40): 베이지/grey 카디건 또는 셔츠 + T + 긴바지
+- 겨울 (W41-W48): 베이지/카멜 모직 코트 또는 더플코트 + 머플러 + 긴바지
+  (NOT 패딩 — 패딩은 jihun athletic 마커)
 ```
 
 > 차별화 마커는 위 player_m 섹션 상단의 "Differentiation from jihun" 표 참조.

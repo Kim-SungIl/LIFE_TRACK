@@ -63,7 +63,9 @@
 [player_m] — "casual everyday wear" baseline
 - Outfit category: 일상 캐주얼 (T+청바지, 카디건, 셔츠, 가벼운 코트)
   NOT athletic/sportswear (그건 jihun의 코드)
-- Color tone: muted (grey, navy, beige, dark)
+- Color tone: **GREY / BEIGE / dark neutral 우선** (NOT navy/blue tones —
+  navy/blue는 jihun의 royal blue와 색조 겹침 위험; 둘 다 파랑 톤이면 단체씬에서
+  서로 묶여 보임)
 - Hair: soft CENTER PART, neat (NOT messy bangs)
 - Build: average
 - Prop: NO prop, hand free or in pocket
@@ -140,7 +142,7 @@ no exaggerated anime eyes, no sexualization, no modern smartphones (2010s flip/s
 
 | 시기 | player_m (casual) | jihun (sportswear) | minjae (modest student) |
 |---|---|---|---|
-| 봄/초가을 | 가벼운 zip-up + T + 청바지 | royal blue athletic zip-up + 흰 T + 트랙팬츠 | navy hoodie + T + dark pants |
+| 봄/초가을 | **light grey or beige zip-up** + 흰/light grey T + 청바지 (NOT navy zip-up) | royal blue athletic zip-up + 흰 T + 트랙팬츠 | navy hoodie + T + dark pants |
 | **여름** | **무지 T + 청 반바지 또는 면 반바지** | **athletic 단색 T (royal blue/red accent) + 트랙쇼츠** | **무지 T (navy/grey) + 무지 반바지** (안경 + 차분) |
 | 늦가을 | 카디건/오버셔츠 + T + 긴바지 | athletic zip-up 또는 트랙 jacket + 긴 트랙팬츠 | 가디건/스웨터 + 셔츠 + 긴바지 |
 | 겨울 | 모직 코트 또는 더플코트 + 머플러 | athletic 패딩 + 모자/머플러 | 단정 더플코트/카멜 코트 + 머플러 |
