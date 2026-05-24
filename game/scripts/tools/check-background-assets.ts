@@ -8,8 +8,19 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dirname, '..', '..');
-const EVENTS_TS = path.join(ROOT, 'src/engine/events.ts');
+const EVENTS_DIR = path.join(ROOT, 'src/engine/events');
 const BACKGROUNDS_TS = path.join(ROOT, 'src/engine/backgrounds.ts');
+
+// P0-2 분리 이후 events 는 디렉토리 — 하위 모든 .ts 텍스트를 재귀 합산
+function readAllEventsText(dir: string): string {
+  const out: string[] = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(readAllEventsText(full));
+    else if (entry.name.endsWith('.ts')) out.push(fs.readFileSync(full, 'utf8'));
+  }
+  return out.join('\n');
+}
 const GAME_SCREEN = path.join(ROOT, 'src/components/GameScreen.tsx');
 const INDEX_HTML = path.join(ROOT, 'index.html');
 const BG_DIR = path.join(ROOT, 'public/images/backgrounds');
@@ -45,7 +56,7 @@ function extractPathStrings(text: string): string[] {
 }
 
 function main() {
-  const eventsText = fs.readFileSync(EVENTS_TS, 'utf8');
+  const eventsText = readAllEventsText(EVENTS_DIR);
   const bgEngineText = fs.readFileSync(BACKGROUNDS_TS, 'utf8');
   const gameScreenText = fs.readFileSync(GAME_SCREEN, 'utf8');
   const indexText = fs.existsSync(path.join(ROOT, 'index.html'))
