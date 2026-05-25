@@ -854,6 +854,13 @@ in background. Other students visible but blurred. Sunlight through window — s
 to early fall tone.
 Mood: fresh resolve, end-of-childhood awareness.
 
+Composition: **three-quarter view from front-left of the classroom**, so player_m
+is shown at a slight side angle but **facing toward the teacher/blackboard like
+every other student**. Read his determined expression from his 3/4 profile.
+DO NOT turn his head backward toward the viewer — that breaks the "first day of class,
+everyone looking at the teacher" scene logic and makes him look isolated.
+He sits at his desk like the others, focus forward.
+
 Season override (W25, 여름 끝 → 초가을 첫날): player_m wears short-sleeve polo
 or short-sleeve T-shirt (light GREY or beige), NOT navy hoodie, NOT long sleeves.
 Classroom still summery — open windows, faint cicada, some classmates show tan
