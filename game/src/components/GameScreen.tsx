@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../engine/store';
-import { getWeekLabel, getMonthLabel, calculateEnding, calculateHappinessGrade, HAPPINESS_LABELS } from '../engine/gameEngine';
+import { getWeekLabel, getMonthLabel } from '../engine/gameEngine';
 import { getExamSchedule } from '../engine/examSystem';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../engine/activities';
 import { getParentMods } from '../engine/parentModifiers';
@@ -9,7 +9,7 @@ import { MiniTalkEvent } from '../engine/talkSystem';
 import { Portrait } from './Portrait';
 import { STAT_DESCRIPTIONS } from '../engine/statDescriptions';
 import { ActivityPicker } from './ActivityPicker';
-import { getBackground, getEventBackground, getSchoolLevel, BgInfo } from '../engine/backgrounds';
+import { getBackground, getEventBackground, getSchoolLevel } from '../engine/backgrounds';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue, getResultDialogue, getFatigueLabel } from '../engine/dialogues';
 import { Tutorial } from './Tutorial';
 import { Shop } from './Shop';
@@ -17,50 +17,13 @@ import { ShopItem } from '../engine/shopSystem';
 import { EventScene, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from './EventScene';
 import { CG_MANIFEST } from '../cg-manifest.generated';
 import { prefetchAssets } from '../engine/assetPrefetch';
-
-const STAT_ICONS: Record<StatKey, string> = {
-  academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
-};
-
-// 결과 메시지 자동 줄바꿈 — 문장 끝(`.` `?` `!`, 따옴표 포함) 다음 공백에서 줄바꿈.
-// 말줄임표(`...`)는 문장 경계가 아니므로 앞이 `[.!?]`인 경우 분할 제외.
-function breakSentences(text: string): string {
-  return text.replace(/(?<![.!?])([.!?]"?)\s+(?=\S)/g, '$1\n');
-}
-
-interface BgWrapperProps {
-  bg: BgInfo;
-  bgImgError: boolean;
-  onImgError: () => void;
-  children: React.ReactNode;
-  extraStyle?: React.CSSProperties;
-}
-
-// 모듈 레벨 컴포넌트 — 부모 렌더마다 새 함수 참조 생성을 피해 자식 트리 unmount/remount 방지
-function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: BgWrapperProps) {
-  return (
-    <div style={{
-      minHeight: '100vh', position: 'relative', overflow: 'hidden',
-      background: bg.gradient,
-      ...extraStyle,
-    }}>
-      {bg.image && !bgImgError && (
-        <img
-          src={`${import.meta.env.BASE_URL}${bg.image.replace(/^\//, '')}`} alt=""
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, pointerEvents: 'none' }}
-          onError={onImgError}
-        />
-      )}
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: bg.overlay, pointerEvents: 'none' }} />
-      <div style={{ position: 'relative', zIndex: 1, padding: 20, maxWidth: 600, margin: '0 auto' }}>
-        {children}
-      </div>
-    </div>
-  );
-}
+import { BgWrapper } from './screens/BgWrapper';
+import { STAT_ICONS, breakSentences } from './screens/shared';
+import { YearEndScreen } from './screens/YearEndScreen';
+import { EndingScreen } from './screens/EndingScreen';
 
 export function GameScreen() {
-  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome } = useGameStore();
+  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome } = useGameStore();
 
   // 뒤로가기/새로고침 방지
   useEffect(() => {
@@ -169,238 +132,12 @@ export function GameScreen() {
 
   // ===== v1.2 학년말 일기장 (Y1~Y6) =====
   if (state.phase === 'year-end') {
-    const finishedYear = state.year;  // 방금 끝난 학년 (advance 전)
-    const yearNames = ['초등학교 6학년', '중학교 1학년', '중학교 2학년', '중학교 3학년', '고등학교 1학년', '고등학교 2학년', '고등학교 3학년'];
-    const yearName = yearNames[finishedYear - 1] || `${finishedYear}학년`;
-    const slotsThisYear = state.memorySlots.filter(m => m.year === finishedYear);
-    const milestone = state.milestoneScenes.find(m => m.year === finishedYear);
-    const happinessGrade = calculateHappinessGrade(state.stats.mental, state.stats.social);
-    const happinessInfo = HAPPINESS_LABELS[happinessGrade];
-    const { advanceFromYearEnd } = useGameStore.getState();
-
-    return (
-      <BgWrapper {...bgProps}>
-        <div className="fade-in" style={{ maxWidth: 520, margin: '0 auto', padding: '24px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', letterSpacing: '0.2em', marginBottom: 8 }}>
-            YEAR-END
-          </div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-            {yearName}이 끝났다
-          </div>
-          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 28 }}>
-            이 한 해를 조용히 돌아본다
-          </div>
-
-          {/* 해당 학년에 쌓인 memorySlots */}
-          {slotsThisYear.length > 0 && (
-            <div style={{ textAlign: 'left', background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '18px 22px', marginBottom: 16, borderLeft: '2px solid var(--accent-soft)' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.15em', marginBottom: 12, textAlign: 'center' }}>
-                이 해에 남은 장면
-              </div>
-              {slotsThisYear
-                .sort((a, b) => a.week - b.week)
-                .map((slot, i) => (
-                  <div key={slot.id} style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.7, marginBottom: i === slotsThisYear.length - 1 ? 0 : 10, fontStyle: 'italic' }}>
-                    {slot.recallText}
-                  </div>
-                ))}
-            </div>
-          )}
-
-          {/* 해당 학년 milestone 요약 */}
-          {milestone?.summaryText && (
-            <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.15em', marginBottom: 10 }}>
-                돌아보면
-              </div>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-primary)', lineHeight: 1.7 }}>
-                {milestone.summaryText}
-              </div>
-            </div>
-          )}
-
-          {/* 올해의 행복 등급 (mental + social 기반) */}
-          <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 12, padding: '16px 20px', marginBottom: 28, borderLeft: '2px solid var(--accent-soft)' }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', letterSpacing: '0.15em', marginBottom: 8 }}>
-              올해의 행복
-            </div>
-            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
-              {happinessInfo.title}
-            </div>
-            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6, fontStyle: 'italic' }}>
-              {happinessInfo.desc}
-            </div>
-          </div>
-
-          {/* 아무 기억도 없으면 조용히 */}
-          {slotsThisYear.length === 0 && !milestone?.summaryText && (
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontStyle: 'italic', marginBottom: 28, lineHeight: 1.7 }}>
-              특별히 기억에 남는 일은 없었다.<br />그래도 한 해가 지나갔다.
-            </div>
-          )}
-
-          <button
-            className="btn btn-primary"
-            style={{ maxWidth: 280 }}
-            onClick={advanceFromYearEnd}
-          >
-            다음 학년으로 →
-          </button>
-        </div>
-      </BgWrapper>
-    );
+    return <YearEndScreen state={state} bgProps={bgProps} onAdvance={advanceFromYearEnd} />;
   }
 
   // ===== 엔딩 =====
   if (state.phase === 'ending') {
-    const ending = calculateEnding(state);
-    const trackLabel = state.track === 'humanities' ? '문과' : state.track === 'science' ? '이과' : null;
-    return (
-      <BgWrapper {...bgProps}>
-        <div className="ending-screen fade-in" style={{ minHeight: 'auto', padding: 0 }}>
-          <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 8 }}>7년의 여정이 끝났습니다</div>
-          <div className="ending-title">{ending.title}</div>
-          <div className="ending-desc">{ending.description}</div>
-
-          {/* 수능 등급 + 진로 카드 */}
-          {ending.suneungGrade && (
-            <div style={{
-              background: 'rgba(224,138,91,0.1)', border: '1px solid rgba(224,138,91,0.3)',
-              borderRadius: 12, padding: '12px 16px', margin: '12px auto 16px', maxWidth: 360,
-              textAlign: 'center',
-            }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 4 }}>수능 결과</div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 800, color: ending.suneungGrade <= 2 ? 'var(--gold)' : ending.suneungGrade <= 4 ? 'var(--green)' : ending.suneungGrade <= 6 ? 'var(--blue)' : 'var(--red)' }}>
-                {ending.suneungGrade}등급
-              </div>
-              {trackLabel && (
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>{trackLabel}</div>
-              )}
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, marginTop: 8, color: 'var(--accent-soft)' }}>
-                {ending.career}
-              </div>
-            </div>
-          )}
-
-          <div className="ending-grades">
-            <div className="ending-grade-item">
-              <div className="ending-grade-label">성취 지수</div>
-              <div className="ending-grade-value" style={{ color: 'var(--gold)' }}>{ending.achievement}</div>
-            </div>
-            <div className="ending-grade-item">
-              <div className="ending-grade-label">행복 지수</div>
-              <div className="ending-grade-value" style={{ color: 'var(--accent-soft)' }}>{ending.happiness}</div>
-            </div>
-          </div>
-
-          <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 16px' }}>
-            {(Object.keys(state.stats) as StatKey[]).map(key => {
-              const grade = getGrade(state.stats[key]);
-              return (
-                <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
-                  <span style={{ width: 24 }}>{STAT_ICONS[key]}</span>
-                  <span style={{ width: 32, fontSize: '0.8rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
-                  <div style={{ flex: 1, height: 14, background: 'rgba(255,255,255,0.1)', borderRadius: 7, margin: '0 8px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${state.stats[key]}%`, background: grade.color, borderRadius: 7 }} />
-                  </div>
-                  <span style={{ fontSize: '0.8rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
-                  <span style={{ width: 28, fontSize: '0.72rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(state.stats[key])}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* v1.2 회상 — 결정적 장면들 */}
-          {ending.memorialHighlights && ending.memorialHighlights.length > 0 && (
-            <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '14px 18px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, borderLeft: '2px solid var(--accent-soft)' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>돌아보면</div>
-              {ending.memorialHighlights.map((h, i) => (
-                <div key={i} style={{ fontSize: '0.82rem', color: h.isFallback ? 'var(--text-muted)' : 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 6, fontStyle: 'italic' }}>
-                  {h.recallText}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* v1.2 7년 요약 — 학년별 클로저 */}
-          {ending.yearClosings && ending.yearClosings.length > 0 && (
-            <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>7년의 마디</div>
-              {ending.yearClosings.map((t, i) => (
-                <div key={i} style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: 4 }}>
-                  <span style={{ color: 'var(--accent-soft)', fontWeight: 600, marginRight: 8 }}>Y{i + 1}</span>{t}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* NPC 근황 */}
-          {ending.npcStories.length > 0 && (
-            <div style={{ maxWidth: 360, margin: '0 auto 16px', padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderRadius: 10 }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 6, textAlign: 'center' }}>그리고 그 후</div>
-              {ending.npcStories.map((s, i) => (
-                <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.6, textAlign: 'center' }}>
-                  {s}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* 부모가 7년에 남긴 흔적 (§9-B 시각 앵커, 스탯 금지) */}
-          {(() => {
-            const parentRecallMap: Record<string, { icon: string; label: string; recall: string }> = {
-              emotional:  { icon: '🫂', label: '정서적 지지', recall: '엄마가 현관에서 기다리던 노란 불빛.' },
-              wealth:     { icon: '🏠', label: '여유 있는 집', recall: '책상 위, 말없이 놓여있던 흰 봉투.' },
-              info:       { icon: '📱', label: '정보가 있는 집', recall: '식탁에 펼쳐진, 빨갛게 밑줄 쳐진 신문.' },
-              strict:     { icon: '📐', label: '엄격한 집', recall: '11시, 스탠드를 끄러 오던 슬리퍼 소리.' },
-              resilience: { icon: '⭐', label: '타고난 체질', recall: '감기에도 멀쩡하게 들고 가던 가방끈.' },
-              freedom:    { icon: '🌿', label: '자유로운 집', recall: '"알아서 해" 뒤에 닫히던 안방 문.' },
-            };
-            return (
-              <div style={{
-                maxWidth: 420, margin: '0 auto 16px', padding: '14px 18px',
-                background: 'rgba(224,138,91,0.06)', borderRadius: 10,
-                border: '1px solid rgba(224,138,91,0.2)',
-              }}>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center', letterSpacing: '0.15em' }}>
-                  부모가 남긴 것
-                </div>
-                {state.parents.map(p => {
-                  const r = parentRecallMap[p];
-                  if (!r) return null;
-                  return (
-                    <div key={p} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
-                      <span style={{ fontSize: '1.1rem', lineHeight: '1.4' }}>{r.icon}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--accent-soft)', fontWeight: 600, marginBottom: 2 }}>
-                          {r.label}
-                        </div>
-                        <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.5 }}>
-                          {r.recall}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'center' }}>
-            총합 {Math.round(Object.values(state.stats).reduce((a, b) => a + b, 0))}점 · 번아웃 {state.burnoutCount}회
-          </div>
-
-          {/* 다회차 유도 문구 */}
-          <div style={{ fontSize: '0.8rem', color: 'var(--accent-soft)', marginBottom: 16, textAlign: 'center', fontStyle: 'italic' }}>
-            다른 길은 어땠을까?
-          </div>
-
-          <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => window.location.reload()}>
-            다시 시작하기
-          </button>
-        </div>
-      </BgWrapper>
-    );
+    return <EndingScreen state={state} bgProps={bgProps} />;
   }
 
   // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
