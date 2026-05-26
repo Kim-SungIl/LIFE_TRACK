@@ -1,12 +1,11 @@
 import { calculateEnding } from '../../engine/gameEngine';
 import { GameState, StatKey, STAT_LABELS, getGrade } from '../../engine/types';
-import { BgInfo } from '../../engine/backgrounds';
-import { BgWrapper } from './BgWrapper';
+import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';
 
 interface EndingScreenProps {
   state: GameState;
-  bgProps: { bg: BgInfo; bgImgError: boolean; onImgError: () => void };
+  bgProps: ScreenBgProps;
 }
 
 const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: string }> = {

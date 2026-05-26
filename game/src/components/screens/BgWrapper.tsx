@@ -32,3 +32,7 @@ export function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: 
 }
 
 export type { BgWrapperProps };
+
+// 화면 컴포넌트가 BgWrapper 에 그대로 펼쳐 넘기는 prop 묶음.
+// children/extraStyle 은 BgWrapper 내부 책임이라 제외.
+export type ScreenBgProps = Pick<BgWrapperProps, 'bg' | 'bgImgError' | 'onImgError'>;

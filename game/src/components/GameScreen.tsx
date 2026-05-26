@@ -23,7 +23,7 @@ import { YearEndScreen } from './screens/YearEndScreen';
 import { EndingScreen } from './screens/EndingScreen';
 
 export function GameScreen() {
-  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome } = useGameStore();
+  const { state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek, advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome } = useGameStore();
 
   // 뒤로가기/새로고침 방지
   useEffect(() => {
@@ -132,7 +132,7 @@ export function GameScreen() {
 
   // ===== v1.2 학년말 일기장 (Y1~Y6) =====
   if (state.phase === 'year-end') {
-    return <YearEndScreen state={state} bgProps={bgProps} />;
+    return <YearEndScreen state={state} bgProps={bgProps} onAdvance={advanceFromYearEnd} />;
   }
 
   // ===== 엔딩 =====

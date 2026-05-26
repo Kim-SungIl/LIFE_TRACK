@@ -1,12 +1,11 @@
-import { useGameStore } from '../../engine/store';
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/gameEngine';
 import { GameState } from '../../engine/types';
-import { BgInfo } from '../../engine/backgrounds';
-import { BgWrapper } from './BgWrapper';
+import { BgWrapper, ScreenBgProps } from './BgWrapper';
 
 interface YearEndScreenProps {
   state: GameState;
-  bgProps: { bg: BgInfo; bgImgError: boolean; onImgError: () => void };
+  bgProps: ScreenBgProps;
+  onAdvance: () => void;
 }
 
 const YEAR_NAMES = [
@@ -15,14 +14,13 @@ const YEAR_NAMES = [
 ];
 
 // v1.2 학년말 일기장 (Y1~Y6) — phase === 'year-end'
-export function YearEndScreen({ state, bgProps }: YearEndScreenProps) {
+export function YearEndScreen({ state, bgProps, onAdvance }: YearEndScreenProps) {
   const finishedYear = state.year;  // 방금 끝난 학년 (advance 전)
   const yearName = YEAR_NAMES[finishedYear - 1] || `${finishedYear}학년`;
   const slotsThisYear = state.memorySlots.filter(m => m.year === finishedYear);
   const milestone = state.milestoneScenes.find(m => m.year === finishedYear);
   const happinessGrade = calculateHappinessGrade(state.stats.mental, state.stats.social);
   const happinessInfo = HAPPINESS_LABELS[happinessGrade];
-  const { advanceFromYearEnd } = useGameStore.getState();
 
   return (
     <BgWrapper {...bgProps}>
@@ -88,7 +86,7 @@ export function YearEndScreen({ state, bgProps }: YearEndScreenProps) {
         <button
           className="btn btn-primary"
           style={{ maxWidth: 280 }}
-          onClick={advanceFromYearEnd}
+          onClick={onAdvance}
         >
           다음 학년으로 →
         </button>
