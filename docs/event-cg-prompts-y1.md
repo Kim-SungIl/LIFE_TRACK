@@ -357,7 +357,11 @@ Minjae glasses MUST be clearly visible (thin silver square or rimless frame).
 
 **[female / c0]** `minjae-meet-elementary_c0_f.png`
 ```
-Same setting with female protagonist. No other changes.
+Same setting with female protagonist (player_f reference — short bob, pink cardigan over
+white T + blue skirt, warm friendly half-smile).
+Minjae glasses MUST be clearly visible (thin silver square or rimless frame) — same
+strict marker as the male variant.
+Outfit: player_f keeps her reference baseline (pink cardigan, spring W2 OK).
 ```
 
 ### [c1] "나도 네 옆자리야" — 이야기 나눈다
@@ -814,7 +818,12 @@ Keep face/hair identical to reference (only outfit changes per season).
 
 **[female / c0]** `elementary-unit-test_c0_f.png`
 ```
-Same setting with female protagonist (player_f reference). No other changes.
+Same setting with female protagonist (player_f reference).
+
+Season override (여름 W16, NO cardigan, NO long sleeves): player_f wears short-sleeve
+T-shirt or sleeveless top in light pink/white/cream (NOT long-sleeve cardigan, NOT hoodie).
+Indoor evening, window open behind desk, electric fan visible, summer cicada feel.
+Keep face/hair identical to reference (only outfit changes per season).
 ```
 
 ### [c1] 그냥 평소대로 논다
@@ -833,7 +842,12 @@ NOT navy hoodie, NOT long pants. Keep face/hair identical to reference.
 
 **[female / c1]** `elementary-unit-test_c1_f.png`
 ```
-Same setting with female protagonist (player_f reference). No other changes.
+Same setting with female protagonist (player_f reference).
+
+Season override (여름 W16, NO cardigan, NO long sleeves): player_f wears short-sleeve
+T-shirt (light pink/white/cream) + light cotton skirt or shorts + white sneakers.
+Subtle sweat sheen on forehead, bright hot afternoon sunlight, cicada-buzz feel.
+NOT cardigan, NOT long sleeves. Keep face/hair identical to reference.
 ```
 
 ---
@@ -869,7 +883,15 @@ lines from vacation (minjae stays pale per spec). Keep face/hair identical to re
 
 **[female / c0]** `elementary-semester2-start_c0_f.png`
 ```
-Same setting with female protagonist (player_f reference). No other changes.
+Same setting with female protagonist (player_f reference).
+
+Composition note: _f variant from BACK view (shoulder/bob visible from back of class)
+is naturally aligned with classmates — keep current back-view composition (NOT 3/4 like _m).
+
+Season override (W25, 여름 끝 → 초가을 첫날): player_f wears short-sleeve T-shirt
+or thin sleeveless top in light pink/white (NOT cardigan, NOT long sleeves).
+Classroom still summery — open windows, faint cicada, some classmates show tan
+lines from vacation. Keep face/hair identical to reference.
 ```
 
 ### [c1] 방학 얘기 수다
@@ -896,7 +918,17 @@ Keep faces/hair identical to references.
 
 **[female / c1]** `elementary-semester2-start_c1_f.png`
 ```
-Same setting with female protagonist (player_f reference). No other changes.
+Same setting with female protagonist (player_f reference) replacing player_m in the
+cluster shot.
+
+Season override (W25, 여름 끝, NO hoodie on anyone):
+- Player_f = short-sleeve T-shirt in light pink/white (NOT cardigan, NOT long sleeves).
+- Jihun = short-sleeve athletic T (royal blue OR red accent) + track shorts
+  (sportswear category, NOT navy hoodie — color collision risk).
+- Minjae = plain short-sleeve T (navy or grey) + plain shorts, glasses MUST be visible.
+- 4th classmate also in short-sleeve summer wear.
+All four kids clearly in summer-end outfits. NOT long sleeves, NOT navy hoodies.
+Keep faces/hair identical to references.
 ```
 
 ### [c2] 추억을 남기자
@@ -1067,7 +1099,12 @@ Indoor warm desk lamp, outside fallen leaves visible. NOT snow, NOT winter coat.
 
 **[female / c0]** `elementary-unit-test-2_c0_f.png`
 ```
-Same setting with female protagonist (player_f reference). No other changes.
+Same setting with female protagonist (player_f reference).
+
+Season override (W37 늦가을, NOT winter): outside window must show late-autumn —
+golden/red maple leaves, NOT snow, NOT winter city. Player_f wears her reference
+baseline (pink cardigan over white T) — cardigan is appropriate for fall.
+Indoor warm desk lamp, fallen leaves outside. NOT snow, NOT winter coat.
 ```
 
 ### [c1] 대충 본다
@@ -1085,7 +1122,11 @@ through window (NOT snow). Keep face/hair identical to reference.
 
 **[female / c1]** `elementary-unit-test-2_c1_f.png`
 ```
-Same setting with female protagonist (player_f reference). No other changes.
+Same setting with female protagonist (player_f reference).
+
+Season override (W37 늦가을, NOT winter): outside window must show late-autumn
+maple leaves (NOT bare branches, NOT snow). Player_f wears her reference baseline
+(pink cardigan over white T + skirt). Late autumn afternoon. Keep face/hair identical.
 ```
 
 ---
