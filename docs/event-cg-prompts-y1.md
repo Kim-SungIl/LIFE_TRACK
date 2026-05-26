@@ -349,6 +349,10 @@ Male protagonist: laughing at something minjae said, relaxed shoulders.
 Background: bright cafeteria, other students blurred in background.
 Mood: first-friendship spark, warm and cheerful (minjae's warmth shows as quiet
 softness, not a wide grin).
+
+Player_m outfit override: **light GREY zip-up hoodie** or grey cardigan over white T
+(NOT navy/blue — navy hoodie is minjae's signature, color collision risk).
+Minjae glasses MUST be clearly visible (thin silver square or rimless frame).
 ```
 
 **[female / c0]** `minjae-meet-elementary_c0_f.png`
@@ -375,6 +379,9 @@ Male protagonist turned toward minjae, engaged listener posture, leaning forward
 with curious "아 그래?" face.
 Background: bright cafeteria, trays/food on table, blurred students in background.
 Mood: deeper conversation while eating, friendship warming up beyond casual chat.
+
+Player_m outfit override: **light GREY zip-up hoodie** or beige cardigan over white T
+(NOT navy — color collision with minjae's navy hoodie).
 ```
 
 **[female / c1]** `minjae-meet-elementary_c1_f.png`
@@ -390,6 +397,9 @@ Elementary school library (reference: library_elementary.png). Empty quiet space
 dust motes in sunlight. Male protagonist (player_m reference) sitting alone at a reading desk,
 open book or notebook in front, quiet focused-but-slightly-lonely expression.
 Mood: peaceful solitude with a hint of loneliness.
+
+Player_m outfit override: **light GREY zip-up hoodie** or grey cardigan over white T
+(NOT navy/blue tones).
 ```
 
 **[female / c2]** `minjae-meet-elementary_c2_f.png`
@@ -543,6 +553,9 @@ in hands, looking up with gentle shy smile.
 Male protagonist standing beside her, showing interest, leaning slightly to see the book.
 Piano bag visible hanging on the back of her chair.
 Mood: quiet intellectual bonding, first meeting atmosphere.
+
+Player_m outfit override: **light GREY zip-up hoodie** or grey cardigan over white T
+(NOT navy/blue tones).
 ```
 
 **[female / c0]** `yuna-meet-elementary_c0_f.png`
@@ -559,6 +572,9 @@ eyes crinkled. Piano bag beside her, sheet music peeking out. Male protagonist
 (player_m reference) sitting across from her, leaning in with a curious smile.
 Background: soft sunlight, empty library.
 Mood: sweet flustered reaction, gentle pride beneath shyness.
+
+Player_m outfit override: **light GREY zip-up hoodie** or grey cardigan over white T
+(NOT navy/blue tones).
 ```
 
 **[female / c1]** `yuna-meet-elementary_c1_f.png`
@@ -576,6 +592,9 @@ but polite expression — "oh, that's okay" kind of smile while turning page.
 Male protagonist (player_m reference, back view, face hidden) slightly stepping away,
 short boy's haircut visible from behind.
 Mood: gentle awkwardness, missed connection but not hostile.
+
+Player_m outfit override (back view): **light GREY zip-up hoodie** + dark indigo jeans
+(NOT navy hoodie — must be clearly grey from behind).
 ```
 
 **[female / c2]** `yuna-meet-elementary_c2_f.png`
@@ -698,6 +717,9 @@ expression, hand extending a small notebook with math problems.
 Male protagonist beside her, leaning in to look at the notebook.
 Background: simple hagwon classroom, warm yellow lighting, "학원" signage subtle in background.
 Mood: quiet studious bonding, shared struggle.
+
+Player_m outfit override: **light GREY zip-up hoodie** or grey cardigan over white T
+(NOT navy/blue tones).
 ```
 
 **[female / c0]** `subin-meet-elementary_c0_f.png`
@@ -722,6 +744,9 @@ Both students at the hagwon desk with defeated but amused expressions, subin cov
 with a small laugh, male protagonist (player_m reference) slumped on the desk. Problem book open
 with crossed-out scribbles.
 Mood: commiserating failure, unexpected friendship in shared defeat.
+
+Player_m outfit override: **light GREY zip-up hoodie** or grey cardigan over white T
+(NOT navy/blue tones).
 ```
 
 **[female / c2]** `subin-meet-elementary_c2_f.png`
@@ -780,6 +805,11 @@ Mood: friendship deepening — small gift, big meaning.
 Child's bedroom desk at home, evening. Male protagonist (player_m reference) sitting at desk
 with textbook open, small focused expression. Warm desk lamp light. Stuffed animal or toy on bed visible.
 Mood: quiet earnest effort, elementary-student studying.
+
+Season override (여름 W16, NO hoodie): player_m wears short-sleeve T-shirt
+(light grey or muted beige, NOT navy hoodie, NO long sleeves). Window open behind
+desk, summer evening cicadas implied, electric fan or open window visible.
+Keep face/hair identical to reference (only outfit changes per season).
 ```
 
 **[female / c0]** `elementary-unit-test_c0_f.png`
@@ -794,6 +824,11 @@ Same setting with female protagonist (player_f reference). No other changes.
 Outside a Korean apartment complex playground area, late afternoon. Male protagonist
 (player_m reference) playing on swings or running with a ball, carefree expression.
 Mood: carefree childhood, "test? what test".
+
+Season override (여름 W16, NO hoodie, NO long pants): player_m wears short-sleeve
+T-shirt (light grey or muted beige) + cotton shorts or jeans-shorts + white sneakers.
+Subtle sweat sheen on forehead, bright hot afternoon sunlight, cicada-buzz feel.
+NOT navy hoodie, NOT long pants. Keep face/hair identical to reference.
 ```
 
 **[female / c1]** `elementary-unit-test_c1_f.png`
@@ -818,6 +853,18 @@ with determined expression, new textbooks stacked neatly, teacher writing "곧 �
 in background. Other students visible but blurred. Sunlight through window — shift from summer
 to early fall tone.
 Mood: fresh resolve, end-of-childhood awareness.
+
+Composition: **three-quarter view from front-left of the classroom**, so player_m
+is shown at a slight side angle but **facing toward the teacher/blackboard like
+every other student**. Read his determined expression from his 3/4 profile.
+DO NOT turn his head backward toward the viewer — that breaks the "first day of class,
+everyone looking at the teacher" scene logic and makes him look isolated.
+He sits at his desk like the others, focus forward.
+
+Season override (W25, 여름 끝 → 초가을 첫날): player_m wears short-sleeve polo
+or short-sleeve T-shirt (light GREY or beige), NOT navy hoodie, NOT long sleeves.
+Classroom still summery — open windows, faint cicada, some classmates show tan
+lines from vacation (minjae stays pale per spec). Keep face/hair identical to reference.
 ```
 
 **[female / c0]** `elementary-semester2-start_c0_f.png`
@@ -836,6 +883,15 @@ clearly visible, notebook on desk nearby) wears a composed half-smile (NOT wide
 grin); Jihun (reference) laughs more openly beside him.
 Tan lines visible on some faces (minjae remains average pale skin tone, NOT tanned).
 Mood: happy post-vacation chatter, summer tan vibes.
+
+Season override (W25, 여름 끝, NO hoodie on anyone):
+- Player_m = short-sleeve T-shirt in light GREY or beige (NOT navy — color collision
+  with jihun's blue tones).
+- Jihun = short-sleeve athletic T (royal blue OR red accent) + track shorts
+  (sportswear category, NOT hoodie).
+- Minjae = plain short-sleeve T (navy or grey) + plain shorts, glasses + composed.
+All three boys clearly in summer-end outfits. NOT navy hoodies, NOT long sleeves.
+Keep faces/hair identical to references.
 ```
 
 **[female / c1]** `elementary-semester2-start_c1_f.png`
@@ -868,6 +924,10 @@ Mood: nostalgic contemplation of "last semester here".
 Elementary classroom. Subin (reference) eyes wide in surprise, both hands cupping a small
 gift bag, shy happy smile, cheeks faintly pink. "어... 어떻게 알았어!" feeling.
 Mood: sweet unexpected joy, quiet character's rare delight.
+
+Season override (W29, 9월 늦여름): subin wears thin short-sleeve top (white T or
+cotton blouse). Open light cardigan optional (NOT heavy/long-sleeve cardigan).
+Classroom windows open, late-summer afternoon golden light, faint cicada feel.
 ```
 
 ### [c1] 여행 에세이 책 한 권을 고른다 (-5만원) — 🆕 신규
@@ -882,6 +942,10 @@ Background: empty classroom, late afternoon golden light from windows, dust mote
 Dialogue cue: "...너, 내가 어디 떠나고 싶어하는 거 알았어?" — moment when she realizes
 the protagonist saw a part of her she rarely shows.
 Mood: quiet revelation, unspoken understanding between two reserved kids.
+
+Season override (W29, 9월 늦여름): subin wears thin short-sleeve top (white T or
+cotton blouse). Open light cardigan optional (NOT heavy/long-sleeve cardigan).
+Late-summer warm afternoon light through open windows.
 ```
 
 ### [c2] 카톡으로 축하한다 — 공통 카톡 폴백
@@ -992,8 +1056,13 @@ Mood: quiet character finally feeling noticed in a way that matters.
 **[male / c0]** `elementary-unit-test-2_c0_m.png`
 ```
 Male protagonist (player_m reference) at home desk, concentrated — but softer, more wistful mood
-than c0 of W16. "마지막이니까" awareness. Winter light through window.
-Mood: quiet diligence, end-of-elementary-era reflection.
+than c0 of W16. "마지막이니까" awareness. Late autumn light through window — golden/red
+maple leaves visible outside, NOT snow (W37 = 늦가을 per season matrix).
+Mood: quiet diligence, end-of-elementary-era reflection (autumn melancholy).
+
+Season override (W37 늦가을): player_m wears **grey zip-up hoodie** or grey/beige
+cardigan over white/light T (NOT navy — navy is jihun's collision zone).
+Indoor warm desk lamp, outside fallen leaves visible. NOT snow, NOT winter coat.
 ```
 
 **[female / c0]** `elementary-unit-test-2_c0_f.png`
@@ -1008,6 +1077,10 @@ Same setting with female protagonist (player_f reference). No other changes.
 Male protagonist (player_m reference) on bed or lounging, daydreaming expression, holding a
 graduation photo booklet or looking at something unrelated to study.
 Mood: "곧 졸업이잖아" daydream.
+
+Season override (W37 늦가을): player_m wears **grey zip-up hoodie** or grey/beige
+cardigan + long pants (NOT navy). Late autumn afternoon, fallen leaves visible
+through window (NOT snow). Keep face/hair identical to reference.
 ```
 
 **[female / c1]** `elementary-unit-test-2_c1_f.png`
