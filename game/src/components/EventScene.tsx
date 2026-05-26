@@ -210,6 +210,8 @@ function renderDescription(
 
 // 긴 description을 페이지로 분할 — 한 페이지가 maxCharsPerPage를 넘기 전까지 source 줄(`\n`)을 누적.
 // 짧은 description(단일 페이지 분량)은 그대로 1페이지로 반환되어 기존 동작 보존.
+// 모바일은 한 줄당 글자수가 적어 같은 임계값이면 description 박스 캡(6em)을 초과 →
+// 호출부에서 화면 폭에 맞춰 더 작은 값(45)을 넘긴다.
 function paginateDescription(text: string, maxCharsPerPage = 80): string[] {
   const lines = text.split('\n');
   const pages: string[][] = [];
@@ -291,8 +293,16 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     return c > 0 && state ? state.money < c : false;
   });
 
+  // 모바일 폭(≤ 600px)에서는 한 줄에 들어가는 글자수가 데스크탑의 절반 이하 →
+  // 페이지 분할 임계값과 description 박스 캡을 모바일에 맞춰 늘려준다.
+  // 마운트 시점 한 번 측정 (charHeight도 같은 패턴) — 회전 시는 다음 이벤트부터 반영.
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
+
   // description 페이지 분할 — 짧으면 1페이지, 길면 여러 페이지로 자동 분할
-  const pages = useMemo(() => paginateDescription(eventDesc), [eventDesc]);
+  const pages = useMemo(
+    () => paginateDescription(eventDesc, isMobile ? 45 : 80),
+    [eventDesc, isMobile],
+  );
   const safePageIndex = Math.min(pageIndex, pages.length - 1);
   const currentPageText = pages[safePageIndex] ?? eventDesc;
   const isMultiPage = pages.length > 1;
@@ -377,7 +387,8 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       style={{
         position: 'relative',
         width: '100%',
-        height: '100vh',
+        // iOS Safari 주소창이 100vh를 가리는 문제 → 동적 viewport(dvh) 사용
+        height: '100dvh',
         overflow: 'hidden',
         background: '#000',
       }}
@@ -520,7 +531,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
             style={{
               fontSize: '1rem',
               lineHeight: 1.7,
-              maxHeight: '6em',
+              maxHeight: isMobile ? '10em' : '6em',
               overflowY: 'auto',
               marginBottom: isMultiPage && !isLastPage ? 6 : 12,
               flex: '0 1 auto',
