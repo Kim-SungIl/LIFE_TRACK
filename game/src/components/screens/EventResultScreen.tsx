@@ -1,15 +1,8 @@
-import { GameState, GameEvent } from '../../engine/types';
+import { GameState } from '../../engine/types';
 import { LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../EventScene';
 import { getEventBackground, getSchoolLevel } from '../../engine/backgrounds';
 import { CG_MANIFEST } from '../../cg-manifest.generated';
-import { breakSentences } from './shared';
-
-export type EventResultData = {
-  message: string;
-  effects: Record<string, string>[];
-  event?: GameEvent;
-  choiceIndex?: number;
-};
+import { breakSentences, EventResultData } from './shared';
 
 interface EventResultScreenProps {
   state: GameState;

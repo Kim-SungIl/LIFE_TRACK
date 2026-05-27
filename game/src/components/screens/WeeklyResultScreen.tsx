@@ -2,7 +2,7 @@ import { GameState, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, getGrade }
 import { getFatigueLabel } from '../../engine/dialogues';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
-import { STAT_ICONS, breakSentences } from './shared';
+import { STAT_ICONS, PARENT_ICONS, breakSentences } from './shared';
 
 interface WeeklyResultScreenProps {
   state: GameState;
@@ -11,18 +11,12 @@ interface WeeklyResultScreenProps {
   resultDialogue: string;
   fatigueColor: string;
   upcomingEvents: string[];
-  bgMood: string;
   onContinue: () => void;
 }
 
-const PARENT_ICONS: Record<string, string> = {
-  emotional: '🫂', wealth: '🏠', info: '📱',
-  strict: '📐', resilience: '⭐', freedom: '🌿',
-};
-
-// 주말 활동 처리 후 결산 일기 — phase 무관, showResult 로컬 state 기반
+// 주말 활동 처리 후 보여주는 한 주 결산 일기 화면
 export function WeeklyResultScreen({
-  state, bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, bgMood, onContinue,
+  state, bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, onContinue,
 }: WeeklyResultScreenProps) {
   const wlog = state.weekLog!;
   // Hero — 이번 주의 핵심 한 줄. 마지막 📖 > milestone[0] 순.
@@ -63,7 +57,7 @@ export function WeeklyResultScreen({
       <div className="fade-in">
         {/* 일기 스타일 결산 */}
         <div style={{ textAlign: 'center', marginBottom: 16, marginTop: 8 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{bgMood} {weekInfo}</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{bgProps.bg.mood} {weekInfo}</div>
           <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: 4 }}>이번 주의 기록</div>
         </div>
 
