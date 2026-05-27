@@ -17,10 +17,10 @@ import { ShopItem } from '../engine/shopSystem';
 import { EventScene } from './EventScene';
 import { prefetchAssets } from '../engine/assetPrefetch';
 import { BgWrapper } from './screens/BgWrapper';
-import { STAT_ICONS, breakSentences } from './screens/shared';
+import { STAT_ICONS, breakSentences, type EventResultData } from './screens/shared';
 import { YearEndScreen } from './screens/YearEndScreen';
 import { EndingScreen } from './screens/EndingScreen';
-import { EventResultScreen, type EventResultData } from './screens/EventResultScreen';
+import { EventResultScreen } from './screens/EventResultScreen';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 
 export function GameScreen() {
@@ -359,12 +359,10 @@ export function GameScreen() {
         resultDialogue={resultDialogue}
         fatigueColor={fatigueColor}
         upcomingEvents={upcomingEvents}
-        bgMood={bg.mood}
         onContinue={() => setShowResult(false)}
       />
     );
   }
-
 
   // ===== 메인 게임 화면 =====
   return (
