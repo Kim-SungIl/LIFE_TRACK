@@ -6,6 +6,7 @@ import { STAT_ICONS } from '../shared';
 type Props = { state: GameState };
 
 // 능력치 패널 — 접기/펼치기 + 스탯별 설명 토글. 로컬 UI state(showStats/expandedStat)는 이 패널 전용.
+// 주간 결산 왕복 시 MainWeekScreen 과 함께 언마운트되어 매 주 collapsed 로 초기화됨(의도된 동작).
 export function StatsPanel({ state }: Props) {
   const [showStats, setShowStats] = useState(false);
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
