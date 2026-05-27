@@ -1686,12 +1686,15 @@ out toward distant rooftops where another school is faintly visible. Eyes
 unfocused, faint sadness behind a casual posture. Player (silhouette/back)
 in foreground out of focus.
 Mood: pre-separation quiet, "we won't be at the same school next year",
-warm glass and cold horizon.
+warm glass and distant horizon.
 
-Outfit override (winter, 졸업 직전 겨울): Doyun in a thick winter sweater or
-zip-up fleece over long-sleeve, optional puffy jacket draped on chair; bare
-trees visible outside the misted window; warm interior tone vs. cold exterior.
-Keep face/hair/build identical to the doyun reference (gender follows player).
+⚠️ Season-NEUTRAL (도달형 — 친밀도 60 도달 시 어느 주차든 발동 가능):
+이벤트 데이터(bg: classroom_elementary, 지문 계절 무관)가 중립이므로 CG도
+특정 계절 단서를 넣지 말 것. NO snow, NO bare winter trees, NO heavy winter
+coat/scarf. Outdoor through window = 계절 불명확한 먼 학교 건물/지붕(녹지 약간,
+계절 특정 안 됨). Doyun in everyday casual (light long-sleeve or zip-up, his
+reference baseline). Warm indoor afternoon light. Keep face/hair/build identical
+to the doyun reference (gender follows player).
 ```
 
 ---
@@ -1714,11 +1717,13 @@ slanting through windows.
 Mood: hidden pressure visible for a moment, "it's nothing" said too quickly,
 gold-light loneliness.
 
-Outfit override (late autumn ~ early winter, around W30~W40): Minjae wearing
-a long-sleeve school sweater or cardigan over collar shirt, long pants; no
-short sleeves. Indoor warm tone; trees outside the window with sparse remaining
-leaves or bare branches. Keep face/hair/build identical to the minjae reference
-(thin glasses must remain visible).
+⚠️ Season-NEUTRAL (도달형 — 친밀도 70 도달 시 어느 주차든 발동 가능):
+이벤트 데이터(기본 classroom, 지문 계절 무관)가 중립이므로 CG도 특정 계절
+단서를 넣지 말 것. NO bare/leafless winter branches, NO snow. Outside window =
+계절 불명확(약한 녹지 또는 흐릿한 운동장). Minjae in his reference baseline
+(navy hoodie + dark pants) — 일상 캐주얼, 긴소매 OK이되 두꺼운 겨울 스웨터는
+지양. Indoor warm evening light. Keep face/hair/build identical to the minjae
+reference (thin glasses MUST remain clearly visible).
 ```
 
 ---
