@@ -232,7 +232,7 @@ export function GameScreen() {
     const hasCg = !!eventImgPrimary;
     const showFallback = !hasCg || cgError;
     return (
-      <div style={{ position: 'relative', width: '100%', height: '100vh', overflow: 'hidden', background: bgGradient }}>
+      <div style={{ position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden', background: bgGradient }}>
         {/* 배경 이미지 + 주인공 — CG 없거나 모든 후보 실패한 경우만 표시 */}
         {showFallback && (
           <>
