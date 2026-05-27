@@ -133,9 +133,11 @@ export const REACH_EVENTS = [
     speakers: ['yuna'],
     location: 'classroom',
     background: 'classroom_elementary_winter',
+    // 겨울(W41+) 게이트: 지문/배경/CG 모두 "졸업을 앞둔 겨울"로 고정 설계 →
+    // 봄·여름에 발동하면 계절 desync. 졸업(W46) 포함 위해 vacation은 막지 않음.
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 90 && s.year === 1;
+      return !!yuna?.met && yuna.intimacy >= 90 && s.year === 1 && s.week >= 41;
     },
     choices: [
       {
@@ -285,9 +287,11 @@ export const REACH_EVENTS = [
     speakers: ['subin'],
     location: 'classroom',
     background: 'classroom_elementary_winter',
+    // 겨울(W41+) 게이트: 지문/배경/CG 모두 "졸업 전날"로 고정 설계 →
+    // 봄·여름에 발동하면 계절 desync. 졸업(W46) 포함 위해 vacation은 막지 않음.
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 90 && s.year === 1;
+      return !!subin?.met && subin.intimacy >= 90 && s.year === 1 && s.week >= 41;
     },
     choices: [
       {
