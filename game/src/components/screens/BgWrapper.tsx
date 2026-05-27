@@ -12,7 +12,7 @@ interface BgWrapperProps {
 export function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: BgWrapperProps) {
   return (
     <div style={{
-      minHeight: '100vh', position: 'relative', overflow: 'hidden',
+      minHeight: '100dvh', position: 'relative', overflow: 'hidden',
       background: bg.gradient,
       ...extraStyle,
     }}>
