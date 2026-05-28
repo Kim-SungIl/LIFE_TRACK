@@ -1474,14 +1474,29 @@ no two trays facing each other.
 
 > 결과: 유나가 "고마워, 사실 좀 무거웠어" 하고 웃는다.
 
-**`yuna-milk-duty.png`** (공통 1장, 성별/선택지 폴백)
+> ⚠️ **성별 분기 (G 작업)**: 기존 공통 1장의 "gender-neutral silhouette" 의도가
+> Codex 렌더에서 남성 코드(검은 단발 + navy hoodie back view)로 굳어져 player_f
+> 사용자에게 mismatch 발생. _m/_f 명시 분기로 재발주.
+> 엔진(EventScene.tsx L267-272)은 `event.id_${gender}.png` fallback chain으로 자동 픽업.
+
+**[male]** `yuna-milk-duty_m.png`
 ```
 Korean elementary classroom doorway, early morning spring light. A 12-year-old girl
 Yuna (reference) standing at the door holding one handle of a square milk crate.
 Her fingertips slightly red from the cold metal handle, bright smile but a tiny shy hint.
-Another small figure (player, silhouette/back view, gender-neutral) holding the other handle.
+Male protagonist (player_m reference — soft center-part black hair, light grey zip-up
+hoodie baseline) holding the other handle of the crate, side or 3/4 view (face visible
+at least in profile, NOT pure silhouette).
 Background: morning hallway through the open door, soft sunrise glow on tile floor.
 Mood: small-shared-effort, springtime classroom warmth, "we're carrying this together".
+```
+
+**[female]** `yuna-milk-duty_f.png`
+```
+Same scene with female protagonist (player_f reference — short bob, pink cardigan over
+white T, blue skirt baseline). Both girls holding the crate handles, parallel friendship
+energy, player_f face visible in side or 3/4 view.
+Mood: same shared-effort warmth between two girls.
 ```
 
 ---
@@ -1558,14 +1573,28 @@ identical to the references.
 
 > 결과: 수빈이가 책등 세 권을 집어 준다. "이 중에 하나만 같이 읽어도 돼."
 
-**`subin-reading-marathon.png`** (공통 1장)
+> ⚠️ **성별 분기 (G 작업)**: 동일 사유로 _m/_f 분기.
+
+**[male]** `subin-reading-marathon_m.png`
 ```
 Elementary school library corner, afternoon sun through tall windows. Small
 bulletin board with a handmade "이번 주 책 세 권 읽기" paper notice pinned with
 a single thumbtack. Subin (reference) standing beside the shelf, three slim
 children's books cradled in her arms, gentle smile that pretends not to need
-an answer. Player (back view, gender-neutral) in foreground reading the notice.
+an answer. Male protagonist (player_m reference, side or 3/4 view, light grey
+zip-up baseline) in foreground reading the notice.
 Mood: quiet bookish friendship, "no pressure" softness, library hush.
+
+⚠️ Season-NEUTRAL (도달형): 창밖 계절 불명확. NO snow/매미. 일상 캐주얼.
+```
+
+**[female]** `subin-reading-marathon_f.png`
+```
+Same scene with female protagonist (player_f reference — short bob, pink cardigan
+baseline) reading the notice. Two girls bookish bonding.
+Mood: same library hush, parallel quiet friendship.
+
+⚠️ Season-NEUTRAL (도달형): 동일.
 ```
 
 ---
@@ -1643,13 +1672,16 @@ pink. Keep face/hair/build identical to references.
 > 결과: 도윤이가 "다 보면 다음 사람한테 넘겨줘" 하며 자연스럽게 순서를 정한다.
 > ※ 기존 W22 고정에서 도달형으로 정비. CG 컨셉은 동일.
 
-**`doyun-comic-share.png`** (공통 1장 — 성별 무관, 도윤 단독+책)
+**`doyun-comic-share.png`** (공통 1장 — 도윤 단독+책, 화면에 player 미등장이라 성별 분기 불필요)
 ```
-Korean elementary classroom during break time. Doyun (reference, gender depends
-on player) walking between desks holding a slightly worn comic book volume out
-with one hand toward viewer, casual confident smile, classmates in background
+Korean elementary classroom during break time. Doyun (reference, canonically male per
+character-prompt-spec) walking between desks holding a slightly worn comic book volume
+out with one hand toward viewer, casual confident smile, classmates in background
 already reading other volumes of the same series. Mid-day classroom light.
 Mood: friendly book-sharing ritual, "you next" easygoing camaraderie.
+
+ℹ️ 성별 분기 안 함: doyun은 spec상 male 고정 + 씬에 player 미등장 → 공통 1장 OK.
+G 백로그의 1-shot 분리 검토 결과 mismatch 없음으로 결론.
 ```
 
 (남주 플레이 → male doyun, 여주 플레이 → female doyun. 기존 doyun 캐릭터 시트의 성별별 버전 사용)
