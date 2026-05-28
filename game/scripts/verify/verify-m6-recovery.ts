@@ -17,7 +17,8 @@
   } as Storage;
 }
 
-import { createInitialState, processWeek, calculateEnding } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek } from '../../src/engine/gameEngine';
+import { calculateEnding } from '../../src/engine/ending';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import { getFollowupForWeek } from '../../src/engine/events';
 import type { GameState, ParentStrength } from '../../src/engine/types';

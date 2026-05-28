@@ -14,7 +14,8 @@
 // 실행: cd game && npx tsx scripts/verify-patch-batch1-2.ts
 
 import { readFileSync } from 'fs';
-import { createInitialState, processWeek, migrateLoadedState } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek } from '../../src/engine/gameEngine';
+import { migrateLoadedState } from '../../src/engine/stateMigration';
 import { generateExamResult } from '../../src/engine/examSystem';
 import { applyItemEffects, SHOP_ITEMS } from '../../src/engine/shopSystem';
 import { GAME_EVENTS } from '../../src/engine/events';

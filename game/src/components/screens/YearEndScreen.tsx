@@ -1,4 +1,4 @@
-import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/gameEngine';
+import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
 import { GameState, Stats } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 

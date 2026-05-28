@@ -6,7 +6,8 @@
 // 실행: cd game && npx tsx scripts/report-m5-checklist-coverage.ts
 
 import { GAME_EVENTS } from '../../src/engine/events';
-import { createInitialState, processWeek, calculateEnding } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek } from '../../src/engine/gameEngine';
+import { calculateEnding } from '../../src/engine/ending';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import type { GameState, ParentStrength, GameEvent, Choice } from '../../src/engine/types';
 

@@ -8,7 +8,8 @@
 //
 // 실행: cd game && npx tsx scripts/report-m5-playthrough.ts
 
-import { createInitialState, processWeek, calculateEnding, scaleIntimacyChange, calculateHappinessGrade, HAPPINESS_LABELS } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek, scaleIntimacyChange } from '../../src/engine/gameEngine';
+import { calculateEnding, calculateHappinessGrade, HAPPINESS_LABELS } from '../../src/engine/ending';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import { getFollowupForWeek } from '../../src/engine/events';
 import type { GameState, ParentStrength, MemoryCategory } from '../../src/engine/types';

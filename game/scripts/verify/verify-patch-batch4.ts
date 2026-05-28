@@ -24,8 +24,9 @@
 
 import { readFileSync } from 'fs';
 import {
-  createInitialState, processWeek, migrateLoadedState, hashInitialState,
+  createInitialState, processWeek, hashInitialState,
 } from '../../src/engine/gameEngine';
+import { migrateLoadedState } from '../../src/engine/stateMigration';
 import { selectMemorialHighlights } from '../../src/engine/memorySystem';
 import { getParentMods } from '../../src/engine/parentModifiers';
 import { useGameStore } from '../../src/engine/store';
