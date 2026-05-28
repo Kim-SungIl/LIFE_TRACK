@@ -111,6 +111,13 @@ console.log('\n=== P14. MainWeekScreen maxSlots SSOT (parentModifiers.vacationSl
 console.log('\n=== P15. migrateLoadedState rngSeed가 마이그레이션된 parents 사용 ===');
 // ============================================================================
 {
+  // hashInitialState 는 startedAt 미지정 시 Date.now() 폴백 — 테스트 expectedSeed
+  // 계산과 migrateLoadedState 내부 hashInitialState 호출 사이 ms 경계가 끼면
+  // 결과가 달라짐. 테스트 구간 동안 Date.now 를 고정해 결정적으로 만든다.
+  const fixedNow = Date.now();
+  const origDateNow = Date.now;
+  Date.now = () => fixedNow;
+
   // 구세이브 시뮬: parents=['gene', 'wealth'], rngSeed 누락
   // 마이그레이션 결과: parents=['resilience', 'wealth']
   // rngSeed는 resilience 기준 hash여야 (gene 기준이 아니라)
@@ -159,6 +166,8 @@ console.log('\n=== P15. migrateLoadedState rngSeed가 마이그레이션된 pare
   const migratedR = migrateLoadedState(oldSaveWithRoutine);
   assert(`구세이브 routineWeeks=5 → 양 슬롯 카운터 백필 (slot2=${migratedR.routineSlot2Weeks}, slot3=${migratedR.routineSlot3Weeks})`,
     migratedR.routineSlot2Weeks === 5 && migratedR.routineSlot3Weeks === 5);
+
+  Date.now = origDateNow;
 }
 
 // ============================================================================

@@ -39,18 +39,13 @@ git add scripts/verify/events-id-order.baseline.json
 
 커밋 메시지에 갱신 이유를 함께 적으면 향후 회귀 추적이 쉽습니다.
 
-### 알려진 비결정성
-
-`verify-patch-batch4.ts` 의 P15 (`migrateLoadedState rngSeed`) 어설션은
-내부 `hashInitialState` 가 `Date.now()` 를 쓰는 race 로 ms 경계에 걸리면
-가끔 실패합니다. 재실행하면 통과 — 별도 후속에서 수정 예정.
-
 ## 디렉토리 구조
 
 ```
 src/
   components/        — 화면 컴포넌트 (GameScreen 라우터 + screens/ 산하)
-    screens/         — 분리된 phase 화면 (Year/Ending/EventResult/Weekly)
+    screens/         — phase 화면 (Year/Ending/EventResult/Weekly)
+                       + BgWrapper (공통 배경) + shared.ts (공유 상수/헬퍼)
       main/          — 메인 화면 컨테이너 + HUD/Stats/모달 4종
   engine/            — 게임 로직 (gameEngine, store, events/, ending,
                        stateMigration, examSystem, talkSystem, ...)
@@ -58,5 +53,6 @@ scripts/
   verify/            — 회귀 검증 (npm run verify:content 의 대상)
   tools/             — 분석·리포트 (report-m5-*, report-m6-*)
 public/              — 정적 자산 (배경/캐릭터/이벤트 CG)
-docs/                — 스펙·프롬프트·검수 노트
 ```
+
+스펙·프롬프트·검수 노트는 repo root 의 [`../docs/`](../docs/) 참조.
