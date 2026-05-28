@@ -85,16 +85,17 @@ console.log('\n=== P13. wealth memory bias 매핑 (dead → live 카테고리) =
 }
 
 // ============================================================================
-console.log('\n=== P14. GameScreen maxSlots SSOT (parentModifiers.vacationSlotBonus) ===');
+console.log('\n=== P14. MainWeekScreen maxSlots SSOT (parentModifiers.vacationSlotBonus) ===');
 // ============================================================================
+// P1-3 에서 maxSlots/parentModifiers 로직이 GameScreen → MainWeekScreen 으로 이동.
 {
-  const src = readFileSync('./src/components/GameScreen.tsx', 'utf8');
+  const src = readFileSync('./src/components/screens/main/MainWeekScreen.tsx', 'utf8');
 
-  assert('GameScreen이 parentModifiers를 import',
-    /from\s+['"]\.\.\/engine\/parentModifiers['"]/.test(src));
-  assert('GameScreen이 maxSlots에 getParentMods 사용',
+  assert('MainWeekScreen이 parentModifiers를 import',
+    /from\s+['"](?:\.\.\/)+engine\/parentModifiers['"]/.test(src));
+  assert('MainWeekScreen이 maxSlots에 getParentMods 사용',
     /maxSlots[^=]*=[^;]*getParentMods/.test(src));
-  assert('GameScreen에서 maxSlots 직접 includes(\'freedom\') 호출 제거',
+  assert('MainWeekScreen에서 maxSlots 직접 includes(\'freedom\') 호출 제거',
     !/parents\.includes\(['"]freedom['"]\)\s*\?\s*6/.test(src));
 
   // 실효 검증: parentModifiers가 freedom일 때 vacationSlotBonus +1

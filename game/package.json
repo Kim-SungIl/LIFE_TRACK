@@ -10,7 +10,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "verify:events": "tsx scripts/verify/verify-events-split.ts"
+    "verify:events": "tsx scripts/verify/verify-events-split.ts",
+    "verify:content": "tsx scripts/verify/verify-events-split.ts && tsx scripts/verify/verify-event-fixes.ts && tsx scripts/verify/verify-event-cg-coverage.ts && tsx scripts/verify/verify-crisis-events.ts && tsx scripts/verify/verify-fixed-event-priority.ts && tsx scripts/verify/verify-followup-chain.ts && tsx scripts/verify/verify-phase22-events.ts && tsx scripts/verify/verify-tier50-mini-events.ts && tsx scripts/verify/verify-tier70-mini-events.ts && tsx scripts/verify/verify-ending-branches.ts && tsx scripts/verify/verify-m2-state.ts && tsx scripts/verify/verify-m3-memory.ts && tsx scripts/verify/verify-m4-money.ts && tsx scripts/verify/verify-m6-recovery.ts && tsx scripts/verify/verify-patch-batch1-2.ts && tsx scripts/verify/verify-patch-batch3.ts && tsx scripts/verify/verify-patch-batch4.ts && tsx scripts/verify/verify-patch-batch5.ts"
   },
   "dependencies": {
     "react": "^19.2.4",
