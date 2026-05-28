@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../engine/store';
-import { getWeekLabel } from '../engine/gameEngine';
+import { getWeekLabel, calculateEnding } from '../engine/gameEngine';
 import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
 import { getResultDialogue } from '../engine/dialogues';
@@ -96,12 +96,30 @@ export function GameScreen() {
 
   // ===== v1.2 학년말 일기장 (Y1~Y6) =====
   if (state.phase === 'year-end') {
-    return <YearEndScreen state={state} bgProps={bgProps} onAdvance={advanceFromYearEnd} />;
+    return (
+      <YearEndScreen
+        year={state.year}
+        memorySlots={state.memorySlots}
+        milestoneScenes={state.milestoneScenes}
+        stats={state.stats}
+        bgProps={bgProps}
+        onAdvance={advanceFromYearEnd}
+      />
+    );
   }
 
   // ===== 엔딩 =====
   if (state.phase === 'ending') {
-    return <EndingScreen state={state} bgProps={bgProps} />;
+    return (
+      <EndingScreen
+        ending={calculateEnding(state)}
+        track={state.track}
+        stats={state.stats}
+        parents={state.parents}
+        burnoutCount={state.burnoutCount}
+        bgProps={bgProps}
+      />
+    );
   }
 
   // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
@@ -148,7 +166,8 @@ export function GameScreen() {
   if (eventResultData) {
     return (
       <EventResultScreen
-        state={state}
+        gender={state.gender}
+        year={state.year}
         eventResultData={eventResultData}
         cgLoaded={cgLoaded}
         cgError={cgError}
@@ -164,7 +183,14 @@ export function GameScreen() {
     const { color: fatigueColor } = getFatigueDisplay(state.fatigue);
     return (
       <WeeklyResultScreen
-        state={state}
+        weekLog={state.weekLog}
+        stats={state.stats}
+        fatigue={state.fatigue}
+        money={state.money}
+        gender={state.gender}
+        year={state.year}
+        mentalState={state.mentalState}
+        track={state.track}
         bgProps={bgProps}
         weekInfo={getWeekLabel(state)}
         resultDialogue={resultDialogue}

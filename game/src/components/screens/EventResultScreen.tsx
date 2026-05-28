@@ -5,7 +5,8 @@ import { CG_MANIFEST } from '../../cg-manifest.generated';
 import { breakSentences, EventResultData } from './shared';
 
 interface EventResultScreenProps {
-  state: GameState;
+  gender: GameState['gender'];
+  year: number;
   eventResultData: EventResultData;
   cgLoaded: boolean;
   cgError: boolean;
@@ -16,7 +17,7 @@ interface EventResultScreenProps {
 
 // 이벤트 선택 직후 결과 화면 — CG/배경/효과 배지 + "계속 →"
 export function EventResultScreen({
-  state, eventResultData, cgLoaded, cgError,
+  gender, year, eventResultData, cgLoaded, cgError,
   onCgLoaded, onCgError, onContinue,
 }: EventResultScreenProps) {
   const resultEvent = eventResultData.event;
@@ -24,7 +25,7 @@ export function EventResultScreen({
   const BASE = import.meta.env.BASE_URL;
   const bgGradient = resultLocation ? (LOCATION_GRADIENTS[resultLocation] || DEFAULT_GRADIENT) : DEFAULT_GRADIENT;
   // 배경 이미지: event.background 우선, 없으면 location 기반 폴백
-  const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, state.year) : undefined;
+  const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, year) : undefined;
   const bgImgCandidates = resolvedEventBg
     ? [`${BASE}${resolvedEventBg.replace(/^\//, '')}`]
     : resultLocation ? [
@@ -45,8 +46,8 @@ export function EventResultScreen({
   // 각 이벤트 파일명으로 사본 저장하는 정책.
   const eventId = resultEvent?.id;
   const ci = eventResultData.choiceIndex ?? 0;
-  const genderSuffix = state.gender === 'male' ? 'm' : 'f';
-  const schoolLevel = getSchoolLevel(state.year);
+  const genderSuffix = gender === 'male' ? 'm' : 'f';
+  const schoolLevel = getSchoolLevel(year);
   // manifest 키는 BASE prefix 없는 events/ 이하 상대경로 (예: 'elementary/foo_c0_m.png').
   // 후보를 manifest로 1차 필터링해 자산 부재 시 8개 직렬 404 비용을 제거.
   const buildCandidates = (dir: string): string[] => eventId ? [
@@ -92,7 +93,7 @@ export function EventResultScreen({
             zIndex: 5, pointerEvents: 'none',
           }}>
             <img
-              src={`${BASE}images/characters/${state.gender === 'male' ? 'player_m' : 'player_f'}${state.year === 1 ? '_elementary' : state.year >= 5 ? '_high' : ''}_fullbody.png`}
+              src={`${BASE}images/characters/${gender === 'male' ? 'player_m' : 'player_f'}${year === 1 ? '_elementary' : year >= 5 ? '_high' : ''}_fullbody.png`}
               alt=""
               style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}

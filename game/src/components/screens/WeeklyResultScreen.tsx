@@ -1,11 +1,19 @@
-import { GameState, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, getGrade } from '../../engine/types';
+import { GameState, Stats, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, Track, WeekLog, getGrade } from '../../engine/types';
 import { getFatigueLabel } from '../../engine/dialogues';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS, PARENT_ICONS, breakSentences } from './shared';
 
 interface WeeklyResultScreenProps {
-  state: GameState;
+  // 부모(GameScreen)가 showResult && state.weekLog 가드로 non-null 보장 후 주입.
+  weekLog: WeekLog;
+  stats: Stats;
+  fatigue: number;
+  money: number;
+  gender: GameState['gender'];
+  year: number;
+  mentalState: GameState['mentalState'];
+  track: Track | null;
   bgProps: ScreenBgProps;
   weekInfo: string;
   resultDialogue: string;
@@ -16,19 +24,19 @@ interface WeeklyResultScreenProps {
 
 // 주말 활동 처리 후 보여주는 한 주 결산 일기 화면
 export function WeeklyResultScreen({
-  state, bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, onContinue,
+  weekLog, stats, fatigue, money, gender, year, mentalState, track,
+  bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, onContinue,
 }: WeeklyResultScreenProps) {
-  const wlog = state.weekLog!;
   // Hero — 이번 주의 핵심 한 줄. 마지막 📖 > milestone[0] 순.
   // 이벤트가 그 주의 "사건"이고 milestone은 누적 스탯 임계치 이벤트라 사건 우선이 자연스러움.
   // milestone은 어차피 아래 ⭐ 성장 영역에 따로 표시되므로 hero에서 빠져도 정보 손실 없음.
   // examResult는 별도 성적표 블록이 있어서 hero에 또 넣으면 중복이라 제외.
-  const narrationMsgs = wlog.messages.filter(m => m.startsWith('📖'));
+  const narrationMsgs = weekLog.messages.filter(m => m.startsWith('📖'));
   const heroFromNarration = narrationMsgs.length > 0
     ? narrationMsgs[narrationMsgs.length - 1].replace(/^📖\s*/, '')
     : null;
-  const heroFromMilestone = !heroFromNarration && (wlog.milestoneMessages?.[0])
-    ? wlog.milestoneMessages[0]
+  const heroFromMilestone = !heroFromNarration && (weekLog.milestoneMessages?.[0])
+    ? weekLog.milestoneMessages[0]
     : null;
   const heroMsg = heroFromNarration || heroFromMilestone;
   // hero에 들어간 narration/milestone은 아래 영역에서 빼서 중복 방지
@@ -36,21 +44,21 @@ export function WeeklyResultScreen({
     ? narrationMsgs.slice(0, -1)
     : narrationMsgs;
   const milestonesToShow = heroFromMilestone
-    ? (wlog.milestoneMessages || []).slice(1)
-    : (wlog.milestoneMessages || []);
+    ? (weekLog.milestoneMessages || []).slice(1)
+    : (weekLog.milestoneMessages || []);
 
   // 잃은 것 칩 — 큰 음수 스탯 변화(절댓값 ≥ 0.5) 상위 2개 + 피로 누적
   const losses: { icon: string; text: string }[] = [];
-  const negativeChanges = (Object.entries(wlog.statChanges) as [StatKey, number | undefined][])
+  const negativeChanges = (Object.entries(weekLog.statChanges) as [StatKey, number | undefined][])
     .filter(([, v]) => (v ?? 0) <= -0.5)
     .sort((a, b) => (a[1] ?? 0) - (b[1] ?? 0))
     .slice(0, 2);
   for (const [k, v] of negativeChanges) {
     losses.push({ icon: STAT_ICONS[k], text: `${STAT_LABELS[k]} ${Math.round((v ?? 0) * 10) / 10}` });
   }
-  if ((wlog.fatigueChange ?? 0) >= 25) losses.push({ icon: '🥱', text: '피로 누적' });
+  if ((weekLog.fatigueChange ?? 0) >= 25) losses.push({ icon: '🥱', text: '피로 누적' });
 
-  const resultFatigueLabel = getFatigueLabel(state.fatigue);
+  const resultFatigueLabel = getFatigueLabel(fatigue);
 
   return (
     <BgWrapper {...bgProps}>
@@ -84,7 +92,7 @@ export function WeeklyResultScreen({
 
         {/* 주인공 + 독백 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
+          <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} />
           <div style={{
             flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
             borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
@@ -110,7 +118,7 @@ export function WeeklyResultScreen({
         {milestonesToShow.map((msg, i) => (
           <div key={i} className="milestone-box">⭐ 성장! — {msg}</div>
         ))}
-        {wlog.messages.filter(m => m.includes('⚠') || m.includes('🔥') || m.includes('💪')).map((msg, i) => (
+        {weekLog.messages.filter(m => m.includes('⚠') || m.includes('🔥') || m.includes('💪')).map((msg, i) => (
           <div key={i} className="message-box">{msg}</div>
         ))}
 
@@ -118,7 +126,7 @@ export function WeeklyResultScreen({
             wealth("용돈이 넉넉했다")와 resilience-체질("피로 증가 -15%")은 부모 strength가 있는 한
             매주 동일하게 발동되어 결산 칩으로는 노이즈라 제외. 항시형은 HUD 부모 칩 + 툴팁으로 노출. */}
         {(() => {
-          const applied = wlog.parentBonusesApplied || [];
+          const applied = weekLog.parentBonusesApplied || [];
           const filtered = applied.filter(b =>
             !(b.parent === 'wealth' && b.what === '용돈이 넉넉했다')
             && !(b.parent === 'resilience' && b.what === '체질 — 피로 증가 -15%'),
@@ -167,18 +175,18 @@ export function WeeklyResultScreen({
 
         {/* 스탯 변화 — 정확한 수치 */}
         <div style={{ background: 'rgba(42,34,48,0.88)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
-          {(Object.keys(state.stats) as StatKey[]).map(key => {
-            const change = wlog.statChanges[key] || 0;
-            const grade = getGrade(state.stats[key]);
+          {(Object.keys(stats) as StatKey[]).map(key => {
+            const change = weekLog.statChanges[key] || 0;
+            const grade = getGrade(stats[key]);
             return (
               <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
                 <span style={{ width: 20, fontSize: '0.8rem' }}>{STAT_ICONS[key]}</span>
                 <span style={{ width: 32, fontSize: '0.78rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
                 <div style={{ flex: 1, height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 6, margin: '0 6px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.round(state.stats[key])}%`, background: grade.color, borderRadius: 6, transition: 'width 0.5s' }} />
+                  <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: 6, transition: 'width 0.5s' }} />
                 </div>
                 <span style={{ width: 20, fontSize: '0.72rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
-                <span style={{ width: 28, fontSize: '0.68rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(state.stats[key])}</span>
+                <span style={{ width: 28, fontSize: '0.68rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(stats[key])}</span>
                 <span style={{ width: 40, fontSize: '0.68rem', fontWeight: 600, textAlign: 'right',
                   color: change > 0.1 ? 'var(--green)' : change < -0.1 ? 'var(--red)' : 'var(--text-muted)' }}>
                   {change > 0 ? '+' : ''}{Math.round(change * 10) / 10}
@@ -187,11 +195,11 @@ export function WeeklyResultScreen({
             );
           })}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.72rem', paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <span style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {resultFatigueLabel}</span>
+            <span style={{ color: fatigueColor }}>피로 {Math.round(fatigue)} · {resultFatigueLabel}</span>
             <span>
-              💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원
+              💰 {Number.isInteger(money) ? money : money.toFixed(1)}만원
               {(() => {
-                const delta = wlog.moneyChange ?? 0;
+                const delta = weekLog.moneyChange ?? 0;
                 if (Math.abs(delta) < 0.05) return null;
                 const isPositive = delta > 0;
                 const formatted = Math.round(delta * 10) / 10;
@@ -206,8 +214,8 @@ export function WeeklyResultScreen({
         </div>
 
         {/* 시험 결과 (학교급별 분기) */}
-        {wlog.examResult && (() => {
-          const exam = wlog.examResult!;
+        {weekLog.examResult && (() => {
+          const exam = weekLog.examResult!;
           const gradeColors: Record<string, string> = { S: '#e5c07b', A: '#8fb573', B: '#7da3d9', C: '#e0a15e', D: '#d96458' };
           const examTitle = exam.examType === 'unit-test' ? '단원평가'
             : exam.examType === 'mock' ? '모의고사'
@@ -246,7 +254,7 @@ export function WeeklyResultScreen({
                 const elemColor = elemGrade === '잘함' ? '#8fb573' : elemGrade === '보통' ? '#7da3d9' : '#e0a15e';
                 // socialScience 라벨: 고등 + track에 따라 분기
                 const subjectLabel = (key === 'socialScience' && exam.schoolLevel === 'high')
-                  ? (state.track === 'humanities' ? '사회탐구' : state.track === 'science' ? '과학탐구' : '탐구')
+                  ? (track === 'humanities' ? '사회탐구' : track === 'science' ? '과학탐구' : '탐구')
                   : SUBJECT_LABELS[key];
                 return (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>

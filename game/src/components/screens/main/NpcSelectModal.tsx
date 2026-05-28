@@ -1,15 +1,17 @@
-import { GameState } from '../../../engine/types';
+import { NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 
 type Props = {
-  state: GameState;
+  // 부모가 met 필터링한 NPC 목록 (메모 안정성 위해 ref 안정 보장)
+  metNpcs: readonly NpcState[];
+  year: number;
   // `slot:idx:activityId` (슬롯 기반) 또는 activityId (레거시)
   npcSelectFor: string;
   onSelect: (npcId: string) => void;
   onCancel: () => void;
 };
 
-export function NpcSelectModal({ state, npcSelectFor, onSelect, onCancel }: Props) {
+export function NpcSelectModal({ metNpcs, year, npcSelectFor, onSelect, onCancel }: Props) {
   const isSlotBased = npcSelectFor.startsWith('slot:');
   const activityId = isSlotBased ? npcSelectFor.split(':')[2] : npcSelectFor;
   const modalLabel = activityId === 'hang-out' ? '놀까' : activityId === 'study-group' ? '공부할까' : '활동할까';
@@ -18,13 +20,13 @@ export function NpcSelectModal({ state, npcSelectFor, onSelect, onCancel }: Prop
       <div style={{ background: 'var(--bg-secondary)', borderRadius: 16, padding: 24, width: '90%', maxWidth: 400 }}>
         <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 4 }}>누구와 {modalLabel}?</div>
         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 16 }}>함께하는 친구에 따라 친밀도가 올라갑니다</div>
-        {state.npcs.filter(n => n.met).map(npc => (
+        {metNpcs.map(npc => (
           <div key={npc.id} onClick={() => onSelect(npc.id)}
             style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--bg-card)', borderRadius: 10, marginBottom: 6, cursor: 'pointer', border: '1px solid transparent', transition: 'all 0.2s' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; }}
           >
-            <Portrait characterId={npc.id} size={40} expression="neutral" year={state.year} />
+            <Portrait characterId={npc.id} size={40} expression="neutral" year={year} />
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{npc.name}</div>
               <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{npc.description}</div>
