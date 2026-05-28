@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { ParentStrength } from '../../../engine/types';
 
 type Props = {
@@ -18,7 +17,7 @@ const LABELS: Record<ParentStrength, { icon: string; label: string }> = {
 };
 
 // Phase 2.1 — 가정 모달 (단일 엔티티 — 두 부모 강점은 가정 분위기)
-export const HomeModal = memo(function HomeModal({ parents, smalltalk, onTalk, onClose }: Props) {
+export function HomeModal({ parents, smalltalk, onTalk, onClose }: Props) {
   return (
     <div onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -68,4 +67,4 @@ export const HomeModal = memo(function HomeModal({ parents, smalltalk, onTalk, o
       </div>
     </div>
   );
-});
+}

@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { breakSentences } from '../shared';
@@ -14,7 +13,7 @@ type Props = {
   onClose: () => void;
 };
 
-export const NpcDetailModal = memo(function NpcDetailModal({ npc, year, dialogue, smalltalk, onTalk, onClose }: Props) {
+export function NpcDetailModal({ npc, year, dialogue, smalltalk, onTalk, onClose }: Props) {
   const intimacyColor = npc.intimacy >= 70 ? 'var(--accent-soft)' : npc.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
   const intimacyLabel = npc.intimacy >= 70 ? '절친' : npc.intimacy >= 40 ? '친구' : '아는 사이';
   return (
@@ -63,4 +62,4 @@ export const NpcDetailModal = memo(function NpcDetailModal({ npc, year, dialogue
       </div>
     </div>
   );
-});
+}

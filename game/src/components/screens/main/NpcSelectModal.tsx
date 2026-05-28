@@ -1,4 +1,3 @@
-import { memo } from 'react';
 import { NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 
@@ -12,7 +11,7 @@ type Props = {
   onCancel: () => void;
 };
 
-export const NpcSelectModal = memo(function NpcSelectModal({ metNpcs, year, npcSelectFor, onSelect, onCancel }: Props) {
+export function NpcSelectModal({ metNpcs, year, npcSelectFor, onSelect, onCancel }: Props) {
   const isSlotBased = npcSelectFor.startsWith('slot:');
   const activityId = isSlotBased ? npcSelectFor.split(':')[2] : npcSelectFor;
   const modalLabel = activityId === 'hang-out' ? '놀까' : activityId === 'study-group' ? '공부할까' : '활동할까';
@@ -39,4 +38,4 @@ export const NpcSelectModal = memo(function NpcSelectModal({ metNpcs, year, npcS
       </div>
     </div>
   );
-});
+}

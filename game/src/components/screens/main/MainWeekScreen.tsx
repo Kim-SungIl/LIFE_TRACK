@@ -108,6 +108,15 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   // memo된 자식들에게 넘기는 콜백 — 안정 ref 보장
   const handleOpenHome = useCallback(() => setShowHomeModal(true), []);
 
+  // 친밀도/상황 기반 NPC 인사말 — getNpcDialogue 내부 Math.random()으로 인해
+  // 부모 리렌더(예: lastReaction)마다 호출하면 modal 표시 중 텍스트가 flickering.
+  // state 스냅샷 + NPC 식별자가 안정한 동안 dialogue 고정 (state ref 가 바뀌면 재추첨).
+  const npcDetail = npcDetailFor ? state.npcs.find(n => n.id === npcDetailFor) : null;
+  const npcDialogue = useMemo(
+    () => npcDetail ? getNpcDialogue(npcDetail.id, npcDetail.intimacy, state) : '',
+    [npcDetail?.id, npcDetail?.intimacy, state],
+  );
+
   // 슬롯 렌더 헬퍼 — routine 슬롯의 경우 그 슬롯의 카운터를 명시적으로 전달
   const renderSlot = (
     emoji: string, timeLabel: string, activityName: string | null,
@@ -219,8 +228,6 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
     if (r.kind === 'event') { setMiniTalkResult(r.event); setHomeSmalltalk(null); }
     else { setHomeSmalltalk(r.line); }
   };
-
-  const npcDetail = npcDetailFor ? state.npcs.find(n => n.id === npcDetailFor) : null;
 
   return (
     <>
@@ -623,7 +630,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         <NpcDetailModal
           npc={npcDetail}
           year={state.year}
-          dialogue={getNpcDialogue(npcDetail.id, npcDetail.intimacy, state)}
+          dialogue={npcDialogue}
           smalltalk={npcSmalltalk}
           onTalk={() => handleTalkNpc(npcDetail.id)}
           onClose={() => { setNpcDetailFor(null); setNpcSmalltalk(null); }}
