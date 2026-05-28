@@ -1,9 +1,13 @@
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/gameEngine';
-import { GameState } from '../../engine/types';
+import { GameState, Stats } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 
 interface YearEndScreenProps {
-  state: GameState;
+  // 방금 끝난 학년 (advance 전 state.year)
+  year: number;
+  memorySlots: GameState['memorySlots'];
+  milestoneScenes: GameState['milestoneScenes'];
+  stats: Stats;
   bgProps: ScreenBgProps;
   onAdvance: () => void;
 }
@@ -14,12 +18,11 @@ const YEAR_NAMES = [
 ];
 
 // v1.2 학년말 일기장 (Y1~Y6) — phase === 'year-end'
-export function YearEndScreen({ state, bgProps, onAdvance }: YearEndScreenProps) {
-  const finishedYear = state.year;  // 방금 끝난 학년 (advance 전)
-  const yearName = YEAR_NAMES[finishedYear - 1] || `${finishedYear}학년`;
-  const slotsThisYear = state.memorySlots.filter(m => m.year === finishedYear);
-  const milestone = state.milestoneScenes.find(m => m.year === finishedYear);
-  const happinessGrade = calculateHappinessGrade(state.stats.mental, state.stats.social);
+export function YearEndScreen({ year, memorySlots, milestoneScenes, stats, bgProps, onAdvance }: YearEndScreenProps) {
+  const yearName = YEAR_NAMES[year - 1] || `${year}학년`;
+  const slotsThisYear = memorySlots.filter(m => m.year === year);
+  const milestone = milestoneScenes.find(m => m.year === year);
+  const happinessGrade = calculateHappinessGrade(stats.mental, stats.social);
   const happinessInfo = HAPPINESS_LABELS[happinessGrade];
 
   return (

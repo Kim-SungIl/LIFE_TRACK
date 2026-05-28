@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { GameState } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
-import { getCharacterDialogue, getActivityReaction } from '../../../engine/dialogues';
+import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent } from '../../../engine/talkSystem';
 import { ShopItem } from '../../../engine/shopSystem';
 import { TalkActionResult } from '../../../engine/store';
@@ -102,6 +102,11 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const routineComboLabel = labelFor(maxComboWeeks);
 
   const upcomingEvents = getUpcomingEvents(state);
+  // met NPC 목록 — NpcSelectModal memo 안정성 위해 npcs ref 변경 시에만 재계산
+  const metNpcs = useMemo(() => state.npcs.filter(n => n.met), [state.npcs]);
+
+  // memo된 자식들에게 넘기는 콜백 — 안정 ref 보장
+  const handleOpenHome = useCallback(() => setShowHomeModal(true), []);
 
   // 슬롯 렌더 헬퍼 — routine 슬롯의 경우 그 슬롯의 카운터를 명시적으로 전달
   const renderSlot = (
@@ -222,7 +227,15 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
     <BgWrapper {...bgProps}>
       {/* HUD 상단 */}
       <HudPanel
-        state={state}
+        parents={state.parents}
+        gender={state.gender}
+        mentalStat={state.stats.mental}
+        mentalState={state.mentalState}
+        year={state.year}
+        fatigue={state.fatigue}
+        money={state.money}
+        isVacation={state.isVacation}
+        parentBonusesApplied={state.weekLog?.parentBonusesApplied}
         mood={bgProps.bg.mood}
         weekInfo={weekInfo}
         month={month}
@@ -230,7 +243,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         fatigueLabel={fatigueLabel}
         weeklyActivityCost={weeklyActivityCost}
         weeklyOverBudget={weeklyOverBudget}
-        onOpenHome={() => setShowHomeModal(true)}
+        onOpenHome={handleOpenHome}
       />
 
       {/* 독백 말풍선 */}
@@ -258,7 +271,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       )}
 
       {/* 스탯 (접기/펼치기) */}
-      <StatsPanel state={state} />
+      <StatsPanel stats={state.stats} />
 
       {/* ===== 주간 플래너 ===== */}
       <div data-tutorial="routine" style={{
@@ -597,7 +610,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {/* NPC 선택 모달 */}
       {npcSelectFor && (
         <NpcSelectModal
-          state={state}
+          metNpcs={metNpcs}
+          year={state.year}
           npcSelectFor={npcSelectFor}
           onSelect={handleSelectNpc}
           onCancel={() => setNpcSelectFor(null)}
@@ -608,7 +622,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {npcDetail && (
         <NpcDetailModal
           npc={npcDetail}
-          state={state}
+          year={state.year}
+          dialogue={getNpcDialogue(npcDetail.id, npcDetail.intimacy, state)}
           smalltalk={npcSmalltalk}
           onTalk={() => handleTalkNpc(npcDetail.id)}
           onClose={() => { setNpcDetailFor(null); setNpcSmalltalk(null); }}
@@ -618,7 +633,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {/* 가정 모달 */}
       {showHomeModal && (
         <HomeModal
-          state={state}
+          parents={state.parents}
           smalltalk={homeSmalltalk}
           onTalk={handleTalkHome}
           onClose={() => { setShowHomeModal(false); setHomeSmalltalk(null); }}

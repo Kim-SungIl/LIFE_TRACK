@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { MiniTalkEvent } from '../../../engine/talkSystem';
 
 type Props = {
@@ -8,7 +9,7 @@ type Props = {
   onCloseAll: () => void;
 };
 
-export function MiniTalkModal({ result, onDismiss, onCloseAll }: Props) {
+export const MiniTalkModal = memo(function MiniTalkModal({ result, onDismiss, onCloseAll }: Props) {
   return (
     <div onClick={onDismiss} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -31,4 +32,4 @@ export function MiniTalkModal({ result, onDismiss, onCloseAll }: Props) {
       </div>
     </div>
   );
-}
+});

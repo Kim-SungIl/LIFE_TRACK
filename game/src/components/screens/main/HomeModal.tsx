@@ -1,7 +1,8 @@
-import { GameState, ParentStrength } from '../../../engine/types';
+import { memo } from 'react';
+import { ParentStrength } from '../../../engine/types';
 
 type Props = {
-  state: GameState;
+  parents: readonly ParentStrength[];
   smalltalk: string | null;
   onTalk: () => void;
   onClose: () => void;
@@ -17,7 +18,7 @@ const LABELS: Record<ParentStrength, { icon: string; label: string }> = {
 };
 
 // Phase 2.1 — 가정 모달 (단일 엔티티 — 두 부모 강점은 가정 분위기)
-export function HomeModal({ state, smalltalk, onTalk, onClose }: Props) {
+export const HomeModal = memo(function HomeModal({ parents, smalltalk, onTalk, onClose }: Props) {
   return (
     <div onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -36,7 +37,7 @@ export function HomeModal({ state, smalltalk, onTalk, onClose }: Props) {
 
         {/* 두 강점을 분위기 카드로 표시 */}
         <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'center' }}>
-          {state.parents.map(p => {
+          {parents.map(p => {
             const m = LABELS[p];
             return (
               <div key={p} style={{
@@ -67,4 +68,4 @@ export function HomeModal({ state, smalltalk, onTalk, onClose }: Props) {
       </div>
     </div>
   );
-}
+});

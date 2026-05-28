@@ -1,10 +1,17 @@
 import { calculateEnding } from '../../engine/gameEngine';
-import { GameState, StatKey, STAT_LABELS, getGrade } from '../../engine/types';
+import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, getGrade } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';
 
+// calculateEnding 반환 타입 — 부모(GameScreen)가 계산해 prop 으로 주입.
+export type EndingData = ReturnType<typeof calculateEnding>;
+
 interface EndingScreenProps {
-  state: GameState;
+  ending: EndingData;
+  track: Track | null;
+  stats: Stats;
+  parents: readonly ParentStrength[];
+  burnoutCount: number;
   bgProps: ScreenBgProps;
 }
 
@@ -18,9 +25,8 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
-export function EndingScreen({ state, bgProps }: EndingScreenProps) {
-  const ending = calculateEnding(state);
-  const trackLabel = state.track === 'humanities' ? '문과' : state.track === 'science' ? '이과' : null;
+export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgProps }: EndingScreenProps) {
+  const trackLabel = track === 'humanities' ? '문과' : track === 'science' ? '이과' : null;
 
   return (
     <BgWrapper {...bgProps}>
@@ -61,17 +67,17 @@ export function EndingScreen({ state, bgProps }: EndingScreenProps) {
         </div>
 
         <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 16px' }}>
-          {(Object.keys(state.stats) as StatKey[]).map(key => {
-            const grade = getGrade(state.stats[key]);
+          {(Object.keys(stats) as StatKey[]).map(key => {
+            const grade = getGrade(stats[key]);
             return (
               <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
                 <span style={{ width: 24 }}>{STAT_ICONS[key]}</span>
                 <span style={{ width: 32, fontSize: '0.8rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
                 <div style={{ flex: 1, height: 14, background: 'rgba(255,255,255,0.1)', borderRadius: 7, margin: '0 8px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${state.stats[key]}%`, background: grade.color, borderRadius: 7 }} />
+                  <div style={{ height: '100%', width: `${stats[key]}%`, background: grade.color, borderRadius: 7 }} />
                 </div>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
-                <span style={{ width: 28, fontSize: '0.72rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(state.stats[key])}</span>
+                <span style={{ width: 28, fontSize: '0.72rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(stats[key])}</span>
               </div>
             );
           })}
@@ -122,7 +128,7 @@ export function EndingScreen({ state, bgProps }: EndingScreenProps) {
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center', letterSpacing: '0.15em' }}>
             부모가 남긴 것
           </div>
-          {state.parents.map(p => {
+          {parents.map(p => {
             const r = PARENT_RECALL_MAP[p];
             if (!r) return null;
             return (
@@ -142,7 +148,7 @@ export function EndingScreen({ state, bgProps }: EndingScreenProps) {
         </div>
 
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'center' }}>
-          총합 {Math.round(Object.values(state.stats).reduce((a, b) => a + b, 0))}점 · 번아웃 {state.burnoutCount}회
+          총합 {Math.round(Object.values(stats).reduce((a, b) => a + b, 0))}점 · 번아웃 {burnoutCount}회
         </div>
 
         {/* 다회차 유도 문구 */}

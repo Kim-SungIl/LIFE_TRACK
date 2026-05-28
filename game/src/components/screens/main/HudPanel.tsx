@@ -1,11 +1,20 @@
-import { useState } from 'react';
-import { GameState } from '../../../engine/types';
+import { memo, useState } from 'react';
+import { GameState, ParentStrength, ParentBonusApplied } from '../../../engine/types';
 import { getParentMods } from '../../../engine/parentModifiers';
 import { Portrait } from '../../Portrait';
 import { PARENT_ICONS } from '../shared';
 
 type Props = {
-  state: GameState;
+  parents: readonly ParentStrength[];
+  gender: GameState['gender'];
+  mentalStat: number;
+  mentalState: GameState['mentalState'];
+  year: number;
+  fatigue: number;
+  money: number;
+  isVacation: boolean;
+  // 부모 보너스가 이번 주 발동했는지(칩 펄스) — null/undefined 면 발동 없음
+  parentBonusesApplied?: ParentBonusApplied[];
   mood: string;
   weekInfo: string;
   month: string;
@@ -30,30 +39,31 @@ const PARENT_TIP_DESC: Record<string, string> = {
   freedom: '"알아서 해" 분위기 — 노는 주의 idle 페널티 -50%.',
 };
 
-export function HudPanel({
-  state, mood, weekInfo, month, fatigueColor, fatigueLabel,
+export const HudPanel = memo(function HudPanel({
+  parents, gender, mentalStat, mentalState, year, fatigue, money, isVacation,
+  parentBonusesApplied, mood, weekInfo, month, fatigueColor, fatigueLabel,
   weeklyActivityCost, weeklyOverBudget, onOpenHome,
 }: Props) {
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글. HUD 전용 로컬 state.
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
-  const mods = getParentMods(state.parents);
+  const mods = getParentMods(parents);
   return (
     <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-      <Portrait characterId={state.gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={state.stats.mental} mentalState={state.mentalState} year={state.year} />
+      <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} />
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '1rem', fontWeight: 700 }}>{mood} {weekInfo}</div>
-        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{month} {state.isVacation ? '· 방학' : ''}</div>
-        {state.mentalState !== 'normal' && (
-          <div style={{ fontSize: '0.68rem', fontWeight: 600, color: state.mentalState === 'burnout' ? 'var(--red)' : 'var(--yellow)' }}>
-            {state.mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{month} {isVacation ? '· 방학' : ''}</div>
+        {mentalState !== 'normal' && (
+          <div style={{ fontSize: '0.68rem', fontWeight: 600, color: mentalState === 'burnout' ? 'var(--red)' : 'var(--yellow)' }}>
+            {mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}
           </div>
         )}
         {/* 부모 칩 — 22×22 발동 시 펄스. 호버/탭하면 absolute popover로 설명 노출 (layout shift 방지) */}
         {/* 클릭하면 부모 모달 — 인라인 "💬 가정" 라벨로 클릭 가능 affordance 명시 */}
         <div style={{ marginTop: 4, position: 'relative' }}>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {state.parents.map(p => {
-              const justFired = state.weekLog?.parentBonusesApplied?.some(b => b.parent === p);
+            {parents.map(p => {
+              const justFired = parentBonusesApplied?.some(b => b.parent === p);
               const isActive = activeParentTip === p;
               return (
                 <span
@@ -81,7 +91,7 @@ export function HudPanel({
               }}
             >💬 가정</span>
           </div>
-          {activeParentTip && state.parents.includes(activeParentTip as any) && (
+          {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (
             <div style={{
               position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 20,
               padding: '5px 8px', borderRadius: 6,
@@ -101,9 +111,9 @@ export function HudPanel({
         </div>
       </div>
       <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
-        <div style={{ color: fatigueColor }}>피로 {Math.round(state.fatigue)} · {fatigueLabel}</div>
+        <div style={{ color: fatigueColor }}>피로 {Math.round(fatigue)} · {fatigueLabel}</div>
         <div>
-          💰 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원
+          💰 {Number.isInteger(money) ? money : money.toFixed(1)}만원
           {weeklyActivityCost > 0 && (
             <span style={{
               marginLeft: 6, fontSize: '0.66rem', fontWeight: 600,
@@ -117,4 +127,4 @@ export function HudPanel({
       </div>
     </div>
   );
-}
+});
