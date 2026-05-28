@@ -4,7 +4,7 @@ import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek, GAME_EVENTS } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState } from './rng';
-import { selectMemorialHighlights, recordMilestoneForYear } from './memorySystem';
+import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
 import { migrateLoadedState } from './stateMigration';
 
@@ -538,7 +538,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
 }
 
 // ===== 행복 등급 산출 (학년말·엔딩 공통 SSOT) =====
-// 행복 등급/엔딩 산정은 ending.ts 로 이동 (P2-6).
+// 행복 등급/엔딩 산정은 ending.ts 로 이동.
 
 // ===== NPC 친밀도 변화량 구간별 감쇠 =====
 // 원본 +10 이상(현재 +8 이상)인 큰 이벤트와 음수는 면제. 그 외 양수만 친밀도 구간별 효율 적용.
@@ -570,7 +570,7 @@ function applyNpcDecay(state: GameState): void {
   }
 }
 
-// 구세이브 호환 백필은 stateMigration.ts 로 이동 (P2-6).
+// 구세이브 호환 백필은 stateMigration.ts 로 이동.
 
 // ===== 주간 처리 (메인 루프) =====
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
@@ -842,4 +842,4 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   return newState;
 }
 
-// 엔딩 산정·진로 판정·NPC 근황은 ending.ts 로 이동 (P2-6).
+// 엔딩 산정·진로 판정·NPC 근황은 ending.ts 로 이동.
