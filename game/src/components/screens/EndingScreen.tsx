@@ -1,4 +1,4 @@
-import { calculateEnding } from '../../engine/gameEngine';
+import { calculateEnding } from '../../engine/ending';
 import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, getGrade } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';

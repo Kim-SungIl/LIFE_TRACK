@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useGameStore } from '../engine/store';
-import { getWeekLabel, calculateEnding } from '../engine/gameEngine';
+import { getWeekLabel } from '../engine/gameEngine';
+import { calculateEnding } from '../engine/ending';
 import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
 import { getResultDialogue } from '../engine/dialogues';

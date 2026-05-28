@@ -18,7 +18,8 @@
   } as Storage;
 }
 
-import { createInitialState, calculateEnding } from '../../src/engine/gameEngine';
+import { createInitialState } from '../../src/engine/gameEngine';
+import { calculateEnding } from '../../src/engine/ending';
 import type { GameState, ExamResult, Track } from '../../src/engine/types';
 
 interface Scenario {

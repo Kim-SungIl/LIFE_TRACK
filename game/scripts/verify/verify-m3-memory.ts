@@ -5,7 +5,8 @@
 // - calculateEnding 확장 반환 필드
 // - 하드위기 연간 1회 가드
 
-import { createInitialState, processWeek, calculateEnding } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek } from '../../src/engine/gameEngine';
+import { calculateEnding } from '../../src/engine/ending';
 import {
   applyMemorySlotFromChoice, selectMemorialHighlights,
   recordMilestoneForYear, yearToPhaseTag, lintRecallText,

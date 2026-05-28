@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { GameState, GameEvent, ParentStrength } from './types';
-import { createInitialState, processWeek, getWeekInfo, migrateLoadedState, scaleIntimacyChange } from './gameEngine';
+import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange } from './gameEngine';
+import { migrateLoadedState } from './stateMigration';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
