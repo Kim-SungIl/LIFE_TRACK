@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
-import { getEventBackground, getSchoolLevel } from '../engine/backgrounds';
+import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 import { prefetchAssets } from '../engine/assetPrefetch';
 import { CG_MANIFEST } from '../cg-manifest.generated';
@@ -17,24 +17,7 @@ const NPC_COLORS: Record<string, string> = {
   haeun: '#D4A03C',
 };
 
-export const LOCATION_GRADIENTS: Record<string, string> = {
-  classroom: 'linear-gradient(180deg, #3a2f42 0%, #241a2a 100%)',
-  home: 'linear-gradient(180deg, #3d2b1f 0%, #2a1f15 100%)',
-  park: 'linear-gradient(180deg, #1e3a26 0%, #13281a 100%)',
-  hallway: 'linear-gradient(180deg, #3a3342 0%, #241f28 100%)',
-  rooftop: 'linear-gradient(180deg, #4a5a85 0%, #2c3a58 100%)',
-  street: 'linear-gradient(180deg, #4a3f5c 0%, #2a2535 100%)',
-  gym: 'linear-gradient(180deg, #5c3a2a 0%, #3a2518 100%)',
-  school_gate: 'linear-gradient(180deg, #3a5c4a 0%, #1a3a28 100%)',
-  cafe: 'linear-gradient(180deg, #5c4a3a 0%, #3a2f20 100%)',
-  music_room: 'linear-gradient(180deg, #3a2f5c 0%, #2a1f3a 100%)',
-  beach: 'linear-gradient(180deg, #4a8ab5 0%, #2a5a80 100%)',
-  convenience_store: 'linear-gradient(180deg, #4a5c3a 0%, #2a3a20 100%)',
-  library: 'linear-gradient(180deg, #3a3346 0%, #1f1929 100%)',
-  auditorium: 'linear-gradient(180deg, #5c4a4a 0%, #3a2a2a 100%)',
-};
-
-export const DEFAULT_GRADIENT = 'linear-gradient(180deg, #1f1a25 0%, #17151c 100%)';
+// LOCATION_GRADIENTS / DEFAULT_GRADIENT 는 engine/backgrounds.ts 로 이동 (SSOT).
 
 // ===== Keyframes injection =====
 

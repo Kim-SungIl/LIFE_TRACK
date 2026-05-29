@@ -182,3 +182,6 @@ export function calculateEnding(state: GameState) {
     yearClosings,
   };
 }
+
+// 엔딩 페이로드 — EndingScreen 의 prop 타입 (이전엔 EndingScreen 내부에 정의돼 있었음).
+export type EndingData = ReturnType<typeof calculateEnding>;

@@ -214,8 +214,9 @@ export function WeeklyResultScreen({
         </div>
 
         {/* 시험 결과 (학교급별 분기) */}
-        {weekLog.examResult && (() => {
-          const exam = weekLog.examResult!;
+        {(() => {
+          const exam = weekLog.examResult;
+          if (!exam) return null;
           const gradeColors: Record<string, string> = { S: '#e5c07b', A: '#8fb573', B: '#7da3d9', C: '#e0a15e', D: '#d96458' };
           const examTitle = exam.examType === 'unit-test' ? '단원평가'
             : exam.examType === 'mock' ? '모의고사'

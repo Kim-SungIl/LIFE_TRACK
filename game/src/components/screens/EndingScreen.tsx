@@ -1,10 +1,7 @@
-import { calculateEnding } from '../../engine/ending';
+import { EndingData } from '../../engine/ending';
 import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, getGrade } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';
-
-// calculateEnding 반환 타입 — 부모(GameScreen)가 계산해 prop 으로 주입.
-export type EndingData = ReturnType<typeof calculateEnding>;
 
 interface EndingScreenProps {
   ending: EndingData;

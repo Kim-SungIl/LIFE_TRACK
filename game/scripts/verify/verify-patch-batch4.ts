@@ -92,7 +92,7 @@ console.log('\n=== P14. MainWeekScreen maxSlots SSOT (parentModifiers.vacationSl
   const src = readFileSync('./src/components/screens/main/MainWeekScreen.tsx', 'utf8');
 
   assert('MainWeekScreen이 parentModifiers를 import',
-    /from\s+['"](?:\.\.\/)+engine\/parentModifiers['"]/.test(src));
+    /from\s+['"](?:\.\.\/){3}engine\/parentModifiers['"]/.test(src));
   assert('MainWeekScreen이 maxSlots에 getParentMods 사용',
     /maxSlots[^=]*=[^;]*getParentMods/.test(src));
   assert('MainWeekScreen에서 maxSlots 직접 includes(\'freedom\') 호출 제거',
