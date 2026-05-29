@@ -83,12 +83,15 @@
 
 export type MemoryCategory =
   | 'courage' | 'betrayal' | 'reconciliation'
-  | 'failure' | 'discovery' | 'growth';
+  | 'failure' | 'discovery' | 'growth'
+  | 'bypass' | 'unspoken_debt';   // wealth 부모 전용 (돈으로 건너뛴 순간 / 말없는 봉투)
 
 export type PhaseTag = 'early' | 'mid' | 'late';
 // early: Y1~Y2, mid: Y3~Y4, late: Y5~Y7
 
-export type ToneTag = 'warm' | 'regret' | 'resolve' | 'breakthrough';
+// melancholy/burden 은 미니 이벤트 tier70 톤검수(PR #189)에서 추가 — 쓸쓸함/기대 압박처럼
+// 기존 4종으로 안 잡히던 결을 위해. toneTag 는 분기 로직 없는 수동 메타.
+export type ToneTag = 'warm' | 'regret' | 'resolve' | 'breakthrough' | 'melancholy' | 'burden';
 
 export interface MemorySlot {
   id: string;                  // {category}_{year}_{week}_{choiceIndex}
