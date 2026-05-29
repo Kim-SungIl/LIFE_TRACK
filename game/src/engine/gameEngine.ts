@@ -264,13 +264,6 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       }
     }
   }
-  // Phase 1: do-nothing 특수 처리 — 피로 70+ 시 추가 회복 -5
-  if (state.isVacation && activity.id === 'do-nothing' && state.fatigue >= 70) {
-    log.messages.push('많이 지쳐 있었던 만큼, 푹 쉬니 더 회복됐다.');
-    state.fatigue = Math.max(0, state.fatigue - 5);
-    log.fatigueChange -= 5;
-  }
-
   // Phase 1: 방학 활동 횟수 카운트 (vacationLimit 추적)
   if (state.isVacation && activity.seasonGate === 'vacation-only') {
     if (!state.vacationActivityCounts) state.vacationActivityCounts = {};
