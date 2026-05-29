@@ -472,12 +472,15 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       </div>
 
       {/* ===== Layer 4: Text Box + Choices ===== */}
+      {/* 모바일: 고정 35% 대신 콘텐츠에 맞춰 늘어나되 상한(80dvh)을 둠 — 작은 화면에서
+          description(10em)이 공간을 다 먹어 선택지가 잘리던 문제 방지.
+          데스크탑: 기존 고정 35% 유지. */}
       <div style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
         right: 0,
-        height: '35%',
+        ...(isMobile ? { maxHeight: '80dvh' } : { height: '35%' }),
         minHeight: 220,
         zIndex: 10,
         display: 'flex',
