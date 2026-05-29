@@ -8,8 +8,11 @@
 
 import { GameState, ParentStrength } from './types';
 import { seededRandom } from './rng';
+import { getSchoolLevel } from './backgrounds';
 import {
   MiniTalkEvent,
+  GenderedPool,
+  SmalltalkBucket,
   NPC_MINI_EVENTS,
   PARENT_MINI_EVENTS,
   PARENT_STATIC_DIALOGUES,
@@ -35,9 +38,20 @@ function pickRandomLine(state: GameState, pool: string[]): string {
 export function getNpcSmalltalk(state: GameState, npcId: string): string {
   const entry = NPC_SMALLTALK[npcId];
   if (!entry) return pickRandomLine(state, []);
-  // common + 현재 성별 풀을 합쳐서 한 줄 픽 (events.ts 분기와 톤 일치)
-  const genderPool = state.gender === 'female' ? entry.female ?? [] : entry.male ?? [];
-  return pickRandomLine(state, [...entry.common, ...genderPool]);
+  const intimacy = state.npcs.find(n => n.id === npcId)?.intimacy ?? 0;
+  const level = getSchoolLevel(state.year); // Y1=elementary / Y2~Y4=middle / Y5~Y7=high
+  // common + 현재 성별 풀을 합침 (events.ts 분기와 톤 일치)
+  const genderLines = (p?: GenderedPool): string[] =>
+    p ? [...(p.common ?? []), ...(state.gender === 'female' ? p.female ?? [] : p.male ?? [])] : [];
+  // 친밀도가 오를수록 warm/close/deep 티어의 "현재 학교급" 셀을 base 위에 누적.
+  const tierLines = (b?: SmalltalkBucket): string[] => genderLines(b?.[level]);
+  const pool = [
+    ...genderLines(entry),
+    ...(intimacy >= 30 ? tierLines(entry.warm) : []),
+    ...(intimacy >= 50 ? tierLines(entry.close) : []),
+    ...(intimacy >= 70 ? tierLines(entry.deep) : []),
+  ];
+  return pickRandomLine(state, pool);
 }
 
 export function getHomeSmalltalk(state: GameState): string {
