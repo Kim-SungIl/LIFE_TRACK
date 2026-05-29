@@ -250,12 +250,29 @@ export const PARENT_STATIC_DIALOGUES: Record<ParentStrength, string[]> = {
 // ===== 짧은 잡담 폴백 (말 걸었으나 이번 주 이벤트가 사전 결정에서 미발동 시) =====
 // 사전 결정 모델 — 미스가 아니라 "이번 주는 별일 없는 평범한 만남". 클릭마다 캐릭터 톤의 다른 한 줄.
 // 톤: 진행 중인 대화 (NPC가 지금 너에게 말 걸고 있는 느낌). "헤어졌다/가버렸다/지나갔다"
-//     같은 종결형 묘사 금지. 학교급 종속 표현(야자 등) 금지.
+//     같은 종결형 묘사 금지.
 //
 // 풀 확장 (2026-05-09): 시드 3개 + Codex 7개 + GPT 일부 = NPC당 8~10개, 강점당 8~9개.
 // gender 분기 (2026-05-09): events.ts의 femaleDescription/condition 분기와 톤을 맞추기 위해
 //   common(성별 무관) + male/female 풀 구조로 전환. getNpcSmalltalk이 state.gender로 풀 결정.
-export type NpcSmalltalkPool = { common: string[]; male?: string[]; female?: string[] };
+//
+// 친밀도×학년 톤 분기 (2026-05-29): base 풀(common/male/female, 학년 무관)은 그대로 두고,
+//   친밀도가 오를수록 warm(30+)/close(50+)/deep(70+) 풀이 추가로 누적된다. 각 티어는 학년(학교급)
+//   별로 나뉘어, 플레이어가 어느 학교급일 때 말 거느냐에 맞는 소재가 나온다. 미니 이벤트의
+//   intimacyMin 30/50/70 게이트와 동일한 구간. base만 있으면 기존과 동작 동일.
+
+// 학년 무관/학년별로 공유하는 성별 분기 풀. base는 common 필수, 티어 셀은 일부만 채워질 수 있어 모두 optional.
+export type GenderedPool = { common?: string[]; male?: string[]; female?: string[] };
+// 학교급별 풀 — getSchoolLevel(year): Y1=elementary / Y2~Y4=middle / Y5~Y7=high.
+export type SmalltalkBucket = { elementary?: GenderedPool; middle?: GenderedPool; high?: GenderedPool };
+export type NpcSmalltalkPool = {
+  common: string[];          // base (학년·친밀도 무관) — 필수
+  male?: string[];
+  female?: string[];
+  warm?: SmalltalkBucket;    // 친밀도 30+ 에서 풀에 누적
+  close?: SmalltalkBucket;   // 50+
+  deep?: SmalltalkBucket;    // 70+
+};
 
 export const NPC_SMALLTALK: Record<string, NpcSmalltalkPool> = {
   jihun: {
