@@ -10,9 +10,12 @@ export function migrateLoadedState(state: GameState): GameState {
   const migratedParents = state.parents
     ? (state.parents.map((p: string) => (p === 'gene' ? 'resilience' : p)) as GameState['parents'])
     : state.parents;
+  // 'do-nothing' 활동 제거(deep-rest와 중복·열등) — 진행 중인 방학 vacationChoices에서 안전 필터링
+  const migratedVacationChoices = (state.vacationChoices || []).filter(id => id !== 'do-nothing');
   const result: GameState = {
     ...state,
     parents: migratedParents,
+    vacationChoices: migratedVacationChoices,
     examResults: state.examResults || [],
     activeBuffs: state.activeBuffs || [],
     weekPurchases: state.weekPurchases || {},

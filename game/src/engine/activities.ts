@@ -146,8 +146,8 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'deep-rest', name: '푹 쉬기', slots: 2, fatigue: -22,
     effects: { mental: 5, health: 2 }, moneyCost: 0, category: 'rest',
-    description: '주말 전체를 휴식에 쓴다.',
-    flavor: '토요일부터 일요일까지 완전히 쉬었다. 세상이 다르게 보인다.',
+    description: '푹 쉬어 완전히 회복한다.',
+    flavor: '방해 없이 온전히 쉴 수 있는 시간. 평소엔 짓눌리던 게 풀린다.',
     tags: ['완전 회복', '2슬롯', '리셋'],
   },
   {
@@ -227,18 +227,6 @@ export const ACTIVITIES: Activity[] = [
     description: '시골 친척집에서 며칠을 보낸다.',
     flavor: '평상에 누우면 바람 소리만 들린다. 도시에서 잊고 있던 박자.',
     tags: ['방학', '회복', '추억', '무료', '1회'],
-  },
-  {
-    id: 'do-nothing',
-    name: '집에서 푹 쉬기', slots: 2, fatigue: -20,
-    effects: { mental: 4 }, moneyCost: 0,
-    category: 'rest',
-    seasonGate: 'vacation-only',
-    vacationLimit: 1,
-    catchupBonus: { targetStat: 'mental', threshold: 0, bonus: 0 }, // 사용 안 함, fatigue 추가 회복은 gameEngine에서 특수 처리
-    description: '아무것도 하지 않는 며칠.',
-    flavor: '늦잠. 멍하니 천장. 죄책감과 평화 사이 어디쯤.',
-    tags: ['방학', '회복', '무료', '1회'],
   },
 
   // 저비용 사회성 1개
