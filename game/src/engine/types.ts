@@ -228,7 +228,7 @@ export type PhaseTag = 'early' | 'mid' | 'late';
 // mid:   Y3~Y4 (중2~중3)
 // late:  Y5~Y7 (고1~고3)
 
-export type ToneTag = 'warm' | 'regret' | 'resolve' | 'breakthrough';
+export type ToneTag = 'warm' | 'regret' | 'resolve' | 'breakthrough' | 'melancholy' | 'burden';
 
 export interface MemorySlotDraft {
   category: MemoryCategory;

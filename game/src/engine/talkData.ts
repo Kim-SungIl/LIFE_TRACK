@@ -146,9 +146,9 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     effects: { intimacy: 4, stats: { mental: 2 }, fatigue: -1 },
     message: '수빈이의 늦은 답장 — 멘탈 +2, 피로 -1, 친밀도 +4',
     memorySlotDraft: {
-      category: 'reconciliation',
+      category: 'discovery',
       importance: 3,
-      toneTag: 'warm',
+      toneTag: 'melancholy',
       recallText: '수빈이의 늦은 답장과 꺼지지 않던 거실 불빛.',
       npcIds: ['subin'],
     },
@@ -162,7 +162,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     memorySlotDraft: {
       category: 'discovery',
       importance: 3,
-      toneTag: 'regret',
+      toneTag: 'burden',
       recallText: '민재가 휴대폰을 뒤집고 기대가 시끄럽다던 순간.',
       npcIds: ['minjae'],
     },
@@ -177,7 +177,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   {
     id: 'talk_haeun_70_direction',
     npcId: 'haeun', intimacyMin: 70,
-    description: '"후배들이 자꾸 나한테 길을 물어보는데, 사실 나도 여기가 어딘지 모르겠어."\n하은 선배가 복도 끝 창밖을 보며 짧게 읊조린다. "선배라고 다 아는 건 아닌데... 그냥 아는 척하는 게 가끔은 너무 지쳐."',
+    description: '"후배들이 자꾸 나한테 길을 물어보는데, 사실 나도 여기가 어딘지 모르겠어."\n하은 선배가 계단참에 잠깐 멈춰 난간을 짚는다. "...아는 척하는 것도, 가끔은 길을 잃는 일이더라." 말끝을 흐리곤, 별일 아니라는 듯 다시 계단을 오른다.',
     effects: { intimacy: 4, stats: { mental: 1, social: -1 }, fatigue: -1 },
     message: '하은 선배의 흔들림 — 멘탈 +1, 사회 -1, 피로 -1, 친밀도 +4',
   },
