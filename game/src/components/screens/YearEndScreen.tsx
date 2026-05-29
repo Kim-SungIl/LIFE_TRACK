@@ -1,12 +1,12 @@
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
-import { GameState, Stats } from '../../engine/types';
+import { MemorySlot, MilestoneScene, Stats } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 
 interface YearEndScreenProps {
   // 방금 끝난 학년 (advance 전 state.year)
   year: number;
-  memorySlots: GameState['memorySlots'];
-  milestoneScenes: GameState['milestoneScenes'];
+  memorySlots: MemorySlot[];
+  milestoneScenes: MilestoneScene[];
   stats: Stats;
   bgProps: ScreenBgProps;
   onAdvance: () => void;

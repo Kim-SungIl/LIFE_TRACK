@@ -25,10 +25,11 @@ type Props = {
   onOpenHome: () => void;
 };
 
-// 부모 칩 hover/탭 popover 라벨·설명 — HUD 전용(메인 화면 한정 카피)
-const PARENT_TIP_LABEL: Record<string, string> = {
-  emotional: '🫂 정서', wealth: '🏠 여유', info: '📱 정보',
-  strict: '📐 엄격', resilience: '⭐ 체질', freedom: '🌿 자유',
+// 부모 칩 hover/탭 popover 라벨·설명 — HUD 전용(메인 화면 한정 카피).
+// 아이콘은 shared PARENT_ICONS 재사용, 라벨 텍스트만 별도 보유 (SSOT).
+const PARENT_TIP_SHORT: Record<string, string> = {
+  emotional: '정서', wealth: '여유', info: '정보',
+  strict: '엄격', resilience: '체질', freedom: '자유',
 };
 const PARENT_TIP_DESC: Record<string, string> = {
   emotional: '엄마/아빠가 자주 물어봐주고 안아준다. 지친 주에 피로 회복 보조.',
@@ -103,7 +104,7 @@ export const HudPanel = memo(function HudPanel({
               wordBreak: 'keep-all', overflowWrap: 'break-word',
               pointerEvents: 'none',
             }}>
-              <strong style={{ color: 'var(--accent-soft)' }}>{PARENT_TIP_LABEL[activeParentTip]}</strong>
+              <strong style={{ color: 'var(--accent-soft)' }}>{PARENT_ICONS[activeParentTip]} {PARENT_TIP_SHORT[activeParentTip]}</strong>
               {' — '}
               {PARENT_TIP_DESC[activeParentTip]}
             </div>

@@ -18,7 +18,7 @@ npm run lint        # ESLint
 
 ```bash
 npm run verify:events       # 빠른 스모크 — events.ts 분리 + ID order baseline
-npm run verify:content      # 전체 (18개) — 콘텐츠·밸런스·패치 회귀 일괄 검증
+npm run verify:content      # 전체 verify-*.ts — 콘텐츠·밸런스·패치 회귀 일괄 검증
 ```
 
 `verify:content` 는 fail-fast — 첫 실패에서 중단됩니다. 개별 스크립트는

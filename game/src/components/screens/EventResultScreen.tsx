@@ -1,6 +1,5 @@
 import { GameState } from '../../engine/types';
-import { LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../EventScene';
-import { getEventBackground, getSchoolLevel } from '../../engine/backgrounds';
+import { LOCATION_GRADIENTS, DEFAULT_GRADIENT, getEventBackground, getSchoolLevel } from '../../engine/backgrounds';
 import { CG_MANIFEST } from '../../cg-manifest.generated';
 import { breakSentences, EventResultData } from './shared';
 

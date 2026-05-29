@@ -88,6 +88,12 @@ export function GameScreen() {
     () => state?.weekLog ? getResultDialogue(state, state.weekLog) : '',
     [state?.weekLog],
   );
+  // 엔딩 진입 후엔 state 가 거의 정지지만, calculateEnding 이 비-trivial 함수라
+  // 방어적으로 memo. ending phase 가 아니면 null — 분기 진입 후만 계산됨.
+  const endingData = useMemo(
+    () => state?.phase === 'ending' ? calculateEnding(state) : null,
+    [state],
+  );
 
   if (!state) return null;
 
@@ -110,10 +116,10 @@ export function GameScreen() {
   }
 
   // ===== 엔딩 =====
-  if (state.phase === 'ending') {
+  if (state.phase === 'ending' && endingData) {
     return (
       <EndingScreen
-        ending={calculateEnding(state)}
+        ending={endingData}
         track={state.track}
         stats={state.stats}
         parents={state.parents}
