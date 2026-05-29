@@ -49,9 +49,12 @@ Only vary details like hair, expression, accessories, and personality.
 - Same face proportions as full-body version
 - Slight angle toward camera
 - Neutral soft expression
-- Background: soft pastel gradient (light pink / sky blue tone)
+- Background: soft pastel gradient (light pink / sky blue tone) — KEEP as final background, do NOT remove
 - Output: PNG, 2:3 ratio
 ```
+
+> Full Body → white bg → removed → transparent (Section 9).
+> Portrait / neutral → pastel gradient → **kept** (no removal). Mixing these up is what caused the 2026-05-20 white-fringe defect.
 
 ---
 
@@ -509,6 +512,26 @@ Same boy at age 11-12. Even more bright and pure energy.
 - Size: 800x1400px
 ```
 
+**Portrait (elementary)** → `doyun_elementary_neutral.png`
+```
+Same boy at age 11-12, bright and pure energy. Chest-up portrait, slight angle toward camera, looking at viewer.
+- Face: SAME base face as doyun middle version (identical proportions, eye rendering, shading) — do NOT alter face base
+- Hair: short neat black hair, slightly side-parted, slightly less styled than older versions
+- Eyes: clear warm brown eyes, dependable honest gaze
+- Expression: soft neutral smile, calm and approachable (NOT wide grin, NO teeth showing) — this is the NEUTRAL portrait
+- Outfit: green V-neck soccer jersey with white collar trim and white sleeve cuffs
+- Background: soft pastel pink-blue gradient (light pink → sky blue)
+- Size: 1024x1536px (2:3)
+
+[append common style anchor + negative prompt]
+Negative additions: transparent background, plain white background
+
+IMPORTANT: This is a Portrait/neutral image → KEEP the pastel background.
+Do NOT run background removal. The jersey has WHITE collar/cuffs, and removing a
+background here previously left white fringe artifacts (the 2026-05-20 alpha pass).
+Pastel-background neutral portraits need no removal — see Section 2 / Section 9.
+```
+
 ---
 
 ### 5-4. Year 2~4 NPCs (Middle school)
@@ -621,10 +644,19 @@ Anime-style Korean high school boy, 16 years old, calm and observant.
 - Size: 800x1400px
 ```
 
-**Portrait**
+**Portrait** → `siwoo_neutral.png`
 ```
-Same character, chest-up. Reserved half-smile, calm analytical gaze.
-Background: soft pastel pink-blue gradient.
+Same character, chest-up, slight angle toward camera, looking at viewer.
+- Face: same proportions as siwoo full-body version
+- Hair: medium-length dark brown hair slightly covering forehead, natural messy style
+- Eyes: sharp but calm dark brown eyes, observant slightly guarded
+- Expression: slight reserved half-smile, calm analytical gaze, watching rather than engaging
+- Outfit: navy blazer worn casually (top button undone), white shirt
+- Background: soft pastel pink-blue gradient (light pink → sky blue)
+- Size: 1024x1536px (2:3)
+
+IMPORTANT: Portrait/neutral → KEEP the pastel background. Do NOT run background removal.
+Outfit has a WHITE shirt; the previous removal pass left white fringe at the hem. See Section 9.
 ```
 
 ---
@@ -699,10 +731,25 @@ game/public/images/characters/
 
 ## 9. Background Removal
 
+**Applies to FULL BODY images ONLY.** Portrait / neutral images KEEP their pastel
+gradient background — do NOT run removal on them (see Section 2).
+
 1. Generate with solid white (#FFFFFF) background
 2. Use remove.bg or Photoshop to remove background
 3. Save as PNG with transparency (RGBA)
 4. Verify no white artifacts on edges
+
+⚠️ Known failure (2026-05-20): a blanket alpha pass was applied to neutral PORTRAITS
+that should have kept their pastel background. Characters with white clothing
+(doyun's white jersey trim, siwoo's white shirt) left white fringe/residue. Never run
+background removal on a Portrait/neutral image.
+
+**Recovery (face-preserving — do NOT regenerate from text, which drifts the face):**
+composite a soft pastel pink→blue gradient *behind* the existing transparent PNG (pure
+alpha-composite, character pixels untouched). For images with leftover white fringe,
+clean only the border-connected white before compositing (keep interior white like
+collars/shirts). Full task spec: **`docs/neutral-pastel-bg-add-task.md`** (24 files;
+excludes already-pastel subin/player_f/player_m_elementary).
 
 ---
 
