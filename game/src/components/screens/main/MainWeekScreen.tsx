@@ -651,6 +651,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {miniTalkResult && (
         <MiniTalkModal
           result={miniTalkResult}
+          year={state.year}
           onDismiss={() => setMiniTalkResult(null)}
           onCloseAll={() => { setMiniTalkResult(null); setNpcDetailFor(null); setShowHomeModal(false); }}
         />
