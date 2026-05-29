@@ -13,7 +13,8 @@
  * 실행: npx tsx scripts/verify-tier50-mini-events.ts
  */
 
-import { NPC_MINI_EVENTS, getAvailableNpcEvents } from '../../src/engine/talkSystem';
+import { NPC_MINI_EVENTS } from '../../src/engine/talkData';
+import { getAvailableNpcEvents } from '../../src/engine/talkSystem';
 import { createInitialState } from '../../src/engine/gameEngine';
 import type { GameState } from '../../src/engine/types';
 

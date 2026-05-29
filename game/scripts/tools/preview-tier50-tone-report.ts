@@ -11,7 +11,7 @@
  *   npx tsx scripts/preview-tier50-tone-report.ts --json          # JSON (다른 AI 발주용)
  */
 
-import { NPC_MINI_EVENTS } from '../../src/engine/talkSystem';
+import { NPC_MINI_EVENTS } from '../../src/engine/talkData';
 
 const TIER50_IDS = [
   'talk_jihun_50_topping',
