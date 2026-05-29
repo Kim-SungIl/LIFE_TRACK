@@ -47,27 +47,31 @@ export function GameScreen() {
     }
   }, [state?.phase]);
 
-  // 자주 쓰는 자산 prefetch — 학년/성별 결정되면 그 학교급의 자주 쓰는 배경과
-  // 플레이어 fullbody를 미리 캐시에 적재. 화면 전환 시 즉시 표시.
+  // 자주 쓰는 자산 prefetch — 학교급(level) 전환 또는 player sprite era(Y1 ↔ Y2+) 변경 시에만 fire.
+  // P3-8: 이전엔 state.year 매번 fire (Y1~Y7 = 7회). 이젠 level + isElementarySprite primitive dep으로
+  //       학교급 transition 시(보통 3회)에만 fire. prefetched Set 내부 중복 차단과 별개로
+  //       useEffect 자체의 호출 횟수를 줄여 hot path overhead 절감.
+  const schoolLevel = state ? getSchoolLevel(state.year) : null;
+  const isElementarySprite = state?.year === 1;
+  const playerGender = state?.gender;
   useEffect(() => {
-    if (!state) return;
-    const level = getSchoolLevel(state.year);
-    const gender = state.gender === 'male' ? 'm' : 'f';
-    const elementarySuffix = state.year === 1 ? '_elementary' : '';
+    if (!playerGender || !schoolLevel) return;
+    const g = playerGender === 'male' ? 'm' : 'f';
+    const suffix = isElementarySprite ? '_elementary' : '';
     prefetchAssets([
-      `images/characters/player_${gender}${elementarySuffix}_fullbody.png`,
-      `images/backgrounds/classroom_${level}.png`,
-      `images/backgrounds/classroom_${level}_spring.png`,
-      `images/backgrounds/classroom_${level}_afternoon.png`,
-      `images/backgrounds/classroom_${level}_sunset.png`,
-      `images/backgrounds/hallway_${level}.png`,
-      `images/backgrounds/library_${level}.png`,
+      `images/characters/player_${g}${suffix}_fullbody.png`,
+      `images/backgrounds/classroom_${schoolLevel}.png`,
+      `images/backgrounds/classroom_${schoolLevel}_spring.png`,
+      `images/backgrounds/classroom_${schoolLevel}_afternoon.png`,
+      `images/backgrounds/classroom_${schoolLevel}_sunset.png`,
+      `images/backgrounds/hallway_${schoolLevel}.png`,
+      `images/backgrounds/library_${schoolLevel}.png`,
       `images/backgrounds/gymnasium.png`,
       `images/backgrounds/school_road_morning.png`,
       `images/backgrounds/home_evening.png`,
       `images/backgrounds/bedroom_night.png`,
     ]);
-  }, [state?.gender, state?.year]);
+  }, [playerGender, schoolLevel, isElementarySprite]);
 
   const [showResult, setShowResult] = useState(false);
   const [eventResultData, setEventResultData] = useState<EventResultData | null>(null);
