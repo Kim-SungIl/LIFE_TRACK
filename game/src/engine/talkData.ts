@@ -10,6 +10,8 @@ export interface MiniTalkEvent {
   npcId?: string;                        // NPC 이벤트
   parentStrength?: ParentStrength;       // 부모 이벤트
   intimacyMin?: number;                  // NPC 친밀도 하한 (이상이어야 풀 진입)
+  yearMin?: number;                      // 학년 하한 (예: haeun 졸업 시드 Y6). 시점 의존 시드 게이팅
+  yearMax?: number;                      // 학년 상한 (선택적)
   gender?: Gender;                       // 특정 성별 전용 (없으면 양쪽 다 발동)
   description: string;                   // 본문 (NPC/부모 대사 + 상황)
   effects: {
@@ -187,6 +189,91 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     description: '"내 말투 고치면 애들이 덜 쳐다보긴 하거든."\n준하가 급식판 모서리를 젓가락으로 톡톡 친다. "근데 그라면 내가 좀 없어지는 것 같아서, 그게 좀 웃기제." 농담처럼 말하지만 눈은 식판에 남아 있다.',
     effects: { intimacy: 4, stats: { social: 1, mental: 1 }, fatigue: -1 },
     message: '준하의 말투 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +4',
+  },
+  // ===== 친밀도 90 단계 (Phase 2.4 — 캐릭터 결정적 코어, importance 5 필수) =====
+  {
+    id: 'talk_jihun_90_bench',
+    npcId: 'jihun', intimacyMin: 90,
+    description: '"넌 왜 힘들 때 더 실실 웃냐. 바보같이."\n매점 평상, 지훈이가 말없이 이온 음료를 네 이마에 대어 온다. "나한텐 힘든 척해도 돼. 내가 힘은 세니까, 대충 다 받아줄 수 있어." 앞만 보며 툭 던지는 목소리에 서툰 다정함이 묻어 있다.',
+    effects: { intimacy: 5, stats: { mental: 2 }, fatigue: -2 },
+    message: '지훈이가 장난 대신 기댈 어깨를 내밀었다.',
+    memorySlotDraft: {
+      category: 'growth',
+      importance: 5,
+      toneTag: 'warm',
+      recallText: '매점 평상에서 지훈이가 툭 내밀던 서툰 다정함.',
+      npcIds: ['jihun'],
+    },
+  },
+  {
+    id: 'talk_subin_90_two_names',
+    npcId: 'subin', intimacyMin: 90,
+    description: '"우리 집 문패엔 이름이 두 개면 돼. 엄마랑 나."\n수빈이는 웃는 얼굴을 조금 늦게 꺼낸다. "이상한 얘기처럼 안 듣는 사람이 필요했는데, 네가 그랬어."',
+    effects: { intimacy: 5, stats: { mental: 1, social: 1 }, fatigue: -1 },
+    message: '수빈이가 자기 집의 모양을 처음으로 보여줬다.',
+    memorySlotDraft: {
+      category: 'discovery',
+      importance: 5,
+      toneTag: 'melancholy',
+      recallText: '수빈이가 두 이름의 집을 말하던 순간.',
+      npcIds: ['subin'],
+    },
+  },
+  {
+    id: 'talk_minjae_90_nocrown',
+    npcId: 'minjae', intimacyMin: 90,
+    description: '"내가 너한테 이긴 척했던 날들... 사실은 지기 싫어서가 아니라, 들키기 싫어서였어."\n빈 강당 무대 아래, 민재가 네 쪽으로 고개를 조금 숙인다.',
+    effects: { intimacy: 5, stats: { social: 2, mental: 1 } },
+    message: '민재가 이긴 척의 이름을 내려놓았다.',
+    memorySlotDraft: {
+      category: 'reconciliation',
+      importance: 5,
+      toneTag: 'breakthrough',
+      recallText: '민재가 이긴 척의 이름을 내려놓던 순간.',
+      npcIds: ['minjae'],
+    },
+  },
+  {
+    id: 'talk_yuna_90_wrong_note',
+    npcId: 'yuna', intimacyMin: 90,
+    description: '"방금 음, 틀렸는데... 그냥 둘래."\n유나는 악보 위에 지우개를 올려두고도 쓰지 않는다. "이상하게 들려도, 지금 내 소리 같아서."',
+    effects: { intimacy: 5, stats: { talent: 1, mental: 2 }, fatigue: 1 },
+    message: '유나가 완벽한 음보다 자기 소리를 골랐다.',
+    memorySlotDraft: {
+      category: 'growth',
+      importance: 5,
+      toneTag: 'breakthrough',
+      recallText: '유나가 틀린 음을 지우지 않던 순간.',
+      npcIds: ['yuna'],
+    },
+  },
+  {
+    id: 'talk_haeun_90_empty_line',
+    npcId: 'haeun', intimacyMin: 90, yearMin: 6,
+    description: '"마지막 줄은 비워둘게. 네가 나중에 쓰면 돼."\n졸업을 앞둔 강당, 하은 선배가 짧은 쪽지를 접지 않은 채 건넨다. "내 말로 끝나면, 그건 네 얘기가 아니니까."',
+    effects: { intimacy: 5, stats: { mental: 2, talent: 1 }, fatigue: -1 },
+    message: '하은 선배가 답 대신 네가 채울 여백을 남겼다.',
+    memorySlotDraft: {
+      category: 'growth',
+      importance: 5,
+      toneTag: 'resolve',
+      recallText: '하은 선배가 마지막 줄을 비워두던 순간.',
+      npcIds: ['haeun'],
+    },
+  },
+  {
+    id: 'talk_junha_90_umbrella',
+    npcId: 'junha', intimacyMin: 90,
+    description: '"비 오면 그냥 뛰면 된다 했는데, 같이 있으니까 속도를 맞춰야 되더라."\n준하는 우산 손잡이를 네 쪽으로 조금 더 기울인다. "혼자 빨리 가는 거, 별로 멋있는 일 아이더라."',
+    effects: { intimacy: 5, stats: { social: 1, mental: 2 }, fatigue: -1 },
+    message: '준하가 혼자 앞서가는 대신 네 걸음에 속도를 맞췄다.',
+    memorySlotDraft: {
+      category: 'growth',
+      importance: 5,
+      toneTag: 'warm',
+      recallText: '준하가 네 걸음에 속도를 맞추던 순간.',
+      npcIds: ['junha'],
+    },
   },
 ];
 
