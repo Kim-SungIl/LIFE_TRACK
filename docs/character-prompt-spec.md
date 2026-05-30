@@ -317,6 +317,8 @@ Background: soft pastel pink-blue gradient.
 Same boy at age 11-12. Slightly shorter, rounder face, even more carefree.
 - Hair: same messy black hair, slightly longer, messy bangs that fall over forehead
   (NOT center part — center part is player_m's marker)
+  (⚠️ HAIR COLOR = BLACK, NOT brown/caramel — 초등 단계에서 갈색으로 드리프트한 사고 재발 방지.
+   middle/high 가 검정이므로 초등도 반드시 검정으로 통일)
 - Outfit category: SPORTSWEAR (athletic/track 라인 — NOT casual everyday;
   casual everyday is player_m's marker)
 - Baseline outfit: royal blue athletic zip-up hoodie with white sleeve stripe + pure white
@@ -504,6 +506,8 @@ Background: soft pastel pink-blue gradient.
 ```
 Same boy at age 11-12. Even more bright and pure energy.
 - Hair: same neat black hair, slightly less styled
+  (⚠️ HAIR COLOR = BLACK, NOT brown — 초등 단계에서 갈색으로 드리프트한 사고 재발 방지.
+   middle/high 가 검정이므로 초등도 반드시 검정으로 통일)
 - Outfit: green jersey/soccer shirt, shorts, grass-stained sneakers
 - Accessory: soccer ball under arm
 - Pose: standing with one foot on soccer ball, hands on hips
