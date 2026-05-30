@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '../engine/store';
 import { getWeekLabel } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
@@ -18,10 +19,24 @@ import { MainWeekScreen } from './screens/main/MainWeekScreen';
 // GameScreen 은 phase 라우터 — 각 화면(year-end / ending / event / event-result / weekly / main)으로 위임.
 // 이벤트 결과(eventResultData)·주간 결산(showResult)·CG 로딩은 화면 전환을 가르므로 여기서 소유한다.
 export function GameScreen() {
+  // P3-7: selector 없는 전체-스토어 구독 → state + 사용하는 액션만 선택.
+  // 액션은 Zustand에서 안정 참조라, npcActivityMap만 바뀔 땐 shallow-equal → 리렌더 스킵.
   const {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
-  } = useGameStore();
+  } = useGameStore(useShallow(s => ({
+    state: s.state,
+    setWeekendChoices: s.setWeekendChoices,
+    setVacationChoices: s.setVacationChoices,
+    setRoutine: s.setRoutine,
+    advanceWeek: s.advanceWeek,
+    advanceFromYearEnd: s.advanceFromYearEnd,
+    resolveEvent: s.resolveEvent,
+    setNpcActivityMap: s.setNpcActivityMap,
+    buyItem: s.buyItem,
+    talkToNpc: s.talkToNpc,
+    talkToHome: s.talkToHome,
+  })));
 
   // 뒤로가기/새로고침 방지
   useEffect(() => {
