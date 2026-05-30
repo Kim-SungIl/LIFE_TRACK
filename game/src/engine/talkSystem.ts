@@ -69,6 +69,8 @@ export function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalk
   return NPC_MINI_EVENTS.filter(e =>
     e.npcId === npcId
     && (!e.intimacyMin || npc.intimacy >= e.intimacyMin)
+    && (!e.yearMin || state.year >= e.yearMin)
+    && (!e.yearMax || state.year <= e.yearMax)
     && (!e.gender || e.gender === state.gender)
     && !state.talkEventsFired.includes(e.id),
   );
