@@ -4,6 +4,7 @@ import { getWeekLabel } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
 import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
+import { characterStagePrefixByLevel } from '../engine/characterAssets';
 import { getResultDialogue } from '../engine/dialogues';
 import { prefetchAssets } from '../engine/assetPrefetch';
 import { EventScene } from './EventScene';
@@ -57,9 +58,9 @@ export function GameScreen() {
   useEffect(() => {
     if (!playerGender || !schoolLevel) return;
     const g = playerGender === 'male' ? 'm' : 'f';
-    const suffix = isElementarySprite ? '_elementary' : '';
+    const playerPrefix = characterStagePrefixByLevel(`player_${g}`, schoolLevel);
     prefetchAssets([
-      `images/characters/player_${g}${suffix}_fullbody.png`,
+      `images/characters/${playerPrefix}_fullbody.png`,
       `images/backgrounds/classroom_${schoolLevel}.png`,
       `images/backgrounds/classroom_${schoolLevel}_spring.png`,
       `images/backgrounds/classroom_${schoolLevel}_afternoon.png`,

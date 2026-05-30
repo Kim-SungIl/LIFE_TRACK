@@ -1,5 +1,6 @@
 import { GameState } from '../../engine/types';
 import { LOCATION_GRADIENTS, DEFAULT_GRADIENT, getEventBackground, getSchoolLevel } from '../../engine/backgrounds';
+import { characterStagePrefix } from '../../engine/characterAssets';
 import { CG_MANIFEST } from '../../cg-manifest.generated';
 import { breakSentences, EventResultData } from './shared';
 
@@ -92,7 +93,7 @@ export function EventResultScreen({
             zIndex: 5, pointerEvents: 'none',
           }}>
             <img
-              src={`${BASE}images/characters/${gender === 'male' ? 'player_m' : 'player_f'}${year === 1 ? '_elementary' : year >= 5 ? '_high' : ''}_fullbody.png`}
+              src={`${BASE}images/characters/${characterStagePrefix(gender === 'male' ? 'player_m' : 'player_f', year)}_fullbody.png`}
               alt=""
               style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}

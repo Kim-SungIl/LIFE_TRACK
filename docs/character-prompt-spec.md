@@ -709,15 +709,31 @@ Background: soft pastel pink-blue gradient.
 
 ## 7. File Naming Convention
 
+**명시적 3-stage 네이밍** — 학년(year)별로 stage 접미사를 항상 붙인다. 무접미사(base) 이름은
+쓰지 않는다. 런타임 SSOT는 `game/src/engine/characterAssets.ts`.
+
+| stage | year | prefix |
+|-------|------|--------|
+| elementary | Y1 | `{id}_elementary` |
+| middle | Y2~Y4 | `{id}_middle` |
+| high | Y5~Y7 | `{id}_high` |
+
 | Type | Pattern | Example |
 |------|---------|---------|
-| Full Body (middle/high) | `{id}_fullbody.png` | `jihun_fullbody.png` |
-| Full Body (elementary) | `{id}_elementary_fullbody.png` | `jihun_elementary_fullbody.png` |
-| Portrait (neutral) | `{id}_neutral.png` | `jihun_neutral.png` |
-| Portrait (elementary) | `{id}_elementary_neutral.png` | `jihun_elementary_neutral.png` |
-| Portrait (expression) | `{id}_{expression}.png` | `jihun_happy.png` |
+| Full Body | `{id}_{stage}_fullbody.png` | `jihun_middle_fullbody.png` |
+| Portrait (neutral) | `{id}_{stage}_neutral.png` | `jihun_high_neutral.png` |
+| Portrait (expression) | `{id}_{stage}_{expression}.png` | `jihun_middle_happy.png` |
+| Gendered full body | `{id}_{stage}_fullbody_f.png` | `jihun_elementary_fullbody_f.png` (여자 주인공 동반 씬) |
 
 Expressions: `neutral`, `happy`, `sad`, `angry`, `tired`, `burnout`, `surprised`, `shy`
+(현재 실제 생성된 표정은 `neutral` 뿐 — 나머지는 폴백으로 neutral 사용)
+
+**학년 범위 / stage 예외 (NPC 등장 구간 기준):**
+- 전 학년 등장(jihun/subin/minjae/yuna/player): elementary·middle·high 모두 필요
+- haeun: Y2 전학 → middle·high (elementary 없음)
+- doyun: Y1~Y2 → elementary·middle (high 도달 안 함)
+- **junha: Y6 전학(고등 전용) → `junha_high_*` 만** (middle/elementary 없음)
+- 폴백 바닥은 `_middle`. staged 자산이 없으면 `_middle` → CSS 아바타 순.
 
 ---
 

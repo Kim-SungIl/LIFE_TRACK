@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
+import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 import { prefetchAssets } from '../engine/assetPrefetch';
 import { CG_MANIFEST } from '../cg-manifest.generated';
@@ -71,20 +72,21 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
   const isElementary = year === 1;
   const isHigh = year !== undefined && year >= 5;
   const isStaged = isElementary || isHigh;
-  const prefix = isElementary ? `${npcId}_elementary` : isHigh ? `${npcId}_high` : npcId;
+  // 학년 분기 자산: elementary(Y1) / middle(Y2~4) / high(Y5+) — SSOT는 characterAssets.ts
+  const prefix = characterStagePrefix(npcId, year);
+  const basePrefix = characterFallbackPrefix(npcId); // 폴백 바닥 = _middle
   const g = gender === 'female' ? 'f' : 'm';
-  // 학년 분기 자산: elementary(Y1) / high(Y5+) — 둘 다 _f gendered 변주 가능
-  // middle(Y2~Y4)은 base 자산 그대로 사용
+  // elementary/high 는 _f gendered 변주 가능
   const stagedFullbodyGendered = gender === 'female'
     ? `${BASE_URL}images/characters/${prefix}_fullbody_${g}.png`
     : null;
   const stagedFullbody = `${BASE_URL}images/characters/${prefix}_fullbody.png`;
   const stagedNeutral = `${BASE_URL}images/characters/${prefix}_neutral.png`;
   const baseFullbodyGendered = gender === 'female'
-    ? `${BASE_URL}images/characters/${npcId}_fullbody_${g}.png`
+    ? `${BASE_URL}images/characters/${basePrefix}_fullbody_${g}.png`
     : null;
-  const baseFullbody = `${BASE_URL}images/characters/${npcId}_fullbody.png`;
-  const baseNeutral = `${BASE_URL}images/characters/${npcId}_neutral.png`;
+  const baseFullbody = `${BASE_URL}images/characters/${basePrefix}_fullbody.png`;
+  const baseNeutral = `${BASE_URL}images/characters/${basePrefix}_neutral.png`;
   const [src, setSrc] = useState(stagedFullbodyGendered || stagedFullbody);
   const [useFallback, setUseFallback] = useState(false);
 

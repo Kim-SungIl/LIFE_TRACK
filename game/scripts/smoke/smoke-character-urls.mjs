@@ -6,17 +6,30 @@
 // 실행: cd game && node scripts/smoke-character-urls.mjs
 
 const BASE = 'http://localhost:5173';
-// 실제 게임 NPC (gameEngine.ts L71-81). 자산이 있는 doyun/seoa/siwoo/yerin은
-// 게임에 등장하는 NPC가 아니므로 검증 대상 제외.
-const NPCS = ['jihun', 'subin', 'minjae', 'yuna', 'haeun', 'junha'];
+// 이벤트에 실제 등장하는 NPC와 그 학년(year) 범위. 도달 가능한 (npc × year)만
+// 검증해 false positive(미등장 학년의 자산 누락)를 제거.
+//   - haeun: Y2 전학 → 이후. (elementary 없음 = 정상)
+//   - doyun: Y1 만남 ~ Y2 school-split 까지. (high 도달 안 함)
+//   - junha: Y6 전학 (고등 전용). (_middle/_elementary 없음 = 정상)
+// seoa/siwoo/yerin 은 미등장(오펀)이라 제외.
+const NPC_YEARS = {
+  jihun: [1, 2, 3, 4, 5, 6, 7],
+  subin: [1, 2, 3, 4, 5, 6, 7],
+  minjae: [1, 2, 3, 4, 5, 6, 7],
+  yuna: [1, 2, 3, 4, 5, 6, 7],
+  haeun: [2, 3, 4, 5, 6, 7],
+  doyun: [1, 2],
+  junha: [6, 7],
+};
+const NPCS = Object.keys(NPC_YEARS);
 const PLAYERS = ['player_m', 'player_f'];
-const GENDERS = ['male', 'female'];
 const YEARS = [1, 2, 3, 4, 5, 6, 7];
 
+// 네이밍 SSOT(characterAssets.ts)와 동일: Y1 elementary / Y2~4 middle / Y5+ high
 function prefix(npc, year) {
   if (year === 1) return `${npc}_elementary`;
   if (year >= 5) return `${npc}_high`;
-  return npc;
+  return `${npc}_middle`;
 }
 
 async function check(url) {
@@ -36,23 +49,21 @@ async function check(url) {
 const seen = new Set();
 const expectedUrls = [];
 
-// NPC fullbody (gender-neutral path — base는 항상 시도, gendered _f는 여자 주인공일 때만 first try)
+// NPC fullbody — 등장 학년(NPC_YEARS)만 검증. 도달 가능한 자산이므로 모두 critical.
 for (const npc of NPCS) {
-  for (const year of YEARS) {
-    const p = prefix(npc, year);
-    const url = `${BASE}/images/characters/${p}_fullbody.png`;
+  for (const year of NPC_YEARS[npc]) {
+    const url = `${BASE}/images/characters/${prefix(npc, year)}_fullbody.png`;
     if (!seen.has(url)) {
-      expectedUrls.push({ url, npc, year, kind: 'staged-fullbody', critical: year === 1 || year >= 5 });
+      expectedUrls.push({ url, npc, year, kind: 'staged-fullbody', critical: true });
       seen.add(url);
     }
   }
 }
 
-// Player (Y1=elem, Y5+=high, else base)
+// Player — 전 학년 등장 (Y1 elem / Y2~4 middle / Y5+ high)
 for (const p of PLAYERS) {
   for (const year of YEARS) {
-    const stage = year === 1 ? '_elementary' : year >= 5 ? '_high' : '';
-    const url = `${BASE}/images/characters/${p}${stage}_fullbody.png`;
+    const url = `${BASE}/images/characters/${prefix(p, year)}_fullbody.png`;
     if (!seen.has(url)) {
       expectedUrls.push({ url, npc: p, year, kind: 'player-fullbody', critical: true });
       seen.add(url);
@@ -85,7 +96,7 @@ if (missing.length > 0) {
 // fallback chain 도달 가능성 검증: 누락된 staged 자산이 있어도 base fullbody가 존재하는지
 const fallbackCheck = [];
 for (const m of missing.filter(x => x.kind === 'staged-fullbody')) {
-  const baseUrl = `${BASE}/images/characters/${m.npc}_fullbody.png`;
+  const baseUrl = `${BASE}/images/characters/${m.npc}_middle_fullbody.png`;
   const status = await check(baseUrl);
   fallbackCheck.push({ ...m, baseUrl, baseStatus: status });
 }
@@ -102,5 +113,5 @@ if (criticalMissing.length > 0) {
   console.log(`\n❌ CRITICAL ${criticalMissing.length}개 누락 — fix 필요`);
   process.exit(1);
 } else {
-  console.log('\n✅ CRITICAL 자산 모두 OK. Y2~Y4 누락은 fallback으로 처리됨.');
+  console.log('\n✅ 등장 NPC × 학년 자산 모두 OK.');
 }
