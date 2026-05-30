@@ -16,15 +16,19 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
     ? mentalToExpression(mental, mentalState)
     : 'neutral');
 
-  // year 1(초6)이면 elementary 프리픽스 추가
-  const prefix = year === 1 ? `${characterId}_elementary` : characterId;
-
-  // 폴백 체인: elementary 표정 → elementary neutral → 일반 표정 → 일반 neutral → CSS 아바타
-  const base = import.meta.env.BASE_URL;
+  // 학년 분기 프리픽스: Y1(초6) → elementary, Y5+(고등) → high, Y2~4(중) → base
+  // (EventScene.tsx의 staged 규칙과 동일하게 맞춤)
   const isElementary = year === 1;
+  const isHigh = year !== undefined && year >= 5;
+  const isStaged = isElementary || isHigh;
+  const prefix = isElementary ? `${characterId}_elementary` : isHigh ? `${characterId}_high` : characterId;
+
+  // 폴백 체인: staged 표정 → staged neutral → base 표정 → base neutral → CSS 아바타
+  // (staged 자산이 없는 NPC는 base로 자동 폴백되므로 안전)
+  const base = import.meta.env.BASE_URL;
   const exactPath = `${base}images/characters/${prefix}_${expr}.png`;
   const neutralPath = `${base}images/characters/${prefix}_neutral.png`;
-  const baseExactPath = isElementary ? `${base}images/characters/${characterId}_${expr}.png` : null;
+  const baseExactPath = isStaged ? `${base}images/characters/${characterId}_${expr}.png` : null;
   const baseNeutralPath = `${base}images/characters/${characterId}_neutral.png`;
 
   const [src, setSrc] = useState(exactPath);
@@ -51,11 +55,11 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
             if (src === exactPath && expr !== 'neutral') {
               setSrc(neutralPath);
             } else if (src === neutralPath && baseExactPath) {
-              // elementary neutral 없으면 일반 표정으로 폴백
+              // staged(elementary/high) neutral 없으면 base 표정으로 폴백
               setSrc(baseExactPath);
             } else if (src === baseExactPath && expr !== 'neutral') {
               setSrc(baseNeutralPath);
-            } else if (src !== baseNeutralPath && isElementary) {
+            } else if (src !== baseNeutralPath && isStaged) {
               setSrc(baseNeutralPath);
             } else {
               setUseFallback(true);
