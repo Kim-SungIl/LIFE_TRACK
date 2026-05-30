@@ -17,13 +17,13 @@ import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
 
 // GameScreen 은 phase 라우터 — 각 화면(year-end / ending / event / event-result / weekly / main)으로 위임.
-// 이벤트 결과(eventResultData)·주간 결산(showResult)·CG 로딩은 화면 전환을 가르므로 여기서 소유한다.
+// 이벤트 결과(eventResultData)·CG 로딩은 화면 전환을 가르므로 여기서 소유한다. 주간 결산은 phase==='result'.
 export function GameScreen() {
   // P3-7: selector 없는 전체-스토어 구독 → state + 사용하는 액션만 선택.
   // 액션은 Zustand에서 안정 참조라, npcActivityMap만 바뀔 땐 shallow-equal → 리렌더 스킵.
   const {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
-    advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
+    advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome, setPhase,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     setWeekendChoices: s.setWeekendChoices,
@@ -36,6 +36,7 @@ export function GameScreen() {
     buyItem: s.buyItem,
     talkToNpc: s.talkToNpc,
     talkToHome: s.talkToHome,
+    setPhase: s.setPhase,
   })));
 
   // 뒤로가기/새로고침 방지
@@ -89,7 +90,7 @@ export function GameScreen() {
     ]);
   }, [playerGender, schoolLevel, isElementarySprite]);
 
-  const [showResult, setShowResult] = useState(false);
+  // 주간 결산 화면은 state.phase==='result'로 표현 (새로고침 후에도 유지). 로컬 boolean 제거.
   const [eventResultData, setEventResultData] = useState<EventResultData | null>(null);
   const [cgLoaded, setCgLoaded] = useState(false);
   // CG 후보 cascade가 모두 실패하면 true → 배경+주인공 fallback 다시 표시
@@ -120,6 +121,25 @@ export function GameScreen() {
   const bg = getBackground(state.week, state.isVacation, state.mentalState, state.year);
   const handleBgImgError = () => setBgImgError(true);
   const bgProps = { bg, bgImgError, onImgError: handleBgImgError };
+
+  // ===== 이벤트 결과 — 비주얼 노벨 배경 유지 =====
+  // 방금 내린 선택의 결과 연출이라 어떤 phase보다 우선한다. 특히 학년말 주(W48) 이벤트에서
+  // year-end/ending보다 먼저 체크해야 결과 화면이 학년말 일기장에 묻히지 않는다.
+  // onContinue로 닫으면 다음 render에서 phase(result/year-end/ending/event)로 자연 분기.
+  if (eventResultData) {
+    return (
+      <EventResultScreen
+        gender={state.gender}
+        year={state.year}
+        eventResultData={eventResultData}
+        cgLoaded={cgLoaded}
+        cgError={cgError}
+        onCgLoaded={() => setCgLoaded(true)}
+        onCgError={() => setCgError(true)}
+        onContinue={() => { setEventResultData(null); setCgLoaded(false); setCgError(false); }}
+      />
+    );
+  }
 
   // ===== v1.2 학년말 일기장 (Y1~Y6) =====
   if (state.phase === 'year-end') {
@@ -189,24 +209,8 @@ export function GameScreen() {
     );
   }
 
-  // ===== 이벤트 결과 — 비주얼 노벨 배경 유지 =====
-  if (eventResultData) {
-    return (
-      <EventResultScreen
-        gender={state.gender}
-        year={state.year}
-        eventResultData={eventResultData}
-        cgLoaded={cgLoaded}
-        cgError={cgError}
-        onCgLoaded={() => setCgLoaded(true)}
-        onCgError={() => setCgError(true)}
-        onContinue={() => { setEventResultData(null); setCgLoaded(false); setCgError(false); setShowResult(true); }}
-      />
-    );
-  }
-
   // ===== 주간 결산 =====
-  if (showResult && state.weekLog) {
+  if (state.phase === 'result' && state.weekLog) {
     const { color: fatigueColor } = getFatigueDisplay(state.fatigue);
     return (
       <WeeklyResultScreen
@@ -223,7 +227,7 @@ export function GameScreen() {
         resultDialogue={resultDialogue}
         fatigueColor={fatigueColor}
         upcomingEvents={getUpcomingEvents(state)}
-        onContinue={() => setShowResult(false)}
+        onContinue={() => setPhase('weekday')}
       />
     );
   }
@@ -242,8 +246,8 @@ export function GameScreen() {
         else setWeekendChoices(activities);
         // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
         setNpcActivityMap(npcChoices);
+        // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
         advanceWeek();
-        setShowResult(true);
       }}
     />
   );
