@@ -1,9 +1,10 @@
 import { ParentStrength } from '../../../engine/types';
-import { PARENT_ICONS } from '../shared';
+import { PARENT_ICONS, breakSentences } from '../shared';
 
 type Props = {
   parents: readonly ParentStrength[];
   smalltalk: string | null;
+  hasEvent: boolean;          // 이번 주 가정 미니 이벤트가 실제로 남아있는지 (배지/라벨 구분용)
   onTalk: () => void;
   onClose: () => void;
 };
@@ -19,7 +20,7 @@ const LABELS: Record<ParentStrength, string> = {
 };
 
 // Phase 2.1 — 가정 모달 (단일 엔티티 — 두 부모 강점은 가정 분위기)
-export function HomeModal({ parents, smalltalk, onTalk, onClose }: Props) {
+export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Props) {
   return (
     <div onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -32,36 +33,44 @@ export function HomeModal({ parents, smalltalk, onTalk, onClose }: Props) {
       }}>
         <div style={{ fontSize: '2.2rem', marginBottom: 6 }}>🏠</div>
         <div style={{ fontSize: '1rem', fontWeight: 700 }}>가정</div>
-        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
           엄마와 아빠가 만든 우리 집 분위기
         </div>
 
-        {/* 두 강점을 분위기 카드로 표시 */}
-        <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'center' }}>
+        {/* 두 강점은 '읽는 정보' — 버튼으로 오인되지 않게 muted 태그(pill)로 표시 */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           {parents.map(p => (
-            <div key={p} style={{
-              flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px 8px',
-              border: '1px solid rgba(224,138,91,0.15)',
+            <span key={p} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              background: 'rgba(255,255,255,0.05)', borderRadius: 999, padding: '5px 12px',
+              fontSize: '0.78rem', color: 'var(--text-muted)',
             }}>
-              <span style={{ fontSize: '1.4rem' }}>{PARENT_ICONS[p]}</span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{LABELS[p]}</span>
-            </div>
+              <span style={{ fontSize: '0.9rem', opacity: 0.85 }}>{PARENT_ICONS[p]}</span>
+              {LABELS[p]}
+            </span>
           ))}
         </div>
 
-        {smalltalk && (
-          <div style={{
-            marginTop: 14, padding: '10px 14px',
-            background: 'rgba(255,255,255,0.04)', borderRadius: 10,
-            fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic',
-            lineHeight: 1.6, wordBreak: 'keep-all', overflowWrap: 'break-word',
-          }}>{smalltalk}</div>
-        )}
+        {/* 잡담 영역 — 항상 렌더 + 고정 최소높이로 클릭마다(또는 줄 길이차로) 모달이 점프하지 않게 (레이아웃 시프트 방지) */}
+        <div style={{
+          marginTop: 14, padding: '10px 14px',
+          background: 'rgba(255,255,255,0.04)', borderRadius: 10,
+          fontSize: '0.82rem', fontStyle: 'italic',
+          lineHeight: 1.6, wordBreak: 'keep-all', overflowWrap: 'break-word',
+          minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          textAlign: 'center', whiteSpace: 'pre-line',
+          color: smalltalk ? 'var(--text-secondary)' : 'var(--text-muted)',
+        }}>
+          {/* 문장(.!?) 단위로 줄바꿈 — 애매하게 두 번째 줄에 한 단어만 걸치는 어색한 wrap 방지 */}
+          {smalltalk ? breakSentences(smalltalk) : '말을 걸면 부모님이 한마디 건네요.'}
+        </div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={onTalk}>부모와 대화하기</button>
-          <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>닫기</button>
+          {/* 1차 액션을 더 넓게(flex 1.6) — '✨ 부모와 대화하기'가 좁은 폭에서 줄바꿈되지 않게 nowrap */}
+          <button className="btn btn-primary" style={{ flex: 1.6, whiteSpace: 'nowrap' }} onClick={onTalk}>
+            {hasEvent ? '✨ 부모와 대화하기' : '부모와 안부 묻기'}
+          </button>
+          <button className="btn btn-secondary" style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={onClose}>닫기</button>
         </div>
       </div>
     </div>
