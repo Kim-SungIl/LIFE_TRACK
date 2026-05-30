@@ -7,6 +7,7 @@ import { seededRandom, hashInitialState } from './rng';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
 import { migrateLoadedState } from './stateMigration';
+import { cloneGameState } from './stateClone';
 
 // rng utility re-export (하위 호환)
 export { seededRandom, hashInitialState } from './rng';
@@ -567,7 +568,7 @@ function applyNpcDecay(state: GameState): void {
 
 // ===== 주간 처리 (메인 루프) =====
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
-  const newState = migrateLoadedState(JSON.parse(JSON.stringify(state))) as GameState;
+  const newState = migrateLoadedState(cloneGameState(state)) as GameState;
 
   // NPC 선택(activity→npc 매핑)에 따른 친밀도 적용
   if (npcActivityMap) {

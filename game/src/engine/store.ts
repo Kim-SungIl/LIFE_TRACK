@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { GameState, GameEvent, ParentStrength } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange } from './gameEngine';
 import { migrateLoadedState } from './stateMigration';
+import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
@@ -144,7 +145,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       message: '잠시 머뭇거리다 자리를 떴다.',
     };
 
-    const newState = JSON.parse(JSON.stringify(s)) as typeof s;
+    const newState = cloneGameState(s);
 
     // 스탯 효과 적용
     for (const [key, val] of Object.entries(choice.effects)) {
@@ -280,7 +281,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   advanceFromYearEnd: () => {
     const s = get().state;
     if (!s || s.phase !== 'year-end') return;
-    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    const newState = cloneGameState(s);
     newState.week = 1;
     newState.year++;
     newState.currentEvent = null;
@@ -322,7 +323,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const available = getAvailableNpcEvents(s, npcId);
       if (available.length > 0) {
         // fire — 효과 적용 + pressure 리셋 + pending 소비 + fired 기록
-        const newState = JSON.parse(JSON.stringify(s)) as GameState;
+        const newState = cloneGameState(s);
         const ev = available[0];
         if (ev.effects.stats) {
           for (const [k, v] of Object.entries(ev.effects.stats)) {
@@ -351,7 +352,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // pending이지만 이 NPC 풀 비어있음 → 잡담 (pending은 다른 NPC를 위해 보존)
     }
     // 잡담 한 줄 — RNG 진행 위해 새 state로 push
-    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    const newState = cloneGameState(s);
     const line = getNpcSmalltalk(newState, npcId);
     set({ state: newState });
     return { kind: 'smalltalk', line };
@@ -364,7 +365,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (s.parentEventPendingThisWeek) {
       const available = getAvailableHomeEvents(s);
       if (available.length > 0) {
-        const newState = JSON.parse(JSON.stringify(s)) as GameState;
+        const newState = cloneGameState(s);
         const ev = available[0];
         if (ev.effects.stats) {
           for (const [k, v] of Object.entries(ev.effects.stats)) {
@@ -389,7 +390,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return { kind: 'event', event: ev };
       }
     }
-    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    const newState = cloneGameState(s);
     const line = getHomeSmalltalk(newState);
     set({ state: newState });
     return { kind: 'smalltalk', line };
@@ -399,7 +400,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   debugAdvanceToYearEnd: () => {
     const s = get().state;
     if (!s || s.phase === 'ending') return;
-    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    const newState = cloneGameState(s);
     // milestone 미생성 시 생성 (학년말 카드 fallback 막기 위함)
     if (!newState.milestoneScenes.find(m => m.year === newState.year)) {
       recordMilestoneForYear(newState, newState.year);
@@ -412,7 +413,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   debugSkipToEnding: () => {
     const s = get().state;
     if (!s) return;
-    const newState = JSON.parse(JSON.stringify(s)) as GameState;
+    const newState = cloneGameState(s);
     // Y1~현재까지 누락된 milestone 채우기 (엔딩 회상 fallback 방지)
     for (let y = 1; y <= 7; y++) {
       if (!newState.milestoneScenes.find(m => m.year === y)) {
