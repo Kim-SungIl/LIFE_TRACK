@@ -23,9 +23,6 @@ function describeEffects(item: ShopItem): string[] {
     if (e.type === 'npc_intimacy' && e.npcBonus) {
       descs.push(`친밀도 +${e.npcBonus}`);
     }
-    if (e.type === 'event_unlock') {
-      descs.push('특별 기회 해금');
-    }
   }
   return descs;
 }
