@@ -25,7 +25,7 @@ import type { GameState } from '../../src/engine/types';
 const TIER90_SEEDS: Array<{ id: string; npcId: string; yearMin?: number }> = [
   { id: 'talk_jihun_90_bench', npcId: 'jihun' },
   { id: 'talk_subin_90_two_names', npcId: 'subin' },
-  { id: 'talk_minjae_90_nocrown', npcId: 'minjae' },
+  { id: 'talk_minjae_90_unmasked', npcId: 'minjae' },
   { id: 'talk_yuna_90_wrong_note', npcId: 'yuna' },
   { id: 'talk_haeun_90_empty_line', npcId: 'haeun', yearMin: 6 },
   { id: 'talk_junha_90_umbrella', npcId: 'junha' },
