@@ -162,7 +162,7 @@ anime background style, no characters, detailed environment, soft pastel colors,
 people, characters, person, students, 3d, realistic, photo, blurry, low quality,
 deformed, watermark, text, signature
 ```
-크기: 960x540
+크기: **1920x1080** (같은 교실의 다른 계절본과 동일 해상도 — 문서 상단 "960x540 권장"은 레거시, 실제 배경 표준은 1920x1080)
 
 > **구도/화풍 일관성 (재생성 시 필수)**: 같은 폴더의 `classroom_elementary_afternoon.png` /
 > `classroom_elementary_spring.png`와 **동일한 시점·책상 배치·화풍**으로(같은 교실의 계절만 바뀐 버전).
