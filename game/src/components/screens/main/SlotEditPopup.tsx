@@ -53,7 +53,7 @@ export function SlotEditPopup({
                '☀️ 주말 활동'}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
-              {editingSlot?.startsWith('routine') ? '매주 반복되는 루틴을 골라주세요' : '이번 주말에 할 활동을 골라주세요'}
+              {editingSlot.startsWith('routine') ? '매주 반복되는 루틴을 골라주세요' : '이번 주말에 할 활동을 골라주세요'}
             </div>
           </div>
           <span onClick={() => setEditingSlot(null)} style={{
@@ -95,7 +95,7 @@ export function SlotEditPopup({
                 // 주말/방학: 현재 편집 중인 슬롯의 활동만 하이라이트
                 const idx = editingSlot === 'weekend1' ? 0 :
                             editingSlot === 'weekend2' ? 1 :
-                            parseInt((editingSlot || '').replace('weekend', '')) - 1;
+                            parseInt(editingSlot.replace('weekend', '')) - 1;
                 return selectedActivities[idx] ? [selectedActivities[idx]] : [];
               })()
             }
@@ -136,12 +136,12 @@ export function SlotEditPopup({
                 setEditingSlot(null);
               }
             }}
-            maxSlots={editingSlot?.startsWith('routine') ? 1 : maxSlots}
-            currentSlots={editingSlot?.startsWith('routine') ? 0 : (() => {
+            maxSlots={editingSlot.startsWith('routine') ? 1 : maxSlots}
+            currentSlots={editingSlot.startsWith('routine') ? 0 : (() => {
               // 편집 중인 슬롯의 활동을 제외한 슬롯 수 계산
               const idx = editingSlot === 'weekend1' ? 0 :
                           editingSlot === 'weekend2' ? 1 :
-                          parseInt((editingSlot || '').replace('weekend', '')) - 1;
+                          parseInt(editingSlot.replace('weekend', '')) - 1;
               const editingAct = selectedActivities[idx];
               const editingSlots = editingAct ? (activities.find(x => x.id === editingAct)?.slots || 0) : 0;
               return currentSlots - editingSlots;

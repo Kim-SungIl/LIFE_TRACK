@@ -10,7 +10,6 @@ type Props = {
   routineTooExpensive: boolean;
   routineCost: number;
   maxComboWeeks: number;
-  routineComboLabel: string;
   slot2ComboWeeks: number;
   slot3ComboWeeks: number;
   maxSlots: number;
@@ -20,10 +19,11 @@ type Props = {
 // 슬롯 탭 → onEditSlot(slotKey) 로 부모의 SlotEditPopup 오픈.
 export function WeekPlanner({
   state, selectedActivities, setSelectedActivities, npcChoices, onEditSlot,
-  routineTooExpensive, routineCost, maxComboWeeks, routineComboLabel,
+  routineTooExpensive, routineCost, maxComboWeeks,
   slot2ComboWeeks, slot3ComboWeeks, maxSlots,
 }: Props) {
   const labelFor = (w: number) => w >= 8 ? '🔥 ' : w >= 6 ? '⭐ ' : w >= 3 ? '✨ ' : '';
+  const routineComboLabel = labelFor(maxComboWeeks);
 
   // 슬롯 렌더 헬퍼 — routine 슬롯의 경우 그 슬롯의 카운터를 명시적으로 전달
   const renderSlot = (

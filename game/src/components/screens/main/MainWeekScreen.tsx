@@ -92,16 +92,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   );
   const weeklyActivityCost = routineCost + selectedActivityCost;
   const weeklyOverBudget = weeklyActivityCost > state.money;
-  // 슬롯 편집 모달의 ActivityPicker 잔액 — 루틴 + 이미 고른 활동을 제외한 가용액
-  const slotEditAvailableMoney = state.money - routineCost -
-    selectedInstances.reduce((sum, act) => sum + getActivityCost(act, state.year), 0);
 
-  // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전)
-  const labelFor = (w: number) => w >= 8 ? '🔥 ' : w >= 6 ? '⭐ ' : w >= 3 ? '✨ ' : '';
+  // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전).
+  // routineComboLabel 은 WeekPlanner 가 maxComboWeeks 로 내부 계산하므로 여기선 카운터만.
   const slot2ComboWeeks = !state.isVacation && state.routineSlot2Weeks >= 3 ? state.routineSlot2Weeks : 0;
   const slot3ComboWeeks = !state.isVacation && state.routineSlot3Weeks >= 3 ? state.routineSlot3Weeks : 0;
   const maxComboWeeks = Math.max(slot2ComboWeeks, slot3ComboWeeks);
-  const routineComboLabel = labelFor(maxComboWeeks);
 
   const upcomingEvents = getUpcomingEvents(state);
   // met NPC 목록 — NpcSelectModal memo 안정성 위해 npcs ref 변경 시에만 재계산
@@ -225,7 +221,6 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         routineTooExpensive={!!routineTooExpensive}
         routineCost={routineCost}
         maxComboWeeks={maxComboWeeks}
-        routineComboLabel={routineComboLabel}
         slot2ComboWeeks={slot2ComboWeeks}
         slot3ComboWeeks={slot3ComboWeeks}
         maxSlots={maxSlots}
@@ -243,7 +238,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           npcChoices={npcChoices}
           maxSlots={maxSlots}
           currentSlots={currentSlots}
-          availableMoney={slotEditAvailableMoney}
+          availableMoney={state.money - routineCost -
+            selectedInstances.reduce((sum, act) => sum + getActivityCost(act, state.year), 0)}
           onSetRoutine={onSetRoutine}
           setNpcSelectFor={setNpcSelectFor}
           setLastReaction={setLastReaction}
