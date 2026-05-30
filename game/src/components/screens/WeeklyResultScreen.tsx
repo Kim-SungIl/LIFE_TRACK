@@ -5,7 +5,7 @@ import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS, PARENT_ICONS, breakSentences } from './shared';
 
 interface WeeklyResultScreenProps {
-  // 부모(GameScreen)가 showResult && state.weekLog 가드로 non-null 보장 후 주입.
+  // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
   weekLog: WeekLog;
   stats: Stats;
   fatigue: number;

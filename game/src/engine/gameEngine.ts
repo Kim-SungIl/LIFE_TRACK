@@ -565,6 +565,24 @@ function applyNpcDecay(state: GameState): void {
 
 // 구세이브 호환 백필은 stateMigration.ts 로 이동.
 
+// 학년 마감(week>48) 전환 — milestone 기록 후 Y7은 엔딩, 그 외는 학년말 일기장으로.
+// processWeek와 resolveEvent 양쪽에서 호출된다: W48에 이벤트가 대기 중이면 전환을
+// 이벤트 resolve 시점까지 미뤄, 학년말/졸업 주 이벤트가 year-end 화면에 묻혀 유실되는 걸 막는다.
+export function applyYearTransition(s: GameState): void {
+  // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
+  recordMilestoneForYear(s, s.year);
+  if (s.year >= 7) {
+    // Y7 끝 → 바로 엔딩 (엔딩에 이미 7년 전체 회상 포함)
+    s.week = 1;
+    s.year++;
+    s.phase = 'ending';
+  } else {
+    // Y1~Y6 끝 → 학년말 일기장 화면. week는 49 상태로 유지
+    // 사용자가 advanceFromYearEnd 호출하면 정리됨
+    s.phase = 'year-end';
+  }
+}
+
 // ===== 주간 처리 (메인 루프) =====
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
   const newState = migrateLoadedState(cloneGameState(state)) as GameState;
@@ -806,23 +824,18 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 주 진행
   newState.week++;
-  if (newState.week > 48) {
-    // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
-    recordMilestoneForYear(newState, newState.year);
-    if (newState.year >= 7) {
-      // Y7 끝 → 바로 엔딩 (엔딩에 이미 7년 전체 회상 포함)
-      newState.week = 1;
-      newState.year++;
-      newState.phase = 'ending';
-    } else {
-      // Y1~Y6 끝 → 학년말 일기장 화면. week는 49 상태로 유지
-      // 사용자가 advanceFromYearEnd 호출하면 정리됨
-      newState.phase = 'year-end';
-    }
+  if (newState.week > 48 && !newState.currentEvent) {
+    // 대기 중인 W48 이벤트가 없을 때만 즉시 학년 전환.
+    // 이벤트가 있으면 phase='event'를 유지하고 week=49 상태로 EventScene을 먼저 띄운다.
+    // 전환은 resolveEvent가 이벤트 종료 후 수행한다 (학년말 이벤트 유실 방지).
+    applyYearTransition(newState);
   }
 
-  // 다음 주의 학기/방학 상태 업데이트 (year-end 상태면 의미 없으니 스킵)
-  if (newState.phase !== 'year-end') {
+  // 다음 주의 학기/방학 상태 업데이트
+  // - year-end면 의미 없으니 스킵
+  // - week=49(학년말 이벤트 대기, phase='event')도 getWeekInfo 범위 밖이므로 스킵 →
+  //   직전 주(48)의 학기/방학 값을 유지해 이벤트 배경이 어긋나지 않게 한다
+  if (newState.phase !== 'year-end' && newState.week <= 48) {
     const nextInfo = getWeekInfo(newState.week);
     newState.semester = nextInfo.semester;
     newState.isVacation = nextInfo.isVacation;

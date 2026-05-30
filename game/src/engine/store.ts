@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { GameState, GameEvent, ParentStrength } from './types';
-import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange } from './gameEngine';
+import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects } from './shopSystem';
@@ -126,8 +126,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   advanceWeek: () => {
     const s = get().state;
     if (!s) return;
-    if (s.phase === 'event' || s.phase === 'year-end' || s.phase === 'ending') return;
+    if (s.phase === 'event' || s.phase === 'result' || s.phase === 'year-end' || s.phase === 'ending') return;
     const newState = processWeek(s, get().npcActivityMap);
+    // 이벤트/학년말/엔딩이 아니면 주간 결산 단계(phase='result')로 전환.
+    // 결산을 React 로컬 state가 아닌 phase로 표현해 새로고침 후에도 결산 화면이 유지되게 한다.
+    if (newState.phase !== 'event' && newState.phase !== 'year-end' && newState.phase !== 'ending') {
+      newState.phase = 'result';
+    }
     set({ state: newState, npcActivityMap: {} });
   },
 
@@ -224,7 +229,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.events.push({
       ...(recordedEvent as GameEvent),
       resolvedChoice: choiceIndex,
-      week: newState.week,
+      // 발생 주차 = 이벤트가 스탬프된 currentEvent.week (gameEngine:795 / 아래 chain 스탬프).
+      // newState.week는 processWeek의 week++ 이후 값이라 그대로 쓰면 발생주+1로 어긋난다(off-by-one).
+      week: s.currentEvent!.week ?? newState.week,
       year: newState.year,
       resolvedFemale: isFemale && !!s.currentEvent!.femaleChoices,
     });
@@ -240,13 +247,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 가드: 같은 주(week+year)에 followup이 이미 한 번 발동했으면 추가 발동 안 함
     // (한 주 3+ 이벤트 누적으로 인한 피로감 방지)
     // 단 DIRECT_SEQUEL_IDS(선거→연설→결과 같은 자연 chain)는 가드에서 제외 — 같은 주에 모두 보이는 게 의도
+    // 같은 주에 연쇄하는 이벤트는 발생주(currentEvent.week)를 그대로 물려줘 records의 week를 일치시킨다.
+    // newState.week는 week++ 이후 값(W48이면 49)이라 이벤트 기록·집계는 occurrenceWeek로 통일한다.
+    const occurrenceWeek = s.currentEvent!.week ?? newState.week;
     const followupFiredThisWeek = newState.events.some(
-      prev => prev.week === newState.week && prev.year === newState.year
+      prev => prev.week === occurrenceWeek && prev.year === newState.year
         && FOLLOWUP_EVENT_IDS.has(prev.id) && !DIRECT_SEQUEL_IDS.has(prev.id),
     );
     const followup = followupFiredThisWeek ? null : getFollowupForWeek(newState, s.currentEvent?.location);
     if (followup) {
-      newState.currentEvent = followup;
+      newState.currentEvent = { ...followup, week: occurrenceWeek };
       newState.phase = 'event';
     } else {
       // followup이 없으면 conditional 이벤트 chain 시도 — 한 주에 fixed + conditional 동시 발동 허용
@@ -254,7 +264,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // chain cap: 일반은 누적 2개, 단 milestone(도달형) 잔여가 있으면 3개까지 허용.
       // 학년 한정 도달형이 졸업 직전에 누락되는 걸 막기 위한 안전판 — 일반 conditional은 3번째 자리에 못 들어옴.
       const eventsThisWeek = newState.events.filter(
-        prev => prev.week === newState.week && prev.year === newState.year,
+        prev => prev.week === occurrenceWeek && prev.year === newState.year,
       ).length;
       let chainPick: ReturnType<typeof getConditionalForWeek> = null;
       if (eventsThisWeek < 2) {
@@ -263,10 +273,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
         chainPick = getMilestoneForWeek(newState);
       }
       if (chainPick) {
-        newState.currentEvent = chainPick;
+        newState.currentEvent = { ...chainPick, week: occurrenceWeek };
         newState.phase = 'event';
+      } else if (newState.week > 48) {
+        // W48 학년말/졸업 주 이벤트가 모두 끝남 → 보류했던 학년 전환을 지금 수행.
+        // (processWeek에서 currentEvent 대기로 미뤄둔 transition)
+        applyYearTransition(newState);
       } else {
-        newState.phase = 'weekday';
+        // 일반 주: 이벤트 종료 후 주간 결산 화면으로 (phase='result' → 새로고침에도 유지)
+        newState.phase = 'result';
       }
     }
     set({ state: newState });
