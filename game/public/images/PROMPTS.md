@@ -144,6 +144,21 @@ soft pastel colors, peaceful atmosphere
 
 시간대 변형: `morning sunlight` / `afternoon golden hour` / `evening orange sunset` / `night with fluorescent lights`
 
+> 교실은 학년별 변형이 있음: `classroom_{학년}_*` (`elementary` / `middle` / `high`).
+> elementary는 더 밝고 아기자기한 초등 교실 느낌(컬러풀한 게시물·낮은 책상), high는 차분하고 정돈된 분위기.
+
+#### 교실 — 겨울 변형 (`classroom_{학년}_winter`)
+
+파일: **`classroom_elementary_winter.png`** (Y1 겨울 이벤트 `yuna-window-promise`·`subin-paper-airplane` 용)
+```
+korean elementary school classroom interior in winter, empty wooden desks and chairs,
+large windows with soft snow falling outside and light frost on the glass, bare trees beyond,
+chalkboard at front, warm cozy indoor lighting contrasting the cold blue light outside,
+brighter and slightly playful elementary-room feel (colorful posters on walls, low desks),
+anime background style, no characters, detailed environment, soft pastel colors, peaceful winter atmosphere
+```
+크기: 960x540
+
 ### 복도
 ```
 korean school hallway, long corridor with lockers,
