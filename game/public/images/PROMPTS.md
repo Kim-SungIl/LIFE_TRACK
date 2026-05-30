@@ -157,7 +157,16 @@ chalkboard at front, warm cozy indoor lighting contrasting the cold blue light o
 brighter and slightly playful elementary-room feel (colorful posters on walls, low desks),
 anime background style, no characters, detailed environment, soft pastel colors, peaceful winter atmosphere
 ```
+네거티브:
+```
+people, characters, person, students, 3d, realistic, photo, blurry, low quality,
+deformed, watermark, text, signature
+```
 크기: 960x540
+
+> **구도/화풍 일관성 (재생성 시 필수)**: 같은 폴더의 `classroom_elementary_afternoon.png` /
+> `classroom_elementary_spring.png`와 **동일한 시점·책상 배치·화풍**으로(같은 교실의 계절만 바뀐 버전).
+> 창문 위치·칠판·원근이 어긋나지 않게. 다른 학년(middle/high) winter는 이번 범위 아님.
 
 ### 복도
 ```
