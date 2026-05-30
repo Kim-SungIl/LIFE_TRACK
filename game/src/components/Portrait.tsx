@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
 import { CharacterAvatar, NPC_APPEARANCES, mentalToExpression } from './CharacterAvatar';
 
 interface Props {
@@ -16,20 +17,20 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
     ? mentalToExpression(mental, mentalState)
     : 'neutral');
 
-  // 학년 분기 프리픽스: Y1(초6) → elementary, Y5+(고등) → high, Y2~4(중) → base
-  // (EventScene.tsx의 staged 규칙과 동일하게 맞춤)
+  // 학년 분기 프리픽스: Y1 → elementary, Y2~4 → middle, Y5+ → high (SSOT: characterAssets.ts)
   const isElementary = year === 1;
   const isHigh = year !== undefined && year >= 5;
   const isStaged = isElementary || isHigh;
-  const prefix = isElementary ? `${characterId}_elementary` : isHigh ? `${characterId}_high` : characterId;
+  const prefix = characterStagePrefix(characterId, year);
+  const basePrefix = characterFallbackPrefix(characterId); // 폴백 바닥 = _middle
 
-  // 폴백 체인: staged 표정 → staged neutral → base 표정 → base neutral → CSS 아바타
-  // (staged 자산이 없는 NPC는 base로 자동 폴백되므로 안전)
+  // 폴백 체인: staged 표정 → staged neutral → base(_middle) 표정 → base neutral → CSS 아바타
+  // (staged 자산이 없는 NPC는 _middle로 자동 폴백되므로 안전)
   const base = import.meta.env.BASE_URL;
   const exactPath = `${base}images/characters/${prefix}_${expr}.png`;
   const neutralPath = `${base}images/characters/${prefix}_neutral.png`;
-  const baseExactPath = isStaged ? `${base}images/characters/${characterId}_${expr}.png` : null;
-  const baseNeutralPath = `${base}images/characters/${characterId}_neutral.png`;
+  const baseExactPath = isStaged ? `${base}images/characters/${basePrefix}_${expr}.png` : null;
+  const baseNeutralPath = `${base}images/characters/${basePrefix}_neutral.png`;
 
   const [src, setSrc] = useState(exactPath);
   const [useFallback, setUseFallback] = useState(false);

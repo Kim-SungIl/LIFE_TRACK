@@ -1,5 +1,11 @@
 # AI 일러스트 프롬프트 시트
 
+> ⚠️ **파일명 규칙은 이 문서가 아니라 `docs/character-prompt-spec.md` Section 7이 SSOT입니다.**
+> 이 시트의 `{id}_neutral.png` / `{id}_[표정].png` 식 무접미사 이름은 **레거시**입니다.
+> 현재 캐릭터 자산은 학년별 stage 접미사를 항상 붙입니다:
+> `{id}_elementary_*`(Y1) / `{id}_middle_*`(Y2~4) / `{id}_high_*`(Y5~7). 런타임 SSOT: `game/src/engine/characterAssets.ts`.
+> (배경/UI 프롬프트 참고용으로는 이 문서 유효)
+
 > 이 문서의 프롬프트를 AI 이미지 생성 도구에 입력하여 캐릭터/배경을 생성합니다.
 > 생성된 이미지는 해당 폴더에 지정된 파일명으로 저장하세요.
 
