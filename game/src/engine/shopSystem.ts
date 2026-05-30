@@ -1,4 +1,5 @@
 import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
+import { cloneGameState } from './stateClone';
 
 // ===== 아이템 타입 =====
 export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
@@ -194,7 +195,7 @@ export function applyItemEffects(
   state: GameState,
   targetNpcId?: string,
 ): { newState: GameState; messages: string[] } {
-  const newState = JSON.parse(JSON.stringify(state)) as GameState;
+  const newState = cloneGameState(state);
   const messages: string[] = [];
 
   newState.money = Math.round((newState.money - item.price) * 10) / 10;
