@@ -150,7 +150,7 @@ console.log('\n=== P21. (회귀) followup이 정상 1회는 여전히 발동 ===
     year: 1, week: 26, npcs: [
       { id: 'subin', met: true, intimacy: 30 },
       { id: 'minjae', met: true, intimacy: 40 },
-    ], events: [], isVacation: false, hardCrisisYears: [], unlockedEvents: [],
+    ], events: [], isVacation: false, hardCrisisYears: [],
   } as unknown as GameState;
   const followup = getFollowupForWeek(fakeState);
   assert(`getFollowupForWeek가 정상 followup 반환 (id=${followup?.id ?? 'null'})`,

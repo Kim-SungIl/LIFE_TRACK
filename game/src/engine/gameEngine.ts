@@ -1,7 +1,7 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
 import { ACTIVITIES, getActivityCost, collapseActivityChoices } from './activities';
 import { getSchoolLevel } from './backgrounds';
-import { getEventForWeek, GAME_EVENTS } from './events';
+import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState } from './rng';
 import { recordMilestoneForYear } from './memorySystem';
@@ -84,7 +84,6 @@ export function createInitialState(
     consecutiveTiredWeeks: 0,
     burnoutCooldown: 0,
     eventTimeCost: 0,
-    unlockedEvents: [],
     // v1.2 기억 슬롯 시스템
     memorySlots: [],
     milestoneScenes: [],

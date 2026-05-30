@@ -146,7 +146,7 @@ console.log('\n=== P15. migrateLoadedState rngSeed가 마이그레이션된 pare
     milestones: [], burnoutCount: 0, totalWeeksPlayed: 0,
     examResults: [], currentExamResult: null, activeBuffs: [], weekPurchases: {},
     idleWeeks: 0, consecutiveTiredWeeks: 0, burnoutCooldown: 0,
-    eventTimeCost: 0, unlockedEvents: [], memorySlots: [],
+    eventTimeCost: 0, memorySlots: [],
     socialRipples: [], milestoneScenes: [], hardCrisisYears: [],
   } as unknown as GameState;
 

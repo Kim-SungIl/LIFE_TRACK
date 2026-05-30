@@ -2,7 +2,7 @@ import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
 
 // ===== 아이템 타입 =====
 export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
-export type ItemEffectType = 'instant' | 'buff' | 'event_unlock' | 'npc_intimacy';
+export type ItemEffectType = 'instant' | 'buff' | 'npc_intimacy';
 
 export interface ShopItem {
   id: string;
@@ -33,8 +33,6 @@ export interface ItemEffect {
   buffAmount?: number;      // 효율 증가 (0.15 = +15%)
   // npc_intimacy
   npcBonus?: number;
-  // event_unlock
-  eventId?: string;
 }
 
 // ===== 상점 아이템 목록 =====
@@ -145,37 +143,12 @@ export const SHOP_ITEMS: ShopItem[] = [
     requireYear: 3, // 중2부터
   },
 
-  // ===== 기회 해금 =====
-  // TODO(event_unlock): 'contest'/'portfolio' 이벤트가 events.ts에 아직 없어 unlockedEvents가
-  // getEventForWeek에 반영되지 않음. 현재는 instant 스탯 보너스만 실제 효과. 추후 해당 이벤트
-  // 콘텐츠가 추가되면 unlockedEvents 체크를 getEventForWeek에 연결해 활성화.
-  {
-    id: 'contest-fee', name: '대회 참가비', description: '교내/교외 대회에 참가할 수 있다.',
-    price: 3, category: 'opportunity', emoji: '🏆',
-    effects: [
-      { type: 'event_unlock', eventId: 'contest' },
-      { type: 'instant', stat: 'talent', value: 2 },
-    ],
-    requireStat: { stat: 'talent', min: 40 },
-    purchaseMessage: '대회 참가 신청 완료! 출전 자격을 얻었다.',
-  },
+  // ===== 특별 (방학 한정) =====
   {
     id: 'camp-fee', name: '캠프 참가비', description: '방학 특별 캠프에 참가한다.',
     price: 8, category: 'opportunity', emoji: '⛺',
     effects: [{ type: 'buff', buffId: 'camp', buffDuration: 4, buffTarget: 'all', buffAmount: 0.15 }],
     seasonal: true,
-  },
-  {
-    id: 'portfolio-kit', name: '포트폴리오 준비 패키지', description: '특기자 전형을 위한 준비물.',
-    price: 10, category: 'opportunity', emoji: '📂',
-    effects: [
-      { type: 'event_unlock', eventId: 'portfolio' },
-      { type: 'instant', stat: 'talent', value: 3 },
-      { type: 'instant', stat: 'academic', value: 2 },
-    ],
-    requireYear: 5,
-    requireStat: { stat: 'talent', min: 60 },
-    purchaseMessage: '포트폴리오 준비를 시작했다. 특기자 전형에 한 발 다가섰다.',
   },
 ];
 
@@ -204,9 +177,6 @@ export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Reco
     if (bought >= item.maxPerWeek) return { ok: false, reason: '이번 주 구매 한도 초과' };
   }
   if (item.seasonal && !state.isVacation) return { ok: false, reason: '방학 기간에만 구매 가능' };
-  if (item.effects.some(e => e.type === 'event_unlock' && e.eventId && state.unlockedEvents?.includes(e.eventId))) {
-    return { ok: false, reason: '이미 해금됨' };
-  }
   // 동일 buff 활성 중이면 재구매 차단 (덮어쓰기로 남은 기간 손실 방지)
   const activeBuffIds = new Set((state.activeBuffs || []).map(b => b.id));
   const clashingBuff = item.effects.find(e => e.type === 'buff' && e.buffId && activeBuffIds.has(e.buffId));
@@ -265,16 +235,6 @@ export function applyItemEffects(
             npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + effect.npcBonus));
             messages.push(`${npc.name}에게 ${item.name}을 줬다! 친밀도가 올랐다.`);
           }
-        }
-        break;
-
-      case 'event_unlock':
-        if (effect.eventId) {
-          if (!newState.unlockedEvents) newState.unlockedEvents = [];
-          if (!newState.unlockedEvents.includes(effect.eventId)) {
-            newState.unlockedEvents.push(effect.eventId);
-          }
-          messages.push(item.purchaseMessage || `${item.name} 구매 완료! 관련 기회가 열렸다.`);
         }
         break;
     }

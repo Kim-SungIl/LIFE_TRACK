@@ -23,7 +23,6 @@ export function migrateLoadedState(state: GameState): GameState {
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
     idleWeeks: state.idleWeeks ?? 0,
-    unlockedEvents: state.unlockedEvents || [],
     memorySlots: state.memorySlots || [],
     milestoneScenes: state.milestoneScenes || [],
     rngSeed: (state.rngSeed && state.rngSeed !== 0)
