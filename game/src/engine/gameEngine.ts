@@ -484,7 +484,10 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   }
   // 회복: tired → normal
   // v7.2: 임계 완화 (50/40 → 45/50) — Y1 만성 진입 39% / 회복률 38% 데스 스파이럴 완화
-  else if (state.mentalState === 'tired' && state.stats.mental >= 45 && state.fatigue < 50) {
+  // v8.2: 진입(mental<40)과 탈출(mental>=45) 사이 5점 갭이 영구 tired(데드존)를 만들던 문제.
+  //   tired 중 mental 성장은 패널티(×0.8, 만성 ×0.5)라 45 복귀가 어려워 Y2+ 88% tired 고착.
+  //   탈출을 mental>=42 && fatigue<55로 완화해 갭을 좁히고(2점 히스테리시스) "dip→recover" 리듬 회복.
+  else if (state.mentalState === 'tired' && state.stats.mental >= 42 && state.fatigue < 55) {
     state.mentalState = 'normal';
     log.messages.push('✨ 회복! — 다시 일상으로 돌아왔다.');
   }
@@ -493,6 +496,17 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     state.mentalState = 'tired';
     state.burnoutCooldown = 8; // v7.1: 4 → 8주 면역 (Y1 25주 연속 tired 데스 스파이럴 방지)
     log.messages.push('💪 번아웃에서 벗어나는 중...');
+  }
+
+  // v8.2: 장기 tired 자력 탈출 보조 — 8주+ 연속 tired면 몸이 강제 회복 모드로 전환.
+  // 멘탈 회복 활동이 루틴에 없는 그라인드 빌드는 mental이 바닥에 깔려 탈출선에 영구 미달,
+  // 200주+ tired에 고착되던 데드존이 있었다. 탈출조건 완화만으로는 거의 안 풀려(58.9→58.3%)
+  // 수동 회복을 더한다 → 최장 연속 tired 222→19주로 영구 락 제거(전체 tired 58→53%).
+  // 균형 빌드(멘탈 활동 포함)는 이 보조 없이도 건강하므로(tired 21%) 영향 미미.
+  if (state.mentalState === 'tired' && (state.consecutiveTiredWeeks || 0) >= 8) {
+    state.stats.mental = Math.min(100, state.stats.mental + 1.5);
+    state.fatigue = Math.max(0, state.fatigue - 3);
+    log.statChanges.mental = (log.statChanges.mental || 0) + 1.5;
   }
 
   // 쿨다운 틱다운
