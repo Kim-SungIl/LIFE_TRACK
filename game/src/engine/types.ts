@@ -98,6 +98,8 @@ export interface WeekLog {
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
   /** 이번 주 발동한 부모 보너스 (UX 가시화용 — 인라인 스티커, WeekLog 1줄, HUD 펄스) */
   parentBonusesApplied?: ParentBonusApplied[];
+  /** 이번 주 parentEffect를 이미 적용한 활동 id — 같은 활동의 슬롯 중복(루틴+주말) 친밀도 2배 방지 */
+  parentEffectAppliedIds?: string[];
 }
 
 // 시험 시스템

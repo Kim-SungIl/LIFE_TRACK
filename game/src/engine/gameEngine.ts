@@ -306,9 +306,11 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 
   // 부모 친밀도 — stat 감쇠(diminishing/fatigue 등)와 무관하게 raw baseDelta를 단일 진입점에 전달.
   // §2.1 구간 감쇠는 applyParentIntimacyDelta 내부에서만 적용(이중 적용 방지).
-  if (activity.parentEffect) {
+  // 같은 활동이 루틴 슬롯 + 주말 선택에 동시 등록되면 2번 호출되므로, 활동 id별 주 1회만 친밀도 적용.
+  if (activity.parentEffect && !log.parentEffectAppliedIds?.includes(activity.id)) {
     applyParentIntimacyDelta(state, activity.parentEffect.baseDelta, activity.parentEffect.tag);
     state.actedWithParentThisWeek = true; // 이번 주 평균 회귀 면제
+    (log.parentEffectAppliedIds ??= []).push(activity.id);
     // 체감 보상: 친밀도가 이미 돈독하면 가족 저녁의 멘탈 회복이 미세하게 더 크다 (숫자 비노출)
     if (activity.id === 'family-dinner' && (state.parentIntimacy ?? 50) >= 60) {
       state.stats.mental = Math.min(100, state.stats.mental + 0.5);

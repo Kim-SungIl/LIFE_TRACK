@@ -273,7 +273,7 @@ export const ACTIVITIES: Activity[] = [
     id: 'family-trip',
     name: '가족 여행', slots: 3, fatigue: -8,
     effects: { mental: 6, social: 2, health: 1 }, moneyCost: 8,
-    parentEffect: { baseDelta: 2.0, tag: 'familyTime' },
+    parentEffect: { baseDelta: 1.5, tag: 'familyTime' },
     category: 'parent',
     seasonGate: 'vacation-only',
     vacationLimit: 1,

@@ -398,8 +398,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         }
         if (ev.effects.parentIntimacy) {
           // 단일 진입점 통합 — 강점 반응 배율·구간 감쇠 적용 (직접 가산 금지)
-          // 부모 미니이벤트는 모두 따뜻한 가족 순간이므로 familyTime 태그로 처리
-          applyParentIntimacyDelta(newState, ev.effects.parentIntimacy, 'familyTime');
+          // 이벤트별 parentTag로 주제에 맞는 배율 적용 (strict→gradeImprove, freedom→autonomyChoice 등)
+          applyParentIntimacyDelta(newState, ev.effects.parentIntimacy, ev.parentTag ?? 'familyTime');
         }
         newState.actedWithParentThisWeek = true; // 부모와 상호작용 → 이번 주 평균 회귀 면제
         newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
