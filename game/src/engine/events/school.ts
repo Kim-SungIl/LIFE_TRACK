@@ -520,7 +520,7 @@ export const SCHOOL_MIDDLE_HIGH = [
   {
     id: 'elementary-semester2-start',
     title: '2학기 시작',
-    description: '여름방학이 끝나고 2학기가 시작됐다.\n반 애들이 햇빛에 탄 얼굴로 돌아왔다.\n칠판에는 "곧 졸업이다!" 라고 선생님이 큰 글씨로 써놓았다.\n벌써 마지막 학기라니.',
+    description: '여름방학이 끝나고 2학기가 시작됐다.\n반 애들이 햇빛에 탄 얼굴로 돌아왔다.\n선생님이 "이제 정말 마지막 학기다" 하고 칠판을 톡톡 두드렸다.\n벌써 졸업이라니.',
     week: 25,
     condition: (s) => s.year === 1,
     location: 'classroom',
