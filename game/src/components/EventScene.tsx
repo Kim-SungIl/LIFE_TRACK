@@ -193,24 +193,34 @@ function renderDescription(
   });
 }
 
-// 긴 description을 페이지로 분할 — 한 페이지가 maxCharsPerPage를 넘기 전까지 source 줄(`\n`)을 누적.
-// 짧은 description(단일 페이지 분량)은 그대로 1페이지로 반환되어 기존 동작 보존.
-// 모바일은 한 줄당 글자수가 적어 같은 임계값이면 description 박스 캡(6em)을 초과 →
-// 호출부에서 화면 폭에 맞춰 더 작은 값(45)을 넘긴다.
-function paginateDescription(text: string, maxCharsPerPage = 80): string[] {
+// 긴 description을 페이지로 분할 — 한 페이지가 description 박스(maxHeight)에 들어갈
+// "예상 visual line 수"를 넘기 전까지 source 줄(`\n`)을 누적.
+//
+// 과거엔 글자수(maxCharsPerPage) 기준으로 잘랐는데, 한 source 줄이 길어 박스 폭에서
+// 2줄로 wrap되면 글자수는 임계 미만이어도 visual line은 박스(6em≈3.5줄)를 초과 →
+// 페이지 끝줄(예: "칠판에 ○○ 써놓았다")이 잘려 스크롤해야만 보이는 버그가 있었다.
+// 사용자는 보통 스크롤 안 하고 다음을 눌러 핵심 문장을 놓친다.
+// → 이제 줄별로 ceil(글자수 / charsPerLine)로 wrap된 visual line을 추정해 누적하고,
+//   maxVisualLines를 넘으면 페이지를 나눈다. 박스 폭/캡에 맞춘 값은 호출부에서 주입.
+function paginateDescription(
+  text: string,
+  opts: { maxVisualLines: number; charsPerLine: number },
+): string[] {
+  const { maxVisualLines, charsPerLine } = opts;
+  const visualLines = (line: string) => Math.max(1, Math.ceil(line.length / charsPerLine));
   const lines = text.split('\n');
   const pages: string[][] = [];
   let current: string[] = [];
-  let currentLen = 0;
+  let currentVL = 0;
   for (const line of lines) {
-    const lineLen = line.length;
-    if (currentLen + lineLen > maxCharsPerPage && current.length > 0) {
+    const vl = visualLines(line);
+    if (currentVL + vl > maxVisualLines && current.length > 0) {
       pages.push(current);
       current = [line];
-      currentLen = lineLen;
+      currentVL = vl;
     } else {
       current.push(line);
-      currentLen += lineLen;
+      currentVL += vl;
     }
   }
   if (current.length > 0) pages.push(current);
@@ -283,10 +293,16 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // 마운트 시점 한 번 측정 (charHeight도 같은 패턴) — 회전 시는 다음 이벤트부터 반영.
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
 
-  // description 페이지 분할 — 짧으면 1페이지, 길면 여러 페이지로 자동 분할
+  // description 페이지 분할 — 짧으면 1페이지, 길면 여러 페이지로 자동 분할.
+  // 박스 폭에서 줄당 글자수(charsPerLine)를, 박스 높이(maxHeight)에서 visual line 한도를 추정해
+  // wrap을 반영. 박스 폭 ≈ min(viewport, 1126px 컨테이너) - 좌우 패딩(24*2). 한글 1rem≈16px.
+  // maxVisualLines: 데스크탑 6em/1.7≈3.5 → 3, 모바일 10em/1.7≈5.8 → 5.
+  const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1024;
+  const charsPerLine = Math.max(12, Math.floor((Math.min(viewportW, 1126) - 48) / 16));
+  const maxVisualLines = isMobile ? 5 : 3;
   const pages = useMemo(
-    () => paginateDescription(eventDesc, isMobile ? 45 : 80),
-    [eventDesc, isMobile],
+    () => paginateDescription(eventDesc, { maxVisualLines, charsPerLine }),
+    [eventDesc, maxVisualLines, charsPerLine],
   );
   const safePageIndex = Math.min(pageIndex, pages.length - 1);
   const currentPageText = pages[safePageIndex] ?? eventDesc;
