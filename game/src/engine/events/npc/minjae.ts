@@ -5,7 +5,7 @@ export const MINJAE_EVENTS = [
   {
     id: 'minjae-sports',
     title: '체육시간의 민재',
-    description: '체육시간. 축구를 하는데 민재가 같은 팀이 됐다.\n민재가 공을 받자마자 두 명을 제치고 슛을 넣었다.\n"...걔 공부만 하는 줄 알았는데?"',
+    description: '체육시간. 농구를 하는데 민재가 같은 팀이 됐다.\n민재가 공을 받자마자 두 명을 제치고 슛을 넣었다.\n조용한 모범생인 줄로만 알았는데, 운동 신경이 장난 아니다.',
     location: 'gym',
     background: 'gymnasium',
     speakers: ['minjae'],
@@ -19,16 +19,16 @@ export const MINJAE_EVENTS = [
         text: '"야, 운동도 잘하네!" — 하이파이브한다',
         effects: { social: 2, mental: 2 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
-        message: '민재가 웃으며 손바닥을 쳤다. "축구는 좀 해." 의외의 모습이다. 공부만 하는 애가 아니었어.',
+        message: '민재가 웃으며 손바닥을 쳤다. "농구는 좀 해." 의외의 모습이다. 공부만 하는 애가 아니었어.',
       },
       {
-        text: '"패스!" — 같이 플레이한다',
+        text: '"같이 뛰자!" — 팀 플레이에 합류한다',
         effects: { health: 2, social: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
-        message: '민재에게 패스했더니 골로 연결됐다. "야, 너 패스 잘하는데?" 같은 팀이 되니 말이 트인다.',
+        message: '다음 공격에서 민재와 패스를 주고받다 깔끔하게 득점했다. "오, 손발 잘 맞는데?" 같은 팀이 되니 말이 트인다.',
       },
     ],
-    femaleDescription: '체육시간. 배구를 하는데 민재가 옆 코트에서 뛰고 있다.\n공이 넘어왔는데 민재가 순식간에 잡아서 돌려줬다.\n"...걔 공부만 하는 줄 알았는데?"',
+    femaleDescription: '체육시간. 배구를 하는데 민재가 옆 코트에서 뛰고 있다.\n공이 넘어왔는데 민재가 순식간에 잡아서 돌려줬다.\n조용한 모범생인 줄로만 알았는데, 운동 신경이 장난 아니다.',
     femaleChoices: [
       {
         text: '"야, 운동도 잘하네!" — 말을 건다',
