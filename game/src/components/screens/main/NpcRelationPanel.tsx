@@ -35,7 +35,8 @@ export function NpcRelationPanel({ npcs, year, onSelect }: Props) {
                   <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${n.intimacy}%`, background: intimacyColor, borderRadius: 3, transition: 'width 0.3s' }} />
                   </div>
-                  <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap' }}>
+                  {/* 라벨 고정 폭 — '아는 사이'(긴 라벨)일 때 바가 좁아지는 너비 편차 방지 */}
+                  <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap', width: 46, flexShrink: 0, textAlign: 'right' }}>
                     {intimacyLabel}
                   </span>
                 </div>
