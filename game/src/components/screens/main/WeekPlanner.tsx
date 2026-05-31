@@ -118,9 +118,9 @@ export function WeekPlanner({
         </div>
       )}
 
-      {/* 학기 중: 주중 | 주말 가로 2단 */}
+      {/* 학기 중: 주중 | 주말 가로 2단 (좁은 폰에서는 week.css에서 세로 스택) */}
       {!state.isVacation && (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="week-grid" style={{ display: 'flex', gap: 8 }}>
           {/* 왼쪽: 주중 */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 600 }}>주중 (월~금)</div>
