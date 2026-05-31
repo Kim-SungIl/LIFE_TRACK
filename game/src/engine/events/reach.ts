@@ -5,6 +5,10 @@ export const REACH_EVENTS = [
   // 친밀도 게이트(30/50/70/90)로 5명 NPC를 Y1에 5개씩 균등화.
   // week 없음 + condition으로 도달 시 conditionalEvents 풀 진입 (1회성 자동 보장).
   // doyun 30 슬롯은 위쪽 doyun-comic-share 정비로 채움.
+  // 주의: week가 없어 학기/방학 무관하게 conditional 풀에 진입한다. 학교 맥락(교실/복도/
+  // 도서코너/운동장) 이벤트는 condition에 !s.isVacation 가드 필수 — 안 그러면 방학에 발동해
+  // "방학인데 교실 문 앞" 같은 컨텍스트 desync 발생. 졸업(W41+) 겨울 이벤트와 집/단톡
+  // 이벤트는 의도적으로 가드하지 않는다(각 condition 주석 참고).
 
   // --- yuna 30 ---
   {
@@ -16,7 +20,7 @@ export const REACH_EVENTS = [
     background: 'classroom_elementary_spring',
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 30 && s.year === 1;
+      return !!yuna?.met && yuna.intimacy >= 30 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
@@ -47,7 +51,7 @@ export const REACH_EVENTS = [
     background: 'classroom_elementary',
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 50 && s.year === 1;
+      return !!yuna?.met && yuna.intimacy >= 50 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
@@ -84,7 +88,7 @@ export const REACH_EVENTS = [
     background: 'classroom_elementary',
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 70 && s.year === 1;
+      return !!yuna?.met && yuna.intimacy >= 70 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
@@ -180,7 +184,7 @@ export const REACH_EVENTS = [
     location: 'library',
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 30 && s.year === 1;
+      return !!subin?.met && subin.intimacy >= 30 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
@@ -209,7 +213,7 @@ export const REACH_EVENTS = [
     location: 'hallway',
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 50 && s.year === 1;
+      return !!subin?.met && subin.intimacy >= 50 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
@@ -334,7 +338,7 @@ export const REACH_EVENTS = [
     location: 'gym',
     condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
-      return !!doyun?.met && doyun.intimacy >= 40 && s.year === 1;
+      return !!doyun?.met && doyun.intimacy >= 40 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
@@ -364,7 +368,7 @@ export const REACH_EVENTS = [
     background: 'classroom_elementary',
     condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
-      return !!doyun?.met && doyun.intimacy >= 60 && s.year === 1;
+      return !!doyun?.met && doyun.intimacy >= 60 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
@@ -414,7 +418,7 @@ export const REACH_EVENTS = [
     location: 'classroom',
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
-      return !!minjae?.met && minjae.intimacy >= 70 && s.year === 1;
+      return !!minjae?.met && minjae.intimacy >= 70 && s.year === 1 && !s.isVacation;
     },
     choices: [
       {
