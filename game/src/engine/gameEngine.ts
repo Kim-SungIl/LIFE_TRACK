@@ -6,6 +6,7 @@ import { generateExamResult, generateMockExamResult, generateSuneungResult, getE
 import { seededRandom, hashInitialState } from './rng';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
+import { applyParentIntimacyDelta, applyParentMeanReversion } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
 
@@ -302,6 +303,18 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
   state.money = Math.round((state.money - cost) * 10) / 10;
   if (state.money < 0) state.money = 0;
   log.moneyChange -= cost;
+
+  // 부모 친밀도 — stat 감쇠(diminishing/fatigue 등)와 무관하게 raw baseDelta를 단일 진입점에 전달.
+  // §2.1 구간 감쇠는 applyParentIntimacyDelta 내부에서만 적용(이중 적용 방지).
+  if (activity.parentEffect) {
+    applyParentIntimacyDelta(state, activity.parentEffect.baseDelta, activity.parentEffect.tag);
+    state.actedWithParentThisWeek = true; // 이번 주 평균 회귀 면제
+    // 체감 보상: 친밀도가 이미 돈독하면 가족 저녁의 멘탈 회복이 미세하게 더 크다 (숫자 비노출)
+    if (activity.id === 'family-dinner' && (state.parentIntimacy ?? 50) >= 60) {
+      state.stats.mental = Math.min(100, state.stats.mental + 0.5);
+      log.statChanges.mental = (log.statChanges.mental ?? 0) + 0.5;
+    }
+  }
 
   log.messages.push(`${activity.name} 완료`);
 }
@@ -625,11 +638,9 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   newState.parentTalkPressure = Math.min(1, (newState.parentTalkPressure ?? 0) + 0.05);
   newState.npcEventPendingThisWeek = seededRandom(newState) < newState.talkEventPressure;
   newState.parentEventPendingThisWeek = seededRandom(newState) < newState.parentTalkPressure;
-  // 부모 친밀도 자연 변화 — emotional은 +0.1/주, strict는 -0.1/주 (강점 톤 반영)
-  let parentIntimacyDelta = 0;
-  if (newState.parents.includes('emotional')) parentIntimacyDelta += 0.1;
-  if (newState.parents.includes('strict')) parentIntimacyDelta -= 0.1;
-  newState.parentIntimacy = Math.max(0, Math.min(100, (newState.parentIntimacy ?? 50) + parentIntimacyDelta));
+  // 부모 친밀도 자연 변화는 더 이상 강점 자동 드리프트가 아니다(결정론 제거).
+  // actedWithParentThisWeek 플래그는 talkToHome(processWeek 이전) + 부모 활동(아래)에서 누적되고,
+  // 평균 회귀(50 수렴)와 플래그 리셋은 활동 적용 뒤 "5b"에서 처리한다.
 
   const log: WeekLog = {
     statChanges: {},
@@ -719,6 +730,11 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   // 루틴 활동도 포함
   if (newState.routineSlot2) allActivities.push(newState.routineSlot2);
   if (newState.routineSlot3) allActivities.push(newState.routineSlot3);
+
+  // 5b. 부모 친밀도 평균 회귀 — 이번 주 부모 행동(활동/대화)이 없었으면 50으로 천천히 수렴.
+  //     (talkToHome은 processWeek 이전에, 부모 활동은 위에서 actedWithParentThisWeek를 세팅)
+  applyParentMeanReversion(newState);
+  newState.actedWithParentThisWeek = false; // 다음 주를 위해 리셋
 
   // 5. 자연 감소
   applyNaturalDecay(newState, log, newState.isVacation);
