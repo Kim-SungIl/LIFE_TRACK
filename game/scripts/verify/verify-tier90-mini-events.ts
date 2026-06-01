@@ -1,13 +1,13 @@
 /**
- * Phase 2.4: 친밀도 90 단계(코어) 미니 이벤트 시드 6개 검증
+ * Phase 2.4: tier90 코어 미니 이벤트 시드 6개 검증 (친밀도 문턱 80 — 80↑ 감쇠 벽 고려해 90→80 하향)
  *
  * 검증 항목:
  *  1. 6개 시드가 NPC_MINI_EVENTS에 모두 존재
- *  2. 각 시드: intimacyMin === 90, intimacy effect === +5 (가이드라인)
- *  3. 친밀도 90 도달 시 getAvailableNpcEvents에 포함 (haeun은 yearMin 6 충족 필요)
- *  4. 친밀도 89 (미달) 시 후보 풀에서 제외
+ *  2. 각 시드: intimacyMin === 80, intimacy effect === +5 (가이드라인)
+ *  3. 친밀도 80 도달 시 getAvailableNpcEvents에 포함 (haeun은 yearMin 6 충족 필요)
+ *  4. 친밀도 79 (미달) 시 후보 풀에서 제외
  *  5. talkEventsFired 기록 후 풀 제외 (1회 발동 보장)
- *  6. 친밀도 90 도달 시 30+50+70+90 모두 후보 (점진 해제)
+ *  6. 친밀도 80 도달 시 30+50+70+90 모두 후보 (점진 해제)
  *  7. 효과 형식 유효성 (stats 키, fatigue 범위)
  *  8. memorySlotDraft 정책 — 6개 전부 필수, importance 5, 유효 category/toneTag
  *  9. applyMemorySlotFromMiniTalk 실제 슬롯 생성 + 중복 방지
@@ -64,7 +64,7 @@ function withFired(state: GameState, ids: string[]): GameState {
   return { ...state, talkEventsFired: [...state.talkEventsFired, ...ids] };
 }
 
-console.log('=== Phase 2.4 친밀도 90 단계(코어) 미니 이벤트 검증 ===\n');
+console.log('=== Phase 2.4 tier90 코어 미니 이벤트 검증 (친밀도 문턱 80) ===\n');
 
 // === 1. 6개 시드 존재 ===
 console.log('=== 1. 시드 6개 존재 ===');
@@ -73,45 +73,45 @@ for (const spec of TIER90_SEEDS) {
 }
 
 // === 2. intimacyMin/intimacy 가이드라인 ===
-console.log('\n=== 2. 가이드라인: intimacyMin=90, intimacy=+5 ===');
+console.log('\n=== 2. 가이드라인: intimacyMin=80, intimacy=+5 ===');
 for (const spec of TIER90_SEEDS) {
   const seed = NPC_MINI_EVENTS.find(e => e.id === spec.id);
   if (!seed) continue;
-  check(`${spec.id}.intimacyMin === 90`, seed.intimacyMin === 90, `actual=${seed.intimacyMin}`);
+  check(`${spec.id}.intimacyMin === 80`, seed.intimacyMin === 80, `actual=${seed.intimacyMin}`);
   check(`${spec.id}.effects.intimacy === 5`, seed.effects.intimacy === 5, `actual=${seed.effects.intimacy}`);
   check(`${spec.id}.npcId === ${spec.npcId}`, seed.npcId === spec.npcId, `actual=${seed.npcId}`);
 }
 
-// === 3. 친밀도 90 도달 시 후보 풀 진입 (year 6 기준) ===
-console.log('\n=== 3. 친밀도 90 도달 — 후보 풀 진입 (남/여) ===');
+// === 3. 친밀도 80 도달 시 후보 풀 진입 (year 6 기준) ===
+console.log('\n=== 3. 친밀도 80 도달 — 후보 풀 진입 (남/여) ===');
 const baseM = createInitialState('male', ['emotional', 'strict']);
 const baseF = createInitialState('female', ['emotional', 'strict']);
 for (const spec of TIER90_SEEDS) {
   for (const [genderLabel, base] of [['남', baseM], ['여', baseF]] as const) {
-    const s = withState(base, spec.npcId, 90, 6);
+    const s = withState(base, spec.npcId, 80, 6);
     const found = getAvailableNpcEvents(s, spec.npcId).find(e => e.id === spec.id);
-    check(`${spec.id} (${genderLabel}) 친밀도 90·Y6에 가용`, !!found);
+    check(`${spec.id} (${genderLabel}) 친밀도 80·Y6에 가용`, !!found);
   }
 }
 
-// === 4. 친밀도 89 미달 시 제외 ===
-console.log('\n=== 4. 친밀도 89 (미달) — 후보 풀 제외 ===');
+// === 4. 친밀도 79 미달 시 제외 ===
+console.log('\n=== 4. 친밀도 79 (미달) — 후보 풀 제외 ===');
 for (const spec of TIER90_SEEDS) {
-  const s = withState(baseM, spec.npcId, 89, 6);
+  const s = withState(baseM, spec.npcId, 79, 6);
   const found = getAvailableNpcEvents(s, spec.npcId).find(e => e.id === spec.id);
-  check(`${spec.id} 친밀도 89엔 미가용`, !found);
+  check(`${spec.id} 친밀도 79엔 미가용`, !found);
 }
 
 // === 5. fired 후 제외 ===
 console.log('\n=== 5. fired 기록 후 — 영구 제외 ===');
 for (const spec of TIER90_SEEDS) {
-  const s = withFired(withState(baseM, spec.npcId, 90, 6), [spec.id]);
+  const s = withFired(withState(baseM, spec.npcId, 80, 6), [spec.id]);
   const found = getAvailableNpcEvents(s, spec.npcId).find(e => e.id === spec.id);
   check(`${spec.id} fired 후 풀 제외`, !found);
 }
 
 // === 6. 30+50+70+90 모두 후보 (점진 해제, Y6 기준) ===
-console.log('\n=== 6. intimacy 90·Y6 — 30+50+70+90 모두 후보 ===');
+console.log('\n=== 6. intimacy 80·Y6 — 30+50+70+90 모두 후보 ===');
 const TIER_BY_NPC: Record<string, { t30: string; t50: string; t70: string }> = {
   jihun: { t30: 'talk_jihun_basket', t50: 'talk_jihun_50_topping', t70: 'talk_jihun_70_locker' },
   subin: { t30: 'talk_subin_problem', t50: 'talk_subin_50_sentence', t70: 'talk_subin_70_night_light' },
@@ -123,7 +123,7 @@ const TIER_BY_NPC: Record<string, { t30: string; t50: string; t70: string }> = {
 for (const spec of TIER90_SEEDS) {
   const t = TIER_BY_NPC[spec.npcId];
   // jihun 30단계는 gender 분기라 남주 기준 basket(남) 사용
-  const s = withState(baseM, spec.npcId, 90, 6);
+  const s = withState(baseM, spec.npcId, 80, 6);
   const ids = getAvailableNpcEvents(s, spec.npcId).map(e => e.id);
   check(`${spec.npcId}: 30+50+70+90 모두 가용`,
     ids.includes(t.t30) && ids.includes(t.t50) && ids.includes(t.t70) && ids.includes(spec.id),
@@ -165,7 +165,7 @@ console.log('\n=== 9. applyMemorySlotFromMiniTalk — 슬롯 생성 + 중복 방
 for (const spec of TIER90_SEEDS) {
   const seed = NPC_MINI_EVENTS.find(e => e.id === spec.id);
   if (!seed) continue;
-  const s = withState(baseM, spec.npcId, 90, 6);
+  const s = withState(baseM, spec.npcId, 80, 6);
   const before = s.memorySlots.length;
   applyMemorySlotFromMiniTalk(s, spec.id, seed.memorySlotDraft);
   applyMemorySlotFromMiniTalk(s, spec.id, seed.memorySlotDraft);  // 중복 호출
@@ -175,8 +175,8 @@ for (const spec of TIER90_SEEDS) {
 
 // === 10. haeun yearMin 게이팅 ===
 console.log('\n=== 10. haeun_90 yearMin 6 게이팅 ===');
-const haeunY5 = withState(baseM, 'haeun', 90, 5);
-const haeunY6 = withState(baseM, 'haeun', 90, 6);
+const haeunY5 = withState(baseM, 'haeun', 80, 5);
+const haeunY6 = withState(baseM, 'haeun', 80, 6);
 check('haeun_90 Y5엔 미가용 (졸업 전)', !getAvailableNpcEvents(haeunY5, 'haeun').find(e => e.id === 'talk_haeun_90_empty_line'));
 check('haeun_90 Y6에 가용 (졸업)', !!getAvailableNpcEvents(haeunY6, 'haeun').find(e => e.id === 'talk_haeun_90_empty_line'));
 
