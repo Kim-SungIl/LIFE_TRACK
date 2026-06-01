@@ -13,8 +13,9 @@ type Props = {
   onCloseAll: () => void;
 };
 
-// 티어 파생: 명시적 tier 필드가 없으므로 memorySlotDraft.importance + intimacyMin 으로 추론.
-//  90 = 결정적 코어(importance 5) / 70 = 속마음(메모리 슬롯 존재) / 50·30 = intimacyMin
+// 티어 파생(UI 표시용 라벨): 명시적 tier 필드가 없어 importance + intimacyMin으로 추론.
+//  90/70 = importance로 판단(코어=5 / 속마음=메모리 슬롯 존재), 50·30만 intimacyMin으로 구분.
+//  ※ 반환값은 표시 라벨일 뿐 — tier90 라벨의 실제 친밀도 문턱은 80(라벨과 intimacyMin은 분리).
 function deriveTier(result: MiniTalkEvent): 30 | 50 | 70 | 90 {
   if (result.memorySlotDraft?.importance === 5) return 90;
   if (result.memorySlotDraft) return 70;
