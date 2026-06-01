@@ -53,13 +53,14 @@ export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Pro
 
         {/* 잡담 영역 — 항상 렌더 + 고정 최소높이로 클릭마다(또는 줄 길이차로) 모달이 점프하지 않게 (레이아웃 시프트 방지) */}
         <div style={{
-          marginTop: 14, padding: '10px 14px',
-          background: 'rgba(255,255,255,0.04)', borderRadius: 10,
-          fontSize: '0.82rem', fontStyle: 'italic',
-          lineHeight: 1.6, wordBreak: 'keep-all', overflowWrap: 'break-word',
+          marginTop: 14, padding: '12px 14px',
+          background: 'rgba(255,255,255,0.06)', borderRadius: 10,
+          // 실제 대사는 크림 off-white(--text-primary)로 또렷하게, placeholder는 muted로 절제
+          fontSize: smalltalk ? '0.9rem' : '0.8rem', fontStyle: 'italic',
+          lineHeight: 1.65, wordBreak: 'keep-all', overflowWrap: 'break-word',
           minHeight: 64, display: 'flex', alignItems: 'center', justifyContent: 'center',
           textAlign: 'center', whiteSpace: 'pre-line',
-          color: smalltalk ? 'var(--text-secondary)' : 'var(--text-muted)',
+          color: smalltalk ? 'var(--text-primary)' : 'var(--text-muted)',
         }}>
           {/* 문장(.!?) 단위로 줄바꿈 — 애매하게 두 번째 줄에 한 단어만 걸치는 어색한 wrap 방지 */}
           {smalltalk ? breakSentences(smalltalk) : '말을 걸면 부모님이 한마디 건네요.'}
