@@ -3,6 +3,7 @@
 // 로직(필터/픽업/RNG)은 talkSystem.ts. 데이터/로직 분리 P3-9 (2026-05-29).
 
 import { Gender, MemorySlotDraft, ParentStrength, Stats } from './types';
+import type { ParentTag } from './parentIntimacy';
 
 // ===== 미니 이벤트 타입 =====
 export interface MiniTalkEvent {
@@ -23,6 +24,7 @@ export interface MiniTalkEvent {
   };
   message: string;                       // 효과 한 줄 요약 (UI 노출)
   memorySlotDraft?: MemorySlotDraft;     // 70+ 단계: 회상 슬롯 후보 (importance ≥3만 실제 생성)
+  parentTag?: ParentTag;                 // 부모 이벤트: 친밀도 반응 태그 (없으면 familyTime). 강점 반응 배율 결정
 }
 
 // ===== NPC 미니 이벤트 풀 (Phase 2.1 시드) =====
@@ -284,6 +286,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
     parentStrength: 'emotional',
     description: '"오늘 좀 피곤해 보이네. 힘들면 힘들다고 해."\n엄마가 핫초코를 내려놓는다.',
     effects: { parentIntimacy: 2, stats: { mental: 1 }, fatigue: -1 },
+    parentTag: 'shareWorry',
     message: '엄마의 따뜻한 한 마디 — 멘탈 +1, 피로 -1',
   },
   {
@@ -291,6 +294,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
     parentStrength: 'wealth',
     description: '"필요한 거 있으면 말해. 친구들이랑 놀러도 다니고."\n아빠가 지갑에서 지폐를 꺼낸다.',
     effects: { parentIntimacy: 2, money: 3 },
+    parentTag: 'familyTime',
     message: '용돈 +3만원',
   },
   {
@@ -298,6 +302,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
     parentStrength: 'info',
     description: '"엄마가 알아봤는데, 그 분야 요즘 전망 좋대."\n메모지에 학원 이름이 빼곡히 적혀 있다.',
     effects: { parentIntimacy: 2, stats: { academic: 1 } },
+    parentTag: 'careerTalk',
     message: '진로 정보 — 학업 +1',
   },
   {
@@ -305,6 +310,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
     parentStrength: 'strict',
     description: '"이번에는 잘 봐야 한다. 11시까지는 자고."\n아빠가 책상을 한 번 둘러보고 방을 나간다.',
     effects: { parentIntimacy: 1, stats: { academic: 1, mental: -1 } },
+    parentTag: 'gradeImprove',
     message: '아빠의 기대 — 학업 +1, 멘탈 -1',
   },
   {
@@ -312,6 +318,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
     parentStrength: 'resilience',
     description: '"피곤해 보인다. 그냥 자, 내일 또 있어."\n엄마가 스탠드를 끄고 문을 닫는다.',
     effects: { parentIntimacy: 2, fatigue: -3 },
+    parentTag: 'recoveryAction',
     message: '엄마의 무심한 격려 — 피로 -3',
   },
   {
@@ -319,6 +326,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
     parentStrength: 'freedom',
     description: '"네가 알아서 해. 엄마는 네 결정 응원할게."\n식탁 너머로 잠깐 눈을 마주친다.',
     effects: { parentIntimacy: 2, stats: { mental: 1 } },
+    parentTag: 'autonomyChoice',
     message: '선택의 자유 — 멘탈 +1',
   },
 ];

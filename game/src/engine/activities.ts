@@ -168,6 +168,7 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'study-with-parent', name: '부모와 같이 공부', slots: 1, fatigue: 3,
     effects: { academic: 1.5, mental: 0.5 }, moneyCost: 0, category: 'parent',
+    parentEffect: { baseDelta: 0.6, tag: 'familyTime' },
     description: '부모님과 함께 공부한다.',
     flavor: '"이거 이렇게 풀면 되지 않아?" 엄마가 옆에서 알려준다. 느리지만 든든하다.',
     tags: ['안정적', '무료', '따뜻함'],
@@ -176,10 +177,11 @@ export const ACTIVITIES: Activity[] = [
   {
     id: 'family-dinner', name: '가족 저녁시간', slots: 1, fatigue: -2,
     effects: { mental: 2 }, moneyCost: 0, category: 'parent',
+    parentEffect: { baseDelta: 0.5, tag: 'familyTime' },
     description: '가족과 따뜻한 저녁 시간을 보낸다.',
     flavor: '"오늘 학교 어땠어?" 밥을 먹으며 이야기한다. 별거 아닌데 마음이 편해진다.',
     tags: ['피로 회복', '가족', '멘탈 회복'],
-    requires: (s) => s.parents.includes('emotional'),
+    // 게이트 해제 — 비-emotional 가정도 부모와 시간을 보낼 수 있어야 함 (emotional은 familyTime 1.4배)
   },
   // === 알바 ===
   {
@@ -271,6 +273,7 @@ export const ACTIVITIES: Activity[] = [
     id: 'family-trip',
     name: '가족 여행', slots: 3, fatigue: -8,
     effects: { mental: 6, social: 2, health: 1 }, moneyCost: 8,
+    parentEffect: { baseDelta: 1.5, tag: 'familyTime' },
     category: 'parent',
     seasonGate: 'vacation-only',
     vacationLimit: 1,

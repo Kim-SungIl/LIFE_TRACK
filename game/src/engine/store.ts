@@ -7,6 +7,7 @@ import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
+import { applyParentIntimacyDelta } from './parentIntimacy';
 
 // 말걸기 결과 — 사전 결정 모델
 // - 'event': 이번 주 사전 결정에서 발동 + 풀에 가용 이벤트 있음 → 미니 이벤트 발동
@@ -396,8 +397,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           if (newState.money < 0) newState.money = 0;
         }
         if (ev.effects.parentIntimacy) {
-          newState.parentIntimacy = Math.max(0, Math.min(100, newState.parentIntimacy + ev.effects.parentIntimacy));
+          // 단일 진입점 통합 — 강점 반응 배율·구간 감쇠 적용 (직접 가산 금지)
+          // 이벤트별 parentTag로 주제에 맞는 배율 적용 (strict→gradeImprove, freedom→autonomyChoice 등)
+          applyParentIntimacyDelta(newState, ev.effects.parentIntimacy, ev.parentTag ?? 'familyTime');
         }
+        newState.actedWithParentThisWeek = true; // 부모와 상호작용 → 이번 주 평균 회귀 면제
         newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
         newState.parentTalkPressure = 0;
         newState.parentEventPendingThisWeek = false;
@@ -406,6 +410,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       }
     }
     const newState = cloneGameState(s);
+    newState.actedWithParentThisWeek = true; // 부모와 대화 → 이번 주 평균 회귀 면제
     const line = getHomeSmalltalk(newState);
     set({ state: newState });
     return { kind: 'smalltalk', line };

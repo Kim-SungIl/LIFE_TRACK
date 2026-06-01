@@ -1,5 +1,7 @@
 // ===== LIFE TRACK: 선택의 결과 — Core Types =====
 
+import type { ParentEffect } from './parentIntimacy';
+
 export type Gender = 'male' | 'female';
 export type ParentStrength = 'wealth' | 'info' | 'resilience' | 'emotional' | 'freedom' | 'strict';
 
@@ -65,6 +67,7 @@ export interface GameState {
   talkEventPressure: number;          // 0~1, NPC 미니 이벤트 누적 확률 (매주 +0.1)
   parentTalkPressure: number;         // 0~1, 부모 미니 이벤트 누적 확률 (매주 +0.05)
   parentIntimacy: number;             // 0~100, 숨겨진 부모 친밀도 (UI 미표시, 회고 톤에 영향)
+  actedWithParentThisWeek?: boolean;  // 이번 주 부모 관련 행동(활동/대화) 여부 — 평균 회귀 면제용(매주 리셋)
   talkEventsFired: string[];          // 발동된 미니 이벤트 ID — 1회 발동 보장(A안)
   npcEventPendingThisWeek: boolean;   // 이번 주 NPC 미니 이벤트 사전 결정 결과
   parentEventPendingThisWeek: boolean;// 이번 주 가정 미니 이벤트 사전 결정 결과
@@ -95,6 +98,8 @@ export interface WeekLog {
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
   /** 이번 주 발동한 부모 보너스 (UX 가시화용 — 인라인 스티커, WeekLog 1줄, HUD 펄스) */
   parentBonusesApplied?: ParentBonusApplied[];
+  /** 이번 주 parentEffect를 이미 적용한 활동 id — 같은 활동의 슬롯 중복(루틴+주말) 친밀도 2배 방지 */
+  parentEffectAppliedIds?: string[];
 }
 
 // 시험 시스템
@@ -151,6 +156,8 @@ export interface Activity {
   tags: string[];           // 분위기 태그
   requires?: (state: GameState) => boolean;
   category: 'study' | 'exercise' | 'social' | 'talent' | 'rest' | 'work' | 'parent';
+  // 부모 친밀도 효과 (stat이 아니므로 effects와 별개 — applyParentIntimacyDelta로 처리)
+  parentEffect?: ParentEffect;
   // Phase 1 방학 시스템
   seasonGate?: 'vacation-only' | 'semester-only';   // 학기/방학 게이팅
   vacationLimit?: number;                           // 방학당 최대 선택 횟수 (없으면 무제한)
