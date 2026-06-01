@@ -17,7 +17,8 @@ export function NpcRelationPanel({ npcs, year, onSelect }: Props) {
       <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 친구</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {metNpcs.map(n => {
-          const intimacyColor = n.intimacy >= 70 ? 'var(--accent-soft)' : n.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
+          // 친구 게이지 색 = 능력치 등급 색 언어(STAT_GRADES)와 통일 — 아는 사이(E 회색) → 친구(B 우수=초록) → 절친(A 최상=골드)
+          const intimacyColor = n.intimacy >= 70 ? '#e5c07b' : n.intimacy >= 40 ? '#8fb573' : '#8a8078';
           const intimacyLabel = n.intimacy >= 70 ? '절친' : n.intimacy >= 40 ? '친구' : '아는 사이';
           return (
             <div key={n.id}
@@ -35,7 +36,8 @@ export function NpcRelationPanel({ npcs, year, onSelect }: Props) {
                   <div style={{ flex: 1, height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${n.intimacy}%`, background: intimacyColor, borderRadius: 3, transition: 'width 0.3s' }} />
                   </div>
-                  <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap' }}>
+                  {/* 라벨 고정 폭 — '아는 사이'(긴 라벨)일 때 바가 좁아지는 너비 편차 방지 */}
+                  <span style={{ fontSize: '0.65rem', color: intimacyColor, whiteSpace: 'nowrap', width: 46, flexShrink: 0, textAlign: 'right' }}>
                     {intimacyLabel}
                   </span>
                 </div>
