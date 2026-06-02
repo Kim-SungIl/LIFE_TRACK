@@ -692,6 +692,71 @@ Background: soft pastel pink-blue gradient.
 
 ---
 
+### 5-6. Parents (부모 — 가정 모달)
+
+> 가정 모달(`HomeModal`) 헤더 전용. 부모 대사는 강점별·대부분 "부모(가족)" 일반 화법이라
+> 라인별 화자 귀속 없이 **엄마·아빠를 나란히** 보여준다(가정=단일 엔티티). 성인이라 학년별
+> 변화가 없어 **`_middle` portrait 1 stage만** 생성(폴백 바닥으로 전 학년 렌더). Full body
+> 불필요(이벤트 미등장). 두 사람은 Global Style Anchor(섹션 1)를 동일 적용해 **같은 화풍의
+> 부부**로 보이게 — 단 학생 face base보다 약간 성숙한 성인 비율.
+
+#### mother (엄마)
+
+**Actual Image:** Korean mother, early-to-mid 40s. Soft shoulder-length dark brown hair loosely tucked, warm brown eyes, kind composed smile. Neat casual home wear — warm-toned soft knit cardigan over a simple cream top. Mature but soft features (subtle age, NOT elderly).
+
+**Portrait**
+```
+Apply Global Style Anchor (Section 1) — same base face/eye/shading style as all
+characters, adult-female version (early-mid 40s, NOT elderly).
+Korean mother, chest-up, slight angle toward camera. Soft shoulder-length dark brown
+hair (loosely tucked), warm brown eyes, gentle kind expression with a soft closed-mouth
+smile. Warm-toned soft knit cardigan over a simple cream top.
+Background: soft pastel pink-blue gradient — KEEP (do NOT remove).
+Output: PNG, 2:3 ratio.
+```
+
+**Portrait — happy (stretch, 잡담/이벤트 시 표정 전환)**
+```
+Same mother — identical face, hair, and outfit. Warmer affectionate smile, eyes slightly
+crinkled, head tilted slightly. ONLY the expression changes. Same pastel background.
+```
+
+#### father (아빠)
+
+**Actual Image:** Korean father, mid-40s. Short neat black hair with slight grey at the temples, warm brown eyes, calm reassuring gentle half-smile. Neat casual home wear — muted blue-grey collared knit or simple shirt. Mature but soft features (subtle age, NOT elderly).
+
+**Portrait**
+```
+Apply Global Style Anchor (Section 1) — same base face/eye/shading style, adult-male
+version (mid-40s, NOT elderly).
+Korean father, chest-up, slight angle toward camera. Short neat black hair with slight
+grey at the temples, warm brown eyes, calm reassuring gentle half-smile. Muted blue-grey
+collared knit or simple shirt.
+Background: soft pastel pink-blue gradient — KEEP (do NOT remove).
+Output: PNG, 2:3 ratio.
+```
+
+**Portrait — happy (stretch)**
+```
+Same father — identical face, hair, and outfit. Warmer reassuring smile, slightly brighter
+eyes. ONLY the expression changes. Same pastel background.
+```
+
+**Negative prompt (both)**
+```
+elderly, grandparent, excessive wrinkles, photorealistic, 3d render, transparent
+background, cutout, full body, school uniform, child, teenager, extra people, text,
+watermark, harsh directional shadows, different art style, distorted face, extra fingers
+```
+
+**Files (→ Section 8 디렉토리)**
+- `mother_middle_neutral.png`, `father_middle_neutral.png` — **필수**
+- `mother_middle_happy.png`, `father_middle_happy.png` — stretch (표정 전환용)
+
+> 와이어링: `HomeModal`의 🏠 → `<Portrait characterId="mother"/>` + `<Portrait characterId="father"/>` 나란히. 기본 neutral, 잡담/이벤트 시 happy.
+
+---
+
 ## 6. Character Summary Table
 
 | ID | Name | Gender | School | Key Visual Features | Differs From |
@@ -708,6 +773,8 @@ Background: soft pastel pink-blue gradient.
 | junha | 김준하 | M | High | Dark brown messy, thick eyebrows, sturdy, ill-fitting blazer | player_m: sharper jaw, broader, more rugged |
 | siwoo | 한시우 | M | High | Medium brown covering forehead, tall lean, slouched, tumbler | junha: leaner, taller, more reserved |
 | yerin | 강예린 | F | High | Wavy brown ends, elegant earrings, planner, polished | subin: longer wavy hair, sharper gaze, calculated |
+| mother | 엄마 | F | 가정 | Early-40s warm, shoulder-length brown, knit cardigan | 가정 모달 전용 — 성인, portrait only |
+| father | 아빠 | M | 가정 | Mid-40s calm, short black w/ grey temples, collared knit | 가정 모달 전용 — 성인, portrait only |
 
 ---
 
@@ -737,6 +804,7 @@ Expressions: `neutral`, `happy`, `sad`, `angry`, `tired`, `burnout`, `surprised`
 - haeun: Y2 전학 → middle·high (elementary 없음)
 - doyun: Y1~Y2 → elementary·middle (high 도달 안 함)
 - **junha: Y6 전학(고등 전용) → `junha_high_*` 만** (middle/elementary 없음)
+- **부모(mother/father): 가정 모달 전용 → `_middle` portrait(neutral)만**. 성인이라 학년 무관, `_middle` 폴백으로 전 학년 렌더. fullbody/elementary/high 없음.
 - 폴백 바닥은 `_middle`. staged 자산이 없으면 `_middle` → CSS 아바타 순.
 
 ---
@@ -790,6 +858,12 @@ excludes already-pastel subin/player_f/player_m_elementary).
 - [ ] junha — fullbody, portrait
 - [ ] siwoo — fullbody, portrait
 - [ ] yerin — fullbody, portrait
+
+### Needed — Parents (가정 모달)
+- [ ] mother — middle portrait (neutral) ★필수
+- [ ] father — middle portrait (neutral) ★필수
+- [ ] mother — middle happy (stretch)
+- [ ] father — middle happy (stretch)
 
 ### Needed — Elementary Versions
 - [ ] player_m — elementary fullbody, elementary portrait
