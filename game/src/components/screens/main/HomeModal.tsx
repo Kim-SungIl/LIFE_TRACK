@@ -1,5 +1,6 @@
 import { ParentStrength } from '../../../engine/types';
 import { PARENT_ICONS, breakSentences } from '../shared';
+import { Portrait } from '../../Portrait';
 
 type Props = {
   parents: readonly ParentStrength[];
@@ -21,6 +22,8 @@ const LABELS: Record<ParentStrength, string> = {
 
 // Phase 2.1 — 가정 모달 (단일 엔티티 — 두 부모 강점은 가정 분위기)
 export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Props) {
+  // 잡담을 건네거나 이벤트가 있을 땐 부모가 환하게(happy), 평소엔 차분히(neutral)
+  const parentExpr = smalltalk || hasEvent ? 'happy' : 'neutral';
   return (
     <div onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -31,7 +34,11 @@ export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Pro
         borderRadius: 16, padding: 24, width: '85%', maxWidth: 360, textAlign: 'center',
         border: '1px solid rgba(224,138,91,0.25)',
       }}>
-        <div style={{ fontSize: '2.2rem', marginBottom: 6 }}>🏠</div>
+        {/* 엄마·아빠 일러스트 헤더 — 이모지(🏠) 대신, NPC 모달과 톤 일관 */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 8 }}>
+          <Portrait characterId="mother" size={62} expression={parentExpr} />
+          <Portrait characterId="father" size={62} expression={parentExpr} />
+        </div>
         <div style={{ fontSize: '1rem', fontWeight: 700 }}>가정</div>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
           엄마와 아빠가 만든 우리 집 분위기
