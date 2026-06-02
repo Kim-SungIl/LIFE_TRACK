@@ -192,10 +192,10 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     effects: { intimacy: 4, stats: { social: 1, mental: 1 }, fatigue: -1 },
     message: '준하의 말투 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +4',
   },
-  // ===== 친밀도 90 단계 (Phase 2.4 — 캐릭터 결정적 코어, importance 5 필수) =====
+  // ===== tier90 코어 (친밀도 80+ 도달 — 80↑ 감쇠 벽 고려해 90→80 하향, Phase 2.4 / importance 5 필수) =====
   {
     id: 'talk_jihun_90_bench',
-    npcId: 'jihun', intimacyMin: 90,
+    npcId: 'jihun', intimacyMin: 80,
     description: '"넌 왜 힘들 때 더 실실 웃냐. 바보같이."\n매점 평상, 지훈이가 말없이 이온 음료를 네 이마에 대어 온다. "나한텐 힘든 척해도 돼. 내가 힘은 세니까, 대충 다 받아줄 수 있어." 앞만 보며 툭 던지는 목소리에 서툰 다정함이 묻어 있다.',
     effects: { intimacy: 5, stats: { mental: 2 }, fatigue: -2 },
     message: '지훈이가 장난 대신 기댈 어깨를 내밀었다.',
@@ -209,7 +209,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_subin_90_two_names',
-    npcId: 'subin', intimacyMin: 90,
+    npcId: 'subin', intimacyMin: 80,
     description: '"우리 집 문패엔 이름이 두 개면 돼. 엄마랑 나."\n수빈이는 웃는 얼굴을 조금 늦게 꺼낸다. "이상한 얘기처럼 안 듣는 사람이 필요했는데, 네가 그랬어."',
     effects: { intimacy: 5, stats: { mental: 1, social: 1 }, fatigue: -1 },
     message: '수빈이가 자기 집의 모양을 처음으로 보여줬다.',
@@ -223,7 +223,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_minjae_90_unmasked',
-    npcId: 'minjae', intimacyMin: 90,
+    npcId: 'minjae', intimacyMin: 80,
     description: '"나... 사실 다 괜찮은 척하느라 좀 지쳤나 봐."\n방과후 빈 교실, 민재가 늘 날 서 있던 표정을 슬쩍 푼다. "근데 너 앞에선 안 괜찮아도 되더라. 그게 좀, 이상하게 편해."',
     effects: { intimacy: 5, stats: { mental: 2, social: 1 } },
     message: "민재가 늘 쓰던 '괜찮은 척'을 처음 벗었다.",
@@ -237,7 +237,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_yuna_90_wrong_note',
-    npcId: 'yuna', intimacyMin: 90,
+    npcId: 'yuna', intimacyMin: 80,
     description: '"방금 음, 틀렸는데... 그냥 둘래."\n유나는 악보 위에 지우개를 올려두고도 쓰지 않는다. "이상하게 들려도, 지금 내 소리 같아서."',
     effects: { intimacy: 5, stats: { talent: 1, mental: 2 }, fatigue: 1 },
     message: '유나가 완벽한 음보다 자기 소리를 골랐다.',
@@ -251,7 +251,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_haeun_90_empty_line',
-    npcId: 'haeun', intimacyMin: 90, yearMin: 6,
+    npcId: 'haeun', intimacyMin: 80, yearMin: 6,
     description: '"마지막 줄은 비워둘게. 네가 나중에 쓰면 돼."\n졸업을 앞둔 강당, 하은 선배가 짧은 쪽지를 접지 않은 채 건넨다. "내 말로 끝나면, 그건 네 얘기가 아니니까."',
     effects: { intimacy: 5, stats: { mental: 2, talent: 1 }, fatigue: -1 },
     message: '하은 선배가 답 대신 네가 채울 여백을 남겼다.',
@@ -265,7 +265,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_junha_90_umbrella',
-    npcId: 'junha', intimacyMin: 90,
+    npcId: 'junha', intimacyMin: 80,
     description: '"비 오면 그냥 뛰면 된다 했는데, 같이 있으니까 속도를 맞춰야 되더라."\n준하는 우산 손잡이를 네 쪽으로 조금 더 기울인다. "혼자 빨리 가는 거, 별로 멋있는 일 아이더라."',
     effects: { intimacy: 5, stats: { social: 1, mental: 2 }, fatigue: -1 },
     message: '준하가 혼자 앞서가는 대신 네 걸음에 속도를 맞췄다.',
