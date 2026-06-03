@@ -20,10 +20,26 @@ const LABELS: Record<ParentStrength, string> = {
   freedom:    '자유로운 집',
 };
 
+// 부모 얼굴 — neutral/happy 두 장을 겹쳐두고 opacity로 크로스페이드(하드 컷 방지).
+// 같은 인물의 표정만 부드럽게 풀리는 느낌. 두 장 모두 미리 렌더해 전환 시 깜빡임 없음.
+const PORTRAIT_W = 62;
+function ParentFace({ id, happy }: { id: string; happy: boolean }) {
+  return (
+    <div style={{ position: 'relative', width: PORTRAIT_W, height: Math.round(PORTRAIT_W * 1.25) }}>
+      <div style={{ position: 'absolute', inset: 0 }}>
+        <Portrait characterId={id} size={PORTRAIT_W} expression="neutral" />
+      </div>
+      <div style={{ position: 'absolute', inset: 0, opacity: happy ? 1 : 0, transition: 'opacity 0.5s ease' }}>
+        <Portrait characterId={id} size={PORTRAIT_W} expression="happy" />
+      </div>
+    </div>
+  );
+}
+
 // Phase 2.1 — 가정 모달 (단일 엔티티 — 두 부모 강점은 가정 분위기)
 export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Props) {
-  // 잡담을 건네거나 이벤트가 있을 땐 부모가 환하게(happy), 평소엔 차분히(neutral)
-  const parentExpr = smalltalk || hasEvent ? 'happy' : 'neutral';
+  // 잡담을 건네거나 이벤트가 있을 땐 부모가 환하게(happy로 크로스페이드), 평소엔 차분히
+  const parentsHappy = Boolean(smalltalk) || hasEvent;
   return (
     <div onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -36,8 +52,8 @@ export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Pro
       }}>
         {/* 엄마·아빠 일러스트 헤더 — 이모지(🏠) 대신, NPC 모달과 톤 일관 */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginBottom: 8 }}>
-          <Portrait characterId="mother" size={62} expression={parentExpr} />
-          <Portrait characterId="father" size={62} expression={parentExpr} />
+          <ParentFace id="mother" happy={parentsHappy} />
+          <ParentFace id="father" happy={parentsHappy} />
         </div>
         <div style={{ fontSize: '1rem', fontWeight: 700 }}>가정</div>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
