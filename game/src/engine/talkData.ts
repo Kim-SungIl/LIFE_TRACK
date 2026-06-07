@@ -3,7 +3,24 @@
 // 로직(필터/픽업/RNG)은 talkSystem.ts. 데이터/로직 분리 P3-9 (2026-05-29).
 
 import { Gender, MemorySlotDraft, ParentStrength, Stats } from './types';
-import type { ParentTag } from './parentIntimacy';
+import type { ParentTag, ParentEffect } from './parentIntimacy';
+
+// ===== 미니 이벤트 선택지 (Phase 2A) =====
+// 부모 미니이벤트의 ±트레이드오프 선택. 도덕 퀴즈가 아니라 "득실 교환"으로 설계.
+// 효과는 선택 시점(store.resolveParentTalkChoice)에 적용된다. parentIntimacy는 숨김 스탯이라
+// parentEffect(baseDelta+tag)로만 다루고 가시 배지에는 노출하지 않는다.
+export interface MiniTalkChoice {
+  label: string;                         // 선택 버튼 텍스트 (보통 대사)
+  parentEffect?: ParentEffect;           // 부모 친밀도 반응(baseDelta+tag) — 강점 배율·구간 감쇠 적용, UI 미표시
+  effects?: {                            // 가시 효과 (배지로 노출)
+    stats?: Partial<Stats>;
+    fatigue?: number;
+    money?: number;
+  };
+  message: string;                       // 선택 후 결과 한 줄 요약 (UI)
+  resultText?: string;                   // 선택 후 본문(없으면 이벤트 description 유지)
+  memorySlotDraft?: MemorySlotDraft;     // 이 선택이 학년말/엔딩 회상에 남을 경우(importance≥3)
+}
 
 // ===== 미니 이벤트 타입 =====
 export interface MiniTalkEvent {
@@ -22,9 +39,10 @@ export interface MiniTalkEvent {
     fatigue?: number;
     money?: number;
   };
-  message: string;                       // 효과 한 줄 요약 (UI 노출)
+  message: string;                       // 효과 한 줄 요약 (UI 노출). choices 있으면 발동 시 안내 문구로 사용
   memorySlotDraft?: MemorySlotDraft;     // 70+ 단계: 회상 슬롯 후보 (importance ≥3만 실제 생성)
   parentTag?: ParentTag;                 // 부모 이벤트: 친밀도 반응 태그 (없으면 familyTime). 강점 반응 배율 결정
+  choices?: MiniTalkChoice[];            // Phase 2A: ±트레이드오프 선택지. 있으면 선택-후-적용(모달에서 분기)
 }
 
 // ===== NPC 미니 이벤트 풀 (Phase 2.1 시드) =====
@@ -279,55 +297,183 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
 ];
 
-// ===== 부모 미니 이벤트 풀 (Phase 2.1 시드 — 강점별 1개) =====
+// ===== 부모 미니 이벤트 풀 (Phase 2A — 강점별 1개, ±선택지 트레이드오프) =====
+// 각 이벤트는 두 선택지로 분기: 관계를 챙기는 쪽 vs 자기를 지키는 쪽.
+// 긍정 선택이 회피보다 매력적이되, 회피도 다른 자원(멘탈·돈·시간)을 보존해 "클릭할 이유"가 있게.
+// parentEffect는 숨김 적용(강점 배율·구간 감쇠), effects만 배지로 노출.
+// 비중 큰 선택은 memorySlotDraft로 학년말/엔딩 회상에 남는다(importance≥3, sourceEventId당 1회).
+// 이벤트 레벨 effects/parentTag는 choices 없는 레거시 폴백용 — choices 있으면 store가 무시한다.
 export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
   {
     id: 'talk_parent_emotional',
     parentStrength: 'emotional',
     description: '"오늘 좀 피곤해 보이네. 힘들면 힘들다고 해."\n엄마가 핫초코를 내려놓는다.',
-    effects: { parentIntimacy: 2, stats: { mental: 1 }, fatigue: -1 },
+    effects: { stats: { mental: 1 }, fatigue: -1 },
     parentTag: 'shareWorry',
-    message: '엄마의 따뜻한 한 마디 — 멘탈 +1, 피로 -1',
+    message: '엄마가 핫초코를 내려놓는다',
+    choices: [
+      {
+        label: '"사실 요즘 좀 힘들었어." 솔직히 털어놓는다',
+        parentEffect: { baseDelta: 1.5, tag: 'shareWorry' },
+        effects: { stats: { mental: 1 }, fatigue: -1 },
+        message: '마음을 털어놨다 — 멘탈 +1, 피로 -1',
+        memorySlotDraft: {
+          category: 'reconciliation', importance: 3, toneTag: 'warm',
+          recallText: '그날 엄마 앞에서 처음으로 속을 다 꺼냈다.',
+        },
+      },
+      {
+        label: '"아냐, 괜찮아." 웃어넘긴다',
+        parentEffect: { baseDelta: -0.6, tag: 'hideProblem' },
+        effects: {},
+        message: '괜찮은 척 웃어넘겼다',
+        resultText: '엄마는 더 묻지 않았다. 핫초코만 천천히 식어갔다.',
+        memorySlotDraft: {
+          category: 'betrayal', importance: 3, toneTag: 'regret',
+          recallText: '괜찮다고 웃었지만, 사실은 괜찮지 않았다.',
+        },
+      },
+    ],
   },
   {
     id: 'talk_parent_wealth',
     parentStrength: 'wealth',
     description: '"필요한 거 있으면 말해. 친구들이랑 놀러도 다니고."\n아빠가 지갑에서 지폐를 꺼낸다.',
-    effects: { parentIntimacy: 2, money: 3 },
+    effects: { money: 2 },
     parentTag: 'familyTime',
-    message: '용돈 +3만원',
+    message: '아빠가 지갑을 연다',
+    choices: [
+      {
+        label: '"고마워요." 받으면서 요즘 얘기를 나눈다',
+        parentEffect: { baseDelta: 0.8, tag: 'familyTime' },
+        effects: { money: 2 },
+        message: '용돈을 받으며 근황을 나눴다 — 💰 +2만원',
+        memorySlotDraft: {
+          category: 'unspoken_debt', importance: 3, toneTag: 'warm',
+          recallText: '말없이 건네진 봉투를 한참 들여다봤다.',
+        },
+      },
+      {
+        label: '"이왕이면 좀 더…" 더 달라고 한다',
+        parentEffect: { baseDelta: -1.2, tag: 'moneyRequest' },
+        effects: { money: 3 },
+        message: '용돈을 더 받아냈다 — 💰 +3만원',
+        resultText: '아빠는 잠깐 머뭇거리다 한 장을 더 꺼냈다.',
+        memorySlotDraft: {
+          category: 'bypass', importance: 3, toneTag: 'regret',
+          recallText: '필요한 건 늘 손쉽게 돈으로 채워졌다.',
+        },
+      },
+    ],
   },
   {
     id: 'talk_parent_info',
     parentStrength: 'info',
     description: '"엄마가 알아봤는데, 그 분야 요즘 전망 좋대."\n메모지에 학원 이름이 빼곡히 적혀 있다.',
-    effects: { parentIntimacy: 2, stats: { academic: 1 } },
+    effects: { stats: { academic: 1 } },
     parentTag: 'careerTalk',
-    message: '진로 정보 — 학업 +1',
+    message: '엄마가 메모지를 내민다',
+    choices: [
+      {
+        label: '"오, 그래?" 관심 있게 듣는다',
+        parentEffect: { baseDelta: 1.0, tag: 'careerTalk' },
+        effects: { stats: { academic: 1 } },
+        message: '진로 얘기에 귀 기울였다 — 학업 +1',
+        memorySlotDraft: {
+          category: 'discovery', importance: 3, toneTag: 'resolve',
+          recallText: '엄마가 모아둔 메모지를 그날 처음 끝까지 읽었다.',
+        },
+      },
+      {
+        label: '"알겠어요." 적당히 흘려듣는다',
+        parentEffect: { baseDelta: -0.8, tag: 'ignoreAdvice' },
+        effects: { stats: { mental: 1 } },
+        message: '잔소리를 흘려보냈다 — 멘탈 +1',
+      },
+    ],
   },
   {
     id: 'talk_parent_strict',
     parentStrength: 'strict',
     description: '"이번에는 잘 봐야 한다. 11시까지는 자고."\n아빠가 책상을 한 번 둘러보고 방을 나간다.',
-    effects: { parentIntimacy: 1, stats: { academic: 1, mental: -1 } },
+    effects: { stats: { academic: 1, mental: -1 } },
     parentTag: 'gradeImprove',
-    message: '아빠의 기대 — 학업 +1, 멘탈 -1',
+    message: '아빠가 방을 둘러본다',
+    choices: [
+      {
+        label: '"알겠어요." 책상에 앉는다',
+        parentEffect: { baseDelta: 0.6, tag: 'keepPromise' },
+        effects: { stats: { academic: 1 } },
+        message: '기대에 부응하려 했다 — 학업 +1',
+        memorySlotDraft: {
+          category: 'growth', importance: 3, toneTag: 'resolve',
+          recallText: '아빠 말이 맞았다는 걸, 그땐 인정하기 싫었다.',
+        },
+      },
+      {
+        label: '"그만 좀 하세요." 쏘아붙인다',
+        parentEffect: { baseDelta: -1.0, tag: 'breakPromise' },
+        effects: { stats: { mental: 1 } },
+        message: '속내를 터뜨렸다 — 멘탈 +1',
+        resultText: '문이 닫히고, 집 안이 한동안 조용했다.',
+        memorySlotDraft: {
+          category: 'betrayal', importance: 3, toneTag: 'regret',
+          recallText: '그만하라 소리치던 밤, 방문이 쾅 닫혔다.',
+        },
+      },
+    ],
   },
   {
     id: 'talk_parent_resilience',
     parentStrength: 'resilience',
     description: '"피곤해 보인다. 그냥 자, 내일 또 있어."\n엄마가 스탠드를 끄고 문을 닫는다.',
-    effects: { parentIntimacy: 2, fatigue: -3 },
+    effects: { fatigue: -3 },
     parentTag: 'recoveryAction',
-    message: '엄마의 무심한 격려 — 피로 -3',
+    message: '엄마가 스탠드를 끈다',
+    choices: [
+      {
+        label: '"…그럴게요." 불 끄고 눕는다',
+        parentEffect: { baseDelta: 1.0, tag: 'recoveryAction' },
+        effects: { fatigue: -3 },
+        message: '푹 쉬었다 — 피로 -3',
+        memorySlotDraft: {
+          category: 'growth', importance: 3, toneTag: 'warm',
+          recallText: '그냥 자라던 그 한마디가 오래 마음에 남았다.',
+        },
+      },
+      {
+        label: '"조금만 더 할게요." 책상에 남는다',
+        parentEffect: { baseDelta: -0.4, tag: 'ignoreAdvice' },
+        effects: { stats: { academic: 1 }, fatigue: 1 },
+        message: '조금 더 버텼다 — 학업 +1, 피로 +1',
+      },
+    ],
   },
   {
     id: 'talk_parent_freedom',
     parentStrength: 'freedom',
     description: '"네가 알아서 해. 엄마는 네 결정 응원할게."\n식탁 너머로 잠깐 눈을 마주친다.',
-    effects: { parentIntimacy: 2, stats: { mental: 1 } },
+    effects: { stats: { mental: 1 } },
     parentTag: 'autonomyChoice',
-    message: '선택의 자유 — 멘탈 +1',
+    message: '엄마가 눈을 마주친다',
+    choices: [
+      {
+        label: '"내가 정했어요." 스스로 결정해 알린다',
+        parentEffect: { baseDelta: 1.2, tag: 'autonomyChoice' },
+        effects: { stats: { mental: 1 } },
+        message: '내 결정을 말했다 — 멘탈 +1',
+        memorySlotDraft: {
+          category: 'discovery', importance: 3, toneTag: 'resolve',
+          recallText: '내 길은 내가 정하겠다고 처음 입 밖에 냈다.',
+        },
+      },
+      {
+        label: '"그냥 엄마가 정해줘요." 미룬다',
+        parentEffect: { baseDelta: -1.5, tag: 'ignoreAdvice' },
+        effects: { fatigue: -1 },
+        message: '결정을 미뤘다 — 피로 -1',
+      },
+    ],
   },
 ];
 

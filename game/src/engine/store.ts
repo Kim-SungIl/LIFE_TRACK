@@ -7,7 +7,35 @@ import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
+import { PARENT_MINI_EVENTS } from './talkData';
 import { applyParentIntimacyDelta } from './parentIntimacy';
+
+// 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
+function applyVisibleTalkEffects(
+  state: GameState,
+  effects: { stats?: Partial<GameState['stats']>; fatigue?: number; money?: number } | undefined,
+): void {
+  if (!effects) return;
+  if (effects.stats) {
+    for (const [k, v] of Object.entries(effects.stats)) {
+      const key = k as keyof GameState['stats'];
+      state.stats[key] = Math.max(0, Math.min(100, state.stats[key] + (v as number)));
+    }
+  }
+  if (effects.fatigue) {
+    state.fatigue = Math.max(0, Math.min(100, state.fatigue + effects.fatigue));
+  }
+  if (effects.money) {
+    state.money = Math.round((state.money + effects.money) * 10) / 10;
+    if (state.money < 0) state.money = 0;
+  }
+}
+
+// 부모 미니이벤트 발동 기록(쿨다운/로테이션용) — id당 마지막 발동 주차만 유지.
+function recordParentEventFired(state: GameState, id: string): void {
+  const prev = (state.parentEventsFired ?? []).filter(f => f.id !== id);
+  state.parentEventsFired = [...prev, { id, week: state.totalWeeksPlayed ?? 0 }];
+}
 
 // 말걸기 결과 — 사전 결정 모델
 // - 'event': 이번 주 사전 결정에서 발동 + 풀에 가용 이벤트 있음 → 미니 이벤트 발동
@@ -67,10 +95,13 @@ interface GameStore {
   // 무한 클릭 가능 — 사전 결정에 따라 이벤트가 떨어지거나 잡담 한 줄
   talkToNpc: (npcId: string) => TalkActionResult;
   talkToHome: () => TalkActionResult;
+  // Phase 2A — 부모 ±선택지 이벤트의 선택 적용 (talkToHome이 띄운 choice 이벤트에 대해 호출)
+  resolveParentTalkChoice: (eventId: string, choiceIdx: number) => void;
   // ===== 개발 환경 한정 디버그 메서드 (DebugPanel에서 호출) =====
   debugAdvanceToYearEnd: () => void;
   debugSkipToEnding: () => void;
   debugSetStat: (key: 'academic' | 'social' | 'talent' | 'mental' | 'health', value: number) => void;
+  debugForceParentEvent: () => void;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -381,28 +412,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (s.parentEventPendingThisWeek) {
       const available = getAvailableHomeEvents(s);
       if (available.length > 0) {
-        const newState = cloneGameState(s);
         const ev = available[0];
-        if (ev.effects.stats) {
-          for (const [k, v] of Object.entries(ev.effects.stats)) {
-            const key = k as keyof typeof newState.stats;
-            newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (v as number)));
-          }
+        // Phase 2A — ±선택지 이벤트: 효과는 선택 시점(resolveParentTalkChoice)에 적용.
+        // 여기선 상태를 건드리지 않으므로 모달을 닫았다 다시 눌러도 같은 이벤트가 뜬다(선택 전 = 보류).
+        if (ev.choices && ev.choices.length > 0) {
+          return { kind: 'event', event: ev };
         }
-        if (ev.effects.fatigue) {
-          newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
-        }
-        if (ev.effects.money) {
-          newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
-          if (newState.money < 0) newState.money = 0;
-        }
+        // 레거시(선택지 없는) 이벤트: 기존처럼 즉시 적용 + 발동 기록.
+        const newState = cloneGameState(s);
+        applyVisibleTalkEffects(newState, ev.effects);
         if (ev.effects.parentIntimacy) {
           // 단일 진입점 통합 — 강점 반응 배율·구간 감쇠 적용 (직접 가산 금지)
-          // 이벤트별 parentTag로 주제에 맞는 배율 적용 (strict→gradeImprove, freedom→autonomyChoice 등)
           applyParentIntimacyDelta(newState, ev.effects.parentIntimacy, ev.parentTag ?? 'familyTime');
         }
+        applyMemorySlotFromMiniTalk(newState, ev.id, ev.memorySlotDraft);
+        recordParentEventFired(newState, ev.id);
         newState.actedWithParentThisWeek = true; // 부모와 상호작용 → 이번 주 평균 회귀 면제
-        newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
         newState.parentTalkPressure = 0;
         newState.parentEventPendingThisWeek = false;
         set({ state: newState });
@@ -414,6 +439,33 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const line = getHomeSmalltalk(newState);
     set({ state: newState });
     return { kind: 'smalltalk', line };
+  },
+
+  // Phase 2A — 부모 ±선택지 이벤트의 선택 적용(선택-후-적용).
+  // talkToHome이 효과 없이 이벤트만 띄우고, 사용자가 모달에서 고른 선택을 여기서 정산한다.
+  // parentEventPendingThisWeek 가드로 중복 클릭/이미 소비된 주를 방어.
+  resolveParentTalkChoice: (eventId, choiceIdx) => {
+    const s = get().state;
+    if (!s || !s.parentEventPendingThisWeek) return;
+    const ev = PARENT_MINI_EVENTS.find(e => e.id === eventId);
+    const choice = ev?.choices?.[choiceIdx];
+    if (!ev || !choice) return;
+    // 가용성 가드 — talkToHome과 대칭. 보유하지 않은 강점/쿨다운 중 이벤트가 stale·외부 호출로
+    // 정산되는 것을 방어(현재 UI 경로는 안전하나 단일 진입점 불변식을 코드로 강제).
+    if (!getAvailableHomeEvents(s).some(e => e.id === eventId)) return;
+
+    const newState = cloneGameState(s);
+    applyVisibleTalkEffects(newState, choice.effects);
+    if (choice.parentEffect) {
+      applyParentIntimacyDelta(newState, choice.parentEffect.baseDelta, choice.parentEffect.tag);
+    }
+    // 선택에 달린 회상 슬롯(있으면) → 학년말/엔딩 회상에 등장. sourceEventId당 1회(재발동해도 중복 방지).
+    applyMemorySlotFromMiniTalk(newState, ev.id, choice.memorySlotDraft, choiceIdx);
+    recordParentEventFired(newState, ev.id);
+    newState.actedWithParentThisWeek = true;
+    newState.parentTalkPressure = 0;
+    newState.parentEventPendingThisWeek = false;
+    set({ state: newState });
   },
 
   // ===== 디버그 메서드 (DebugPanel에서 호출, import.meta.env.DEV 가드는 컴포넌트 쪽에서) =====
@@ -452,6 +504,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!s) return;
     const clamped = Math.max(0, Math.min(100, value));
     set({ state: { ...s, stats: { ...s.stats, [key]: clamped } } });
+  },
+
+  // DEV 전용 — 다음 "가정에 말 걸기" 클릭에서 부모 미니이벤트를 즉시 발동시킨다.
+  // 기존 발동기록의 쿨다운을 풀어(week=-999) 두 강점 이벤트가 번갈아(로테이션) 뜨게 한다.
+  debugForceParentEvent: () => {
+    const s = get().state;
+    if (!s) return;
+    const newState = cloneGameState(s);
+    newState.parentEventPendingThisWeek = true;
+    newState.parentTalkPressure = 1;
+    newState.parentEventsFired = (newState.parentEventsFired ?? []).map(f => ({ ...f, week: -999 }));
+    set({ state: newState });
   },
 }));
 

@@ -76,13 +76,27 @@ export function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalk
   );
 }
 
+// Phase 2A: 부모 미니이벤트는 영구 1회가 아니라 쿨다운 후 재발동.
+// ±선택지로 하강압력을 주려면 같은 이벤트가 다시 떠야 하므로(긍정만 1회면 인플레),
+// parentEventsFired의 마지막 발동 주차로 쿨다운을 판정하고, 가장 오래전(또는 미발동) 이벤트를
+// 우선해 두 강점 이벤트가 자연스럽게 번갈아 나오게 한다(로테이션).
+export const PARENT_EVENT_COOLDOWN_WEEKS = 4;
+
+function lastFiredWeek(state: GameState, id: string): number {
+  const recs = (state.parentEventsFired ?? []).filter(f => f.id === id);
+  return recs.length ? Math.max(...recs.map(f => f.week)) : -Infinity;
+}
+
 export function getAvailableHomeEvents(state: GameState): MiniTalkEvent[] {
-  // 가정은 두 부모 강점 풀 합집합에서 픽업
-  return PARENT_MINI_EVENTS.filter(e =>
+  const now = state.totalWeeksPlayed ?? 0;
+  // 가정은 두 부모 강점 풀 합집합 — 쿨다운 지난 것만 가용
+  const avail = PARENT_MINI_EVENTS.filter(e =>
     e.parentStrength
     && state.parents.includes(e.parentStrength)
-    && !state.talkEventsFired.includes(e.id),
+    && now - lastFiredWeek(state, e.id) >= PARENT_EVENT_COOLDOWN_WEEKS,
   );
+  // 로테이션: 가장 오래전 발동(미발동 = -Infinity가 최우선) 순 → available[0]이 자연 교대
+  return avail.sort((a, b) => lastFiredWeek(state, a.id) - lastFiredWeek(state, b.id));
 }
 
 // ===== 부모 친밀도 회고 톤 (학년말 일기장 변주) =====

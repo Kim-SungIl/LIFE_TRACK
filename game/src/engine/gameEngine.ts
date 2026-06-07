@@ -100,6 +100,7 @@ export function createInitialState(
     talkEventsFired: [],
     npcEventPendingThisWeek: true,
     parentEventPendingThisWeek: true,
+    parentEventsFired: [],
   };
 }
 

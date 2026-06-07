@@ -41,6 +41,8 @@ export function migrateLoadedState(state: GameState): GameState {
     talkEventsFired: state.talkEventsFired ?? [],
     npcEventPendingThisWeek: state.npcEventPendingThisWeek ?? false,
     parentEventPendingThisWeek: state.parentEventPendingThisWeek ?? false,
+    // Phase 2A: 부모 미니이벤트 쿨다운 기록(없던 세이브는 빈 배열 → 즉시 재발동 가능)
+    parentEventsFired: state.parentEventsFired ?? [],
   };
 
   // 직렬화/clone에서 손실된 currentEvent의 함수 필드(condition 등) 복원
