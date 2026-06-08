@@ -426,6 +426,20 @@ body {
   .ye-stagger, .ye-cta { animation: none; opacity: 1; transform: none; }
 }
 
+/* 학년말 CG 갤러리 — 가로 스크롤-스냅 캐러셀(스와이프). 스크롤바만 숨김 */
+.ye-gallery {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;            /* Firefox */
+  -webkit-overflow-scrolling: touch;
+}
+.ye-gallery::-webkit-scrollbar { display: none; }   /* WebKit */
+.ye-gallery > * { scroll-snap-align: center; flex: 0 0 100%; }
+/* 여러 장일 때만 — 슬라이드를 좁혀(88%) 이웃 가장자리를 보이게(peek): "넘길 게 더 있다"를 정적으로 암시 */
+.ye-gallery-multi { gap: 10px; }
+.ye-gallery-multi > * { flex: 0 0 88%; }
+
 /* ===== 부모 선택 ===== */
 .parent-grid {
   display: grid;

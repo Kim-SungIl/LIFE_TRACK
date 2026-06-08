@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
 import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
@@ -32,8 +33,8 @@ const YEAR_SUBTITLES = [
 
 // 카테고리별 엠블럼(플레이스홀더) + 한글 라벨.
 // CG도 NPC 초상도 없는 기억의 최후 폴백 — 전용 아트 세트(P1b)가 나오면 emoji→이미지로 교체.
-// 색은 STAT_GRADES 색 언어와 통일(gold/green/amber/red/grey 계열). reconciliation은 growth(초록)와
-// 색이 겹치지 않게 청록 쪽으로 분리. failure ☔는 VS16 없는 코드포인트(구버전 기기 □ 깨짐 회피).
+// 색은 STAT_GRADES 색 언어와 통일. reconciliation은 growth(초록)와 겹치지 않게 청록으로 분리.
+// failure ☔는 VS16 없는 코드포인트(구버전 기기 □ 깨짐 회피).
 type CatInfo = { emoji: string; label: string; color: string };
 const CATEGORY: Record<MemoryCategory, CatInfo> = {
   courage:        { emoji: '🔥', label: '용기',     color: '#e0a45e' },
@@ -61,9 +62,85 @@ const TEXT_SHADOW = '0 1px 4px rgba(0,0,0,0.55)';
 // 세 이미지 타입(hero CG·NPC 초상·엠블럼)을 "바랜 일기장" 한 톤으로 묶는 공통 필터 — 패치워크 방지.
 const DIARY_FILTER = 'saturate(0.82) sepia(0.12) brightness(0.98)';
 const MAX_CARDS = 4;  // 회고는 "전부 나열"이 아니라 "추려보기" — 초과분은 한 줄로 암시
+// 갤러리도 동일 철학 — 너무 많은 CG를 넘기는 건 "감상"이 아니라 "작업"이 된다. 초과 CG는 썸네일 카드로 강등(유실X).
+const MAX_GALLERY = 5;
+
+type CgItem = { slot: MemorySlot; cg: string };
+
+// CG가 있는 기억들의 스와이프 갤러리 — 한 해에 CG가 여러 장이면 좌우로 넘겨본다.
+// 1장이면 단일 표시(점 없음), 2장+면 스크롤-스냅 캐러셀 + 하단 점 인디케이터. 자동진행 없음(넘김은 선택).
+function HeroGallery({ items }: { items: CgItem[] }) {
+  const [idx, setIdx] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const multi = items.length > 1;
+
+  // 슬라이드 폭(88%)≠컨테이너 폭이므로 scrollLeft/clientWidth 반올림은 부정확.
+  // 뷰포트 중앙에 가장 가까운 슬라이드를 실제 위치로 찾는다(peek/gap 무관하게 정확).
+  const onScroll = () => {
+    const el = ref.current;
+    if (!el) return;
+    const center = el.scrollLeft + el.clientWidth / 2;
+    let best = 0, bestDist = Infinity;
+    Array.from(el.children).forEach((k, i) => {
+      const kid = k as HTMLElement;
+      const d = Math.abs(kid.offsetLeft + kid.offsetWidth / 2 - center);
+      if (d < bestDist) { bestDist = d; best = i; }
+    });
+    setIdx(prev => (prev === best ? prev : best));
+  };
+  const goTo = (i: number) => {
+    const el = ref.current;
+    const kid = el?.children[i] as HTMLElement | undefined;
+    if (!el || !kid) return;
+    el.scrollTo({ left: kid.offsetLeft - (el.clientWidth - kid.offsetWidth) / 2, behavior: 'smooth' });
+  };
+
+  // 첫 진입 1회 nudge — 점만으론 "넘길 수 있음"이 안 보인다(기획자 3명 일치). 살짝 밀었다 되돌려 swipe 가능을 암시.
+  useEffect(() => {
+    if (!multi) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const el = ref.current;
+    if (!el) return;
+    const t1 = setTimeout(() => el.scrollTo({ left: 36, behavior: 'smooth' }), 650);
+    const t2 = setTimeout(() => el.scrollTo({ left: 0, behavior: 'smooth' }), 1150);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [multi]);
+
+  return (
+    <div style={{ ...PANEL, overflow: 'hidden', textAlign: 'left' }}>
+      <div ref={ref} className={multi ? 'ye-gallery ye-gallery-multi' : 'ye-gallery'} onScroll={multi ? onScroll : undefined}>
+        {items.map(({ slot, cg }) => (
+          <div key={slot.id}>
+            <img src={cg} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', objectPosition: 'center 30%', display: 'block', filter: DIARY_FILTER }}
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <div style={{ padding: '12px 16px 14px' }}>
+              <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic' }}>
+                {slot.recallText}
+              </div>
+              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                {`W${slot.week} · ${catOf(slot.category).label}`}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      {multi && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingBottom: 12 }}>
+          {items.map((_, i) => (
+            <button key={i} aria-label={`${i + 1}번째 장면 보기`} onClick={() => goTo(i)} style={{
+              width: i === idx ? 18 : 6, height: 6, borderRadius: 3, border: 'none', padding: 0, cursor: 'pointer',
+              background: i === idx ? 'var(--accent-soft)' : 'rgba(255,255,255,0.25)',
+              transition: 'width 0.2s, background 0.2s',
+            }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // 기억 썸네일 — NPC 초상(있으면) → 카테고리 엠블럼. (작은 썸네일에선 줄인 CG가 오히려 판독 어려워 제외;
-// CG는 표제(hero)의 큰 자리에서만 사용). 초상/엠블럼 모두 동일 색 링 + 동일 바랜 필터로 한 시스템처럼.
+// CG는 갤러리의 큰 자리에서만 사용). 초상/엠블럼 모두 동일 색 링 + 동일 바랜 필터로 한 시스템처럼.
 function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; size: number }) {
   const npc = slot.npcIds?.[0];
   const radius = Math.round(size * 0.15);
@@ -87,10 +164,9 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
   );
 }
 
-// v1.4 학년말 회고 (Y1~Y6) — phase === 'year-end'
+// v1.5 학년말 회고 (Y1~Y6) — phase === 'year-end'
 //   P0: 스크림·라벨 정리·부모줄 부활·정직한 CTA
-//   P1: 표제(최고 importance) 기억에 CG 있으면 hero로 크게, 나머지는 썸네일 카드.
-//       CG 없으면 NPC 초상→카테고리 엠블럼 폴백. (CG는 깔리는 대로 자동 hero 승격)
+//   P1: CG 있는 기억 = 스와이프 갤러리(여러 장 넘겨보기), 나머지 = 초상/엠블럼 썸네일 카드.
 export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, bgProps, onAdvance }: YearEndScreenProps) {
   const yearName = YEAR_NAMES[year - 1] || `${year}학년`;
   const subtitle = YEAR_SUBTITLES[year - 1] || '이 한 해를 조용히 돌아본다';
@@ -104,21 +180,30 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
   const [milestoneMain, ...milestoneRest] = (milestone?.summaryText || '').split('\n');
   const milestoneExtra = milestoneRest.join(' ').trim();
 
-  // 표제 = 그 해 가장 중요한 기억. importance 동률 시 빠른 주차 우선(결정적 tiebreaker).
-  const byImportance = [...slotsThisYear].sort((a, b) => (b.importance - a.importance) || (a.week - b.week));
-  const anchor = byImportance[0] ?? null;
-  const heroCg = anchor ? resolveEventCgUrl(anchor.sourceEventId, anchor.choiceIndex, gender, year) : null;
-  // hero로 빠진 표제는 카드 목록에서 제외, 나머지는 시간순. 카드는 최대 MAX_CARDS개만 노출.
-  const cardSlots = (heroCg && anchor ? slotsThisYear.filter(s => s.id !== anchor.id) : slotsThisYear)
-    .sort((a, b) => a.week - b.week);
+  // CG 있는 기억 → 갤러리. 정렬은 하이브리드: 1번=대표(최고 importance, 첫 장만 봐도 그 해의 핵심),
+  // 2번~ = 시간순(그 해를 다시 걷는 흐름). 기획자 3명 합의 — 중요도 클로저 + 타임라인 둘 다 만족.
+  const cgAll: CgItem[] = slotsThisYear
+    .map(s => ({ slot: s, cg: resolveEventCgUrl(s.sourceEventId, s.choiceIndex, gender, year) }))
+    .filter((x): x is CgItem => !!x.cg);
+  const anchor = cgAll.length
+    ? [...cgAll].sort((a, b) => (b.slot.importance - a.slot.importance) || (a.slot.week - b.slot.week))[0]
+    : undefined;
+  const ordered: CgItem[] = anchor
+    ? [anchor, ...cgAll.filter(x => x.slot.id !== anchor.slot.id).sort((a, b) => a.slot.week - b.slot.week)]
+    : [];
+  // 상한 — 초과 CG는 버리지 않고 썸네일 카드로 강등(아래 cardSlots가 갤러리에 없는 기억을 자동 흡수).
+  const galleryItems = ordered.slice(0, MAX_GALLERY);
+  const galleryIds = new Set(galleryItems.map(x => x.slot.id));
+  // 나머지(CG 없음 + 갤러리 초과 CG) → 썸네일 카드(시간순, 최대 MAX_CARDS).
+  const cardSlots = slotsThisYear.filter(s => !galleryIds.has(s.id)).sort((a, b) => a.week - b.week);
   const shownCards = cardSlots.slice(0, MAX_CARDS);
   const hiddenCount = cardSlots.length - shownCards.length;
 
   const hasScenes = slotsThisYear.length > 0;
-  const tHero = 420;
-  const tCards = heroCg ? 560 : 420;
+  const tGallery = 420;
+  const tCards = galleryItems.length > 0 ? 560 : 420;
   const tClosing = hasScenes ? 700 : 420;
-  // CTA는 콘텐츠를 다 읽을 즈음 조용히 등장 — 카드 수에 비례(고정값이면 기억 많을 때 너무 일찍 뜸). 상한 클램프.
+  // CTA는 콘텐츠를 다 읽을 즈음 조용히 등장 — 카드 수 비례(고정값이면 기억 많을 때 너무 일찍 뜸). 상한 클램프.
   const tCta = Math.min(tClosing + 600 + shownCards.length * 140, 2600);
 
   return (
@@ -131,19 +216,10 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
           {subtitle}
         </div>
 
-        {/* 표제 기억 — CG 있을 때만 hero로 크게 */}
-        {heroCg && anchor && (
-          <div className="ye-stagger" style={{ ...PANEL, animationDelay: `${tHero}ms`, padding: 0, marginBottom: 14, overflow: 'hidden', textAlign: 'left' }}>
-            <img src={heroCg} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', objectPosition: 'center 30%', display: 'block', filter: DIARY_FILTER }}
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <div style={{ padding: '12px 16px 14px' }}>
-              <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                {anchor.recallText}
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 6 }}>
-                {`W${anchor.week} · ${catOf(anchor.category).label}`}
-              </div>
-            </div>
+        {/* CG 기억 갤러리 — 여러 장이면 스와이프 */}
+        {galleryItems.length > 0 && (
+          <div className="ye-stagger" style={{ animationDelay: `${tGallery}ms`, marginBottom: 14 }}>
+            <HeroGallery items={galleryItems} />
           </div>
         )}
 
