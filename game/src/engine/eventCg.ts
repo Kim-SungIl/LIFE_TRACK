@@ -18,10 +18,12 @@ export function resolveEventCgRelPaths(
 ): string[] {
   const g = gender === 'male' ? 'm' : 'f';
   const sl = getSchoolLevel(year);
+  // 두 소비처(결과화면/학년말)가 동일 정책을 쓰도록 choiceIndex 정규화를 resolver 안에 둔다.
+  const ci = Number.isInteger(choiceIndex) ? choiceIndex : 0;
   const build = (dir: string): string[] => [
-    `${dir}/${eventId}_c${choiceIndex}_${g}.png`,
+    `${dir}/${eventId}_c${ci}_${g}.png`,
     `${dir}/${eventId}_${g}.png`,
-    `${dir}/${eventId}_c${choiceIndex}.png`,
+    `${dir}/${eventId}_c${ci}.png`,
     `${dir}/${eventId}.png`,
   ];
   return [...build(sl), ...build('common')].filter(rel => CG_MANIFEST.has(rel));
