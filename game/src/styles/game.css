@@ -408,6 +408,24 @@ body {
   }
 }
 
+/* ===== 학년말 회고 — 블록 스태거 등장 + 늦고 조용한 CTA ===== */
+/* 기억이 한 박자씩 "떠오르고", 넘기는 버튼은 다 읽은 뒤 조용히 켜진다 */
+@keyframes ye-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ye-cta-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ye-stagger { animation: ye-rise 0.6s cubic-bezier(0.2,0.8,0.2,1) both; }
+.ye-cta     { animation: ye-cta-in 1.2s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* 동작을 끄면 모두 즉시 보이게 — CTA가 영영 안 켜지는 함정 방지 */
+  .ye-stagger, .ye-cta { animation: none; opacity: 1; transform: none; }
+}
+
 /* ===== 부모 선택 ===== */
 .parent-grid {
   display: grid;
