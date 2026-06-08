@@ -122,6 +122,7 @@ export function YearEndScreen({ year, memorySlots, milestoneScenes, stats, bgPro
           className="btn ye-cta"
           style={{
             maxWidth: 280,
+            margin: '0 auto',
             background: 'rgba(224,138,91,0.12)',
             border: '1px solid var(--accent-soft)',
             color: 'var(--accent-soft)',
