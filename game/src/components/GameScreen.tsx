@@ -148,6 +148,7 @@ export function GameScreen() {
     return (
       <YearEndScreen
         year={state.year}
+        gender={state.gender}
         memorySlots={state.memorySlots}
         milestoneScenes={state.milestoneScenes}
         stats={state.stats}
