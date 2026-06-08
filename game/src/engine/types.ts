@@ -68,9 +68,12 @@ export interface GameState {
   parentTalkPressure: number;         // 0~1, 부모 미니 이벤트 누적 확률 (매주 +0.05)
   parentIntimacy: number;             // 0~100, 숨겨진 부모 친밀도 (UI 미표시, 회고 톤에 영향)
   actedWithParentThisWeek?: boolean;  // 이번 주 부모 관련 행동(활동/대화) 여부 — 평균 회귀 면제용(매주 리셋)
-  talkEventsFired: string[];          // 발동된 미니 이벤트 ID — 1회 발동 보장(A안)
+  talkEventsFired: string[];          // 발동된 미니 이벤트 ID — 1회 발동 보장(A안). NPC 전용(부모는 parentEventsFired로 이관)
   npcEventPendingThisWeek: boolean;   // 이번 주 NPC 미니 이벤트 사전 결정 결과
   parentEventPendingThisWeek: boolean;// 이번 주 가정 미니 이벤트 사전 결정 결과
+  // Phase 2A: 부모 미니 이벤트는 영구 1회가 아니라 쿨다운 후 재발동(±선택지로 하강압력 부여).
+  // id별 마지막 발동 totalWeeksPlayed를 기록해 쿨다운/로테이션 판정. (없으면 미발동 취급)
+  parentEventsFired?: { id: string; week: number }[];
 }
 
 // 활성 버프 (shopSystem에서도 사용)

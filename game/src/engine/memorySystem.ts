@@ -135,6 +135,7 @@ export function applyMemorySlotFromMiniTalk(
   state: GameState,
   eventId: string,
   draft: MemorySlotDraft | undefined,
+  choiceIndex = 0,  // Phase 2A: ±선택지 이벤트는 고른 선택 인덱스 기록(분석/디버그용). 기본 0(레거시 무선택).
 ): void {
   if (!draft) return;
   if (draft.importance < MIN_IMPORTANCE_TO_SLOT) return;
@@ -154,7 +155,7 @@ export function applyMemorySlotFromMiniTalk(
     week: state.week,
     year: state.year,
     sourceEventId: eventId,
-    choiceIndex: 0,
+    choiceIndex,
     recallText: draft.recallText,
     npcIds: draft.npcIds,
     importance: draft.importance,

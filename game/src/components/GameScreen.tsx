@@ -23,7 +23,8 @@ export function GameScreen() {
   // 액션은 Zustand에서 안정 참조라, npcActivityMap만 바뀔 땐 shallow-equal → 리렌더 스킵.
   const {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
-    advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome, setPhase,
+    advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
+    resolveParentTalkChoice, setPhase,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     setWeekendChoices: s.setWeekendChoices,
@@ -36,6 +37,7 @@ export function GameScreen() {
     buyItem: s.buyItem,
     talkToNpc: s.talkToNpc,
     talkToHome: s.talkToHome,
+    resolveParentTalkChoice: s.resolveParentTalkChoice,
     setPhase: s.setPhase,
   })));
 
@@ -240,6 +242,7 @@ export function GameScreen() {
       onSetRoutine={setRoutine}
       onTalkNpc={talkToNpc}
       onTalkHome={talkToHome}
+      onResolveParentChoice={resolveParentTalkChoice}
       onBuyItem={buyItem}
       onConfirmWeek={(activities, npcChoices) => {
         if (state.isVacation) setVacationChoices(activities);

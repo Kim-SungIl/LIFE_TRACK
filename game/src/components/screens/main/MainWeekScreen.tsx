@@ -27,12 +27,13 @@ type Props = {
   onSetRoutine: (slot2: string | null, slot3: string | null) => void;
   onTalkNpc: (npcId: string) => TalkActionResult;
   onTalkHome: () => TalkActionResult;
+  onResolveParentChoice: (eventId: string, choiceIdx: number) => void;
   onBuyItem: (item: ShopItem, npcId?: string) => void;
   // 주 확정 — 선택/루틴 choice 와 NPC 동행을 store 에 반영하고 주간 결산으로 전환 (GameScreen 오케스트레이션)
   onConfirmWeek: (activities: string[], npcChoices: Record<string, string>) => void;
 };
 
-export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onBuyItem, onConfirmWeek }: Props) {
+export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek }: Props) {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
@@ -290,6 +291,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         <MiniTalkModal
           result={miniTalkResult}
           year={state.year}
+          onSelectChoice={(idx) => onResolveParentChoice(miniTalkResult.id, idx)}
           onDismiss={() => setMiniTalkResult(null)}
           onCloseAll={() => { setMiniTalkResult(null); setNpcDetailFor(null); setShowHomeModal(false); }}
         />

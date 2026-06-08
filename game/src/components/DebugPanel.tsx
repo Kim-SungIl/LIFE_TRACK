@@ -13,7 +13,7 @@ const STAT_LABELS: Record<StatKey, string> = {
 export function DebugPanel() {
   const [open, setOpen] = useState(false);
   const state = useGameStore(s => s.state);
-  const { debugAdvanceToYearEnd, debugSkipToEnding, debugSetStat } = useGameStore.getState();
+  const { debugAdvanceToYearEnd, debugSkipToEnding, debugSetStat, debugForceParentEvent } = useGameStore.getState();
 
   if (!state) return null;
 
@@ -62,6 +62,7 @@ export function DebugPanel() {
       <div style={{ fontSize: '0.62rem', color: '#aaa', marginBottom: 4 }}>페이즈 점프</div>
       <button style={btnStyle} onClick={debugAdvanceToYearEnd}>▶ 현재 학년 종료 (year-end)</button>
       <button style={btnStyle} onClick={debugSkipToEnding}>🏁 엔딩으로 (Y7 결산)</button>
+      <button style={btnStyle} onClick={debugForceParentEvent}>👪 부모 이벤트 강제 (다음 집 클릭)</button>
 
       <div style={{ fontSize: '0.62rem', color: '#aaa', margin: '8px 0 4px' }}>스탯 빠른 설정</div>
       {(Object.keys(state.stats) as StatKey[]).map(key => (
