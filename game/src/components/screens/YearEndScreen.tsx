@@ -31,22 +31,23 @@ const YEAR_SUBTITLES = [
   '입시가 가까워진 해를 돌아본다',          // Y6
 ];
 
-// 카테고리별 엠블럼(플레이스홀더) + 한글 라벨.
-// CG도 NPC 초상도 없는 기억의 최후 폴백 — 전용 아트 세트(P1b)가 나오면 emoji→이미지로 교체.
-// 색은 STAT_GRADES 색 언어와 통일. reconciliation은 growth(초록)와 겹치지 않게 청록으로 분리.
-// failure ☔는 VS16 없는 코드포인트(구버전 기기 □ 깨짐 회피).
-type CatInfo = { emoji: string; label: string; color: string };
+// 카테고리별 엠블럼(전용 아트 P1b) + 한글 라벨.
+// CG도 NPC 초상도 없는 기억의 최후 폴백 이미지. art = images/emblems/{key}.png (4:5, 480×600).
+// emoji는 art 로드 실패 시 폴백(안전망) + 라벨 보조. 색은 STAT_GRADES 색 언어와 통일.
+// reconciliation은 growth(초록)와 겹치지 않게 청록으로 분리. failure ☔는 VS16 없는 코드포인트(구버전 □ 회피).
+type CatInfo = { emoji: string; label: string; color: string; art: string };
+const EMB = (key: string): string => `${import.meta.env.BASE_URL}images/emblems/${key}.png`;
 const CATEGORY: Record<MemoryCategory, CatInfo> = {
-  courage:        { emoji: '🔥', label: '용기',     color: '#e0a45e' },
-  betrayal:       { emoji: '💔', label: '상처',     color: '#d96458' },
-  reconciliation: { emoji: '🤝', label: '화해',     color: '#6fa890' },
-  failure:        { emoji: '☔', label: '실패',     color: '#7c89a8' },
-  discovery:      { emoji: '💡', label: '깨달음',   color: '#e0b354' },
-  growth:         { emoji: '🌱', label: '성장',     color: '#8fb573' },
-  bypass:         { emoji: '💸', label: '우회',     color: '#a89888' },
-  unspoken_debt:  { emoji: '✉️', label: '말없는 빚', color: '#caa17a' },
+  courage:        { emoji: '🔥', label: '용기',     color: '#e0a45e', art: EMB('courage') },
+  betrayal:       { emoji: '💔', label: '상처',     color: '#d96458', art: EMB('betrayal') },
+  reconciliation: { emoji: '🤝', label: '화해',     color: '#6fa890', art: EMB('reconciliation') },
+  failure:        { emoji: '☔', label: '실패',     color: '#7c89a8', art: EMB('failure') },
+  discovery:      { emoji: '💡', label: '깨달음',   color: '#e0b354', art: EMB('discovery') },
+  growth:         { emoji: '🌱', label: '성장',     color: '#8fb573', art: EMB('growth') },
+  bypass:         { emoji: '💸', label: '우회',     color: '#a89888', art: EMB('bypass') },
+  unspoken_debt:  { emoji: '✉️', label: '말없는 빚', color: '#caa17a', art: EMB('unspoken_debt') },
 };
-const CATEGORY_FALLBACK: CatInfo = { emoji: '🕊️', label: '기억', color: '#a89888' };
+const CATEGORY_FALLBACK: CatInfo = { emoji: '🕊️', label: '기억', color: '#a89888', art: EMB('memory') };
 // 레거시/마이그레이션 세이브에 미지 카테고리가 들어와도 화면 전체가 죽지 않게 폴백.
 const catOf = (c: string): CatInfo => CATEGORY[c as MemoryCategory] ?? CATEGORY_FALLBACK;
 
@@ -169,14 +170,26 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
       </div>
     );
   }
+  // 전용 엠블럼 아트(4:5). 로드 실패 시 이모지로 폴백(안전망 유지).
   return (
     <div style={{
-      flexShrink: 0, width: size, height: Math.round(size * 1.25), borderRadius: radius,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: `${cat.color}22`, boxShadow: `0 0 0 1.5px ${cat.color}88`,
-      fontSize: Math.round(size * 0.46), filter: toneFilter(slot.toneTag),
+      position: 'relative', flexShrink: 0, width: size, height: Math.round(size * 1.25), borderRadius: radius,
+      overflow: 'hidden', background: `${cat.color}22`, boxShadow: `0 0 0 1.5px ${cat.color}88`,
+      filter: toneFilter(slot.toneTag),
     }}>
-      {cat.emoji}
+      <img src={cat.art} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+        onError={e => {
+          const img = e.currentTarget;
+          img.style.display = 'none';
+          const fb = img.nextElementSibling as HTMLElement | null;
+          if (fb) fb.style.display = 'flex';
+        }} />
+      <div style={{
+        display: 'none', position: 'absolute', inset: 0,
+        alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.46),
+      }}>
+        {cat.emoji}
+      </div>
     </div>
   );
 }
