@@ -1,7 +1,7 @@
 import { GameState } from '../../engine/types';
-import { LOCATION_GRADIENTS, DEFAULT_GRADIENT, getEventBackground, getSchoolLevel } from '../../engine/backgrounds';
+import { LOCATION_GRADIENTS, DEFAULT_GRADIENT, getEventBackground } from '../../engine/backgrounds';
 import { characterStagePrefix } from '../../engine/characterAssets';
-import { CG_MANIFEST } from '../../cg-manifest.generated';
+import { resolveEventCgRelPaths } from '../../engine/eventCg';
 import { breakSentences, EventResultData } from './shared';
 
 interface EventResultScreenProps {
@@ -46,22 +46,11 @@ export function EventResultScreen({
   // 각 이벤트 파일명으로 사본 저장하는 정책.
   const eventId = resultEvent?.id;
   const ci = eventResultData.choiceIndex ?? 0;
-  const genderSuffix = gender === 'male' ? 'm' : 'f';
-  const schoolLevel = getSchoolLevel(year);
-  // manifest 키는 BASE prefix 없는 events/ 이하 상대경로 (예: 'elementary/foo_c0_m.png').
-  // 후보를 manifest로 1차 필터링해 자산 부재 시 8개 직렬 404 비용을 제거.
-  const buildCandidates = (dir: string): string[] => eventId ? [
-    `${dir}/${eventId}_c${ci}_${genderSuffix}.png`,
-    `${dir}/${eventId}_${genderSuffix}.png`,
-    `${dir}/${eventId}_c${ci}.png`,
-    `${dir}/${eventId}.png`,
-  ] : [];
-  const eventImgCandidates: string[] = [
-    ...buildCandidates(schoolLevel),
-    ...buildCandidates('common'),
-  ]
-    .filter(rel => CG_MANIFEST.has(rel))
-    .map(rel => `${BASE}images/events/${rel}`);
+  // CG 후보 해석은 eventCg.ts 공통 함수로 위임 — YearEndScreen 썸네일과 동일 폴백 정책 공유.
+  // 매니페스트로 1차 필터링된 상대경로를 URL로 변환(자산 부재 시 직렬 404 비용 제거).
+  const eventImgCandidates: string[] = eventId
+    ? resolveEventCgRelPaths(eventId, ci, gender, year).map(rel => `${BASE}images/events/${rel}`)
+    : [];
   const eventImgPrimary = eventImgCandidates[0] ?? null;
 
   // CG 정상: 그라데이션 → CG 페이드인 (PR #76 — 모바일에서 fallback 깜빡임 회피)
