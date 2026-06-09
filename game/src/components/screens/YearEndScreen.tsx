@@ -196,12 +196,20 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
   const galleryIds = new Set(galleryItems.map(x => x.slot.id));
   // 나머지(CG 없음 + 갤러리 초과 CG) → 썸네일 카드(시간순, 최대 MAX_CARDS).
   const cardSlots = slotsThisYear.filter(s => !galleryIds.has(s.id)).sort((a, b) => a.week - b.week);
-  const shownCards = cardSlots.slice(0, MAX_CARDS);
-  const hiddenCount = cardSlots.length - shownCards.length;
+  // CG 없는 해(Y2~Y6 현 상태)엔 갤러리=focal이 없어 카드만 나열돼 밋밋하다.
+  // → 대표 기억(최고 importance, 동률이면 이른 주)을 큰 hero로 승격해 "그 해의 한 장면"을 만든다.
+  // 갤러리가 있으면 그게 이미 focal이므로 승격하지 않음(중복 강조 방지).
+  const heroCard = galleryItems.length === 0 && cardSlots.length > 0
+    ? [...cardSlots].sort((a, b) => (b.importance - a.importance) || (a.week - b.week))[0]
+    : undefined;
+  const listSlots = heroCard ? cardSlots.filter(s => s.id !== heroCard.id) : cardSlots;
+  const shownCards = listSlots.slice(0, MAX_CARDS);
+  const hiddenCount = listSlots.length - shownCards.length;
 
   const hasScenes = slotsThisYear.length > 0;
-  const tGallery = 420;
-  const tCards = galleryItems.length > 0 ? 560 : 420;
+  const hasFocal = galleryItems.length > 0 || !!heroCard;  // 갤러리 또는 hero 카드
+  const tGallery = 420;  // focal 슬롯(갤러리/hero) 공통 등장 타이밍
+  const tCards = hasFocal ? 560 : 420;
   const tClosing = hasScenes ? 700 : 420;
   // CTA는 콘텐츠를 다 읽을 즈음 조용히 등장 — 카드 수 비례(고정값이면 기억 많을 때 너무 일찍 뜸). 상한 클램프.
   const tCta = Math.min(tClosing + 600 + shownCards.length * 140, 2600);
@@ -220,6 +228,21 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
         {galleryItems.length > 0 && (
           <div className="ye-stagger" style={{ animationDelay: `${tGallery}ms`, marginBottom: 14 }}>
             <HeroGallery items={galleryItems} />
+          </div>
+        )}
+
+        {/* CG 없는 해 대표 기억 — hero 카드(큰 초상/엠블럼 focal). 갤러리 없을 때만 */}
+        {heroCard && (
+          <div className="ye-stagger" style={{ ...PANEL, animationDelay: `${tGallery}ms`, padding: '22px 20px 20px', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              <MemoryThumb slot={heroCard} year={year} size={104} />
+            </div>
+            <div style={{ fontSize: '1rem', color: 'var(--text-primary)', lineHeight: 1.7, fontStyle: 'italic', marginTop: 16 }}>
+              {heroCard.recallText}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 8 }}>
+              {`W${heroCard.week} · ${catOf(heroCard.category).label}`}
+            </div>
           </div>
         )}
 
