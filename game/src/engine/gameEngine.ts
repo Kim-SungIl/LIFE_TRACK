@@ -6,7 +6,7 @@ import { generateExamResult, generateMockExamResult, generateSuneungResult, getE
 import { seededRandom, hashInitialState } from './rng';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
-import { applyParentIntimacyDelta, applyParentMeanReversion } from './parentIntimacy';
+import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
 
@@ -101,6 +101,7 @@ export function createInitialState(
     npcEventPendingThisWeek: true,
     parentEventPendingThisWeek: true,
     parentEventsFired: [],
+    parentPraiseYears: [],
   };
 }
 
@@ -828,6 +829,28 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
         log.messages.push(`시험 결과에 기분이 좋아졌다! (멘탈 +${examResult.mentalDelta})`);
       } else if (examResult.mentalDelta < 0) {
         log.messages.push(`시험 결과에 기분이 가라앉았다... (멘탈 ${examResult.mentalDelta})`);
+      }
+    }
+
+    // 시험 결과 → 부모 친밀도 약연동 (Phase 2B §3.3, 단일 진입점).
+    // 주의: 평균회귀(5b)와 actedWithParentThisWeek 리셋이 이미 끝난 지점이라 여기선 델타만 적용한다.
+    //       (여기서 플래그를 세팅하면 리셋 이후라 다음 주 회귀가 잘못 면제된다. 시험은 수동적 신호라 면제 대상 아님.)
+    const examEffect = examParentEffect(examResult);
+    if (examEffect) {
+      applyParentIntimacyDelta(newState, examEffect.baseDelta, examEffect.tag);
+
+      // B2: strict + 뚜렷한 성적 향상 → 연 1회 어드밴티지(친밀도와 별개의 멘탈 버프 + 서사).
+      //     "신뢰·책임으로 가까워지는" strict 부모가 노력에 드물게 보답하는 순간.
+      const praiseYears = (newState.parentPraiseYears ??= []);
+      const topTier = (examResult.rank != null && examResult.rank <= 5)
+        || (examResult.mockGrade != null && examResult.mockGrade <= 2)
+        || (examResult.schoolLevel === 'elementary' && examResult.average >= 85);
+      if (newState.parents.includes('strict') && examEffect.tag === 'gradeImprove'
+          && topTier && !praiseYears.includes(newState.year)) {
+        newState.stats.mental = Math.min(100, newState.stats.mental + 2);
+        log.statChanges.mental = (log.statChanges.mental ?? 0) + 2;
+        praiseYears.push(newState.year);
+        log.messages.push('아빠가 성적표를 한참 보더니, 드물게 "잘했다"고 했다. (멘탈 +2)');
       }
     }
   } else {

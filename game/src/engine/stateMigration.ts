@@ -43,6 +43,8 @@ export function migrateLoadedState(state: GameState): GameState {
     parentEventPendingThisWeek: state.parentEventPendingThisWeek ?? false,
     // Phase 2A: 부모 미니이벤트 쿨다운 기록(없던 세이브는 빈 배열 → 즉시 재발동 가능)
     parentEventsFired: state.parentEventsFired ?? [],
+    // Phase 2B: strict 성적향상 어드밴티지 연간 가드
+    parentPraiseYears: state.parentPraiseYears ?? [],
   };
 
   // 직렬화/clone에서 손실된 currentEvent의 함수 필드(condition 등) 복원
