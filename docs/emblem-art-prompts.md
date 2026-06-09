@@ -20,9 +20,14 @@ GPT(이미지 생성)로 병렬 제작하기 위한 프롬프트/스펙이다.
 - 코드가 박스 위에 **카테고리 색 링**(1.5px)과 옅은 배경 틴트를 그린다 → 아트에 테두리·외곽선 불필요
 - **공통 필터가 코드에서 입혀진다:** `saturate(0.82) sepia(0.12) brightness(0.98)`
   = "바랜 일기장" 톤. 모든 기억 이미지(CG·초상·엠블럼)를 한 톤으로 묶기 위함.
-  → **원본은 최종보다 채도·명도를 15~20% 높게** 그려라(필터가 깎아낸다). 너무 차분하게 그리면 인게임에서 칙칙해짐.
+  → 이 페이드는 **코드가** 입힌다. 원본은 게임 기본 화풍(아래)대로 **clean anime + slightly muted tones**로 그리고,
+    **수채화·종이 텍스처·미리 빛바램을 넣지 마라**(이중으로 칙칙해짐). 필터가 알아서 일기장 톤을 만든다.
 
 ### 핵심 디자인 결정
+- **화풍은 게임 SSOT를 그대로 따른다 — anime-style illustration + clean thin uniform lineart + soft cel-shading
+  (2~3 layers) + semi-realistic(not chibi) + slightly muted/soft pastel tones + soft even lighting(방향광 X).**
+  (`character-prompt-spec.md` §1 Global Style Anchor / `event-cg-prompts-y1.md` 공통 스타일과 동일해야
+  같은 회고 화면의 CG·초상 옆에서 안 튄다. **여기서 화풍이 어긋나면 그 두 문서가 우선.**)
 - **풀-블리드 4:5 일러스트**로 제작(투명 아이콘 ❌). 가운데 덩그러니 아이콘 하나면 104px hero에서 허전하다.
 - **단일 상징 모티프 + 부드러운 톤 배경**. 48px로 줄여도 뭉개지지 않게 모티프는 크게(프레임 높이의 55~65%).
 - **얼굴·글자·숫자·로고 금지.** 사람 형상은 실루엣/손 정도까지만(특정 캐릭터로 읽히면 안 됨).
@@ -35,15 +40,18 @@ GPT(이미지 생성)로 병렬 제작하기 위한 프롬프트/스펙이다.
 A single symbolic emblem illustration for a memory category in a calm Korean
 coming-of-age life-sim game's year-end reflection screen.
 
-Style: soft muted watercolor blended with gentle colored-pencil texture, warm
-"old diary / pressed-memory" mood, subtle paper grain, soft inner vignette in the
-emblem's signature hue, gentle light from upper-left, no hard outlines.
+Style: anime-style illustration matching a Korean visual-novel game — clean thin
+uniform lineart, soft cel-shading (2~3 smooth layers), semi-realistic anime
+(not chibi, not overly stylized), slightly muted natural tones, soft even lighting
+with no strong directional shadows. (Must match the game's CG / character art.)
 Composition: ONE centered focal motif filling ~60% of frame height, calm negative
-space around it, full-bleed tonal background wash in the signature color.
+space around it, full-bleed soft pastel background wash in the signature color.
 Framing: vertical 4:5 portrait, motif readable even when shrunk to a 48px thumbnail.
-Palette: built around {SIGNATURE_COLOR} ({COLOR_NAME}); render ~15% more saturated
-and brighter than final (a desaturating sepia filter is applied later).
+Palette: built around {SIGNATURE_COLOR} ({COLOR_NAME}), slightly muted natural tones.
 Absolutely NO text, NO numbers, NO letters, NO logos, NO faces, NO watermark.
+Do NOT add watercolor / colored-pencil / paper texture, and do NOT pre-fade the
+image — the faded "old diary" look is applied in-engine by a sepia filter; keep the
+source clean anime so it sits cohesively next to the anime CGs and portraits.
 Mood keyword: {MOOD}. Motif: {MOTIF}.
 ```
 
@@ -72,15 +80,18 @@ Mood keyword: {MOOD}. Motif: {MOTIF}.
 ```
 A single symbolic emblem illustration for a memory category in a calm Korean
 coming-of-age life-sim game's year-end reflection screen.
-Style: soft muted watercolor blended with gentle colored-pencil texture, warm
-"old diary / pressed-memory" mood, subtle paper grain, soft inner vignette in the
-emblem's signature hue, gentle light from upper-left, no hard outlines.
+Style: anime-style illustration matching a Korean visual-novel game — clean thin
+uniform lineart, soft cel-shading (2~3 smooth layers), semi-realistic anime
+(not chibi, not overly stylized), slightly muted natural tones, soft even lighting
+with no strong directional shadows. (Must match the game's CG / character art.)
 Composition: ONE centered focal motif filling ~60% of frame height, calm negative
-space around it, full-bleed tonal background wash in the signature color.
+space around it, full-bleed soft pastel background wash in the signature color.
 Framing: vertical 4:5 portrait, motif readable even when shrunk to a 48px thumbnail.
-Palette: built around #8fb573 (tender new-leaf green); render ~15% more saturated
-and brighter than final (a desaturating sepia filter is applied later).
+Palette: built around #8fb573 (tender new-leaf green), slightly muted natural tones.
 Absolutely NO text, NO numbers, NO letters, NO logos, NO faces, NO watermark.
+Do NOT add watercolor / colored-pencil / paper texture, and do NOT pre-fade the
+image — the faded "old diary" look is applied in-engine by a sepia filter; keep the
+source clean anime so it sits cohesively next to the anime CGs and portraits.
 Mood keyword: hopeful, tender. Motif: a small sprout just rising from a clay pot.
 ```
 
