@@ -185,7 +185,7 @@ const FALLBACK_SEEDS: Record<number, string> = {
   1: '초등학교의 마지막 날, 운동장은 여전히 시끄러웠다.',
   2: '처음으로 입은 교복이 조금 컸던 중1의 봄.',
   3: '중2는 그저 지나갔다. 돌아보면 길었던 해.',
-  4: '고입 원서를 쓰던 손끝이 차가웠다.',
+  4: '고등학교로 넘어가는 길목에서, 손끝이 까닭 없이 차가웠다.',
   5: '새 교복, 새 반, 새 시간표. 낯설고 묘하게 설렜다.',
   6: '고2의 여름. 입시가 갑자기 가까워졌다.',
   7: '수능 전날 밤, 창밖은 이상하리만치 조용했다.',
@@ -346,7 +346,7 @@ const Y4_PATTERNS: MilestonePattern[] = [
   {
     theme: 'pressure',
     requires: (_ids, slots) => countCat(slots, 'failure') >= 1,
-    summaryText: '고입 원서를 쓰는 손이 생각보다 오래 멈춰 있었다.',
+    summaryText: '내 이름이 붙을 고등학교를 기다리며, 손이 생각보다 오래 멈춰 있었다.',
   },
   {
     theme: 'identity',
@@ -423,7 +423,7 @@ const MILESTONE_FALLBACK: Record<number, { theme: MilestoneTheme; text: string }
   1: { theme: 'connection', text: '초등학교의 마지막 날, 운동장은 여전히 시끄러웠다.' },
   2: { theme: 'connection', text: '처음으로 입은 교복이 조금 컸던 중1의 봄.' },
   3: { theme: 'loss', text: '중2는 그저 지나갔다. 돌아보면 길었던 해.' },
-  4: { theme: 'pressure', text: '고입 원서를 쓰던 손끝이 차가웠다.' },
+  4: { theme: 'pressure', text: '고등학교로 넘어가는 길목에서, 손끝이 까닭 없이 차가웠다.' },
   5: { theme: 'identity', text: '새 교복, 새 반, 새 시간표. 낯설고 묘하게 설렜다.' },
   6: { theme: 'pressure', text: '고2의 여름. 입시가 갑자기 가까워졌다.' },
   7: { theme: 'pressure', text: '수능 전날 밤, 창밖은 이상하리만치 조용했다.' },
