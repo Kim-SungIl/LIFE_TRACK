@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
-import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender } from '../../engine/types';
+import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender, ToneTag } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
@@ -60,7 +60,24 @@ const PANEL: React.CSSProperties = {
 };
 const TEXT_SHADOW = '0 1px 4px rgba(0,0,0,0.55)';
 // 세 이미지 타입(hero CG·NPC 초상·엠블럼)을 "바랜 일기장" 한 톤으로 묶는 공통 필터 — 패치워크 방지.
+// toneTag 없는 기억의 기본값이기도 하다.
 const DIARY_FILTER = 'saturate(0.82) sepia(0.12) brightness(0.98)';
+// 기억의 정서(toneTag)를 "색온도"로 — 같은 일기장 톤 안에서 따뜻함(sepia↑·밝게)↔차가움(채도↓·어둡게)만 미세 조정.
+// hue-rotate는 sepia와 겹치면 탁해져서 안 씀(온도를 sepia·brightness·saturate 축으로만 표현).
+const TONE_FILTER: Record<ToneTag, string> = {
+  warm:         'saturate(0.88) sepia(0.24) brightness(1.02)',  // 따뜻·살아있음
+  breakthrough: 'saturate(0.95) sepia(0.14) brightness(1.07)',  // 환하게 트임
+  resolve:      'saturate(0.86) sepia(0.18) brightness(1.00)',  // 단단·약한 온기
+  regret:       'saturate(0.72) sepia(0.06) brightness(0.94)',  // 식어감
+  melancholy:   'saturate(0.66) sepia(0.04) brightness(0.91)',  // 가장 차갑게
+  burden:       'saturate(0.70) sepia(0.12) brightness(0.88)',  // 무겁게 가라앉음
+};
+const toneFilter = (tone?: ToneTag): string => (tone ? TONE_FILTER[tone] : DIARY_FILTER);
+// hero(큰 focal) 패널에만 얹는 옅은 색온도 글로우 — 이미지 필터 차이가 작아, 정서가 "공기"로도 느껴지게.
+const TONE_GLOW: Record<ToneTag, string> = {
+  warm: '#e0a86a', breakthrough: '#f0c060', resolve: '#d8a878',
+  regret: '#8295b2', melancholy: '#7488aa', burden: '#8a8296',
+};
 const MAX_CARDS = 4;  // 회고는 "전부 나열"이 아니라 "추려보기" — 초과분은 한 줄로 암시
 // 갤러리도 동일 철학 — 너무 많은 CG를 넘기는 건 "감상"이 아니라 "작업"이 된다. 초과 CG는 썸네일 카드로 강등(유실X).
 const MAX_GALLERY = 5;
@@ -111,7 +128,7 @@ function HeroGallery({ items }: { items: CgItem[] }) {
       <div ref={ref} className={multi ? 'ye-gallery ye-gallery-multi' : 'ye-gallery'} onScroll={multi ? onScroll : undefined}>
         {items.map(({ slot, cg }) => (
           <div key={slot.id}>
-            <img src={cg} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', objectPosition: 'center 30%', display: 'block', filter: DIARY_FILTER }}
+            <img src={cg} alt="" style={{ width: '100%', maxHeight: 200, objectFit: 'cover', objectPosition: 'center 30%', display: 'block', filter: toneFilter(slot.toneTag) }}
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             <div style={{ padding: '12px 16px 14px' }}>
               <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic' }}>
@@ -147,7 +164,7 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
   const cat = catOf(slot.category);
   if (npc) {
     return (
-      <div style={{ flexShrink: 0, borderRadius: radius, boxShadow: `0 0 0 1.5px ${cat.color}88`, overflow: 'hidden', lineHeight: 0, filter: DIARY_FILTER }}>
+      <div style={{ flexShrink: 0, borderRadius: radius, boxShadow: `0 0 0 1.5px ${cat.color}88`, overflow: 'hidden', lineHeight: 0, filter: toneFilter(slot.toneTag) }}>
         <Portrait characterId={npc} size={size} expression="neutral" year={year} />
       </div>
     );
@@ -157,7 +174,7 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
       flexShrink: 0, width: size, height: Math.round(size * 1.25), borderRadius: radius,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: `${cat.color}22`, boxShadow: `0 0 0 1.5px ${cat.color}88`,
-      fontSize: Math.round(size * 0.46), filter: DIARY_FILTER,
+      fontSize: Math.round(size * 0.46), filter: toneFilter(slot.toneTag),
     }}>
       {cat.emoji}
     </div>
@@ -233,7 +250,12 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
 
         {/* CG 없는 해 대표 기억 — hero 카드(큰 초상/엠블럼 focal). 갤러리 없을 때만 */}
         {heroCard && (
-          <div className="ye-stagger" style={{ ...PANEL, animationDelay: `${tGallery}ms`, padding: '22px 20px 20px', marginBottom: 14 }}>
+          <div className="ye-stagger" style={{
+            ...PANEL,
+            // 정서 색온도 글로우 — 상단에서 옅게 번지는 따뜻/차가운 공기(toneTag 있을 때만)
+            ...(heroCard.toneTag ? { background: `radial-gradient(120% 80% at 50% 0%, ${TONE_GLOW[heroCard.toneTag]}1f, transparent 62%), rgba(20,17,26,0.55)` } : {}),
+            animationDelay: `${tGallery}ms`, padding: '22px 20px 20px', marginBottom: 14,
+          }}>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
               <MemoryThumb slot={heroCard} year={year} size={104} />
             </div>
