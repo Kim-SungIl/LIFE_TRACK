@@ -6,7 +6,7 @@
 // (활동/미니이벤트/시험/이벤트 선택지 — 직접 가산 금지).
 // 자동 드리프트는 제거하고, 부모 관련 행동이 없는 주에만 50으로 평균 회귀한다.
 
-import type { GameState, ParentStrength } from './types';
+import type { GameState, ParentStrength, ExamResult } from './types';
 
 // 친밀도를 움직이는 행동 유형 태그.
 export type ParentTag =
@@ -66,6 +66,26 @@ export function applyParentIntimacyDelta(state: GameState, baseDelta: number, ta
   const next = Math.max(0, Math.min(100, pi + delta));
   state.parentIntimacy = next;
   return next - pi;
+}
+
+// 시험 결과 → 부모 친밀도 반응(Phase 2B, §3.3 "약하게"). 단일 진입점에 넘길 ParentEffect를 반환.
+// 강점 배율(emotional gradeDrop 0.6 완충 / strict gradeImprove·gradeDrop 1.4 증폭)은 applyParentIntimacyDelta가 적용.
+//  - 직전 대비 석차 상승(중·고) → gradeImprove (레벨 무관, "성적이 올랐다"가 strict 온도의 핵심 경로)
+//  - 그 외엔 mentalDelta 부호로: >0 상위권 → gradeImprove / <0 하위권·급락 → gradeDrop / 0 무난 → 변화 없음
+export function examParentEffect(r: ExamResult): ParentEffect | null {
+  // 초등은 rank=null·mentalDelta=0이라 아래 신호가 없다 → average로 분류(generateParentReaction 초등 기준과 정합).
+  if (r.schoolLevel === 'elementary') {
+    if (r.average >= 75) return { baseDelta: 0.8, tag: 'gradeImprove' };
+    if (r.average < 45) return { baseDelta: -1.0, tag: 'gradeDrop' };
+    return null;
+  }
+  if (r.rank != null && r.prevRank != null && r.rank < r.prevRank) {
+    return { baseDelta: 0.8, tag: 'gradeImprove' };
+  }
+  const md = r.mentalDelta ?? 0;
+  if (md > 0) return { baseDelta: 0.8, tag: 'gradeImprove' };
+  if (md < 0) return { baseDelta: -1.0, tag: 'gradeDrop' };
+  return null;
 }
 
 // 부모 관련 행동이 없는 주에만 50(평균)으로 천천히 회귀.

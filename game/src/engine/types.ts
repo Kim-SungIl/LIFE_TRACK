@@ -74,6 +74,8 @@ export interface GameState {
   // Phase 2A: 부모 미니 이벤트는 영구 1회가 아니라 쿨다운 후 재발동(±선택지로 하강압력 부여).
   // id별 마지막 발동 totalWeeksPlayed를 기록해 쿨다운/로테이션 판정. (없으면 미발동 취급)
   parentEventsFired?: { id: string; week: number }[];
+  // Phase 2B: strict 부모 성적향상 어드밴티지의 연간 1회 가드(hardCrisisYears 패턴). 발동 연도 기록.
+  parentPraiseYears?: number[];
 }
 
 // 활성 버프 (shopSystem에서도 사용)

@@ -93,6 +93,8 @@ export function getAvailableHomeEvents(state: GameState): MiniTalkEvent[] {
   const avail = PARENT_MINI_EVENTS.filter(e =>
     e.parentStrength
     && state.parents.includes(e.parentStrength)
+    && (!e.yearMin || state.year >= e.yearMin)   // NPC 경로와 동일하게 학년 게이트 적용(진학 이벤트가 초등 발동 방지)
+    && (!e.yearMax || state.year <= e.yearMax)
     && now - lastFiredWeek(state, e.id) >= PARENT_EVENT_COOLDOWN_WEEKS,
   );
   // 로테이션: 가장 오래전 발동(미발동 = -Infinity가 최우선) 순 → available[0]이 자연 교대

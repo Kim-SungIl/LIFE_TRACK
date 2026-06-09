@@ -50,7 +50,12 @@ const VALID_CATEGORIES: MemoryCategory[] = [
 console.log('\n=== 1. 데이터 무결성 — 6개 ±선택지 + 메모리 드래프트 ===');
 // ============================================================================
 {
-  assert('부모 미니이벤트 6개', PARENT_MINI_EVENTS.length === 6, `len=${PARENT_MINI_EVENTS.length}`);
+  // Phase 2B: 강점당 2개로 확장 → 총 12개, 6강점 각 2개.
+  assert('부모 미니이벤트 12개', PARENT_MINI_EVENTS.length === 12, `len=${PARENT_MINI_EVENTS.length}`);
+  for (const st of ['emotional', 'wealth', 'info', 'strict', 'resilience', 'freedom'] as const) {
+    const n = PARENT_MINI_EVENTS.filter(e => e.parentStrength === st).length;
+    assert(`강점 ${st} 이벤트 2개`, n === 2, `${n}`);
+  }
   for (const ev of PARENT_MINI_EVENTS) {
     assert(`${ev.id}: parentStrength 지정`, !!ev.parentStrength);
     assert(`${ev.id}: choices 2지선다`, (ev.choices?.length ?? 0) === 2, `len=${ev.choices?.length}`);
@@ -85,8 +90,9 @@ console.log('\n=== 2. 반복발동 — 쿨다운 + 로테이션 (getAvailableHom
   s.totalWeeksPlayed = 10;
   s.parentEventsFired = [];
   const avail0 = getAvailableHomeEvents(s);
-  assert('미발동: 두 강점 이벤트 모두 가용',
-    avail0.length === 2 && avail0.some(e => e.parentStrength === 'emotional') && avail0.some(e => e.parentStrength === 'strict'),
+  assert('미발동: 두 강점의 이벤트 모두 가용(강점당 2개 → 4개)',
+    avail0.length === 4 && avail0.every(e => e.parentStrength === 'emotional' || e.parentStrength === 'strict')
+    && avail0.some(e => e.parentStrength === 'emotional') && avail0.some(e => e.parentStrength === 'strict'),
     avail0.map(e => e.id).join(','));
 
   // emotional을 week 10에 발동 기록
@@ -104,20 +110,26 @@ console.log('\n=== 2. 반복발동 — 쿨다운 + 로테이션 (getAvailableHom
   assert('쿨다운 종료: 재발동 가능(영구잠금 아님)',
     avail2.some(e => e.id === 'talk_parent_emotional'), avail2.map(e => e.id).join(','));
 
-  // least-recently-fired 우선: emotional(10) < strict(12) → emotional 먼저
-  s.parentEventsFired = [{ id: 'talk_parent_emotional', week: 10 }, { id: 'talk_parent_strict', week: 12 }];
-  s.totalWeeksPlayed = 20;
+  // least-recently-fired 우선: 강점당 2개(총 4개)를 모두 다른 주에 발동시키고 가장 오래된 것이 첫 번째인지
+  s.parentEventsFired = [
+    { id: 'talk_parent_emotional', week: 10 },
+    { id: 'talk_parent_strict', week: 12 },
+    { id: 'talk_parent_emotional_2', week: 14 },
+    { id: 'talk_parent_strict_2', week: 16 },
+  ];
+  s.totalWeeksPlayed = 30; // 모두 쿨다운 경과
   const avail3 = getAvailableHomeEvents(s);
   assert('로테이션: 가장 오래전 발동이 available[0]',
     avail3[0]?.id === 'talk_parent_emotional', avail3[0]?.id);
 
-  // 강점 풀 필터: 보유하지 않은 강점 이벤트는 안 나옴
+  // 강점 풀 필터: 보유하지 않은 강점 이벤트는 안 나옴 (year=5 — info_2 yearMin:5 게이트 통과시켜 4개 확인)
   const s2 = freshState(['wealth', 'info']);
+  s2.year = 5;
   s2.totalWeeksPlayed = 10;
   s2.parentEventsFired = [];
   const availW = getAvailableHomeEvents(s2);
-  assert('강점 필터: wealth/info만',
-    availW.every(e => e.parentStrength === 'wealth' || e.parentStrength === 'info') && availW.length === 2,
+  assert('강점 필터: wealth/info만(각 2개 → 4개)',
+    availW.every(e => e.parentStrength === 'wealth' || e.parentStrength === 'info') && availW.length === 4,
     availW.map(e => e.id).join(','));
 }
 

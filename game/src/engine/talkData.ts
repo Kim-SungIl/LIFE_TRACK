@@ -475,6 +475,174 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
       },
     ],
   },
+
+  // ===== Phase 2B — 강점별 추가 이벤트(다중화, 단조로움 해소) =====
+  // 기존 1개와 다른 상황을 다룬다. 밸런스: 긍정에도 가시 보상을 둬 "긍정이 가시적으로 손해"가 안 되게,
+  // 회피 페널티는 강점 배율을 곱해 실효 −0.6 이상이 되게(지배전략 방지, 4자 리뷰 교훈).
+  {
+    id: 'talk_parent_emotional_2',
+    parentStrength: 'emotional',
+    description: '"요즘 표정이 어둡더라. 친구랑 무슨 일 있어?"\n엄마가 옆자리에 가만히 앉는다.',
+    effects: { stats: { mental: 1 } },
+    parentTag: 'shareWorry',
+    message: '엄마가 옆에 앉는다',
+    choices: [
+      {
+        label: '"사실 멀어진 친구가 있어." 털어놓는다',
+        parentEffect: { baseDelta: 1.4, tag: 'shareWorry' },
+        effects: { stats: { mental: 1 } },
+        message: '속엣말을 꺼냈다 — 멘탈 +1',
+        memorySlotDraft: {
+          category: 'reconciliation', importance: 3, toneTag: 'warm',
+          recallText: '그날 엄마한테 멀어진 친구 얘길 다 했다.',
+        },
+      },
+      {
+        label: '"별일 아냐." 화제를 돌린다',
+        parentEffect: { baseDelta: -0.6, tag: 'hideProblem' },
+        effects: {},
+        message: '괜찮은 척 화제를 돌렸다',
+        resultText: '엄마는 더 캐묻지 않고, 등을 한 번 쓸어주고 일어섰다.',
+        memorySlotDraft: {
+          category: 'betrayal', importance: 3, toneTag: 'regret',
+          recallText: '괜찮다 했지만, 그 친구가 내내 맴돌았다.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'talk_parent_wealth_2',
+    parentStrength: 'wealth',
+    description: '"이번에 좋은 거 하나 장만해줄까? 남들 다 있다던데."\n아빠가 카탈로그를 펼친다.',
+    effects: { stats: { mental: 1 } },
+    parentTag: 'familyTime',
+    message: '아빠가 카탈로그를 펼친다',
+    choices: [
+      {
+        label: '"있는 걸로 충분해요." 사양한다',
+        parentEffect: { baseDelta: 0.8, tag: 'familyTime' },
+        effects: { stats: { mental: 1 }, money: 1 },
+        message: '마음만 받았다 — 멘탈 +1, 💰 +1만원',
+        resultText: '됐다고 했는데도 아빠는 기어이 만원을 손에 쥐여줬다.',
+      },
+      {
+        label: '"그럼 이것도…" 더 고른다',
+        parentEffect: { baseDelta: -0.7, tag: 'overspend' },
+        effects: { money: 3 },
+        message: '결국 더 받아냈다 — 💰 +3만원',
+        memorySlotDraft: {
+          category: 'bypass', importance: 3, toneTag: 'regret',
+          recallText: '갖고 싶던 걸 또 그냥 손에 넣어버렸다.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'talk_parent_info_2',
+    parentStrength: 'info',
+    yearMin: 5,
+    description: '"엄마가 알아봤는데, 이 학과가 더 안정적이래."\n진학 설명회 자료가 식탁에 펼쳐져 있다.',
+    effects: { stats: { academic: 1 } },
+    parentTag: 'careerTalk',
+    message: '엄마가 진학 자료를 내민다',
+    choices: [
+      {
+        label: '"같이 좀 더 알아봐요." 진지하게 듣는다',
+        parentEffect: { baseDelta: 1.0, tag: 'careerTalk' },
+        effects: { stats: { academic: 1 } },
+        message: '진로를 함께 들여다봤다 — 학업 +1',
+        memorySlotDraft: {
+          category: 'discovery', importance: 3, toneTag: 'resolve',
+          recallText: '엄마가 짚어준 길을 그날 진지하게 들여다봤다.',
+        },
+      },
+      {
+        label: '"내가 알아서 정할래요." 선을 긋는다',
+        parentEffect: { baseDelta: -0.8, tag: 'ignoreAdvice' },
+        effects: { stats: { mental: 1 } },
+        message: '내 뜻을 분명히 했다 — 멘탈 +1',
+      },
+    ],
+  },
+  {
+    id: 'talk_parent_strict_2',
+    parentStrength: 'strict',
+    description: '"정한 시간까지 들어오기로 했지. 약속이다."\n아빠가 시계를 가리킨다.',
+    effects: { fatigue: -1 },
+    parentTag: 'keepPromise',
+    message: '아빠가 시계를 가리킨다',
+    choices: [
+      {
+        label: '"네, 그때까지 올게요." 약속을 지킨다',
+        parentEffect: { baseDelta: 0.8, tag: 'keepPromise' },
+        effects: { fatigue: -1 },
+        message: '약속을 지켰다 — 피로 -1',
+      },
+      {
+        label: '"오늘만 좀 늦을게요…" 약속을 어긴다',
+        parentEffect: { baseDelta: -1.0, tag: 'breakPromise' },
+        effects: { stats: { mental: 1 } },
+        message: '늦게까지 놀았다 — 멘탈 +1',
+        memorySlotDraft: {
+          category: 'betrayal', importance: 3, toneTag: 'regret',
+          recallText: '약속을 깬 그 밤, 아빠는 말이 없었다.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'talk_parent_resilience_2',
+    parentStrength: 'resilience',
+    description: '"이번엔 잘 안 됐어도 괜찮아. 다시 하면 되지."\n엄마가 식은 국을 데워 온다.',
+    effects: { stats: { mental: 1 } },
+    parentTag: 'recoveryAction',
+    message: '엄마가 국을 데워 온다',
+    choices: [
+      {
+        label: '"…다시 해볼게요." 마음을 다잡는다',
+        parentEffect: { baseDelta: 1.0, tag: 'recoveryAction' },
+        effects: { stats: { mental: 1 } },
+        message: '다시 일어섰다 — 멘탈 +1',
+        memorySlotDraft: {
+          category: 'growth', importance: 3, toneTag: 'resolve',
+          recallText: '다시 해보자던 그 말에 한 번 더 일어섰다.',
+        },
+      },
+      {
+        label: '"이제 그만하고 싶어요." 마음을 접는다',
+        parentEffect: { baseDelta: -1.0, tag: 'ignoreAdvice' },
+        effects: { fatigue: -1 },
+        message: '잠시 손을 놓았다 — 피로 -1',
+      },
+    ],
+  },
+  {
+    id: 'talk_parent_freedom_2',
+    parentStrength: 'freedom',
+    description: '"하고 싶은 거 하면 돼. 후회만 없게."\n엄마는 더 말을 보태지 않는다.',
+    effects: { stats: { mental: 1 } },
+    parentTag: 'autonomyChoice',
+    message: '엄마가 말을 아낀다',
+    choices: [
+      {
+        label: '"고마워요. 내가 정할게요." 받아 안는다',
+        parentEffect: { baseDelta: 1.2, tag: 'autonomyChoice' },
+        effects: { stats: { mental: 1 } },
+        message: '내 선택을 책임지기로 했다 — 멘탈 +1',
+        memorySlotDraft: {
+          category: 'discovery', importance: 3, toneTag: 'resolve',
+          recallText: '하고 싶은 걸 해도 된다는 말이 오래 남았다.',
+        },
+      },
+      {
+        label: '"뭘 해야 할지 모르겠어요." 떠넘긴다',
+        parentEffect: { baseDelta: -1.0, tag: 'ignoreAdvice' },
+        effects: { fatigue: -1 },
+        message: '결정을 미뤘다 — 피로 -1',
+        resultText: '엄마는 "그것도 네 몫이야"라며 더 답해주지 않았다.',
+      },
+    ],
+  },
 ];
 
 // ===== 정적 인사말 풀 — 풀 다 본 후 / pressure 미만 / 친밀도 미달 시 (부모 전용) =====
