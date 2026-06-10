@@ -54,11 +54,37 @@ export function getNpcSmalltalk(state: GameState, npcId: string): string {
   return pickRandomLine(state, pool);
 }
 
+// 고3(Y7) 입시 시점 — getExamSchedule(7)의 수능=35주차 기준.
+//   early: 원서 전(~27주, 3월~여름) — 과정·각오·건강 톤
+//   rush:  수시 원서~수능(28~35주) — 수시/정시/긴장 톤
+//   after: 수능 후(36주~, 면접·정시·결과) — 마무리·결과 톤
+// senior 풀(시점 무관)에 위 시점 풀을 누적해, "수능 끝나면"·"수시 카드" 같은 시점 의존
+// 대사가 봄에 뜨던 모순(QA Y7 [상])을 막는다.
+export function getSeniorPhase(week: number): 'early' | 'rush' | 'after' {
+  if (week <= 27) return 'early';
+  if (week <= 35) return 'rush';
+  return 'after';
+}
+
 export function getHomeSmalltalk(state: GameState): string {
-  // 가정은 단일 엔티티 — 두 부모 강점 풀에서 RNG로 한 줄 픽
-  const pools = state.parents
-    .map(p => PARENT_SMALLTALK[p] ?? [])
-    .flat();
+  // 가정은 단일 엔티티 — 두 부모 강점 풀에서 RNG로 한 줄 픽.
+  // 학교급(elementary/middle/high)별 셀 + 고3(Y7) senior(시점 무관) + 입시 시점별 풀을
+  // common 위에 누적해 초6과 고3, 또 고3 안에서도 봄/수능기/수능후 톤이 달라지게 한다.
+  const level = getSchoolLevel(state.year); // Y1=elementary / Y2~Y4=middle / Y5~Y7=high
+  const isSenior = state.year === 7;        // 고3 — high 위에 senior + 시점 풀 추가 누적
+  const phase = isSenior ? getSeniorPhase(state.week) : null;
+  const pools = state.parents.flatMap(p => {
+    const pool = PARENT_SMALLTALK[p];
+    if (!pool) return [];
+    return [
+      ...(pool.common ?? []),
+      ...(pool[level] ?? []),
+      ...(isSenior ? pool.senior ?? [] : []),
+      ...(phase === 'early' ? pool.seniorEarly ?? [] : []),
+      ...(phase === 'rush' ? pool.seniorRush ?? [] : []),
+      ...(phase === 'after' ? pool.seniorAfter ?? [] : []),
+    ];
+  });
   return pickRandomLine(state, pools);
 }
 
