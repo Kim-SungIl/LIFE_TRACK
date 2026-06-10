@@ -66,7 +66,7 @@ export function createInitialState(
         greeting: '어, 안녕. 시험공부 했어? 나 하나도 안 했는데.', personality: '전교 1등이지만 천재가 아니라 노력형. 새벽까지 공부하고 아침에 태연한 척하는 아이. 학원 원장 엄마와 교사 아빠 밑에서 자란 교육 가정.' },
       { id: 'yuna', name: '유나', intimacy: 20, description: '밝고 활발한 같은 반 친구', emoji: '🌟', met: false,
         greeting: '야! 오늘 숙제 했어? 나 7번 모르겠는데 같이 풀자!', personality: '성적은 항상 상위권인데 공부벌레 느낌은 아니다. 밝고 에너지 넘치는 성격. 피아노도 잘 치고 친구도 잘 사귄다. 근데 그 밝음 뒤에는 1등을 놓치면 안 된다는 압박이 있다.' },
-      { id: 'doyun', name: '도윤', intimacy: 0, description: '초등 같은 반 체육부장', emoji: '⚽', met: false,
+      { id: 'doyun', name: '도윤', intimacy: 20, description: '초등 같은 반 체육부장', emoji: '⚽', met: false,
         greeting: '야! 점심에 축구 나갈래? 한 명 모자라!', personality: '반에서 모두가 따르는 자연스러운 리더. 축구 잘하고 예의 바르지만 찐따스럽지 않음. "괜찮아"를 입에 달고 사는 착한 아이 페르소나 — 부모 기대에 부응하느라 속마음 잘 안 보여줌. 중학교 진학 시 학군 이사로 갈라짐.' },
       { id: 'haeun', name: '하은', intimacy: 0, description: '1학년 위 선배', emoji: '🌿', met: false,
         greeting: '야, 존댓말 하지 마. 어색해.', personality: '중학교 2학년 선배. 겉으로는 여유 있어 보이지만, 고등학교 진학과 오빠의 수능 실패 트라우마로 속은 불안하다. 후배를 챙기면서 자기 자신을 다독이는 사람.' },
@@ -543,10 +543,14 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   if (state.mentalState === 'tired') {
     const fatDrop = state.useReducedRecovery ? 3 : 5;
     state.fatigue = Math.max(0, state.fatigue - fatDrop);
-    // v7.2: 자동 mental 회복 +1 → +2 (임계 완화와 함께 burnout 재진입 차단)
-    state.stats.mental = Math.min(100, state.stats.mental + 2);
     log.fatigueChange -= fatDrop;
-    log.statChanges.mental = (log.statChanges.mental || 0) + 2;
+    // v7.2: 자동 mental 회복 +1 → +2 (임계 완화와 함께 burnout 재진입 차단)
+    // QA C4-A: 단 고피로(fatigue>=60)에선 자동 회복을 끊어 '갈아넣기' 루틴이 번아웃 게이트에 닿게 한다.
+    //          (12 페르소나 전원 burnoutCount 0 — tired 자가치유가 mental<20 게이트를 영구 차단하던 문제)
+    if (state.fatigue < 60) {
+      state.stats.mental = Math.min(100, state.stats.mental + 2);
+      log.statChanges.mental = (log.statChanges.mental || 0) + 2;
+    }
   }
 
   // v6.1: 번아웃 자동 회복 — 강화 (활동 피로를 이길 수 있는 수준)

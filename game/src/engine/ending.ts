@@ -35,9 +35,12 @@ function determineCareer(state: GameState): { path: string; detail: string } {
   // 예체능 특기자 최우선 체크 (수능 등급과 무관하게 talent 우위이면 특기자 루트)
   // academic 낮아도 특기로 대학 가는 실제 진로 반영
   if (talent >= 85) {
-    if (talent >= 90) return { path: '예술/체육 특기자', detail: '특기로 명문 예술대학·체대에 진학했다.' };
+    // QA C5-A: talent≥90이라도 academic이 충분히 높으면 특기자로 강제하지 않고 아래 일반 진로(의대/SKY 등)로 보낸다.
+    //          이전엔 talent≥90이 수능·학업 무관 최우선 return이라 학업·특기 겸비(talent95/academic92)도
+    //          「예술/체육 특기자」로 덮어써져 상위 학업 엔딩을 강탈당하던 hard cliff였다.
+    if (talent >= 90 && academic < 80) return { path: '예술/체육 특기자', detail: '특기로 명문 예술대학·체대에 진학했다.' };
     if (academic < 70) return { path: '예체능 진학', detail: '특기를 살려 예체능 계열 대학에 진학했다.' };
-    // talent 85~89 + academic 70+ → 특기 + 학업 균형 → 아래 일반 진로 로직에서 +α
+    // talent 85~89 (또는 talent 90+ & academic 80+) → 특기 + 학업 균형 → 아래 일반 진로 로직에서 결정
   }
 
   // 번아웃 심각 AND 멘탈 현재 상태도 바닥일 때만 방황
