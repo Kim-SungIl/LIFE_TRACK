@@ -8,8 +8,11 @@ import { selectMemorialHighlights } from './memorySystem';
 // calculateEnding(엔딩 누적)과 학년말 카드 둘 다 동일 산식 — 일관된 시그널.
 export type HappinessGrade = 'S' | 'A' | 'B' | 'C' | 'D';
 
-export function calculateHappinessGrade(mental: number, social: number): HappinessGrade {
-  if (mental >= 80 && social >= 60) return 'S';
+// QA C1-B: health 하한 게이트. health<20(achievement 약점선과 동일)이면 S 불가 → 최고 A.
+// 건강을 끝까지 갈아넣은 한 해는 "빛났던 해"가 될 수 없다 — happiness 전원 S 수렴을 깨는 첫 분기.
+// health 기본값 100: 인자 미전달 호출(레거시) 호환.
+export function calculateHappinessGrade(mental: number, social: number, health = 100): HappinessGrade {
+  if (mental >= 80 && social >= 60 && health >= 20) return 'S';
   if (mental >= 60 && social >= 40) return 'A';
   if (mental >= 40) return 'B';
   if (mental >= 25) return 'C';
@@ -140,7 +143,7 @@ export function calculateEnding(state: GameState) {
   if (hasCollapse && achievement === 'A') achievement = 'B';
 
   // 행복 지수
-  const happiness = calculateHappinessGrade(mental, social);
+  const happiness = calculateHappinessGrade(mental, social, health);
 
   // 진로 판정
   const career = determineCareer(state);
@@ -164,7 +167,11 @@ export function calculateEnding(state: GameState) {
   } else if (state.burnoutCount >= 3 && suneungGrade && suneungGrade <= 4) {
     title = `불꽃은 꺼지지 않는다 — ${career.path}`;
     description = '몇 번이고 쓰러졌지만, 그래도 일어났다. ' + career.detail;
-  } else if (happiness === 'S' && achievement === 'C') {
+  } else if (happiness === 'S' && achievement !== 'S' && academic < 60) {
+    // QA C1-B 연동: 기존 (happiness S && achievement C)는 C1-B 후 도달 불가
+    // (happiness S 가 health≥20 을 요구 → lifeScore≥53 → achievement 최소 B).
+    // 의도("성적은 평범했지만 행복")대로 academic 기준으로 re-base — 관계·멘탈·건강은 좋고
+    // 성적만 평범(academic<60)한 빌드가 받는 엔딩. 최상위(achievement S)는 제외.
     title = `행복한 평범함 — ${career.path}`;
     description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다. ' + career.detail;
   }

@@ -293,11 +293,10 @@ console.log('\n=== 엔딩 타이틀 수식 ===');
   if (e2.title.startsWith('불꽃은 꺼지지 않는다')) { console.log(`  ✓ 불꽃은 꺼지지 않는다 수식 적용`); passed++; }
   else { console.log(`  ✗ 불꽃은 꺼지지 않는다 미적용 (title="${e2.title}")`); failed++; }
 
-  // 행복한 평범함: happiness S (mental≥80 && social≥60) + achievement C (bestAxis<50)
-  // lifeScore=(mental+health+social)/3 이라 achievement C를 얻으려면 health를 매우 낮춰
-  // lifeScore<50 을 만들어야 함
+  // 행복한 평범함 (QA C1-B re-base): happiness S(mental≥80 && social≥60 && health≥20)
+  // + academic<60 + achievement≠S. 관계·멘탈·건강은 좋고 성적만 평범한 빌드.
   const happy = withScenario({
-    label: '', stats: { academic: 45, mental: 80, social: 60, talent: 45, health: 5 },
+    label: '', stats: { academic: 45, mental: 80, social: 60, talent: 45, health: 60 },
     mockGrade: 5, track: 'humanities', expectCareer: '',
   });
   const e3 = calculateEnding(happy);

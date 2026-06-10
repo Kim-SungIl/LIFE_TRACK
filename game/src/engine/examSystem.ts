@@ -47,7 +47,7 @@ function toElementaryGrade(score: number): ElementaryGrade {
 }
 
 function toMockGrade(score: number): number {
-  if (score >= 96) return 1;
+  if (score >= 93) return 1;  // QA C2-A: 96→93. internalAvg 드래그 제거 후 최적 빌드가 닿는 현실선
   if (score >= 89) return 2;
   if (score >= 77) return 3;
   if (score >= 60) return 4;
@@ -317,7 +317,9 @@ export function generateSuneungResult(state: GameState): ExamResult {
     ? internalExams.reduce((sum, e) => sum + e.average, 0) / internalExams.length
     : state.stats.academic * 0.7;
 
-  const suneungBase = mock1 * 0.35 + mock2 * 0.45 + internalAvg * 0.20;
+  // QA C2-A: internalAvg(Y1~Y7 내신 평균 ~80)가 천장을 막아 mock 92~97 도 수능 88로 추락 → 1등급 불가.
+  // 내신 가중 0.20→0.10, 자유분 0.10은 mock 으로 이전(0.35/0.45 → 0.40/0.50). mock 우위 최적화 빌드만 수혜.
+  const suneungBase = mock1 * 0.40 + mock2 * 0.50 + internalAvg * 0.10;
   const growthBonus = clamp(Math.round((mock2 - mock1) * 0.15), 0, 3);
   const suneungScore = clamp(Math.round(suneungBase + growthBonus + rand(state, 3)));
   const mockGrade = toMockGrade(suneungScore);
