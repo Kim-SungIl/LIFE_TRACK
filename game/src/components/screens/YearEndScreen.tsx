@@ -203,7 +203,7 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
   const nextGradeName = YEAR_NAMES[year];
   const slotsThisYear = memorySlots.filter(m => m.year === year);
   const milestone = milestoneScenes.find(m => m.year === year);
-  const happinessGrade = calculateHappinessGrade(stats.mental, stats.social);
+  const happinessGrade = calculateHappinessGrade(stats.mental, stats.social, stats.health);
   const happinessInfo = HAPPINESS_LABELS[happinessGrade];
 
   // 부모 친밀도 줄(\n append, Phase 2.1)을 본문과 분리해 "뒤늦게 떠오른 한 줄"로
