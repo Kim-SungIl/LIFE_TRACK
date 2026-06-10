@@ -128,9 +128,13 @@ export function calculateEnding(state: GameState) {
   const allStats = [academic, social, talent, mental, health];
   const hasCollapse = allStats.some(v => v < 10);
   const hasWeakness = allStats.some(v => v < 20);
+  // 붕괴(<10)는 약점(<20)보다 강한 강등 — 순서 고정: S일 때 붕괴 우선 판정(→B),
+  // 그 다음 약점(→A). 이전엔 약점 강등(S→A)이 먼저라 붕괴 강등(S→B)이 가려져 S+붕괴가 A에 머물렀다.
+  if (achievement === 'S') {
+    if (hasCollapse) achievement = 'B';
+    else if (hasWeakness) achievement = 'A';
+  }
   if (hasCollapse && achievement === 'A') achievement = 'B';
-  if (hasWeakness && achievement === 'S') achievement = 'A';
-  if (hasCollapse && achievement === 'S') achievement = 'B';
 
   // 행복 지수
   const happiness = calculateHappinessGrade(mental, social);
