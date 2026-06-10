@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { GameState, GameEvent, ParentStrength } from './types';
-import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, applyYearTransition } from './gameEngine';
+import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects } from './shopSystem';
@@ -184,10 +184,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     const newState = cloneGameState(s);
 
-    // 스탯 효과 적용
+    // 스탯 효과 적용 — 구간별 감쇠(scaleStatChange)로 활동과 동일하게 고구간 캡 적용.
+    // 이전엔 raw 가산이라 이벤트가 활동 감쇠를 우회 → 빌드 무관 수렴(QA C3 근본원인).
     for (const [key, val] of Object.entries(choice.effects)) {
       const k = key as keyof typeof newState.stats;
-      newState.stats[k] = Math.max(0, Math.min(100, newState.stats[k] + (val as number)));
+      const scaled = scaleStatChange(val as number, newState.stats[k]);
+      newState.stats[k] = Math.max(0, Math.min(100, newState.stats[k] + scaled));
     }
 
     // 피로 효과

@@ -586,6 +586,25 @@ export function scaleIntimacyChange(delta: number, currentIntimacy: number): num
   return Math.max(1, Math.floor(delta * multiplier));
 }
 
+// ===== 이벤트 스탯 효과 구간별 감쇠 (QA C3-B) =====
+// 문제: 활동(applyActivity)은 getDiminishingReturn 으로 70+ 구간에서 강하게 눌리는데,
+// 이벤트 선택지 효과(store.resolveEvent)는 raw 가산이라 캡을 우회 → 한 판 350+ 이벤트가
+// 빌드 무관하게 social/mental 을 97~99 로 수렴시켜 빌드 차별성을 지웠다(QA C3 근본원인).
+// scaleIntimacyChange 와 동일 철학: 음수 패널티·큰 단발 보상(≥8, "majorReward")은 면제,
+// 그 외 양수만 고구간에서 감쇠. 활동 곡선(0.5/0.3/0.1)보다 완만 — 이벤트는 드물고 플레이어가 고른
+// 보상이라 초·중반(70 미만)은 100% 유지해 여정의 보상감을 지키고, 천장 근처만 누른다.
+// 0~69: 100% / 70~84: 60% / 85~94: 40% / 95~100: 25%
+export function scaleStatChange(delta: number, currentStat: number): number {
+  if (delta <= 0) return delta;       // 패널티는 그대로 (감쇠 면제)
+  if (delta >= 8) return delta;       // majorReward: 큰 단발 보상은 캡 우회 유지
+  let multiplier: number;
+  if (currentStat < 70) multiplier = 1.0;
+  else if (currentStat < 85) multiplier = 0.6;
+  else if (currentStat < 95) multiplier = 0.4;
+  else multiplier = 0.25;
+  return delta * multiplier;          // 스탯은 소수 누적이라 floor 없이 비율만 적용
+}
+
 // ===== NPC 친밀도 자연 감소 =====
 // M5 Phase 4: 80 초과 -0.2 / 20~80 -0.15 / 20 미만 0 (floor 20).
 // 자연 감소는 20에서 멈추고, 그 아래는 이벤트에서 관계를 해치는 선택지를 골라야 도달.
