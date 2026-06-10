@@ -109,13 +109,15 @@ export const JUNHA_EVENTS = [
     choices: [
       { text: '"멋있다. 너한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 4 },
         npcEffects: [{ npcId: 'junha', intimacyChange: 8 }],
-        message: '준하가 웃었다. "진짜? 아빠는 뭔 요리사냐고 했는데... 엄마는 응원해줘." "네 주먹밥 먹어본 사람은 다 응원할걸." 준하가 주먹밥을 하나 더 건넸다. "이거 새 메뉴야. 먹어봐."' },
+        message: '준하가 웃었다. "진짜? 아빠는 뭔 요리사냐고 했는데... 엄마는 응원해줘." "네 주먹밥 먹어본 사람은 다 응원할걸." 준하가 주먹밥을 하나 더 건넸다. "이거 새 메뉴야. 먹어봐."',
+        memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '요리사가 되겠다는 준하에게, 다들 응원할 거라 했다.', npcIds: ['junha'] } },
       { text: '"대학은 어떻게 할 거야?" — 현실적으로 묻는다', effects: { mental: 1 },
         npcEffects: [{ npcId: 'junha', intimacyChange: 2 }],
         message: '"조리학과 갈 거야. 수시는 힘들고 정시로." 준하가 담담하게 말했다. 이미 다 생각해둔 눈빛이었다.' },
       { text: '"언젠가 네 가게에 갈게" — 약속한다', effects: { social: 3, mental: 3 },
         npcEffects: [{ npcId: 'junha', intimacyChange: 7 }],
-        message: '준하가 잠깐 멈칫했다가 웃었다. "약속이다. 첫 번째 손님." 바람이 불었다. 옥상에서 먹는 주먹밥이 유난히 맛있었다.' },
+        message: '준하가 잠깐 멈칫했다가 웃었다. "약속이다. 첫 번째 손님." 바람이 불었다. 옥상에서 먹는 주먹밥이 유난히 맛있었다.',
+        memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '네 가게 첫 손님이 되겠다고, 옥상에서 약속했다.', npcIds: ['junha'] } },
     ],
   },
   // ===== 준하 x 민재 교차이벤트 =====

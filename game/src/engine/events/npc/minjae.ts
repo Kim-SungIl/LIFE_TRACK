@@ -334,6 +334,7 @@ export const MINJAE_EVENTS = [
         effects: { social: 3, mental: 4 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 6 }],
         message: '"...모르겠어. 그걸 모르는 게 제일 무서워." 민재가 처음으로 완전히 솔직했다. "근데 너한테는 말할 수 있어서 다행이다."',
+        memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '모르는 게 제일 무섭다던 민재가, 처음으로 솔직했다.', npcIds: ['minjae'] },
       },
       {
         text: '"일단 가서 생각해도 되지 않아?" — 현실적으로 답한다',
@@ -346,6 +347,7 @@ export const MINJAE_EVENTS = [
         effects: { social: 2, mental: 5 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
         message: '민재가 한참 동안 아무 말 안 했다. 그러다 "야... 그 말 진짜 좋다." 주먹을 내밀었다. 쿵. 라이벌이자, 유일하게 진짜를 보여줄 수 있는 사이.',
+        memorySlotDraft: { category: 'growth', importance: 8, toneTag: 'resolve', recallText: '네 인생이라 하자, 민재가 말없이 주먹을 내밀었다. 쿵.', npcIds: ['minjae'] },
       },
     ],
   },
