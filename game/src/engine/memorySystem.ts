@@ -12,12 +12,13 @@ import type {
 // ===== 부모 → 카테고리 bias (tiebreaker, 곱셈 아님) =====
 // importance 동률·근접 시 가산점으로만 작용. 최대 +0.3을 넘지 않도록 설계.
 // 부록 B (parent-strengths-proposal §부록 B) 매핑.
-// wealth: 본래 부록 B는 bypass/unspoken_debt 카테고리를 가정했으나,
-// 현 events.ts에 해당 카테고리 슬롯이 없어 betrayal(돈으로 우회한 거리감)·
-// failure(말 못한 부채)로 매핑 — 콘텐츠 추가 시 부록 B 카테고리로 환원.
+// wealth: 부록 B의 정식 카테고리는 bypass(돈으로 우회한 거리감)·unspoken_debt(말 못한 부채).
+// 과거엔 해당 슬롯이 없어 betrayal/failure로 임시 매핑했으나, 콘텐츠가 추가되어
+// (reach.ts·talkData.ts에 bypass/unspoken_debt 슬롯 실재) 부록 B 정식 카테고리로 환원한다.
+// betrayal/failure는 wealth 외 일반 기억과 겹쳐 호환을 위해 약하게(0.1) 유지.
 const PARENT_MEMORY_BIAS: Record<ParentStrength, Partial<Record<MemoryCategory, number>>> = {
   emotional:  { reconciliation: 0.3, growth: 0.2 },
-  wealth:     { betrayal: 0.2, failure: 0.2, reconciliation: -0.1 },
+  wealth:     { bypass: 0.25, unspoken_debt: 0.25, betrayal: 0.1, failure: 0.1, reconciliation: -0.1 },
   info:       { discovery: 0.2 },
   strict:     { failure: 0.2, growth: 0.3 },
   resilience: { growth: 0.2 },
