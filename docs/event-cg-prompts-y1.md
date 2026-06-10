@@ -1794,3 +1794,228 @@ reference (thin glasses MUST remain clearly visible).
 
 생성 완료 후 `game/public/images/events/elementary/`에 동일 파일명으로 저장.
 파일이 없으면 GameScreen.tsx의 폴백 cascade가 자동으로 처리 (`{eventId}_c{ci}_{g}` → `{eventId}_{g}` → `{eventId}_c{ci}` → `{eventId}` → common).
+
+---
+
+# 📅 Y1 누락분 추가 (2026-06 — 초등 갭에서 이관)
+
+> 기존 커버 27개에서 빠졌던 Y1 이벤트 CG. 위 공통 스타일 가이드·캐릭터 마커(doyun/jihun/minjae elementary)를 그대로 따른다.
+> (doyun-school-split은 Y2 발동이라 middle 문서로 분리됨.)
+
+## 🟠 W4 doyun-meet-elementary — 운동장 한 명 모자라 (★남주 전용)
+
+**발동조건**: `year === 1 && gender === 'male'`, W4. 체육부장 도윤이 점심시간 운동장 축구에 합류 권유.
+**Scene**: 점심시간 운동장. 도윤이가 축구공을 한 손으로 튕기며 다가와 "한 명 모자라는데, 너 들어올래? 너 발 빠르잖아."
+
+**References**: `doyun_elementary_fullbody.png` + `doyun_elementary_neutral.png` · `player_m_elementary_fullbody.png` · `gymnasium.png`
+
+### [c0] "좋아!" — 같이 뛴다 (첫 골)
+
+> 결과: "도윤이가 패스를 정확하게 줬다. 한 골 넣고 같이 웃었다." (discovery/warm/4)
+
+**파일명** `elementary/doyun-meet-elementary_c0_m.png`
+```
+Elementary school outdoor field / gymnasium, lunch-time, late spring daylight.
+Two 12-year-old Korean BOYS playing soccer together.
+Doyun (reference): GREEN soccer jersey + shorts + grass-stained sneakers, short NEAT
+black hair (side-parted, NOT messy bangs), bright confident "golden boy" grin, mid-motion
+just after passing the ball — natural leader posture.
+Male protagonist (player_m reference): just received the pass / striking the ball into goal,
+bright open laughing expression, light GREY or beige casual T-shirt + shorts (NOT navy —
+navy collides with sport tones), sweaty from running.
+Background: school field, goal net, blurred classmates playing, bright midday sun, dust kicked up.
+Mood: first-friendship spark through sport, the satisfying moment of scoring the first goal together.
+```
+
+### [c1] "잠깐만, 가방만 두고 갈게"
+
+> 결과: "교실에 가방 두고 운동장으로 뛰었다. 도윤이가 '왜 이렇게 늦어!' 하면서도 자리를 만들어줬다." (discovery/warm/3)
+
+**파일명** `elementary/doyun-meet-elementary_c1_m.png`
+```
+Elementary school field edge, lunch-time. Male protagonist (player_m reference) jogging in
+from the school building side, schoolbag just dropped by the fence, slightly out of breath,
+small eager smile (괜히 빨라진 걸음).
+Doyun (reference): GREEN jersey, one hand waving him over / making space in the lineup,
+mock-complaining "왜 이렇게 늦어!" grin, foot resting on the soccer ball.
+Background: outdoor field, other kids mid-game blurred, bright midday sun.
+Mood: warm welcome, a slightly-too-eager step toward a new friendship.
+```
+
+> c2("오늘은 좀..." 사양)는 memorySlotDraft 없음 → CG 비대상.
+
+
+---
+
+## 🟠 W4 doyun-meet-elementary-f — 청소시간 (★여주 전용, 별도 id)
+
+**발동조건**: `year === 1 && gender === 'female'`, W4. **남주 버전과 id가 분리**된 별도 장면(축구 X, 청소시간 관찰).
+**Scene**: 청소시간 교실. 도윤이가 무거운 양동이를 대신 들어주고 "내가 들게. 별것도 아니야." 정리하다 너와 잠깐 눈이 마주치며 살짝 웃는다.
+
+**References**: `doyun_elementary_fullbody.png` + `doyun_elementary_neutral.png` · `player_f_elementary_fullbody.png` · `classroom_elementary.png`
+
+### [c0] "멋있다" — 솔직하게 말한다
+
+> 결과: "도윤이가 '어, 별거 아닌데' 하면서도 어깨가 살짝 으쓱해졌다." (discovery/warm/4)
+
+**파일명** `elementary/doyun-meet-elementary-f_c0_f.png`
+```
+Elementary classroom during cleaning time, late afternoon. Doyun (reference) carrying a
+heavy water bucket with both hands (helping a classmate), GREEN jersey or casual tee,
+short NEAT black hair, shoulders subtly puffed up with modest pride ("어, 별거 아닌데"),
+warm confident smile. NO soccer ball in this indoor cleaning scene.
+Female protagonist (player_f reference): pausing mid-cleaning (broom or cloth in hand),
+looking at him with a candid impressed expression, light pink cardigan over white T.
+Background: classroom mid-cleaning — desks pushed aside, mop/broom, soft afternoon light,
+relaxed loosened class atmosphere, blurred classmates.
+Mood: noticing why he's popular — a quiet first spark of admiration.
+```
+
+### [c1] 눈이 마주치자 살짝 웃어준다
+
+> 결과: "도윤이가 살짝 끄덕이고 다시 청소를 한다. 별 말 안 했는데 뭔가 통한 기분이다." (discovery/warm/3)
+
+**파일명** `elementary/doyun-meet-elementary-f_c1_f.png`
+```
+Same elementary classroom cleaning-time setting. A brief eye-meet between Doyun (reference,
+GREEN jersey/casual, neat black hair) and the female protagonist (player_f reference) across
+the room — Doyun gives a small nod and a faint smile before turning back to cleaning.
+Composition: medium-wide so both faces read the silent "something clicked" beat.
+Soft afternoon light, blurred classmates tidying in background.
+Mood: wordless understanding — the moment a circle starts being drawn in the yearbook.
+```
+
+> c2(못 본 척 청소 계속)는 memorySlotDraft 없음 → CG 비대상.
+
+
+---
+
+## 🔴 W45 graduation-prep-elementary — 졸업 앨범 촬영
+
+**발동조건**: Y1 W45. **`ANNUAL_EVENT_IDS` 아님** → memorySlotDraft 슬롯 생성됨(회고 대상). (discovery/warm/7)
+**Scene**: 졸업 앨범 촬영. 사진관/교실에서 반 전체가 웃는다. 롤링페이퍼에 "중학교 가서도 보자". 지훈·민재 등장(마커 spec).
+
+**References**: `jihun_elementary_fullbody.png` · `minjae_elementary_fullbody.png` · `player_m_*` / `player_f_*` · `classroom_elementary_afternoon.png`
+
+### [c0] (사진 촬영 — 단체 컷)
+
+**파일명** `elementary/graduation-prep-elementary_c0_m.png`
+```
+Elementary classroom decorated for yearbook photo day, late autumn / early winter afternoon
+light. A group of 12-year-old Korean classmates squeezed together for a class photo, all
+warm laughing smiles, a 롤링페이퍼 (rolling-paper poster) on the wall reading
+"중학교 가서도 보자".
+Front-center cluster: Male protagonist (player_m reference — black soft center-part hair,
+casual grey/beige top, NO glasses) mid-laugh.
+Jihun (reference — messy black hair, athletic, big open grin showing teeth, royal-blue
+accent casual/sport top) beside him, arm thrown around shoulders.
+Minjae (reference — neat short hair NOT buzz cut, thin rimless/square glasses clearly
+visible, composed half-smile NOT wide grin) on the other side; NO notebook in this photo
+scene — hands free or a small peace sign.
+Background: classroom decorated with garlands, chalkboard with "졸업 축하" doodles, a
+photographer's camera/tripod hint in foreground, warm nostalgic afternoon glow.
+Mood: pure end-of-childhood warmth — last class photo before everyone scatters to different
+middle schools. Bittersweet but bright.
+```
+
+**[female] 파일명** `elementary/graduation-prep-elementary_c0_f.png`
+```
+Same composition with ONLY one change: male protagonist replaced by female protagonist
+(player_f reference — shoulder-length dark brown hair, pink cardigan, warm smile).
+Jihun MUST remain a 12-year-old BOY, Minjae MUST remain a 12-year-old BOY (glasses visible,
+composed half-smile). All other elements (롤링페이퍼, decorations, mood, light) identical.
+```
+
+> c1(무드래프트)은 importance 미달/슬롯 미생성 → 단일 c0 1세트(남/여)면 충분.
+
+
+---
+
+## 🟠 W47 doyun-graduation-sign — 졸업앨범 뒤에 사인 (남/여 choices 둘 다)
+
+**발동조건**: `year === 1 && doyun.met`, W47. **남(`choices`) / 여(`femaleChoices`) 서술·선택 분기**. 각 importance≥3 → 전부 CG 대상.
+> 촬영 리스트 본 표엔 미기재였으나 본 담당에 명시 포함됨(리스트 "애매한 점 2" 참조). femaleChoices까지 드래프트 풍부.
+
+**References**: `doyun_elementary_fullbody.png` + `doyun_elementary_neutral.png` · `player_m_*` / `player_f_*` · `auditorium_elementary.png` (운동장 톤도 가능)
+
+### 남주 — Scene
+졸업식 며칠 뒤 운동장. 도윤이가 졸업앨범을 들고 "야, 사인 하나 해줘. 나도 너 거 해줄게." 매직펜을 쥐어준다.
+
+#### [c0] "중학교 달라도 자주 보자" — 진심으로 적는다 (reconciliation/warm/6)
+> 결과: 도윤이가 자기 사인 옆에 작은 축구공을 그렸다. "나중에 만나면 모른 척하지 마라."
+
+**파일명** `elementary/doyun-graduation-sign_c0_m.png`
+```
+Outside the elementary school field a few days after graduation, bright clear winter daylight.
+Doyun (reference — GREEN jersey or casual graduation-day clothes, short neat black hair,
+warm bright smile) holding an open graduation yearbook (졸업앨범), having just drawn a tiny
+soccer ball next to his signature with a marker pen. Male protagonist (player_m reference)
+beside him writing a heartfelt line in Doyun's book, both leaning over the open page.
+Marker pens in hand. Background: empty field, a couple of lingering classmates, soft winter sun.
+Dialogue cue: "나중에 만나면 모른 척하지 마라." — implied through Doyun's warm grin.
+Mood: a real promise between two boys parting for different middle schools — warm, hopeful.
+```
+
+#### [c1] 장난스럽게 짧게 적는다 (discovery/warm/4)
+> 결과: "'야 이게 뭐야!!!' 도윤이가 웃으면서 똑같이 짧게 적었다."
+
+**파일명** `elementary/doyun-graduation-sign_c1_m.png`
+```
+Same field / post-graduation setting. Doyun (reference) laughing big "야 이게 뭐야!!!" at a
+silly short scribble in his yearbook, scribbling something equally short back. Male protagonist
+(player_m reference) grinning mischievously, marker in hand. Light playful energy, open
+yearbook between them, bright winter sun.
+Mood: goofy lightness — both pretending this isn't the last time (둘 다 마지막인 줄 모르는 척).
+```
+
+#### [c2] 뭐라고 적을지 한참 고민하다 평범하게 마무리 (failure/regret/4)
+> 결과: "'잘 지내' 정도로 적었다. 그게 어떤 뜻인지는 그때 몰랐다."
+
+**파일명** `elementary/doyun-graduation-sign_c2_m.png`
+```
+Same setting. Close-ish on the open yearbook page — a plain short line "잘 지내" written in
+marker, the pen hesitating / lingering over the page. Male protagonist (player_m reference,
+slightly downcast or pensive) having struggled to find words; Doyun (reference) writing
+something similarly plain beside him, a small unreadable expression. Muted winter light.
+Mood: the quiet regret of a goodbye that should have said more — felt only later.
+```
+
+### 여주 — Scene (femaleDescription, 거리감 호감 톤)
+무리에 둘러싸여 있던 도윤이가 졸업앨범을 든 채 너 쪽으로 슬쩍 다가와 "...사인, 한 줄만 해줄래?" 매직펜이 건네진다.
+
+#### [c0-f] 잠깐 펜을 멈췄다가, 한 줄 진심으로 적는다 (discovery/warm/5)
+> 결과: 도윤이가 페이지를 보더니 "...너답다" 하고 자기 것도 짧게 적어줬다.
+
+**파일명** `elementary/doyun-graduation-sign_c0_f.png`
+```
+Outside the elementary school field a few days after graduation, clear winter daylight.
+Doyun (reference — neat black hair, GREEN jersey or casual, having just slipped away from a
+small cluster of classmates in the background) holding an open yearbook toward the female
+protagonist (player_f reference). She has paused her marker pen for a beat, then writes one
+sincere line. Doyun glances at the page with a small soft "...너답다" expression.
+Background: distant cluster of classmates, winter sun, slightly shy distance between the two.
+Mood: a quiet crush-distance warmth — being singled out for one honest line.
+```
+
+#### [c1-f] 살짝 웃고 짧게 한 줄 적는다 (discovery/warm/4)
+> 결과: "도윤이도 별 말 없이 짧게 적었다. 페이지를 닫는 손이 평소보다 조심스러웠다."
+
+**파일명** `elementary/doyun-graduation-sign_c1_f.png`
+```
+Same post-graduation field setting. Female protagonist (player_f reference) writing a short
+line with a faint smile; Doyun (reference) writing back wordlessly, then closing the yearbook
+page with unusually careful hands. Background: classmates in distance, soft winter light.
+Mood: gentle, unspoken — the one day Doyun was quieter than usual.
+```
+
+#### [c2-f] "...뭐 적지" 하다가 평범하게 마무리 (failure/regret/4)
+> 결과: "결국 '잘 지내' 정도로 끝냈다. 그게 어떤 뜻인지는 그땐 몰랐다."
+
+**파일명** `elementary/doyun-graduation-sign_c2_f.png`
+```
+Same setting, close-ish on the open yearbook page with a plain "잘 지내" line, marker pen
+hesitating ("...뭐 적지"). Female protagonist (player_f reference, slightly pensive) and Doyun
+(reference) each writing something plain, a small distance between them. Muted winter light.
+Mood: a goodbye that stayed safe and ordinary — regret understood only in hindsight.
+```
+

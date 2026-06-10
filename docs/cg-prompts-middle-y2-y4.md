@@ -596,3 +596,62 @@ Mood: the weight of the year's last exam — everything riding on this one.
 - `middle-school-entrance` · `middle2-start` · `middle3-start`
 - `middle-school-graduation` (c0 단체 대표)
 - `midterm-1` (middle분) · `final-exam-2` (middle분)
+
+---
+
+# 📅 초등 친구와의 이별 (Y2 발동 → middle CG)
+
+> doyun-school-split: 내용은 초등 친구지만 Y2 발동이라 schoolLevel=middle → 파일이 middle/. 폰/방 컷이라 교복 거의 안 보임.
+
+## 🔴 W2(Y2) doyun-school-split — 도윤이는 다른 학교 (★middle 디렉토리 함정)
+
+**발동조건**: `year === 2 && doyun.met`, W2. **Y2 발동 → schoolLevel=middle** → 파일은 `middle/` 디렉토리.
+**Scene**: 중학교 입학 둘째 주. 카톡으로 도윤이가 "나 다른 중학교 가게 됐어. 학군 때문에 이사 가더라고. 미리 말 못해서 미안~~" 읽고 한참 가만히 있었다.
+**톤**: 혼자 방 안에서 폰 화면을 보는 컷. 교복 거의 안 보임 — 실내 사복/13세.
+
+**References**: `player_m_*` / `player_f_*` (실내 사복, 후방·측면 실루엣 권장) · `home_evening.png`
+> NPC(도윤) 직접 등장 X — 폰 화면의 카톡 말풍선으로만 존재.
+
+### [c0] "야 진짜야? 우리 만나서 밥이라도 먹자" — 약속을 잡으려 한다
+
+> 결과: "도윤이가 '오 진짜? 좋지!!!' 답했지만, 약속은 결국 잡히지 않았다." (discovery/regret/6)
+
+**파일명** `middle/doyun-school-split_c0.png`
+```
+A 13-year-old Korean kid (protagonist, back view or side silhouette, face hidden/downcast)
+alone in their own bedroom in the evening, sitting on the floor or bed, holding a smartphone.
+Phone screen lit, showing a Korean messaging app chat (generic, no brand): a long hopeful
+message just sent ("우리 만나서 밥이라도 먹자"), reply bubble "오 진짜? 좋지!!!" — but the
+chat trails off, no follow-up scheduling. Indoor casual home wear (NO school uniform visible).
+Through window: blue evening sky, a single streetlamp on.
+Mood: a promise made that quietly never happens — first lesson that different schools mean
+different time. Bittersweet, not bitter.
+```
+
+### [c1] "잘 가" — 짧게 답한다
+
+> 결과: "'응. 너도 잘 지내.' 도윤이의 답도 짧았다. 그렇게 카톡 창이 닫혔다." (failure/regret/7)
+
+**파일명** `middle/doyun-school-split_c1.png`
+```
+Same bedroom-evening setting, protagonist (back/side silhouette, face hidden). Phone screen
+shows a very short exchange: "잘 가" sent, "응. 너도 잘 지내." reply — then the thumb hovering
+over a closed/dimming chat. The screen is about to go dark. Indoor casual wear, NO uniform.
+Dim warm room, single lamp, cold blue light from the phone on the face/hand.
+Mood: a relationship closing in two short lines — quiet regret of words not said.
+```
+
+### [c2] 읽씹한다 — 뭐라고 답해야 할지 모르겠다
+
+> 결과: "하루, 이틀, 일주일이 지나자 답할 수 없는 분위기가 됐다." (failure/regret/7)
+
+**파일명** `middle/doyun-school-split_c2.png`
+```
+Same bedroom-evening setting. The phone lies face-up on the desk or floor, screen showing
+Doyun's last unanswered message ("...미리 말 못해서 미안~~") marked READ (읽음) but with no reply,
+a "1" read-mark gone. Protagonist (back view / out of frame, only a shoulder or hand at the
+edge) NOT touching the phone — frozen, unable to type. Indoor casual, NO uniform.
+Several days implied (a calendar / faint time passing). Dim cooling light.
+Mood: the ache of a message you couldn't bring yourself to answer — a spring that quietly faded.
+```
+
