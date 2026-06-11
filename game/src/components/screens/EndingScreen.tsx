@@ -15,10 +15,10 @@ interface EndingScreenProps {
 const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: string }> = {
   emotional:  { icon: '🫂', label: '정서적 지지', recall: '엄마가 현관에서 기다리던 노란 불빛.' },
   wealth:     { icon: '🏠', label: '여유 있는 집', recall: '책상 위, 말없이 놓여있던 흰 봉투.' },
-  info:       { icon: '📱', label: '정보가 있는 집', recall: '식탁에 펼쳐진, 빨갛게 밑줄 쳐진 신문.' },
+  info:       { icon: '📱', label: '정보가 있는 집', recall: '식탁에 펼쳐진, 빨갛게 밑줄 쳐진 입시설명회 자료.' },
   strict:     { icon: '📐', label: '엄격한 집', recall: '11시, 스탠드를 끄러 오던 슬리퍼 소리.' },
-  resilience: { icon: '⭐', label: '타고난 체질', recall: '감기에도 멀쩡하게 들고 가던 가방끈.' },
-  freedom:    { icon: '🌿', label: '자유로운 집', recall: '"알아서 해" 뒤에 닫히던 안방 문.' },
+  resilience: { icon: '⭐', label: '다시 일어나는 집', recall: '혼자 일어설 때까지, 한 발 떨어져 지켜보던 자리.' },
+  freedom:    { icon: '🌿', label: '자유로운 집', recall: '"네가 정해" 하고는, 끝까지 안 닫던 안방 문.' },
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
@@ -125,9 +125,17 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center', letterSpacing: '0.15em' }}>
             부모가 남긴 것
           </div>
+          {/* Phase 4A: 친밀도 tier 전반 회고 (warm/normal/distant) */}
+          {ending.parentEpilogue?.intro && (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginBottom: 12, textAlign: 'center', fontStyle: 'italic' }}>
+              {ending.parentEpilogue.intro}
+            </div>
+          )}
           {parents.map(p => {
             const r = PARENT_RECALL_MAP[p];
             if (!r) return null;
+            // Phase 4A: 친밀도 tier별 강점 서사 (없으면 기존 고정 앵커만)
+            const beat = ending.parentEpilogue?.beats.find(b => b.strength === p)?.text;
             return (
               <div key={p} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
                 <span style={{ fontSize: '1.1rem', lineHeight: '1.4' }}>{r.icon}</span>
@@ -138,6 +146,11 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
                   <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.5 }}>
                     {r.recall}
                   </div>
+                  {beat && (
+                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.6, marginTop: 4 }}>
+                      {beat}
+                    </div>
+                  )}
                 </div>
               </div>
             );

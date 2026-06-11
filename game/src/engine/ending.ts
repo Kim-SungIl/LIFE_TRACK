@@ -1,6 +1,6 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
-import { GameState } from './types';
+import { GameState, ParentStrength } from './types';
 import { selectMemorialHighlights } from './memorySystem';
 
 // ===== 행복 등급 =====
@@ -23,6 +23,62 @@ export const HAPPINESS_LABELS: Record<HappinessGrade, { title: string; desc: str
   C: { title: '😐 외로운 한 해', desc: '마음이 자주 비어 있던 한 해.' },
   D: { title: '😔 힘들었던 한 해', desc: '돌아보면 버티는 것만으로 벅찼다.' },
 };
+
+// ===== 부모 에필로그 (Phase 4A) =====
+// 진로 결과(대학)는 stats/수능으로만 결정하고 친밀도로 바꾸지 않는다("스탯 퍼주기" 회피).
+// 친밀도는 "내 이야기의 결말"로만 남긴다 — 같은 결과를 부모와 함께(warm) 맞느냐,
+// 끝내 못 한 말로(distant) 맞느냐. tier 경계는 talkSystem.getParentIntimacyTone과 동일(distant<30 / warm≥70).
+// 화자 SSOT 유지(엄마: emotional/info/resilience/freedom, 아빠: wealth/strict).
+export type EpilogueTier = 'distant' | 'normal' | 'warm';
+export type ParentEpilogue = { tier: EpilogueTier; intro: string; beats: { strength: ParentStrength; text: string }[] };
+
+const PARENT_EPILOGUE_INTRO: Record<EpilogueTier, string> = {
+  warm: '집을 떠나던 날, 현관까지 따라 나온 두 사람을 한참 돌아봤다. 7년이 거기 다 담겨 있었다.',
+  normal: '늘 곁에 있어서 당연했던 사람들. 떠날 때가 되어서야 그 당연함이 얼마나 컸는지 알았다.',
+  distant: '집은 끝까지 조용했다. 서로에게 닿지 못한 말들이 현관 앞에 그대로 쌓여 있었다.',
+};
+
+const PARENT_EPILOGUE_BEATS: Record<ParentStrength, Record<EpilogueTier, string>> = {
+  emotional: {
+    warm: '엄마는 늘 "오늘은 어땠어"를 먼저 물었다. 그 한마디가 내 하루의 무게를 절반으로 줄여줬다.',
+    normal: '엄마는 가끔 내 표정을 살폈다. 다 말하진 못했어도, 누군가 보고 있다는 건 알았다.',
+    distant: '엄마가 "무슨 일 있어?" 물을 때마다 "아니"라고 답했다. 그 "아니"들이 쌓여 벽이 됐다.',
+  },
+  wealth: {
+    warm: '아빠는 말 대신 통장을 만들어뒀더라. 필요할 때 쓰라는, 그 사람다운 사랑이었다.',
+    normal: '아빠는 "필요한 거 있으면 말해"를 반복했다. 그게 아빠가 아는 가장 다정한 문장이었다.',
+    distant: '아빠가 내민 것들을 몇 번 거절했다. 그게 아빠의 서툰 언어였다는 걸, 너무 늦게 알았다.',
+  },
+  info: {
+    warm: '엄마는 자료를 한 아름 안고 왔다. 답을 정해주는 대신, 내가 고를 수 있게 길을 다 펼쳐놨다.',
+    normal: '엄마는 자료를 모아뒀다가 슬쩍 건넸다. 받든 안 받든, 늘 준비돼 있었다.',
+    distant: '엄마가 모아둔 자료들을 끝내 펼쳐보지 않았다. 그 마음까지 밀어낸 건 아니었는데.',
+  },
+  strict: {
+    warm: '아빠는 끝내 "잘했다"고 했다. 평생 아껴두기만 하던 그 말을, 떠나는 날에야 꺼냈다.',
+    normal: '아빠의 기준은 높았다. 그 뒤에 뭐가 있었는지는, 아직 다 알지 못한다.',
+    distant: '아빠의 기준을 따라가려 애썼지만, 어느 순간 그게 내 기준이 아니라는 걸 알았다.',
+  },
+  resilience: {
+    warm: '엄마는 넘어진 나를 곧장 일으키지 않았다. 그 몇 초의 침묵이, 나를 혼자 일어서게 했다.',
+    normal: '"괜찮아, 그런 날도 있어." 엄마의 그 말이 생각보다 자주 필요했다.',
+    distant: '힘들다고 말하지 못했다. 엄마는 늘 괜찮냐고 물었지만, 나는 늘 괜찮은 척했다.',
+  },
+  freedom: {
+    warm: '엄마는 끝까지 안 말렸다. 내 선택을 믿어준 그 침묵이, 가장 큰 응원이었다.',
+    normal: '"네가 정해." 엄마는 답을 주지 않았다. 그게 답답하면서도 든든했다.',
+    distant: '엄마는 안방 문을 늘 열어뒀지만, 나는 한 번도 들어가 방향을 묻지 못했다.',
+  },
+};
+
+function buildParentEpilogue(state: GameState): ParentEpilogue {
+  const pi = state.parentIntimacy ?? 50;
+  const tier: EpilogueTier = pi < 30 ? 'distant' : pi >= 70 ? 'warm' : 'normal';
+  const beats = (state.parents ?? [])
+    .map(s => { const text = PARENT_EPILOGUE_BEATS[s]?.[tier]; return text ? { strength: s, text } : null; })
+    .filter((b): b is { strength: ParentStrength; text: string } => !!b);
+  return { tier, intro: PARENT_EPILOGUE_INTRO[tier], beats };
+}
 
 // ===== 진로 판정 =====
 // 수능 등급 + 문이과 + 특기를 기반으로 "진로" 결정
@@ -169,6 +225,9 @@ export function calculateEnding(state: GameState) {
     description = '성적은 평범했지만, 웃음이 가득한 학창시절이었다. ' + career.detail;
   }
 
+  // Phase 4A: 부모 에필로그 (친밀도 tier × 강점별 회고 — 진로 결과엔 영향 없음)
+  const parentEpilogue = buildParentEpilogue(state);
+
   // v1.2 회상 레이어 (크래시 보험: 빈 배열도 안전)
   const memorialHighlights = selectMemorialHighlights(state);
   const yearClosings = [...(state.milestoneScenes || [])]
@@ -185,6 +244,7 @@ export function calculateEnding(state: GameState) {
     careerDetail: career.detail,
     suneungGrade,
     npcStories,
+    parentEpilogue,
     memorialHighlights,
     yearClosings,
   };
