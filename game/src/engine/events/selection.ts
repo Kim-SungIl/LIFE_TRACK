@@ -33,6 +33,7 @@ function weeksSince(state: GameState, prev: GameEvent): number {
 function pickConditionalCandidates(state: GameState): GameEvent[] {
   return GAME_EVENTS.filter(e =>
     !e.week &&
+    !e.reach &&
     e.condition &&
     e.condition(state) &&
     !FOLLOWUP_EVENT_IDS.has(e.id) &&
@@ -42,40 +43,82 @@ function pickConditionalCandidates(state: GameState): GameEvent[] {
   );
 }
 
-// E-2: 친밀도 도달형 자동 판별 — condition 함수 소스에서 npc.intimacy >= N 패턴 검사.
-// 스토리 핵심 컷이라 일반 풀과 섞이지 않고 별도 풀로 우선 노출되도록 분리한다.
-function isIntimacyMilestone(e: GameEvent): boolean {
-  if (!e.condition) return false;
-  return /\.intimacy\s*>=/.test(e.condition.toString());
+// ===== 도달형(reach) 페이싱 엔진 =====
+// 절대 친밀도 임계만으로 게이트하면 친밀도가 미리 높을 때 적격 reach가 한꺼번에 터진다(burst).
+// 규칙: ① fresh(이번 주에 임계를 방금 넘음) = 쿨다운 면제, 즉시 발동 → 빠르게 도달한 헌신 플레이어를
+//       굶기지 않음. ② pre-met(이미 넘어 있던 임계) = NPC별 쿨다운(48주 ÷ 그 NPC·그 해 reach 수)으로
+//       균등 분산. ③ 주당 1개. ④ 영구 1회성.
+function absWeek(year: number, week: number): number {
+  return (year - 1) * 48 + week;
 }
 
-// fixed/followup 이벤트 resolve 후 chain용 — conditional 이벤트 1개 추가 픽
+// 그 NPC·그 해 reach 수로 쿨다운 산출(= 1년 ÷ 이벤트 수). 최소 4주 가드.
+function reachCooldown(npc: string, year: number): number {
+  const count = GAME_EVENTS.filter(e => e.reach && e.reach.npc === npc && e.reach.year === year).length;
+  return count > 0 ? Math.max(4, Math.round(48 / count)) : 48;
+}
+
+// 그 NPC의 마지막 reach 발동 절대주차 (없으면 null)
+function lastReachAbsWeek(state: GameState, npc: string): number | null {
+  let last: number | null = null;
+  for (const e of state.events) {
+    if (e.reach && e.reach.npc === npc) {
+      const abs = absWeek(e.year ?? 1, e.week ?? 0);
+      if (last === null || abs > last) last = abs;
+    }
+  }
+  return last;
+}
+
+// 이번 주 발동할 도달형 1개 선택 (페이싱 규칙 적용). 없으면 null.
+export function getReachForWeek(state: GameState): GameEvent | null {
+  // ④ 1회성: 이미 발동한 reach 제외
+  const firedIds = new Set(state.events.filter(e => e.reach).map(e => e.id));
+  // ③ 주당 1개: 이번 주에 이미 reach 발동했으면 중단
+  if (state.events.some(e => e.reach && e.year === state.year && e.week === state.week)) return null;
+
+  const cands = (GAME_EVENTS as GameEvent[]).filter(e =>
+    e.reach && !firedIds.has(e.id) && e.condition && e.condition(state),
+  );
+  if (cands.length === 0) return null;
+  const npcOf = (e: GameEvent) => state.npcs.find(n => n.id === e.reach!.npc);
+
+  // ① fresh: 주 시작 친밀도 < 임계 <= 현재 친밀도 (이번 주에 막 넘음) → 쿨다운 면제, 즉시
+  const fresh = cands.filter(e => {
+    const n = npcOf(e);
+    return n && (n.weekStartIntimacy ?? n.intimacy) < e.reach!.tier && n.intimacy >= e.reach!.tier;
+  });
+  if (fresh.length > 0) return fresh.sort((a, b) => a.reach!.tier - b.reach!.tier)[0];
+
+  // ② pre-met: 이미 임계를 넘어 있던 것 → NPC별 쿨다운 경과분만, 낮은 tier 우선
+  const cur = absWeek(state.year, state.week);
+  const eligible = cands.filter(e => {
+    const n = npcOf(e);
+    if (!n || (n.weekStartIntimacy ?? n.intimacy) < e.reach!.tier) return false;
+    const last = lastReachAbsWeek(state, e.reach!.npc);
+    return last === null || (cur - last) >= reachCooldown(e.reach!.npc, e.reach!.year);
+  });
+  if (eligible.length === 0) return null;
+  return eligible.sort((a, b) => a.reach!.tier - b.reach!.tier)[0];
+}
+
+// fixed/followup 이벤트 resolve 후 chain용 — 도달형 우선, 없으면 일반 조건부 1개(50%).
 // 같은 주(week+year)에 한 번만 호출되도록 호출자가 가드
 export function getConditionalForWeek(state: GameState): GameEvent | null {
+  const reach = getReachForWeek(state);
+  if (reach) return reach;
+
   const candidates = pickConditionalCandidates(state);
   if (candidates.length === 0) return null;
-
-  // 친밀도 도달형 후보가 있으면 일반 풀과 섞지 않고 그중에서 무조건 1개 노출.
-  // (도달형이 일반 이벤트와 1/N 경쟁해 묻히면 다음 노출까지 10주 쿨다운에 걸려 답답해진다.)
-  const milestone = candidates.filter(isIntimacyMilestone);
-  if (milestone.length > 0) {
-    return milestone[Math.floor(seededRandom(state) * milestone.length)];
-  }
-
-  // 일반 조건부 풀: 기존 동작 유지 (50% 게이트)
   if (seededRandom(state) < 0.5) {
     return candidates[Math.floor(seededRandom(state) * candidates.length)];
   }
   return null;
 }
 
-// 옵션 C: chain cap 초과 시 milestone-only 추가 픽용. 일반 조건부는 픽하지 않는다.
-// 학년 한정 도달형(예: Y1 한정)이 학년 마감 직전에 발동 못 하고 사라지는 문제 완화.
+// chain cap 초과 시 도달형 전용 추가 픽 — 학년 한정 reach가 마감 직전 누락되는 것 완화.
 export function getMilestoneForWeek(state: GameState): GameEvent | null {
-  const candidates = pickConditionalCandidates(state);
-  const milestone = candidates.filter(isIntimacyMilestone);
-  if (milestone.length === 0) return null;
-  return milestone[Math.floor(seededRandom(state) * milestone.length)];
+  return getReachForWeek(state);
 }
 
 // getEventForWeek 결과 — 선택된 이벤트 + state patch (사이드이펙트를 호출자에 위임)
@@ -138,6 +181,11 @@ export function getEventForWeek(state: GameState): EventSelection {
     );
     if (softCrisis) return noPatch(softCrisis);
   }
+
+  // 3.5 도달형(reach) — 페이싱 엔진이 적격 판정(fresh 즉시 / pre-met 쿨다운). 적격이면 확정 발동.
+  // 일반 조건부보다 우선(스토리 핵심 컷) — pickConditionalCandidates 는 reach 를 제외하므로 중복 없음.
+  const reach = getReachForWeek(state);
+  if (reach) return noPatch(reach);
 
   // 4. 조건부 상태 이벤트 (피로/멘탈 등) — 50% 확률
   // 위기 ID는 위에서 이미 처리했으므로 중복 제거

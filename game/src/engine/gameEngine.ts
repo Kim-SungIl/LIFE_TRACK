@@ -641,6 +641,10 @@ export function applyYearTransition(s: GameState): void {
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
   const newState = migrateLoadedState(cloneGameState(state)) as GameState;
 
+  // 도달형 페이싱: 주 시작 시점 친밀도 스냅샷. 이번 주 이벤트로 친밀도가 임계를 "방금 넘으면"(fresh)
+  // 즉시 발동, 이미 넘어 있었으면(pre-met) 쿨다운으로 분산 — getReachForWeek 가 이 값으로 판별.
+  for (const npc of newState.npcs) npc.weekStartIntimacy = npc.intimacy;
+
   // NPC 선택(activity→npc 매핑)에 따른 친밀도 적용
   if (npcActivityMap) {
     for (const npcId of Object.values(npcActivityMap)) {
