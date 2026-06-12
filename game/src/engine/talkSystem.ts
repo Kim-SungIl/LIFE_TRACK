@@ -11,10 +11,12 @@ import { seededRandom } from './rng';
 import { getSchoolLevel } from './backgrounds';
 import {
   MiniTalkEvent,
+  ParentClimaxEvent,
   GenderedPool,
   SmalltalkBucket,
   NPC_MINI_EVENTS,
   PARENT_MINI_EVENTS,
+  PARENT_CLIMAX_EVENTS,
   PARENT_STATIC_DIALOGUES,
   NPC_SMALLTALK,
   PARENT_SMALLTALK,
@@ -125,6 +127,38 @@ export function getAvailableHomeEvents(state: GameState): MiniTalkEvent[] {
   );
   // 로테이션: 가장 오래전 발동(미발동 = -Infinity가 최우선) 순 → available[0]이 자연 교대
   return avail.sort((a, b) => lastFiredWeek(state, a.id) - lastFiredWeek(state, b.id));
+}
+
+// ===== Phase 4B — 강점별 "절정 순간" 트리거 =====
+// 복합 게이트(검토 합의): 친밀도 자격 + 해당 강점 긍정 태그 누적 + 연령 창 + 평생 1회.
+// 친밀도 단독 임계는 금지(숨은 스탯 그라인딩) — 누적 행동이 "쌓을 이유"가 되어야 한다.
+export const PARENT_CLIMAX_INTIMACY_GATE = 60;  // 자격(충분히 쌓은 관계). warm 전용 아님 — "착한 플레이만 보상" 방지
+export const PARENT_CLIMAX_TAG_THRESHOLD = 2;   // 해당 강점 긍정 태그 누적 하한
+export const PARENT_CLIMAX_RESCUE_WEEK = 36;    // 고3 수능 후(getExamSchedule(7) 수능=35주) 구제 발동창 진입
+export const PARENT_CLIMAX_RESCUE_GATE = 45;    // 구제 발동 시 친밀도 하한(normal+). distant는 미발동이 서사
+
+// 이번 시점에 발동 가능한 절정 1건(우선 강점 순)을 반환. 없으면 null.
+//  - 일반: 친밀도≥GATE AND 긍정태그≥THRESHOLD AND year≥climaxYearMin
+//  - 구제: 고3 수능 후 미발동분은 누적 무시, 친밀도≥RESCUE_GATE면 발동(놓침 방지)
+export function getEligibleParentClimax(state: GameState): ParentClimaxEvent | null {
+  const fired = state.parentClimaxFired ?? [];
+  const pi = state.parentIntimacy ?? 50;
+  const tags = state.parentPositiveTags ?? {};
+  const isRescue = state.year === 7 && state.week >= PARENT_CLIMAX_RESCUE_WEEK;
+
+  for (const strength of state.parents) {
+    if (fired.includes(strength)) continue;
+    const c = PARENT_CLIMAX_EVENTS.find(e => e.parentStrength === strength);
+    if (!c) continue;
+    if (state.year < c.climaxYearMin) continue;
+    if (isRescue) {
+      if (pi >= PARENT_CLIMAX_RESCUE_GATE) return c;
+    } else if (pi >= PARENT_CLIMAX_INTIMACY_GATE
+        && (tags[c.triggerTag] ?? 0) >= PARENT_CLIMAX_TAG_THRESHOLD) {
+      return c;
+    }
+  }
+  return null;
 }
 
 // ===== 부모 친밀도 회고 톤 (학년말 일기장 변주) =====

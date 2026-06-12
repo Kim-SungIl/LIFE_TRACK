@@ -41,34 +41,45 @@ const PARENT_EPILOGUE_INTRO: Record<EpilogueTier, string> = {
   distant: '집은 끝까지 조용했다. 서로에게 닿지 못한 말들이 현관 앞에 그대로 쌓여 있었다.',
 };
 
-const PARENT_EPILOGUE_BEATS: Record<ParentStrength, Record<EpilogueTier, string>> = {
+// warmSeen(선택): Phase 4B 절정을 본 강점은 warm 비트를 "그 순간을 돌아보는 콜백"으로 교체한다.
+// 절정(현재 장면) ↔ 엔딩(회고적 해석) 분업으로 verbatim 중복을 막는다(검토 합의). 못 본 강점은 warm 사용.
+// warm standalone은 절정 소재(통장/자료/안 말림 등)를 직접 재서술하지 않게 추상화해, 절정 미발동 플레이에서도 중복 인상이 없게 한다.
+type EpilogueBeatSet = { distant: string; normal: string; warm: string; warmSeen?: string };
+
+const PARENT_EPILOGUE_BEATS: Record<ParentStrength, EpilogueBeatSet> = {
   emotional: {
     warm: '엄마는 늘 "오늘은 어땠어"를 먼저 물었다. 그 한마디가 내 하루의 무게를 절반으로 줄여줬다.',
+    warmSeen: '늘 묻던 엄마가, 가장 힘든 밤엔 아무것도 묻지 않았다. 묻지 않는 것도 사랑이라는 걸 그날 알았다.',
     normal: '엄마는 가끔 내 표정을 살폈다. 다 말하진 못했어도, 누군가 보고 있다는 건 알았다.',
     distant: '엄마가 "무슨 일 있어?" 물을 때마다 "아니"라고 답했다. 그 "아니"들이 쌓여 벽이 됐다.',
   },
   wealth: {
-    warm: '아빠는 말 대신 통장을 만들어뒀더라. 필요할 때 쓰라는, 그 사람다운 사랑이었다.',
+    warm: '아빠의 다정함은 늘 말이 아니라 다른 데 가만히 놓여 있었다. 나는 그걸 한참 뒤에야 읽는 법을 배웠다.',
+    warmSeen: '그때 그 통장, 개설일이 입학식 날이었다. 아빠는 끝내 그 얘길 입에 올리지 않았다.',
     normal: '아빠는 "필요한 거 있으면 말해"를 반복했다. 그게 아빠가 아는 가장 다정한 문장이었다.',
     distant: '아빠가 내민 것들을 몇 번 거절했다. 그게 아빠의 서툰 언어였다는 걸, 너무 늦게 알았다.',
   },
   info: {
-    warm: '엄마는 자료를 한 아름 안고 왔다. 답을 정해주는 대신, 내가 고를 수 있게 길을 다 펼쳐놨다.',
+    warm: '엄마는 답을 정해주는 사람이 아니었다. 대신 내가 고를 수 있는 길을, 늘 한 뼘 더 넓혀뒀다.',
+    warmSeen: '내가 흘리듯 한 말을 엄마는 포스트잇에 적어뒀다. 답이 아니라, 나를 듣고 있었다는 증거였다.',
     normal: '엄마는 자료를 모아뒀다가 슬쩍 건넸다. 받든 안 받든, 늘 준비돼 있었다.',
     distant: '엄마가 모아둔 자료들을 끝내 펼쳐보지 않았다. 그 마음까지 밀어낸 건 아니었는데.',
   },
   strict: {
     warm: '아빠는 끝내 "잘했다"고 했다. 평생 아껴두기만 하던 그 말을, 떠나는 날에야 꺼냈다.',
+    warmSeen: '"고생했네." 결과가 아니라 과정을 본 그 한마디가, "잘했다"보다 무거웠다는 걸 떠나는 날에야 알았다.',
     normal: '아빠의 기준은 높았다. 그 뒤에 뭐가 있었는지는, 아직 다 알지 못한다.',
     distant: '아빠의 기준을 따라가려 애썼지만, 어느 순간 그게 내 기준이 아니라는 걸 알았다.',
   },
   resilience: {
     warm: '엄마는 넘어진 나를 곧장 일으키지 않았다. 그 몇 초의 침묵이, 나를 혼자 일어서게 했다.',
+    warmSeen: '문 앞에 놓였던 그 식은 밥상이, 일으켜 세우는 손보다 나를 더 단단하게 했다.',
     normal: '"괜찮아, 그런 날도 있어." 엄마의 그 말이 생각보다 자주 필요했다.',
     distant: '힘들다고 말하지 못했다. 엄마는 늘 괜찮냐고 물었지만, 나는 늘 괜찮은 척했다.',
   },
   freedom: {
-    warm: '엄마는 끝까지 안 말렸다. 내 선택을 믿어준 그 침묵이, 가장 큰 응원이었다.',
+    warm: '엄마는 내 선택에 토를 달지 않았다. 그 믿음이 때로 어떤 조언보다 무거웠다.',
+    warmSeen: '엄마도 말리고 싶었다는 걸, 삼킨 그 한마디로 알았다. 안 말린 게 아니라, 참아준 거였다.',
     normal: '"네가 정해." 엄마는 답을 주지 않았다. 그게 답답하면서도 든든했다.',
     distant: '엄마는 안방 문을 늘 열어뒀지만, 나는 한 번도 들어가 방향을 묻지 못했다.',
   },
@@ -77,8 +88,15 @@ const PARENT_EPILOGUE_BEATS: Record<ParentStrength, Record<EpilogueTier, string>
 function buildParentEpilogue(state: GameState): ParentEpilogue {
   const pi = state.parentIntimacy ?? 50;
   const tier: EpilogueTier = pi < 30 ? 'distant' : pi >= 70 ? 'warm' : 'normal';
+  const climaxFired = new Set(state.parentClimaxFired ?? []);
   const beats = (state.parents ?? [])
-    .map(s => { const text = PARENT_EPILOGUE_BEATS[s]?.[tier]; return text ? { strength: s, text } : null; })
+    .map(s => {
+      const set = PARENT_EPILOGUE_BEATS[s];
+      if (!set) return null;
+      // 절정을 본 강점은 warm에서 콜백 비트로 교체(4A↔4B 분업).
+      const text = (tier === 'warm' && climaxFired.has(s) && set.warmSeen) ? set.warmSeen : set[tier];
+      return text ? { strength: s, text } : null;
+    })
     .filter((b): b is { strength: ParentStrength; text: string } => !!b);
   return { tier, intro: PARENT_EPILOGUE_INTRO[tier], beats };
 }

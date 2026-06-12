@@ -645,6 +645,88 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
   },
 ];
 
+// ===== Phase 4B — 강점별 "절정 순간" =====
+// "이 부모라서 좋은 단 한 장면". 강점당 평생 1회(store.parentClimaxFired 가드).
+// 미니이벤트와 달리 선택지 없는 단일 컷이라 톤이 분리된다(반복 잡담과 구분).
+// 트리거(talkSystem.getEligibleParentClimax): 친밀도 게이트 + triggerTag 누적 + climaxYearMin + 미발동.
+//   고3 수능 후 구제 발동창에선 누적 무시(친밀도 normal+면 발동).
+// 스탯 퍼주기 금지: strict만 기존 밸런스(멘탈 +2) 유지, 나머지 5축은 스탯 0 — 보상은 회상 슬롯(importance 5).
+// 화자 SSOT: 엄마(emotional/info/resilience/freedom) / 아빠(wealth/strict).
+export interface ParentClimaxEvent extends MiniTalkEvent {
+  parentStrength: ParentStrength;
+  triggerTag: ParentTag;     // 누적 자격 태그
+  climaxYearMin: number;     // 연령 창 하한
+}
+
+export const PARENT_CLIMAX_EVENTS: ParentClimaxEvent[] = [
+  {
+    id: 'climax_parent_emotional',
+    parentStrength: 'emotional', triggerTag: 'shareWorry', climaxYearMin: 2,
+    description: '밤 11시, 공부방 문이 5센티쯤 열렸다. 엄마는 아무것도 묻지 않았다.\n핫초코 한 잔이 책상 모서리에 놓였다가, 문이 다시 조용히 닫혔다.',
+    effects: {},
+    message: '엄마가 말없이 핫초코를 두고 갔다',
+    memorySlotDraft: {
+      category: 'reconciliation', importance: 5, toneTag: 'warm',
+      recallText: '아무것도 묻지 않고 핫초코만 두고 가던 그 밤.',
+    },
+  },
+  {
+    id: 'climax_parent_wealth',
+    parentStrength: 'wealth', triggerTag: 'familyTime', climaxYearMin: 5,
+    description: '아빠 서랍을 열다 내 이름이 적힌 무언가를 봤다. 금액이 아니라, 개설일이 입학식 날인 게 먼저 눈에 들어왔다.\n아빠는 그걸 보더니 "밥은 먹었냐" 하고는 서랍을 닫았다.',
+    effects: {},
+    message: '아빠는 끝내 그 통장 얘길 하지 않았다',
+    memorySlotDraft: {
+      category: 'unspoken_debt', importance: 5, toneTag: 'warm',
+      recallText: '개설일이 입학식 날이던, 내 이름의 통장.',
+    },
+  },
+  {
+    id: 'climax_parent_info',
+    parentStrength: 'info', triggerTag: 'careerTalk', climaxYearMin: 4,
+    description: '엄마가 자료 더미를 내려놨다. 맨 위에, 내가 흘리듯 한마디 했던 분야가 포스트잇으로 따로 붙어 있었다.\n"강제 아니야. 그냥, 네가 저번에 그랬잖아."',
+    effects: {},
+    message: '엄마는 내 말을 기억하고 있었다',
+    memorySlotDraft: {
+      category: 'discovery', importance: 5, toneTag: 'resolve',
+      recallText: '내 한마디를 포스트잇으로 붙여둔 자료 더미.',
+    },
+  },
+  {
+    id: 'climax_parent_strict',
+    parentStrength: 'strict', triggerTag: 'gradeImprove', climaxYearMin: 4,
+    description: '성적표를 한참 보던 아빠가, "잘했다" 대신 "…고생했네" 한마디만 남기고 먼저 돌아섰다.\n그 등을 보는데, 왜인지 성적보다 그 말이 오래 남았다.',
+    effects: { stats: { mental: 2 } },
+    message: '아빠가 "고생했네" 한마디를 남겼다 — 멘탈 +2',
+    memorySlotDraft: {
+      category: 'growth', importance: 5, toneTag: 'warm',
+      recallText: '"고생했네" 한마디 남기고 돌아서던 아빠.',
+    },
+  },
+  {
+    id: 'climax_parent_resilience',
+    parentStrength: 'resilience', triggerTag: 'recoveryAction', climaxYearMin: 3,
+    description: '크게 주저앉은 날, 엄마는 손을 내밀지 않았다. 문 앞에 식은 밥상만 두고 갔다.\n"안 들어갈게. 배고프면 나와." 문이 닫히고도, 발소리는 한참 복도에 남아 있었다.',
+    effects: {},
+    message: '엄마는 일으키는 대신 기다려줬다',
+    memorySlotDraft: {
+      category: 'growth', importance: 5, toneTag: 'warm',
+      recallText: '문 앞에 식은 밥상을 두고 가던, 그 거리.',
+    },
+  },
+  {
+    id: 'climax_parent_freedom',
+    parentStrength: 'freedom', triggerTag: 'autonomyChoice', climaxYearMin: 4,
+    description: '온 가족이 말리는 선택 앞에서, 엄마만 아무 말이 없었다. 입을 열었다 다시 다물고는—\n"…그래. 네가 정했으면." 말리고 싶은 걸 삼킨 한순간이었다.',
+    effects: {},
+    message: '엄마는 말리고 싶은 걸 삼켰다',
+    memorySlotDraft: {
+      category: 'discovery', importance: 5, toneTag: 'resolve',
+      recallText: '말리고 싶은 걸 삼키던, 그 한마디.',
+    },
+  },
+];
+
 // ===== 정적 인사말 풀 — 풀 다 본 후 / pressure 미만 / 친밀도 미달 시 (부모 전용) =====
 // NPC 정적 대사는 events.ts의 getNpcDialogue가 처리.
 export const PARENT_STATIC_DIALOGUES: Record<ParentStrength, string[]> = {

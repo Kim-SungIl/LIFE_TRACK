@@ -76,6 +76,10 @@ export interface GameState {
   parentEventsFired?: { id: string; week: number }[];
   // Phase 2B: strict 부모 성적향상 어드밴티지의 연간 1회 가드(hardCrisisYears 패턴). 발동 연도 기록.
   parentPraiseYears?: number[];
+  // Phase 4B: 강점별 "절정 순간". parentClimaxFired = 발동 완료 강점(평생 1회 가드).
+  // parentPositiveTags = 긍정 부모 태그 누적 횟수(절정 트리거 자격). applyParentIntimacyDelta 단일 진입점에서 적립.
+  parentClimaxFired?: ParentStrength[];
+  parentPositiveTags?: Partial<Record<string, number>>;
 }
 
 // 활성 버프 (shopSystem에서도 사용)

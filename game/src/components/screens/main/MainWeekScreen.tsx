@@ -4,7 +4,7 @@ import { getWeekLabel, getMonthLabel } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
-import { MiniTalkEvent, getAvailableHomeEvents } from '../../../engine/talkSystem';
+import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
 import { ShopItem } from '../../../engine/shopSystem';
 import { TalkActionResult } from '../../../engine/store';
 import { Shop } from '../../Shop';
@@ -101,8 +101,10 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const maxComboWeeks = Math.max(slot2ComboWeeks, slot3ComboWeeks);
 
   const upcomingEvents = getUpcomingEvents(state);
-  // 가정 모달 배지 — pending 이어도 풀이 비면 잡담으로 빠지므로, 실제 남은 이벤트가 있을 때만 true
-  const homeHasEvent = state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0;
+  // 가정 모달 배지 — pending 이어도 풀이 비면 잡담으로 빠지므로, 실제 남은 이벤트가 있을 때만 true.
+  // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
+  const homeHasEvent = getEligibleParentClimax(state) != null
+    || (state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0);
   // met NPC 목록 — NpcSelectModal memo 안정성 위해 npcs ref 변경 시에만 재계산
   const metNpcs = useMemo(() => state.npcs.filter(n => n.met), [state.npcs]);
 
