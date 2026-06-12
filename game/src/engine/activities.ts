@@ -201,6 +201,9 @@ export const ACTIVITIES: Activity[] = [
     effects: { social: 0.5, mental: -1 }, moneyCost: -3,
     // 학년 올라갈수록 시급 인상 (Y4 중3 -3만, Y5~7 고등 -4만 — 약 33% 인상)
     yearlyCost: { middle: -3, high: -4 },
+    // Phase 4B: "자립"은 자기주도(autonomyChoice) 신호 — freedom 1.4배(환영)·strict 0.6배(못마땅)로 강점별 반응이 갈린다.
+    //           freedom 절정의 일반 트리거 도달 경로를 미니이벤트 외에 하나 더 확보(게임체크 항목4).
+    parentEffect: { baseDelta: 0.4, tag: 'autonomyChoice' },
     category: 'work',
     description: '편의점에서 일하며 돈을 번다.',
     flavor: '"어서오세요~" 반복되는 인사. 힘들지만 통장 잔고가 올라가는 건 뿌듯하다.',

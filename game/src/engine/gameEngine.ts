@@ -102,6 +102,8 @@ export function createInitialState(
     parentEventPendingThisWeek: true,
     parentEventsFired: [],
     parentPraiseYears: [],
+    parentClimaxFired: [],
+    parentPositiveTags: {},
   };
 }
 

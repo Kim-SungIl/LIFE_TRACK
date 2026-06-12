@@ -6,7 +6,7 @@ import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
-import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
+import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 import { PARENT_MINI_EVENTS } from './talkData';
 import { applyParentIntimacyDelta } from './parentIntimacy';
 
@@ -410,6 +410,21 @@ export const useGameStore = create<GameStore>((set, get) => ({
   talkToHome: () => {
     const s = get().state;
     if (!s) return { kind: 'smalltalk', line: '' };
+
+    // Phase 4B: 강점별 "절정 순간" — 미니이벤트보다 우선. 선택지 없는 단일 컷, 평생 1회.
+    // pressure RNG와 무관하게(결정론적 마일스톤) 발동 가능 시점에 가정 대화로 surface된다.
+    const climax = getEligibleParentClimax(s);
+    if (climax) {
+      const newState = cloneGameState(s);
+      applyVisibleTalkEffects(newState, climax.effects);  // strict만 멘탈 +2, 나머지 스탯 0(친밀도 가산 없음)
+      applyMemorySlotFromMiniTalk(newState, climax.id, climax.memorySlotDraft);
+      newState.parentClimaxFired = [...(newState.parentClimaxFired ?? []), climax.parentStrength];
+      newState.actedWithParentThisWeek = true;
+      newState.parentTalkPressure = 0;
+      newState.parentEventPendingThisWeek = false;
+      set({ state: newState });
+      return { kind: 'event', event: climax };
+    }
 
     if (s.parentEventPendingThisWeek) {
       const available = getAvailableHomeEvents(s);

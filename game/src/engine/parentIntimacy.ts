@@ -65,6 +65,14 @@ export function applyParentIntimacyDelta(state: GameState, baseDelta: number, ta
 
   const next = Math.max(0, Math.min(100, pi + delta));
   state.parentIntimacy = next;
+
+  // Phase 4B: 긍정 의도(baseDelta>0)의 부모 태그를 누적 — 강점별 절정 트리거의 "쌓을 이유".
+  // 천장 감쇠로 적용량이 0에 가까워도 "그 행동을 했다"는 사실은 적립한다(의도 기준).
+  if (baseDelta > 0) {
+    const counts = (state.parentPositiveTags ??= {});
+    counts[tag] = (counts[tag] ?? 0) + 1;
+  }
+
   return next - pi;
 }
 

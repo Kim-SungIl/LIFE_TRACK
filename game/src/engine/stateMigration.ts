@@ -45,6 +45,9 @@ export function migrateLoadedState(state: GameState): GameState {
     parentEventsFired: state.parentEventsFired ?? [],
     // Phase 2B: strict 성적향상 어드밴티지 연간 가드
     parentPraiseYears: state.parentPraiseYears ?? [],
+    // Phase 4B: 강점별 절정 발동 가드 + 긍정 태그 누적(구버전 세이브는 0부터 — 절정은 조건 충족 시 발동)
+    parentClimaxFired: state.parentClimaxFired ?? [],
+    parentPositiveTags: state.parentPositiveTags ?? {},
   };
 
   // 직렬화/clone에서 손실된 currentEvent의 함수 필드(condition 등) 복원
