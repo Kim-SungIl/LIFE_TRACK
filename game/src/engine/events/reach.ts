@@ -13,6 +13,7 @@ export const REACH_EVENTS = [
   // --- yuna 30 ---
   {
     id: 'yuna-milk-duty',
+    reach: { npc: 'yuna', tier: 30, year: 1 },
     title: '우유 당번',
     description: '아침 조회 전, 유나가 우유 상자를 들고 교실 문 앞에 서 있다.\n"나 혼자 들 수 있는데... 같이 들면 더 빨리 끝나긴 해." 밝게 말하지만 손끝이 조금 빨개져 있다.',
     speakers: ['yuna'],
@@ -44,6 +45,7 @@ export const REACH_EVENTS = [
   // --- yuna 50 ---
   {
     id: 'yuna-sticker-plan',
+    reach: { npc: 'yuna', tier: 50, year: 1 },
     title: '별 스티커 계획표',
     description: '쉬는 시간, 유나 책상 위에 작은 계획표가 펼쳐져 있다.\n국어, 수학, 피아노 옆에 별 스티커가 빼곡하다.\n유나가 얼른 가리려다 멈춘다. "이거 좀 유치하지?"',
     speakers: ['yuna'],
@@ -81,6 +83,7 @@ export const REACH_EVENTS = [
   // --- yuna 70 ---
   {
     id: 'yuna-perfect-smile',
+    reach: { npc: 'yuna', tier: 70, year: 1 },
     title: '칠판 옆 웃음',
     description: '수업 전 교실. 유나가 칠판에 쓴 글씨를 지우다 멈춘다.\n"너는… 맨날 웃으면서 다 하면 어때?"\n물음이 장난처럼 들리지만 눈은 장난이 아니다.\n"나도 가끔 그냥 아무것도 모르는 척 하고 싶어."',
     speakers: ['yuna'],
@@ -132,6 +135,7 @@ export const REACH_EVENTS = [
   // --- yuna 90 ---
   {
     id: 'yuna-window-promise',
+    reach: { npc: 'yuna', tier: 90, year: 1 },
     title: '창문 옆 약속',
     description: '졸업을 앞둔 겨울, 유나가 빈 교실 창문에 손가락으로 작은 별을 그린다.\n"나 나중에도 계속 잘해야 할까? 그냥 나로 있어도 괜찮은 날이 올까?"',
     speakers: ['yuna'],
@@ -178,6 +182,7 @@ export const REACH_EVENTS = [
   // --- subin 30 ---
   {
     id: 'subin-reading-marathon',
+    reach: { npc: 'subin', tier: 30, year: 1 },
     title: '독서 마라톤 종이',
     description: '도서코너 앞 게시판에 작은 종이가 붙어 있다.\n"이번 주 책 세 권 읽기"\n수빈이가 옆에서 말한다.\n"나도 할 건데, 너도 할래? 안 해도 되고."\n부담 없어 보이는 척하는 목소리가 오히려 수빈 같다.',
     speakers: ['subin'],
@@ -207,6 +212,7 @@ export const REACH_EVENTS = [
   // --- subin 50 ---
   {
     id: 'subin-keychain',
+    reach: { npc: 'subin', tier: 50, year: 1 },
     title: '책갈피 대신 열쇠고리',
     description: '점심 후 복도. 수빈이가 작은 열쇠고리를 꺼낸다.\n"엄마가 과일 사 오실 때 마트에서 주던 거… 나 하나 남았어."\n손바닥에 올려준다.\n"책갈피 대신 써도 되고, 그냥 가지고 있어도 돼."',
     speakers: ['subin'],
@@ -236,6 +242,7 @@ export const REACH_EVENTS = [
   // --- subin 70 ---
   {
     id: 'subin-night-light',
+    reach: { npc: 'subin', tier: 70, year: 1 },
     title: '늦은 밤 불빛 얘기',
     description: '단톡 창이 밤늦게 떴다. 수빈이다.\n"너 아직 깨어 있어? …괜찮으면 잠깐만."\n잠깐 뒤 메시지가 이어진다.\n"우리 집 거실 불, 밤새 켜두는 날이 있어. 그냥."',
     speakers: ['subin'],
@@ -286,6 +293,7 @@ export const REACH_EVENTS = [
   // --- subin 90 ---
   {
     id: 'subin-paper-airplane',
+    reach: { npc: 'subin', tier: 90, year: 1 },
     title: '종이비행기',
     description: '졸업 전날, 수빈이가 빈 교실에서 종이비행기를 접고 있다.\n"멀리 날아가면 좋겠다. 어디든 갈 수 있는 것처럼."\n비행기 날개에는 작은 글씨로 이름 두 개와, 수빈이가 좋아하던 책에서 베꼈을 한 줄이 함께 적혀 있다.',
     speakers: ['subin'],
@@ -332,6 +340,7 @@ export const REACH_EVENTS = [
   // --- doyun 40 (보강: Y1 종료 후 멀어지므로 다른 NPC 50 슬롯보다 임계값 낮춤) ---
   {
     id: 'doyun-secret-spot',
+    reach: { npc: 'doyun', tier: 40, year: 1 },
     title: '운동장 스탠드 뒤편',
     description: '도윤이가 조용히 손짓해.\n"야, 여기 와봐. 여기 앉아서 보면 하늘이 진짜 잘 보여. 선생님들도 몰라."',
     speakers: ['doyun'],
@@ -361,6 +370,7 @@ export const REACH_EVENTS = [
   // --- doyun 60 (보강: Y1 종료 후 멀어지므로 다른 NPC 70 슬롯보다 임계값 낮춤) ---
   {
     id: 'doyun-window-school',
+    reach: { npc: 'doyun', tier: 60, year: 1 },
     title: '창문 너머 말',
     description: '방과 후 교실이 시끄럽다.\n도윤이는 창가에 기대어 밖을 본다.\n"…저기 멀리 학교 하나 더 있지?"\n물어보는 사람처럼 말하는데, 답을 원하는 얼굴은 아니다.',
     speakers: ['doyun'],
@@ -412,6 +422,7 @@ export const REACH_EVENTS = [
   // --- minjae 70 ---
   {
     id: 'minjae-crumbled-note',
+    reach: { npc: 'minjae', tier: 70, year: 1 },
     title: '구겨진 만점',
     description: '교실 구석. 민재가 책상 서랍을 열었다 닫는다.\n손 안에는 말없이 구겨진 쪽지 하나.\n"…별거 아니야."\n말끝을 잘라 버리는 게 별거 같다는 걸 알고 있어서 더 말이 안 나온다.',
     speakers: ['minjae'],
