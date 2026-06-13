@@ -19,15 +19,15 @@
 
 ### jihun-locker-code — 사물함 비번 (tier 45)
 파일: `middle/jihun-locker-code.png` | 등장: jihun + player
-> School hallway lockers, late afternoon. **Jihun** (messy bangs, navy middle-school blazer, athletic build) rests one hand on an open locker dial, looking away pretending nonchalance, ears slightly red. The player stands beside with a half-amused, half-exasperated expression. Warm corridor light, soft pastel anime style. Mood: playful, secret tenderness hidden behind teasing. 16:9.
+> School hallway lockers, late afternoon. **Jihun** (messy spiky black hair, navy middle-school blazer worn casually open over white shirt, basketball keychain on his bag, athletic broad-shouldered build) rests one hand on the open locker dial (numbers faintly visible), looking away pretending nonchalance, ears slightly red. The player stands beside with a dawning half-surprised, half-amused smile — just realizing the code is their own birthday. Warm corridor light, soft pastel anime style. Mood: playful, secret tenderness hidden behind teasing. 16:9.
 
 ### jihun-mirror-height — 거울 속 키차이 (tier 55)
 파일: `middle/jihun-mirror-height.png` | 등장: jihun + player
-> Small after-school snack bar (분식집), a wall mirror reflecting the two standing side by side. **Jihun** caught mid-tiptoe, sheepish grin, in athletic zip-up. A plate of steaming tteokbokki on the table. Cozy warm interior light, condensation on the window. Mood: light teen banter, a faint flicker of "we're changing." 16:9.
+> Small after-school snack bar (분식집), a wall mirror reflecting the two standing side by side. **Jihun** (messy spiky black hair, athletic broad-shouldered build) caught mid-tiptoe in athletic zip-up, sheepish grin. A plate of steaming tteokbokki on the table. Cozy warm interior light, condensation on the window. Mood: light teen banter, a faint flicker of "we're changing." 16:9.
 
 ### jihun-relay-baton — 계주, 흔들린 바통 (tier 65) ⭐핵심
 파일: `middle/jihun-relay-baton.png` | 등장: jihun
-> Behind a sports-day tent on the field. **Jihun** in a dirt-smudged PE uniform sits hunched, gripping a water bottle with both hands, head lowered, the usual brightness gone. The cheering track is blurred far behind. Overcast diffuse light, melancholy. Mood: the mask of cheerfulness slipping for the first time. Emotional close scene. 16:9.
+> Behind a sports-day tent on the field. **Jihun** in a dirt-smudged PE uniform sits hunched, gripping a water bottle with both hands, head lowered (his signature short messy black hair — not a center part — still visible from above; athletic broad-shouldered frame), the usual brightness gone. The cheering track is blurred far behind. Overcast diffuse light, melancholy. Mood: the mask of cheerfulness slipping for the first time. Emotional close scene. 16:9.
 
 ## 수빈 (subin) — Y2
 
@@ -61,7 +61,7 @@
 
 ### yuna-metronome — 음악실 메트로놈 (tier 72)
 파일: `middle/yuna-metronome.png` | 등장: yuna
-> Quiet music room at lunch. A metronome ticking on the closed piano lid; beside it the keys untouched, **Yuna**'s hands folded on her lap (caramel wavy hair, star hair clip, navy blazer). Soft window light. Mood: managing the rhythm instead of playing — "did I even like this?" 16:9.
+> Quiet music room at lunch. A metronome set to a brisk tempo ticking on the closed piano lid; the keys stay untouched while **Yuna**'s fingertips faintly twitch to the beat in her lap (caramel wavy hair, star hair clip, navy blazer). Soft window light. Mood: managing the rhythm instead of playing — "did I even like this?" 16:9.
 
 ### yuna-song-pick — 동아리방 곡 추천 (tier 78)
 파일: `middle/yuna-song-pick.png` | 등장: yuna
@@ -69,7 +69,7 @@
 
 ### yuna-light-booth — 안 틀려도 되는 자리 (tier 82) ⭐핵심
 파일: `middle/yuna-light-booth.png` | 등장: yuna
-> Dark lighting/sound booth at a school festival, auditorium. **Yuna** rests a hand on the fader, looking NOT toward the bright stage but down at the darkness at her feet, side profile lit only by spill light. Caramel hair, star clip. Mood: retreated to the safe place where mistakes can't be seen. 16:9.
+> Dark lighting/sound booth at a school festival, auditorium. **Yuna** rests a hand on the fader, seen over-the-shoulder with her back to the bright stage, gazing into the dark booth rather than the light, lit only by spill light. Caramel hair, star clip. Mood: retreated to the safe place where mistakes can't be seen. 16:9.
 
 ## 하은 (haeun) — Y2 (1년 위 선배)
 
