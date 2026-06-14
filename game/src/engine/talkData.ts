@@ -213,7 +213,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   // ===== tier90 코어 (친밀도 80+ 도달 — 80↑ 감쇠 벽 고려해 90→80 하향, Phase 2.4 / importance 5 필수) =====
   {
     id: 'talk_jihun_90_bench',
-    npcId: 'jihun', intimacyMin: 80,
+    npcId: 'jihun', intimacyMin: 80, yearMin: 2,
     description: '"넌 왜 힘들 때 더 실실 웃냐. 바보같이."\n매점 평상, 지훈이가 말없이 이온 음료를 네 이마에 대어 온다. "나한텐 힘든 척해도 돼. 내가 힘은 세니까, 대충 다 받아줄 수 있어." 앞만 보며 툭 던지는 목소리에 서툰 다정함이 묻어 있다.',
     effects: { intimacy: 5, stats: { mental: 2 }, fatigue: -2 },
     message: '지훈이가 장난 대신 기댈 어깨를 내밀었다.',
@@ -227,7 +227,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_subin_90_two_names',
-    npcId: 'subin', intimacyMin: 80,
+    npcId: 'subin', intimacyMin: 80, yearMin: 2,
     description: '"우리 집 문패엔 이름이 두 개면 돼. 엄마랑 나."\n수빈이는 웃는 얼굴을 조금 늦게 꺼낸다. "이상한 얘기처럼 안 듣는 사람이 필요했는데, 네가 그랬어."',
     effects: { intimacy: 5, stats: { mental: 1, social: 1 }, fatigue: -1 },
     message: '수빈이가 자기 집의 모양을 처음으로 보여줬다.',
@@ -241,7 +241,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_minjae_90_unmasked',
-    npcId: 'minjae', intimacyMin: 80,
+    npcId: 'minjae', intimacyMin: 80, yearMin: 2,
     description: '"나... 사실 다 괜찮은 척하느라 좀 지쳤나 봐."\n방과후 빈 교실, 민재가 늘 날 서 있던 표정을 슬쩍 푼다. "근데 너 앞에선 안 괜찮아도 되더라. 그게 좀, 이상하게 편해."',
     effects: { intimacy: 5, stats: { mental: 2, social: 1 } },
     message: "민재가 늘 쓰던 '괜찮은 척'을 처음 벗었다.",
@@ -255,7 +255,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_yuna_90_wrong_note',
-    npcId: 'yuna', intimacyMin: 80,
+    npcId: 'yuna', intimacyMin: 80, yearMin: 2,
     description: '"방금 음, 틀렸는데... 그냥 둘래."\n유나는 악보 위에 지우개를 올려두고도 쓰지 않는다. "이상하게 들려도, 지금 내 소리 같아서."',
     effects: { intimacy: 5, stats: { talent: 1, mental: 2 }, fatigue: 1 },
     message: '유나가 완벽한 음보다 자기 소리를 골랐다.',
@@ -283,7 +283,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_junha_90_umbrella',
-    npcId: 'junha', intimacyMin: 80,
+    npcId: 'junha', intimacyMin: 80, yearMin: 6,
     description: '"비 오면 그냥 뛰면 된다 했는데, 같이 있으니까 속도를 맞춰야 되더라."\n준하는 우산 손잡이를 네 쪽으로 조금 더 기울인다. "혼자 빨리 가는 거, 별로 멋있는 일 아이더라."',
     effects: { intimacy: 5, stats: { social: 1, mental: 2 }, fatigue: -1 },
     message: '준하가 혼자 앞서가는 대신 네 걸음에 속도를 맞췄다.',
@@ -369,6 +369,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
   {
     id: 'talk_parent_info',
     parentStrength: 'info',
+    yearMin: 2,  // QA #5: "전망/학원" 진로 못박기는 중1+ 톤. 초6(Y1)은 잡담(info.elementary "넌 뭐 할 때 재밌어?")이 담당.
     description: '"엄마가 알아봤는데, 그 분야 요즘 전망 좋대."\n메모지에 학원 이름이 빼곡히 적혀 있다.',
     effects: { stats: { academic: 1 } },
     parentTag: 'careerTalk',
@@ -395,6 +396,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
   {
     id: 'talk_parent_strict',
     parentStrength: 'strict',
+    yearMin: 2,  // QA #5: "이번엔 잘 봐야 한다/11시 취침" 성적압박은 중1+ 톤. 초6(Y1)엔 과함 → 잡담이 담당.
     description: '"이번에는 잘 봐야 한다. 11시까지는 자고."\n아빠가 책상을 한 번 둘러보고 방을 나간다.',
     effects: { stats: { academic: 1, mental: -1 } },
     parentTag: 'gradeImprove',
@@ -1205,10 +1207,8 @@ export const NPC_SMALLTALK: Record<string, NpcSmalltalkPool> = {
       '"너는 모르는 거 바로 물어보는 편이야? 난 그게 아직 좀 어렵더라."',
       '"너 어제 몇 시에 잤어? 나는 일찍 잤다고 말하고 싶은데, 양심이 좀 찔려."',
     ],
-    female: [
-      '"체육시간에 너 서브 좀 잘 들어가더라. 팔 쓰는 각도가 좋아."',
-      '"옆 코트에서 보니까 너 의외로 잘 뛰던데. 평소엔 조용해 보이는데."',
-    ],
+    // QA #4: base female의 운동 칭찬은 친밀도 0·전 학년 노출이라 공부형 민재의 base 톤과 충돌 → 제거.
+    //        운동 칭찬은 이미 warm/close/deep의 학교급별 female 셀이 친밀도 게이트로 담당한다.
     warm: {
       elementary: {
         common: [
