@@ -87,6 +87,7 @@ console.log('\n=== 2. 반복발동 — 쿨다운 + 로테이션 (getAvailableHom
   assert('쿨다운 상수 = 4주', PARENT_EVENT_COOLDOWN_WEEKS === 4, `${PARENT_EVENT_COOLDOWN_WEEKS}`);
 
   const s = freshState(['emotional', 'strict']);
+  s.year = 2;  // QA #5: talk_parent_strict는 yearMin:2 게이트(초6 성적압박 방지) → 4개 가용은 중1+ 기준
   s.totalWeeksPlayed = 10;
   s.parentEventsFired = [];
   const avail0 = getAvailableHomeEvents(s);
