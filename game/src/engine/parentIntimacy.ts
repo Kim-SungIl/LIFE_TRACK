@@ -57,6 +57,12 @@ export function applyParentIntimacyDelta(state: GameState, baseDelta: number, ta
     delta *= reactionMultiplier(strength, tag);
   }
 
+  // (1.5) Phase 4D 사춘기 골짜기 — 중2~3(Y3~4)엔 유대 행동(familyTime/shareWorry) 반응이 한시적으로 둔해진다(×0.75).
+  //       "이 시기 하락은 정상" — 골짜기를 만들어, 이후 회복(화해 비트)이 의미를 갖게 한다(§10). 전 부모 공통.
+  if ((state.year === 3 || state.year === 4) && (tag === 'familyTime' || tag === 'shareWorry')) {
+    delta *= 0.75;
+  }
+
   // (2) 연속 구간 감쇠 — 천장/바닥에 가까울수록 부드럽게 감쇠 (계단 불연속 없음)
   //     pi=50→×1.0, 70→×0.6, 85→×0.3, 100→clamp 0.2 / 음수는 대칭
   const pi = state.parentIntimacy ?? 50;
