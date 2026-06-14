@@ -13,6 +13,7 @@ import { RANDOM_EVENTS } from './random';
 import { BIRTHDAY_EVENTS } from './birthday';
 import { MONEY_SINK_EVENTS } from './money-sink';
 import { CRISIS_EVENTS } from './crisis';
+import { CAREER_CONFLICT_EVENTS } from './parent-career';
 import { REACH_EVENTS } from './reach';
 
 export const GAME_EVENTS: GameEvent[] = [
@@ -39,5 +40,6 @@ export const GAME_EVENTS: GameEvent[] = [
 
   ...MONEY_SINK_EVENTS,
   ...CRISIS_EVENTS,
+  ...CAREER_CONFLICT_EVENTS,
   ...REACH_EVENTS,
 ];

@@ -228,6 +228,9 @@ export interface EventChoice {
   memorySlotDraft?: MemorySlotDraft;
   // M4: 이 선택을 고르면 활성 버프에 추가 (상점 버프와 동일 구조)
   addBuff?: ActiveBuff;
+  // Phase 4C: 이 선택이 부모 친밀도에 주는 반응(태그+baseDelta) — applyParentIntimacyDelta로 처리(스탯 아님).
+  //           강점 배율·구간 감쇠는 단일 진입점에서 적용. 적용 시 그 주 평균회귀 면제.
+  parentEffect?: ParentEffect;
 }
 
 // ===== v1.2 기억 슬롯 시스템 =====
