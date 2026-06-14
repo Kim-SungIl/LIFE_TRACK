@@ -245,6 +245,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.track = choice.trackSelect;
     }
 
+    // Phase 4C: 이벤트 선택의 부모 친밀도 반응 — 단일 진입점(강점 배율·구간 감쇠). 스탯 아님.
+    // 진로 갈등에서 부모와의 거리가 움직이고, 그 주는 평균회귀 면제(부모와 상호작용한 주).
+    if (choice.parentEffect) {
+      applyParentIntimacyDelta(newState, choice.parentEffect.baseDelta, choice.parentEffect.tag);
+      newState.actedWithParentThisWeek = true;
+    }
+
     // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
     applyMemorySlotFromChoice(newState, newState.currentEvent!, choiceIndex, choice);
 
