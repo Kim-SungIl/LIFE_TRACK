@@ -39,7 +39,8 @@
 
 ### minjae-dawn-on-hand — 새벽이 묻은 손등 (tier 70)
 파일: `middle/minjae-dawn-on-hand.png` | 등장: minjae
-> Morning bus stop, backlit. **Minjae** (thin square glasses, navy blazer) — as he hands over a vocabulary booklet, the back of his hand, densely scrawled with ballpoint English words (ran out of paper at dawn), is briefly exposed; he yanks his sleeve down to hide it. Caught, faintly flustered. Soft backlight. Mood: the performance of "fine" peeled back one layer. 3:4 portrait.
+> Morning bus stop, backlit. **Minjae** (thin square glasses, navy blazer) — as he hands over a vocabulary booklet, just a **few small ballpoint English words on the BACK of one hand, near the knuckles only** (he ran out of paper at dawn) are briefly glimpsed; he yanks his sleeve down to hide it. **Palm is clean, wrist and forearm are clean and stay covered by the blazer sleeve — writing ONLY on the back of the hand, sparse, not covering the whole hand.** Caught, faintly flustered. Soft backlight. Mood: the performance of "fine" peeled back one layer. 3:4 portrait.
+> ⚠️ Negative: NO writing on the palm, NO writing on the wrist or forearm, do NOT cover the whole hand/arm in ink — only a sparse few words on the back of one hand.
 
 ### minjae-displayed-model — 전시된 모범생 (tier 76)
 파일: `middle/minjae-displayed-model.png` | 등장: minjae + 엄마(실루엣)
