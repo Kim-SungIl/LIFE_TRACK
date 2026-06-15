@@ -850,6 +850,35 @@ export const SCHOOL_MIDDLE_HIGH = [
         },
       },
     ],
+    femaleChoices: [
+      {
+        text: '"그래, 같이 하자" — 가르쳐준다',
+        effects: { academic: 1, social: 2, mental: 2 },
+        fatigueEffect: 3,
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 8 }],
+        message: '유나에게 수학을 가르쳤다. 가르치면서 나도 더 잘 이해하게 됐다. 유나가 "오 대박, 이거였어? 천재 아냐?" 했다.',
+        memorySlotDraft: {
+          category: 'discovery',
+          importance: 5,
+          toneTag: 'warm',
+          recallText: '도서관에서 유나에게 수학을 가르쳐준 날, 같이 푸니 더 잘 풀렸다.',
+          npcIds: ['yuna'],
+        },
+      },
+      {
+        text: '"미안, 나도 바빠서..." — 거절한다',
+        effects: { academic: 1 },
+        npcEffects: [{ npcId: 'yuna', intimacyChange: -5 }],
+        message: '유나가 "아 그래? 알겠어~" 하며 돌아갔다. 웃고 있는데 좀 아쉬워 보였다.',
+        memorySlotDraft: {
+          category: 'betrayal',
+          importance: 5,
+          toneTag: 'regret',
+          recallText: '"괜찮아~" 하고 돌아서던 유나의 뒷모습이 너무 가볍게 느껴졌다.',
+          npcIds: ['yuna'],
+        },
+      },
+    ],
   },
   // 초등 2학기 단원평가 이벤트 (Y1, W37 — 단원평가 W38 전주)
   {

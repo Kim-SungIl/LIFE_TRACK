@@ -79,5 +79,16 @@ export const BIRTHDAY_EVENTS = [
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '"고마워" 짧은 답장이 왔다. 유나답다.' },
     ],
+    femaleChoices: [
+      { text: '작은 선물을 준다 (-2만원)', effects: { social: 2, mental: 2 }, moneyEffect: -2,
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 6 }],
+        message: '유나가 조용히 받아들었다. "...고마워." 평소처럼 무심한 척했지만 입꼬리가 올라가 있었다.' },
+      { text: '별 장식 머리핀 세트를 준비한다 (-5만원)', effects: { social: 3, mental: 4 }, moneyEffect: -5,
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 10 }],
+        message: '유나가 머리핀을 한참 보더니 씩 웃었다. "센스 좋은데? 잘 골랐어." 바로 꽂아 보고는 친구들한테 자랑하러 갔다.' },
+      { text: '조용히 카톡으로 축하한다', effects: { social: 1 },
+        npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
+        message: '"고마워" 짧은 답장이 왔다. 유나답다.' },
+    ],
   },
 ] satisfies readonly GameEvent[];
