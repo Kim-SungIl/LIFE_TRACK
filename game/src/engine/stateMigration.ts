@@ -4,6 +4,7 @@
 import { GameState } from './types';
 import { hashInitialState } from './rng';
 import { GAME_EVENTS } from './events';
+import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 
 export function migrateLoadedState(state: GameState): GameState {
   // 'gene' → 'resilience' 리네임 마이그레이션 (구세이브 호환)
@@ -54,10 +55,22 @@ export function migrateLoadedState(state: GameState): GameState {
   // EventChoice.condition이 살아 있어야 EventScene 선택지 게이팅이 정상 동작 —
   // 이벤트 도중 새로고침 시 돈 부족 선택지가 잠금 풀려 보이던 버그 차단
   if (result.currentEvent && result.currentEvent.id) {
-    const fresh = GAME_EVENTS.find(e => e.id === result.currentEvent!.id);
-    result.currentEvent = fresh
-      ? { ...fresh, week: result.week }
-      : null;  // 카탈로그에서 사라진 ID → 안전 fallback
+    const cur = result.currentEvent;
+    // SCHOOL_LIFE_EVENTS 는 별도 풀(GAME_EVENTS 미포함)이지만 selection 에서 currentEvent 로
+    // 반환되는 가장 흔한 이벤트군 — 함께 조회하지 않으면 학교생활 랜덤 이벤트 도중 새로고침 시
+    // currentEvent 유실(null) + phase='event' 유지로 soft-lock 발생.
+    const fresh = GAME_EVENTS.find(e => e.id === cur.id)
+      ?? SCHOOL_LIFE_EVENTS.find(e => e.id === cur.id);
+    if (fresh) {
+      // 발생주(cur.week)는 보존 — result.week 는 week++(gameEngine) 이후 값이라 덮어쓰면
+      // 기억(memory)의 발생주가 +1 어긋난다(W48 이벤트 → 49).
+      result.currentEvent = { ...fresh, week: cur.week ?? result.week };
+    } else {
+      // 카탈로그에서 사라진 ID(구세이브 리네임/삭제) → currentEvent 제거 + phase 복구로 soft-lock 차단.
+      // weekLog 가 있으면 주간 결산(result)으로, 없으면 일상(weekday)으로 떨어뜨려 진행 가능 상태 보장.
+      result.currentEvent = null;
+      if (result.phase === 'event') result.phase = result.weekLog ? 'result' : 'weekday';
+    }
   }
 
   return result;

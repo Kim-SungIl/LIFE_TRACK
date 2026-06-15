@@ -639,7 +639,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
               </div>
               );
             })}
-            {allInsufficient && (
+            {(allInsufficient || visibleChoices.length === 0) && (
               <div
                 onClick={() => handleChoice(-1)}
                 style={{
