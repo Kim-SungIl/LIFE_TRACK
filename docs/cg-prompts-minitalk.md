@@ -180,11 +180,14 @@ Mood: warm vulnerability — the relief of not having to be okay in front of one
 ```
 A school music room, soft daytime light. Yuna (reference — caramel wavy hair, STAR HAIR CLIP
 on right side clearly visible, NO glasses, high-school navy blazer) at a piano or desk with a
-sheet of music, an eraser RESTING on the score but NOT being used. Quieter and more inward
-than her usual bright energy — a small resolved smile looking at the un-erased wrong note.
+sheet of music, an eraser RESTING on the score but NOT being used. Quiet and inward — her gaze
+cast DOWN at the un-erased wrong note, a faint wistful closed-lip half-smile, pensive and a
+little heavy. NOT her usual bright cheerful open grin, NOT smiling at the viewer, eyes not
+wide/sparkly.
 Background: music room (piano, music stands), gentle light.
 Dialogue cue: "지금 내 소리 같아서." — choosing her own voice over a perfect note.
-Mood: a quiet breakthrough — accepting imperfection as authenticity.
+Mood: a quiet breakthrough — accepting imperfection as authenticity (introspective, slightly melancholy, NOT happy).
+🔁 v2 재생성(2026-06-15): v1이 밝은 미소로 드리프트(톤 미스) → 시선 내리깐 잔잔·내성적 표정으로 고정, 밝은 활짝 미소 Negative 명시.
 ```
 
 ---

@@ -19,7 +19,9 @@
 
 ### jihun-locker-code — 사물함 비번 (tier 45)
 파일: `middle/jihun-locker-code.png` | 등장: jihun + player
-> School hallway lockers, late afternoon. **Jihun** (messy spiky black hair, navy middle-school blazer worn casually open over white shirt, basketball keychain on his bag, athletic broad-shouldered build) rests one hand on the open locker dial (numbers faintly visible), looking away pretending nonchalance, ears slightly red. The player stands beside with a dawning half-surprised, half-amused smile — just realizing the code is their own birthday. Warm corridor light, soft pastel anime style. Mood: playful, secret tenderness hidden behind teasing. 16:9.
+> School hallway lockers, late afternoon. **Jihun** (messy spiky black hair, navy middle-school blazer worn casually open over white shirt, basketball keychain on his bag, athletic broad-shouldered build) **rests one hand flat and calm on the open locker dial (numbers faintly visible); his other hand hangs relaxed at his side or tucked in a pocket — NO raised open-palm gesturing hand**, looking away pretending nonchalance, ears slightly red. The player stands beside with a dawning half-surprised, half-amused smile — just realizing the code is their own birthday. Warm corridor light, soft pastel anime style. Mood: playful, secret tenderness hidden behind teasing. 16:9.
+> ⚠️ Negative: **clean anatomically-correct hands, exactly five fingers per hand, no distorted/melted/extra/fused fingers**; no open-palm mid-gesture pose; no tie on middle-stage uniform; no photorealistic/3D/live-action.
+> 🔁 v2 재생성(2026-06-15): v1에서 지훈의 들어올린 개방 손바닥 손가락이 뭉개짐(AI 손 왜곡) → 손을 다이얼에 차분히 얹고 반대 손은 옆/주머니로 고정 + 손 품질 Negative 추가.
 
 ### jihun-mirror-height — 거울 속 키차이 (tier 55)
 파일: `middle/jihun-mirror-height.png` | 등장: jihun + player
