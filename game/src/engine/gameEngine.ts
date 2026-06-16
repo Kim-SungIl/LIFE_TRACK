@@ -639,6 +639,98 @@ export function applyYearTransition(s: GameState): void {
   }
 }
 
+// ===== processWeek 단계 헬퍼 (순수 추출 — state를 직접 mutate, 동작 보존) =====
+
+// npcActivityMap(UI에서 고른 동행 친구)에 따른 친밀도 +3
+function applyNpcActivitySelection(state: GameState, npcActivityMap?: Record<string, string>): void {
+  if (!npcActivityMap) return;
+  for (const npcId of Object.values(npcActivityMap)) {
+    const npc = state.npcs.find(n => n.id === npcId);
+    if (npc) npc.intimacy = Math.min(100, npc.intimacy + 3);
+  }
+}
+
+// 주 시작 컨텍스트: 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정.
+// seededRandom 2회 호출 순서는 rngSeed 전진이라 절대 바꾸지 말 것.
+function prepareWeekContext(state: GameState): void {
+  const info = getWeekInfo(state.week);
+  state.semester = info.semester;
+  state.isVacation = info.isVacation;
+  // Phase 1: 학기 중에는 방학 활동 카운터 자동 초기화 (방학 동안만 누적)
+  if (!state.isVacation) {
+    state.vacationActivityCounts = {};
+  }
+  // Phase 2.1 말걸기 — pressure 차오름 + 사전 결정. pressure는 fire 시점에 0 리셋.
+  state.talkEventPressure = Math.min(1, (state.talkEventPressure ?? 0) + 0.1);
+  state.parentTalkPressure = Math.min(1, (state.parentTalkPressure ?? 0) + 0.05);
+  state.npcEventPendingThisWeek = seededRandom(state) < state.talkEventPressure;
+  state.parentEventPendingThisWeek = seededRandom(state) < state.parentTalkPressure;
+}
+
+// 용돈 지급 + 생활비 차감 (v6, parentModifiers SSOT). econMods를 반환해 idle 페널티와 공유.
+function applyAllowanceAndLiving(state: GameState, log: WeekLog): ReturnType<typeof getParentMods> {
+  const econMods = getParentMods(state.parents);
+  const netMoney = Math.round((econMods.weeklyIncome - econMods.livingCost) * 10) / 10;
+  if (state.parents.includes('wealth')) {
+    log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
+  }
+  state.money = Math.round((state.money + netMoney) * 10) / 10;
+  log.moneyChange += netMoney;
+  return econMods;
+}
+
+// 방치 무기력 (v6): 3주 연속 비생산적 활동 시 멘탈/소셜 감소. freedom 부모는 페널티 배율(econMods).
+function applyIdlePenalty(state: GameState, log: WeekLog, econMods: ReturnType<typeof getParentMods>): void {
+  const productiveActivities = [...(state.isVacation ? state.vacationChoices : state.weekendChoices)];
+  if (state.routineSlot2) productiveActivities.push(state.routineSlot2);
+  if (state.routineSlot3) productiveActivities.push(state.routineSlot3);
+  const restOnlyIds = ['rest', 'deep-rest', 'gaming', 'park-walk'];
+  const isRestOnly = productiveActivities.length === 0 || productiveActivities.every(id => restOnlyIds.includes(id));
+  if (isRestOnly) {
+    state.idleWeeks = (state.idleWeeks || 0) + 1;
+  } else {
+    state.idleWeeks = 0;
+  }
+  if ((state.idleWeeks || 0) >= 3) {
+    // v7.2: freedom 부모 — idle 페널티 배율 (parentModifiers SSOT)
+    const isFreeSpirit = econMods.idlePenaltyMult < 1.0;
+    const mentalDrain = 2 * econMods.idlePenaltyMult;
+    const socialDrain = 1 * econMods.idlePenaltyMult;
+    if (isFreeSpirit) {
+      log.parentBonusesApplied?.push({ parent: 'freedom', what: '"알아서 해" — idle 페널티 -50%' });
+    }
+    state.stats.mental = Math.max(0, state.stats.mental - mentalDrain);
+    state.stats.social = Math.max(5, state.stats.social - socialDrain);
+    log.statChanges.mental = (log.statChanges.mental || 0) - mentalDrain;
+    log.statChanges.social = (log.statChanges.social || 0) - socialDrain;
+    log.messages.push(isFreeSpirit
+      ? '🌿 좀 쉬는 중. 부모님이 별 말씀 안 하셔서 다행이다.'
+      : '😶 무기력... 뭔가 해야 할 것 같은데, 아무것도 하기 싫다.');
+  }
+}
+
+// 이번 주 이벤트 선택 (getEventForWeek는 순수 — patch는 호출자가 명시 적용).
+function selectEventForWeek(state: GameState): void {
+  const selection = getEventForWeek(state);
+  if (selection.patch) {
+    state.hardCrisisYears = selection.patch.hardCrisisYears;
+  }
+  if (selection.event) {
+    state.currentEvent = { ...selection.event, week: state.week };
+    state.phase = 'event';
+  }
+}
+
+// 버프 틱다운 + 주간 구매 리셋.
+function tickBuffsAndResetPurchases(state: GameState): void {
+  if (state.activeBuffs) {
+    state.activeBuffs = state.activeBuffs
+      .map(b => ({ ...b, remainingWeeks: b.remainingWeeks - 1 }))
+      .filter(b => b.remainingWeeks > 0);
+  }
+  state.weekPurchases = {};
+}
+
 // ===== 주간 처리 (메인 루프) =====
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
   const newState = migrateLoadedState(cloneGameState(state)) as GameState;
@@ -648,29 +740,10 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   for (const npc of newState.npcs) npc.weekStartIntimacy = npc.intimacy;
 
   // NPC 선택(activity→npc 매핑)에 따른 친밀도 적용
-  if (npcActivityMap) {
-    for (const npcId of Object.values(npcActivityMap)) {
-      const npc = newState.npcs.find(n => n.id === npcId);
-      if (npc) npc.intimacy = Math.min(100, npc.intimacy + 3);
-    }
-  }
+  applyNpcActivitySelection(newState, npcActivityMap);
 
-  const info = getWeekInfo(newState.week);
-  newState.semester = info.semester;
-  newState.isVacation = info.isVacation;
-
-  // Phase 1: 학기 중에는 방학 활동 카운터 자동 초기화
-  // (방학 동안만 누적, 학기 진입 시 비워짐 — 다음 방학에 다시 0부터)
-  if (!newState.isVacation) {
-    newState.vacationActivityCounts = {};
-  }
-
-  // Phase 2.1 말걸기 — 매주 시작 시 pressure 차오름 + 사전 결정(이번 주 이벤트 발동 여부)
-  // pressure는 fire 시점에 0으로 리셋(놓친 주는 누적 유지 → 오래 안 만나면 100% 보장)
-  newState.talkEventPressure = Math.min(1, (newState.talkEventPressure ?? 0) + 0.1);
-  newState.parentTalkPressure = Math.min(1, (newState.parentTalkPressure ?? 0) + 0.05);
-  newState.npcEventPendingThisWeek = seededRandom(newState) < newState.talkEventPressure;
-  newState.parentEventPendingThisWeek = seededRandom(newState) < newState.parentTalkPressure;
+  // 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정
+  prepareWeekContext(newState);
   // 부모 친밀도 자연 변화는 더 이상 강점 자동 드리프트가 아니다(결정론 제거).
   // actedWithParentThisWeek 플래그는 talkToHome(processWeek 이전) + 부모 활동(아래)에서 누적되고,
   // 평균 회귀(50 수렴)와 플래그 리셋은 활동 적용 뒤 "5b"에서 처리한다.
@@ -783,41 +856,10 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   checkMilestones(newState, log);
 
   // 9. 용돈 지급 — 생활비 차감 (v6, parentModifiers SSOT)
-  const econMods = getParentMods(newState.parents);
-  const netMoney = Math.round((econMods.weeklyIncome - econMods.livingCost) * 10) / 10;
-  if (newState.parents.includes('wealth')) {
-    log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
-  }
-  newState.money = Math.round((newState.money + netMoney) * 10) / 10;
-  log.moneyChange += netMoney;
+  const econMods = applyAllowanceAndLiving(newState, log);
 
   // 10. 방치 무기력 체크 (v6: 3주 연속 비생산적 활동 시 멘탈/소셜 감소)
-  const productiveActivities = [...(newState.isVacation ? newState.vacationChoices : newState.weekendChoices)];
-  if (newState.routineSlot2) productiveActivities.push(newState.routineSlot2);
-  if (newState.routineSlot3) productiveActivities.push(newState.routineSlot3);
-  const restOnlyIds = ['rest', 'deep-rest', 'gaming', 'park-walk'];
-  const isRestOnly = productiveActivities.length === 0 || productiveActivities.every(id => restOnlyIds.includes(id));
-  if (isRestOnly) {
-    newState.idleWeeks = (newState.idleWeeks || 0) + 1;
-  } else {
-    newState.idleWeeks = 0;
-  }
-  if ((newState.idleWeeks || 0) >= 3) {
-    // v7.2: freedom 부모 — idle 페널티 배율 (parentModifiers SSOT)
-    const isFreeSpirit = econMods.idlePenaltyMult < 1.0;
-    const mentalDrain = 2 * econMods.idlePenaltyMult;
-    const socialDrain = 1 * econMods.idlePenaltyMult;
-    if (isFreeSpirit) {
-      log.parentBonusesApplied?.push({ parent: 'freedom', what: '"알아서 해" — idle 페널티 -50%' });
-    }
-    newState.stats.mental = Math.max(0, newState.stats.mental - mentalDrain);
-    newState.stats.social = Math.max(5, newState.stats.social - socialDrain);
-    log.statChanges.mental = (log.statChanges.mental || 0) - mentalDrain;
-    log.statChanges.social = (log.statChanges.social || 0) - socialDrain;
-    log.messages.push(isFreeSpirit
-      ? '🌿 좀 쉬는 중. 부모님이 별 말씀 안 하셔서 다행이다.'
-      : '😶 무기력... 뭔가 해야 할 것 같은데, 아무것도 하기 싫다.');
-  }
+  applyIdlePenalty(newState, log, econMods);
 
   // 스탯 범위 보정
   for (const key of Object.keys(newState.stats) as StatKey[]) {
@@ -887,25 +929,11 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     log.examResult = null;
   }
 
-  // 11. 이벤트 체크
-  // getEventForWeek 은 순수 함수 — 사이드이펙트(예: 하드 위기 연간 가드)는
-  // patch 로 받아 호출자(여기)에서 명시적으로 적용한다.
-  const selection = getEventForWeek(newState);
-  if (selection.patch) {
-    newState.hardCrisisYears = selection.patch.hardCrisisYears;
-  }
-  if (selection.event) {
-    newState.currentEvent = { ...selection.event, week: newState.week };
-    newState.phase = 'event';
-  }
+  // 11. 이벤트 체크 — getEventForWeek는 순수 함수, patch는 selectEventForWeek 내부에서 명시 적용
+  selectEventForWeek(newState);
 
   // 12. 버프 틱다운 + 주간 구매 리셋
-  if (newState.activeBuffs) {
-    newState.activeBuffs = newState.activeBuffs
-      .map(b => ({ ...b, remainingWeeks: b.remainingWeeks - 1 }))
-      .filter(b => b.remainingWeeks > 0);
-  }
-  newState.weekPurchases = {};
+  tickBuffsAndResetPurchases(newState);
 
   // 주 진행
   newState.week++;
