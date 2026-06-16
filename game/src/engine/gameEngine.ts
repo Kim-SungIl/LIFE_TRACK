@@ -731,6 +731,152 @@ function tickBuffsAndResetPurchases(state: GameState): void {
   state.weekPurchases = {};
 }
 
+// 루틴 활동 (학기 중 방과후). timeCost(이벤트 소모)로 슬롯 스킵, strict 부모 루틴 보너스 +1주.
+function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number): void {
+  if (timeCost > 0) {
+    const skipMsg = timeCost >= 2 ? '📅 이벤트 때문에 이번 주 방과후 활동을 다 빠졌다.' : '📅 이벤트 때문에 이번 주 방과후 활동 하나를 빠졌다.';
+    log.messages.push(skipMsg);
+    state.eventTimeCost = 0;
+  }
+  if (!state.isVacation) {
+    // v7.2: strict 부모 — 루틴 보너스 도달 1주 단축 (3→2, 6→5, 8→7주에 도달)
+    const wkMods = getParentMods(state.parents);
+    const boost = wkMods.routineWeeksBoost;
+    // 슬롯별 rBonus — 한쪽 슬롯만 변경되어도 다른 슬롯 보너스 보전
+    const r2Bonus = getRoutineBonus(state.routineSlot2Weeks + boost);
+    const r3Bonus = getRoutineBonus(state.routineSlot3Weeks + boost);
+    // strict 표시 — 어느 슬롯이라도 부스트로 임계값 통과한 주만
+    const r2Base = getRoutineBonus(state.routineSlot2Weeks);
+    const r3Base = getRoutineBonus(state.routineSlot3Weeks);
+    if (boost > 0 && (r2Bonus > r2Base || r3Bonus > r3Base)) {
+      log.parentBonusesApplied?.push({ parent: 'strict', what: '정해진 시간에 책상 — 루틴 +1주' });
+    }
+    // timeCost 2: 둘 다 스킵, timeCost 1: 슬롯2는 실행 + 슬롯3 스킵
+    if (state.routineSlot2 && timeCost < 2) {
+      const r2 = ACTIVITIES.find(a => a.id === state.routineSlot2);
+      const r2Cost = r2 ? getActivityCost(r2, state.year) : 0;
+      if (r2 && (r2Cost <= 0 || state.money >= r2Cost)) {
+        applyActivity(state, state.routineSlot2, log, r2Bonus);
+        state.routineSlot2Weeks++;
+      } else {
+        log.messages.push(`💰 돈이 부족해서 ${r2?.name || '활동'}을 못 했다...`);
+      }
+    }
+    if (state.routineSlot3 && timeCost < 1) {
+      const r3 = ACTIVITIES.find(a => a.id === state.routineSlot3);
+      const r3Cost = r3 ? getActivityCost(r3, state.year) : 0;
+      if (r3 && (r3Cost <= 0 || state.money >= r3Cost)) {
+        applyActivity(state, state.routineSlot3, log, r3Bonus);
+        state.routineSlot3Weeks++;
+      } else {
+        log.messages.push(`💰 돈이 부족해서 ${r3?.name || '활동'}을 못 했다...`);
+      }
+    }
+    // timeCost로 스킵해도 카운터는 유지 (습관은 남아있음)
+    if (timeCost >= 2) {
+      if (state.routineSlot2) state.routineSlot2Weeks++;
+      if (state.routineSlot3) state.routineSlot3Weeks++;
+    }
+  }
+}
+
+// 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 뒤에서부터 슬롯 감소.
+function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number): void {
+  const rawChoices = state.isVacation ? state.vacationChoices : state.weekendChoices;
+  // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개, 2=마지막 2개) → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push
+  const slicedChoices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
+  // 2칸 활동의 같은 id 인접 중복을 1 인스턴스로 collapse
+  const choices = collapseActivityChoices(slicedChoices);
+  const allActivities = [...choices];
+  for (const choice of choices) {
+    const act = ACTIVITIES.find(a => a.id === choice);
+    const actCost = act ? getActivityCost(act, state.year) : 0;
+    if (act && actCost > 0 && state.money < actCost) {
+      log.messages.push(`💰 돈이 부족해서 ${act.name}을 못 했다...`);
+      continue;
+    }
+    applyActivity(state, choice, log);
+  }
+  // 루틴 활동도 포함 (allActivities는 idle 페널티가 자체 재계산하므로 현재 읽는 곳 없음 — 원본 보존)
+  if (state.routineSlot2) allActivities.push(state.routineSlot2);
+  if (state.routineSlot3) allActivities.push(state.routineSlot3);
+}
+
+// 시험 주 처리 — 결과 생성(수능/모의/일반), 멘탈 후처리, 부모 친밀도 약연동 + strict 칭찬.
+function applyExamForWeek(state: GameState, log: WeekLog): void {
+  const thisWeekExam = getExamSchedule(state.year)[state.week];
+  if (thisWeekExam) {
+    let examResult;
+    let examName: string;
+
+    if (thisWeekExam === 'suneung') {
+      examResult = generateSuneungResult(state);
+      examName = '수능';
+    } else if (thisWeekExam === 'mock') {
+      examResult = generateMockExamResult(state);
+      examName = '모의고사';
+    } else {
+      examResult = generateExamResult(state, thisWeekExam);
+      examName = thisWeekExam === 'unit-test' ? '단원평가'
+        : thisWeekExam === 'midterm' ? '중간고사' : '기말고사';
+    }
+
+    state.examResults.push(examResult);
+    state.currentExamResult = examResult;
+    log.examResult = examResult;
+    log.messages.push(`📝 ${examName} 결과 발표!`);
+
+    // 시험 결과 멘탈 후처리
+    if (examResult.mentalDelta) {
+      state.stats.mental = Math.max(0, Math.min(100, state.stats.mental + examResult.mentalDelta));
+      if (examResult.mentalDelta > 0) {
+        log.messages.push(`시험 결과에 기분이 좋아졌다! (멘탈 +${examResult.mentalDelta})`);
+      } else if (examResult.mentalDelta < 0) {
+        log.messages.push(`시험 결과에 기분이 가라앉았다... (멘탈 ${examResult.mentalDelta})`);
+      }
+    }
+
+    // 시험 결과 → 부모 친밀도 약연동 (Phase 2B §3.3, 단일 진입점).
+    // 주의: 평균회귀(5b)와 actedWithParentThisWeek 리셋이 이미 끝난 지점이라 여기선 델타만 적용한다.
+    const examEffect = examParentEffect(examResult);
+    if (examEffect) {
+      applyParentIntimacyDelta(state, examEffect.baseDelta, examEffect.tag);
+
+      // B2: strict + 뚜렷한 성적 향상 → 연 1회 어드밴티지(멘탈 버프 + 서사).
+      const praiseYears = (state.parentPraiseYears ??= []);
+      const topTier = (examResult.rank != null && examResult.rank <= 5)
+        || (examResult.mockGrade != null && examResult.mockGrade <= 2)
+        || (examResult.schoolLevel === 'elementary' && examResult.average >= 85);
+      if (state.parents.includes('strict') && examEffect.tag === 'gradeImprove'
+          && topTier && !praiseYears.includes(state.year)) {
+        state.stats.mental = Math.min(100, state.stats.mental + 2);
+        log.statChanges.mental = (log.statChanges.mental ?? 0) + 2;
+        praiseYears.push(state.year);
+        log.messages.push('아빠가 성적표를 한참 보더니, 드물게 "잘했다"고 했다. (멘탈 +2)');
+      }
+    }
+  } else {
+    state.currentExamResult = null;
+    log.examResult = null;
+  }
+}
+
+// 주 진행 + 학년 전환 판정 + 다음 주 학기/방학 상태.
+function advanceWeekCounter(state: GameState): void {
+  state.week++;
+  if (state.week > 48 && !state.currentEvent) {
+    // 대기 중인 W48 이벤트가 없을 때만 즉시 학년 전환. 이벤트가 있으면 phase='event' 유지,
+    // 전환은 resolveEvent가 이벤트 종료 후 수행한다 (학년말 이벤트 유실 방지).
+    applyYearTransition(state);
+  }
+  // 다음 주의 학기/방학 상태 — year-end거나 week=49(학년말 이벤트 대기)면 직전 주 값 유지.
+  if (state.phase !== 'year-end' && state.week <= 48) {
+    const nextInfo = getWeekInfo(state.week);
+    state.semester = nextInfo.semester;
+    state.isVacation = nextInfo.isVacation;
+  }
+}
+
 // ===== 주간 처리 (메인 루프) =====
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
   const newState = migrateLoadedState(cloneGameState(state)) as GameState;
@@ -766,76 +912,12 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     applySchoolClass(newState, log);
   }
 
-  // 3. 루틴 활동 (학기 중, 방과후) — 돈 부족하면 스킵 + 루틴 연속 보너스
-  // 이벤트 시간 소모: 1=슬롯3 스킵, 2=둘 다 스킵
+  // 3. 루틴 활동 (학기 중 방과후) — timeCost(이벤트 소모)로 슬롯 스킵. timeCost는 4번에서도 쓰임.
   const timeCost = newState.eventTimeCost || 0;
-  if (timeCost > 0) {
-    const skipMsg = timeCost >= 2 ? '📅 이벤트 때문에 이번 주 방과후 활동을 다 빠졌다.' : '📅 이벤트 때문에 이번 주 방과후 활동 하나를 빠졌다.';
-    log.messages.push(skipMsg);
-    newState.eventTimeCost = 0;
-  }
-  if (!newState.isVacation) {
-    // v7.2: strict 부모 — 루틴 보너스 도달 1주 단축 (3→2, 6→5, 8→7주에 도달)
-    const wkMods = getParentMods(newState.parents);
-    const boost = wkMods.routineWeeksBoost;
-    // 슬롯별 rBonus — 한쪽 슬롯만 변경되어도 다른 슬롯 보너스 보전
-    const r2Bonus = getRoutineBonus(newState.routineSlot2Weeks + boost);
-    const r3Bonus = getRoutineBonus(newState.routineSlot3Weeks + boost);
-    // strict 표시 — 어느 슬롯이라도 부스트로 임계값 통과한 주만
-    const r2Base = getRoutineBonus(newState.routineSlot2Weeks);
-    const r3Base = getRoutineBonus(newState.routineSlot3Weeks);
-    if (boost > 0 && (r2Bonus > r2Base || r3Bonus > r3Base)) {
-      log.parentBonusesApplied?.push({ parent: 'strict', what: '정해진 시간에 책상 — 루틴 +1주' });
-    }
-    // timeCost 2: 둘 다 스킵, timeCost 1: 슬롯2는 실행 + 슬롯3 스킵
-    if (newState.routineSlot2 && timeCost < 2) {
-      const r2 = ACTIVITIES.find(a => a.id === newState.routineSlot2);
-      const r2Cost = r2 ? getActivityCost(r2, newState.year) : 0;
-      if (r2 && (r2Cost <= 0 || newState.money >= r2Cost)) {
-        applyActivity(newState, newState.routineSlot2, log, r2Bonus);
-        newState.routineSlot2Weeks++;
-      } else {
-        log.messages.push(`💰 돈이 부족해서 ${r2?.name || '활동'}을 못 했다...`);
-      }
-    }
-    if (newState.routineSlot3 && timeCost < 1) {
-      const r3 = ACTIVITIES.find(a => a.id === newState.routineSlot3);
-      const r3Cost = r3 ? getActivityCost(r3, newState.year) : 0;
-      if (r3 && (r3Cost <= 0 || newState.money >= r3Cost)) {
-        applyActivity(newState, newState.routineSlot3, log, r3Bonus);
-        newState.routineSlot3Weeks++;
-      } else {
-        log.messages.push(`💰 돈이 부족해서 ${r3?.name || '활동'}을 못 했다...`);
-      }
-    }
-    // timeCost로 스킵해도 카운터는 유지 (습관은 남아있음)
-    if (timeCost >= 2) {
-      if (newState.routineSlot2) newState.routineSlot2Weeks++;
-      if (newState.routineSlot3) newState.routineSlot3Weeks++;
-    }
-  }
+  applyRoutineActivities(newState, log, timeCost);
 
   // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 슬롯 감소
-  const rawChoices = newState.isVacation ? newState.vacationChoices : newState.weekendChoices;
-  // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개 제거, 2=마지막 2개 제거)
-  // → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push 됨 ("이벤트로 일정 잘려서 시골 반쯤만")
-  const slicedChoices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
-  // 2칸 활동의 같은 id 인접 중복을 1 인스턴스로 collapse — applyActivity / vacationLimit 카운트는 인스턴스당 1회
-  const choices = collapseActivityChoices(slicedChoices);
-  const allActivities = [...choices];
-  for (const choice of choices) {
-    const act = ACTIVITIES.find(a => a.id === choice);
-    const actCost = act ? getActivityCost(act, newState.year) : 0;
-    if (act && actCost > 0 && newState.money < actCost) {
-      log.messages.push(`💰 돈이 부족해서 ${act.name}을 못 했다...`);
-      continue;
-    }
-    applyActivity(newState, choice, log);
-  }
-
-  // 루틴 활동도 포함
-  if (newState.routineSlot2) allActivities.push(newState.routineSlot2);
-  if (newState.routineSlot3) allActivities.push(newState.routineSlot3);
+  applyWeekendActivities(newState, log, timeCost);
 
   // 5b. 부모 친밀도 평균 회귀 — 이번 주 부모 행동(활동/대화)이 없었으면 50으로 천천히 수렴.
   //     (talkToHome은 processWeek 이전에, 부모 활동은 위에서 actedWithParentThisWeek를 세팅)
@@ -871,63 +953,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   newState.totalWeeksPlayed++;
 
   // 10. 시험 체크 — 스케줄은 getExamSchedule SSOT 사용
-  const thisWeekExam = getExamSchedule(newState.year)[newState.week];
-  if (thisWeekExam) {
-    let examResult;
-    let examName: string;
-
-    if (thisWeekExam === 'suneung') {
-      examResult = generateSuneungResult(newState);
-      examName = '수능';
-    } else if (thisWeekExam === 'mock') {
-      examResult = generateMockExamResult(newState);
-      examName = '모의고사';
-    } else {
-      examResult = generateExamResult(newState, thisWeekExam);
-      examName = thisWeekExam === 'unit-test' ? '단원평가'
-        : thisWeekExam === 'midterm' ? '중간고사' : '기말고사';
-    }
-
-    newState.examResults.push(examResult);
-    newState.currentExamResult = examResult;
-    log.examResult = examResult;
-    log.messages.push(`📝 ${examName} 결과 발표!`);
-
-    // 시험 결과 멘탈 후처리
-    if (examResult.mentalDelta) {
-      newState.stats.mental = Math.max(0, Math.min(100, newState.stats.mental + examResult.mentalDelta));
-      if (examResult.mentalDelta > 0) {
-        log.messages.push(`시험 결과에 기분이 좋아졌다! (멘탈 +${examResult.mentalDelta})`);
-      } else if (examResult.mentalDelta < 0) {
-        log.messages.push(`시험 결과에 기분이 가라앉았다... (멘탈 ${examResult.mentalDelta})`);
-      }
-    }
-
-    // 시험 결과 → 부모 친밀도 약연동 (Phase 2B §3.3, 단일 진입점).
-    // 주의: 평균회귀(5b)와 actedWithParentThisWeek 리셋이 이미 끝난 지점이라 여기선 델타만 적용한다.
-    //       (여기서 플래그를 세팅하면 리셋 이후라 다음 주 회귀가 잘못 면제된다. 시험은 수동적 신호라 면제 대상 아님.)
-    const examEffect = examParentEffect(examResult);
-    if (examEffect) {
-      applyParentIntimacyDelta(newState, examEffect.baseDelta, examEffect.tag);
-
-      // B2: strict + 뚜렷한 성적 향상 → 연 1회 어드밴티지(친밀도와 별개의 멘탈 버프 + 서사).
-      //     "신뢰·책임으로 가까워지는" strict 부모가 노력에 드물게 보답하는 순간.
-      const praiseYears = (newState.parentPraiseYears ??= []);
-      const topTier = (examResult.rank != null && examResult.rank <= 5)
-        || (examResult.mockGrade != null && examResult.mockGrade <= 2)
-        || (examResult.schoolLevel === 'elementary' && examResult.average >= 85);
-      if (newState.parents.includes('strict') && examEffect.tag === 'gradeImprove'
-          && topTier && !praiseYears.includes(newState.year)) {
-        newState.stats.mental = Math.min(100, newState.stats.mental + 2);
-        log.statChanges.mental = (log.statChanges.mental ?? 0) + 2;
-        praiseYears.push(newState.year);
-        log.messages.push('아빠가 성적표를 한참 보더니, 드물게 "잘했다"고 했다. (멘탈 +2)');
-      }
-    }
-  } else {
-    newState.currentExamResult = null;
-    log.examResult = null;
-  }
+  applyExamForWeek(newState, log);
 
   // 11. 이벤트 체크 — getEventForWeek는 순수 함수, patch는 selectEventForWeek 내부에서 명시 적용
   selectEventForWeek(newState);
@@ -935,24 +961,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   // 12. 버프 틱다운 + 주간 구매 리셋
   tickBuffsAndResetPurchases(newState);
 
-  // 주 진행
-  newState.week++;
-  if (newState.week > 48 && !newState.currentEvent) {
-    // 대기 중인 W48 이벤트가 없을 때만 즉시 학년 전환.
-    // 이벤트가 있으면 phase='event'를 유지하고 week=49 상태로 EventScene을 먼저 띄운다.
-    // 전환은 resolveEvent가 이벤트 종료 후 수행한다 (학년말 이벤트 유실 방지).
-    applyYearTransition(newState);
-  }
-
-  // 다음 주의 학기/방학 상태 업데이트
-  // - year-end면 의미 없으니 스킵
-  // - week=49(학년말 이벤트 대기, phase='event')도 getWeekInfo 범위 밖이므로 스킵 →
-  //   직전 주(48)의 학기/방학 값을 유지해 이벤트 배경이 어긋나지 않게 한다
-  if (newState.phase !== 'year-end' && newState.week <= 48) {
-    const nextInfo = getWeekInfo(newState.week);
-    newState.semester = nextInfo.semester;
-    newState.isVacation = nextInfo.isVacation;
-  }
+  // 주 진행 + 학년 전환 판정 + 다음 주 학기/방학 상태
+  advanceWeekCounter(newState);
 
   // 선택 초기화
   newState.weekendChoices = [];
