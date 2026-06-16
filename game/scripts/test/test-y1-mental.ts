@@ -12,7 +12,6 @@
 }
 
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
-import type { GameState } from '../../src/engine/types';
 
 // Y1 극단적 고압 시나리오: 학업형 + 엄격 부모
 let state = createInitialState('male', ['strict', 'resilience']);

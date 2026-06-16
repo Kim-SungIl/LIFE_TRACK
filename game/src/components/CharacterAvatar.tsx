@@ -1,8 +1,10 @@
 // CSS 기반 캐릭터 아바타 — 나중에 AI 일러스트로 교체할 플레이스홀더
 
+export type AvatarExpression = 'happy' | 'neutral' | 'sad' | 'angry' | 'tired' | 'burnout' | 'surprised' | 'shy';
+
 interface Props {
   size?: number;
-  expression?: 'happy' | 'neutral' | 'sad' | 'angry' | 'tired' | 'burnout' | 'surprised' | 'shy';
+  expression?: AvatarExpression;
   hair?: string;      // 머리 색상
   skin?: string;      // 피부 색상
   accent?: string;    // 악센트 색상 (교복 등)
@@ -164,6 +166,7 @@ export function CharacterAvatar({
 }
 
 // NPC별 외형 설정
+// eslint-disable-next-line react-refresh/only-export-components -- 아바타와 함께 쓰이는 상수 SSOT, 별도 파일 분리는 import 경로만 늘림
 export const NPC_APPEARANCES: Record<string, { hair: string; skin: string; accent: string }> = {
   player_m: { hair: '#2c2c3e', skin: '#fdd5b1', accent: '#3b5998' },  // 남주: 검은 단발
   player_f: { hair: '#3a2218', skin: '#fde0c8', accent: '#3b5998' },  // 여주: 갈색 긴 머리
@@ -175,6 +178,7 @@ export const NPC_APPEARANCES: Record<string, { hair: string; skin: string; accen
 };
 
 // 멘탈 상태 → 표정 매핑
+// eslint-disable-next-line react-refresh/only-export-components -- 아바타 표정 매핑 헬퍼, CharacterAvatar와 응집
 export function mentalToExpression(mental: number, mentalState: string): Props['expression'] {
   if (mentalState === 'burnout') return 'burnout';
   if (mentalState === 'tired') return 'tired';

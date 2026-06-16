@@ -3,15 +3,13 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
   pages: write
   id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -28,15 +26,32 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install and Build
+      - name: Install
         working-directory: ./game
-        run: npm ci && npm run build
+        run: npm ci
 
+      # 게이트 1 — ESLint (--max-warnings 0: error/warning 모두 실패 처리)
+      - name: Lint
+        working-directory: ./game
+        run: npm run lint
+
+      # 게이트 2 — 타입체크 + 번들 빌드 (tsc -b && vite build)
+      - name: Typecheck & Build
+        working-directory: ./game
+        run: npm run build
+
+      # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name == 'push'
         with:
           path: ./game/dist
 
   deploy:
+    # 배포는 main push에서만 — PR은 위 build 게이트까지만 돈다
+    if: github.event_name == 'push'
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

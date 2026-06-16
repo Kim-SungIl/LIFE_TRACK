@@ -3,13 +3,13 @@
 // 실행: cd game && npx tsx scripts/diagnose-shop-fatigue.ts
 
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
-import { SHOP_ITEMS, canBuyItem, applyItemEffects, SHOP_CATEGORIES, ShopItem, ItemCategory, ItemEffectType } from '../../src/engine/shopSystem';
+import { SHOP_ITEMS, canBuyItem, applyItemEffects, ShopItem, ItemCategory, ItemEffectType } from '../../src/engine/shopSystem';
 import type { GameState, ParentStrength, StatKey } from '../../src/engine/types';
 
 // ============ 공통 유틸 ============
 type BuyStrategy = 'none' | 'greedy' | 'smart';
 
-function setupState(seed = 0): GameState {
+function setupState(): GameState {
   const parents: [ParentStrength, ParentStrength] = ['wealth', 'emotional'];
   const s = createInitialState('male', parents);
   // 루틴 고정: 일반적 플레이 시뮬
@@ -27,7 +27,7 @@ function pickWeekendChoices(state: GameState): string[] {
 }
 
 // 아이템 '즉시 가치' 점수 — 가격당 이득 계산 (greedy 비교용)
-function itemImmediateValue(item: ShopItem, state: GameState): number {
+function itemImmediateValue(item: ShopItem): number {
   let val = 0;
   for (const eff of item.effects) {
     if (eff.type === 'instant') {
@@ -99,7 +99,7 @@ function runSimulation(strategy: BuyStrategy): SimStats {
     if (strategy === 'greedy') {
       // 매주 "돈 여유"에 따라 구매: 가격당 가치 Top3 중 상황에 맞는 것 여러 개 구매
       // 보다 현실적: 여러 아이템 살 수도 있음 (maxPerWeek 한도 내)
-      const ranked = [...buyable].sort((a, b) => itemImmediateValue(b, state) - itemImmediateValue(a, state));
+      const ranked = [...buyable].sort((a, b) => itemImmediateValue(b) - itemImmediateValue(a));
       let budgetLeft = Math.max(0, state.money - 3); // 3만원은 안전 비축
       for (const top of ranked) {
         if (budgetLeft < top.price) continue;

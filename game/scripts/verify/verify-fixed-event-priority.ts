@@ -2,7 +2,7 @@
 // NPC 이벤트(speakers 보유)가 우선 선택되는지 확인.
 // 실행: cd game && npx tsx scripts/verify-fixed-event-priority.ts
 
-import { GAME_EVENTS, getEventForWeek } from '../../src/engine/events';
+import { getEventForWeek } from '../../src/engine/events';
 import { createInitialState } from '../../src/engine/gameEngine';
 import type { GameState } from '../../src/engine/types';
 

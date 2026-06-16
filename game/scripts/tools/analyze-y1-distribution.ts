@@ -31,7 +31,7 @@ function inferIntimacyThreshold(condStr: string): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
-function inferNpc(event: any, condStr: string): string | null {
+function inferNpc(event: { speakers?: string[] }, condStr: string): string | null {
   if (event.speakers && event.speakers.length > 0) {
     const npc = event.speakers.find((s: string) => NPC_IDS.includes(s));
     if (npc) return npc;
@@ -63,7 +63,7 @@ for (const ev of GAME_EVENTS) {
   } else if (ev.condition) {
     const condStr = ev.condition.toString().replace(/\s+/g, ' ');
     let firesY1 = false;
-    try { firesY1 = ev.condition(sHi); } catch {}
+    try { firesY1 = ev.condition(sHi); } catch { /* 의도적으로 비움: 조건 평가 실패 시 미발동으로 간주 */ }
     if (firesY1) {
       const npc = inferNpc(ev, condStr);
       const threshold = inferIntimacyThreshold(condStr);

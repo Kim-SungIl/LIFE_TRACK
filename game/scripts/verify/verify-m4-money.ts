@@ -7,7 +7,7 @@
 
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { GAME_EVENTS } from '../../src/engine/events';
-import type { GameState, ParentStrength } from '../../src/engine/types';
+import type { GameState } from '../../src/engine/types';
 
 let passed = 0, failed = 0;
 function assert(label: string, cond: boolean, detail?: string) {

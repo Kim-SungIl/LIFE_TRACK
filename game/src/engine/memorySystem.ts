@@ -5,7 +5,7 @@
 
 import type {
   GameState, MemorySlot, MemorySlotDraft, MemoryCategory, ParentStrength,
-  PhaseTag, ToneTag, MilestoneScene, MilestoneTheme,
+  PhaseTag, MilestoneTheme,
   GameEvent, EventChoice,
 } from './types';
 
@@ -65,7 +65,7 @@ export function yearToPhaseTag(year: number): PhaseTag {
 // ===== recallText 린트 (부록 B.7) =====
 const FORBIDDEN_RECALL_PATTERNS = [
   /\b(academic|social|talent|mental|health)\b/i,
-  /[+\-]\d+/,           // +3, -5 등
+  /[+-]\d+/,            // +3, -5 등
   /\d+\s*점/,
   /등급|스탯/,
 ];

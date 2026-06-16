@@ -6,7 +6,7 @@
 
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { getFollowupForWeek } from '../../src/engine/events';
-import type { GameState, ParentStrength } from '../../src/engine/types';
+import type { ParentStrength } from '../../src/engine/types';
 
 const PARENTS: [ParentStrength, ParentStrength] = ['wealth', 'emotional'];
 

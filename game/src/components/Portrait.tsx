@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
-import { CharacterAvatar, NPC_APPEARANCES, mentalToExpression } from './CharacterAvatar';
+import { CharacterAvatar, NPC_APPEARANCES, mentalToExpression, type AvatarExpression } from './CharacterAvatar';
 
 interface Props {
   characterId: string;
@@ -36,6 +36,7 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
   const [useFallback, setUseFallback] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 캐릭터/표정/학년 경로가 바뀌면 이미지 src 리셋(prop 동기화)
     setSrc(exactPath);
     setUseFallback(false);
   }, [exactPath]);
@@ -80,7 +81,7 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
   return (
     <CharacterAvatar
       size={size}
-      expression={expr as any}
+      expression={expr as AvatarExpression}
       hair={appearance.hair}
       skin={appearance.skin}
       accent={appearance.accent}

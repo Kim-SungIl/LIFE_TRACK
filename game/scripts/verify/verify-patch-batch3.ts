@@ -161,7 +161,6 @@ console.log('\n=== 부가 검증: 6개 단일 부모 단독 효과 매트릭스 
     vacation: ['self-study', 'self-study', 'jogging', 'hang-out', 'club'],
   };
   const partners: ParentStrength[] = ['emotional', 'wealth', 'info', 'strict', 'resilience', 'freedom'];
-  const baseline: [ParentStrength, ParentStrength] = ['wealth', 'wealth' as ParentStrength]; // 더미 (실제로는 wealth + 다른 1개)
 
   console.log('  부모     | academic | social | talent | mental | health | fatigue | money');
   console.log('  ---------|----------|--------|--------|--------|--------|---------|------');

@@ -18,7 +18,7 @@ import { ACTIVITIES, getActivityCost } from '../../src/engine/activities';
 import { getFollowupForWeek } from '../../src/engine/events';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import { getParentMods } from '../../src/engine/parentModifiers';
-import type { GameState, ParentStrength, Activity } from '../../src/engine/types';
+import type { GameState, ParentStrength } from '../../src/engine/types';
 
 // ===== 패턴 5종 (기존 m5-playthrough 재사용) =====
 interface Pattern {
@@ -178,16 +178,6 @@ function pickVacationChoices(state: GameState, pattern: Pattern): string[] {
 }
 
 // ===== 측정 데이터 =====
-interface VacationSnap {
-  pattern: string;
-  year: number;
-  semesterVac: 'summer' | 'winter';
-  weekStart: number;
-  weekEnd: number;
-  picksByWeek: string[][];        // 주별 vacationChoices (정확히 적용된 것)
-  catchupTriggers: { activityId: string; stat: string; year: number }[];
-}
-
 interface Measurement {
   pattern: string;
   totalVacations: number;             // 방학 횟수 (=14: 7년×2)
@@ -406,7 +396,7 @@ async function main() {
 
   console.log(`\n[측정 2] catch-up 활동당 발동률: ${(catchupRate * 100).toFixed(1)}% (${totalCatchupTrig}/${totalCatchupAct})`);
   console.log(`  학년별 방학당 평균:`);
-  let exceedYears: number[] = [];
+  const exceedYears: number[] = [];
   for (const y of Object.keys(yearCatchups).map(Number).sort((a, b) => a - b)) {
     const arr = yearCatchups[y];
     const avg = arr.reduce((a, b) => a + b, 0) / Math.max(1, arr.length);

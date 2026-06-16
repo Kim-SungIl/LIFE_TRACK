@@ -122,7 +122,7 @@ console.log('\n=== 3. excludeLocation 필터 ===');
 // ========================================
 console.log('\n=== 4. 체이닝 무한 루프 방지 ===');
 {
-  let s = mkState({ year: 2, week: 10, stats: { academic: 45, social: 30, talent: 20, mental: 60, health: 60 } });
+  const s = mkState({ year: 2, week: 10, stats: { academic: 45, social: 30, talent: 20, mental: 60, health: 60 } });
   const first = getFollowupForWeek(s);
   if (first) {
     s.events.push({ ...first, resolvedChoice: 0, week: s.week, year: s.year });

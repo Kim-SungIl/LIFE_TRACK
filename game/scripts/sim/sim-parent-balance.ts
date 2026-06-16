@@ -10,15 +10,13 @@
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import { getFollowupForWeek } from '../../src/engine/events';
-import type { GameState, ParentStrength } from '../../src/engine/types';
-
-const ALL_PARENTS: ParentStrength[] = ['emotional', 'wealth', 'info', 'strict', 'resilience', 'freedom'];
+import type { ParentStrength } from '../../src/engine/types';
 
 // 결정론 시드 — 동일 입력이면 동일 출력
 const SEEDS = [11111, 22222, 33333];
 
 // 중립 선택 정책: 항상 0번 선택 (편향 없는 베이스라인)
-function neutralChoice(state: GameState): number {
+function neutralChoice(): number {
   return 0;
 }
 
@@ -60,7 +58,7 @@ function simulate(parents: [ParentStrength, ParentStrength], seed: number): Resu
     if (state.phase === 'event' && state.currentEvent) {
       const ev = state.currentEvent;
       const choices = state.gender === 'female' && ev.femaleChoices ? ev.femaleChoices : ev.choices;
-      const idx = neutralChoice(state) % choices.length;
+      const idx = neutralChoice() % choices.length;
       const ch = choices[idx];
 
       // resolveEvent 로직 인라인

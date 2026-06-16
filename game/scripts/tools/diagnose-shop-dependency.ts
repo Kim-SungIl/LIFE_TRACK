@@ -197,10 +197,10 @@ function q2ShopOff() {
   for (const variant of variants) {
     console.log(`\n--- Variant: ${variant} (seed 평균 n=${seeds.length}) ---`);
     let totalCrises = 0, totalF80 = 0, totalM20 = 0, totalBO = 0, totalCT = 0;
-    let firstCrisisWeeks: number[] = [];
+    const firstCrisisWeeks: number[] = [];
     const firstCrisisByReason: Record<string, number[]> = {};
-    let finals: GameState[] = [];
-    let crisisWeekLists: string[][] = [];
+    const finals: GameState[] = [];
+    const crisisWeekLists: string[][] = [];
 
     for (const seed of seeds) {
       const { snaps, finalState } = runShopOffSim(seed, variant, ['freedom', 'emotional']);
@@ -459,7 +459,7 @@ function q4Levers() {
 
   console.log('\n  Lever                              CrisisWks  Burnout  FinalFat  FinalMen');
   for (const lv of levers) {
-    let cs: number[] = [], bos: number[] = [], fs: number[] = [], ms: number[] = [];
+    const cs: number[] = [], bos: number[] = [], fs: number[] = [], ms: number[] = [];
     for (const sd of seeds) {
       const r = runShopOffWithLever(sd, 'baseline', parents, lv);
       cs.push(r.crises); bos.push(r.burnouts); fs.push(r.finalF); ms.push(r.finalM);
