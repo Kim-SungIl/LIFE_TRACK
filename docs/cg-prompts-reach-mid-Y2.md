@@ -41,9 +41,12 @@
 파일: `middle/subin-hundred-chats.png` | 등장: subin
 > Morning bus stop bench. Close on **Subin**'s phone screen flooded with endless group-chat notifications, and above it her faintly cooled side profile (small smile not reaching her eyes). Soft morning light. Mood: surrounded by connection yet quietly alone. 3:4 portrait. 
 
-### subin-edge-again — 또 끝자리 (tier 78) ⭐핵심
-파일: `middle/subin-edge-again.png` | 등장: subin
-> School corridor bulletin board with a printed class group photo. **Subin** reaches a hand toward the photo, her fingertip pointing at her own shoulder half-cropped at the very edge of the frame. Bittersweet expression, smile not quite holding. Cool indoor light. Mood: "always at the edge." 16:9.
+### subin-always-photographer — 내가 없는 사진 (tier 78) ⭐핵심
+파일: `middle/subin-always-photographer.png` | 등장: subin
+> **Art style: Anime-style illustration, soft pastel colors, gentle lighting, same character design as the provided reference sheets. 2010s~2020s Korean middle school, 14-year-old students.**
+> A class group-photo moment, warm classroom afternoon light. **Subin** (short black bob, gold star earrings, navy blazer + white shirt + red ribbon + plaid skirt), seen from a slight side angle in the foreground, holds up **a single smartphone in both hands** to take a photo of her classmates — a bright cheerful "say cheese" expression with a faint wistfulness behind the eyes. Beyond the phone, a cluster of **blurred classmates pose and smile together (soft bokeh)**. She is clearly the one BEHIND the camera, a small step apart from the group. Mood: always the one taking the picture, never in it. 16:9.
+> ⚠️ Negative: **no photorealistic, no realistic photo, no 3D render, no CGI, no live-action**; **clean anatomically-correct hands, exactly five fingers per hand, no distorted/melted/extra fingers**; only ONE phone; Subin is holding/aiming the phone at the group (NOT taking a selfie of her own face, phone NOT pointed at herself); no adult features, no exaggerated anime eyes, no tie on middle-stage uniform.
+> 🔁 교체(2026-06-16): 전(前) `subin-edge-again`("사진 속 끝자리 잘린 나")은 실제 수빈+사진 속 작은 수빈을 한 컷에 담아야 해 식별·구도 난이도가 커 v1~v3 모두 실패 → 정서축("외향적이지만 늘 기록 밖") 유지하되 **CG 단순한 "늘 찍어주는 사람" 1인 구도**로 이벤트 교체.
 
 ## 민재 (minjae) — Y2
 

@@ -48,7 +48,10 @@
 
 ### minjae-stolen-five-minutes — 셔틀이 떠난 5분 (tier 82) ⭐핵심
 파일: `middle/minjae-stolen-five-minutes.png` | 등장: minjae + player
-> Under a ROOFED academy shuttle stop at dusk (NO rain). **Minjae** (thin square glasses, navy blazer buttoned) and the player (player_m: soft center-part hair, no glasses) stand side by side watching the shuttle's tail-lights leave; his shoulders relaxed for the first time. Warm dusk glow. Mood: five stolen minutes outside the scheduled route. (※비 없음 — 유나 t88 처마비와 구분) 16:9.
+> **Art style: Anime-style illustration, soft pastel colors, gentle lighting, same character design as the provided reference sheets. 2010s~2020s Korean middle school, 15-year-old students.**
+> Under a ROOFED academy shuttle stop at dusk (NO rain). Two boys side by side watching the shuttle's tail-lights leave. **Minjae** — **clearly visible thin SQUARE dark-rimmed glasses (prominent and unmistakable, the single key identity marker)**, neat short side-part hair, navy blazer (white shirt, no tie) buttoned to the top, his stiff "model student" posture loosening for the first time as his shoulders finally drop. Beside him the player (**player_m: soft center-part hair, NO glasses, casual relaxed stance**). The two must read as **clearly different people** — distinct hair, and the glasses marker on Minjae alone. Warm dusk glow, long shadows. Mood: five stolen minutes outside the scheduled route. (※비 없음 — 유나 t88 처마비와 구분) 16:9.
+> ⚠️ Negative: **no photorealistic, no realistic photo, no 3D render, no CGI, no live-action**; do NOT leave Minjae without glasses; the two boys must NOT look like twins/identical — Minjae has prominent square glasses, the player has none; one roofed shelter only, no rain; no adult features, no exaggerated anime eyes, no tie on middle-stage uniform.
+> 🔁 v2 재생성(2026-06-15): 1차 생성물이 ①두 인물 모두 안경 없이 닮게 나와 식별 불가 ②실사풍으로 새어나옴 → 민재 사각 안경 마커 강제 + 두 인물 차별화 + **스타일 앵커/반실사 Negative를 엔트리에 직접 포함**(단독 복붙 대비).
 
 ## 유나 (yuna) — Y3
 
