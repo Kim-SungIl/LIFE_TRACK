@@ -5,7 +5,7 @@
 // - calculateEnding 확장 반환 필드
 // - 하드위기 연간 1회 가드
 
-import { createInitialState, processWeek } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek, applyYearTransition } from '../../src/engine/gameEngine';
 import { calculateEnding } from '../../src/engine/ending';
 import {
   applyMemorySlotFromChoice, selectMemorialHighlights,
@@ -283,10 +283,14 @@ console.log('\n=== 16. year-end phase 전환 (M3.5) ===');
   let s = setupState();
   s.routineSlot2 = 'self-study';
   s.routineSlot3 = 'basketball';
-  // Y1 끝까지 주차 돌림
+  // Y1 끝까지 주차 돌림. W48에 이벤트가 뜨면 엔진이 학년 전환을 resolve 시점까지 미루므로
+  // (gameEngine.applyYearTransition 주석 참조), 실게임의 resolveEvent 대신 여기서 수동 전환한다.
   for (let i = 0; i < 48; i++) {
     s = processWeek(s);
-    if (s.currentEvent) s.currentEvent = null;
+    if (s.currentEvent) {
+      s.currentEvent = null;
+      if (s.week > 48) applyYearTransition(s);
+    }
   }
   assert('Y1 끝: phase === year-end', s.phase === 'year-end');
   assert('Y1 끝: year === 1 유지 (아직 증가 안 됨)', s.year === 1);
@@ -301,7 +305,11 @@ console.log('\n=== 17. Y7 끝 — year-end 스킵하고 바로 ending ===');
   s.routineSlot2 = 'self-study';
   s.routineSlot3 = 'basketball';
   s = processWeek(s);
-  if (s.currentEvent) s.currentEvent = null;
+  // W48 이벤트로 미뤄진 학년 전환을 수동 처리 (실게임은 resolveEvent가 담당)
+  if (s.currentEvent) {
+    s.currentEvent = null;
+    if (s.week > 48) applyYearTransition(s);
+  }
   assert(`Y7 W48 처리 후 phase === ending (실제: ${s.phase})`, s.phase === 'ending');
   assert('Y7 milestone 자동 기록됨', s.milestoneScenes.some(m => m.year === 7));
 }
