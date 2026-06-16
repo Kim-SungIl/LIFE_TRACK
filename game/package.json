@@ -8,7 +8,7 @@
     "dev": "vite",
     "prebuild": "node scripts/generate-cg-manifest.mjs",
     "build": "tsc -b && vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
     "check": "tsc -b && vite build",
     "verify:events": "tsx scripts/verify/verify-events-split.ts",

@@ -71,6 +71,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   }, [current.target]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- DOM 측정값(rect) 동기화, 외부 레이아웃 읽기
     updateRect();
     const timer = setTimeout(updateRect, 100);
     window.addEventListener('scroll', updateRect, true);
@@ -107,7 +108,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
       observer?.disconnect();
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [updateRect, current.target]);
+  }, [updateRect, current.target, current.interactive]);
 
   // 타겟으로 스크롤
   useEffect(() => {
@@ -121,6 +122,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   // 인터랙티브 스텝에서 DOM 변화 감지 (루틴 설정 등)
   useEffect(() => {
     if (!current.waitFor) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- waitFor 스텝 진입 시 대기상태 1회 리셋
     setWaitDone(false);
 
     // routineSet prop으로 감지
@@ -143,6 +145,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   // routineSet이 변하면 자동으로 다음 스텝으로
   useEffect(() => {
     if (current.waitFor === 'routine-done' && routineSet) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- 루틴 완료 감지 시 대기 해제
       setWaitDone(true);
       updateRect();
       // 1.5초 후 자동으로 다음 스텝
@@ -271,7 +274,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
               {/* waitFor가 없는 인터랙티브(주말): 항상 다음 표시 */}
               {(!current.interactive || waitDone || !current.waitFor) && (
                 <button
-                  onClick={() => { setWaitDone(false); isLast ? onComplete() : setStep(step + 1); }}
+                  onClick={() => { setWaitDone(false); if (isLast) { onComplete(); } else { setStep(step + 1); } }}
                   style={{
                     background: 'var(--accent)', border: 'none',
                     borderRadius: 8, padding: '8px 24px', color: 'white',

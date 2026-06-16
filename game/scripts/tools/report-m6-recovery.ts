@@ -52,45 +52,6 @@ const PATTERNS: Pattern[] = [
   },
 ];
 
-async function runPlaythrough(p: Pattern, useReducedRecovery: boolean): Promise<GameState> {
-  let s = createInitialState(p.gender, p.parents, { useReducedRecovery });
-  s.routineSlot2 = p.routine2;
-  s.routineSlot3 = p.routine3;
-
-  for (let i = 0; i < 420 && s.year <= 7; i++) {
-    s = processWeek(s);
-    while (s.currentEvent) {
-      const event = s.currentEvent;
-      const ci = p.choicePolicy(s);
-      const choices = s.gender === 'female' && event.femaleChoices ? event.femaleChoices : event.choices;
-      const choice = choices[Math.min(ci, choices.length - 1)];
-      for (const [k, v] of Object.entries(choice.effects)) {
-        const cur = (s.stats as unknown as Record<string, number>)[k] ?? 0;
-        (s.stats as unknown as Record<string, number>)[k] = Math.max(0, Math.min(100, cur + (v as number)));
-      }
-      if (choice.fatigueEffect) s.fatigue = Math.max(0, Math.min(100, s.fatigue + choice.fatigueEffect));
-      if (choice.moneyEffect) s.money += choice.moneyEffect;
-      if (choice.npcEffects) for (const ne of choice.npcEffects) {
-        const npc = s.npcs.find(n => n.id === ne.npcId);
-        if (npc) { npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + ne.intimacyChange)); npc.met = true; }
-      }
-      applyMemorySlotFromChoice(s, event, ci, choice);
-      if (choice.addBuff) {
-        if (!s.activeBuffs) s.activeBuffs = [];
-        s.activeBuffs = s.activeBuffs.filter(b => b.id !== choice.addBuff!.id);
-        s.activeBuffs.push({ ...choice.addBuff });
-      }
-      s.events.push({ ...event, resolvedChoice: ci, week: s.week, year: s.year });
-      s.currentEvent = null;
-      const fu = getFollowupForWeek(s, event.location);
-      if (fu) s.currentEvent = fu;
-    }
-    if (s.phase === 'year-end') { s.week = 1; s.year++; s.phase = 'weekday'; }
-    if (s.phase === 'ending') break;
-  }
-  return s;
-}
-
 interface Metrics {
   name: string;
   mode: string;

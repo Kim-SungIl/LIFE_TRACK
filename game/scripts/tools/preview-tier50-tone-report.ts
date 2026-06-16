@@ -69,7 +69,6 @@ const SELECTION_REASON: Record<string, { ai: string; reason: string }> = {
 
 const args = process.argv.slice(2);
 const isJSON = args.includes('--json');
-const isMD = args.includes('--md') || !isJSON;
 
 function formatStat(stats: Record<string, number> | undefined): string {
   if (!stats) return '';

@@ -12,7 +12,7 @@ import {
   recordMilestoneForYear, yearToPhaseTag, lintRecallText,
 } from '../../src/engine/memorySystem';
 import { GAME_EVENTS } from '../../src/engine/events';
-import type { GameState, ParentStrength, EventChoice, GameEvent, MemorySlot } from '../../src/engine/types';
+import type { GameState, EventChoice, GameEvent, MemorySlot } from '../../src/engine/types';
 
 let passed = 0, failed = 0;
 const assert = (label: string, cond: boolean, detail?: string) => {
@@ -48,7 +48,7 @@ assert('"커피 얼룩" 통과', lintRecallText('책상 위 커피 얼룩만 늘
 
 console.log('\n=== 3. applyMemorySlotFromChoice 기본 동작 ===');
 {
-  let s = setupState();
+  const s = setupState();
   s.year = 3; s.week = 15;
   const choice = makeChoice({
     category: 'growth', importance: 8, toneTag: 'breakthrough',
@@ -63,7 +63,7 @@ console.log('\n=== 3. applyMemorySlotFromChoice 기본 동작 ===');
 
 console.log('\n=== 4. importance <3 스킵 ===');
 {
-  let s = setupState();
+  const s = setupState();
   const choice = makeChoice({
     category: 'courage', importance: 2, recallText: '무시할 기억',
   });
@@ -73,7 +73,7 @@ console.log('\n=== 4. importance <3 스킵 ===');
 
 console.log('\n=== 5. ANNUAL 이벤트 슬롯 금지 (부록 B.4) ===');
 {
-  let s = setupState();
+  const s = setupState();
   const choice = makeChoice({
     category: 'warm' as never, importance: 7,
     recallText: '생일 축하',
@@ -86,7 +86,7 @@ console.log('\n=== 5. ANNUAL 이벤트 슬롯 금지 (부록 B.4) ===');
 
 console.log('\n=== 6. 같은 sourceEventId 중복 방지 (B.2) ===');
 {
-  let s = setupState();
+  const s = setupState();
   const choice = makeChoice({
     category: 'courage', importance: 5, recallText: '처음 손을 든 날.',
   });
@@ -97,7 +97,7 @@ console.log('\n=== 6. 같은 sourceEventId 중복 방지 (B.2) ===');
 
 console.log('\n=== 7. 카테고리 상한 2 + importance 교체 ===');
 {
-  let s = setupState();
+  const s = setupState();
   function addSlot(eventId: string, importance: number, year: number) {
     s.year = year;
     applyMemorySlotFromChoice(s, makeTestEvent(eventId), 0, makeChoice({
@@ -118,7 +118,7 @@ console.log('\n=== 7. 카테고리 상한 2 + importance 교체 ===');
 
 console.log('\n=== 8. selectMemorialHighlights — 정상 케이스 (5개 슬롯) ===');
 {
-  let s = setupState();
+  const s = setupState();
   const slots: Array<[string, MemorySlot['category'], number, number]> = [
     ['ev1', 'growth', 8, 3],
     ['ev2', 'failure', 7, 3],
@@ -141,7 +141,7 @@ console.log('\n=== 8. selectMemorialHighlights — 정상 케이스 (5개 슬롯
 
 console.log('\n=== 9. selectMemorialHighlights — 슬롯 0개 폴백 ===');
 {
-  let s = setupState();
+  const s = setupState();
   s.year = 4;
   const highlights = selectMemorialHighlights(s);
   assert(`슬롯 0개 → 폴백 3+ 반환 (${highlights.length})`, highlights.length >= 3);
@@ -150,7 +150,7 @@ console.log('\n=== 9. selectMemorialHighlights — 슬롯 0개 폴백 ===');
 
 console.log('\n=== 10. selectMemorialHighlights — 슬롯 1개 + milestoneScene 승격 ===');
 {
-  let s = setupState();
+  const s = setupState();
   s.year = 3;
   applyMemorySlotFromChoice(s, makeTestEvent('solo'), 0, makeChoice({
     category: 'growth', importance: 9, recallText: '단 하나의 기억.',
@@ -168,7 +168,7 @@ console.log('\n=== 10. selectMemorialHighlights — 슬롯 1개 + milestoneScene
 
 console.log('\n=== 11. recordMilestoneForYear Y3 패턴 매칭 ===');
 {
-  let s = setupState();
+  const s = setupState();
   s.year = 3;
   // 민재 화해 + growth 조합 → Y3_PATTERNS[0] 매칭
   applyMemorySlotFromChoice(s, makeTestEvent('minjae-jealousy'), 1, makeChoice({
@@ -189,7 +189,7 @@ console.log('\n=== 11. recordMilestoneForYear Y3 패턴 매칭 ===');
 
 console.log('\n=== 12. recordMilestoneForYear 중복 방지 ===');
 {
-  let s = setupState();
+  const s = setupState();
   recordMilestoneForYear(s, 1);
   recordMilestoneForYear(s, 1);
   assert('Y1 중복 호출 → 1개만', s.milestoneScenes.filter(m => m.year === 1).length === 1);
@@ -223,7 +223,7 @@ console.log('\n=== 13. 하드위기 연간 1회 가드 — minjae-jealousy / mid
 
 console.log('\n=== 14. calculateEnding 회상 레이어 반환 ===');
 {
-  let s = setupState();
+  const s = setupState();
   s.year = 7; s.week = 48;
   // 슬롯 2개 + milestone 2개
   s.memorySlots.push({

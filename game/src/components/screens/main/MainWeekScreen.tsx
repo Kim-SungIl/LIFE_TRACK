@@ -60,6 +60,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   // 말걸기 같은 로컬 state 변경에는 영향 안 받게 한다.
   const dialogue = useMemo(
     () => getCharacterDialogue(state),
+    // state 전체가 아닌 primitive만 deps — 말걸기 등 로컬 state 변경 시 재추첨 방지(위 주석)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.week, state.year, state.totalWeeksPlayed],
   );
 
@@ -117,6 +119,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const npcDetail = npcDetailFor ? state.npcs.find(n => n.id === npcDetailFor) : null;
   const npcDialogue = useMemo(
     () => npcDetail ? getNpcDialogue(npcDetail.id, npcDetail.intimacy, state) : '',
+    // npcDetail은 id/intimacy로 풀어서 추적 — 객체 ref 변경에 흔들리지 않게(위 주석)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [npcDetail?.id, npcDetail?.intimacy, state],
   );
 

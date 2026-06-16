@@ -1,6 +1,5 @@
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { getFollowupForWeek } from '../../src/engine/events';
-import type { GameState } from '../../src/engine/types';
 
 async function runMentalHealthTest(): Promise<void> {
   // 높은 mental이 효율에 미치는 영향 측정
@@ -13,9 +12,9 @@ async function runMentalHealthTest(): Promise<void> {
   s1.routineSlot2 = 'self-study';
   s1.routineSlot3 = 'light-exercise';
   
-  let mentalHistory = [];
-  let healthHistory = [];
-  let academicHistory = [];
+  const mentalHistory = [];
+  const healthHistory = [];
+  const academicHistory = [];
   
   for (let i = 0; i < 52; i++) {
     s1.weekendChoices = ['self-study'];

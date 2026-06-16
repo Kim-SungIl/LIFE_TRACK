@@ -5,7 +5,7 @@
 
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { getFollowupForWeek } from '../../src/engine/events';
-import type { GameState, ParentStrength } from '../../src/engine/types';
+import type { ParentStrength } from '../../src/engine/types';
 
 type Build = { id: string; parents: [ParentStrength, ParentStrength]; r2: string; r3: string; weekend: [string, string] };
 

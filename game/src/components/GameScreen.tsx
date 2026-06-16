@@ -109,6 +109,8 @@ export function GameScreen() {
   // useMemo는 모든 early return 위에 둬야 hooks order가 안 깨진다.
   const resultDialogue = useMemo(
     () => state?.weekLog ? getResultDialogue(state, state.weekLog) : '',
+    // weekLog만 deps — state 전체를 넣으면 매 렌더 재계산
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [state?.weekLog],
   );
   // 엔딩 진입 후엔 state 가 거의 정지지만, calculateEnding 이 비-trivial 함수라

@@ -9,7 +9,7 @@ import { GAME_EVENTS } from '../../src/engine/events';
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { calculateEnding } from '../../src/engine/ending';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
-import type { GameState, ParentStrength, GameEvent, Choice } from '../../src/engine/types';
+import type { GameState, GameEvent, Choice } from '../../src/engine/types';
 
 // ===== 짧은 플레이스루 (1패턴, 표준 시나리오) =====
 async function runStandard(): Promise<GameState> {
@@ -78,10 +78,6 @@ function runChecks(s: GameState): Check[] {
     evidence: 'phase 전환은 코드상 존재하나 UI 렌더 확인은 브라우저 필요',
   });
   // milestoneScene 학년 라벨 확인
-  const yearLabels: Record<number, string> = {
-    1: '초등학교 6학년', 2: '중학교 1학년', 3: '중학교 2학년',
-    4: '중학교 3학년', 5: '고등학교 1학년', 6: '고등학교 2학년', 7: '고등학교 3학년',
-  };
   const milestoneYears = s.milestoneScenes.map(m => m.year).sort((a, b) => a - b);
   checks.push({
     section: '1. 학년말 일기장',

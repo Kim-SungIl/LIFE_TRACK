@@ -10,8 +10,6 @@ import { createInitialState } from '../../src/engine/gameEngine';
 import type { GameState, GameEvent } from '../../src/engine/types';
 
 // ===== 학년 적격성 분류 =====
-type YearKind = 'fixed-only' | 'range' | 'agnostic' | 'no-condition';
-
 interface EventClass {
   id: string;
   hasFixedWeek: boolean;

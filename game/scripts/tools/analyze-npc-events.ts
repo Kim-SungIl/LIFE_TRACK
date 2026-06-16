@@ -68,7 +68,6 @@ console.log('NPC별 이벤트 현황\n');
 for (const npc of NPC_IDS) {
   const list = byNpc[npc];
   const total = list.reduce((acc, e) => acc + e.sumBest, 0);
-  const positiveEvents = list.filter(e => e.maxIntimacy > 0).length;
   console.log(`\n===== ${npc} (${list.length}개 이벤트, 최적선택시 총 +${total} intimacy) =====`);
   for (const e of list.sort((a, b) => (a.week ?? 99) - (b.week ?? 99))) {
     const w = e.week ? `W${e.week}` : '랜덤';

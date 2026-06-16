@@ -243,7 +243,7 @@ console.log('\n=== P22. setRoutine 슬롯별 카운터 보전 (한 슬롯만 변
 
   // 케이스 1: 슬롯3만 변경 → slot2 카운터 유지, slot3 카운터 0
   useGameStore.getState().setRoutine('self-study', 'self-study');
-  let s1 = useGameStore.getState().state!;
+  const s1 = useGameStore.getState().state!;
   assert(`슬롯3만 변경 → slot2 카운터 유지 (실제: ${s1.routineSlot2Weeks})`, s1.routineSlot2Weeks === 5);
   assert(`슬롯3만 변경 → slot3 카운터 0 (실제: ${s1.routineSlot3Weeks})`, s1.routineSlot3Weeks === 0);
 
@@ -252,7 +252,7 @@ console.log('\n=== P22. setRoutine 슬롯별 카운터 보전 (한 슬롯만 변
     state: cur.state ? { ...cur.state, routineSlot2Weeks: 5, routineSlot3Weeks: 5 } : null,
   }));
   useGameStore.getState().setRoutine('basketball', 'basketball');
-  let s2 = useGameStore.getState().state!;
+  const s2 = useGameStore.getState().state!;
   assert(`둘 다 변경 → 둘 다 카운터 0 (실제: slot2=${s2.routineSlot2Weeks}, slot3=${s2.routineSlot3Weeks})`,
     s2.routineSlot2Weeks === 0 && s2.routineSlot3Weeks === 0);
 
@@ -261,7 +261,7 @@ console.log('\n=== P22. setRoutine 슬롯별 카운터 보전 (한 슬롯만 변
     state: cur.state ? { ...cur.state, routineSlot2Weeks: 4, routineSlot3Weeks: 7 } : null,
   }));
   useGameStore.getState().setRoutine('basketball', 'basketball');
-  let s3 = useGameStore.getState().state!;
+  const s3 = useGameStore.getState().state!;
   assert(`둘 다 동일 → 카운터 그대로 (실제: slot2=${s3.routineSlot2Weeks}, slot3=${s3.routineSlot3Weeks})`,
     s3.routineSlot2Weeks === 4 && s3.routineSlot3Weeks === 7);
 }

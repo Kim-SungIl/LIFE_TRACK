@@ -286,7 +286,7 @@ export function generateMockExamResult(
 
   const comment = generateMockComment(mockGrade, state);
   const parentReaction = generateMockParentReaction(mockGrade, state);
-  const teacherReaction = generateMockTeacherReaction(mockGrade, state);
+  const teacherReaction = generateMockTeacherReaction(mockGrade);
 
   return {
     subjects,
@@ -510,7 +510,7 @@ function generateMockParentReaction(mockGrade: number, state: GameState): string
   return '"음... 좀 더 노력이 필요할 것 같아."';
 }
 
-function generateMockTeacherReaction(mockGrade: number, state: GameState): string {
+function generateMockTeacherReaction(mockGrade: number): string {
   if (mockGrade <= 2) return '"이 성적이면 충분해. 컨디션 관리에 집중하자."';
   if (mockGrade <= 4) return '"가능성은 있어. 약한 과목 집중 공략하자."';
   if (mockGrade <= 6) return '"지금부터 진짜 시작이야. 아직 늦지 않았어."';

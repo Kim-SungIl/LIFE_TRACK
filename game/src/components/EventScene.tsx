@@ -240,7 +240,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     injectKeyframes();
   }, []);
 
-  // Reset state when event changes
+  // Reset state when event changes — event.id가 바뀌면 페이지/배경 로드 상태를 동기 리셋(의도된 prop 동기화, cascading 아님)
   useEffect(() => {
     setBgLoaded(false);
     setBgError(false);
@@ -271,7 +271,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       }
     }
     prefetchAssets(candidates);
-  }, [event.id, gender, year]);
+  }, [event.id, gender, year, event.choices.length, event.femaleChoices]);
 
   // Gender-specific description/choices
   const isFemale = gender === 'female';
@@ -363,6 +363,8 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       img.src = bgCandidates[idx];
     };
     tryLoad(0);
+    // bgCandidates는 매 렌더 새 배열이라 deps에서 의도적 제외 — 실제 입력인 location/event.background만 추적
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location, event.background]);
 
   // Character positions

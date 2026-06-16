@@ -1,5 +1,5 @@
 import { GameState, Activity } from '../../../engine/types';
-import { ACTIVITIES, getActivityCost } from '../../../engine/activities';
+import { ACTIVITIES } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
 import { ActivityPicker } from '../../ActivityPicker';
 

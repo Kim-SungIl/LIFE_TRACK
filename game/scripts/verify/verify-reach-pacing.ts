@@ -23,26 +23,30 @@ function cooldown(npc: string, year: number): number {
 
 interface Fire { id: string; npc: string; tier: number; year: number; week: number; abs: number; mode: 'fresh' | 'pre-met'; }
 
+// getReachForWeek가 실제로 읽는 필드만 갖춘 최소 NPC 모양 (NpcState 전체를 채우지 않으므로 별도 정의)
+interface SimNpc { id: string; met: boolean; intimacy: number; weekStartIntimacy: number; }
+
 // npcIntim: NPC별 시작 친밀도. growthPerWeek: 주당 친밀도 상승(fresh 경로 테스트용, 0이면 전부 pre-met).
 function runScenario(name: string, npcIntim: Record<string, number>, growthPerWeek = 0) {
-  const npcs = ALL_NPCS.map((id) => ({ id, met: true, intimacy: npcIntim[id] ?? 0, weekStartIntimacy: npcIntim[id] ?? 0 }));
-  const state = { year: 2, week: 1, isVacation: false, npcs, events: [] as any[] } as unknown as GameState;
+  const npcs: SimNpc[] = ALL_NPCS.map((id) => ({ id, met: true, intimacy: npcIntim[id] ?? 0, weekStartIntimacy: npcIntim[id] ?? 0 }));
+  const state = { year: 2, week: 1, isVacation: false, npcs, events: [] as { id: string; reach: GameState['events'][number]['reach']; year: number; week: number }[] } as unknown as GameState;
+  const sim = state as unknown as { year: number; week: number; npcs: SimNpc[]; events: { id: string; reach: unknown; year: number; week: number }[] };
   const fires: Fire[] = [];
 
   for (let y = 2; y <= 4; y++) {
     for (let w = 1; w <= 48; w++) {
-      (state as any).year = y;
-      (state as any).week = w;
+      sim.year = y;
+      sim.week = w;
       // processWeek 스냅샷 재현: 주 시작 친밀도 기록 후, 이번 주 성장 반영
-      for (const n of (state as any).npcs) {
+      for (const n of sim.npcs) {
         n.weekStartIntimacy = n.intimacy;
         if (growthPerWeek > 0) n.intimacy = Math.min(100, n.intimacy + growthPerWeek);
       }
       const ev = getReachForWeek(state);
       if (ev && ev.reach) {
-        const n = (state as any).npcs.find((x: any) => x.id === ev.reach!.npc);
+        const n = sim.npcs.find((x) => x.id === ev.reach!.npc)!;
         const mode: 'fresh' | 'pre-met' = (n.weekStartIntimacy < ev.reach.tier && n.intimacy >= ev.reach.tier) ? 'fresh' : 'pre-met';
-        (state as any).events.push({ id: ev.id, reach: ev.reach, year: y, week: w });
+        sim.events.push({ id: ev.id, reach: ev.reach, year: y, week: w });
         fires.push({ id: ev.id, npc: ev.reach.npc, tier: ev.reach.tier, year: y, week: w, abs: (y - 1) * 48 + w, mode });
       }
     }
