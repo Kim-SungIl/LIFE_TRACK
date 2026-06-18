@@ -116,13 +116,14 @@ console.log('\n=== B2. gameEngine strict 어드밴티지 가드 (소스) ===');
   // 시험 정산 안의 가드 블록만 슬라이스
   const at = ge.indexOf('examParentEffect(examResult)');
   const block = at >= 0 ? ge.slice(at, at + 1400) : '';
+  // #255 리팩터: applyExamForWeek 헬퍼로 추출 — newState→state(헬퍼 파라미터). 로직/순서 보존
   assert('examParentEffect 호출 + 단일 진입점 적용',
-    /examParentEffect\(examResult\)/.test(block) && /applyParentIntimacyDelta\(newState, examEffect\.baseDelta, examEffect\.tag\)/.test(block));
+    /examParentEffect\(examResult\)/.test(block) && /applyParentIntimacyDelta\(state, examEffect\.baseDelta, examEffect\.tag\)/.test(block));
   assert('strict + gradeImprove + 상위권 + 연1회 가드',
     /parents\.includes\('strict'\)/.test(block) && /examEffect\.tag === 'gradeImprove'/.test(block)
-    && /topTier/.test(block) && /!praiseYears\.includes\(newState\.year\)/.test(block));
+    && /topTier/.test(block) && /!praiseYears\.includes\(state\.year\)/.test(block));
   assert('어드밴티지 = 멘탈 버프 + 연도 기록',
-    /stats\.mental = Math\.min\(100, newState\.stats\.mental \+ 2\)/.test(block) && /praiseYears\.push\(newState\.year\)/.test(block));
+    /stats\.mental = Math\.min\(100, state\.stats\.mental \+ 2\)/.test(block) && /praiseYears\.push\(state\.year\)/.test(block));
   assert('시험 훅은 actedWithParentThisWeek를 세팅하지 않음(회귀 타이밍)',
     !/actedWithParentThisWeek\s*=\s*true/.test(block));
 }
