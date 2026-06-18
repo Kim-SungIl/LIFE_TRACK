@@ -27,13 +27,13 @@ const SEED = 1234567;
 // 공통 시뮬: 부모 조합으로 Y1 48주 진행, 동일 루틴 강제
 function simulateY1(parents: [ParentStrength, ParentStrength], routine: {
   slot2: string; slot3: string; weekend: string[]; vacation: string[];
-}): GameState {
+}, weeks = 48): GameState {
   let s = createInitialState('male', parents, { rngSeed: SEED });
   s.routineSlot2 = routine.slot2;
   s.routineSlot3 = routine.slot3;
   s.weekendChoices = routine.weekend;
   s.vacationChoices = routine.vacation;
-  for (let w = 0; w < 48; w++) {
+  for (let w = 0; w < weeks; w++) {
     s = processWeek(s);
     if (s.currentEvent) s.currentEvent = null;
     if (s.phase === 'year-end') break;
@@ -135,18 +135,21 @@ console.log('\n=== P12. freedom: idle 페널티 절반 ===');
     weekend: ['rest', 'rest'],
     vacation: ['rest', 'rest', 'rest', 'rest', 'rest'],
   };
-  const sFree = simulateY1(['freedom', 'wealth'], restOnlyRoutine);
-  const sBase = simulateY1(['strict', 'wealth'], restOnlyRoutine);
+  // 48주 전체는 freedom·비교군 mental이 모두 0 floor에 포화돼 Δ가 0으로 사라진다(측정 불가).
+  // idle 페널티 차(freedom -1/주 vs strict -2/주)는 선형 누적이므로, 0 floor 도달 전 12주 구간에서 측정한다.
+  const MEASURE_WEEKS = 12;
+  const sFree = simulateY1(['freedom', 'wealth'], restOnlyRoutine, MEASURE_WEEKS);
+  const sBase = simulateY1(['strict', 'wealth'], restOnlyRoutine, MEASURE_WEEKS);
 
-  console.log(`  rest-only — freedom: mental=${sFree.stats.mental.toFixed(1)}, social=${sFree.stats.social.toFixed(1)}, idleWeeks=${sFree.idleWeeks} / 비교군: mental=${sBase.stats.mental.toFixed(1)}, social=${sBase.stats.social.toFixed(1)}, idleWeeks=${sBase.idleWeeks}`);
-  assert('freedom의 Y1 mental ≥ 비교군 (idle 페널티 절반)',
+  console.log(`  rest-only(${MEASURE_WEEKS}주) — freedom: mental=${sFree.stats.mental.toFixed(1)}, social=${sFree.stats.social.toFixed(1)}, idleWeeks=${sFree.idleWeeks} / 비교군: mental=${sBase.stats.mental.toFixed(1)}, social=${sBase.stats.social.toFixed(1)}, idleWeeks=${sBase.idleWeeks}`);
+  assert('freedom의 mental ≥ 비교군 (idle 페널티 절반)',
     sFree.stats.mental >= sBase.stats.mental,
     `free=${sFree.stats.mental.toFixed(1)} base=${sBase.stats.mental.toFixed(1)}`);
-  assert('freedom의 Y1 social ≥ 비교군',
+  assert('freedom의 social ≥ 비교군',
     sFree.stats.social >= sBase.stats.social);
-  // 비교군 mental이 0 floor에 박히는 시점이 빨라 측정 한계 — Δ 1.0 이상이면 효과 감지로 충분
-  assert('freedom과 비교군 mental 차이 ≥ 1.0 (Y1 누적 효과, 0 floor 한계 감안)',
-    sFree.stats.mental - sBase.stats.mental >= 1.0,
+  // 12주 실측 Δ≈13(freedom 절반 페널티 효과). 임계는 여유 마진을 둬 ≥5.0
+  assert('freedom과 비교군 mental 차이 ≥ 5.0 (12주 누적, 0 floor 회피)',
+    sFree.stats.mental - sBase.stats.mental >= 5.0,
     `Δ=${(sFree.stats.mental - sBase.stats.mental).toFixed(2)}`);
 }
 

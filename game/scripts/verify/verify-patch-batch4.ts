@@ -53,8 +53,10 @@ console.log('\n=== P13. wealth memory bias 매핑 (dead → live 카테고리) =
     assert('wealth bias에 betrayal 포함', /betrayal/.test(body), body.trim());
     assert('wealth bias에 failure 포함', /failure/.test(body), body.trim());
     assert('wealth bias에 reconciliation: -0.1 유지', /reconciliation:\s*-0\.1/.test(body));
-    assert('wealth bias에 데드 카테고리(bypass) 제거', !/\bbypass\b/.test(body));
-    assert('wealth bias에 데드 카테고리(unspoken_debt) 제거', !/unspoken_debt/.test(body));
+    // 부록 B 환원(memorySystem.ts:15-21): bypass/unspoken_debt 슬롯이 reach.ts·talkData.ts에 실재하게 되어
+    // 임시 매핑(betrayal/failure)에서 정식 주력 카테고리(0.25)로 편입. betrayal/failure는 호환용 약화(0.1) 유지.
+    assert('wealth bias에 bypass 주력 편입(0.25)', /bypass:\s*0\.25/.test(body), body.trim());
+    assert('wealth bias에 unspoken_debt 주력 편입(0.25)', /unspoken_debt:\s*0\.25/.test(body), body.trim());
   }
 
   // 실효 검증: wealth 부모일 때 betrayal 슬롯이 reconciliation 슬롯보다 우선 회상되는지
