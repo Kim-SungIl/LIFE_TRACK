@@ -163,8 +163,9 @@ console.log('\n=== 5. resolveEvent 상태 전이 계약 ===');
   const afterState = useGameStore.getState().state!;
   assert('resolveEvent 후 events에 haeun-meet 기록됨', afterState.events.some(e => e.id === 'haeun-meet'));
   // haeun-meet이 completed되면 haeun-advice 등 추가 followup이 조건 충족하면 이어짐
-  // 여기서는 "followup이 이어지든(event) 아니든(weekday) 둘 중 하나"만 확인
-  const validPhase = afterState.phase === 'event' || afterState.phase === 'weekday';
+  // followup이 이어지면 'event', 없으면 주간 결산 'result'(체인 없을 때 resolveEvent 기본 전이).
+  // ('weekday'는 구버전 전이 — result 도입 전 호환을 위해 함께 허용)
+  const validPhase = afterState.phase === 'event' || afterState.phase === 'weekday' || afterState.phase === 'result';
   assert(`resolveEvent 후 phase 정상 전이 (현재: ${afterState.phase})`, validPhase);
   if (afterState.phase === 'event') {
     assert('followup 연쇄 시 currentEvent가 null이 아님', afterState.currentEvent !== null);
@@ -191,30 +192,31 @@ console.log('\n=== 6. DIRECT_SEQUEL: 선거→연설→결과 (classroom exclude
   }
 
   // Y1 W3: 출마(c0) 직후 체인은 연설 → (social 기준) win/lose (GAME_EVENTS 선순위)
-  const sWin = isolated(1, 3, 35);
+  // win 임계: 1학기 social≥40 (president.ts class-president-win), 2학기 social≥50
+  const sWin = isolated(1, 3, 45);
   sWin.events.push({ id: 'class-president', title: '', description: '', choices: [], resolvedChoice: 0, week: 3, year: 1 });
   const fuSpeech = getFollowupForWeek(sWin, 'classroom');
   assert('class-president(출마) 직후 exclude=classroom 무시·연설 발동', fuSpeech?.id === 'class-president-speech');
   sWin.events.push({ id: 'class-president-speech', title: '', description: '', choices: [], resolvedChoice: 0, week: 3, year: 1 });
   const fuWin = getFollowupForWeek(sWin, 'classroom');
-  assert('연설 후(social≥30) win 발동', fuWin?.id === 'class-president-win');
+  assert('연설 후(social≥40) win 발동', fuWin?.id === 'class-president-win');
 
   const sLose = isolated(1, 3, 25);
   sLose.events.push({ id: 'class-president', title: '', description: '', choices: [], resolvedChoice: 0, week: 3, year: 1 });
   const fuSpeechL = getFollowupForWeek(sLose, 'classroom');
-  assert('class-president(출마, social<30) 직후 연설 발동', fuSpeechL?.id === 'class-president-speech');
+  assert('class-president(출마, social<40) 직후 연설 발동', fuSpeechL?.id === 'class-president-speech');
   sLose.events.push({ id: 'class-president-speech', title: '', description: '', choices: [], resolvedChoice: 0, week: 3, year: 1 });
   const fuLose = getFollowupForWeek(sLose, 'classroom');
-  assert('연설 후(social<30) lose 발동', fuLose?.id === 'class-president-lose');
+  assert('연설 후(social<40) lose 발동', fuLose?.id === 'class-president-lose');
 
-  // 2학기: 연설 → 2-win (social≥40)
-  const s2Win = isolated(1, 25, 45);
+  // 2학기: 연설 → 2-win (social≥50)
+  const s2Win = isolated(1, 25, 55);
   s2Win.events.push({ id: 'class-president-2', title: '', description: '', choices: [], resolvedChoice: 0, week: 25, year: 1 });
   const fu2Speech = getFollowupForWeek(s2Win, 'classroom');
   assert('class-president-2(출마) 직후 2학기 연설 발동', fu2Speech?.id === 'class-president-2-speech');
   s2Win.events.push({ id: 'class-president-2-speech', title: '', description: '', choices: [], resolvedChoice: 0, week: 25, year: 1 });
   const fu2Win = getFollowupForWeek(s2Win, 'classroom');
-  assert('2학기 연설 후(social≥40) 2-win 발동', fu2Win?.id === 'class-president-2-win');
+  assert('2학기 연설 후(social≥50) 2-win 발동', fu2Win?.id === 'class-president-2-win');
 
   // 일반 followup(non-direct-sequel)은 여전히 location 필터 적용
   // junha-transfer는 DIRECT_SEQUEL_IDS에 없으므로 excludeLocation=classroom으로 막혀야 함
