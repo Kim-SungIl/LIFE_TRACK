@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameState, GameEvent, ParentStrength } from './types';
+import { GameState, GameEvent, EventChoice, ParentStrength } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
@@ -104,6 +104,117 @@ interface GameStore {
   debugForceParentEvent: () => void;
 }
 
+// ===== resolveEvent 단계 헬퍼 (순수 추출 — state 직접 mutate, 동작 보존) =====
+
+// 선택 결과 적용: 스탯(구간감쇠)/피로/용돈 + 이벤트 등장 NPC met + timeCost/문이과/부모 친밀도.
+function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice): void {
+  // 스탯 효과 — 구간별 감쇠(scaleStatChange)로 활동과 동일하게 고구간 캡 적용 (QA C3 근본원인).
+  for (const [key, val] of Object.entries(choice.effects)) {
+    const k = key as keyof typeof state.stats;
+    const scaled = scaleStatChange(val as number, state.stats[k]);
+    state.stats[k] = Math.max(0, Math.min(100, state.stats[k] + scaled));
+  }
+  // 피로 효과
+  if (choice.fatigueEffect) {
+    state.fatigue = Math.max(0, Math.min(100, state.fatigue + choice.fatigueEffect));
+  }
+  // 용돈 효과 — 음수 방지
+  if (choice.moneyEffect) {
+    state.money = Math.round((state.money + choice.moneyEffect) * 10) / 10;
+    if (state.money < 0) state.money = 0;
+  }
+  // NPC 친밀도 효과 + 만남 처리 (구간별 감쇠)
+  if (choice.npcEffects) {
+    for (const ne of choice.npcEffects) {
+      const npc = state.npcs.find(n => n.id === ne.npcId);
+      if (npc) {
+        const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
+        npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
+        npc.met = true;
+      }
+    }
+  }
+  // 이벤트에 등장한 모든 NPC도 met (선택지 무관, 남/여 분기 모두)
+  const allBranchChoices = [...event.choices, ...(event.femaleChoices || [])];
+  for (const c of allBranchChoices) {
+    if (c.npcEffects) {
+      for (const ne of c.npcEffects) {
+        const npc = state.npcs.find(n => n.id === ne.npcId);
+        if (npc) npc.met = true;
+      }
+    }
+  }
+  // speakers 등장 NPC도 met (대사 전용 등장도 만남으로 인정)
+  if (event.speakers) {
+    for (const npcId of event.speakers) {
+      const npc = state.npcs.find(n => n.id === npcId);
+      if (npc) npc.met = true;
+    }
+  }
+  // 시간 소모: 다음 주 루틴/주말 슬롯 감소
+  if (choice.timeCost) {
+    state.eventTimeCost = choice.timeCost;
+  }
+  // 문/이과 선택 (Y6 W1 이벤트 전용)
+  if (choice.trackSelect) {
+    state.track = choice.trackSelect;
+  }
+  // Phase 4C: 이벤트 선택의 부모 친밀도 반응 — 단일 진입점. 그 주는 평균회귀 면제.
+  if (choice.parentEffect) {
+    applyParentIntimacyDelta(state, choice.parentEffect.baseDelta, choice.parentEffect.tag);
+    state.actedWithParentThisWeek = true;
+  }
+}
+
+// 이벤트 기록 — condition(함수)은 JSON 직렬화 손실 방지 위해 제거, 발생주차는 occurrenceWeek로 통일.
+function recordResolvedEvent(state: GameState, event: GameEvent, choiceIndex: number, occurrenceWeek: number, isFemale: boolean): void {
+  const recordedEvent: Partial<GameEvent> = { ...event };
+  delete recordedEvent.condition;
+  state.events.push({
+    ...(recordedEvent as GameEvent),
+    resolvedChoice: choiceIndex,
+    week: occurrenceWeek,
+    year: state.year,
+    resolvedFemale: isFemale && !!event.femaleChoices,
+  });
+}
+
+// 이벤트 종료 후 연쇄: followup → conditional/milestone chain(주당 cap) → 학년전환/주간결산 분기.
+// occurrenceWeek = 발생주차(currentEvent.week, clone 이전 원본). location도 clone 이전 원본을 받는다.
+function resolveEventChain(state: GameState, location: string | undefined, occurrenceWeek: number): void {
+  // 가드: 같은 주(week+year)에 followup이 이미 발동했으면 추가 발동 안 함 (DIRECT_SEQUEL은 제외).
+  const followupFiredThisWeek = state.events.some(
+    prev => prev.week === occurrenceWeek && prev.year === state.year
+      && FOLLOWUP_EVENT_IDS.has(prev.id) && !DIRECT_SEQUEL_IDS.has(prev.id),
+  );
+  const followup = followupFiredThisWeek ? null : getFollowupForWeek(state, location);
+  if (followup) {
+    state.currentEvent = { ...followup, week: occurrenceWeek };
+    state.phase = 'event';
+  } else {
+    // chain cap: 일반 누적 2개, milestone(도달형) 잔여 있으면 3개까지 (졸업 직전 누락 방지).
+    const eventsThisWeek = state.events.filter(
+      prev => prev.week === occurrenceWeek && prev.year === state.year,
+    ).length;
+    let chainPick: ReturnType<typeof getConditionalForWeek> = null;
+    if (eventsThisWeek < 2) {
+      chainPick = getConditionalForWeek(state);
+    } else if (eventsThisWeek < 3) {
+      chainPick = getMilestoneForWeek(state);
+    }
+    if (chainPick) {
+      state.currentEvent = { ...chainPick, week: occurrenceWeek };
+      state.phase = 'event';
+    } else if (state.week > 48) {
+      // W48 학년말/졸업 주 이벤트 종료 → processWeek가 미뤄둔 학년 전환을 지금 수행.
+      applyYearTransition(state);
+    } else {
+      // 일반 주: 주간 결산 화면으로 (phase='result')
+      state.phase = 'result';
+    }
+  }
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
   npcActivityMap: {},
@@ -183,77 +294,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     };
 
     const newState = cloneGameState(s);
+    const event = newState.currentEvent!;
+    // 발생 주차 = currentEvent.week (clone 이전 원본). newState.week는 processWeek의 week++ 이후라
+    // 그대로 쓰면 발생주+1로 어긋난다(off-by-one) → record/chain이 이 값을 공유한다.
+    const occurrenceWeek = s.currentEvent!.week ?? newState.week;
 
-    // 스탯 효과 적용 — 구간별 감쇠(scaleStatChange)로 활동과 동일하게 고구간 캡 적용.
-    // 이전엔 raw 가산이라 이벤트가 활동 감쇠를 우회 → 빌드 무관 수렴(QA C3 근본원인).
-    for (const [key, val] of Object.entries(choice.effects)) {
-      const k = key as keyof typeof newState.stats;
-      const scaled = scaleStatChange(val as number, newState.stats[k]);
-      newState.stats[k] = Math.max(0, Math.min(100, newState.stats[k] + scaled));
-    }
-
-    // 피로 효과
-    if (choice.fatigueEffect) {
-      newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + choice.fatigueEffect));
-    }
-
-    // 용돈 효과 — 음수 방지 (gameEngine/shopSystem과 동일 클램프)
-    if (choice.moneyEffect) {
-      newState.money = Math.round((newState.money + choice.moneyEffect) * 10) / 10;
-      if (newState.money < 0) newState.money = 0;
-    }
-
-    // NPC 친밀도 효과 + 만남 처리 (구간별 감쇠 적용 — scaleIntimacyChange)
-    if (choice.npcEffects) {
-      for (const ne of choice.npcEffects) {
-        const npc = newState.npcs.find(n => n.id === ne.npcId);
-        if (npc) {
-          const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
-          npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
-          npc.met = true;
-        }
-      }
-    }
-    // 이벤트에 등장한 모든 NPC도 met 처리 (선택지 관계없이, 남/여 분기 모두 포함)
-    const allBranchChoices = [
-      ...newState.currentEvent!.choices,
-      ...(newState.currentEvent!.femaleChoices || []),
-    ];
-    for (const c of allBranchChoices) {
-      if (c.npcEffects) {
-        for (const ne of c.npcEffects) {
-          const npc = newState.npcs.find(n => n.id === ne.npcId);
-          if (npc) npc.met = true;
-        }
-      }
-    }
-    // speakers 에 등장한 NPC도 met 처리 (npcEffects 없는 대사 전용 등장도 만남으로 인정)
-    if (newState.currentEvent!.speakers) {
-      for (const npcId of newState.currentEvent!.speakers) {
-        const npc = newState.npcs.find(n => n.id === npcId);
-        if (npc) npc.met = true;
-      }
-    }
-
-    // 시간 소모 이벤트: 다음 주 루틴/주말 슬롯 감소
-    if (choice.timeCost) {
-      newState.eventTimeCost = choice.timeCost;
-    }
-
-    // 문/이과 선택 (Y6 W1 이벤트 전용)
-    if (choice.trackSelect) {
-      newState.track = choice.trackSelect;
-    }
-
-    // Phase 4C: 이벤트 선택의 부모 친밀도 반응 — 단일 진입점(강점 배율·구간 감쇠). 스탯 아님.
-    // 진로 갈등에서 부모와의 거리가 움직이고, 그 주는 평균회귀 면제(부모와 상호작용한 주).
-    if (choice.parentEffect) {
-      applyParentIntimacyDelta(newState, choice.parentEffect.baseDelta, choice.parentEffect.tag);
-      newState.actedWithParentThisWeek = true;
-    }
+    // 선택 결과 적용 (스탯/피로/용돈 + NPC met + timeCost/문이과/부모 친밀도)
+    applyChoiceOutcome(newState, event, choice);
 
     // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
-    applyMemorySlotFromChoice(newState, newState.currentEvent!, choiceIndex, choice);
+    applyMemorySlotFromChoice(newState, event, choiceIndex, choice);
 
     // M4: 버프 추가 (동일 id 있으면 기간 덮어쓰기)
     if (choice.addBuff) {
@@ -262,69 +312,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.activeBuffs.push({ ...choice.addBuff });
     }
 
-    // 이벤트 기록 (선택 인덱스 + 발생 주차 + 연차 + 성별 분기 정보 포함)
-    // condition은 함수라 JSON 직렬화에서 손실되므로 기록 시점에 명시적으로 제거
-    // (저장/로드 후 메모리상 객체 일관성 — events 배열 비교 시 함수 비교 회피)
-    const recordedEvent: Partial<GameEvent> = { ...newState.currentEvent! };
-    delete recordedEvent.condition;
-    newState.events.push({
-      ...(recordedEvent as GameEvent),
-      resolvedChoice: choiceIndex,
-      // 발생 주차 = 이벤트가 스탬프된 currentEvent.week (gameEngine:795 / 아래 chain 스탬프).
-      // newState.week는 processWeek의 week++ 이후 값이라 그대로 쓰면 발생주+1로 어긋난다(off-by-one).
-      week: s.currentEvent!.week ?? newState.week,
-      year: newState.year,
-      resolvedFemale: isFemale && !!s.currentEvent!.femaleChoices,
-    });
+    // 이벤트 기록 (선택 인덱스 + 발생주차 + 연차 + 성별 분기)
+    recordResolvedEvent(newState, event, choiceIndex, occurrenceWeek, isFemale);
 
-    // weekLog에 메시지 추가
+    // weekLog 메시지 + 이벤트 닫기
     if (newState.weekLog) {
       newState.weekLog.messages.push(`📖 ${choice.message}`);
     }
-
     newState.currentEvent = null;
 
-    // 이벤트 해결 후 → 대기 중인 followup 이벤트 즉시 연쇄 발동 (같은 장소 제외)
-    // 가드: 같은 주(week+year)에 followup이 이미 한 번 발동했으면 추가 발동 안 함
-    // (한 주 3+ 이벤트 누적으로 인한 피로감 방지)
-    // 단 DIRECT_SEQUEL_IDS(선거→연설→결과 같은 자연 chain)는 가드에서 제외 — 같은 주에 모두 보이는 게 의도
-    // 같은 주에 연쇄하는 이벤트는 발생주(currentEvent.week)를 그대로 물려줘 records의 week를 일치시킨다.
-    // newState.week는 week++ 이후 값(W48이면 49)이라 이벤트 기록·집계는 occurrenceWeek로 통일한다.
-    const occurrenceWeek = s.currentEvent!.week ?? newState.week;
-    const followupFiredThisWeek = newState.events.some(
-      prev => prev.week === occurrenceWeek && prev.year === newState.year
-        && FOLLOWUP_EVENT_IDS.has(prev.id) && !DIRECT_SEQUEL_IDS.has(prev.id),
-    );
-    const followup = followupFiredThisWeek ? null : getFollowupForWeek(newState, s.currentEvent?.location);
-    if (followup) {
-      newState.currentEvent = { ...followup, week: occurrenceWeek };
-      newState.phase = 'event';
-    } else {
-      // followup이 없으면 conditional 이벤트 chain 시도 — 한 주에 fixed + conditional 동시 발동 허용
-      // (자율 이벤트는 우선순위 마지막이라 chain에서 픽 안 됨 — 사용자 요구대로)
-      // chain cap: 일반은 누적 2개, 단 milestone(도달형) 잔여가 있으면 3개까지 허용.
-      // 학년 한정 도달형이 졸업 직전에 누락되는 걸 막기 위한 안전판 — 일반 conditional은 3번째 자리에 못 들어옴.
-      const eventsThisWeek = newState.events.filter(
-        prev => prev.week === occurrenceWeek && prev.year === newState.year,
-      ).length;
-      let chainPick: ReturnType<typeof getConditionalForWeek> = null;
-      if (eventsThisWeek < 2) {
-        chainPick = getConditionalForWeek(newState);
-      } else if (eventsThisWeek < 3) {
-        chainPick = getMilestoneForWeek(newState);
-      }
-      if (chainPick) {
-        newState.currentEvent = { ...chainPick, week: occurrenceWeek };
-        newState.phase = 'event';
-      } else if (newState.week > 48) {
-        // W48 학년말/졸업 주 이벤트가 모두 끝남 → 보류했던 학년 전환을 지금 수행.
-        // (processWeek에서 currentEvent 대기로 미뤄둔 transition)
-        applyYearTransition(newState);
-      } else {
-        // 일반 주: 이벤트 종료 후 주간 결산 화면으로 (phase='result' → 새로고침에도 유지)
-        newState.phase = 'result';
-      }
-    }
+    // followup/conditional/milestone chain + 학년 전환·결산 분기 (location은 clone 이전 원본)
+    resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
+
     set({ state: newState });
   },
 
