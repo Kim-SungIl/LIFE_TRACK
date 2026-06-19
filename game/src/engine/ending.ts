@@ -120,10 +120,12 @@ function determineCareer(state: GameState): { path: string; detail: string } {
     // talent 85~89 (또는 talent 90+ & academic 80+) → 특기 + 학업 균형 → 아래 일반 진로 로직에서 결정
   }
 
-  // 번아웃 심각 AND 멘탈 현재 상태도 바닥일 때만 방황
+  // 번아웃 심각 AND 멘탈 현재 상태도 바닥일 때 방황 — 또는 극단 갈아넣기는 회복했어도 재수.
   // M5 Phase 2: OR → AND. 이전엔 burnoutCount≥4만으로 재수 확정되어 모든 패턴이 재수로 수렴.
   // 번아웃 이력이 많아도 졸업 직전 회복했으면 정상 진학 가능해야 함.
-  if (state.burnoutCount >= 4 && mental < 30) {
+  // QA ⓕ: burnoutCount≥6 단독 OR 추가. 12회 갈아넣고 mental만 회복한 빌드도 「재수」로 — 대가의 서사.
+  //        ≥6은 그 자체로 극단이라 '모두 재수 수렴'(과거 버그) 재발 없음.
+  if ((state.burnoutCount >= 4 && mental < 30) || state.burnoutCount >= 6) {
     return { path: '재수 결심', detail: '올해는 결과가 좋지 않았다. 1년 더 해보기로 했다.' };
   }
   if (mental < 15) {
