@@ -123,12 +123,12 @@ export const MID_REACH_EVENTS = [
     choices: [
       { text: '"갑자기 웬 독서실?" 콕 집는다', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }], message: '"같이 다니면 좀 버틸 만하잖아." 지훈이 컵라면 뚜껑을 뜯는다.', timeCost: 1 },
       { text: '"내기 콜. 단 둘 다 끝까지"', effects: { mental: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }], message: '"콜!" 익어가는 컵라면을 보며 둘이 웃는다.', timeCost: 1 },
-      { text: '"네 페이스 지키면서 같이 가자" 자율+연대', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }], message: '"…그래 그게 낫겠다." 지훈이 고개를 끄덕인다.', timeCost: 1 },
+      { text: '"네 페이스 지키면서 같이 가자"', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }], message: '"…그래 그게 낫겠다." 지훈이 고개를 끄덕인다.', timeCost: 1 },
     ],
     femaleChoices: [
       { text: '"너 나 따라 독서실 등록하려는 거지?" 콕 집는다', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }], message: '"아 들켰네." 지훈이 컵라면 뚜껑을 만지작거린다.', timeCost: 1 },
       { text: '"내기 콜. 단 둘 다 끝까지"', effects: { mental: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }], message: '"콜!" 익어가는 컵라면을 보며 둘이 웃는다.', timeCost: 1 },
-      { text: '"네 페이스 지키면서 같이 가자" 자율+연대', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }], message: '"…그래 그게 낫겠다." 지훈이 고개를 끄덕인다.', timeCost: 1 },
+      { text: '"네 페이스 지키면서 같이 가자"', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }], message: '"…그래 그게 낫겠다." 지훈이 고개를 끄덕인다.', timeCost: 1 },
     ],
   },
   {
@@ -163,7 +163,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'jihun'); return !!n?.met && n.intimacy >= 90 && s.year === 4 && !s.isVacation; },
     choices: [
       { text: '"어디 가든 너 지훈인 거 안 변해" 단단하게', effects: { mental: 2 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }], message: '지훈이 창밖을 보다 천천히 고개를 끄덕인다. "…그건 그러네."', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '처음 다른 길을 입에 올린 복도.', npcIds: ['jihun'] } },
-      { text: '"몰라, 근데 학교 갈린다고 우리가 갈리냐 그게" 흐트러진 진심', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }], message: '"…야 너 말 그렇게 하니까 좀 안심된다." 지훈이 픽 웃는다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '처음 다른 길을 입에 올린 복도.', npcIds: ['jihun'] } },
+      { text: '"몰라, 근데 학교 갈린다고 우리가 갈리냐 그게"', effects: { social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }], message: '"…야 너 말 그렇게 하니까 좀 안심된다." 지훈이 픽 웃는다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '처음 다른 길을 입에 올린 복도.', npcIds: ['jihun'] } },
       { text: '"솔직히 나도 무섭다" 같이 인정', effects: { social: 1, mental: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }], message: '"…너도?" 둘이 복도에 서서 한참 창밖만 본다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '처음 다른 길을 입에 올린 복도.', npcIds: ['jihun'] } },
     ],
   },
@@ -195,7 +195,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'subin'); return !!n?.met && n.intimacy >= 74 && s.year === 2; },
     choices: [
       { text: '"그럼 내가 직접 보낼게" 하고 그 자리에서 톡을 보낸다', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '수빈 폰이 띵, 하고 울린다. "…너 방금 나한테 보낸 거야?" 하고 화면을 본다.', timeCost: 1 },
-      { text: '"그 많은 데서 직접 온 톡이 없는 게 더 외롭겠다" 공감', effects: { mental: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 3 }], message: '수빈이 잠깐 멈칫한다. "…그러고 보니 진짜 그러네."', timeCost: 1 },
+      { text: '"그 많은 데서 직접 온 톡이 없는 게 더 외롭겠다"', effects: { mental: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 3 }], message: '수빈이 잠깐 멈칫한다. "…그러고 보니 진짜 그러네."', timeCost: 1 },
       { text: '같이 알림을 하나씩 끄며 정리해준다', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 3 }], message: '둘이 머리를 맞대고 단톡방을 정리한다. 화면이 한결 조용해진다.', timeCost: 1 },
     ],
   },
@@ -210,7 +210,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'subin'); return !!n?.met && n.intimacy >= 78 && s.year === 2 && !s.isVacation; },
     choices: [
       { text: '"폰 이리 줘. 이번 건 너도 들어가야지." 카메라를 둘 쪽으로 돌린다', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 5 }], message: '수빈이 어색하게 프레임 안으로 들어온다. "…나 이런 거 진짜 오랜만이다." 찰칵, 둘이 같이 찍힌 첫 장.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'warm', recallText: '늘 찍어주기만 하던 애를, 처음 같이 프레임에 넣은 날.', npcIds: ['subin'] } },
-      { text: '"네가 찍은 게 제일 잘 나와. 너 눈 좋잖아" 역할을 인정해준다', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '"…그치? 내가 좀 잘 찍긴 하지." 으쓱하지만, 폰을 든 손이 조금 오래 멈춰 있다.', timeCost: 1 },
+      { text: '"네가 찍은 게 제일 잘 나와. 너 눈 좋잖아"', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '"…그치? 내가 좀 잘 찍긴 하지." 으쓱하지만, 폰을 든 손이 조금 오래 멈춰 있다.', timeCost: 1 },
       { text: '말없이, 다음 사진 땐 수빈을 슬쩍 한가운데로 민다', effects: { mental: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '얼떨결에 가운데 선 수빈이 "야, 나 왜 여기—" 하면서도 안 빠져나간다.', timeCost: 1 },
     ],
   },
@@ -270,7 +270,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'subin'); return !!n?.met && n.intimacy >= 86 && s.year === 4; },
     choices: [
       { text: '"그 방 안 나가도 돼, 대신 나랑은 직접 이어져 있잖아"', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '수빈이 폰을 무릎에 내려놓는다. "…그건 그렇네."', timeCost: 1 },
-      { text: '"끄고 싶으면 끄고, 못 끄겠으면 둬도 돼" 판단하지 않는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '"…너는 안 다그치네." 수빈이 차창에 머리를 기댄다.', timeCost: 1 },
+      { text: '"끄고 싶으면 끄고, 못 끄겠으면 둬도 돼"', effects: { mental: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '"…너는 안 다그치네." 수빈이 차창에 머리를 기댄다.', timeCost: 1 },
       { text: '"나가는 거 무서우면 내가 옆에서 봐줄게"', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 3 }], message: '"…아직은 못 누르겠어." 그래도 손가락 힘이 풀린다.', timeCost: 1 },
     ],
   },
@@ -286,7 +286,7 @@ export const MID_REACH_EVENTS = [
     choices: [
       { text: '"그럼 네 그 능력, 엄마한테 물려받은 거네. 멋있다"', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 5 }], message: '수빈이 명함을 도로 곱게 넣으며 옅게 웃는다.', timeCost: 1 },
       { text: '"백 명한테 웃는 거, 아무나 못 해. 너도 마찬가지야"', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '"…그렇게 생각하니까 좀 낫다." 수빈이 명함을 쓰다듬는다.', timeCost: 1 },
-      { text: '"언젠가 네가 괜찮으면 더 얘기해줘" 속도에 맡김', effects: { mental: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 3 }], message: '"…응. 언젠가." 수빈이 고개를 끄덕인다.', timeCost: 1 },
+      { text: '"언젠가 네가 괜찮으면 더 얘기해줘"', effects: { mental: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 3 }], message: '"…응. 언젠가." 수빈이 고개를 끄덕인다.', timeCost: 1 },
     ],
   },
   {
@@ -316,8 +316,8 @@ export const MID_REACH_EVENTS = [
     background: 'cafeteria_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 50 && s.year === 2 && !s.isVacation; },
     choices: [
-      { text: '"그 빵 내가 사줄게, 졸리면 내가 깨워줄게" 장난', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…됐어." 그러면서도 빵을 흘끔 본다.', timeCost: 1 },
-      { text: '"3분 먹는 시간도 못 내?" 정곡 살짝', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '민재가 잠깐 멈칫한다. "…그러게." 두유를 만지작거린다.', timeCost: 1 },
+      { text: '"그 빵 내가 사줄게, 졸리면 내가 깨워줄게"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…됐어." 그러면서도 빵을 흘끔 본다.', timeCost: 1 },
+      { text: '"3분 먹는 시간도 못 내?"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '민재가 잠깐 멈칫한다. "…그러게." 두유를 만지작거린다.', timeCost: 1 },
       { text: '말없이 같은 두유를 집어 옆에 선다', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '둘이 두유를 들고 나란히 선다. 민재가 곁눈으로 너를 본다.', timeCost: 1 },
     ],
   },
@@ -331,7 +331,7 @@ export const MID_REACH_EVENTS = [
     background: 'locker_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 58 && s.year === 2 && !s.isVacation; },
     choices: [
-      { text: '"그 칸, 비워두는 게 제일 잘한 거야" 빈칸 긍정', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '민재가 문손잡이를 쥔 채 잠깐 멈춘다. "…그런가."', timeCost: 1 },
+      { text: '"그 칸, 비워두는 게 제일 잘한 거야"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '민재가 문손잡이를 쥔 채 잠깐 멈춘다. "…그런가."', timeCost: 1 },
       { text: '"그 칸엔 뭐가 들어갈 뻔했어?" 조심스레 묻기', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '민재가 잠깐 말을 고른다. "…나도 몰라. 그래서 비워뒀어."', timeCost: 1 },
       { text: '"나도 시간표 칸 하나는 늘 비워둬" 나란히 서기', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…너도?" 민재가 처음으로 문을 다시 살짝 연다.', timeCost: 1 },
     ],
@@ -347,7 +347,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 66 && s.year === 2 && !s.isVacation; },
     choices: [
       { text: '"등수가 너냐? 내가 아는 넌 그런 거 아닌데" 반문', effects: { mental: 2 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 석차표에서 눈을 뗀다. "…그렇게 말해주는 사람 처음이야."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'breakthrough', recallText: '1등 아닌 난 뭐냐 묻던 게시판 앞.', npcIds: ['minjae'] } },
-      { text: '"0.1점 때문에 네가 없어지는 건 아니잖아" 위로+반박', effects: { mental: 1, academic: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…머리로는 아는데." 민재가 작게 한숨을 쉰다.', timeCost: 1 },
+      { text: '"0.1점 때문에 네가 없어지는 건 아니잖아"', effects: { mental: 1, academic: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…머리로는 아는데." 민재가 작게 한숨을 쉰다.', timeCost: 1 },
       { text: '아무 말 없이 옆에 서서 같이 게시판을 본다', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '둘이 석차표 앞에 한참 서 있는다. 종소리가 멀게 들린다.', timeCost: 1 },
     ],
   },
@@ -361,7 +361,7 @@ export const MID_REACH_EVENTS = [
     background: 'school_road_morning',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 70 && s.year === 3; },
     choices: [
-      { text: '"안 지워도 돼. 그거 멋있는데" 노력 긍정', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…멋있긴." 그러면서도 소매를 슬쩍 내린다.', timeCost: 1 },
+      { text: '"안 지워도 돼. 그거 멋있는데"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…멋있긴." 그러면서도 소매를 슬쩍 내린다.', timeCost: 1 },
       { text: '"몇 시까지 한 거야 대체" 걱정', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '"…기억 안 나." 민재가 얼버무린다.', timeCost: 1 },
       { text: '못 본 척 단어장만 받는다 배려의 외면', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '민재가 잠깐 너를 본다. 못 본 척해준 걸 안다는 눈빛이다.', timeCost: 1 },
     ],
@@ -376,9 +376,9 @@ export const MID_REACH_EVENTS = [
     background: 'counseling_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 76 && s.year === 3 && !s.isVacation; },
     choices: [
-      { text: '"네 노트는 네 거야. 샘플 아니고" 소유권 되돌리기', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…내 거." 민재가 작게 그 말을 따라 한다.', timeCost: 1 },
+      { text: '"네 노트는 네 거야. 샘플 아니고"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…내 거." 민재가 작게 그 말을 따라 한다.', timeCost: 1 },
       { text: '"여기 말고 다른 데 가서 기다리자" 그 자리에서 빼내기', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '민재가 순순히 일어선다. 복도를 빠져나오자 숨이 조금 트인다.', timeCost: 1 },
-      { text: '"샘플치고는 글씨가 너무 너 같은데" 농담으로 인간화', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '"…뭐야 그게." 민재가 피식 웃는다.', timeCost: 1 },
+      { text: '"샘플치고는 글씨가 너무 너 같은데"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '"…뭐야 그게." 민재가 피식 웃는다.', timeCost: 1 },
     ],
   },
   {
@@ -391,9 +391,9 @@ export const MID_REACH_EVENTS = [
     background: 'hagwon_front',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 82 && s.year === 3; },
     choices: [
-      { text: '"그럼 같이 한 대 더 보내자" 해방의 공모', effects: { mental: 2 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 처음으로 어깨를 푼다. "…그래도 돼?"', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '셔틀 보내고 훔친 5분의 해질녘.', npcIds: ['minjae'] } },
-      { text: '"막차 올 때까진 여기 있어도 돼" 시간 지켜주기', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…고마워." 민재가 천막 기둥에 등을 기댄다.', timeCost: 1 },
-      { text: '"거짓말 들통나면 내 핑계 대" 책임 나눠 메기', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…너 의외로 든든하다." 민재가 작게 웃는다.', timeCost: 1 },
+      { text: '"그럼 같이 한 대 더 보내자"', effects: { mental: 2 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 처음으로 어깨를 푼다. "…그래도 돼?"', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '셔틀 보내고 훔친 5분의 해질녘.', npcIds: ['minjae'] } },
+      { text: '"막차 올 때까진 여기 있어도 돼"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…고마워." 민재가 천막 기둥에 등을 기댄다.', timeCost: 1 },
+      { text: '"거짓말 들통나면 내 핑계 대"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…너 의외로 든든하다." 민재가 작게 웃는다.', timeCost: 1 },
     ],
   },
   {
@@ -421,9 +421,9 @@ export const MID_REACH_EVENTS = [
     background: 'faculty_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 88 && s.year === 4 && !s.isVacation; },
     choices: [
-      { text: '"내 앞에선 못해도 돼. 알아서 안 해도 돼" 반대 명제', effects: { mental: 2 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 가방끈을 쥔 손에서 힘을 푼다. "…그 말, 처음 들어."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'burden', recallText: '알아서 잘한다는 말이 제일 무섭다던.', npcIds: ['minjae'] } },
-      { text: '"안 해도 되는 날, 나랑 그냥 놀자" 대안 제시', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…놀아본 게 언젠지 기억도 안 나." 민재가 옅게 웃는다.', timeCost: 1 },
-      { text: '"나도 그 말 무거운 거 알아" 인정의 동행', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…너도 그래?" 민재가 처음으로 너를 똑바로 본다.', timeCost: 1 },
+      { text: '"내 앞에선 못해도 돼. 알아서 안 해도 돼"', effects: { mental: 2 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 가방끈을 쥔 손에서 힘을 푼다. "…그 말, 처음 들어."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'burden', recallText: '알아서 잘한다는 말이 제일 무섭다던.', npcIds: ['minjae'] } },
+      { text: '"안 해도 되는 날, 나랑 그냥 놀자"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…놀아본 게 언젠지 기억도 안 나." 민재가 옅게 웃는다.', timeCost: 1 },
+      { text: '"나도 그 말 무거운 거 알아"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '"…너도 그래?" 민재가 처음으로 너를 똑바로 본다.', timeCost: 1 },
     ],
   },
   {
@@ -436,7 +436,7 @@ export const MID_REACH_EVENTS = [
     background: 'classroom_middle_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 92 && s.year === 4 && !s.isVacation; },
     choices: [
-      { text: '"좋은 답이야. 그게 제일 정답이야" 추인', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 자기 이름을 한참 들여다본다. "…응. 그렇게 생각할래."', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'breakthrough', recallText: '빈칸에 정답 대신 제 이름 적던 날.', npcIds: ['minjae'] } },
+      { text: '"좋은 답이야. 그게 제일 정답이야"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 자기 이름을 한참 들여다본다. "…응. 그렇게 생각할래."', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'breakthrough', recallText: '빈칸에 정답 대신 제 이름 적던 날.', npcIds: ['minjae'] } },
       { text: '"진짜 괜찮겠어? 1등 아닌 너로 시작하는 거" 되묻기', effects: { mental: 1, academic: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '민재가 잠깐 멈칫하더니 천천히 고개를 끄덕인다. "…응. 처음으로 진짜 그러고 싶어."', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'breakthrough', recallText: '빈칸에 정답 대신 제 이름 적던 날.', npcIds: ['minjae'] } },
       { text: '그가 적은 이름 옆에 너도 한 단어를 적어준다', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 네가 적은 단어를 보고 처음으로 환하게 웃는다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'breakthrough', recallText: '빈칸에 정답 대신 제 이름 적던 날.', npcIds: ['minjae'] } },
     ],
@@ -455,7 +455,7 @@ export const MID_REACH_EVENTS = [
     choices: [
       { text: '"한 곡만 쳐봐, 나 들을게" 권유', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '유나가 망설이다 건반에 손을 올린다. 한 소절 치고는 멈춘다.', timeCost: 1 },
       { text: '"메트로놈 끄고 그냥 아무거나 쳐봐" 장난스런 흔듦', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"아무거나?" 유나가 메트로놈을 멈추고 피식 웃는다.', timeCost: 1 },
-      { text: '"박자 맞추는 것도 연습이지 뭐" 거리 둔 동조', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }], message: '"그치?" 유나가 다시 메트로놈을 본다. 손은 여전히 무릎 위다.', timeCost: 1 },
+      { text: '"박자 맞추는 것도 연습이지 뭐"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }], message: '"그치?" 유나가 다시 메트로놈을 본다. 손은 여전히 무릎 위다.', timeCost: 1 },
     ],
   },
   {
@@ -468,8 +468,8 @@ export const MID_REACH_EVENTS = [
     background: 'music_room_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 78 && s.year === 2 && !s.isVacation; },
     choices: [
-      { text: '"네가 좋다는 거 해. 책임은 같이 질게" 연대', effects: { talent: 1, social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"…같이?" 유나가 등 뒤로 숨겼던 악보를 다시 꺼낸다.', timeCost: 1 },
-      { text: '"왜 거둬? 방금 눈 반짝였잖아" 정곡', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '유나가 멈칫한다. "…티 났어?"', timeCost: 1 },
+      { text: '"네가 좋다는 거 해. 책임은 같이 질게"', effects: { talent: 1, social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"…같이?" 유나가 등 뒤로 숨겼던 악보를 다시 꺼낸다.', timeCost: 1 },
+      { text: '"왜 거둬? 방금 눈 반짝였잖아"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '유나가 멈칫한다. "…티 났어?"', timeCost: 1 },
       { text: '"무난한 게 안전하긴 하지" 동조', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }], message: '"그치. 안전한 게 낫지." 유나가 악보를 접는다. 어딘가 아쉬운 얼굴로.', timeCost: 1 },
     ],
   },
@@ -483,9 +483,9 @@ export const MID_REACH_EVENTS = [
     background: 'auditorium_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 82 && s.year === 2 && !s.isVacation; },
     choices: [
-      { text: '"여기서도 잘 보여. 근데 무대 위 너도 언젠가 보고 싶다" 인정+여지', effects: { talent: 1, mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 페이더를 만지작거린다. "…언젠가는, 그럴까."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '무대 대신 조명 부스 고른 유나.', npcIds: ['yuna'] } },
+      { text: '"여기서도 잘 보여. 근데 무대 위 너도 언젠가 보고 싶다"', effects: { talent: 1, mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 페이더를 만지작거린다. "…언젠가는, 그럴까."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '무대 대신 조명 부스 고른 유나.', npcIds: ['yuna'] } },
       { text: '"틀리면 좀 어때. 나는 안 보는데" 가볍게 풀어주기', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"…너는 그렇게 말하네." 유나가 어둠 속에서 작게 웃는다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '무대 대신 조명 부스 고른 유나.', npcIds: ['yuna'] } },
-      { text: '"왜 뒤로 갔어? 너 무대 좋아했잖아" 관심으로 묻기', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 페이더에 손을 얹은 채 한참 답이 없다. "…좋아했었지."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '무대 대신 조명 부스 고른 유나.', npcIds: ['yuna'] } },
+      { text: '"왜 뒤로 갔어? 너 무대 좋아했잖아"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 페이더에 손을 얹은 채 한참 답이 없다. "…좋아했었지."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '무대 대신 조명 부스 고른 유나.', npcIds: ['yuna'] } },
     ],
   },
   {
@@ -498,9 +498,9 @@ export const MID_REACH_EVENTS = [
     background: 'hallway_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 83 && s.year === 3 && !s.isVacation; },
     choices: [
-      { text: '"나도 너라서 봐줄 맘 없는데" 맞받는 우정', effects: { academic: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"오, 좋아 그래야 재밌지." 유나 눈이 반짝인다.', timeCost: 1 },
-      { text: '"분한 거 인정하네, 너답다" 솔직함 칭찬', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…티 났어?" 유나가 입을 삐죽인다.', timeCost: 1 },
-      { text: '"다음엔 안 진다" 경쟁 점화', effects: { academic: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"흥, 어디 해봐." 유나가 웃으며 게시판을 떠난다.', timeCost: 1 },
+      { text: '"나도 너라서 봐줄 맘 없는데"', effects: { academic: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"오, 좋아 그래야 재밌지." 유나 눈이 반짝인다.', timeCost: 1 },
+      { text: '"분한 거 인정하네, 너답다"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…티 났어?" 유나가 입을 삐죽인다.', timeCost: 1 },
+      { text: '"다음엔 안 진다"', effects: { academic: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"흥, 어디 해봐." 유나가 웃으며 게시판을 떠난다.', timeCost: 1 },
     ],
   },
   {
@@ -513,9 +513,9 @@ export const MID_REACH_EVENTS = [
     background: 'faculty_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 85 && s.year === 3 && !s.isVacation; },
     choices: [
-      { text: '"안 보이는 데서도, 너 너잖아" 통합', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 소견문을 접는다. "…그렇게 말해주니까 좀 낫다."', timeCost: 1 },
-      { text: '"그럼 안 보이는 데서 뭐 하는지 나한테만 말해줘" 끌어내기', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"…너한테만?" 유나가 잠깐 웃는다.', timeCost: 1 },
-      { text: '"그래도 선생님은 네가 애쓴 걸 본 거 아닐까" 완충된 관점', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…그런가." 유나가 소견문을 다시 한 번 읽는다.', timeCost: 1 },
+      { text: '"안 보이는 데서도, 너 너잖아"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 소견문을 접는다. "…그렇게 말해주니까 좀 낫다."', timeCost: 1 },
+      { text: '"그럼 안 보이는 데서 뭐 하는지 나한테만 말해줘"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"…너한테만?" 유나가 잠깐 웃는다.', timeCost: 1 },
+      { text: '"그래도 선생님은 네가 애쓴 걸 본 거 아닐까"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…그런가." 유나가 소견문을 다시 한 번 읽는다.', timeCost: 1 },
     ],
   },
   {
@@ -528,8 +528,8 @@ export const MID_REACH_EVENTS = [
     background: 'school_entrance_rain',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 88 && s.year === 3 && !s.isVacation; },
     choices: [
-      { text: '"안 웃어도 돼. 지금은." 침묵 허용', effects: { mental: 2 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 빗줄기를 본다. "…고마워. 안 웃어도 된다는 말." ', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
-      { text: '"가도 너 피아노 들으러 갈게" 떠남 인정+연결', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…진짜 올 거야?" 유나가 처음으로 눈을 마주친다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
+      { text: '"안 웃어도 돼. 지금은."', effects: { mental: 2 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 빗줄기를 본다. "…고마워. 안 웃어도 된다는 말." ', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
+      { text: '"가도 너 피아노 들으러 갈게"', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…진짜 올 거야?" 유나가 처음으로 눈을 마주친다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
       { text: '"안 갔으면 좋겠다, 솔직히" 붙잡음', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 잠깐 말이 없다. "…나도." 빗소리만 가득하다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
     ],
   },
@@ -543,8 +543,8 @@ export const MID_REACH_EVENTS = [
     background: 'music_room_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 86 && s.year === 4 && !s.isVacation; },
     choices: [
-      { text: '"너 좀 변했다, 좋은 쪽으로" 변화 짚기', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"그런가?" 유나가 악보를 톡톡 만지며 웃는다.', timeCost: 1 },
-      { text: '"같이 말리자, 빨리 안 마르는 거 옆에서 봐줄게" 동행', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '둘이 라디에이터 앞에 쪼그려 악보를 넌다. 조용한 오후다.', timeCost: 1 },
+      { text: '"너 좀 변했다, 좋은 쪽으로"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '"그런가?" 유나가 악보를 톡톡 만지며 웃는다.', timeCost: 1 },
+      { text: '"같이 말리자, 빨리 안 마르는 거 옆에서 봐줄게"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '둘이 라디에이터 앞에 쪼그려 악보를 넌다. 조용한 오후다.', timeCost: 1 },
       { text: '"예전 너였으면 난리 났을 텐데" 놀림', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"맞아, 옛날 같았으면." 유나가 머쓱하게 웃는다.', timeCost: 1 },
     ],
   },
@@ -558,9 +558,9 @@ export const MID_REACH_EVENTS = [
     background: 'locker_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 89 && s.year === 4 && !s.isVacation; },
     choices: [
-      { text: '"내가 받아둘 거 있으면 줘" 짐 나눠 받기', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 빌렸던 책 한 권을 건넨다. "…이건 네가 가질래?"', timeCost: 1 },
-      { text: '"벌써 정리해? 아직 시간 많잖아" 떠남 늦추고 싶음', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…그래도 미리 하는 게 나아." 유나 손이 잠깐 멈춘다.', timeCost: 1 },
-      { text: '"그 상장은 버리지 마, 네가 잘한 거잖아" 흔적 지키기', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 상장을 다시 종이가방에 넣는다. "…알았어. 안 버릴게."', timeCost: 1 },
+      { text: '"내가 받아둘 거 있으면 줘"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 빌렸던 책 한 권을 건넨다. "…이건 네가 가질래?"', timeCost: 1 },
+      { text: '"벌써 정리해? 아직 시간 많잖아"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…그래도 미리 하는 게 나아." 유나 손이 잠깐 멈춘다.', timeCost: 1 },
+      { text: '"그 상장은 버리지 마, 네가 잘한 거잖아"', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 상장을 다시 종이가방에 넣는다. "…알았어. 안 버릴게."', timeCost: 1 },
     ],
   },
   {
@@ -573,9 +573,9 @@ export const MID_REACH_EVENTS = [
     background: 'music_room_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 92 && s.year === 4 && !s.isVacation; },
     choices: [
-      { text: '"지금 그 표정, 처음 봐. 진짜 같애." 진짜를 알아봐줌', effects: { talent: 1, mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '유나가 건반에서 손을 떼고 환하게 웃는다. 처음으로, 역할 없이.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
-      { text: '"어디 가서 치든 이 곡 들으면 너 생각할게" 연결의 약속', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '"…그럼 나도 칠 때마다 너 생각할게." 유나 목소리가 살짝 떨린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
-      { text: '"한 곡만 더. 마지막이니까." 시간 늘리기', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…좋아. 딱 한 곡만 더." 유나가 다시 건반에 손을 올린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
+      { text: '"지금 그 표정, 처음 봐. 진짜 같애."', effects: { talent: 1, mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '유나가 건반에서 손을 떼고 환하게 웃는다. 처음으로, 역할 없이.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
+      { text: '"어디 가서 치든 이 곡 들으면 너 생각할게"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '"…그럼 나도 칠 때마다 너 생각할게." 유나 목소리가 살짝 떨린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
+      { text: '"한 곡만 더. 마지막이니까."', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…좋아. 딱 한 곡만 더." 유나가 다시 건반에 손을 올린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
     ],
   },
 
@@ -605,9 +605,9 @@ export const MID_REACH_EVENTS = [
     background: 'club_room',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'haeun'); return !!n?.met && n.intimacy >= 42 && s.year === 2 && !s.isVacation; },
     choices: [
-      { text: '"이걸 다 적었어요?" 배려에 감동', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }], message: '"후배가 헤매면 안 되잖아." 하은이 당연하다는 듯 말한다.', timeCost: 1 },
+      { text: '"이걸 다 적었어요?"', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }], message: '"후배가 헤매면 안 되잖아." 하은이 당연하다는 듯 말한다.', timeCost: 1 },
       { text: '"여기까지가 내 거, 라니… 뭔가 미리 정리하는 것 같아요"', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }], message: '"…그런가? 그냥 헷갈리지 말라고." 하은이 노트를 톡톡 친다.', timeCost: 1 },
-      { text: '"선배 거 칸은 비었네요" 빈칸을 알아채기', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }], message: '"…내 칸은 뭐, 별거 없으니까." 하은이 팔짱을 낀다.', timeCost: 1 },
+      { text: '"선배 거 칸은 비었네요"', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }], message: '"…내 칸은 뭐, 별거 없으니까." 하은이 팔짱을 낀다.', timeCost: 1 },
     ],
   },
   {
@@ -621,7 +621,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'haeun'); return !!n?.met && n.intimacy >= 55 && s.year === 2 && !s.isVacation; },
     choices: [
       { text: '"선배도 떨려요?" 의외라는 듯', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }], message: '"안 떠는 게 아니라, 떨면서 끝까지 가는 거야." 하은이 마이크를 정리한다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '떨려도 끝까지 읽으면 방송이 된다던.', npcIds: ['haeun'] } },
-      { text: '"끝까지 잘 들었어요" 방송을 칭찬', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }], message: '"…고마워. 듣는 사람 있으니까 끝까지 했네." 하은이 옅게 웃는다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '떨려도 끝까지 읽으면 방송이 된다던.', npcIds: ['haeun'] } },
+      { text: '"끝까지 잘 들었어요"', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }], message: '"…고마워. 듣는 사람 있으니까 끝까지 했네." 하은이 옅게 웃는다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '떨려도 끝까지 읽으면 방송이 된다던.', npcIds: ['haeun'] } },
       { text: '"손 떨던 거 봤어요" 조용히 본 걸 말해주기', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }], message: '하은이 잠깐 멈칫한다. "…그것도 봤구나." 그 떨림을, 나만 봤다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '떨려도 끝까지 읽으면 방송이 된다던.', npcIds: ['haeun'] } },
     ],
   },
@@ -636,8 +636,8 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'haeun'); return !!n?.met && n.intimacy >= 62 && s.year === 3; },
     choices: [
       { text: '"오빠는 지금 뭐 해요?" 가볍게 묻기', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }], message: '"…뭐, 그냥 지내." 하은이 표지를 덮는다.', timeCost: 1 },
-      { text: '"선배는 다를 거예요" 위로 건네기', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }], message: '"…그럴까." 하은이 참고서를 가방에 넣는다.', timeCost: 1 },
-      { text: '"…그 표정, 무슨 일 있어요?" 균열을 알아채기', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }], message: '"아무것도. …아니다." 하은이 말을 삼킨다.', timeCost: 1 },
+      { text: '"선배는 다를 거예요"', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }], message: '"…그럴까." 하은이 참고서를 가방에 넣는다.', timeCost: 1 },
+      { text: '"…그 표정, 무슨 일 있어요?"', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }], message: '"아무것도. …아니다." 하은이 말을 삼킨다.', timeCost: 1 },
     ],
   },
   {
@@ -665,9 +665,9 @@ export const MID_REACH_EVENTS = [
     background: 'faculty_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'haeun'); return !!n?.met && n.intimacy >= 80 && s.year === 3 && !s.isVacation; },
     choices: [
-      { text: '"선배가 원하는 데 써요" 등 떠밀어주기', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }], message: '"…그래도 될까." 하은이 원서를 꼭 쥔다.', timeCost: 1, memorySlotDraft: { category: 'courage', importance: 7, toneTag: 'breakthrough', recallText: '원서 앞, 선배가 처음 무섭다던 날.', npcIds: ['haeun'] } },
-      { text: '"안전한 게 나쁜 건 아니에요" 현실을 인정해주기', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }], message: '"…그 말도 위로가 되네." 하은이 옅게 웃는다.', timeCost: 1, memorySlotDraft: { category: 'courage', importance: 7, toneTag: 'breakthrough', recallText: '원서 앞, 선배가 처음 무섭다던 날.', npcIds: ['haeun'] } },
-      { text: '"선배도 그냥 무서울 수 있어요" 역할을 벗겨주기', effects: { mental: 2 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }], message: '하은이 처음으로 후배 앞에서 어깨를 늘어뜨린다. "…응. 나 사실 무서워."', timeCost: 1, memorySlotDraft: { category: 'courage', importance: 7, toneTag: 'breakthrough', recallText: '원서 앞, 선배가 처음 무섭다던 날.', npcIds: ['haeun'] } },
+      { text: '"선배가 원하는 데 써요"', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }], message: '"…그래도 될까." 하은이 원서를 꼭 쥔다.', timeCost: 1, memorySlotDraft: { category: 'courage', importance: 7, toneTag: 'breakthrough', recallText: '원서 앞, 선배가 처음 무섭다던 날.', npcIds: ['haeun'] } },
+      { text: '"안전한 게 나쁜 건 아니에요"', effects: { mental: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }], message: '"…그 말도 위로가 되네." 하은이 옅게 웃는다.', timeCost: 1, memorySlotDraft: { category: 'courage', importance: 7, toneTag: 'breakthrough', recallText: '원서 앞, 선배가 처음 무섭다던 날.', npcIds: ['haeun'] } },
+      { text: '"선배도 그냥 무서울 수 있어요"', effects: { mental: 2 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 5 }], message: '하은이 처음으로 후배 앞에서 어깨를 늘어뜨린다. "…응. 나 사실 무서워."', timeCost: 1, memorySlotDraft: { category: 'courage', importance: 7, toneTag: 'breakthrough', recallText: '원서 앞, 선배가 처음 무섭다던 날.', npcIds: ['haeun'] } },
     ],
   },
 ] satisfies readonly GameEvent[];
