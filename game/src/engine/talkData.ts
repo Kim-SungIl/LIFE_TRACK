@@ -214,7 +214,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   {
     id: 'talk_jihun_90_bench',
     npcId: 'jihun', intimacyMin: 80, yearMin: 2,
-    description: '"넌 왜 힘들 때 더 실실 웃냐. 바보같이."\n매점 평상, 지훈이가 말없이 이온 음료를 네 이마에 대어 온다. "나한텐 힘든 척해도 돼. 내가 힘은 세니까, 대충 다 받아줄 수 있어." 앞만 보며 툭 던지는 목소리에 서툰 다정함이 묻어 있다.',
+    description: '"넌 왜 힘들 때 더 실실 웃냐. 바보같이."\n매점 평상, 지훈이가 말없이 이온 음료를 툭 쥐여 준다. "나한텐 힘든 척해도 돼. 내가 힘은 세니까, 대충 다 받아줄 수 있어." 앞만 보며 툭 던지는 목소리에 서툰 다정함이 묻어 있다.',
     effects: { intimacy: 5, stats: { mental: 2 }, fatigue: -2 },
     message: '지훈이가 장난 대신 기댈 어깨를 내밀었다.',
     memorySlotDraft: {
