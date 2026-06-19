@@ -115,7 +115,7 @@ export const MINJAE_EVENTS = [
   {
     id: 'minjae-ranking',
     title: '성적표가 붙은 날',
-    description: '중간고사 성적표가 복도에 붙었다.\n다들 웅성거리며 성적표 앞에 몰려 있다.\n쭉 올라가보니 전교 1등 — 강민재.\n같은 반 민재? "하나도 안 했는데"라고 했던 그 민재가?',
+    description: '중간고사 성적표가 복도에 붙었다.\n다들 웅성거리며 성적표 앞에 몰려 있다.\n쭉 올라가보니 전교 1등 — 박민재.\n같은 반 민재? "하나도 안 했는데"라고 했던 그 민재가?',
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['minjae'],
