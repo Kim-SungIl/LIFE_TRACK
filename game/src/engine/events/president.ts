@@ -91,7 +91,7 @@ export const PRESIDENT_ELECTION = [
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
-      { text: '반장이 됐다!', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
+      { text: '기쁘게 받아들인다', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
         message: '당선됐다! 떨리지만 잘 해보자.' },
     ],
   },
@@ -163,7 +163,7 @@ export const PRESIDENT_ELECTION = [
     location: 'classroom',
     background: 'classroom_{school}',
     choices: [
-      { text: '2학기도 반장이다!', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
+      { text: '이어서 맡기로 한다', effects: { social: 5, mental: 3 }, fatigueEffect: 2,
         message: '이번엔 더 잘 해내고 싶다. 반 친구들의 기대가 느껴진다.' },
     ],
   },
