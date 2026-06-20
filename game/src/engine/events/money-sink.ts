@@ -165,7 +165,7 @@ export const MONEY_SINK_EVENTS = [
     background: 'classroom_high',
     choices: [
       {
-        text: '"학원 등록할게" — 공부에 집중 (-10만원, 학업 루틴 20% 버프 8주)',
+        text: '"학원 등록할게" — 공부에 집중 (-10만원)',
         effects: { academic: 2, mental: -1 },
         moneyEffect: -10,
         message: '학원을 등록했다. 선생님이 "고1이 제일 중요하다"고 했다. 주 3회, 이제 저녁이 학원에서 흘러간다.',
@@ -184,7 +184,7 @@ export const MONEY_SINK_EVENTS = [
         },
       },
       {
-        text: '"동아리 들어갈래" — 사람 (-10만원, 특기 루틴 15% 버프 8주)',
+        text: '"동아리 들어갈래" — 사람들과 어울리며 (-10만원)',
         effects: { social: 3, talent: 2, mental: 3 },
         moneyEffect: -10,
         message: '동아리에 이름을 적었다. 선배들이 웃으며 맞아줬다. "공부만 하면 재미없잖아?" — 맞는 말이었다.',
