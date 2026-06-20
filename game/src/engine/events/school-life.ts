@@ -46,7 +46,8 @@ export const SCHOOL_LIFE_EVENTS = [
       { text: '웃으며 무시한다', effects: { mental: 1 }, message: '웃음을 참느라 힘들었다. 그래도 수업은 들었다.' },
       { text: '같이 보내본다 (몰래)', effects: { social: 2, mental: 2, academic: -1 }, message: '같이 장난치다 수업을 날렸다. 하지만 재밌었다!' },
     ],
-    condition: (s) => !s.isVacation,
+    // 종이비행기 장난은 초·중 정서 — 고등(year>=5)에선 발동 안 함
+    condition: (s) => !s.isVacation && s.year <= 4,
   },
   {
     id: 'rain-day', title: '비 오는 날',
@@ -124,7 +125,8 @@ export const SCHOOL_LIFE_EVENTS = [
       { text: '멋지게 잡아본다!', effects: { health: 2, social: 3, mental: 2 }, message: '잡았다!! 반 전체가 환호했다. 오늘 영웅이다!' },
       { text: '피한다 (안전제일)', effects: { health: 1 }, message: '무사히 살아남았다. 뭐, 이것도 전략이지.' },
     ],
-    condition: (s) => !s.isVacation,
+    // 피구는 초·중 정서 — 고등(year>=5)에선 발동 안 함
+    condition: (s) => !s.isVacation && s.year <= 4,
   },
   {
     id: 'study-cafe', title: '스터디 카페',
