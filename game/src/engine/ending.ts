@@ -1,7 +1,7 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
 import { GameState, ParentStrength } from './types';
-import { selectMemorialHighlights } from './memorySystem';
+import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 
 // ===== 행복 등급 =====
 // mental + social 조합으로 한 해/일생의 행복도를 5단계로 분류.
@@ -257,6 +257,9 @@ export function calculateEnding(state: GameState) {
 
   // v1.2 회상 레이어 (크래시 보험: 빈 배열도 안전)
   const memorialHighlights = selectMemorialHighlights(state);
+  // 후회카드 — "한 일" 회고가 인용한 문장을 제외해 이중 노출 방지(0장 허용)
+  const usedTexts = new Set(memorialHighlights.map(h => h.recallText));
+  const regretHighlights = selectRegretHighlights(state, usedTexts);
   const yearClosings = [...(state.milestoneScenes || [])]
     .sort((a, b) => a.year - b.year)
     .map(ms => ms.summaryText || `${ms.year}학년의 기억.`);
@@ -273,6 +276,7 @@ export function calculateEnding(state: GameState) {
     npcStories,
     parentEpilogue,
     memorialHighlights,
+    regretHighlights,
     yearClosings,
   };
 }

@@ -92,6 +92,18 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
           </div>
         )}
 
+        {/* 후회카드 — "미처 닿지 못한 것" (0장이면 미표시) */}
+        {ending.regretHighlights && ending.regretHighlights.length > 0 && (
+          <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '14px 18px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, borderLeft: '2px solid rgba(160,160,180,0.35)' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>미처 닿지 못한 것</div>
+            {ending.regretHighlights.map((h, i) => (
+              <div key={i} style={{ fontSize: '0.82rem', color: h.isClosing ? 'var(--accent-soft)' : 'var(--text-muted)', lineHeight: 1.7, marginBottom: 6, fontStyle: 'italic', marginTop: h.isClosing ? 10 : 0 }}>
+                {h.recallText}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* v1.2 7년 요약 — 학년별 클로저 */}
         {ending.yearClosings && ending.yearClosings.length > 0 && (
           <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10 }}>
