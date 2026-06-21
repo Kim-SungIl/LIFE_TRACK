@@ -283,7 +283,9 @@ export function selectMemorialHighlights(state: GameState): MemorialHighlight[] 
 //  - 0장 허용: 후회 소재가 없는 플레이엔 섹션 자체를 안 띄움(억지 생성 금지·폴백 없음).
 const REGRET_TONES: ToneTag[] = ['regret', 'melancholy', 'burden'];
 const REGRET_CATEGORIES: MemoryCategory[] = ['failure', 'betrayal', 'bypass', 'unspoken_debt'];
-const REGRET_CLOSING = '그때의 나를 탓하지 않기로 했다. 그 애도, 나도, 그저 어렸다.';
+// 대상 비특정 — 후회 풀엔 또래뿐 아니라 부모·자기(번아웃) 슬롯도 섞이므로
+// "그 애" 같은 또래 전제 표현을 피하고 헤더("닿지 못한")와 콜백한다.
+const REGRET_CLOSING = '그때의 나를 탓하지 않기로 했다. 닿지 못한 채로도, 그 마음들은 있었다.';
 
 export function selectRegretHighlights(
   state: GameState,
@@ -313,19 +315,23 @@ export function selectRegretHighlights(
 
   if (pool.length === 0) return [];   // 0장 허용 — 폴백 없음
 
-  // 최대 2장 — 1장은 최고 점수, 2장째는 가능하면 다른 phaseTag(학년 분산)
+  // 최대 2장 — 1장은 최고 점수, 2장째는 가능하면 다른 phaseTag(학년 분산).
+  // 2장째는 recallText 기준으로 1장째와 다른 것만(같은 문장 중복 노출 방지).
   const picked: MemorySlot[] = [pool[0]];
   const second =
-    pool.find(s => s !== picked[0] && s.phaseTag !== picked[0].phaseTag) ??
-    pool.find(s => s !== picked[0]);
+    pool.find(s => s.recallText !== picked[0].recallText && s.phaseTag !== picked[0].phaseTag) ??
+    pool.find(s => s.recallText !== picked[0].recallText);
   if (second) picked.push(second);
 
   const highlights: MemorialHighlight[] = picked.map(s => ({
     recallText: s.recallText, year: s.year,
   }));
 
-  // 화해 마감 — 후회가 1장 이상일 때만 닫는 한 줄(자책으로 끝나지 않게)
-  highlights.push({ recallText: REGRET_CLOSING, year: state.year, isClosing: true });
+  // 화해 마감 — 후회 본문이 1장 이상일 때만 닫는 한 줄(자책으로 끝나지 않게).
+  // 방어 가드: 본문이 비면 화해만 단독 노출되어 맥락 없는 위로가 되므로 막는다.
+  if (highlights.length > 0) {
+    highlights.push({ recallText: REGRET_CLOSING, year: state.year, isClosing: true });
+  }
 
   return highlights;
 }

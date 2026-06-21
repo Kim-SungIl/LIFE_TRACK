@@ -398,6 +398,27 @@ console.log('\n=== 18. selectRegretHighlights (후회카드) ===');
     assert('드리프트 관계 슬롯이 먼저 선발',
       selectRegretHighlights(s)[0].recallText === '멀어진 관계');
   }
+
+  // 18.8 같은 recallText 슬롯 2개 → 본문 1장만(중복 노출 방지) + 화해
+  {
+    const s = setupState();
+    s.memorySlots = [
+      mkSlot({ id: 'dup1', category: 'failure', toneTag: 'regret', phaseTag: 'early', recallText: '같은 문장' }),
+      mkSlot({ id: 'dup2', category: 'betrayal', toneTag: 'regret', phaseTag: 'late', recallText: '같은 문장' }),
+    ];
+    const r = selectRegretHighlights(s);
+    const body = r.filter(h => !h.isClosing);
+    assert('동일 recallText 중복 노출 방지 → 본문 1장', body.length === 1);
+    assert('화해 마감은 그대로 1장', r.some(h => h.isClosing));
+  }
+
+  // 18.9 화해 마감 문구 — 또래 전제("그 애") 표현 없음(부모·자기 슬롯 호환)
+  {
+    const s = setupState();
+    s.memorySlots = [mkSlot({ id: 'c1', category: 'failure', toneTag: 'regret', recallText: '혼자 앓던 밤' })];
+    const closing = selectRegretHighlights(s).find(h => h.isClosing);
+    assert('화해 마감에 "그 애" 또래 전제 표현 없음', !closing?.recallText.includes('그 애'));
+  }
 }
 
 console.log(`\n결과: ${passed} passed, ${failed} failed`);
