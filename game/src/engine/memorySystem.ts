@@ -5,7 +5,7 @@
 
 import type {
   GameState, MemorySlot, MemorySlotDraft, MemoryCategory, ParentStrength,
-  PhaseTag, MilestoneTheme,
+  PhaseTag, MilestoneTheme, ToneTag,
   GameEvent, EventChoice,
 } from './types';
 
@@ -197,6 +197,7 @@ export interface MemorialHighlight {
   recallText: string;
   year: number;
   isFallback?: boolean;
+  isClosing?: boolean;   // 후회카드 전용 — 화해 마감 한 줄(자책으로 끝나지 않게)
 }
 
 export function selectMemorialHighlights(state: GameState): MemorialHighlight[] {
@@ -268,6 +269,71 @@ export function selectMemorialHighlights(state: GameState): MemorialHighlight[] 
 
   // 5. 3~5개 보장
   return highlights.slice(0, 5);
+}
+
+// ===== 후회카드 (regret cards) =====
+// "한 일" 회고(selectMemorialHighlights)와 짝이 되는 "남은 마음" 레이어.
+// 설계 원칙(5개 의견 종합):
+//  - 큐레이션 노선: 기존 regret/melancholy/burden 톤 + failure/betrayal/bypass/unspoken_debt
+//    슬롯을 재선별. 신규 추적 인프라·대량 문장 작성 없음(읽기 전용 파생).
+//  - 이중 노출 방지: memorialHighlights가 이미 인용한 recallText는 제외(인자로 전달).
+//  - 드리프트 근사: npcIds가 있고 그 NPC와 현재 멀어진(친밀도 ≤30) 슬롯에 가산점.
+//    peak 친밀도 추적 신규 필드는 의도적으로 도입하지 않음(가벼운 스코프 유지).
+//  - 톤: 죄책감 X. 담담한 인정 + 마지막 한 줄만 따뜻한 화해(isClosing).
+//  - 0장 허용: 후회 소재가 없는 플레이엔 섹션 자체를 안 띄움(억지 생성 금지·폴백 없음).
+const REGRET_TONES: ToneTag[] = ['regret', 'melancholy', 'burden'];
+const REGRET_CATEGORIES: MemoryCategory[] = ['failure', 'betrayal', 'bypass', 'unspoken_debt'];
+// 대상 비특정 — 후회 풀엔 또래뿐 아니라 부모·자기(번아웃) 슬롯도 섞이므로
+// "그 애" 같은 또래 전제 표현을 피하고 헤더("닿지 못한")와 콜백한다.
+const REGRET_CLOSING = '그때의 나를 탓하지 않기로 했다. 닿지 못한 채로도, 그 마음들은 있었다.';
+
+export function selectRegretHighlights(
+  state: GameState,
+  excludeTexts: Set<string> = new Set(),
+): MemorialHighlight[] {
+  const slots = state.memorySlots || [];
+  const npcs = state.npcs || [];
+
+  // 드리프트 근사 — 슬롯에 엮인 NPC가 met이면서 현재 친밀도 ≤30이면 "멀어진 관계"로 본다.
+  const isDriftRelation = (s: MemorySlot): boolean =>
+    !!s.npcIds?.some(id => {
+      const npc = npcs.find(n => n.id === id);
+      return !!npc?.met && npc.intimacy <= 30;
+    });
+
+  const inRegretPool = (s: MemorySlot): boolean =>
+    (s.toneTag != null && REGRET_TONES.includes(s.toneTag)) ||
+    REGRET_CATEGORIES.includes(s.category);
+
+  // 점수 = importance + 관계 가산점(드리프트 +1.5 / 일반 NPC 슬롯 +0.5)
+  const score = (s: MemorySlot): number =>
+    s.importance + (isDriftRelation(s) ? 1.5 : (s.npcIds?.length ? 0.5 : 0));
+
+  const pool = slots
+    .filter(s => inRegretPool(s) && !excludeTexts.has(s.recallText))
+    .sort((a, b) => score(b) - score(a));
+
+  if (pool.length === 0) return [];   // 0장 허용 — 폴백 없음
+
+  // 최대 2장 — 1장은 최고 점수, 2장째는 가능하면 다른 phaseTag(학년 분산).
+  // 2장째는 recallText 기준으로 1장째와 다른 것만(같은 문장 중복 노출 방지).
+  const picked: MemorySlot[] = [pool[0]];
+  const second =
+    pool.find(s => s.recallText !== picked[0].recallText && s.phaseTag !== picked[0].phaseTag) ??
+    pool.find(s => s.recallText !== picked[0].recallText);
+  if (second) picked.push(second);
+
+  const highlights: MemorialHighlight[] = picked.map(s => ({
+    recallText: s.recallText, year: s.year,
+  }));
+
+  // 화해 마감 — 후회 본문이 1장 이상일 때만 닫는 한 줄(자책으로 끝나지 않게).
+  // 방어 가드: 본문이 비면 화해만 단독 노출되어 맥락 없는 위로가 되므로 막는다.
+  if (highlights.length > 0) {
+    highlights.push({ recallText: REGRET_CLOSING, year: state.year, isClosing: true });
+  }
+
+  return highlights;
 }
 
 // ===== Y3 milestoneScene summaryText 풀 (부록 D.1) =====

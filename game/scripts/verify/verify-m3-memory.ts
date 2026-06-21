@@ -8,7 +8,7 @@
 import { createInitialState, processWeek, applyYearTransition } from '../../src/engine/gameEngine';
 import { calculateEnding } from '../../src/engine/ending';
 import {
-  applyMemorySlotFromChoice, selectMemorialHighlights,
+  applyMemorySlotFromChoice, selectMemorialHighlights, selectRegretHighlights,
   recordMilestoneForYear, yearToPhaseTag, lintRecallText,
 } from '../../src/engine/memorySystem';
 import { GAME_EVENTS } from '../../src/engine/events';
@@ -312,6 +312,113 @@ console.log('\n=== 17. Y7 끝 — year-end 스킵하고 바로 ending ===');
   }
   assert(`Y7 W48 처리 후 phase === ending (실제: ${s.phase})`, s.phase === 'ending');
   assert('Y7 milestone 자동 기록됨', s.milestoneScenes.some(m => m.year === 7));
+}
+
+console.log('\n=== 18. selectRegretHighlights (후회카드) ===');
+{
+  const mkSlot = (over: Partial<MemorySlot>): MemorySlot => ({
+    id: over.id ?? 's',
+    category: over.category ?? 'failure',
+    week: 1, year: over.year ?? 3,
+    sourceEventId: over.sourceEventId ?? 'ev',
+    choiceIndex: 0,
+    recallText: over.recallText ?? '후회 문장',
+    npcIds: over.npcIds,
+    importance: over.importance ?? 5,
+    phaseTag: over.phaseTag ?? 'mid',
+    toneTag: over.toneTag,
+  });
+
+  // 18.1 빈 슬롯 → 0장 (폴백 없음)
+  {
+    const s = setupState();
+    s.memorySlots = [];
+    assert('빈 슬롯 → 0장 (폴백 없음)', selectRegretHighlights(s).length === 0);
+  }
+
+  // 18.2 긍정 슬롯만 → 0장 (후회 풀 미포함)
+  {
+    const s = setupState();
+    s.memorySlots = [
+      mkSlot({ id: 'p1', category: 'growth', toneTag: 'warm', recallText: '좋은 기억' }),
+      mkSlot({ id: 'p2', category: 'discovery', toneTag: 'breakthrough', recallText: '깨달음' }),
+    ];
+    assert('긍정 슬롯만 → 0장', selectRegretHighlights(s).length === 0);
+  }
+
+  // 18.3 regret 톤 1개 → 본문 1 + 화해 마감 = 2장, 마지막 isClosing
+  {
+    const s = setupState();
+    s.memorySlots = [mkSlot({ id: 'r1', category: 'failure', toneTag: 'regret', recallText: '책상 위 얼룩' })];
+    const r = selectRegretHighlights(s);
+    assert('regret 1개 → 2장(본문1+화해)', r.length === 2);
+    assert('마지막 장 isClosing', r[r.length - 1].isClosing === true);
+    assert('본문은 슬롯 recallText', r[0].recallText === '책상 위 얼룩');
+  }
+
+  // 18.4 betrayal 카테고리(톤 없음)도 후회 풀
+  {
+    const s = setupState();
+    s.memorySlots = [mkSlot({ id: 'b1', category: 'betrayal', toneTag: undefined, recallText: '먼저 돌아섰다' })];
+    assert('betrayal 카테고리 → 후회 풀 포함',
+      selectRegretHighlights(s).some(h => h.recallText === '먼저 돌아섰다'));
+  }
+
+  // 18.5 이중 노출 방지 — excludeTexts 제외
+  {
+    const s = setupState();
+    s.memorySlots = [mkSlot({ id: 'd1', category: 'failure', toneTag: 'regret', recallText: '중복 문장' })];
+    assert('회고가 인용한 문장 제외 → 0장',
+      selectRegretHighlights(s, new Set(['중복 문장'])).length === 0);
+  }
+
+  // 18.6 본문 최대 2장 + 학년 분산
+  {
+    const s = setupState();
+    s.memorySlots = [
+      mkSlot({ id: 'm1', category: 'failure', toneTag: 'regret', phaseTag: 'early', importance: 8, recallText: 'a' }),
+      mkSlot({ id: 'm2', category: 'betrayal', toneTag: 'regret', phaseTag: 'mid', importance: 7, recallText: 'b' }),
+      mkSlot({ id: 'm3', category: 'failure', toneTag: 'melancholy', phaseTag: 'late', importance: 6, recallText: 'c' }),
+    ];
+    const r = selectRegretHighlights(s);
+    assert('후회 본문 최대 2장 (+화해 = 3)', r.length === 3);
+    assert('본문 2장 서로 다른 phaseTag', r[0].recallText !== r[1].recallText);
+  }
+
+  // 18.7 드리프트 가산 — 멀어진 NPC 슬롯 우선
+  {
+    const s = setupState();
+    const drifted = s.npcs[0];
+    drifted.met = true; drifted.intimacy = 10;
+    s.memorySlots = [
+      mkSlot({ id: 'plain', category: 'failure', toneTag: 'regret', importance: 7, recallText: '일반 후회' }),
+      mkSlot({ id: 'drift', category: 'betrayal', toneTag: 'regret', importance: 6, npcIds: [drifted.id], recallText: '멀어진 관계' }),
+    ];
+    // 드리프트(+1.5) → 6+1.5=7.5 가 일반 7 을 앞섬
+    assert('드리프트 관계 슬롯이 먼저 선발',
+      selectRegretHighlights(s)[0].recallText === '멀어진 관계');
+  }
+
+  // 18.8 같은 recallText 슬롯 2개 → 본문 1장만(중복 노출 방지) + 화해
+  {
+    const s = setupState();
+    s.memorySlots = [
+      mkSlot({ id: 'dup1', category: 'failure', toneTag: 'regret', phaseTag: 'early', recallText: '같은 문장' }),
+      mkSlot({ id: 'dup2', category: 'betrayal', toneTag: 'regret', phaseTag: 'late', recallText: '같은 문장' }),
+    ];
+    const r = selectRegretHighlights(s);
+    const body = r.filter(h => !h.isClosing);
+    assert('동일 recallText 중복 노출 방지 → 본문 1장', body.length === 1);
+    assert('화해 마감은 그대로 1장', r.some(h => h.isClosing));
+  }
+
+  // 18.9 화해 마감 문구 — 또래 전제("그 애") 표현 없음(부모·자기 슬롯 호환)
+  {
+    const s = setupState();
+    s.memorySlots = [mkSlot({ id: 'c1', category: 'failure', toneTag: 'regret', recallText: '혼자 앓던 밤' })];
+    const closing = selectRegretHighlights(s).find(h => h.isClosing);
+    assert('화해 마감에 "그 애" 또래 전제 표현 없음', !closing?.recallText.includes('그 애'));
+  }
 }
 
 console.log(`\n결과: ${passed} passed, ${failed} failed`);
