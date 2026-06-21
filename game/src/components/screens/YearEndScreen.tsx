@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
-import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender, ToneTag } from '../../engine/types';
+import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender, ToneTag, ExamResult, EXAM_TYPE_LABELS } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
@@ -14,6 +14,14 @@ interface YearEndScreenProps {
   stats: Stats;
   bgProps: ScreenBgProps;
   onAdvance: () => void;
+  // ===== 기록장(읽기 전용 과거 열람) 모드 — 같은 카드를 지난 학년 회상용으로 재활용 =====
+  // readonly면: 학년 탭으로 넘겨보기, "올해의 마음"(현재 stats 종속 → 시점 오염) 숨김,
+  //             그 해 성적표 한 줄 추가, CTA를 "닫기"로 교체.
+  readonly?: boolean;
+  examResults?: ExamResult[];     // 전체 시험 기록(그 해만 필터해서 표시)
+  reachedYears?: number[];        // 학년 탭에 띄울 도달 학년 목록
+  onSelectYear?: (y: number) => void;
+  onClose?: () => void;
 }
 
 const YEAR_NAMES = [
@@ -197,7 +205,8 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
 // v1.5 학년말 회고 (Y1~Y6) — phase === 'year-end'
 //   P0: 스크림·라벨 정리·부모줄 부활·정직한 CTA
 //   P1: CG 있는 기억 = 스와이프 갤러리(여러 장 넘겨보기), 나머지 = 초상/엠블럼 썸네일 카드.
-export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, bgProps, onAdvance }: YearEndScreenProps) {
+export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, bgProps, onAdvance, readonly, examResults, reachedYears, onSelectYear, onClose }: YearEndScreenProps) {
+  const examsThisYear = (examResults ?? []).filter(e => e.year === year);
   const yearName = YEAR_NAMES[year - 1] || `${year}학년`;
   const subtitle = YEAR_SUBTITLES[year - 1] || '이 한 해를 조용히 돌아본다';
   const nextGradeName = YEAR_NAMES[year];
@@ -247,8 +256,21 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
   return (
     <BgWrapper {...bgProps}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '28px 16px 40px', textAlign: 'center' }}>
+        {/* 기록장 모드 — 도달 학년 탭으로 넘겨본다 */}
+        {readonly && reachedYears && reachedYears.length > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+            {reachedYears.map(y => (
+              <button key={y} onClick={() => onSelectYear?.(y)} style={{
+                fontSize: '0.74rem', padding: '4px 11px', borderRadius: 14, cursor: 'pointer',
+                border: '1px solid var(--accent-soft)',
+                background: y === year ? 'rgba(224,138,91,0.18)' : 'transparent',
+                color: y === year ? 'var(--accent-soft)' : 'var(--text-muted)',
+              }}>{YEAR_NAMES[y - 1] || `${y}학년`}</button>
+            ))}
+          </div>
+        )}
         <div className="ye-stagger" style={{ animationDelay: '120ms', fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)', textShadow: TEXT_SHADOW, marginBottom: 6 }}>
-          {yearName}이 끝났다
+          {readonly ? yearName : `${yearName}이 끝났다`}
         </div>
         <div className="ye-stagger" style={{ animationDelay: '240ms', fontSize: '0.9rem', color: 'var(--text-secondary)', textShadow: TEXT_SHADOW, marginBottom: 26 }}>
           {subtitle}
@@ -320,17 +342,44 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
               {milestoneExtra}
             </div>
           )}
-          <div style={{ marginTop: milestoneMain ? 16 : 0 }}>
-            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-              {happinessInfo.title}
+          {/* "올해의 마음"은 현재 stats 종속이라 과거 회상(readonly)엔 시점 오염 → 진행 중에만 */}
+          {!readonly && (
+            <div style={{ marginTop: milestoneMain ? 16 : 0 }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                {happinessInfo.title}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.6, marginTop: 4 }}>
+                {happinessInfo.desc}
+              </div>
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.6, marginTop: 4 }}>
-              {happinessInfo.desc}
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* 정직한 전환 — 실제로 학년을 넘김. 고스트 톤 + 늦은 등장. */}
+        {/* 그 해의 성적표 — 기록장 모드 전용. 수치표가 아니라 시험별 한 줄 총평(회고 톤). */}
+        {readonly && examsThisYear.length > 0 && (
+          <div style={{ ...PANEL, padding: '16px 18px', marginBottom: 30, textAlign: 'left' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center', letterSpacing: '0.15em' }}>그 해의 성적표</div>
+            {examsThisYear.map((e, i) => (
+              <div key={i} style={{ marginBottom: i === examsThisYear.length - 1 ? 0 : 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    {`${e.semester}학기 ${EXAM_TYPE_LABELS[e.examType]}`}
+                  </span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                    {e.mockGrade != null ? `${e.mockGrade}등급` : e.rank != null ? `반 ${e.rank}등` : ''}
+                  </span>
+                </div>
+                {e.comment && (
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.6, marginTop: 3 }}>
+                    {e.comment}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* CTA — 진행 모드: 실제 학년 넘김 / 기록장 모드: 닫고 게임으로 복귀. 고스트 톤 + 늦은 등장. */}
         <button
           className="btn ye-cta"
           style={{
@@ -339,11 +388,11 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
             background: 'rgba(224,138,91,0.12)',
             border: '1px solid var(--accent-soft)',
             color: 'var(--accent-soft)',
-            animationDelay: `${tCta}ms`,
+            animationDelay: readonly ? '0ms' : `${tCta}ms`,
           }}
-          onClick={onAdvance}
+          onClick={readonly ? onClose : onAdvance}
         >
-          {nextGradeName ? `${nextGradeName}으로` : '다음으로'}
+          {readonly ? '닫기' : nextGradeName ? `${nextGradeName}으로` : '다음으로'}
         </button>
       </div>
     </BgWrapper>

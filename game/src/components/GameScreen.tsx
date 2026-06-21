@@ -94,6 +94,8 @@ export function GameScreen() {
 
   // 주간 결산 화면은 state.phase==='result'로 표현 (새로고침 후에도 유지). 로컬 boolean 제거.
   const [eventResultData, setEventResultData] = useState<EventResultData | null>(null);
+  // 기록장 — 지난 학년 회상(읽기 전용). null이면 닫힘. phase를 안 건드리는 로컬 오버레이.
+  const [albumYear, setAlbumYear] = useState<number | null>(null);
   const [cgLoaded, setCgLoaded] = useState(false);
   // CG 후보 cascade가 모두 실패하면 true → 배경+주인공 fallback 다시 표시
   const [cgError, setCgError] = useState(false);
@@ -125,6 +127,26 @@ export function GameScreen() {
   const bg = getBackground(state.week, state.isVacation, state.mentalState, state.year);
   const handleBgImgError = () => setBgImgError(true);
   const bgProps = { bg, bgImgError, onImgError: handleBgImgError };
+
+  // 기록장 오버레이 — 어느 화면에서 열든 최상단에서 가로챈다(읽기 전용, phase 무변경).
+  if (albumYear !== null) {
+    return (
+      <YearEndScreen
+        year={albumYear}
+        gender={state.gender}
+        memorySlots={state.memorySlots ?? []}
+        milestoneScenes={state.milestoneScenes ?? []}
+        stats={state.stats}
+        bgProps={bgProps}
+        onAdvance={() => {}}
+        readonly
+        examResults={state.examResults ?? []}
+        reachedYears={Array.from({ length: Math.max(0, state.year - 1) }, (_, i) => i + 1)}
+        onSelectYear={setAlbumYear}
+        onClose={() => setAlbumYear(null)}
+      />
+    );
+  }
 
   // ===== 이벤트 결과 — 비주얼 노벨 배경 유지 =====
   // 방금 내린 선택의 결과 연출이라 어떤 phase보다 우선한다. 특히 학년말 주(W48) 이벤트에서
@@ -242,6 +264,7 @@ export function GameScreen() {
     <MainWeekScreen
       state={state}
       bgProps={bgProps}
+      onOpenAlbum={state.year >= 2 ? () => setAlbumYear(state.year - 1) : undefined}
       onSetRoutine={setRoutine}
       onTalkNpc={talkToNpc}
       onTalkHome={talkToHome}
