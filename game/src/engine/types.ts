@@ -50,6 +50,7 @@ export interface GameState {
   weekPurchases: Record<string, number>; // 이번 주 구매 횟수
   idleWeeks: number;                // v6: 연속 비생산적 주 카운트
   consecutiveTiredWeeks: number;    // v6.4: 연속 피로 주수 (만성 피로 패널티)
+  totalTiredWeeks: number;          // QA C5: 누적 tired/burnout 주수 (만성 탈진 엔딩 라우팅)
   burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
   // v1.2 기억 슬롯 시스템

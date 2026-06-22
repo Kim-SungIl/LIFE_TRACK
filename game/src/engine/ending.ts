@@ -132,6 +132,21 @@ function determineCareer(state: GameState): { path: string; detail: string } {
     return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
   }
 
+  // QA C5: 만성 탈진 라우팅. burnoutCount는 쿨다운 면역(8주)에 막혀 갈아넣기 빌드에서도 2~3회로
+  //   적게 쌓여(grind-burnout) 위 게이트를 못 닿고 A/A 안전빵이 됐다. 7년의 70%+(누적 235주, 336주 중)를
+  //   tired/burnout으로 버틴 빌드는, 끝에 성적이 나와도 몸/마음 중 하나가 바닥이면 "텅 빈 합격"이다.
+  //   health<20(갈아넣기의 흉터) → 쉼표 / mental<40(소진) → 재수. 끝에 둘 다 회복했으면 정상 진학.
+  //   임계 235(70%)는 갈아넣기/과부하(71~95%)와 균형·관계형(~63%)을 가르는 선 — 200이면 무운동(health<20)
+  //   균형 빌드까지 쉼표로 끌려와 과교정(과거 '재수 수렴' 버그 류). tiredRate 단독 라우팅 금지.
+  if ((state.totalTiredWeeks ?? 0) >= 235) {
+    if (state.stats.health < 20) {
+      return { path: '잠시 쉼표', detail: '합격 통지서를 받아 든 손이 떨렸다. 그런데 몸이 먼저 멈춰 섰다. 대학은, 1년 미루기로 했다.' };
+    }
+    if (mental < 40) {
+      return { path: '재수 결심', detail: '버텨내긴 했다. 텅 빈 채로. 1년, 이번엔 다르게 해보기로 했다.' };
+    }
+  }
+
   // 수능 7등급 이하 — 입시 실패 루트
   if (mockGrade >= 7) {
     if (state.burnoutCount >= 2) return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };

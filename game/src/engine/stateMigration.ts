@@ -21,6 +21,7 @@ export function migrateLoadedState(state: GameState): GameState {
     activeBuffs: state.activeBuffs || [],
     weekPurchases: state.weekPurchases || {},
     consecutiveTiredWeeks: state.consecutiveTiredWeeks ?? 0,
+    totalTiredWeeks: state.totalTiredWeeks ?? 0,
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
     idleWeeks: state.idleWeeks ?? 0,
