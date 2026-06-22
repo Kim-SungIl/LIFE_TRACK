@@ -101,10 +101,11 @@ export const JUNHA_EVENTS = [
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['junha'],
-    // M5 Phase 3: intimacy 65→50 완화
+    // M5 Phase 3: intimacy 65→50 완화. QA C6: 50→38 — junha 집중 천장 ~42라 50이면 '요리사의 꿈'
+    //   핵심 장면이 사장. 짧은 등장 윈도(Y6~7)에 맞춘 게이트 압축(talk tier 50/70/80→38/44/48과 정합).
     condition: (s) => {
       const junha = s.npcs.find(n => n.id === 'junha');
-      return !!junha?.met && junha.intimacy >= 50 && s.year === 7 && s.week >= 8 && !s.isVacation;
+      return !!junha?.met && junha.intimacy >= 38 && s.year === 7 && s.week >= 8 && !s.isVacation;
     },
     choices: [
       { text: '"멋있다. 너한테 딱 맞는 것 같아" — 응원한다', effects: { social: 2, mental: 4 },
