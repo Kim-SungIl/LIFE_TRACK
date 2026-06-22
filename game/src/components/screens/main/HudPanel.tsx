@@ -23,6 +23,8 @@ type Props = {
   weeklyActivityCost: number;
   weeklyOverBudget: boolean;
   onOpenHome: () => void;
+  // 기록장(지난 학년 회상) 진입 — 완료 학년이 있을 때만(2학년~). undefined면 버튼 숨김.
+  onOpenAlbum?: () => void;
 };
 
 // 부모 칩 hover/탭 popover 라벨·설명 — HUD 전용(메인 화면 한정 카피).
@@ -43,7 +45,7 @@ const PARENT_TIP_DESC: Record<string, string> = {
 export const HudPanel = memo(function HudPanel({
   parents, gender, mentalStat, mentalState, year, fatigue, money, isVacation,
   parentBonusesApplied, mood, weekInfo, month, fatigueColor, fatigueLabel,
-  weeklyActivityCost, weeklyOverBudget, onOpenHome,
+  weeklyActivityCost, weeklyOverBudget, onOpenHome, onOpenAlbum,
 }: Props) {
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글. HUD 전용 로컬 state.
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
@@ -91,6 +93,16 @@ export const HudPanel = memo(function HudPanel({
                 cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
               }}
             >💬 가정</span>
+            {/* 기록장 — 지난 학년을 다시 넘겨본다(읽기 전용). 조용한 고스트 톤. */}
+            {onOpenAlbum && (
+              <span
+                onClick={() => { setActiveParentTip(null); onOpenAlbum(); }}
+                style={{
+                  marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
+                  cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
+                }}
+              >📖 기록장</span>
+            )}
           </div>
           {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (
             <div style={{

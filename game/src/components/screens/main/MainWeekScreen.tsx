@@ -31,9 +31,11 @@ type Props = {
   onBuyItem: (item: ShopItem, npcId?: string) => void;
   // 주 확정 — 선택/루틴 choice 와 NPC 동행을 store 에 반영하고 주간 결산으로 전환 (GameScreen 오케스트레이션)
   onConfirmWeek: (activities: string[], npcChoices: Record<string, string>) => void;
+  // 기록장 열기 — 2학년 이상에서만 전달(완료 학년 존재). undefined면 HUD에서 버튼 숨김.
+  onOpenAlbum?: () => void;
 };
 
-export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek }: Props) {
+export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum }: Props) {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
@@ -191,6 +193,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         weeklyActivityCost={weeklyActivityCost}
         weeklyOverBudget={weeklyOverBudget}
         onOpenHome={handleOpenHome}
+        onOpenAlbum={onOpenAlbum}
       />
 
       {/* 독백 말풍선 */}
