@@ -84,6 +84,7 @@ export function createInitialState(
     weekPurchases: {},
     idleWeeks: 0,
     consecutiveTiredWeeks: 0,
+    totalTiredWeeks: 0,
     burnoutCooldown: 0,
     eventTimeCost: 0,
     // v1.2 기억 슬롯 시스템
@@ -517,12 +518,33 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     log.messages.push('💪 번아웃에서 벗어나는 중...');
   }
 
+  // QA C5: 만성 탈진 강제 붕괴 — 24주+ 연속 tired면 mental 수치와 무관하게 몸이 무너진다.
+  //   게이트만으론 grind 빌드가 mental을 20~42에 부유시켜 번아웃에도 회복에도 못 닿고
+  //   영구 tired 락(294주)·A/A 안전빵이 됐다. "24주 연속 tired"라는 사실 자체가 갈아넣기 신호다 —
+  //   회복 중인 빌드는 게이트된 자력탈출 보조(fatigue<60)로 이미 24주 전에 위(normal)로 빠져나가므로,
+  //   24주를 못 빠져나온 건 진짜로 쉬지 못한 빌드뿐. 강제로 burnout 전환 → burnoutCount 누적 →
+  //   재수/잠시쉼표로 "밑으로 무너지게" 한다(갈아넣기의 서사적 대가). 쿨다운 면역 중엔 미발동.
+  if (state.mentalState === 'tired' && (state.consecutiveTiredWeeks || 0) >= 24
+    && (state.burnoutCooldown || 0) === 0) {
+    state.mentalState = 'burnout';
+    state.burnoutCount++;
+    state.routineSlot2Weeks = 0;
+    state.routineSlot3Weeks = 0;
+    log.messages.push('🔥 한계였다 — 쉬지 않고 달린 몸이 결국 멈춰 섰다.');
+  }
+
   // v8.2: 장기 tired 자력 탈출 보조 — 8주+ 연속 tired면 몸이 강제 회복 모드로 전환.
   // 멘탈 회복 활동이 루틴에 없는 그라인드 빌드는 mental이 바닥에 깔려 탈출선에 영구 미달,
   // 200주+ tired에 고착되던 데드존이 있었다. 탈출조건 완화만으로는 거의 안 풀려(58.9→58.3%)
   // 수동 회복을 더한다 → 최장 연속 tired 222→19주로 영구 락 제거(전체 tired 58→53%).
   // 균형 빌드(멘탈 활동 포함)는 이 보조 없이도 건강하므로(tired 21%) 영향 미미.
-  if (state.mentalState === 'tired' && (state.consecutiveTiredWeeks || 0) >= 8) {
+  // QA C5: 단 fatigue>=60(쉬지 않고 갈아넣는 중)이면 이 보조를 끊는다. C4-A(고피로 시 +2 차단)와
+  //   동일 기준. 이전엔 이 +1.5가 갈아넣기 빌드의 mental을 번아웃 게이트(<20) 위로 떠받쳐,
+  //   tired에서 위(normal)로도 아래(burnout)로도 못 가고 영구 부유(grind-burnout 294주 tired·
+  //   burnoutCount 2 → 재수 게이트 ≥4 미달 → A/A 안전빵)했다. 고피로 빌드는 보조를 끊어 mental을
+  //   드레인 → burnout 반복 → burnoutCount 누적 → 재수/잠시쉼표 엔딩으로 "밑으로 무너지게" 한다.
+  //   (회복 중인 빌드는 fatigue<60이라 그대로 위로 탈출 — 영구 락 제거 효과는 유지)
+  if (state.mentalState === 'tired' && (state.consecutiveTiredWeeks || 0) >= 8 && state.fatigue < 60) {
     state.stats.mental = Math.min(100, state.stats.mental + 1.5);
     state.fatigue = Math.max(0, state.fatigue - 3);
     log.statChanges.mental = (log.statChanges.mental || 0) + 1.5;
@@ -533,9 +555,10 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     state.burnoutCooldown = Math.max(0, (state.burnoutCooldown || 0) - 1);
   }
 
-  // v6.4: 연속 피로 주수 카운터
+  // v6.4: 연속 피로 주수 카운터 + QA C5: 누적 tired/burnout 주수(엔딩 만성탈진 라우팅용)
   if (state.mentalState === 'tired' || state.mentalState === 'burnout') {
     state.consecutiveTiredWeeks = (state.consecutiveTiredWeeks || 0) + 1;
+    state.totalTiredWeeks = (state.totalTiredWeeks || 0) + 1;
   } else {
     state.consecutiveTiredWeeks = 0;
   }
