@@ -207,6 +207,11 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
 //   P1: CG 있는 기억 = 스와이프 갤러리(여러 장 넘겨보기), 나머지 = 초상/엠블럼 썸네일 카드.
 export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, bgProps, onAdvance, readonly, examResults, reachedYears, onSelectYear, onClose }: YearEndScreenProps) {
   const examsThisYear = (examResults ?? []).filter(e => e.year === year);
+  // 성적표(기록장) — 단원평가는 접고 주요 시험 우선, 최대 4개. 등급/석차 숫자는 빼고 총평만(반-수치 회상 톤).
+  // 초등처럼 주요 시험이 없는 해는 단원평가라도 보여준다(빈 성적표 방지).
+  const majorExams = examsThisYear.filter(e => e.examType !== 'unit-test');
+  const shownExams = (majorExams.length > 0 ? majorExams : examsThisYear).slice(0, 4);
+  const hiddenExamCount = examsThisYear.length - shownExams.length;
   const yearName = YEAR_NAMES[year - 1] || `${year}학년`;
   const subtitle = YEAR_SUBTITLES[year - 1] || '이 한 해를 조용히 돌아본다';
   const nextGradeName = YEAR_NAMES[year];
@@ -275,6 +280,15 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
         <div className="ye-stagger" style={{ animationDelay: '240ms', fontSize: '0.9rem', color: 'var(--text-secondary)', textShadow: TEXT_SHADOW, marginBottom: 26 }}>
           {subtitle}
         </div>
+
+        {/* 기록장에서 기억이 흐려진(슬롯 축출) 학년 — 빈 화면 대신 한 줄. 진행 모드엔 항상 기억이 있어 안 뜸. */}
+        {readonly && !hasScenes && (
+          <div className="ye-stagger" style={{ ...PANEL, animationDelay: '300ms', padding: '20px', marginBottom: 16 }}>
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.75 }}>
+              이 해의 장면들은 어느새 흐릿해졌다. 그래도, 그 시간을 지나왔다.
+            </div>
+          </div>
+        )}
 
         {/* CG 기억 갤러리 — 여러 장이면 스와이프 */}
         {galleryItems.length > 0 && (
@@ -355,20 +369,15 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
           )}
         </div>
 
-        {/* 그 해의 성적표 — 기록장 모드 전용. 수치표가 아니라 시험별 한 줄 총평(회고 톤). */}
-        {readonly && examsThisYear.length > 0 && (
+        {/* 그 해의 시험들 — 기록장 모드 전용. 등급/석차 숫자 없이 시험별 한 줄 총평(회고 톤). */}
+        {readonly && shownExams.length > 0 && (
           <div style={{ ...PANEL, padding: '16px 18px', marginBottom: 30, textAlign: 'left' }}>
-            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center', letterSpacing: '0.15em' }}>그 해의 성적표</div>
-            {examsThisYear.map((e, i) => (
-              <div key={i} style={{ marginBottom: i === examsThisYear.length - 1 ? 0 : 12 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    {`${e.semester}학기 ${EXAM_TYPE_LABELS[e.examType]}`}
-                  </span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flexShrink: 0 }}>
-                    {e.mockGrade != null ? `${e.mockGrade}등급` : e.rank != null ? `반 ${e.rank}등` : ''}
-                  </span>
-                </div>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 12, textAlign: 'center', letterSpacing: '0.15em' }}>그 해의 시험들</div>
+            {shownExams.map((e, i) => (
+              <div key={i} style={{ marginBottom: i === shownExams.length - 1 && hiddenExamCount === 0 ? 0 : 12 }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  {`${e.semester}학기 ${EXAM_TYPE_LABELS[e.examType]}`}
+                </span>
                 {e.comment && (
                   <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.6, marginTop: 3 }}>
                     {e.comment}
@@ -376,6 +385,11 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
                 )}
               </div>
             ))}
+            {hiddenExamCount > 0 && (
+              <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', fontStyle: 'italic', textAlign: 'center', marginTop: 4 }}>
+                그리고 {hiddenExamCount}번의 시험이 더 있었다
+              </div>
+            )}
           </div>
         )}
 
