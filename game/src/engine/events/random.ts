@@ -157,7 +157,7 @@ export const RANDOM_EVENTS = [
       {
         text: '"네, 열심히 하고 있어요"',
         effects: { mental: -1 },
-        message: '"그래, 기대하마." 부담이 좀 느껴진다.',
+        message: '"그래, 기대한다." 부담이 좀 느껴진다.',
       },
       {
         text: '"...보통이요"',

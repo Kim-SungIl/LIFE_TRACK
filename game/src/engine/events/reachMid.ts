@@ -55,7 +55,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'jihun'); return !!n?.met && n.intimacy >= 65 && s.year === 2 && !s.isVacation; },
     choices: [
       { text: '"안 괜찮아도 돼. 나한테까지 척 안 해도 돼" 받아준다', effects: { mental: 2, social: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }], message: '지훈이 물통을 쥔 손에 힘을 풀었다. "…어." 짧게 답하고 한참 말이 없다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '물통 쥔 지훈, 처음 안 괜찮다던 날.', npcIds: ['jihun'] } },
-      { text: '"야 됐어, 나한테까지 척하지 마 좀" 툭', effects: { social: 2 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }], message: '지훈이 피식, 울 듯 말 듯 웃는다. "…너 앞에선 안 되네." 트랙의 환호가 멀게 들린다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '물통 쥔 지훈, 처음 안 괜찮다던 날.', npcIds: ['jihun'] } },
+      { text: '"야 됐어, 나한테까지 척하지 마 좀" 툭', effects: { social: 2 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }], message: '지훈이 피식, 울 듯 말 듯 웃는다. "…너 앞에선 안 되네." 트랙의 환호가 멀게 들린다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'warm', recallText: '"너 앞에선 안 되네" — 툭 던진 말에 울 듯 웃던 지훈.', npcIds: ['jihun'] } },
       { text: '말없이 옆에 앉아 물통을 같이 쥔다', effects: { health: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }], message: '둘이 천막 그늘에 앉아 아무 말도 안 한다. 그게 더 편한 순간이 있다.', timeCost: 1 },
     ],
   },
