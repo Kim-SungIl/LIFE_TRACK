@@ -209,6 +209,14 @@ export function GameScreen() {
         onChoice={(index: number) => {
           const evt = state.currentEvent!;
           const choice = ((state.gender === 'female' && evt.femaleChoices) ? evt.femaleChoices : evt.choices)[index];
+          // B-2 안전망: 모든 선택지가 비용 부족으로 잠겨 EventScene이 sentinel(-1)을 보낸 경우.
+          // choices[-1]은 undefined라 아래 effects 계산이 크래시 → store.resolveEvent와 동일하게
+          // 효과 없는 "지나친다"로 위임한다. choiceIndex=-1은 CG 조회에서 매칭 안 돼 CG도 안 뜬다.
+          if (!choice) {
+            setEventResultData({ message: '잠시 머뭇거리다 자리를 떴다.', effects: [], event: evt, choiceIndex: index });
+            resolveEvent(index);
+            return;
+          }
           const effects: Record<string, string>[] = [];
           for (const [k, v] of Object.entries(choice.effects)) {
             const val = v as number;

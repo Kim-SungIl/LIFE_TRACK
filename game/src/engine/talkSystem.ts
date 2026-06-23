@@ -6,7 +6,7 @@
 // 데이터 풀(NPC_MINI_EVENTS, PARENT_MINI_EVENTS, 잡담/정적 대사)은 talkData.ts.
 // 데이터/로직 분리 P3-9 (2026-05-29).
 
-import { GameState, ParentStrength } from './types';
+import { GameState } from './types';
 import { seededRandom } from './rng';
 import { getSchoolLevel } from './backgrounds';
 import {
@@ -17,19 +17,12 @@ import {
   NPC_MINI_EVENTS,
   PARENT_MINI_EVENTS,
   PARENT_CLIMAX_EVENTS,
-  PARENT_STATIC_DIALOGUES,
   NPC_SMALLTALK,
   PARENT_SMALLTALK,
 } from './talkData';
 
 // 외부에서 talkSystem 경로로 MiniTalkEvent 타입을 import하는 기존 코드 호환.
 export type { MiniTalkEvent } from './talkData';
-
-export function getParentStaticDialogue(state: GameState, strength: ParentStrength): string {
-  const pool = PARENT_STATIC_DIALOGUES[strength];
-  const idx = Math.floor(seededRandom(state) * pool.length);
-  return pool[idx];
-}
 
 function pickRandomLine(state: GameState, pool: string[]): string {
   if (pool.length === 0) return '오늘은 별 다른 일 없이 지나갔다.';

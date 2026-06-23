@@ -505,14 +505,6 @@ export function getResultDialogue(state: GameState, weekLog: WeekLog): string {
   return getCharacterDialogue(state);
 }
 
-// 피로 수치 → 한 단어 라벨. UX에서 22 vs 48의 의미 차를 즉시 잡아주기 위함.
-export function getFatigueLabel(fatigue: number): string {
-  if (fatigue >= 70) return '한계';
-  if (fatigue >= 50) return '쉬어야 할 때';
-  if (fatigue >= 30) return '괜찮음';
-  return '가뿐함';
-}
-
 // 활동 선택 시 반응 독백
 export function getActivityReaction(activityId: string): string {
   const reactions: Record<string, string[]> = {
