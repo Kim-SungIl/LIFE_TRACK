@@ -111,7 +111,7 @@ export const PRESIDENT_ELECTION = [
   },
   {
     id: 'class-president-vice', title: '부반장 제안',
-    description: '쉬는 시간에 당선된 반장이 다가온다.\n"야, 부반장 자리 아직 비었는데... 어때?"',
+    description: '쉬는 시간에 이번 반장이 된 민재가 다가온다.\n"야, 부반장 자리 아직 비었는데... 너 어때?"',
     condition: (s) => s.events.some(e => e.id === 'class-president-lose' && e.year === s.year)
       && !s.events.some(e => e.id === 'class-president-vice' && e.year === s.year),
     location: 'classroom', background: 'classroom_{school}', speakers: ['minjae'],

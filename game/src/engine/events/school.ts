@@ -99,7 +99,7 @@ export const SCHOOL_Y1_INTRO = [
         effects: { academic: 1, mental: -1 },
         message: '도서관에서 조용히 시간을 보냈다. 편하긴 한데... 좀 외롭다.',
         memorySlotDraft: {
-          category: 'betrayal',
+          category: 'failure',
           importance: 5,
           toneTag: 'regret',
           recallText: '처음 내민 손을 피한 점심시간. 도서관 창밖이 유난히 멀었다.',
@@ -151,7 +151,7 @@ export const SCHOOL_Y1_INTRO = [
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 "괜찮아, 그럴 수도 있지" 하며 다시 책으로 돌아갔다. 약간 어색했다.',
         memorySlotDraft: {
-          category: 'betrayal',
+          category: 'failure',
           importance: 4,
           toneTag: 'regret',
           recallText: '도서관 창가에서 유나가 책으로 돌아섰다. 어색한 침묵이 길었다.',
