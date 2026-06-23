@@ -141,14 +141,14 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_haeun_50_window',
-    npcId: 'haeun', intimacyMin: 50,
+    npcId: 'haeun', intimacyMin: 45,
     description: '"오늘은 대답 안 해도 되는 날."\n하은 선배가 복도 끝 창문을 조금 열어 둔다. 바람이 들어오면, 둘 사이에선 잠깐 쉬어도 된다는 신호가 된다.',
     effects: { intimacy: 3, stats: { mental: 1, social: 1 }, fatigue: -1 },
     message: '하은 선배의 창문 — 멘탈 +1, 사회 +1, 피로 -1, 친밀도 +3',
   },
   {
     id: 'talk_junha_50_seabreeze',
-    npcId: 'junha', intimacyMin: 50,
+    npcId: 'junha', intimacyMin: 38,
     description: '"이 바람은 좀 부산 같다. 진짜로."\n준하가 교실 창문 틈으로 들어오는 바람을 맡고는 작게 웃는다. 이제 너도 그 말이 그리움인지 농담인지 대충 알아듣는다.',
     effects: { intimacy: 3, stats: { social: 1, mental: 1 }, fatigue: -1 },
     message: '준하의 바람 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +3',
@@ -198,14 +198,14 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_haeun_70_direction',
-    npcId: 'haeun', intimacyMin: 70,
+    npcId: 'haeun', intimacyMin: 56,
     description: '"후배들이 자꾸 나한테 길을 물어보는데, 사실 나도 여기가 어딘지 모르겠어."\n하은 선배가 계단참에 잠깐 멈춰 난간을 짚는다. "...아는 척하는 것도, 가끔은 길을 잃는 일이더라." 말끝을 흐리곤, 별일 아니라는 듯 다시 계단을 오른다.',
     effects: { intimacy: 4, stats: { mental: 1, social: -1 }, fatigue: -1 },
     message: '하은 선배의 흔들림 — 멘탈 +1, 사회 -1, 피로 -1, 친밀도 +4',
   },
   {
     id: 'talk_junha_70_speech',
-    npcId: 'junha', intimacyMin: 70,
+    npcId: 'junha', intimacyMin: 44,
     description: '"내 말투 고치면 애들이 덜 쳐다보긴 하거든."\n준하가 급식판 모서리를 젓가락으로 톡톡 친다. "근데 그라면 내가 좀 없어지는 것 같아서, 그게 좀 웃기제." 농담처럼 말하지만 눈은 식판에 남아 있다.',
     effects: { intimacy: 4, stats: { social: 1, mental: 1 }, fatigue: -1 },
     message: '준하의 말투 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +4',
@@ -269,7 +269,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_haeun_90_empty_line',
-    npcId: 'haeun', intimacyMin: 80, yearMin: 6,
+    npcId: 'haeun', intimacyMin: 62, yearMin: 6,
     description: '"마지막 줄은 비워둘게. 네가 나중에 쓰면 돼."\n졸업을 앞둔 강당, 하은 선배가 짧은 쪽지를 접지 않은 채 건넨다. "내 말로 끝나면, 그건 네 얘기가 아니니까."',
     effects: { intimacy: 5, stats: { mental: 2, talent: 1 }, fatigue: -1 },
     message: '하은 선배가 답 대신 네가 채울 여백을 남겼다.',
@@ -283,7 +283,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_junha_90_umbrella',
-    npcId: 'junha', intimacyMin: 80, yearMin: 6,
+    npcId: 'junha', intimacyMin: 48, yearMin: 6,
     description: '"비 오면 그냥 뛰면 된다 했는데, 같이 있으니까 속도를 맞춰야 되더라."\n준하는 우산 손잡이를 네 쪽으로 조금 더 기울인다. "혼자 빨리 가는 거, 별로 멋있는 일 아이더라."',
     effects: { intimacy: 5, stats: { social: 1, mental: 2 }, fatigue: -1 },
     message: '준하가 혼자 앞서가는 대신 네 걸음에 속도를 맞췄다.',
