@@ -511,6 +511,7 @@ export function getActivityReaction(activityId: string): string {
     'self-study': ['집중, 집중...', '오늘은 좀 하는 느낌이다.', '졸리다...'],
     'academy': ['오늘도 셔틀버스를 타야 하나...', '학원은 피곤하지만 확실하긴 해.'],
     'study-group': ['같이 하니까 덜 지루하다.', '누가 과자 사왔으면 좋겠다.'],
+    'private-tutoring': ['1:1이라 빠져나갈 데가 없다.', '약점만 콕 집어주니 효율은 확실해.'],
     'light-exercise': ['바람이 시원하다.', '달리고 나니 머리가 맑아졌어.'],
     'school-sports': ['오늘 연습 빡셌다...', '같이 뛰는 게 좋다.'],
     'hang-out': ['역시 노는 게 최고야!', '시간 가는 줄 몰랐다.'],
@@ -531,6 +532,15 @@ export function getActivityReaction(activityId: string): string {
     'library': ['도서관은 역시 집중이 잘 돼.', '옆자리 사람도 열심히 하네.'],
     'internet-lecture': ['1.5배속으로 돌려야지.', '이 부분 이해 안 되는데...'],
     'gym': ['근육이 아프다... 하지만 뿌듯.', '오늘 기록 갱신!'],
+    // 방학 전용 활동
+    'vacation-library': ['종일 앉아 있었더니 진도 쭉 나갔다.', '방학 도서관, 의외로 집중 잘 되네.'],
+    'creative-project': ['드디어 형태가 잡히기 시작했다.', '시간 들인 만큼 나온다.'],
+    'countryside': ['공기부터 다르다.', '할머니 밥이 최고지.'],
+    'neighborhood-hangout': ['동네 친구들은 역시 편하다.', '별거 안 해도 재밌네.'],
+    'intensive-academy': ['짧고 굵게 몰아쳤다.', '머리에 쥐 날 것 같지만 남는 건 있어.'],
+    'sports-camp': ['합숙은 빡세도 끈끈해진다.', '몸은 천근만근, 마음은 뿌듯.'],
+    'family-trip': ['오랜만에 가족이랑 푹 쉬었다.', '이런 시간이 필요했어.'],
+    'short-term-job': ['며칠 고생했더니 지갑이 두둑하네.', '몸은 힘들어도 보람은 있다.'],
   };
   const lines = reactions[activityId] || ['열심히 했다.'];
   return lines[Math.floor(Math.random() * lines.length)];
