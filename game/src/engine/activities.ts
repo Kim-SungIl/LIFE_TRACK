@@ -47,13 +47,15 @@ export const ACTIVITIES: Activity[] = [
     requires: (s) => s.money >= 1,
   },
   {
-    // QA C7-A: 고2~고3 전용 고비용 학업 활동 — 돈 sink. 누적된 용돈(789~1609)을 학업 효율로 환원.
+    // QA C7-A: 고비용 학업 활동 — 돈 sink. 누적된 용돈을 학업 효율로 환원.
     // 유료라 applyActivity 의 "무료활동 80+ ×0.1" 캡을 면제받아 고구간에서 독학보다 효과적이되,
     // getDiminishingReturn·effectiveAcademic 소프트캡은 그대로 적용 → 돈으로 효율을 사는 것이지
     // 캡(수능 천장)을 우회하지 않음. wealth 부모(넉넉한 용돈)가 비로소 실질 어드밴티지가 됨.
+    // QA C7-B: 고1(Y5)부터로 확대 + 비용 15→28. 이전엔 돈이 너무 흔해(791 적립) 비-wealth도 다 사서
+    //   wealth 차별성이 없었다. 비용을 올려 고3 과외를 wealth만 매주 감당 → 돈 드레인 + 학업 격차 발생.
     id: 'private-tutoring', name: '집중 과외', slots: 1, fatigue: 9,
-    effects: { academic: 2.5 }, moneyCost: 15, category: 'study',
-    requires: (s) => s.year >= 6 && s.money >= 15,
+    effects: { academic: 2.5 }, moneyCost: 28, category: 'study',
+    requires: (s) => s.year >= 5 && s.money >= 28,
     description: '입시 전문 과외 선생님과 1:1로 약점을 짚는다.',
     flavor: '시간당 비싸지만 밀도가 다르다. 모르는 걸 그 자리에서 메운다. 다만 통장은 빠르게 가벼워진다.',
     tags: ['고3', '학업', '고효율', '고비용'],
