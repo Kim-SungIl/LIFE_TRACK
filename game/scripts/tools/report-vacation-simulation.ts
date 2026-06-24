@@ -4,7 +4,7 @@
 //   1) short-term-job 방학당 평균 선택 회수
 //   2) catch-up 발동 빈도 (활동당 발동 비율, 학년별)
 //   3) "알바 2회 + 회복 1회" 패턴 출현 비율
-//   4) countryside / do-nothing / family-trip 선택률
+//   4) countryside / family-trip 선택률
 //
 // 실행: cd game && npx tsx scripts/report-vacation-simulation.ts
 //
@@ -39,7 +39,7 @@ const PATTERNS: Pattern[] = [
     routine2: 'self-study', routine3: 'academy',
     vacationPriority: [
       'intensive-academy', 'vacation-library', 'short-term-job',
-      'neighborhood-hangout', 'do-nothing', 'countryside',
+      'neighborhood-hangout', 'countryside',
     ],
     choicePolicy: (s) => {
       const e = s.currentEvent; if (!e) return 0;
@@ -58,7 +58,7 @@ const PATTERNS: Pattern[] = [
     routine2: 'club', routine3: 'part-time',
     vacationPriority: [
       'neighborhood-hangout', 'sports-camp', 'family-trip',
-      'creative-project', 'short-term-job', 'vacation-library', 'do-nothing', 'countryside',
+      'creative-project', 'short-term-job', 'vacation-library', 'countryside',
     ],
     choicePolicy: (s) => {
       const e = s.currentEvent; if (!e) return 0;
@@ -77,7 +77,7 @@ const PATTERNS: Pattern[] = [
     routine2: 'basketball', routine3: 'music',
     vacationPriority: [
       'creative-project', 'sports-camp', 'neighborhood-hangout',
-      'short-term-job', 'vacation-library', 'do-nothing', 'countryside',
+      'short-term-job', 'vacation-library', 'countryside',
     ],
     choicePolicy: (s) => {
       const e = s.currentEvent; if (!e) return 0;
@@ -96,7 +96,7 @@ const PATTERNS: Pattern[] = [
     routine2: 'self-study', routine3: 'basketball',
     vacationPriority: [
       'vacation-library', 'creative-project', 'neighborhood-hangout',
-      'sports-camp', 'family-trip', 'short-term-job', 'do-nothing', 'countryside', 'intensive-academy',
+      'sports-camp', 'family-trip', 'short-term-job', 'countryside', 'intensive-academy',
     ],
     choicePolicy: () => 0,
   },
@@ -106,7 +106,7 @@ const PATTERNS: Pattern[] = [
     routine2: 'self-study', routine3: 'academy',
     vacationPriority: [
       // 싸고 안전 우선 — 무료 학업/회복, 가난하면 알바
-      'do-nothing', 'vacation-library', 'countryside',
+      'vacation-library', 'countryside',
       'neighborhood-hangout', 'creative-project', 'short-term-job',
     ],
     choicePolicy: (s) => {
@@ -186,7 +186,6 @@ interface Measurement {
   catchupActivityCount: number;       // catch-up 트리거 가능 활동 선택 횟수 (분모)
   perVacationMix: { picks: string[] }[]; // 방학당 정렬된 선택 리스트 (메타 패턴 검출용)
   countrysideCount: number;
-  doNothingCount: number;
   familyTripCount: number;
   // 학년별 catch-up 발동 횟수 (방학 단위)
   catchupByYear: Record<number, number[]>; // year → [방학당 발동 수, ...]
@@ -206,7 +205,6 @@ async function runVacationSim(p: Pattern): Promise<Measurement> {
     catchupActivityCount: 0,
     perVacationMix: [],
     countrysideCount: 0,
-    doNothingCount: 0,
     familyTripCount: 0,
     catchupByYear: {},
   };
@@ -248,7 +246,6 @@ async function runVacationSim(p: Pattern): Promise<Measurement> {
         currentVacPicks.push(id);
         if (id === 'short-term-job') m.shortTermJobCount++;
         if (id === 'countryside') m.countrysideCount++;
-        if (id === 'do-nothing') m.doNothingCount++;
         if (id === 'family-trip') m.familyTripCount++;
 
         // catch-up 발동 가능 여부 사전 측정 (실제 적용 전 스탯 기준)
@@ -317,9 +314,9 @@ async function runVacationSim(p: Pattern): Promise<Measurement> {
 
 // ===== 메타패턴 검출 =====
 function isJobHeavyPattern(picks: string[]): boolean {
-  // "알바 2회 + 회복 1회" — short-term-job 2회 + (do-nothing | countryside) 1회 이상
+  // "알바 2회 + 회복 1회" — short-term-job 2회 + countryside 1회 이상
   const jobs = picks.filter(p => p === 'short-term-job').length;
-  const rests = picks.filter(p => p === 'do-nothing' || p === 'countryside').length;
+  const rests = picks.filter(p => p === 'countryside').length;
   return jobs >= 2 && rests >= 1;
 }
 
@@ -331,7 +328,7 @@ function printMeasurement(m: Measurement) {
   console.log(`총 방학 수: ${m.totalVacations}회`);
   console.log(`short-term-job 총 선택: ${m.shortTermJobCount}회 → 방학당 평균 ${(m.shortTermJobCount / Math.max(1, m.totalVacations)).toFixed(2)}회`);
   console.log(`catch-up 발동: ${m.catchupTotal}/${m.catchupActivityCount} (활동당 ${(m.catchupTotal / Math.max(1, m.catchupActivityCount) * 100).toFixed(1)}%)`);
-  console.log(`countryside=${m.countrysideCount}회 / do-nothing=${m.doNothingCount}회 / family-trip=${m.familyTripCount}회`);
+  console.log(`countryside=${m.countrysideCount}회 / family-trip=${m.familyTripCount}회`);
 
   const jobHeavy = m.perVacationMix.filter(v => isJobHeavyPattern(v.picks)).length;
   console.log(`알바2+회복1 메타패턴: ${jobHeavy}/${m.totalVacations} (${(jobHeavy / Math.max(1, m.totalVacations) * 100).toFixed(1)}%)`);
@@ -382,11 +379,9 @@ async function main() {
 
   // 회복 활동 선택률 (전체 방학 중)
   const totalCountryside = all.reduce((a, b) => a + b.countrysideCount, 0);
-  const totalDoNothing = all.reduce((a, b) => a + b.doNothingCount, 0);
   const totalFamilyTrip = all.reduce((a, b) => a + b.familyTripCount, 0);
   // 한 방학에 한 번 가능한 1회짜리들 → 분모는 방학 횟수
   const countrysideRate = totalCountryside / Math.max(1, totalVacations);
-  const doNothingRate = totalDoNothing / Math.max(1, totalVacations);
   const familyTripRate = totalFamilyTrip / Math.max(1, totalVacations);
 
   console.log(`\n총 방학 수: ${totalVacations}회 (5패턴 × 14방학 = ${5 * 14})`);
@@ -411,11 +406,9 @@ async function main() {
 
   console.log(`\n[측정 4] 회복/여행 선택률 (방학당)`);
   console.log(`  countryside: ${(countrysideRate * 100).toFixed(1)}%`);
-  console.log(`  do-nothing : ${(doNothingRate * 100).toFixed(1)}%`);
   console.log(`  family-trip: ${(familyTripRate * 100).toFixed(1)}%`);
   const overdom = [
     countrysideRate > 0.9 ? 'countryside' : null,
-    doNothingRate > 0.9 ? 'do-nothing' : null,
     familyTripRate > 0.9 ? 'family-trip' : null,
   ].filter(Boolean);
   console.log(`  → ${overdom.length > 0 ? `${overdom.join(',')} 90% 초과 — 너프 권고` : '편중 없음'}`);
