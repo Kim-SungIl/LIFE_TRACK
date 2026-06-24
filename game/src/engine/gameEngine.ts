@@ -470,7 +470,6 @@ function checkMilestones(state: GameState, log: WeekLog): void {
   for (const m of milestoneChecks) {
     if (!state.milestones.includes(m.id) && state.stats[m.stat] >= m.threshold) {
       state.milestones.push(m.id);
-      log.milestone = m.message; // 하위호환
       log.milestoneMessages.push(m.message);
     }
   }
@@ -922,7 +921,6 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     fatigueChange: 0,
     moneyChange: 0,
     messages: [],
-    milestone: null,
     milestoneMessages: [],
     parentBonusesApplied: [],
   };

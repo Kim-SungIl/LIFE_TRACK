@@ -1,8 +1,7 @@
 import { GameState, Stats, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, Track, WeekLog, getGrade } from '../../engine/types';
-import { getFatigueLabel } from '../../engine/dialogues';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
-import { STAT_ICONS, PARENT_ICONS, breakSentences } from './shared';
+import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay } from './shared';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -58,7 +57,8 @@ export function WeeklyResultScreen({
   }
   if ((weekLog.fatigueChange ?? 0) >= 25) losses.push({ icon: '🥱', text: '피로 누적' });
 
-  const resultFatigueLabel = getFatigueLabel(fatigue);
+  // 피로 라벨/색 단일 SSOT — HUD와 동일하게 getFatigueDisplay 사용 (color는 부모가 이미 같은 함수로 계산해 prop 주입).
+  const resultFatigueLabel = getFatigueDisplay(fatigue).label;
 
   return (
     <BgWrapper {...bgProps}>

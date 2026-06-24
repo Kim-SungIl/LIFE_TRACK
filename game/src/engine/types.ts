@@ -103,7 +103,6 @@ export interface WeekLog {
   fatigueChange: number;
   moneyChange: number;
   messages: string[];
-  milestone: string | null;      // 하위호환용 (deprecated)
   milestoneMessages: string[];   // 이번 주 달성한 성장 메시지들
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
   /** 이번 주 발동한 부모 보너스 (UX 가시화용 — 인라인 스티커, WeekLog 1줄, HUD 펄스) */

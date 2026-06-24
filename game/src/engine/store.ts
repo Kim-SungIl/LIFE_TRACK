@@ -380,19 +380,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
         // fire — 효과 적용 + pressure 리셋 + pending 소비 + fired 기록
         const newState = cloneGameState(s);
         const ev = available[0];
-        if (ev.effects.stats) {
-          for (const [k, v] of Object.entries(ev.effects.stats)) {
-            const key = k as keyof typeof newState.stats;
-            newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (v as number)));
-          }
-        }
-        if (ev.effects.fatigue) {
-          newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
-        }
-        if (ev.effects.money) {
-          newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
-          if (newState.money < 0) newState.money = 0;
-        }
+        // stats/fatigue/money는 공통 헬퍼로 적용 (talkToHome과 동일 경로 — raw 가산, 정규 이벤트와 달리 구간 감쇠 미적용).
+        applyVisibleTalkEffects(newState, ev.effects);
         if (ev.effects.intimacy && ev.npcId) {
           const target = newState.npcs.find(n => n.id === ev.npcId);
           if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
