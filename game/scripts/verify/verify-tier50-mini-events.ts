@@ -18,13 +18,16 @@ import { getAvailableNpcEvents } from '../../src/engine/talkSystem';
 import { createInitialState } from '../../src/engine/gameEngine';
 import type { GameState } from '../../src/engine/types';
 
-const TIER50_SEEDS: Array<{ id: string; npcId: string }> = [
+// 기본 게이트는 가이드라인(50). haeun/junha는 등장 윈도가 좁아 #267에서 게이트를
+// 가이드라인보다 낮게 압축(사장 해소) → gate로 실제 문턱을 명시한다.
+const GUIDELINE = 50;
+const TIER50_SEEDS: Array<{ id: string; npcId: string; gate?: number }> = [
   { id: 'talk_jihun_50_topping', npcId: 'jihun' },
   { id: 'talk_subin_50_sentence', npcId: 'subin' },
   { id: 'talk_minjae_50_wrong_answer_mark', npcId: 'minjae' },
   { id: 'talk_yuna_50_humming', npcId: 'yuna' },
-  { id: 'talk_haeun_50_window', npcId: 'haeun' },
-  { id: 'talk_junha_50_seabreeze', npcId: 'junha' },
+  { id: 'talk_haeun_50_window', npcId: 'haeun', gate: 45 },
+  { id: 'talk_junha_50_seabreeze', npcId: 'junha', gate: 38 },
 ];
 
 let passed = 0;
@@ -64,11 +67,12 @@ for (const spec of TIER50_SEEDS) {
 }
 
 // === 2. intimacyMin/intimacy 효과 가이드라인 ===
-console.log('\n=== 2. 가이드라인: intimacyMin=50, intimacy=+3 ===');
+console.log('\n=== 2. 가이드라인: intimacyMin=50(haeun/junha 압축 게이트 예외), intimacy=+3 ===');
 for (const spec of TIER50_SEEDS) {
   const seed = NPC_MINI_EVENTS.find(e => e.id === spec.id);
   if (!seed) continue;
-  check(`${spec.id}.intimacyMin === 50`, seed.intimacyMin === 50, `actual=${seed.intimacyMin}`);
+  const gate = spec.gate ?? GUIDELINE;
+  check(`${spec.id}.intimacyMin === ${gate}`, seed.intimacyMin === gate, `actual=${seed.intimacyMin}`);
   check(`${spec.id}.effects.intimacy === 3`, seed.effects.intimacy === 3, `actual=${seed.effects.intimacy}`);
   check(`${spec.id}.npcId === ${spec.npcId}`, seed.npcId === spec.npcId, `actual=${seed.npcId}`);
 }
@@ -88,12 +92,13 @@ for (const spec of TIER50_SEEDS) {
 }
 
 // === 4. 친밀도 49 미달 시 후보 풀 제외 ===
-console.log('\n=== 4. 친밀도 49 (미달) — 후보 풀 제외 ===');
+console.log('\n=== 4. 게이트 미달(gate-1) — 후보 풀 제외 ===');
 for (const spec of TIER50_SEEDS) {
-  const s = withIntimacy(baseM, spec.npcId, 49);
+  const gate = spec.gate ?? GUIDELINE;
+  const s = withIntimacy(baseM, spec.npcId, gate - 1);
   const available = getAvailableNpcEvents(s, spec.npcId);
   const found = available.find(e => e.id === spec.id);
-  check(`${spec.id} 친밀도 49엔 미가용`, !found);
+  check(`${spec.id} 친밀도 ${gate - 1}엔 미가용`, !found);
 }
 
 // === 5. talkEventsFired 기록 후 풀 제외 ===
