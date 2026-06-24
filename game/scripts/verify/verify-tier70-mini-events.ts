@@ -20,13 +20,16 @@ import { applyMemorySlotFromMiniTalk } from '../../src/engine/memorySystem';
 import { createInitialState } from '../../src/engine/gameEngine';
 import type { GameState } from '../../src/engine/types';
 
-const TIER70_SEEDS: Array<{ id: string; npcId: string; expectMemorySlot: boolean }> = [
+// 기본 게이트는 가이드라인(70). haeun/junha는 등장 윈도가 좁아 #267에서 게이트를
+// 가이드라인보다 낮게 압축(사장 해소) → gate로 실제 문턱을 명시한다.
+const GUIDELINE = 70;
+const TIER70_SEEDS: Array<{ id: string; npcId: string; expectMemorySlot: boolean; gate?: number }> = [
   { id: 'talk_jihun_70_locker', npcId: 'jihun', expectMemorySlot: false },
   { id: 'talk_subin_70_night_light', npcId: 'subin', expectMemorySlot: true },
   { id: 'talk_minjae_70_phone_call', npcId: 'minjae', expectMemorySlot: true },
   { id: 'talk_yuna_70_chalk_dust', npcId: 'yuna', expectMemorySlot: false },
-  { id: 'talk_haeun_70_direction', npcId: 'haeun', expectMemorySlot: false },
-  { id: 'talk_junha_70_speech', npcId: 'junha', expectMemorySlot: false },
+  { id: 'talk_haeun_70_direction', npcId: 'haeun', expectMemorySlot: false, gate: 56 },
+  { id: 'talk_junha_70_speech', npcId: 'junha', expectMemorySlot: false, gate: 44 },
 ];
 
 let passed = 0;
@@ -66,11 +69,12 @@ for (const spec of TIER70_SEEDS) {
 }
 
 // === 2. intimacyMin/intimacy 효과 가이드라인 ===
-console.log('\n=== 2. 가이드라인: intimacyMin=70, intimacy=+4 ===');
+console.log('\n=== 2. 가이드라인: intimacyMin=70(haeun/junha 압축 게이트 예외), intimacy=+4 ===');
 for (const spec of TIER70_SEEDS) {
   const seed = NPC_MINI_EVENTS.find(e => e.id === spec.id);
   if (!seed) continue;
-  check(`${spec.id}.intimacyMin === 70`, seed.intimacyMin === 70, `actual=${seed.intimacyMin}`);
+  const gate = spec.gate ?? GUIDELINE;
+  check(`${spec.id}.intimacyMin === ${gate}`, seed.intimacyMin === gate, `actual=${seed.intimacyMin}`);
   check(`${spec.id}.effects.intimacy === 4`, seed.effects.intimacy === 4, `actual=${seed.effects.intimacy}`);
   check(`${spec.id}.npcId === ${spec.npcId}`, seed.npcId === spec.npcId, `actual=${seed.npcId}`);
 }
@@ -89,12 +93,13 @@ for (const spec of TIER70_SEEDS) {
 }
 
 // === 4. 친밀도 69 미달 시 후보 풀 제외 ===
-console.log('\n=== 4. 친밀도 69 (미달) — 후보 풀 제외 ===');
+console.log('\n=== 4. 게이트 미달(gate-1) — 후보 풀 제외 ===');
 for (const spec of TIER70_SEEDS) {
-  const s = withIntimacy(baseM, spec.npcId, 69);
+  const gate = spec.gate ?? GUIDELINE;
+  const s = withIntimacy(baseM, spec.npcId, gate - 1);
   const available = getAvailableNpcEvents(s, spec.npcId);
   const found = available.find(e => e.id === spec.id);
-  check(`${spec.id} 친밀도 69엔 미가용`, !found);
+  check(`${spec.id} 친밀도 ${gate - 1}엔 미가용`, !found);
 }
 
 // === 5. talkEventsFired 기록 후 풀 제외 ===
