@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
+import { activityHints } from '../engine/activityHints';
 
 const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = {
   study:    { emoji: '📚', name: '공부',     desc: '학업 성적을 올린다' },
@@ -131,6 +132,9 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   const vacUsed = state.vacationActivityCounts?.[a.id] ?? 0;
                   const showVacLimit = state.isVacation && a.vacationLimit !== undefined;
 
+                  // 전략 신호 태그 (장기/맥락 — 단기 효과에 안 드러나는 결과). 수치 토글과 무관하게 항상.
+                  const stratHints = activityHints(a, state);
+
                   // 서술형 태그 생성
                   const hintTags: { text: string; color: string }[] = [];
                   if (!showDetail) {
@@ -249,6 +253,23 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           }}>
                             피로{a.fatigue > 0 ? '+' : ''}{a.fatigue}
                           </span>
+                        </div>
+                      )}
+
+                      {/* 전략 신호 태그 (앰버/초록 — 장기·맥락 결과. 효과 태그와 시각적 구분) */}
+                      {stratHints.length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 5 }}>
+                          {stratHints.map((h, i) => (
+                            <span key={i} style={{
+                              fontSize: '0.68rem', fontWeight: 600,
+                              color: h.tone === 'good' ? 'var(--green)' : 'var(--accent)',
+                              background: h.tone === 'good' ? 'rgba(143,181,115,0.12)' : 'rgba(224,138,91,0.15)',
+                              border: `1px solid ${h.tone === 'good' ? 'rgba(143,181,115,0.3)' : 'rgba(224,138,91,0.35)'}`,
+                              padding: '2px 7px', borderRadius: 4,
+                            }}>
+                              {h.text}
+                            </span>
+                          ))}
                         </div>
                       )}
                     </div>
