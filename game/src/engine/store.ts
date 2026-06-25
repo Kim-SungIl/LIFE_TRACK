@@ -9,6 +9,7 @@ import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestone
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 import { PARENT_MINI_EVENTS } from './talkData';
 import { applyParentIntimacyDelta } from './parentIntimacy';
+import { absWeek } from './relationshipSignals';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
 function applyVisibleTalkEffects(
@@ -107,7 +108,7 @@ interface GameStore {
 // ===== resolveEvent 단계 헬퍼 (순수 추출 — state 직접 mutate, 동작 보존) =====
 
 // 선택 결과 적용: 스탯(구간감쇠)/피로/용돈 + 이벤트 등장 NPC met + timeCost/문이과/부모 친밀도.
-function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice): void {
+function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice, occurrenceWeek: number): void {
   // 스탯 효과 — 구간별 감쇠(scaleStatChange)로 활동과 동일하게 고구간 캡 적용 (QA C3 근본원인).
   for (const [key, val] of Object.entries(choice.effects)) {
     const k = key as keyof typeof state.stats;
@@ -131,6 +132,9 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
         const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
         npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
         npc.met = true;
+        // 관계 신호: 친밀도가 오른 상호작용만 "최근 함께함"으로 기록(악화 선택지는 제외)
+        // 발생주(occurrenceWeek) 사용 — state.week은 processWeek의 week++ 이후라 +1 어긋남(record와 동일 규칙).
+        if (scaled > 0) npc.lastInteractionWeek = absWeek(state.year, occurrenceWeek);
       }
     }
   }
@@ -300,7 +304,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const occurrenceWeek = s.currentEvent!.week ?? newState.week;
 
     // 선택 결과 적용 (스탯/피로/용돈 + NPC met + timeCost/문이과/부모 친밀도)
-    applyChoiceOutcome(newState, event, choice);
+    applyChoiceOutcome(newState, event, choice, occurrenceWeek);
 
     // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
     applyMemorySlotFromChoice(newState, event, choiceIndex, choice);
@@ -386,6 +390,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const target = newState.npcs.find(n => n.id === ev.npcId);
           if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
         }
+        // 관계 신호: 미니 이벤트를 본 NPC는 상호작용 기록(친밀도 변화 무관 — 말을 건 것 자체가 만남)
+        { const t = newState.npcs.find(n => n.id === npcId); if (t) t.lastInteractionWeek = absWeek(newState.year, newState.week); }
         applyMemorySlotFromMiniTalk(newState, ev.id, ev.memorySlotDraft);
         newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
         newState.talkEventPressure = 0;
@@ -398,6 +404,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 잡담 한 줄 — RNG 진행 위해 새 state로 push
     const newState = cloneGameState(s);
     const line = getNpcSmalltalk(newState, npcId);
+    // 관계 신호: 잡담도 상호작용(친밀도 변화 0이라 lastInteractionWeek로만 "최근 함께함"이 잡힘)
+    { const t = newState.npcs.find(n => n.id === npcId); if (t) t.lastInteractionWeek = absWeek(newState.year, newState.week); }
     set({ state: newState });
     return { kind: 'smalltalk', line };
   },

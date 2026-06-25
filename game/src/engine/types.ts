@@ -188,6 +188,7 @@ export interface NpcState {
   greeting?: string;      // 클릭 시 인사말
   personality?: string;   // 성격/관계 설명
   weekStartIntimacy?: number; // 도달형 페이싱용 — 이번 주 시작 시점 친밀도(processWeek에서 스냅샷). fresh/pre-met 판별.
+  lastInteractionWeek?: number; // 관계 신호용 — 마지막 상호작용 절대주차(동행·말걸기·이벤트·선물). 방치/최근 판정.
 }
 
 export type EventLocation = 'classroom' | 'home' | 'park' | 'hallway' | 'rooftop' | 'street' | 'gym' | 'school_gate' | 'cafe' | 'music_room' | 'beach' | 'convenience_store' | 'library' | 'auditorium';

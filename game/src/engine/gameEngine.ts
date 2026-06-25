@@ -9,6 +9,7 @@ import { getParentMods } from './parentModifiers';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
+import { absWeek } from './relationshipSignals';
 
 // rng utility re-export (하위 호환)
 export { seededRandom, hashInitialState } from './rng';
@@ -668,7 +669,10 @@ function applyNpcActivitySelection(state: GameState, npcActivityMap?: Record<str
   if (!npcActivityMap) return;
   for (const npcId of Object.values(npcActivityMap)) {
     const npc = state.npcs.find(n => n.id === npcId);
-    if (npc) npc.intimacy = Math.min(100, npc.intimacy + 3);
+    if (npc) {
+      npc.intimacy = Math.min(100, npc.intimacy + 3);
+      npc.lastInteractionWeek = absWeek(state.year, state.week); // 관계 신호: 동행 = 상호작용
+    }
   }
 }
 
