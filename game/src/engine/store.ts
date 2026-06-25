@@ -108,7 +108,7 @@ interface GameStore {
 // ===== resolveEvent 단계 헬퍼 (순수 추출 — state 직접 mutate, 동작 보존) =====
 
 // 선택 결과 적용: 스탯(구간감쇠)/피로/용돈 + 이벤트 등장 NPC met + timeCost/문이과/부모 친밀도.
-function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice): void {
+function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice, occurrenceWeek: number): void {
   // 스탯 효과 — 구간별 감쇠(scaleStatChange)로 활동과 동일하게 고구간 캡 적용 (QA C3 근본원인).
   for (const [key, val] of Object.entries(choice.effects)) {
     const k = key as keyof typeof state.stats;
@@ -133,7 +133,8 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
         npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
         npc.met = true;
         // 관계 신호: 친밀도가 오른 상호작용만 "최근 함께함"으로 기록(악화 선택지는 제외)
-        if (scaled > 0) npc.lastInteractionWeek = absWeek(state.year, state.week);
+        // 발생주(occurrenceWeek) 사용 — state.week은 processWeek의 week++ 이후라 +1 어긋남(record와 동일 규칙).
+        if (scaled > 0) npc.lastInteractionWeek = absWeek(state.year, occurrenceWeek);
       }
     }
   }
@@ -303,7 +304,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const occurrenceWeek = s.currentEvent!.week ?? newState.week;
 
     // 선택 결과 적용 (스탯/피로/용돈 + NPC met + timeCost/문이과/부모 친밀도)
-    applyChoiceOutcome(newState, event, choice);
+    applyChoiceOutcome(newState, event, choice, occurrenceWeek);
 
     // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
     applyMemorySlotFromChoice(newState, event, choiceIndex, choice);
