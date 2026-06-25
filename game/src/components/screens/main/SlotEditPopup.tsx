@@ -79,6 +79,7 @@ export function SlotEditPopup({
           )}
           <ActivityPicker
             key={editingSlot}
+            companionEligible={editingSlot !== 'routine1' && editingSlot !== 'routine2'}
             activities={
               editingSlot === 'routine1' || editingSlot === 'routine2'
                 ? activities.filter(a => a.slots === 1 && a.category !== 'rest' &&

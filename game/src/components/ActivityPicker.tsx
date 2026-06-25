@@ -48,9 +48,11 @@ interface Props {
   npcChoices?: Record<string, string>;
   compact?: boolean;
   availableMoney?: number;
+  // 이 슬롯에서 NPC 동행 선택이 가능한지(주말/방학 true, 루틴 false). '💛 관계 유지' 태그 정합용.
+  companionEligible?: boolean;
 }
 
-export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney }: Props) {
+export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney, companionEligible = true }: Props) {
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
@@ -133,7 +135,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   const showVacLimit = state.isVacation && a.vacationLimit !== undefined;
 
                   // 전략 신호 태그 (장기/맥락 — 단기 효과에 안 드러나는 결과). 수치 토글과 무관하게 항상.
-                  const stratHints = activityHints(a, state);
+                  const stratHints = activityHints(a, state, companionEligible);
 
                   // 서술형 태그 생성
                   const hintTags: { text: string; color: string }[] = [];
