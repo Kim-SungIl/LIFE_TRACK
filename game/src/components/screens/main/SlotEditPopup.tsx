@@ -1,10 +1,7 @@
 import { GameState, Activity } from '../../../engine/types';
-import { ACTIVITIES } from '../../../engine/activities';
+import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
 import { ActivityPicker } from '../../ActivityPicker';
-
-// 동행(NPC 선택)이 필요한 사회 활동 — 선택 시 NPC 모달을 먼저 띄운다.
-const SOCIAL_ACTIVITIES = ['hang-out', 'club', 'study-group'];
 
 type Props = {
   editingSlot: string;
@@ -116,7 +113,7 @@ export function SlotEditPopup({
                 const slotIdx = editingSlot === 'weekend1' ? 0 :
                                 editingSlot === 'weekend2' ? 1 :
                                 parseInt(editingSlot.replace('weekend', '')) - 1;
-                if (SOCIAL_ACTIVITIES.includes(id)) {
+                if (NPC_COMPANION_ACTIVITIES.includes(id)) {
                   // NPC 선택 필요 — slotKey 저장 후 NPC 모달 열기
                   setNpcSelectFor(`slot:${slotIdx}:${id}`);
                 } else {
