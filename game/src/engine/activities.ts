@@ -8,6 +8,10 @@ export function getActivityCost(activity: Pick<Activity, 'moneyCost' | 'yearlyCo
   return activity.yearlyCost[level] ?? activity.moneyCost;
 }
 
+// NPC 동행 선택이 열리는 활동(선택 시 친밀도 +3 부여) — SlotEditPopup·activityHints 공용 SSOT.
+// category와 무관: study-group은 category 'study'지만 동행 활동이고, 같은 social이라도 sns 등은 동행 아님.
+export const NPC_COMPANION_ACTIVITIES: string[] = ['hang-out', 'club', 'study-group'];
+
 // v6.2: 활동 기본값 전면 하향 — 7년 장기 레이스에 맞는 Y1 성장 속도
 // 목표: 일반 플레이어 Y1 종료 시 주력 스탯 50~60, 집중형 65~75
 export const ACTIVITIES: Activity[] = [
