@@ -1,16 +1,21 @@
 import { NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
+import { relationshipSignal, absWeek } from '../../../engine/relationshipSignals';
 
 type Props = {
   npcs: NpcState[];
   year: number;
+  week: number;
   onSelect: (npcId: string) => void;
 };
 
+const SIGNAL_COLOR = { warn: '#d9a05b', good: '#8fb573', info: '#8a8078' } as const;
+
 // 만난 친구만 카드로 표시 — 클릭 시 상세 모달 오픈 (부모가 npcDetailFor 처리)
-export function NpcRelationPanel({ npcs, year, onSelect }: Props) {
+export function NpcRelationPanel({ npcs, year, week, onSelect }: Props) {
   const metNpcs = npcs.filter(n => n.met);
   if (metNpcs.length === 0) return null;
+  const absNow = absWeek(year, week);
 
   return (
     <div data-tutorial="npc" style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
@@ -20,6 +25,7 @@ export function NpcRelationPanel({ npcs, year, onSelect }: Props) {
           // 친구 게이지 색 = 능력치 등급 색 언어(STAT_GRADES)와 통일 — 아는 사이(E 회색) → 친구(B 우수=초록) → 절친(A 최상=골드)
           const intimacyColor = n.intimacy >= 70 ? '#e5c07b' : n.intimacy >= 40 ? '#8fb573' : '#8a8078';
           const intimacyLabel = n.intimacy >= 70 ? '절친' : n.intimacy >= 40 ? '친구' : '아는 사이';
+          const signal = relationshipSignal(n, absNow);
           return (
             <div key={n.id}
               onClick={() => onSelect(n.id)}
@@ -41,6 +47,12 @@ export function NpcRelationPanel({ npcs, year, onSelect }: Props) {
                     {intimacyLabel}
                   </span>
                 </div>
+                {/* 관계 신호 — 방치/최근/임박. 숫자 대신 감각적 한 줄(없으면 미표시) */}
+                {signal && (
+                  <div style={{ fontSize: '0.65rem', color: SIGNAL_COLOR[signal.tone], marginTop: 3 }}>
+                    {signal.text}
+                  </div>
+                )}
               </div>
             </div>
           );

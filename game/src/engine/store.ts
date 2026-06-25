@@ -9,6 +9,7 @@ import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestone
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 import { PARENT_MINI_EVENTS } from './talkData';
 import { applyParentIntimacyDelta } from './parentIntimacy';
+import { absWeek } from './relationshipSignals';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
 function applyVisibleTalkEffects(
@@ -131,6 +132,8 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
         const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
         npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
         npc.met = true;
+        // 관계 신호: 친밀도가 오른 상호작용만 "최근 함께함"으로 기록(악화 선택지는 제외)
+        if (scaled > 0) npc.lastInteractionWeek = absWeek(state.year, state.week);
       }
     }
   }
@@ -386,6 +389,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
           const target = newState.npcs.find(n => n.id === ev.npcId);
           if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
         }
+        // 관계 신호: 미니 이벤트를 본 NPC는 상호작용 기록(친밀도 변화 무관 — 말을 건 것 자체가 만남)
+        { const t = newState.npcs.find(n => n.id === npcId); if (t) t.lastInteractionWeek = absWeek(newState.year, newState.week); }
         applyMemorySlotFromMiniTalk(newState, ev.id, ev.memorySlotDraft);
         newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
         newState.talkEventPressure = 0;
@@ -398,6 +403,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 잡담 한 줄 — RNG 진행 위해 새 state로 push
     const newState = cloneGameState(s);
     const line = getNpcSmalltalk(newState, npcId);
+    // 관계 신호: 잡담도 상호작용(친밀도 변화 0이라 lastInteractionWeek로만 "최근 함께함"이 잡힘)
+    { const t = newState.npcs.find(n => n.id === npcId); if (t) t.lastInteractionWeek = absWeek(newState.year, newState.week); }
     set({ state: newState });
     return { kind: 'smalltalk', line };
   },

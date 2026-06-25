@@ -1,5 +1,6 @@
 import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
 import { cloneGameState } from './stateClone';
+import { absWeek } from './relationshipSignals';
 
 // ===== 아이템 타입 =====
 export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
@@ -234,6 +235,7 @@ export function applyItemEffects(
           const npc = newState.npcs.find(n => n.id === targetNpcId);
           if (npc) {
             npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + effect.npcBonus));
+            npc.lastInteractionWeek = absWeek(newState.year, newState.week); // 관계 신호: 선물 = 상호작용
             messages.push(`${npc.name}에게 ${item.name}을 줬다! 친밀도가 올랐다.`);
           }
         }

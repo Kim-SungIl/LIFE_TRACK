@@ -13,9 +13,17 @@ export function migrateLoadedState(state: GameState): GameState {
     : state.parents;
   // 'do-nothing' 활동 제거(deep-rest와 중복·열등) — 진행 중인 방학 vacationChoices에서 안전 필터링
   const migratedVacationChoices = (state.vacationChoices || []).filter(id => id !== 'do-nothing');
+  // 관계 신호: lastInteractionWeek 백필. undefined로 두면 구세이브 전원이 로드 즉시 '요즘 뜸하다'로
+  // 대량 오탐 → 현재 절대주차로 시딩해 "방금 만난" 중립 상태에서 시작(다음 8주 뒤부터 자연 발현).
+  const nowAbs = ((state.year ?? 1) - 1) * 48 + (state.week ?? 1);
+  const migratedNpcs = (state.npcs || []).map(n => ({
+    ...n,
+    lastInteractionWeek: n.lastInteractionWeek ?? nowAbs,
+  }));
   const result: GameState = {
     ...state,
     parents: migratedParents,
+    npcs: migratedNpcs,
     vacationChoices: migratedVacationChoices,
     examResults: state.examResults || [],
     activeBuffs: state.activeBuffs || [],
