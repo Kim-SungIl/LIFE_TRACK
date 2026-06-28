@@ -17,6 +17,7 @@ import { CAREER_CONFLICT_EVENTS } from './parent-career';
 import { ADOLESCENCE_EVENTS } from './parent-adolescence';
 import { REACH_EVENTS } from './reach';
 import { MID_REACH_EVENTS } from './reachMid';
+import { HIGH_REACH_EVENTS } from './reachHigh';
 
 export const GAME_EVENTS: GameEvent[] = [
   ...SCHOOL_Y1_INTRO,
@@ -46,4 +47,5 @@ export const GAME_EVENTS: GameEvent[] = [
   ...ADOLESCENCE_EVENTS,
   ...REACH_EVENTS,
   ...MID_REACH_EVENTS,
+  ...HIGH_REACH_EVENTS,
 ];
