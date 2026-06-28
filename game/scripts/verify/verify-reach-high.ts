@@ -5,8 +5,8 @@ import { createInitialState } from '../../src/engine/gameEngine';
 import { getReachForWeek } from '../../src/engine/events/selection';
 import { HIGH_REACH_EVENTS } from '../../src/engine/events/reachHigh';
 
-const cuts = HIGH_REACH_EVENTS.map((e: any) => ({
-  id: e.id, npc: e.reach.npc, tier: e.reach.tier, year: e.reach.year,
+const cuts = HIGH_REACH_EVENTS.map((e) => ({
+  id: e.id, npc: e.reach!.npc, tier: e.reach!.tier, year: e.reach!.year,
 }));
 
 let pass = 0;
@@ -19,7 +19,7 @@ for (const c of cuts) {
   s.isVacation = false;
   // 모든 NPC를 met=false로 깔아 간섭 제거
   for (const n of s.npcs) { n.met = false; }
-  const target = s.npcs.find((n: any) => n.id === c.npc)!;
+  const target = s.npcs.find((n) => n.id === c.npc)!;
   target.met = true;
   target.weekStartIntimacy = c.tier - 1;  // 직전 주엔 tier 미만 → 이번 주 fresh 진입
   target.intimacy = c.tier;               // 이번 주 tier 도달
