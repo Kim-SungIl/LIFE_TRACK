@@ -1,6 +1,7 @@
 import { GameEvent } from '../types';
 import {
   HAEUN_EVENTS, JIHUN_EVENTS, SUBIN_EVENTS, MINJAE_EVENTS, YUNA_EVENTS, JUNHA_EVENTS,
+  SEOA_EVENTS, SIWOO_EVENTS, YERIN_EVENTS,
   DOYUN_FIRST_MEET_M, DOYUN_FIRST_MEET_F, DOYUN_DAILY, DOYUN_GRADUATION, DOYUN_SCHOOL_SPLIT,
 } from './npc';
 import {
@@ -18,6 +19,7 @@ import { ADOLESCENCE_EVENTS } from './parent-adolescence';
 import { REACH_EVENTS } from './reach';
 import { MID_REACH_EVENTS } from './reachMid';
 import { HIGH_REACH_EVENTS } from './reachHigh';
+import { NEW_NPC_REACH_EVENTS } from './reachNew';
 
 export const GAME_EVENTS: GameEvent[] = [
   ...SCHOOL_Y1_INTRO,
@@ -40,6 +42,9 @@ export const GAME_EVENTS: GameEvent[] = [
   ...PRESIDENT_NON,
   ...BIRTHDAY_EVENTS,
   ...JUNHA_EVENTS,
+  ...SEOA_EVENTS,
+  ...SIWOO_EVENTS,
+  ...YERIN_EVENTS,
 
   ...MONEY_SINK_EVENTS,
   ...CRISIS_EVENTS,
@@ -48,4 +53,5 @@ export const GAME_EVENTS: GameEvent[] = [
   ...REACH_EVENTS,
   ...MID_REACH_EVENTS,
   ...HIGH_REACH_EVENTS,
+  ...NEW_NPC_REACH_EVENTS,
 ];
