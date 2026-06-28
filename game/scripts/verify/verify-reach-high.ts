@@ -1,11 +1,12 @@
-// Wave 1 검증 — 고교 reach 23컷이 실제 페이싱 엔진(getReachForWeek)에서 픽되는지 헤드리스 확인.
+// Wave 1·2 검증 — 고교/신규 reach 컷이 실제 페이싱 엔진(getReachForWeek)에서 픽되는지 헤드리스 확인.
 // 게임이 매주 호출하는 selection.getReachForWeek를 그대로 태운다(단위테스트 아님 — 실제 루프 함수).
 // 각 컷을 fresh 조건(weekStartIntimacy < tier <= intimacy, year===Y, !vacation)으로 만들고 픽 여부 확인.
 import { createInitialState } from '../../src/engine/gameEngine';
 import { getReachForWeek } from '../../src/engine/events/selection';
 import { HIGH_REACH_EVENTS } from '../../src/engine/events/reachHigh';
+import { NEW_NPC_REACH_EVENTS } from '../../src/engine/events/reachNew';
 
-const cuts = HIGH_REACH_EVENTS.map((e) => ({
+const cuts = [...HIGH_REACH_EVENTS, ...NEW_NPC_REACH_EVENTS].map((e) => ({
   id: e.id, npc: e.reach!.npc, tier: e.reach!.tier, year: e.reach!.year,
 }));
 
@@ -28,12 +29,12 @@ for (const c of cuts) {
   else fails.push(`${c.id} (${c.npc} t${c.tier} Y${c.year}) → ${picked?.id ?? 'null'}`);
 }
 
-console.log(`\n=== Wave 1 reach 발동 검증 ===`);
+console.log(`\n=== Wave 1·2 reach 발동 검증 ===`);
 console.log(`fresh 픽 성공: ${pass}/${cuts.length}`);
 if (fails.length) {
   console.log(`\n실패:`);
   fails.forEach(f => console.log('  ✗ ' + f));
   process.exit(1);
 } else {
-  console.log('✓ 23컷 전부 페이싱 엔진에서 정상 픽');
+  console.log(`✓ ${cuts.length}컷 전부 페이싱 엔진에서 정상 픽`);
 }
