@@ -1,1 +1,4 @@
 **/.DS_Store
+
+# 일회성 CLI 검수 raw 덤프(codex/cursor/agent 출력) — 재생성 가능, 추적 안 함
+docs/*-out/
