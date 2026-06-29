@@ -42,7 +42,14 @@ const imminent = (n: NpcState, s: GameState) => relationshipSignal(n, s)?.text.i
 // 6) 다 소진하면 null — jihun Y7 최고 tier(97) 넘으면 없음
 { const { s, n } = mk(7, 'jihun', 98); check('jihun Y7 i98 → th=null', nextIntimacyThreshold(n, s) === null); }
 
-// 7) 불변식 스윕 — 모든 met NPC·전 학년·여러 친밀도에서 th는 null 또는 intimacy 초과
+// 7) isVacation 게이트 정합 — 학기 전용(!isVacation) reach는 방학 중 신호 후보에서 빠지고, mini(방학 무관)만 남는다.
+//    subin Y5: reach t55(!isVacation) / mini intimacyMin 70·80. probe+condition이 isVacation을 condition(SSOT)으로 반영하는지 확인.
+{ const { s, n } = mk(5, 'subin', 50);
+  check('subin Y5 i50 학기중 → th=55 (학기 reach 발동)', nextIntimacyThreshold(n, s) === 55);
+  s.isVacation = true;
+  check('subin Y5 i50 방학중 → th=70 (학기전용 t55 억제, mini만)', nextIntimacyThreshold(n, s) === 70); }
+
+// 8) 불변식 스윕 — 모든 met NPC·전 학년·여러 친밀도에서 th는 null 또는 intimacy 초과
 const npcIds = createInitialState('male', ['neutral', 'neutral'], { rngSeed: 1 }).npcs.map((x) => x.id);
 let invChecked = 0;
 for (const id of npcIds) for (let y = 1; y <= 7; y++) for (const i of [0, 25, 45, 65, 85, 99]) {

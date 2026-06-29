@@ -22,21 +22,30 @@ export type RelationSignal = { text: string; tone: 'warn' | 'good' | 'info' } | 
 //           성별은 reach condition 공통(femaleChoices로만 분기)이라 필터 불요.
 //  - mini: yearMin/yearMax·gender 통과 + 미발동(talkEventsFired)인 것만.
 export function nextIntimacyThreshold(npc: NpcState, state: GameState): number | null {
+  if (!npc.met) return null; // 호출 경로(met 필터)가 보장하지만 직접 호출 대비 방어적으로 명시.
   let best: number | null = null;
   const consider = (t: number) => { if (t > npc.intimacy && (best === null || t < best)) best = t; };
 
+  // 발동 기록 — selection.getReachForWeek와 동일 SSOT(state.events의 reach id, state.talkEventsFired)를 읽는다.
   const firedReach = new Set(state.events.filter(e => e.reach).map(e => e.id));
+  const firedMini = new Set(state.talkEventsFired);
+
+  // reach 후보: 친밀도를 그 tier로 올린 가상(probe) state로 condition을 직접 평가한다.
+  // year·isVacation·week 등 비-친밀도 게이트를 condition(SSOT) 그대로 반영 → 메타 재현 없이 정합.
+  // (예: 방학 중 학기-전용 !isVacation 컷, 다른 학년 컷을 "곧 열린다"로 잘못 띄우지 않는다.)
   for (const e of GAME_EVENTS) {
-    if (e.reach && e.reach.npc === npc.id && e.reach.year === state.year && !firedReach.has(e.id)) {
-      consider(e.reach.tier);
-    }
+    if (!e.reach || e.reach.npc !== npc.id || e.reach.tier <= npc.intimacy || firedReach.has(e.id) || !e.condition) continue;
+    const tier = e.reach.tier;
+    const probe: GameState = { ...state, npcs: state.npcs.map(n => n.id === npc.id ? { ...n, intimacy: tier } : n) };
+    if (e.condition(probe)) consider(tier);
   }
+  // mini는 reach와 발동 경로가 다르며 isVacation 게이트가 없다(talkSystem.getAvailableNpcEvents와 동일 필터).
   for (const m of NPC_MINI_EVENTS) {
     if (m.npcId !== npc.id || m.intimacyMin === undefined) continue;
     if (m.yearMin !== undefined && state.year < m.yearMin) continue;
     if (m.yearMax !== undefined && state.year > m.yearMax) continue;
     if (m.gender !== undefined && m.gender !== state.gender) continue;
-    if (state.talkEventsFired.includes(m.id)) continue;
+    if (firedMini.has(m.id)) continue;
     consider(m.intimacyMin);
   }
   return best;
