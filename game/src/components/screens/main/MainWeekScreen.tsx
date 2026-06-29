@@ -259,7 +259,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       )}
 
       {/* NPC 관계 — 만난 친구만 표시 */}
-      <NpcRelationPanel npcs={state.npcs} year={state.year} week={state.week} onSelect={setNpcDetailFor} />
+      <NpcRelationPanel state={state} onSelect={setNpcDetailFor} />
 
       {/* NPC 선택 모달 */}
       {npcSelectFor && (
@@ -276,8 +276,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {npcDetail && (
         <NpcDetailModal
           npc={npcDetail}
-          year={state.year}
-          week={state.week}
+          state={state}
           dialogue={npcDialogue}
           smalltalk={npcSmalltalk}
           onTalk={() => handleTalkNpc(npcDetail.id)}

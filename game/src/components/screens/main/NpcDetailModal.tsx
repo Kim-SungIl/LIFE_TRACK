@@ -1,14 +1,13 @@
-import { NpcState } from '../../../engine/types';
+import { GameState, NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { breakSentences } from '../shared';
-import { relationshipSignal, absWeek } from '../../../engine/relationshipSignals';
+import { relationshipSignal } from '../../../engine/relationshipSignals';
 
 const SIGNAL_COLOR = { warn: '#d9a05b', good: '#8fb573', info: '#8a8078' } as const;
 
 type Props = {
   npc: NpcState;
-  year: number;
-  week: number;
+  state: GameState;
   // 친밀도/상황 기반 기본 인사말 — 부모(MainWeekScreen)가 getNpcDialogue 로 사전 계산해 전달
   dialogue: string;
   // 말 걸기 후 잡담 라인 — null 이면 dialogue 표시, 있으면 잡담 라인으로 교체
@@ -17,10 +16,10 @@ type Props = {
   onClose: () => void;
 };
 
-export function NpcDetailModal({ npc, year, week, dialogue, smalltalk, onTalk, onClose }: Props) {
+export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClose }: Props) {
   const intimacyColor = npc.intimacy >= 70 ? 'var(--accent-soft)' : npc.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
   const intimacyLabel = npc.intimacy >= 70 ? '절친' : npc.intimacy >= 40 ? '친구' : '아는 사이';
-  const signal = relationshipSignal(npc, absWeek(year, week));
+  const signal = relationshipSignal(npc, state);
   return (
     <div onClick={onClose} style={{
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -31,7 +30,7 @@ export function NpcDetailModal({ npc, year, week, dialogue, smalltalk, onTalk, o
         borderRadius: 16, padding: 24, width: '85%', maxWidth: 340, textAlign: 'center',
         border: '1px solid rgba(255,255,255,0.1)',
       }}>
-        <Portrait characterId={npc.id} size={72} expression="neutral" year={year} />
+        <Portrait characterId={npc.id} size={72} expression="neutral" year={state.year} />
         <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
           {npc.intimacy >= 30 ? npc.description : '같은 학교 친구'}
