@@ -211,6 +211,7 @@ export const ACTIVITIES: Activity[] = [
     //           freedom 절정의 일반 트리거 도달 경로를 미니이벤트 외에 하나 더 확보(게임체크 항목4).
     parentEffect: { baseDelta: 0.4, tag: 'autonomyChoice' },
     category: 'work',
+    requires: (s) => s.year >= 4, // short-term-job과 일관 — 현재 category 게이트(year<4)와 이중이나, 향후 category 조건 변경 시 Y1~3 노출 방어
     description: '편의점에서 일하며 돈을 번다.',
     flavor: '"어서오세요~" 반복되는 인사. 힘들지만 통장 잔고가 올라가는 건 뿌듯하다.',
     tags: ['수입', '고피로', '자립'],
@@ -360,7 +361,6 @@ export function isVacationLimitReached(activity: Activity, state: GameState): bo
 
 export function getAvailableActivities(state: GameState): Activity[] {
   return ACTIVITIES.filter(a => {
-    if (a.category === 'parent' && a.requires && !a.requires(state)) return false;
     if (a.category === 'work' && state.year < 4) return false;
     // Phase 1: 학기/방학 게이팅
     if (a.seasonGate === 'vacation-only' && !state.isVacation) return false;
