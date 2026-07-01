@@ -206,6 +206,32 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
 //   P0: 스크림·라벨 정리·부모줄 부활·정직한 CTA
 //   P1: CG 있는 기억 = 스와이프 갤러리(여러 장 넘겨보기), 나머지 = 초상/엠블럼 썸네일 카드.
 export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, bgProps, onAdvance, readonly, examResults, reachedYears, onSelectYear, onClose }: YearEndScreenProps) {
+  // 기록장을 열었지만 아직 마친 학년이 없다(1학년) — 회상할 과거가 없으니 연도별 렌더 대신 "약속" 빈 상태만.
+  // reachedYears가 빈 배열인 건 이 경우뿐(진행 모드는 undefined, 2학년+는 length≥1).
+  if (readonly && reachedYears && reachedYears.length === 0) {
+    return (
+      <BgWrapper {...bgProps}>
+        <div style={{ maxWidth: 480, margin: '0 auto', padding: '28px 16px 40px', textAlign: 'center' }}>
+          <div className="ye-stagger" style={{ animationDelay: '120ms', fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)', textShadow: TEXT_SHADOW, marginBottom: 6 }}>
+            📖 기록장
+          </div>
+          <div className="ye-stagger" style={{ ...PANEL, animationDelay: '300ms', padding: '28px 22px', marginTop: 26, marginBottom: 26 }}>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 2 }}>
+              아직 담긴 기억이 없어요.<br />한 학년을 마치면,<br />그 해의 순간들이 여기 쌓입니다. 📖
+            </div>
+          </div>
+          <button
+            className="btn ye-cta"
+            style={{ maxWidth: 280, margin: '0 auto', background: 'rgba(224,138,91,0.12)', border: '1px solid var(--accent-soft)', color: 'var(--accent-soft)', animationDelay: '0ms' }}
+            onClick={onClose}
+          >
+            닫기
+          </button>
+        </div>
+      </BgWrapper>
+    );
+  }
+
   const examsThisYear = (examResults ?? []).filter(e => e.year === year);
   // 성적표(기록장) — 단원평가는 접고 주요 시험 우선, 최대 4개. 등급/석차 숫자는 빼고 총평만(반-수치 회상 톤).
   // 초등처럼 주요 시험이 없는 해는 단원평가라도 보여준다(빈 성적표 방지).
