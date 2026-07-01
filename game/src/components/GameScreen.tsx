@@ -274,7 +274,7 @@ export function GameScreen() {
     <MainWeekScreen
       state={state}
       bgProps={bgProps}
-      onOpenAlbum={state.year >= 2 ? () => setAlbumYear(state.year - 1) : undefined}
+      onOpenAlbum={() => setAlbumYear(state.year - 1)}
       onSetRoutine={setRoutine}
       onTalkNpc={talkToNpc}
       onTalkHome={talkToHome}

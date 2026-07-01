@@ -23,7 +23,7 @@ type Props = {
   weeklyActivityCost: number;
   weeklyOverBudget: boolean;
   onOpenHome: () => void;
-  // 기록장(지난 학년 회상) 진입 — 완료 학년이 있을 때만(2학년~). undefined면 버튼 숨김.
+  // 기록장(지난 학년 회상) 진입 — 1학년(완료 학년 없음)엔 "약속" 빈 상태를 띄운다. undefined면 버튼 숨김.
   onOpenAlbum?: () => void;
 };
 
