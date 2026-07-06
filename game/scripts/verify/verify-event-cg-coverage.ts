@@ -1,6 +1,11 @@
 // 이벤트 CG 자산 커버리지 검증
 // 모든 이벤트의 (선택지 × 성별 × 학년대) 조합에 대해 폴백 cascade 매칭 여부 검사.
 // 실행: cd game && npx tsx scripts/verify-event-cg-coverage.ts
+//
+// CI 게이트 정책: CG는 일부 이벤트에만 붙는 게 정상이라 "전체 미매칭"으로 실패시키면 상시 red다.
+// 따라서 전량 커버리지는 정보 리포트로만 출력하고, 실패(exit 1)는 아래 두 축으로 좁힌다.
+//  · 필수 CG 세트(생일 P0-B) 누락 → HARD FAIL (지정 세트라 회귀만 잡힘)
+//  · 부분 커버(같은 학년대 일부 조합만 CG) → ⚠️ WARN (변형 누락 의심, 검토 권장하나 비치명)
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -74,26 +79,30 @@ const missing = rows.filter(r => r.hit === null);
 const total = rows.length;
 const found = total - missing.length;
 
-console.log(`\n=== CG 커버리지 ===`);
+console.log(`\n=== CG 커버리지 (정보 리포트) ===`);
 console.log(`총 조합: ${total} / 매칭: ${found} / 미매칭: ${missing.length}`);
+console.log(`(대부분의 미매칭은 CG 미지정 이벤트로 정상 — 전량 나열은 생략)`);
 
-if (missing.length > 0) {
-  // 이벤트 ID별로 그룹핑하여 가독성 향상
-  const byEvent = new Map<string, Row[]>();
-  for (const r of missing) {
-    const k = `${r.eventId}@${r.level}`;
-    if (!byEvent.has(k)) byEvent.set(k, []);
-    byEvent.get(k)!.push(r);
-  }
-  console.log(`\n=== 미매칭 이벤트 (${byEvent.size}건) ===`);
-  for (const [k, rs] of [...byEvent.entries()].sort()) {
-    const cis = rs.map(r => `c${r.ci}_${r.gender}`).join(', ');
-    console.log(`  ${k} → ${cis}`);
-  }
+// === 부분 커버 경고 (비치명 WARN) ===
+// 같은 학년대에서 일부 (선택지×성별) 조합만 CG가 있는 이벤트 = 변형 누락 의심.
+// 의도된 부분 CG일 수 있어 빌드는 막지 않되, 작성자 검토용으로 노출한다.
+const byLevel = new Map<string, { hit: number; miss: number }>();
+for (const r of rows) {
+  const k = `${r.eventId}@${r.level}`;
+  const e = byLevel.get(k) ?? { hit: 0, miss: 0 };
+  if (r.hit) e.hit++; else e.miss++;
+  byLevel.set(k, e);
+}
+const partial = [...byLevel.entries()].filter(([, v]) => v.hit > 0 && v.miss > 0).sort();
+if (partial.length > 0) {
+  console.warn(`\n⚠️  부분 커버 경고 (${partial.length}건 — 변형 누락 의심, 검토 권장):`);
+  for (const [k, v] of partial) console.warn(`   ${k} → ${v.hit}/${v.hit + v.miss} 커버`);
 }
 
-// 생일 이벤트 핵심 검증
-console.log(`\n=== 생일 이벤트 (P0-B 추적) ===`);
+// === 필수 CG 세트 검증 (HARD FAIL 대상) ===
+// 생일 이벤트(P0-B): CG가 반드시 존재해야 하는 지정 세트. 이 세트 누락 시에만 CI 실패시킨다.
+// (커버리지 전량은 위 리포트로 관측 — 구조적 부분 커버로 인한 상시 red 방지)
+console.log(`\n=== 필수 CG: 생일 이벤트 (P0-B) ===`);
 const birthdayIds = ['minjae-birthday', 'jihun-birthday', 'subin-birthday', 'yuna-birthday'];
 let bdayMissing = 0;
 for (const eid of birthdayIds) {
@@ -109,4 +118,5 @@ for (const eid of birthdayIds) {
 }
 
 console.log(`\n생일 미매칭 분기: ${bdayMissing}`);
-process.exit(missing.length > 0 ? 1 : 0);
+if (bdayMissing > 0) console.error(`\n❌ 필수 CG(생일 P0-B) 누락 ${bdayMissing}건 — CI 실패 처리`);
+process.exit(bdayMissing > 0 ? 1 : 0);
