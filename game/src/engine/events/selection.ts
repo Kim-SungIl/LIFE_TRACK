@@ -6,6 +6,7 @@ import {
 } from './constants';
 import { GAME_EVENTS } from './data';
 import { SCHOOL_LIFE_EVENTS } from './school-life';
+import { absWeek } from '../weekMath';
 
 
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
@@ -24,8 +25,8 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
 
 // 절대 주차 (학년 경계에서 음수가 안 나오도록) — 쿨다운 비교용
 function weeksSince(state: GameState, prev: GameEvent): number {
-  const curAbs = (state.year - 1) * 48 + state.week;
-  const prevAbs = ((prev.year ?? state.year) - 1) * 48 + (prev.week ?? 0);
+  const curAbs = absWeek(state.year, state.week);
+  const prevAbs = absWeek(prev.year ?? state.year, prev.week ?? 0);
   return curAbs - prevAbs;
 }
 
@@ -48,10 +49,6 @@ function pickConditionalCandidates(state: GameState): GameEvent[] {
 // 규칙: ① fresh(이번 주에 임계를 방금 넘음) = 쿨다운 면제, 즉시 발동 → 빠르게 도달한 헌신 플레이어를
 //       굶기지 않음. ② pre-met(이미 넘어 있던 임계) = NPC별 쿨다운(48주 ÷ 그 NPC·그 해 reach 수)으로
 //       균등 분산. ③ 주당 1개. ④ 영구 1회성.
-function absWeek(year: number, week: number): number {
-  return (year - 1) * 48 + week;
-}
-
 // 그 NPC·그 해 reach 수로 쿨다운 산출(= 1년 ÷ 이벤트 수). 최소 4주 가드.
 function reachCooldown(npc: string, year: number): number {
   const count = GAME_EVENTS.filter(e => e.reach && e.reach.npc === npc && e.reach.year === year).length;

@@ -5,6 +5,7 @@ import { GameState } from './types';
 import { hashInitialState } from './rng';
 import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
+import { absWeek } from './weekMath';
 
 export function migrateLoadedState(state: GameState): GameState {
   // 'gene' → 'resilience' 리네임 마이그레이션 (구세이브 호환)
@@ -15,7 +16,7 @@ export function migrateLoadedState(state: GameState): GameState {
   const migratedVacationChoices = (state.vacationChoices || []).filter(id => id !== 'do-nothing');
   // 관계 신호: lastInteractionWeek 백필. undefined로 두면 구세이브 전원이 로드 즉시 '요즘 뜸하다'로
   // 대량 오탐 → 현재 절대주차로 시딩해 "방금 만난" 중립 상태에서 시작(다음 8주 뒤부터 자연 발현).
-  const nowAbs = ((state.year ?? 1) - 1) * 48 + (state.week ?? 1);
+  const nowAbs = absWeek(state.year ?? 1, state.week ?? 1);
   const migratedNpcs = (state.npcs || []).map(n => ({
     ...n,
     lastInteractionWeek: n.lastInteractionWeek ?? nowAbs,
