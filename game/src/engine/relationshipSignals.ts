@@ -5,11 +5,10 @@
 import { GameState, NpcState } from './types';
 import { GAME_EVENTS } from './events/data';
 import { NPC_MINI_EVENTS } from './talkData/miniEvents';
+import { absWeek } from './weekMath';
 
-// 절대주차 SSOT — 한 학년 48주 가정(W48 전환). "몇 주 전" 비교용이라 ±1주 오차는 무해.
-export function absWeek(year: number, week: number): number {
-  return (year - 1) * 48 + week;
-}
+// 절대주차 SSOT는 ./weekMath로 이전 — 기존 import 경로(shopSystem/store/gameEngine) 유지 위해 재노출.
+export { absWeek };
 
 export type RelationSignal = { text: string; tone: 'warn' | 'good' | 'info' } | null;
 
