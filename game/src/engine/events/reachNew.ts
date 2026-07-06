@@ -234,7 +234,7 @@ export const NEW_NPC_REACH_EVENTS = [
     ],
   },
   // ===================== 강예린 (yerin) — 고1~고3, 입시 전략가·효율의 언어 / 미산정 =====================
-  // intro(단가표)가 t25를 흡수. 회계 콜백: intro N/A → t58 자소서 N/A → t68 미수금.
+  // intro(단가표)가 t25를 흡수. 회계 콜백: intro ??? → t58 자소서 ??? → t68 미수금.
   {
     id: 'yerin-only-sample',
     reach: { npc: 'yerin', tier: 40, year: 5 },
@@ -284,15 +284,15 @@ export const NEW_NPC_REACH_EVENTS = [
     id: 'yerin-undroppable-line',
     reach: { npc: 'yerin', tier: 58, year: 7 },
     title: '단가가 안 떨어지는 줄',
-    description: '고3 여름. 야자 끝난 교실. 예린이 처음으로 대가를 안 걸고 부탁한다. "내 자소서 좀 봐줄래. …아니, 봐줘." 늘 완벽하게 짜오던 애가 초안을 통째로 내민다. 모든 칸이 빼곡한데, 장래희망 줄에만 단가란처럼 \'N/A\'가 적혀 있고, 그 위로 두 줄이 그어져 있다 — 처음 만난 날 내 이름 줄에 했던 그 처리 그대로다.\n예린: "나 그동안 \'단가 나오는 거\'만 줄 세웠지, \'되고 싶은 거\'는 한 줄도 산출을 못 돌려봤더라. 너는 사람을 손익으로 안 매기잖아. …그 셈법이, 지금은 나한테 필요해."',
+    description: '고3 여름. 야자 끝난 교실. 예린이 처음으로 대가를 안 걸고 부탁한다. "내 자소서 좀 봐줄래. …아니, 봐줘." 늘 완벽하게 짜오던 애가 초안을 통째로 내민다. 모든 칸이 빼곡한데, 장래희망 줄에만 단가란처럼 \'???\'가 적혀 있고, 그 위로 두 줄이 그어져 있다 — 처음 만난 날 내 이름 줄에 했던 그 처리 그대로다.\n예린: "나 그동안 \'단가 나오는 거\'만 줄 세웠지, \'되고 싶은 거\'는 한 줄도 산출을 못 돌려봤더라. 너는 사람을 손익으로 안 매기잖아. …그 셈법이, 지금은 나한테 필요해."',
     speakers: ['yerin'],
     location: 'classroom',
     background: 'classroom_high_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yerin'); return !!n?.met && n.intimacy >= 58 && s.year === 7 && !s.isVacation; },
     choices: [
-      { text: '"나는 그 줄, 아직도 단가 한 번 못 내봤는데" 내 미정산 줄을 같이 펼친다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 펜을 다시 쥐고 첫 글자를 대보다가, 두 줄에 똑같이 N/A가 그어진 걸 보고 펜을 놓는다. "…너도 적자였구나. 그럼 이건 누구 손해로 다는 거야."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 N/A.', npcIds: ['yerin'] } },
-      { text: '"줄 세우기 전에, 뭐 할 때 시간 가는 줄 몰랐어?" 근본을 묻는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 오래 침묵한다. "…기억이 안 나." 거기서 끊는다. N/A 위에 펜을 댔다 뗀다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 N/A.', npcIds: ['yerin'] } },
-      { text: '"이 줄, 결산 안 하고 그냥 둬볼래?" 그 애 셈을 비튼다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린이 그어둔 N/A 옆에 펜을 한참 댔다 뗀다 — 처음 내 줄을 미산정으로 보류하던 그 손이다. "…결산을 미루는 회계는, 처음 본다."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 N/A.', npcIds: ['yerin'] } },
+      { text: '"나는 그 줄, 아직도 단가 한 번 못 내봤는데" 내 미정산 줄을 같이 펼친다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 펜을 다시 쥐고 첫 글자를 대보다가, 두 줄에 똑같이 ???가 그어진 걸 보고 펜을 놓는다. "…너도 적자였구나. 그럼 이건 누구 손해로 다는 거야."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
+      { text: '"줄 세우기 전에, 뭐 할 때 시간 가는 줄 몰랐어?" 근본을 묻는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 오래 침묵한다. "…기억이 안 나." 거기서 끊는다. ??? 위에 펜을 댔다 뗀다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
+      { text: '"이 줄, 결산 안 하고 그냥 둬볼래?" 그 애 셈을 비튼다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린이 그어둔 ??? 옆에 펜을 한참 댔다 뗀다 — 처음 내 줄을 미산정으로 보류하던 그 손이다. "…결산을 미루는 회계는, 처음 본다."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
     ],
   },
   {
