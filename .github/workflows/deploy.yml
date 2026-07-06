@@ -46,6 +46,28 @@ jobs:
         with:
           path: ./game/dist
 
+  # 게이트 3 — 콘텐츠 회귀 검증 (부모 아크·reach·기억·생일 CG 필수세트 등 30종)
+  # build와 독립 병렬. 배포는 build 성공에만 의존하므로 여기 실패가 배포를 막진 않지만,
+  # PR 체크로 노출돼 콘텐츠 회귀를 머지 전에 잡는다. (m6-recovery는 밸런스 판정 대기로 제외)
+  content-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        working-directory: ./game
+        run: npm ci
+
+      - name: Content Verify
+        working-directory: ./game
+        run: npm run verify:ci
+
   deploy:
     # 배포는 main push에서만 — PR은 위 build 게이트까지만 돈다
     if: github.event_name == 'push'
