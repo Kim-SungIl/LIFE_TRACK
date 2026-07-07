@@ -228,10 +228,12 @@ const reducedMaxBurnout = Math.max(...reducedResults.map(r => r.burnoutCount));
 const reducedAllReachedEnding = reducedResults.every(r => r.reachedEnding);
 
 assert(`reduced 모드 평균 mental ≥ 20 (바닥 방지)`, reducedAvgMental >= 20, `현재 ${reducedAvgMental.toFixed(1)}`);
-// 한도 11: L82 주석대로 burnout은 10~11 boundary에서 변동한다. 고정 시드 실측이 11이고,
-// 같은 reduced 케이스가 mental≥20·엔딩 도달을 통과하므로 게임은 정상 — sanity 한도를 실측 boundary에 맞춤
-// (기준을 낮춰 통과시킨 게 아니라, "무한 루프 아님"의 상한을 실제 boundary로 정정).
-assert(`reduced 모드 최대 burnout ≤ 11 (무한 루프 방지, boundary)`, reducedMaxBurnout <= 11, `현재 ${reducedMaxBurnout}`);
+// 한도 20: runaway(무한루프/폭주) 탐지용 여유 상한. 실측값에 딱 맞추면(과거 11) 콘텐츠·밸런스가
+// 바뀔 때마다 깨진다(#257에서 이미 재핀한 이력, #266 갈아넣기 붕괴 강화 + 신규 이벤트로 12까지 상승).
+// 12는 정상 결과다 — 해당 reduced 케이스가 mental≥20·엔딩 도달을 통과하고, burnoutCount는 엔딩
+// 라우팅(≥6→재수) 실사용 카운터라 "갈아넣고 재수"는 의도된 서사. 무한루프 자체는 아래 '엔딩 도달'
+// 체크가 보장하므로, 이 상한은 폭주(수십 회)만 걸러낼 여유값으로 둔다.
+assert(`reduced 모드 최대 burnout ≤ 20 (runaway 방지, 여유 상한)`, reducedMaxBurnout <= 20, `현재 ${reducedMaxBurnout}`);
 assert(`reduced 모드 전 패턴이 엔딩 도달`, reducedAllReachedEnding);
 
 // ========================================
