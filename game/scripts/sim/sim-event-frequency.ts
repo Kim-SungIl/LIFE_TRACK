@@ -22,6 +22,18 @@ import type { GameState, ParentStrength } from '../../src/engine/types';
 
 const WEEKS = 336; // 7년 × 48주
 const schoolLifeIds = new Set(SCHOOL_LIFE_EVENTS.map(e => e.id));
+
+// gameEngine.ts getCalendarInfo와 동일: 여름방학 20~24주, 겨울방학 43~48주 (학기=나머지 37주)
+const isVacationWeek = (w: number) => (w >= 20 && w <= 24) || (w >= 43 && w <= 48);
+// finalYear·finalWeek까지 실제 플레이한 주를 학기/방학으로 분해
+function weeksPlayed(finalYear: number, finalWeek: number): { sem: number; vac: number } {
+  let sem = 0, vac = 0;
+  for (let y = 1; y <= finalYear; y++) {
+    const maxW = y < finalYear ? 48 : finalWeek;
+    for (let w = 1; w <= maxW; w++) { if (isVacationWeek(w)) vac++; else sem++; }
+  }
+  return { sem, vac };
+}
 const reachIds = new Set(GAME_EVENTS.filter(e => e.reach).map(e => e.id));
 const totalReach = reachIds.size;
 
@@ -36,6 +48,10 @@ interface RunResult {
   parentTalk: number;     // 부모 미니이벤트(parentEventsFired)
   grandTotal: number;     // 자동 + 미니톡 + 부모
   finalYear: number;
+  // 학기 주만(방학 게이트 반영): school-life는 방학엔 원천 발동 안 함
+  semEvents: number;      // 학기 주에 발동한 자동 이벤트 수
+  semEventWeeks: number;  // 학기 주 중 이벤트 발생 주 수
+  semWeeksPlayed: number; // 실제 플레이한 학기 주 수
 }
 
 type Mode = 'solo' | 'social';
@@ -100,6 +116,11 @@ function runOnce(seed: number, gender: 'male' | 'female', parents: [ParentStreng
   }
   const dist: Record<number, number> = {};
   for (const c of byWeek.values()) dist[c] = (dist[c] ?? 0) + 1;
+  // 학기 주만 집계 (e.week은 1~48 연중 주차)
+  const semEvents = evs.filter(e => !isVacationWeek(e.week ?? 0)).length;
+  let semEventWeeks = 0;
+  for (const k of byWeek.keys()) { const w = Number(k.split('-')[1]); if (!isVacationWeek(w)) semEventWeeks++; }
+  const { sem: semWeeksPlayed } = weeksPlayed(final.year, final.week);
   const miniTalk = (final.talkEventsFired ?? []).length;
   const parentTalk = (final.parentEventsFired ?? []).length;
   return {
@@ -113,6 +134,9 @@ function runOnce(seed: number, gender: 'male' | 'female', parents: [ParentStreng
     parentTalk,
     grandTotal: evs.length + miniTalk + parentTalk,
     finalYear: final.year,
+    semEvents,
+    semEventWeeks,
+    semWeeksPlayed,
   };
 }
 
@@ -138,6 +162,10 @@ for (const mode of ['solo', 'social'] as Mode[]) {
     console.log(`  ├ 미니톡: 평균 ${fmt(avg(runs.map(r => r.miniTalk)))} / 부모: 평균 ${fmt(avg(runs.map(r => r.parentTalk)))}`);
     const weeksWith = runs.map(r => r.weeksWithEvent);
     console.log(`자동 이벤트 발생 주: ${fmt(avg(weeksWith) / WEEKS * 100)}% (${fmt(avg(weeksWith))}/${WEEKS})`);
+    // 학기 주만 (방학 11주 제외 — school-life는 방학엔 발동 안 함)
+    const semPerWeek = avg(runs.map(r => r.semWeeksPlayed > 0 ? r.semEvents / r.semWeeksPlayed : 0));
+    const semEventWeekPct = avg(runs.map(r => r.semWeeksPlayed > 0 ? r.semEventWeeks / r.semWeeksPlayed * 100 : 0));
+    console.log(`  └ 학기 주만: 주당 ${fmt(semPerWeek)} / 이벤트 발생 주 ${fmt(semEventWeekPct)}%`);
     const distKeys = [1, 2, 3, 4];
     const distAvg = distKeys.map(k => avg(runs.map(r => r.dist[k] ?? 0)));
     console.log('주당 자동 이벤트 분포(평균 주 수):', distKeys.map((k, i) => `${k}개=${fmt(distAvg[i])}`).join(' / '));

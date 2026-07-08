@@ -191,12 +191,15 @@ export function getEventForWeek(state: GameState): EventSelection {
     return noPatch(conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)]);
   }
 
-  // 5. 학교생활 랜덤 이벤트 — 70% 확률
+  // 5. 학교생활 랜덤 이벤트 — 50% 확률
+  // (방학엔 개별 이벤트 condition의 !isVacation으로 원천 차단 → 학기 주에만 발동)
+  // 70%→50%: 학기 주 이벤트 발생률 ~85%→~77%로 완화, "매주 뭔가 터지는" 압박 축소.
+  // 다중시드 sim 측정치는 scripts/sim/sim-event-frequency.ts 참고.
   const availableSchoolEvents = SCHOOL_LIFE_EVENTS.filter(e =>
     (!e.condition || e.condition(state)) &&
     !state.events.some(prev => prev.id === e.id && weeksSince(state, prev) < 6)
   );
-  if (availableSchoolEvents.length > 0 && seededRandom(state) < 0.7) {
+  if (availableSchoolEvents.length > 0 && seededRandom(state) < 0.5) {
     return noPatch(availableSchoolEvents[Math.floor(seededRandom(state) * availableSchoolEvents.length)]);
   }
 
