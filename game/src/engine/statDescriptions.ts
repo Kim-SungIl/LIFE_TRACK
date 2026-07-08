@@ -1,4 +1,4 @@
-import { StatKey } from './types';
+import { StatKey, SchoolLevel } from './types';
 
 interface StatDescription {
   name: string;
@@ -6,6 +6,22 @@ interface StatDescription {
   why: string;           // 왜 중요한지
   high: string;          // 높으면 어떻게 되는지
   low: string;           // 낮으면 어떻게 되는지
+}
+
+// 학업 유지 난도 — 학교급이 오를수록 자연감쇠가 가속되는 것(gameEngine 주간 틱)의 질감 노출.
+// 수치(-N/주)는 비공개, "잊는 속도"의 서열만 전달한다. 고등은 80+ 소프트캡(examSystem)의 존재도 함께 암시.
+const ACADEMIC_KEEP_HINT: Record<SchoolLevel, string> = {
+  elementary: '한번 익힌 건 잘 잊지 않는다',
+  middle: '손을 놓으면 조금씩 잊는다',
+  high: '일주일만 놓아도 훅 떨어지고, 80을 넘긴 실력은 그만큼 지키기도 어렵다',
+};
+
+// academic 설명을 학년에 맞게 조회 — StatsPanel 등 UI 는 이 함수를 쓴다.
+export function getStatDescription(key: StatKey, year: number): StatDescription {
+  const base = STAT_DESCRIPTIONS[key];
+  if (key !== 'academic') return base;
+  const level: SchoolLevel = year <= 1 ? 'elementary' : year <= 4 ? 'middle' : 'high';
+  return { ...base, what: `${base.what}. ${ACADEMIC_KEEP_HINT[level]}` };
 }
 
 export const STAT_DESCRIPTIONS: Record<StatKey, StatDescription> = {

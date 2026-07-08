@@ -215,13 +215,15 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           color: 'var(--accent-soft)',
         }}>
           {upcomingEvents.map((e, i) => (
-            <div key={i}>📌 {e}</div>
+            <div key={i} style={e.tone === 'warn' ? { color: 'var(--yellow)' } : undefined}>
+              {e.tone === 'warn' ? '⚠️' : '📌'} {e.text}
+            </div>
           ))}
         </div>
       )}
 
       {/* 스탯 (접기/펼치기) */}
-      <StatsPanel stats={state.stats} />
+      <StatsPanel stats={state.stats} year={state.year} />
 
       {/* ===== 주간 플래너 ===== */}
       <WeekPlanner
