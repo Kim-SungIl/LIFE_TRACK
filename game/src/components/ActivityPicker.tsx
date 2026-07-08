@@ -134,6 +134,15 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   const vacUsed = state.vacationActivityCounts?.[a.id] ?? 0;
                   const showVacLimit = state.isVacation && a.vacationLimit !== undefined;
 
+                  // 스테이지 변화 노출 — 해금 첫 학년 NEW 배지 + 진학 첫 학기(W1~8) 비용/시급 변동 배지.
+                  // yearlyCost 차등은 엔진에 이미 있던 규칙 — 여기선 "달라졌다"만 보여준다.
+                  const isNewUnlock = a.unlockYear === state.year;
+                  const prevLevelCost = (state.year === 2 || state.year === 5) && a.yearlyCost
+                    ? (state.year === 2 ? a.yearlyCost.elementary : a.yearlyCost.middle)
+                    : undefined;
+                  const costRaised = prevLevelCost !== undefined && state.week <= 8 && cost > 0 && cost > prevLevelCost;
+                  const wageRaised = prevLevelCost !== undefined && state.week <= 8 && cost < 0 && cost < prevLevelCost;
+
                   // 전략 신호 태그 (장기/맥락 — 단기 효과에 안 드러나는 결과). 수치 토글과 무관하게 항상.
                   const stratHints = activityHints(a, state, companionEligible);
 
@@ -177,6 +186,36 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                               padding: '1px 6px', borderRadius: 4,
                             }}>
                               🏖 방학
+                            </span>
+                          )}
+                          {isNewUnlock && (
+                            <span style={{
+                              fontSize: '0.62rem', fontWeight: 700,
+                              color: 'var(--green)',
+                              background: 'rgba(143,181,115,0.15)',
+                              padding: '1px 6px', borderRadius: 4,
+                            }}>
+                              NEW
+                            </span>
+                          )}
+                          {costRaised && (
+                            <span style={{
+                              fontSize: '0.62rem', fontWeight: 600,
+                              color: 'var(--yellow)',
+                              background: 'rgba(224,179,84,0.15)',
+                              padding: '1px 6px', borderRadius: 4,
+                            }}>
+                              ⬆ 인상
+                            </span>
+                          )}
+                          {wageRaised && (
+                            <span style={{
+                              fontSize: '0.62rem', fontWeight: 600,
+                              color: 'var(--green)',
+                              background: 'rgba(143,181,115,0.15)',
+                              padding: '1px 6px', borderRadius: 4,
+                            }}>
+                              ⬆ 시급
                             </span>
                           )}
                           {cost > 0 && (

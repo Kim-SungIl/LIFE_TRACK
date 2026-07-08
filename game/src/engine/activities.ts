@@ -60,6 +60,7 @@ export const ACTIVITIES: Activity[] = [
     id: 'private-tutoring', name: '집중 과외', slots: 1, fatigue: 9,
     effects: { academic: 2.5 }, moneyCost: 28, category: 'study',
     requires: (s) => s.year >= 5 && s.money >= 28,
+    unlockYear: 5,
     description: '입시 전문 과외 선생님과 1:1로 약점을 짚는다.',
     flavor: '시간당 비싸지만 밀도가 다르다. 모르는 걸 그 자리에서 메운다. 다만 통장은 빠르게 가벼워진다.',
     tags: ['고3', '학업', '고효율', '고비용'],
@@ -212,6 +213,7 @@ export const ACTIVITIES: Activity[] = [
     parentEffect: { baseDelta: 0.4, tag: 'autonomyChoice' },
     category: 'work',
     requires: (s) => s.year >= 4, // short-term-job과 일관 — 현재 category 게이트(year<4)와 이중이나, 향후 category 조건 변경 시 Y1~3 노출 방어
+    unlockYear: 4,
     description: '편의점에서 일하며 돈을 번다.',
     flavor: '"어서오세요~" 반복되는 인사. 힘들지만 통장 잔고가 올라가는 건 뿌듯하다.',
     tags: ['수입', '고피로', '자립'],
@@ -316,6 +318,7 @@ export const ACTIVITIES: Activity[] = [
     seasonGate: 'vacation-only',
     vacationLimit: 2,
     requires: (s) => s.year >= 4,
+    unlockYear: 4,
     description: '며칠짜리 단기 일자리. 손에 쥐는 돈은 평소보다 크다.',
     flavor: '어른들 사이에서 종일 일했다. 시급은 짜지만 그래도 내 손으로 번 돈.',
     tags: ['방학', '수입', '자립', 'Y4+'],

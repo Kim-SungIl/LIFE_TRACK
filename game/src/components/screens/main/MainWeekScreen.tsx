@@ -3,6 +3,7 @@ import { GameState } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
+import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
 import { ShopItem } from '../../../engine/shopSystem';
@@ -13,6 +14,8 @@ import { BgWrapper, ScreenBgProps } from '../BgWrapper';
 import { breakSentences, getFatigueDisplay, getUpcomingEvents } from '../shared';
 import { HudPanel } from './HudPanel';
 import { StatsPanel } from './StatsPanel';
+import { StageBriefingCard } from './StageBriefingCard';
+import { ExamTimeline } from './ExamTimeline';
 import { NpcSelectModal } from './NpcSelectModal';
 import { NpcDetailModal } from './NpcDetailModal';
 import { HomeModal } from './HomeModal';
@@ -105,6 +108,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const maxComboWeeks = Math.max(slot2ComboWeeks, slot3ComboWeeks);
 
   const upcomingEvents = getUpcomingEvents(state);
+  // Y7 수능 D-day — 스케줄 SSOT에서 수능 주차 조회. 지나면 숨김(null).
+  const suneungWeek = state.year === 7
+    ? Object.entries(getExamSchedule(state.year)).find(([, t]) => t === 'suneung')
+    : undefined;
+  const suneungWeeksLeft = suneungWeek && state.week <= Number(suneungWeek[0])
+    ? Number(suneungWeek[0]) - state.week : null;
   // 가정 모달 배지 — pending 이어도 풀이 비면 잡담으로 빠지므로, 실제 남은 이벤트가 있을 때만 true.
   // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
   const homeHasEvent = getEligibleParentClimax(state) != null
@@ -192,6 +201,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         fatigueLabel={fatigueLabel}
         weeklyActivityCost={weeklyActivityCost}
         weeklyOverBudget={weeklyOverBudget}
+        suneungWeeksLeft={suneungWeeksLeft}
         onOpenHome={handleOpenHome}
         onOpenAlbum={onOpenAlbum}
       />
@@ -205,6 +215,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       }}>
         {lastReaction ? `"${breakSentences(lastReaction)}"` : `"${breakSentences(dialogue)}"`}
       </div>
+
+      {/* 진학 브리핑 — 스테이지 전환 학년(Y2/Y5/Y7) 첫 2주 한정 */}
+      <StageBriefingCard state={state} />
 
       {/* 다가오는 이벤트 배너 */}
       {upcomingEvents.length > 0 && (
@@ -221,6 +234,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           ))}
         </div>
       )}
+
+      {/* 연간 시험 스트립 — 시험 밀도(초2 vs 고6+수능)의 상시 노출 */}
+      <ExamTimeline year={state.year} week={state.week} />
 
       {/* 스탯 (접기/펼치기) */}
       <StatsPanel stats={state.stats} year={state.year} />
