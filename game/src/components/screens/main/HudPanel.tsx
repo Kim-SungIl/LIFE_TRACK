@@ -22,6 +22,8 @@ type Props = {
   fatigueLabel: string;
   weeklyActivityCost: number;
   weeklyOverBudget: boolean;
+  // Y7 수능까지 남은 주 — null이면 비표시 (Y7 외 학년 / 수능 이후)
+  suneungWeeksLeft?: number | null;
   onOpenHome: () => void;
   // 기록장(지난 학년 회상) 진입 — 1학년(완료 학년 없음)엔 "약속" 빈 상태를 띄운다. undefined면 버튼 숨김.
   onOpenAlbum?: () => void;
@@ -45,7 +47,7 @@ const PARENT_TIP_DESC: Record<string, string> = {
 export const HudPanel = memo(function HudPanel({
   parents, gender, mentalStat, mentalState, year, fatigue, money, isVacation,
   parentBonusesApplied, mood, weekInfo, month, fatigueColor, fatigueLabel,
-  weeklyActivityCost, weeklyOverBudget, onOpenHome, onOpenAlbum,
+  weeklyActivityCost, weeklyOverBudget, suneungWeeksLeft, onOpenHome, onOpenAlbum,
 }: Props) {
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글. HUD 전용 로컬 state.
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
@@ -56,6 +58,12 @@ export const HudPanel = memo(function HudPanel({
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: '1rem', fontWeight: 700 }}>{mood} {weekInfo}</div>
         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{month} {isVacation ? '· 방학' : ''}</div>
+        {/* Y7 수능 카운트다운 — 교실 칠판 "D-xxx"(high3-start)의 상시 UI 짝. 정보라서 또렷하게(red). */}
+        {suneungWeeksLeft != null && (
+          <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--red)' }}>
+            {suneungWeeksLeft === 0 ? '🎯 이번 주, 수능' : `🎯 수능까지 ${suneungWeeksLeft}주`}
+          </div>
+        )}
         {mentalState !== 'normal' && (
           <div style={{ fontSize: '0.68rem', fontWeight: 600, color: mentalState === 'burnout' ? 'var(--red)' : 'var(--yellow)' }}>
             {mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}

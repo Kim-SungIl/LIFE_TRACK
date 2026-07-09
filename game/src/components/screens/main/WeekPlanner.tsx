@@ -212,8 +212,8 @@ export function WeekPlanner({
               state.year === 1 ? 'elementary' : state.year <= 4 ? 'middle' : 'high';
             const startMessages: Record<typeof schoolLevel, string> = {
               elementary: '방학식이 끝났다. 가방이 평소보다 가볍게 느껴졌다.',
-              middle: '방학이 시작됐지만, 숙제와 학원 일정표가 먼저 눈에 들어왔다.',
-              high: '방학이라는 말이 예전처럼 가볍게 들리지는 않았다.',
+              middle: '방학이 시작됐지만, 숙제와 학원 일정표가 먼저 눈에 들어왔다. 손을 놓으면 배운 게 조금씩 새어나가는 게 느껴지는 나이다.',
+              high: '방학이라는 말이 예전처럼 가볍게 들리지는 않았다. 일주일만 책을 안 펴도 감이 훅 떨어진다 — 다들 그래서 방학이 더 무섭다고 한다.',
             };
             const endMessages: Record<typeof schoolLevel, string> = {
               elementary: '방학의 마지막 날. 일기장에 적을 게 평소보다 많았다.',

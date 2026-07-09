@@ -1,7 +1,7 @@
 import { GameState, Stats, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, Track, WeekLog, getGrade } from '../../engine/types';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
-import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay } from './shared';
+import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, type UpcomingEvent } from './shared';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -17,7 +17,7 @@ interface WeeklyResultScreenProps {
   weekInfo: string;
   resultDialogue: string;
   fatigueColor: string;
-  upcomingEvents: string[];
+  upcomingEvents: UpcomingEvent[];
   onContinue: () => void;
 }
 
@@ -317,7 +317,7 @@ export function WeeklyResultScreen({
         {/* 다음 주 예고 */}
         {upcomingEvents.length > 0 && (
           <div style={{ background: 'rgba(224,138,91,0.1)', borderRadius: 10, padding: '8px 12px', marginBottom: 16, fontSize: '0.78rem', textAlign: 'center' }}>
-            📅 {upcomingEvents.join(' · ')}
+            📅 {upcomingEvents.map(e => e.text).join(' · ')}
           </div>
         )}
 

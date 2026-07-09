@@ -164,6 +164,8 @@ export interface Activity {
   flavor: string;           // 서사적 설명 한 줄
   tags: string[];           // 분위기 태그
   requires?: (state: GameState) => boolean;
+  // 이 학년부터 해금 (requires의 year 게이트와 중복 명시 — UI "NEW" 배지용 메타데이터. 밸런스 무관)
+  unlockYear?: number;
   category: 'study' | 'exercise' | 'social' | 'talent' | 'rest' | 'work' | 'parent';
   // 부모 친밀도 효과 (stat이 아니므로 effects와 별개 — applyParentIntimacyDelta로 처리)
   parentEffect?: ParentEffect;

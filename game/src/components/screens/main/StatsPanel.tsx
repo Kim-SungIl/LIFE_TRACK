@@ -1,14 +1,15 @@
 import { memo, useState } from 'react';
 import { Stats, StatKey, STAT_LABELS, getGrade, STAT_FLAVOR_LABELS } from '../../../engine/types';
-import { STAT_DESCRIPTIONS } from '../../../engine/statDescriptions';
+import { getStatDescription } from '../../../engine/statDescriptions';
 import { STAT_ICONS } from '../shared';
 
-type Props = { stats: Stats };
+type Props = { stats: Stats; year: number };
 
 // 능력치 패널 — 접기/펼치기 + 스탯별 설명 토글. 로컬 UI state(showStats/expandedStat)는 이 패널 전용.
 // 주간 결산 왕복 시 MainWeekScreen 과 함께 언마운트되어 매 주 collapsed 로 초기화됨(의도된 동작).
 // memo: stats 참조가 안 바뀐 동안 부모(MainWeekScreen) 리렌더로 인한 재실행 회피.
-export const StatsPanel = memo(function StatsPanel({ stats }: Props) {
+// year: academic 설명의 유지 난도 문구가 학교급을 따라간다(getStatDescription).
+export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
   const [showStats, setShowStats] = useState(false);
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
   return (
@@ -40,7 +41,7 @@ export const StatsPanel = memo(function StatsPanel({ stats }: Props) {
           {(Object.keys(stats) as StatKey[]).map(key => {
             const grade = getGrade(stats[key]);
             const isExp = expandedStat === key;
-            const desc = STAT_DESCRIPTIONS[key];
+            const desc = getStatDescription(key, year);
             return (
               <div key={key}>
                 <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', cursor: 'pointer' }} onClick={() => setExpandedStat(isExp ? null : key)}>
