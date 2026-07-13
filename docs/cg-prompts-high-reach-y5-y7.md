@@ -17,7 +17,7 @@
 `cg-prompts-high-y5-y7.md`의 Art style / Era / Uniform / Negative prompt / 계절 의상표 / "고등 단계 공통 오버라이드"
 (17~19세, 고교 교복, 약간 더 큰 키·성숙한 비율·진지한 표정, player_m navy tie + 가슴 crest)를 **전부 동일 적용**.
 
-> **[전 컷 공통 금지]** ① 소품·종이의 **읽히는 글자/뒤집힌(거울상) 텍스트** 금지(간판·게시판은 흐리게 처리) ② **명세에 없는 가구·테이블·받침대·소품 추가 금지**(인물이 소품을 직접 들거나, 명세가 지정한 표면에만) ③ **캔은 빨대 없는 평평한 일반 풀탭**, 브랜드/텍스트 없음.
+> **[전 컷 공통 금지]** ① 소품·종이의 **읽히는 글자/뒤집힌(거울상) 텍스트** 금지(간판·게시판은 흐리게 처리) ② **명세에 없는 가구·테이블·받침대·소품 추가 금지**(인물이 소품을 직접 들거나, 명세가 지정한 표면에만) ③ **캔은 빨대 없는 평평한 일반 풀탭**, 브랜드/텍스트 없음. ④ **교실 배경의 학년·반 명패 / 시간표 게시물 / D-day 카운트다운 / 연도·날짜 표기 전면 금지** — 이 게임은 연도 비명시 세계관(인게임 유일 언급도 `school.ts`의 "D-xxx"로 숫자를 비움). "3학년 2반"·"2025학년도"·"D-180" 류가 그려지면 시점 고증까지 깨짐(2026-07-09 minjae-hs `_f` 4컷 사고 — ①만으론 부족, 각 컷 프롬프트에도 **인라인 부정문**으로 명시할 것).
 
 > 본 reach 이벤트는 전부 **친구 1:1 정서 컷**(군중·단체 없음, 졸업 강당 컷도 인물은 둘).
 > **성별 방침(2026-07-01 개정): 전 컷 남/여 주인공 분기(`_m`/`_f`).** 초기엔 "성별무관 뒷모습" 공통 1장으로 설계했으나,
@@ -307,24 +307,32 @@ Mood: 캔 부딪는 소리의 작별-아닌-시작 — reconciliation/warm, "고
 ## 박민재 (minjae) — 8컷
 
 > 모티프: **무가당 두유**, **떨리는 손**(천재인 척), 성적표, 의대→생명공학. 얇은 사각/림리스 안경 매 컷 필수.
+>
+> ⚠️ **재생성 (2026-07-09 검수)**: `pressure_f` · `doubt_f` · `mask_c1_f` · `mask_f` 4컷 — 여주판 배경에 "3학년 2반" 명패 + 완전 가독 시간표 + "대입 정보/2025학년도/수능 11.14/D-180" 게시판이 렌더됨. 공통 금지 ①·④ 위반 + **시점 오류**(pressure는 고1, doubt/mask는 고2 이벤트인데 고3 교실). `_m` 4컷과 `mask_c0_f`는 정상 — 재생성 불필요. 아래 각 블록의 **STRICT 문장은 재생성분부터 프롬프트에 그대로 포함**할 것.
 
 ### ⚪ minjae-hs-pressure — 성적표 (t58, Y5)
 **배경**: classroom_high · **공통** `high/minjae-hs-pressure.png`
 ```
-High-school classroom (classroom_high). Minjae (thin silver SQUARE/rimless glasses clearly visible,
-neat short hair, pale skin, navy blazer properly buttoned, composed face with no expression) stuffing
-a top-rank mock-exam report card carelessly into his bag, sipping UNSWEETENED SOY MILK. The
-protagonist (uniform, 3/4 / back, gender-neutral) beside him. Daylight.
+High-school FIRST-YEAR classroom (classroom_high), generic and anonymous. Minjae (thin silver
+SQUARE/rimless glasses clearly visible, neat short hair, pale skin, navy blazer properly buttoned,
+composed face with no expression) stuffing a top-rank mock-exam report card carelessly into his bag,
+sipping UNSWEETENED SOY MILK. The protagonist (uniform, 3/4 / back, gender-neutral) beside him. Daylight.
+STRICT: plain walls only — NO timetable poster, NO notice board with writing, NO class/grade name
+plaque, NO D-day countdown, NO dates or year numbers anywhere; the report card shows only faint
+illegible table lines, no readable text.
 Mood: 잘해도 본전인 집의 무표정 — the loneliness behind a perfect score.
 ```
 
 ### ⚪ minjae-hs-doubt — 진짜 하고 싶은 거 (t62, Y6)
 **배경**: classroom_high_afternoon · **공통** `high/minjae-hs-doubt.png`
 ```
-Evening self-study classroom (classroom_high_afternoon). Minjae (square/rimless glasses, neat hair,
-navy blazer) — who never rests — having put his pen DOWN, looking out the window, a rare uncertain
-look ("의대 가야 되는 건 아는데, 하고 싶은 건진 모르겠어"). Soy milk carton on the desk. The
-protagonist (uniform, 3/4 / back, gender-neutral) at the next desk. Cool dusk light.
+Evening SECOND-YEAR self-study classroom (classroom_high_afternoon), generic and anonymous. Minjae
+(square/rimless glasses, neat hair, navy blazer) — who never rests — having put his pen DOWN, looking
+out the window, a rare uncertain look ("의대 가야 되는 건 아는데, 하고 싶은 건진 모르겠어"). Soy milk
+carton on the desk (plain, no brand text). The protagonist (uniform, 3/4 / back, gender-neutral) at
+the next desk. Cool dusk light.
+STRICT: plain walls only — NO timetable poster, NO notice board with writing, NO class/grade name
+plaque, NO D-day countdown, NO dates or year numbers anywhere; notebook pages illegible.
 Mood: 펜을 놓고 처음 던진 질문 — the top student unsure what he actually wants.
 ```
 
@@ -341,15 +349,19 @@ Mood: 처음으로 안 숨긴 떨리는 손 — growth/melancholy, the mask set 
 ```
 - **[c1]** `high/minjae-hs-mask_c1.png` — "천재인 척, 안 힘들어?" *(growth/melancholy/6)*
 ```
-Same self-study room (classroom_high_afternoon). Minjae (glasses, neat hair) admitting it too
-easily — "힘들지" — a tired honest half-smile, soy milk aside. The protagonist (gender-neutral)
-across the desk. The relief of being asked.
+Same SECOND-YEAR self-study room (classroom_high_afternoon), generic and anonymous. Minjae (glasses,
+neat hair) admitting it too easily — "힘들지" — a tired honest half-smile, soy milk aside (plain
+carton, no brand text). The protagonist (gender-neutral) across the desk. The relief of being asked.
+STRICT: plain walls only — NO timetable poster, NO notice board with writing, NO class/grade name
+plaque, NO D-day countdown, NO dates or year numbers anywhere; workbook pages illegible.
 Mood: 너무 쉽게 인정한 피로 — growth/melancholy, the first person he says it to.
 ```
 - **[c2 폴백·공통]** `high/minjae-hs-mask.png`
 ```
-Same room, two students solving problems in silence, only pencil sounds; Minjae's trembling hand
-gradually settling. (covers no-draft c2.)
+Same SECOND-YEAR room, generic and anonymous, two students solving problems in silence, only pencil
+sounds; Minjae's trembling hand gradually settling. (covers no-draft c2.)
+STRICT: plain walls only — NO timetable poster, NO notice board with writing, NO class/grade name
+plaque, NO D-day countdown, NO dates or year numbers anywhere; workbook pages illegible.
 ```
 
 ### 🔴 minjae-hs-choice — 자기 선택 (t75, Y7, discovery/7)
