@@ -12,6 +12,10 @@ export const DOYUN_FIRST_MEET_M = [
     title: '운동장 한 명 모자라',
     description: '점심시간. 운동장 쪽에서 누가 손을 흔든다.\n같은 반 체육부장 박도윤. 축구공을 한 손으로 튕기며 가까이 온다.\n"야! 한 명 모자라는데, 너 들어올래? 너 발 빠르잖아."',
     week: 4,
+    // Y1 W4는 jihun-call(조건 없음, speakers 보유)과 경합 — 지금까지는 배열 순서로
+    // 우연히 도윤이 이겼다. 도윤 첫만남은 전체 아크(Y1 관계→Y2 전출 서사)의 게이트라
+    // import 순서에 운명을 맡기지 않도록 명시 우선순위. jihun-call은 일회성이라 Y2 W4로 밀리면 됨.
+    selectionPriority: 10,
     condition: (s) => s.year === 1 && s.gender === 'male',
     location: 'gym',
     background: 'gymnasium',
@@ -60,6 +64,8 @@ export const DOYUN_FIRST_MEET_F = [
     title: '청소시간',
     description: '청소시간. 양동이가 무겁다는 애한테 도윤이가 슥 다가간다.\n"내가 들게. 별것도 아니야."\n반 분위기가 살짝 풀어진다. 정리하던 도윤이 시선이 너에게 잠깐 와 닿더니, 살짝 웃는다.',
     week: 4,
+    // doyun-meet-elementary와 동일 사유 — jihun-call(W4)과의 경합에서 도윤 아크 게이트 보호.
+    selectionPriority: 10,
     condition: (s) => s.year === 1 && s.gender === 'female',
     location: 'classroom',
     background: 'classroom_elementary',

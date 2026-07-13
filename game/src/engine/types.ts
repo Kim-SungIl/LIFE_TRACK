@@ -201,6 +201,10 @@ export interface GameEvent {
   description: string;
   choices: EventChoice[];
   week?: number;          // 특정 주에만 발생
+  // 같은 주 후보 경합 시 명시적 우선순위 — 클수록 우선, 기본 0.
+  // 동순위 tiebreak: speakers 보유 우선(레거시 휴리스틱) → 배열 순서(stable sort).
+  // 배열/import 순서에 운명을 맡기지 않기 위한 필드 — 경합이 확인된 이벤트에만 부여한다.
+  selectionPriority?: number;
   condition?: (state: GameState) => boolean;
   location?: EventLocation; // 이벤트 장소 (배경 이미지/폴백 색상)
   speakers?: string[];    // 등장 NPC ID (캐릭터 표시 순서)

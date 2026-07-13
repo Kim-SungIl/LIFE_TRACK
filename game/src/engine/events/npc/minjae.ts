@@ -74,7 +74,11 @@ export const MINJAE_EVENTS = [
     id: 'minjae-birthday',
     title: '민재 생일',
     description: '오늘이 민재 생일이다.\n교실에서 누군가 "야 민재 생일이래!" 하고 외쳤다.\n민재가 살짝 당황하면서도 웃는다. "아, 뭐 별 거 아닌데..."',
-    week: 7,
+    // W7→W9 이동(2026-07-13): midterm-1(W7)과 둘 다 ANNUAL이라 매년 경합 —
+    // speakers 휴리스틱이 생일을 우선해 Y2+ 중간고사 준비 이벤트가 영구 가려지던 버그.
+    // annual vs annual은 우선순위로 못 풀어 주차 분리 (선례: yuna-birthday W37→W38).
+    // W9 = 중간고사(W8) 직후라 "시험 끝나고 생일" 흐름으로 서사도 자연스러움.
+    week: 9,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],

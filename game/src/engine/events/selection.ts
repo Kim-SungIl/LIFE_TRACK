@@ -127,36 +127,46 @@ export type EventSelection = {
 
 const noPatch = (event: GameEvent | null): EventSelection => ({ event, patch: null });
 
+// 같은 슬롯 후보 경합의 단일 해소 규칙 — selectionPriority 내림차순(기본 0),
+// 동순위는 speakers 보유 우선(일회성 관계 이벤트 보호용 레거시 휴리스틱), 마지막은 배열 순서(stable).
+// 주의: annual vs annual 경합은 우선순위로 풀 수 없다(한쪽이 영구히 가려짐) —
+//   그 경우는 주차를 분리해야 한다 (선례: yuna-birthday W37→W38, minjae-birthday W7→W9).
+function pickByPriority(candidates: GameEvent[]): GameEvent | undefined {
+  if (candidates.length <= 1) return candidates[0];
+  return [...candidates].sort((a, b) =>
+    ((b.selectionPriority ?? 0) - (a.selectionPriority ?? 0)) ||
+    ((b.speakers?.length ? 1 : 0) - (a.speakers?.length ? 1 : 0))
+  )[0];
+}
+
 // 이번 주에 발동할 이벤트 가져오기 — 순수 함수 (state mutation 없음)
 export function getEventForWeek(state: GameState): EventSelection {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
-  // 같은 주에 여러 fixed 이벤트가 매칭될 수 있음 (예: W37의 단원평가 + 유나생일).
-  // NPC 이벤트(speakers 보유)는 보통 친밀도/met 같은 추가 조건이 붙어 더 희소하므로 우선.
-  // 학교 일정 이벤트는 매년 발동하지만, NPC 생일/관계 이벤트는 한 번 놓치면 끝이라
-  // 후자가 우선되도록 stable 정렬.
+  // 같은 주에 여러 fixed 이벤트가 매칭될 수 있음. 경합 해소는 pickByPriority 규칙 참조.
   const fixedCandidates = GAME_EVENTS.filter(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
-  const fixedEvent = fixedCandidates.find(e => (e.speakers?.length ?? 0) > 0) ?? fixedCandidates[0];
+  const fixedEvent = pickByPriority(fixedCandidates);
   if (fixedEvent) return noPatch(fixedEvent);
 
   // 1. 후속 이벤트 체크 (100% 발동) — ANNUAL은 매년 재발동 허용
-  const followup = GAME_EVENTS.find(e =>
+  // 복수 매칭 시 pickByPriority — 현재 priority 미부여라 배열 순서와 동일 동작(회귀 없음).
+  const followup = pickByPriority(GAME_EVENTS.filter(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
-  );
+  ));
   if (followup) return noPatch(followup);
 
   // v1.2 (§4.3): 2. 하드 위기 — 연간 1회 가드 (state.hardCrisisYears)
   if (!state.hardCrisisYears.includes(state.year)) {
-    const hardCrisis = GAME_EVENTS.find(e =>
+    const hardCrisis = pickByPriority(GAME_EVENTS.filter(e =>
       HARD_CRISIS_IDS.has(e.id) &&
       e.condition && e.condition(state) &&
       !state.events.some(prev => prev.id === e.id)
-    );
+    ));
     if (hardCrisis) {
       // 발동 시 연간 가드 갱신을 patch 로 반환 (호출자가 적용)
       return {

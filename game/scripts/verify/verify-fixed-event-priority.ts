@@ -91,21 +91,50 @@ console.log('\n=== 2. W20 junha-birthday: summer-start보다 우선 ===');
   assert(ev?.id === 'summer-start', `Y6 W20 junha 미만남 → summer-start (실제: ${ev?.id})`);
 }
 
-console.log('\n=== 3. NPC 이벤트가 없는 주는 기존대로 ===');
+console.log('\n=== 3. W7/W9 분리 — midterm-1 vs minjae-birthday (2026-07-13 주차 이동) ===');
+// 설계 변경: minjae-birthday를 W7→W9로 이동. 둘 다 ANNUAL이라 speakers 휴리스틱으로는
+// 생일이 매년 이겨 Y2+ 중간고사 준비 이벤트가 영구 가려지던 버그 (yuna W37→W38과 동일 해법).
 {
-  // W7 minjae-birthday Y1: minjae 만나야 함, first-midterm은 year>=2라 Y1엔 후보 아님
-  const s = setupAt(7, 1);
+  // Y2 W7: minjae 친밀도 높아도 midterm-1 (이전엔 생일이 가렸음)
+  const s = setupAt(7, 2);
+  meetNpc(s, 'minjae', 80);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id === 'midterm-1', `Y2 W7 minjae 친밀도 80 → midterm-1 (실제: ${ev?.id})`);
+}
+{
+  // Y2 W9: minjae-birthday 발동 (새 주차)
+  const s = setupAt(9, 2);
   meetNpc(s, 'minjae', 30);
   const ev = getEventForWeek(s).event;
-  assert(ev?.id === 'minjae-birthday', `Y1 W7 minjae 친밀도 30 → minjae-birthday (실제: ${ev?.id})`);
+  assert(ev?.id === 'minjae-birthday', `Y2 W9 minjae 친밀도 30 → minjae-birthday (실제: ${ev?.id})`);
+}
+{
+  // Y1 W9: Y1은 met만으로 발동
+  const s = setupAt(9, 1);
+  meetNpc(s, 'minjae', 10);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id === 'minjae-birthday', `Y1 W9 minjae.met → minjae-birthday (실제: ${ev?.id})`);
 }
 
-console.log('\n=== 4. NPC 이벤트끼리 충돌 시 array 순서 유지 ===');
+console.log('\n=== 4. W4 doyun 첫만남 — selectionPriority로 jihun-call 경합 고정 ===');
+// jihun-call(조건 없음)과 doyun-meet-elementary(Y1 한정)가 W4에서 경합.
+// 이전엔 배열 순서로 우연히 도윤이 이겼음 — selectionPriority: 10으로 명시 고정.
 {
-  // 같은 주에 NPC 이벤트가 겹치는 경우는 현재 데이터에 없지만,
-  // 만약 있다면 GAME_EVENTS 배열에서 먼저 나오는 게 우선되어야 함 (find 의 안정성).
-  // 직접 검증은 어려워서 skip — 코드 리뷰로 보장.
-  console.log('  (현재 데이터에 NPC 이벤트끼리 같은 주 충돌 없음 — skip)');
+  const s = setupAt(4, 1); // male
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id === 'doyun-meet-elementary', `Y1 W4 남주 → doyun-meet-elementary (실제: ${ev?.id})`);
+}
+{
+  const s = createInitialState('female', ['wealth', 'emotional']);
+  s.week = 4; s.year = 1;
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id === 'doyun-meet-elementary-f', `Y1 W4 여주 → doyun-meet-elementary-f (실제: ${ev?.id})`);
+}
+{
+  // Y2 W4: doyun 이벤트는 Y1 한정이라 jihun-call이 정상 발동 (일회성 — 한 해 밀리는 게 의도)
+  const s = setupAt(4, 2);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id === 'jihun-call', `Y2 W4 → jihun-call (실제: ${ev?.id})`);
 }
 
 console.log(`\n=== 결과: ${passed} passed / ${failed} failed ===`);
