@@ -70,7 +70,7 @@
 
 ### yuna-song-pick — 동아리방 곡 추천 (tier 78)
 파일: `middle/yuna-song-pick.png` | 등장: yuna
-> After-school club room, quiet afternoon. **Yuna** holds two sheet-music pages, slipping the "song she really likes" behind her back at the last second, an ambivalent half-retracting gesture. Bright but hesitant. Warm afternoon light. Mood: pulling back her own taste out of fear of standing out. 16:9.
+> After-school club room, quiet afternoon. **Yuna** (caramel wavy hair, star hair clip, navy blazer, plaid skirt) holds two sheet-music pages, slipping the "song she really likes" behind her back at the last second, an ambivalent half-retracting gesture. The right side of the room is filled with a music-room storage cabinet and a cork notice board. **No mirror, no reflective glass, no second figure or reflection anywhere.** Bright but hesitant. Warm afternoon light. Mood: pulling back her own taste out of fear of standing out. 16:9.
 
 ### yuna-light-booth — 안 틀려도 되는 자리 (tier 82) ⭐핵심
 파일: `middle/yuna-light-booth.png` | 등장: yuna
