@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useGameStore } from '../engine/store';
+import { useGameStore, isStorageSaveFailed } from '../engine/store';
 import { getWeekLabel } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
 import { StatKey, STAT_LABELS } from '../engine/types';
@@ -128,9 +128,11 @@ export function GameScreen() {
   const handleBgImgError = () => setBgImgError(true);
   const bgProps = { bg, bgImgError, onImgError: handleBgImgError };
 
-  // 기록장 오버레이 — 어느 화면에서 열든 최상단에서 가로챈다(읽기 전용, phase 무변경).
-  if (albumYear !== null) {
-    return (
+  // 기록장 오버레이 — 메인 화면 반환부에서 fixed 오버레이로 겹쳐 그린다(읽기 전용, phase 무변경).
+  // 이전엔 여기서 early-return으로 화면을 통째로 갈아끼워 MainWeekScreen이 언마운트됐고,
+  // 그 로컬 state(주말 활동/NPC 동행 선택)가 기록장을 열 때마다 소실됐다.
+  const albumOverlay = albumYear !== null ? (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, overflowY: 'auto' }}>
       <YearEndScreen
         year={albumYear}
         gender={state.gender}
@@ -145,8 +147,8 @@ export function GameScreen() {
         onSelectYear={setAlbumYear}
         onClose={() => setAlbumYear(null)}
       />
-    );
-  }
+    </div>
+  ) : null;
 
   // ===== 이벤트 결과 — 비주얼 노벨 배경 유지 =====
   // 방금 내린 선택의 결과 연출이라 어떤 phase보다 우선한다. 특히 학년말 주(W48) 이벤트에서
@@ -209,30 +211,32 @@ export function GameScreen() {
         onChoice={(index: number) => {
           const evt = state.currentEvent!;
           const choice = ((state.gender === 'female' && evt.femaleChoices) ? evt.femaleChoices : evt.choices)[index];
+          // 먼저 적용하고, 반환된 "실제 적용값"(구간 감쇠·클램프 반영)으로 표시를 만든다.
+          // 이전엔 choice 원본 수치를 표시해 고스탯 구간에서 "+4 표시 → +1.6 적용" 괴리가 있었음.
+          // resolveEvent → setEventResultData 두 set은 같은 핸들러라 React가 배칭 — 중간 렌더 없음.
+          const applied = resolveEvent(index);
           // B-2 안전망: 모든 선택지가 비용 부족으로 잠겨 EventScene이 sentinel(-1)을 보낸 경우.
-          // choices[-1]은 undefined라 아래 effects 계산이 크래시 → store.resolveEvent와 동일하게
-          // 효과 없는 "지나친다"로 위임한다. (choiceIndex=-1은 선택지별 CG(_c-1_)는 매칭 안 되지만,
-          // resolveEventCgRelPaths 폴백에 선택지-무관 base/gender CG가 있어 그 이벤트에 존재하면
-          // 결과 화면에 표시될 수 있음 — 전선택지 잠김 + base CG 동시 충족은 드문 cosmetic.)
-          if (!choice) {
+          // (choiceIndex=-1은 선택지별 CG(_c-1_)는 매칭 안 되지만, resolveEventCgRelPaths 폴백에
+          // 선택지-무관 base/gender CG가 있어 그 이벤트에 존재하면 결과 화면에 표시될 수 있음 — 드문 cosmetic.)
+          if (!choice || !applied) {
             setEventResultData({ message: '잠시 머뭇거리다 자리를 떴다.', effects: [], event: evt, choiceIndex: index });
-            resolveEvent(index);
             return;
           }
           const effects: Record<string, string>[] = [];
-          for (const [k, v] of Object.entries(choice.effects)) {
+          const fmt = (v: number) => `${v > 0 ? '+' : ''}${Number.isInteger(v) ? v : v.toFixed(1)}`;
+          for (const [k, v] of Object.entries(applied.stats)) {
             const val = v as number;
-            if (val !== 0) effects.push({ text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${val > 0 ? '+' + val : val}`, color: val > 0 ? 'var(--green)' : 'var(--red)' });
+            effects.push({ text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${fmt(val)}`, color: val > 0 ? 'var(--green)' : 'var(--red)' });
           }
-          if (choice.fatigueEffect) effects.push({ text: `피로 ${choice.fatigueEffect > 0 ? '+' : ''}${choice.fatigueEffect}`, color: choice.fatigueEffect > 0 ? 'var(--red)' : 'var(--green)' });
-          if (choice.moneyEffect) effects.push({ text: `💰 ${choice.moneyEffect > 0 ? '+' : ''}${choice.moneyEffect}만`, color: choice.moneyEffect > 0 ? 'var(--green)' : 'var(--red)' });
-          // NPC 첫 만남 체크
+          if (applied.fatigue) effects.push({ text: `피로 ${fmt(applied.fatigue)}`, color: applied.fatigue > 0 ? 'var(--red)' : 'var(--green)' });
+          if (applied.money) effects.push({ text: `💰 ${fmt(applied.money)}만`, color: applied.money > 0 ? 'var(--green)' : 'var(--red)' });
+          // NPC 친밀도 + 첫 만남 — state는 resolve 이전 스냅샷(렌더 클로저)이라 이름/이모지 조회용으로만 사용
           const newMeets: string[] = [];
-          if (choice.npcEffects) for (const ne of choice.npcEffects) {
-            const npc = state.npcs.find(n => n.id === ne.npcId);
+          for (const an of applied.npcs) {
+            const npc = state.npcs.find(n => n.id === an.npcId);
             if (npc) {
-              effects.push({ text: `${npc.emoji} ${npc.name} ${ne.intimacyChange > 0 ? '♥' : '💔'}`, color: ne.intimacyChange > 0 ? 'var(--blue)' : 'var(--red)' });
-              if (!npc.met) newMeets.push(npc.name);
+              effects.push({ text: `${npc.emoji} ${npc.name} ${an.delta >= 0 ? '♥' : '💔'}`, color: an.delta >= 0 ? 'var(--blue)' : 'var(--red)' });
+              if (an.firstMeet) newMeets.push(npc.name);
             }
           }
           // 첫 만남 알림 추가
@@ -240,7 +244,6 @@ export function GameScreen() {
             effects.unshift({ text: `🤝 ${name}와(과) 알게 되었다!`, color: 'var(--yellow)' });
           }
           setEventResultData({ message: choice.message, effects, event: evt, choiceIndex: index });
-          resolveEvent(index);
         }}
       />
     );
@@ -271,23 +274,27 @@ export function GameScreen() {
 
   // ===== 메인 게임 화면 =====
   return (
-    <MainWeekScreen
-      state={state}
-      bgProps={bgProps}
-      onOpenAlbum={() => setAlbumYear(state.year - 1)}
-      onSetRoutine={setRoutine}
-      onTalkNpc={talkToNpc}
-      onTalkHome={talkToHome}
-      onResolveParentChoice={resolveParentTalkChoice}
-      onBuyItem={buyItem}
-      onConfirmWeek={(activities, npcChoices) => {
-        if (state.isVacation) setVacationChoices(activities);
-        else setWeekendChoices(activities);
-        // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
-        setNpcActivityMap(npcChoices);
-        // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
-        advanceWeek();
-      }}
-    />
+    <>
+      <MainWeekScreen
+        state={state}
+        bgProps={bgProps}
+        saveFailed={isStorageSaveFailed()}
+        onOpenAlbum={() => setAlbumYear(state.year - 1)}
+        onSetRoutine={setRoutine}
+        onTalkNpc={talkToNpc}
+        onTalkHome={talkToHome}
+        onResolveParentChoice={resolveParentTalkChoice}
+        onBuyItem={buyItem}
+        onConfirmWeek={(activities, npcChoices) => {
+          if (state.isVacation) setVacationChoices(activities);
+          else setWeekendChoices(activities);
+          // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
+          setNpcActivityMap(npcChoices);
+          // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
+          advanceWeek();
+        }}
+      />
+      {albumOverlay}
+    </>
   );
 }

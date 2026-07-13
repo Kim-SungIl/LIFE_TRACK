@@ -36,9 +36,11 @@ type Props = {
   onConfirmWeek: (activities: string[], npcChoices: Record<string, string>) => void;
   // 기록장 열기 — 2학년 이상에서만 전달(완료 학년 존재). undefined면 HUD에서 버튼 숨김.
   onOpenAlbum?: () => void;
+  // localStorage 저장 실패 여부 — true면 진행 손실 경고 배너 (store.isStorageSaveFailed)
+  saveFailed?: boolean;
 };
 
-export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum }: Props) {
+export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, saveFailed }: Props) {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
@@ -205,6 +207,17 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         onOpenHome={handleOpenHome}
         onOpenAlbum={onOpenAlbum}
       />
+
+      {/* 저장 실패 경고 — 진행 손실을 사용자가 모른 채 지나가지 않게 (storage full/사파리 프라이빗 등) */}
+      {saveFailed && (
+        <div style={{
+          background: 'rgba(217,100,88,0.15)', border: '1px solid rgba(217,100,88,0.4)',
+          borderRadius: 10, padding: '8px 14px', marginBottom: 10,
+          fontSize: '0.75rem', fontWeight: 600, textAlign: 'center', color: 'var(--red)',
+        }}>
+          ⚠️ 진행 상황이 저장되지 않았어요 — 브라우저 저장 공간을 확인해 주세요
+        </div>
+      )}
 
       {/* 독백 말풍선 */}
       <div style={{

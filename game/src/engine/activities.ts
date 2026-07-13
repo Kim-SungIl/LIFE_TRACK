@@ -362,14 +362,27 @@ export function isVacationLimitReached(activity: Activity, state: GameState): bo
   return used >= activity.vacationLimit;
 }
 
+// 활동 게이트 공통 판정 — UI 목록(getAvailableActivities)과 엔진 검증(canApplyActivity)이 공유하는 SSOT.
+function passesActivityGates(a: Activity, state: GameState): boolean {
+  if (a.category === 'work' && state.year < 4) return false;
+  // Phase 1: 학기/방학 게이팅
+  if (a.seasonGate === 'vacation-only' && !state.isVacation) return false;
+  if (a.seasonGate === 'semester-only' && state.isVacation) return false;
+  // requires 함수 (방학 알바 등 추가 조건)
+  if (a.requires && !a.requires(state)) return false;
+  return true;
+}
+
 export function getAvailableActivities(state: GameState): Activity[] {
-  return ACTIVITIES.filter(a => {
-    if (a.category === 'work' && state.year < 4) return false;
-    // Phase 1: 학기/방학 게이팅
-    if (a.seasonGate === 'vacation-only' && !state.isVacation) return false;
-    if (a.seasonGate === 'semester-only' && state.isVacation) return false;
-    // requires 함수 (방학 알바 등 추가 조건)
-    if (a.requires && !a.requires(state)) return false;
-    return true;
-  });
+  return ACTIVITIES.filter(a => passesActivityGates(a, state));
+}
+
+// 엔진 진입점 단일 검증 — UI를 안 거치는 호출자(sim 하니스, 세이브 변조, 스테일 루틴,
+// 향후 다른 UI)가 학년/학기/방학횟수 게이트를 우회해 활동을 적용하는 것을 막는다.
+// 밸런스 수치 무변경 — 판정만. (vacationLimit은 UI에선 목록에 남겨 비활성 표시하므로
+// getAvailableActivities가 아니라 여기서만 합산 판정한다)
+export function canApplyActivity(state: GameState, activityId: string): boolean {
+  const a = ACTIVITIES.find(x => x.id === activityId);
+  if (!a) return false;
+  return passesActivityGates(a, state) && !isVacationLimitReached(a, state);
 }
