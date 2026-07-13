@@ -33,7 +33,7 @@ scripts/sim/sim-phase22-firing.ts
 scripts/sim/sim-tier70-ingame.ts
 scripts/sim/sim-milestone-chain.ts
 scripts/sim/_analyze-npc-effects.ts
-scripts/lib/y1-sim-resolve.ts
+# (scripts/lib/y1-sim-resolve.ts 는 커밋되는 QA 하네스 sim-qa-playthrough.ts 의 공용 의존성이라 추적)
 
 # 캐릭터 이미지 아카이브 (디스크 보관 전용 — 재생성 이전 버전 등)
 public/images/characters/_archive/
