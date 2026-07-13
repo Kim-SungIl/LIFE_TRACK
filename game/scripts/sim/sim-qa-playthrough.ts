@@ -65,9 +65,12 @@ interface Result {
   endedAtWeek: number;
   reachedEnding: boolean;
   finalStats: GameState['stats'];
-  ending: { path: string; achievement: string; happiness: string; detail?: string };
+  ending: { path: string; achievement: string; happiness: string; detail?: string; title?: string };
   happinessGrade: string;
   burnoutCount: number;
+  regretCardBody: number;
+  regretCardShown: boolean;
+  regretMemorialOverlap: number;
   finalMentalState: string;
   totalWeeksPlayed: number;
   eventsResolved: number;

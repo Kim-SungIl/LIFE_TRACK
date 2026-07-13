@@ -10,7 +10,9 @@ import {
   type GameEvent,
 } from '../../src/engine/events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from '../../src/engine/memorySystem';
-import { scaleStatChange } from '../../src/engine/gameEngine';
+import { scaleStatChange, scaleIntimacyChange } from '../../src/engine/gameEngine';
+import { applyParentIntimacyDelta } from '../../src/engine/parentIntimacy';
+import { absWeek } from '../../src/engine/weekMath';
 import { getAvailableNpcEvents, getNpcSmalltalk } from '../../src/engine/talkSystem';
 import { cloneGameState } from '../../src/engine/stateClone';
 import type { GameState } from '../../src/engine/types';
@@ -28,6 +30,10 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   if (!choice) return state;
 
   const newState = JSON.parse(JSON.stringify(s)) as GameState;
+
+  // 이벤트 발생 주(occurrence week). processWeek가 currentEvent.week=N을 박은 뒤 week++(→N+1)이라
+  // newState.week은 이미 다음 주다. store.resolveEvent가 occurrenceWeek로 기록·체인캡·냉각을 하는 것과 맞춘다.
+  const occurrenceWeek = newState.currentEvent!.week ?? newState.week;
 
   // 스탯 효과 — store.applyChoiceOutcome와 동일하게 구간감쇠(scaleStatChange) 적용 (게임 본체 일치).
   for (const [key, val] of Object.entries(choice.effects)) {
@@ -49,7 +55,10 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     for (const ne of choice.npcEffects) {
       const npc = newState.npcs.find(n => n.id === ne.npcId);
       if (npc) {
-        npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + ne.intimacyChange));
+        // store.applyChoiceOutcome와 동일하게 구간감쇠(scaleIntimacyChange) 적용 — raw 가산 시 tier 게이트 조기도달.
+        const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
+        npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
+        if (scaled > 0) npc.lastInteractionWeek = absWeek(newState.year, occurrenceWeek);
         npc.met = true;
       }
     }
@@ -78,6 +87,12 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   if (choice.timeCost) newState.eventTimeCost = choice.timeCost;
   if (choice.trackSelect) newState.track = choice.trackSelect;
 
+  // store.applyChoiceOutcome와 동일: 이벤트 선택의 부모 친밀도 반응 + 그 주 평균회귀 면제 플래그.
+  if (choice.parentEffect) {
+    applyParentIntimacyDelta(newState, choice.parentEffect.baseDelta, choice.parentEffect.tag);
+    newState.actedWithParentThisWeek = true;
+  }
+
   applyMemorySlotFromChoice(newState, newState.currentEvent!, choiceIndex, choice);
 
   if (choice.addBuff) {
@@ -91,7 +106,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   newState.events.push({
     ...(recordedEvent as GameEvent),
     resolvedChoice: choiceIndex,
-    week: newState.week,
+    week: occurrenceWeek,
     year: newState.year,
     resolvedFemale: isFemale && !!s.currentEvent!.femaleChoices,
   });
@@ -103,18 +118,19 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   newState.currentEvent = null;
 
   const followupFiredThisWeek = newState.events.some(
-    prev => prev.week === newState.week && prev.year === newState.year
+    prev => prev.week === occurrenceWeek && prev.year === newState.year
       && FOLLOWUP_EVENT_IDS.has(prev.id) && !DIRECT_SEQUEL_IDS.has(prev.id),
   );
   const followup = followupFiredThisWeek ? null : getFollowupForWeek(newState, resolvedLocation);
   if (followup) {
-    newState.currentEvent = followup;
+    // 체인 이벤트도 occurrenceWeek 유지 — store.resolveEventChain이 {...ev, week: occurrenceWeek}로 세팅.
+    newState.currentEvent = { ...followup, week: occurrenceWeek };
     newState.phase = 'event';
   } else {
     // followup 없으면 conditional chain 시도 — store.resolveEvent와 동일 로직
     // cap=2 (일반) / cap=3 (milestone 잔여 시) — 학년 한정 도달형 누락 방지
     const eventsThisWeek = newState.events.filter(
-      prev => prev.week === newState.week && prev.year === newState.year,
+      prev => prev.week === occurrenceWeek && prev.year === newState.year,
     ).length;
     let chainPick: GameEvent | null = null;
     if (eventsThisWeek < 2) {
@@ -123,7 +139,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
       chainPick = getMilestoneForWeek(newState);
     }
     if (chainPick) {
-      newState.currentEvent = chainPick;
+      newState.currentEvent = { ...chainPick, week: occurrenceWeek };
       newState.phase = 'event';
     } else {
       newState.phase = 'weekday';
@@ -170,11 +186,15 @@ export function talkToNpcLikeStore(state: GameState, npcId: string): GameState {
       newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
       newState.talkEventPressure = 0;
       newState.npcEventPendingThisWeek = false;
+      // store.talkToNpc와 동일: 말건 상대는 이번 주 상호작용으로 기록(관계 냉각 신호 정합).
+      { const t = newState.npcs.find(n => n.id === npcId); if (t) t.lastInteractionWeek = absWeek(newState.year, newState.week); }
       return newState;
     }
   }
   // 잡담 — RNG 진행 위해 새 state로 push (getNpcSmalltalk가 seededRandom mutate)
   const newState = cloneGameState(s);
   getNpcSmalltalk(newState, npcId);
+  // 잡담도 상호작용(친밀도 변화 0이라 lastInteractionWeek로만 "최근 함께함"이 잡힘) — store L408 미러.
+  { const t = newState.npcs.find(n => n.id === npcId); if (t) t.lastInteractionWeek = absWeek(newState.year, newState.week); }
   return newState;
 }
