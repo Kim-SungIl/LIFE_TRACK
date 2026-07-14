@@ -1,5 +1,5 @@
 import { GameState, Activity } from '../../../engine/types';
-import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from '../../../engine/activities';
+import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
 import { ActivityPicker } from '../../ActivityPicker';
 
@@ -148,6 +148,20 @@ export function SlotEditPopup({
             npcChoices={npcChoices}
             compact={false}
             availableMoney={availableMoney}
+            pendingVacUse={editingSlot.startsWith('routine') ? undefined : (() => {
+              // 이번 주 계획에 이미 배치된 활동별 인스턴스 수 — 편집 중 슬롯의 활동은
+              // 1인스턴스 제외 (위 currentSlots 계산과 동일 규칙)
+              const idx = editingSlot === 'weekend1' ? 0 :
+                          editingSlot === 'weekend2' ? 1 :
+                          parseInt(editingSlot.replace('weekend', '')) - 1;
+              const counts: Record<string, number> = {};
+              for (const inst of collapseActivityChoices(selectedActivities)) {
+                counts[inst] = (counts[inst] ?? 0) + 1;
+              }
+              const editingAct = selectedActivities[idx];
+              if (editingAct && counts[editingAct]) counts[editingAct] -= 1;
+              return counts;
+            })()}
           />
         </div>
       </div>

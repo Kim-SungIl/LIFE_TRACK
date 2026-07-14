@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameState, GameEvent, EventChoice, ParentStrength } from './types';
+import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
@@ -58,8 +58,17 @@ function saveToStorage(state: GameState) {
   try {
     const data: SaveData = { version: SAVE_VERSION, state, savedAt: new Date().toISOString() };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
-  } catch { /* storage full or unavailable — silently skip */ }
+    storageSaveFailed = false;
+  } catch {
+    // storage full/unavailable — 진행은 계속하되 UI가 배너로 알릴 수 있게 플래그만 세운다.
+    storageSaveFailed = true;
+  }
 }
+
+// 마지막 저장 시도 실패 여부 — 저장은 state 변경마다 subscribe에서 동기 실행되므로,
+// 렌더 시점에 이 getter를 읽으면 항상 최신이다 (진행 손실을 사용자가 모른 채 지나가지 않게).
+let storageSaveFailed = false;
+export function isStorageSaveFailed(): boolean { return storageSaveFailed; }
 
 export function loadFromStorage(): SaveData | null {
   try {
@@ -88,7 +97,8 @@ interface GameStore {
   setVacationChoices: (choices: string[]) => void;
   setNpcActivityMap: (map: Record<string, string>) => void;
   advanceWeek: () => void;
-  resolveEvent: (choiceIndex: number) => void;
+  // 반환: 실제 적용된 효과(구간 감쇠·클램프 반영) — 결과 화면 표시는 이 실측값을 쓴다.
+  resolveEvent: (choiceIndex: number) => AppliedEventOutcome | undefined;
   advanceFromYearEnd: () => void;
   setPhase: (phase: GameState['phase']) => void;
   buyItem: (item: ShopItem, targetNpcId?: string) => string[];
@@ -107,34 +117,60 @@ interface GameStore {
 
 // ===== resolveEvent 단계 헬퍼 (순수 추출 — state 직접 mutate, 동작 보존) =====
 
+// 이벤트 선택의 "실제 적용" 결과 DTO — choice의 원본 수치와 적용값은 다르다
+// (스탯/친밀도는 구간 감쇠 + 0~100 클램프). 화면이 원본을 그대로 보여주면
+// 고스탯 구간에서 "+4 표시 → +1.6 적용" 괴리가 생기므로 resolveEvent가 이걸 반환한다.
+export type AppliedEventOutcome = {
+  stats: Partial<Record<StatKey, number>>;  // 적용 후 실측 델타 (소수 1자리)
+  fatigue?: number;
+  money?: number;
+  npcs: { npcId: string; delta: number; firstMeet: boolean }[];
+};
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
 // 선택 결과 적용: 스탯(구간감쇠)/피로/용돈 + 이벤트 등장 NPC met + timeCost/문이과/부모 친밀도.
-function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice, occurrenceWeek: number): void {
+// 반환값 = 실제 적용된 델타 모음 (표시용 — 게임 로직은 여전히 state mutate가 본체).
+function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice, occurrenceWeek: number): AppliedEventOutcome {
+  const outcome: AppliedEventOutcome = { stats: {}, npcs: [] };
   // 스탯 효과 — 구간별 감쇠(scaleStatChange)로 활동과 동일하게 고구간 캡 적용 (QA C3 근본원인).
   for (const [key, val] of Object.entries(choice.effects)) {
     const k = key as keyof typeof state.stats;
-    const scaled = scaleStatChange(val as number, state.stats[k]);
-    state.stats[k] = Math.max(0, Math.min(100, state.stats[k] + scaled));
+    const before = state.stats[k];
+    const scaled = scaleStatChange(val as number, before);
+    state.stats[k] = Math.max(0, Math.min(100, before + scaled));
+    const applied = round1(state.stats[k] - before);
+    if (applied !== 0) outcome.stats[k] = applied;
   }
   // 피로 효과
   if (choice.fatigueEffect) {
+    const before = state.fatigue;
     state.fatigue = Math.max(0, Math.min(100, state.fatigue + choice.fatigueEffect));
+    const applied = round1(state.fatigue - before);
+    if (applied !== 0) outcome.fatigue = applied;
   }
   // 용돈 효과 — 음수 방지
   if (choice.moneyEffect) {
+    const before = state.money;
     state.money = Math.round((state.money + choice.moneyEffect) * 10) / 10;
     if (state.money < 0) state.money = 0;
+    const applied = round1(state.money - before);
+    if (applied !== 0) outcome.money = applied;
   }
   // NPC 친밀도 효과 + 만남 처리 (구간별 감쇠)
   if (choice.npcEffects) {
     for (const ne of choice.npcEffects) {
       const npc = state.npcs.find(n => n.id === ne.npcId);
       if (npc) {
+        const firstMeet = !npc.met;
+        const before = npc.intimacy;
         const scaled = scaleIntimacyChange(ne.intimacyChange, npc.intimacy);
         npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaled));
         npc.met = true;
         // 관계 신호: 친밀도가 오른 상호작용만 "최근 함께함"으로 기록(악화 선택지는 제외)
         // 발생주(occurrenceWeek) 사용 — state.week은 processWeek의 week++ 이후라 +1 어긋남(record와 동일 규칙).
         if (scaled > 0) npc.lastInteractionWeek = absWeek(state.year, occurrenceWeek);
+        outcome.npcs.push({ npcId: ne.npcId, delta: round1(npc.intimacy - before), firstMeet });
       }
     }
   }
@@ -168,6 +204,7 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
     applyParentIntimacyDelta(state, choice.parentEffect.baseDelta, choice.parentEffect.tag);
     state.actedWithParentThisWeek = true;
   }
+  return outcome;
 }
 
 // 이벤트 기록 — condition(함수)은 JSON 직렬화 손실 방지 위해 제거, 발생주차는 occurrenceWeek로 통일.
@@ -304,7 +341,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const occurrenceWeek = s.currentEvent!.week ?? newState.week;
 
     // 선택 결과 적용 (스탯/피로/용돈 + NPC met + timeCost/문이과/부모 친밀도)
-    applyChoiceOutcome(newState, event, choice, occurrenceWeek);
+    const applied = applyChoiceOutcome(newState, event, choice, occurrenceWeek);
 
     // v1.2 기억 슬롯 생성 (importance ≥3 + ANNUAL 제외 필터는 내부에서)
     applyMemorySlotFromChoice(newState, event, choiceIndex, choice);
@@ -329,6 +366,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
 
     set({ state: newState });
+    return applied;
   },
 
   setPhase: (phase) => {

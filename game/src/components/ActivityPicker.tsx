@@ -50,9 +50,11 @@ interface Props {
   availableMoney?: number;
   // 이 슬롯에서 NPC 동행 선택이 가능한지(주말/방학 true, 루틴 false). '💛 관계 유지' 태그 정합용.
   companionEligible?: boolean;
+  // 이번 주 계획에 이미 배치된 활동별 인스턴스 수 (편집 중 슬롯 제외) — vacationLimit 합산 판정용
+  pendingVacUse?: Record<string, number>;
 }
 
-export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney, companionEligible = true }: Props) {
+export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney, companionEligible = true, pendingVacUse }: Props) {
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
@@ -127,11 +129,13 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   const canAfford = (cost <= 0 || money >= cost) && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
                   // Phase 1: vacationLimit 도달 시 새 선택 불가 (이미 선택돼 있으면 그대로 유지)
-                  const vacLimitReached = !isSel && isVacationLimitReached(a, state);
+                  // 이번 주 계획분(pendingVacUse)도 합산 — 남은 한도보다 많이 배치해 엔진이 스킵하는 것 방지
+                  const pendingUse = pendingVacUse?.[a.id] ?? 0;
+                  const vacLimitReached = !isSel && isVacationLimitReached(a, state, pendingUse);
                   const disabled = !canSelect || !canAfford || vacLimitReached;
-                  // Phase 1: 방학 한정 활동 표시 + 남은 횟수
+                  // Phase 1: 방학 한정 활동 표시 + 남은 횟수 (이번 주 계획분 포함)
                   const isVacationOnly = a.seasonGate === 'vacation-only';
-                  const vacUsed = state.vacationActivityCounts?.[a.id] ?? 0;
+                  const vacUsed = (state.vacationActivityCounts?.[a.id] ?? 0) + pendingUse;
                   const showVacLimit = state.isVacation && a.vacationLimit !== undefined;
 
                   // 스테이지 변화 노출 — 해금 첫 학년 NEW 배지 + 진학 첫 학기(W1~8) 비용/시급 변동 배지.
@@ -242,7 +246,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                               color: vacLimitReached ? 'var(--red)' : 'var(--text-muted)',
                               fontWeight: vacLimitReached ? 600 : 400,
                             }}>
-                              {vacLimitReached ? '이번 방학 사용 완료' : `방학당 ${a.vacationLimit}회 (${vacUsed}/${a.vacationLimit})`}
+                              {vacLimitReached ? '이번 방학 한도 도달' : `방학당 ${a.vacationLimit}회 (${vacUsed}/${a.vacationLimit})`}
                             </span>
                           )}
                           {cost > 0 && money < cost && (

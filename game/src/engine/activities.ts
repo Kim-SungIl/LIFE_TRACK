@@ -356,20 +356,36 @@ export function collapseActivityChoices(ids: string[]): string[] {
 }
 
 // 활동의 vacationLimit 도달 여부
-export function isVacationLimitReached(activity: Activity, state: GameState): boolean {
+// pendingUse: 이번 주 계획에 이미 배치된 인스턴스 수 — UI(슬롯 편집)에서 같은 주 중복 배치가
+// 엔진 스킵으로 이어지지 않도록 합산 판정. 엔진 경로(canApplyActivity)는 적용마다 카운트가
+// 갱신되므로 0 그대로.
+export function isVacationLimitReached(activity: Activity, state: GameState, pendingUse = 0): boolean {
   if (!activity.vacationLimit || !state.isVacation) return false;
-  const used = state.vacationActivityCounts?.[activity.id] ?? 0;
+  const used = (state.vacationActivityCounts?.[activity.id] ?? 0) + pendingUse;
   return used >= activity.vacationLimit;
 }
 
+// 활동 게이트 공통 판정 — UI 목록(getAvailableActivities)과 엔진 검증(canApplyActivity)이 공유하는 SSOT.
+function passesActivityGates(a: Activity, state: GameState): boolean {
+  if (a.category === 'work' && state.year < 4) return false;
+  // Phase 1: 학기/방학 게이팅
+  if (a.seasonGate === 'vacation-only' && !state.isVacation) return false;
+  if (a.seasonGate === 'semester-only' && state.isVacation) return false;
+  // requires 함수 (방학 알바 등 추가 조건)
+  if (a.requires && !a.requires(state)) return false;
+  return true;
+}
+
 export function getAvailableActivities(state: GameState): Activity[] {
-  return ACTIVITIES.filter(a => {
-    if (a.category === 'work' && state.year < 4) return false;
-    // Phase 1: 학기/방학 게이팅
-    if (a.seasonGate === 'vacation-only' && !state.isVacation) return false;
-    if (a.seasonGate === 'semester-only' && state.isVacation) return false;
-    // requires 함수 (방학 알바 등 추가 조건)
-    if (a.requires && !a.requires(state)) return false;
-    return true;
-  });
+  return ACTIVITIES.filter(a => passesActivityGates(a, state));
+}
+
+// 엔진 진입점 단일 검증 — UI를 안 거치는 호출자(sim 하니스, 세이브 변조, 스테일 루틴,
+// 향후 다른 UI)가 학년/학기/방학횟수 게이트를 우회해 활동을 적용하는 것을 막는다.
+// 밸런스 수치 무변경 — 판정만. (vacationLimit은 UI에선 목록에 남겨 비활성 표시하므로
+// getAvailableActivities가 아니라 여기서만 합산 판정한다)
+export function canApplyActivity(state: GameState, activityId: string): boolean {
+  const a = ACTIVITIES.find(x => x.id === activityId);
+  if (!a) return false;
+  return passesActivityGates(a, state) && !isVacationLimitReached(a, state);
 }
