@@ -9,7 +9,7 @@ import { GAME_EVENTS } from '../../src/engine/events';
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { calculateEnding } from '../../src/engine/ending';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
-import type { GameState, GameEvent, Choice } from '../../src/engine/types';
+import type { GameState, GameEvent, EventChoice } from '../../src/engine/types';
 
 // ===== 짧은 플레이스루 (1패턴, 표준 시나리오) =====
 async function runStandard(): Promise<GameState> {
@@ -182,7 +182,7 @@ function runChecks(s: GameState): Check[] {
   const birthdayEvents = GAME_EVENTS.filter(e => /birthday|생일/.test(e.id));
   const giftEvents = birthdayEvents.filter(e => {
     const allChoices = [...(e.choices || []), ...(e.femaleChoices || [])];
-    return allChoices.some((c: Choice) => /정성|선물/.test(c.text) && (c.moneyEffect ?? 0) <= -3);
+    return allChoices.some((c: EventChoice) => /정성|선물/.test(c.text) && (c.moneyEffect ?? 0) <= -3);
   });
   checks.push({
     section: '3. 주요 이벤트 발동',

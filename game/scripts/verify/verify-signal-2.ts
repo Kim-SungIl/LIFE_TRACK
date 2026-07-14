@@ -6,8 +6,12 @@ import { nextIntimacyThreshold, relationshipSignal } from '../../src/engine/rela
 import { GAME_EVENTS } from '../../src/engine/events/data';
 import { GameEvent, GameState, NpcState } from '../../src/engine/types';
 
+// 부모 특성 게이트가 하나도 안 걸리는 중립 상태 — 실제 ParentStrength에 없는 센티널이라 캐스트로 명시.
+// (getParentMods는 includes()만 쓰므로 미매칭 값 = 보정 0. 실값을 넣으면 초기 스탯/효율이 바뀜)
+const NEUTRAL_PARENTS = ['neutral', 'neutral'] as unknown as [import('../../src/engine/types').ParentStrength, import('../../src/engine/types').ParentStrength];
+
 function mk(year: number, npcId: string, intimacy: number, events: GameEvent[] = []): { s: GameState; n: NpcState } {
-  const s = createInitialState('male', ['neutral', 'neutral'], { rngSeed: 1 });
+  const s = createInitialState('male', NEUTRAL_PARENTS, { rngSeed: 1 });
   s.year = year; s.week = 10; s.isVacation = false;
   s.events = events;
   const n = s.npcs.find((x) => x.id === npcId)!;
@@ -50,7 +54,7 @@ const imminent = (n: NpcState, s: GameState) => relationshipSignal(n, s)?.text.i
   check('subin Y5 i50 방학중 → th=70 (학기전용 t55 억제, mini만)', nextIntimacyThreshold(n, s) === 70); }
 
 // 8) 불변식 스윕 — 모든 met NPC·전 학년·여러 친밀도에서 th는 null 또는 intimacy 초과
-const npcIds = createInitialState('male', ['neutral', 'neutral'], { rngSeed: 1 }).npcs.map((x) => x.id);
+const npcIds = createInitialState('male', NEUTRAL_PARENTS, { rngSeed: 1 }).npcs.map((x) => x.id);
 let invChecked = 0;
 for (const id of npcIds) for (let y = 1; y <= 7; y++) for (const i of [0, 25, 45, 65, 85, 99]) {
   const { s, n } = mk(y, id, i); const th = nextIntimacyThreshold(n, s);

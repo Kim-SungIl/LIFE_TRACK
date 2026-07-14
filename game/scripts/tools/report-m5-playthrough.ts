@@ -46,7 +46,7 @@ const PATTERNS: Pattern[] = [
       return best;
     },
     // 학업형: 격주로 민재(공부 잘하는 친구)와 스터디그룹
-    npcPolicy: (s) => (s.week % 2 === 0 ? { 'study-group': 'minjae' } : {}),
+    npcPolicy: (s): Record<string, string> => (s.week % 2 === 0 ? { 'study-group': 'minjae' } : {}),
   },
   {
     name: '인기형 (사교 우선)',
@@ -64,7 +64,7 @@ const PATTERNS: Pattern[] = [
       return best;
     },
     // 인기형: 매주 친구놀기 + 만난 NPC 중 순환 (사교적, 골고루)
-    npcPolicy: (s) => {
+    npcPolicy: (s): Record<string, string> => {
       const met = s.npcs.filter(n => n.met && n.id !== 'doyun');
       if (met.length === 0) return {};
       const pick = met[s.week % met.length];
@@ -87,7 +87,7 @@ const PATTERNS: Pattern[] = [
       return best;
     },
     // 재능형: 격주로 지훈(운동 친구)과 친구놀기
-    npcPolicy: (s) => (s.week % 2 === 0 ? { 'hang-out': 'jihun' } : {}),
+    npcPolicy: (s): Record<string, string> => (s.week % 2 === 0 ? { 'hang-out': 'jihun' } : {}),
   },
   {
     name: '밸런스 (첫 선택지 고정)',
@@ -95,7 +95,7 @@ const PATTERNS: Pattern[] = [
     routine2: 'self-study', routine3: 'basketball',
     choicePolicy: () => 0,
     // 밸런스: 4주마다 지훈(가장 친한 첫 친구) 고정 — 무난한 선택
-    npcPolicy: (s) => (s.week % 4 === 0 ? { 'hang-out': 'jihun' } : {}),
+    npcPolicy: (s): Record<string, string> => (s.week % 4 === 0 ? { 'hang-out': 'jihun' } : {}),
   },
   {
     name: '회피형 (시간 절약 / 돈 아낌)',
@@ -159,7 +159,6 @@ async function runPlaythrough(p: Pattern, trajectoryOut?: Trajectory[]): Promise
         (s.stats as unknown as Record<string, number>)[k] = Math.max(0, Math.min(100, cur + (v as number)));
       }
       if (choice.fatigueEffect) s.fatigue = Math.max(0, Math.min(100, s.fatigue + choice.fatigueEffect));
-      if (choice.mentalEffect) s.stats.mental = Math.max(0, Math.min(100, s.stats.mental + choice.mentalEffect));
       if (choice.moneyEffect) s.money += choice.moneyEffect;
       if (choice.npcEffects) {
         for (const ne of choice.npcEffects) {
@@ -243,7 +242,7 @@ interface Report {
 
 function analyze(p: Pattern, s: GameState, trajectory: Trajectory[]): Report {
   const memByCat: Record<MemoryCategory, number> = {
-    courage: 0, betrayal: 0, reconciliation: 0, failure: 0, discovery: 0, growth: 0,
+    courage: 0, betrayal: 0, reconciliation: 0, failure: 0, discovery: 0, growth: 0, bypass: 0, unspoken_debt: 0,
   };
   const memByYear: Record<number, number> = {};
   const memByTone: Record<string, number> = {};

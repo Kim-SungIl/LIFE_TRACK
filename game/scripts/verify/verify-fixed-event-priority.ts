@@ -2,7 +2,7 @@
 // NPC 이벤트(speakers 보유)가 우선 선택되는지 확인.
 // 실행: cd game && npx tsx scripts/verify-fixed-event-priority.ts
 
-import { getEventForWeek } from '../../src/engine/events';
+import { getEventForWeek, GAME_EVENTS } from '../../src/engine/events';
 import { createInitialState } from '../../src/engine/gameEngine';
 import type { GameState } from '../../src/engine/types';
 
@@ -70,7 +70,8 @@ console.log('\n=== 1-bis. final-exam-2 매년 발동 (ANNUAL_EVENT_IDS) ===');
 {
   // Y3 W37: 이전에 final-exam-2가 발동된 적 있어도 ANNUAL이라 다시 발동
   const s = setupAt(37, 3);
-  s.events.push({ id: 'final-exam-2', year: 2, week: 37, choiceIndex: 0 });
+  const prevExam = GAME_EVENTS.find(e => e.id === 'final-exam-2')!;
+  s.events.push({ ...prevExam, condition: undefined, year: 2, week: 37, resolvedChoice: 0 });
   const ev = getEventForWeek(s).event;
   assert(ev?.id === 'final-exam-2', `Y3 W37 (Y2에 발동 이력 있음) → final-exam-2 (실제: ${ev?.id})`);
 }

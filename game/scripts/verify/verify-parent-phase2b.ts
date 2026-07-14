@@ -102,7 +102,7 @@ console.log('\n=== B2. parentPraiseYears 필드 (init / migration) ===');
   assert('createInitialState가 parentPraiseYears=[] 초기화', Array.isArray(fresh.parentPraiseYears) && fresh.parentPraiseYears.length === 0);
 
   // 구 세이브(필드 없음) 백필
-  const legacy = freshState(['strict', 'info']) as Record<string, unknown>;
+  const legacy = freshState(['strict', 'info']) as unknown as Record<string, unknown>;
   delete legacy.parentPraiseYears;
   const migrated = migrateLoadedState(legacy as unknown as GameState);
   assert('migration이 parentPraiseYears 백필', Array.isArray(migrated.parentPraiseYears) && migrated.parentPraiseYears.length === 0);

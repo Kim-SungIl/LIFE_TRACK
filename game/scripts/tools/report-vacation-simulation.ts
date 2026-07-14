@@ -274,7 +274,6 @@ async function runVacationSim(p: Pattern): Promise<Measurement> {
         (s.stats as unknown as Record<string, number>)[k] = Math.max(0, Math.min(100, cur + (v as number)));
       }
       if (choice.fatigueEffect) s.fatigue = Math.max(0, Math.min(100, s.fatigue + choice.fatigueEffect));
-      if (choice.mentalEffect) s.stats.mental = Math.max(0, Math.min(100, s.stats.mental + choice.mentalEffect));
       if (choice.moneyEffect) s.money += choice.moneyEffect;
       if (choice.npcEffects) {
         for (const ne of choice.npcEffects) {

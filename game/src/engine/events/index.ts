@@ -3,6 +3,8 @@
 // 데이터(GAME_EVENTS)는 data.ts, 선택 로직은 selection.ts, ID 셋은 constants.ts 에서.
 
 export { GAME_EVENTS } from './data';
+// 타입 편의 re-export — scripts/ 등이 이벤트 데이터와 함께 가져다 씀
+export type { GameEvent } from '../types';
 export {
   FOLLOWUP_EVENT_IDS,
   DIRECT_SEQUEL_IDS,
