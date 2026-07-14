@@ -6,7 +6,8 @@
  * 실행: npx tsx scripts/sim/sim-qa-playthrough.ts [출력디렉토리]
  * 출력: <dir>/qa-<persona>.json (페르소나별) + 콘솔 요약표
  */
-import { createInitialState, processWeek, hashInitialState } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek, hashInitialState, getWeekInfo } from '../../src/engine/gameEngine';
+import { NPC_COMPANION_ACTIVITIES } from '../../src/engine/activities';
 import { calculateEnding, calculateHappinessGrade } from '../../src/engine/ending';
 import { resolveEventLikeStore, talkToNpcLikeStore } from '../lib/y1-sim-resolve';
 import { getAvailableNpcEvents } from '../../src/engine/talkSystem';
@@ -28,6 +29,8 @@ interface Persona {
   policy: ChoicePolicy;
   talk?: boolean;        // 매주 친밀도 최상위 NPC에게 말걸기 (미니톡/tier 측정)
   talkFocus?: string;    // 설정 시 그 NPC에게만 집중 말걸기 (focused ceiling 측정)
+  companionFocus?: string; // 주말/방학 동행 활동(+3)을 이 NPC에게 몰빵 (met 이후부터)
+  companionSpread?: boolean; // 동행을 최저 친밀도 met NPC에게 분산 (전원 친구 상한 측정)
   tutoringY6?: boolean;  // Y6+ 주말 슬롯에 집중과외 투입 (돈 sink 측정)
 }
 
@@ -77,6 +80,9 @@ interface Result {
   examsSat: { type: string; mockGrade?: number; rank?: number | null; avg?: number }[];
   suneungMockGrade: number | null;
   npcIntimacy: { id: string; name: string; intimacy: number; met: boolean }[];
+  npcPeakIntimacy: Record<string, number>;   // 7년 중 최고 친밀도 (감쇠 전 도달점)
+  npcYearPeaks: Record<string, Record<number, number>>;  // npc→year→그 학년 최고점 (학년 게이트 tier 도달성)
+  reachFired: { npc: string; year: number; tier: number }[];  // 발동된 reach (starvation 측정)
   memorySlots: number;
   regretSlots: number;        // regret/betrayal/melancholy 톤 슬롯 수 (후회카드 재료)
   regretRecalls: string[];    // 그 슬롯들의 recallText (재료 품질 점검)
@@ -97,6 +103,8 @@ function runPersona(p: Persona, seed: number): Result {
   let maxConsecutiveTired = 0;   // 데스 스파이럴/영구락 회귀 가드
   let fatigueSum = 0, weekCount = 0;   // 평균 fatigue (중간 과부하 밴드 확인용)
   let tiredWeeks = 0;
+  const peakIntimacy: Record<string, number> = {};  // 드리프트(감쇠) 전 최고점 — scarcity 측정용
+  const yearPeaks: Record<string, Record<number, number>> = {};  // npc → year → 그 학년 내 최고점 (학년 게이트 tier 도달성)
 
   // 학년 전환(week>48 → year-end 처리)이 학년당 49회 진행이라 7년에 343회+ 필요 → 상한 넉넉히.
   for (let week = 0; week < 420; week++) {
@@ -105,7 +113,26 @@ function runPersona(p: Persona, seed: number): Result {
       ? ['private-tutoring', p.weekend[1] ?? 'rest']
       : p.weekend;
     s.vacationChoices = p.vacation;
-    s = processWeek(s);
+
+    // 동행(+3) — UI npcActivityMap 시뮬. 이번 주 실제 돌아갈 슬롯(학기=주말/방학=방학)의
+    // 동행 가능 활동에만 배정 (processWeek는 map을 무조건 적용하므로 주차 정합 필수).
+    let npcMap: Record<string, string> | undefined;
+    if (p.companionFocus || p.companionSpread) {
+      const acts = getWeekInfo(s.week).isVacation ? s.vacationChoices : s.weekendChoices;
+      const eligible = [...new Set((acts ?? []).filter(a => NPC_COMPANION_ACTIVITIES.includes(a)))];
+      if (eligible.length > 0) {
+        const met = s.npcs.filter(n => n.met);
+        if (p.companionFocus) {
+          const target = met.find(n => n.id === p.companionFocus);
+          if (target) npcMap = Object.fromEntries(eligible.map(a => [a, target.id]));
+        } else if (met.length > 0) {
+          // spread: 활동마다 최저 친밀도 순으로 서로 다른 NPC
+          const sorted = [...met].sort((a, b) => a.intimacy - b.intimacy);
+          npcMap = Object.fromEntries(eligible.map((a, i) => [a, sorted[i % sorted.length].id]));
+        }
+      }
+    }
+    s = processWeek(s, npcMap);
 
     // 말걸기 — processWeek가 npcEventPendingThisWeek를 굴린 직후, 친밀도 최상위 met NPC에게.
     // pending이면 발동 가능한 NPC를 우선 (미니톡 fire 극대화 → tier 도달 측정).
@@ -130,6 +157,11 @@ function runPersona(p: Persona, seed: number): Result {
       eventsResolved++;
     }
 
+    for (const n of s.npcs) {
+      peakIntimacy[n.id] = Math.max(peakIntimacy[n.id] ?? 0, n.intimacy);
+      const yp = (yearPeaks[n.id] ??= {});
+      yp[s.year] = Math.max(yp[s.year] ?? 0, n.intimacy);
+    }
     maxConsecutiveTired = Math.max(maxConsecutiveTired, s.consecutiveTiredWeeks ?? 0);
     fatigueSum += s.fatigue; weekCount++;
     if (s.mentalState === 'tired' || s.mentalState === 'burnout') tiredWeeks++;
@@ -170,6 +202,10 @@ function runPersona(p: Persona, seed: number): Result {
     examsSat: s.examResults.map(e => ({ type: e.examType, mockGrade: e.mockGrade, rank: e.rank ?? null, avg: e.average })),
     suneungMockGrade: suneung?.mockGrade ?? null,
     npcIntimacy: s.npcs.map(n => ({ id: n.id, name: n.name, intimacy: Math.round(n.intimacy), met: n.met })),
+    npcPeakIntimacy: Object.fromEntries(Object.entries(peakIntimacy).map(([k, v]) => [k, Math.round(v)])),
+    npcYearPeaks: Object.fromEntries(Object.entries(yearPeaks).map(([k, m]) =>
+      [k, Object.fromEntries(Object.entries(m).map(([y, v]) => [y, Math.round(v)]))])),
+    reachFired: s.events.filter(e => e.reach).map(e => ({ npc: e.reach!.npc, year: e.reach!.year, tier: e.reach!.tier })),
     memorySlots: s.memorySlots?.length ?? 0,
     // 후회카드 측정 — 본문 장수(화해 마감 제외), 노출 여부, 회고와의 이중노출(0이어야 정상)
     regretCardBody: (ending.regretHighlights ?? []).filter(h => !h.isClosing).length,
@@ -221,6 +257,11 @@ const PERSONAS: Persona[] = [
   { name: 'mid-overload-allround', label: '중간과부하(올라운드 풀가동, 무휴식)', gender: 'female', parents: ['emotional', 'info'], routineSlot2: 'self-study', routineSlot3: 'creative', weekend: ['club', 'creative'], vacation: ['self-study', 'creative', 'club'], policy: 'balanced', talk: true },
   { name: 'focus-haeun', label: '하은 집중(선배 관계 몰빵)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['club', 'rest'], vacation: ['rest', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'haeun' },
   { name: 'focus-junha', label: '준하 집중(전학생 관계 몰빵)', gender: 'male', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['club', 'rest'], vacation: ['rest', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'junha' },
+  // 캐스트 밸런스 검수(balance-review-brief) — 신규 3인 집중 ceiling + 전원 친구 scarcity 측정
+  { name: 'focus-seoa', label: '서아 집중(중2 데뷔 몰빵+동행)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'seoa', companionFocus: 'seoa' },
+  { name: 'focus-siwoo', label: '시우 집중(고1 데뷔 몰빵+동행)', gender: 'male', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'siwoo', companionFocus: 'siwoo' },
+  { name: 'focus-yerin', label: '예린 집중(고1 데뷔 몰빵+동행)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'yerin', companionFocus: 'yerin' },
+  { name: 'all-friends-max', label: '전원 친구(관계 극한+동행 분산)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, companionSpread: true },
 ];
 
 // ===== 분포 집계 헬퍼 =====
