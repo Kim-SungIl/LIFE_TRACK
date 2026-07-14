@@ -356,9 +356,12 @@ export function collapseActivityChoices(ids: string[]): string[] {
 }
 
 // 활동의 vacationLimit 도달 여부
-export function isVacationLimitReached(activity: Activity, state: GameState): boolean {
+// pendingUse: 이번 주 계획에 이미 배치된 인스턴스 수 — UI(슬롯 편집)에서 같은 주 중복 배치가
+// 엔진 스킵으로 이어지지 않도록 합산 판정. 엔진 경로(canApplyActivity)는 적용마다 카운트가
+// 갱신되므로 0 그대로.
+export function isVacationLimitReached(activity: Activity, state: GameState, pendingUse = 0): boolean {
   if (!activity.vacationLimit || !state.isVacation) return false;
-  const used = state.vacationActivityCounts?.[activity.id] ?? 0;
+  const used = (state.vacationActivityCounts?.[activity.id] ?? 0) + pendingUse;
   return used >= activity.vacationLimit;
 }
 

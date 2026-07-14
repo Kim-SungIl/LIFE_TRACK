@@ -235,7 +235,11 @@ export function GameScreen() {
           for (const an of applied.npcs) {
             const npc = state.npcs.find(n => n.id === an.npcId);
             if (npc) {
-              effects.push({ text: `${npc.emoji} ${npc.name} ${an.delta >= 0 ? '♥' : '💔'}`, color: an.delta >= 0 ? 'var(--blue)' : 'var(--red)' });
+              // 클램프(0/100)로 실변화 0이면 하트 생략 — 스탯/피로/돈의 0 생략과 동일 규칙
+              // (음수 효과가 친밀도 0에서 클램프되면 ♥로 반전되던 표기 방지)
+              if (an.delta !== 0) {
+                effects.push({ text: `${npc.emoji} ${npc.name} ${an.delta > 0 ? '♥' : '💔'}`, color: an.delta > 0 ? 'var(--blue)' : 'var(--red)' });
+              }
               if (an.firstMeet) newMeets.push(npc.name);
             }
           }
