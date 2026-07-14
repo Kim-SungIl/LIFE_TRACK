@@ -127,15 +127,16 @@ export type EventSelection = {
 
 const noPatch = (event: GameEvent | null): EventSelection => ({ event, patch: null });
 
-// 같은 슬롯 후보 경합의 단일 해소 규칙 — selectionPriority 내림차순(기본 0),
-// 동순위는 speakers 보유 우선(일회성 관계 이벤트 보호용 레거시 휴리스틱), 마지막은 배열 순서(stable).
+// 같은 슬롯 후보 경합의 단일 해소 규칙 — selectionPriority 내림차순(기본 0), 마지막은 배열 순서(stable).
+// speakersTiebreak: 동순위에서 speakers 보유 우선(일회성 관계 이벤트 보호용 레거시 휴리스틱).
+//   fixed 경로 전용 — followup/hardCrisis 경로는 기존 find(순수 배열 순서) 동작 보존을 위해 끈다.
 // 주의: annual vs annual 경합은 우선순위로 풀 수 없다(한쪽이 영구히 가려짐) —
-//   그 경우는 주차를 분리해야 한다 (선례: yuna-birthday W37→W38, minjae-birthday W7→W9).
-function pickByPriority(candidates: GameEvent[]): GameEvent | undefined {
+//   그 경우는 주차를 분리해야 한다 (선례: yuna-birthday W37→W38, minjae-birthday W7→W13).
+function pickByPriority(candidates: GameEvent[], speakersTiebreak = true): GameEvent | undefined {
   if (candidates.length <= 1) return candidates[0];
   return [...candidates].sort((a, b) =>
     ((b.selectionPriority ?? 0) - (a.selectionPriority ?? 0)) ||
-    ((b.speakers?.length ? 1 : 0) - (a.speakers?.length ? 1 : 0))
+    (speakersTiebreak ? ((b.speakers?.length ? 1 : 0) - (a.speakers?.length ? 1 : 0)) : 0)
   )[0];
 }
 
@@ -152,12 +153,12 @@ export function getEventForWeek(state: GameState): EventSelection {
   if (fixedEvent) return noPatch(fixedEvent);
 
   // 1. 후속 이벤트 체크 (100% 발동) — ANNUAL은 매년 재발동 허용
-  // 복수 매칭 시 pickByPriority — 현재 priority 미부여라 배열 순서와 동일 동작(회귀 없음).
+  // 복수 매칭 시 pickByPriority(speakers tiebreak 없음) — priority 미부여 시 기존 find와 완전 동일.
   const followup = pickByPriority(GAME_EVENTS.filter(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
-  ));
+  ), false);
   if (followup) return noPatch(followup);
 
   // v1.2 (§4.3): 2. 하드 위기 — 연간 1회 가드 (state.hardCrisisYears)
@@ -166,7 +167,7 @@ export function getEventForWeek(state: GameState): EventSelection {
       HARD_CRISIS_IDS.has(e.id) &&
       e.condition && e.condition(state) &&
       !state.events.some(prev => prev.id === e.id)
-    ));
+    ), false);
     if (hardCrisis) {
       // 발동 시 연간 가드 갱신을 patch 로 반환 (호출자가 적용)
       return {

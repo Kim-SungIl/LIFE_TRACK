@@ -91,9 +91,10 @@ console.log('\n=== 2. W20 junha-birthday: summer-start보다 우선 ===');
   assert(ev?.id === 'summer-start', `Y6 W20 junha 미만남 → summer-start (실제: ${ev?.id})`);
 }
 
-console.log('\n=== 3. W7/W9 분리 — midterm-1 vs minjae-birthday (2026-07-13 주차 이동) ===');
-// 설계 변경: minjae-birthday를 W7→W9로 이동. 둘 다 ANNUAL이라 speakers 휴리스틱으로는
+console.log('\n=== 3. W7/W13 분리 — midterm-1 vs minjae-birthday (2026-07-14 주차 이동) ===');
+// 설계 변경: minjae-birthday를 W7→W13으로 이동. 둘 다 ANNUAL이라 speakers 휴리스틱으로는
 // 생일이 매년 이겨 Y2+ 중간고사 준비 이벤트가 영구 가려지던 버그 (yuna W37→W38과 동일 해법).
+// W9 안은 기각 — minjae-pressure(FOLLOWUP, 발동 창 [9,...])가 생일 직후 같은 주에 연쇄됨.
 {
   // Y2 W7: minjae 친밀도 높아도 midterm-1 (이전엔 생일이 가렸음)
   const s = setupAt(7, 2);
@@ -102,18 +103,27 @@ console.log('\n=== 3. W7/W9 분리 — midterm-1 vs minjae-birthday (2026-07-13 
   assert(ev?.id === 'midterm-1', `Y2 W7 minjae 친밀도 80 → midterm-1 (실제: ${ev?.id})`);
 }
 {
-  // Y2 W9: minjae-birthday 발동 (새 주차)
-  const s = setupAt(9, 2);
+  // Y2 W13: minjae-birthday 발동 (새 주차)
+  const s = setupAt(13, 2);
   meetNpc(s, 'minjae', 30);
   const ev = getEventForWeek(s).event;
-  assert(ev?.id === 'minjae-birthday', `Y2 W9 minjae 친밀도 30 → minjae-birthday (실제: ${ev?.id})`);
+  assert(ev?.id === 'minjae-birthday', `Y2 W13 minjae 친밀도 30 → minjae-birthday (실제: ${ev?.id})`);
 }
 {
-  // Y1 W9: Y1은 met만으로 발동
-  const s = setupAt(9, 1);
+  // Y1 W13: Y1은 met만으로 발동
+  const s = setupAt(13, 1);
   meetNpc(s, 'minjae', 10);
   const ev = getEventForWeek(s).event;
-  assert(ev?.id === 'minjae-birthday', `Y1 W9 minjae.met → minjae-birthday (실제: ${ev?.id})`);
+  assert(ev?.id === 'minjae-birthday', `Y1 W13 minjae.met → minjae-birthday (실제: ${ev?.id})`);
+}
+{
+  // Y2 W9: 생일이 비켜나 minjae-pressure의 W9 슬롯(시험 직후 압박 전화)이 살아 있음
+  // (haeun-meet은 Y2 미만남 시 즉발 followup이라 만남 처리로 배제 — 실플레이선 Y2 초에 소비됨)
+  const s = setupAt(9, 2);
+  meetNpc(s, 'minjae', 50);
+  meetNpc(s, 'haeun', 10);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id === 'minjae-pressure', `Y2 W9 minjae 친밀도 50 → minjae-pressure (실제: ${ev?.id})`);
 }
 
 console.log('\n=== 4. W4 doyun 첫만남 — selectionPriority로 jihun-call 경합 고정 ===');
