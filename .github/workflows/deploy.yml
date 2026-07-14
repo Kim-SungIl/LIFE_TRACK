@@ -46,9 +46,9 @@ jobs:
         with:
           path: ./game/dist
 
-  # 게이트 3 — 콘텐츠 회귀 검증 (부모 아크·reach·기억·생일 CG 필수세트 등 30종)
-  # build와 독립 병렬. 배포는 build 성공에만 의존하므로 여기 실패가 배포를 막진 않지만,
-  # PR 체크로 노출돼 콘텐츠 회귀를 머지 전에 잡는다. (m6-recovery는 밸런스 판정 대기로 제외)
+  # 게이트 3 — 콘텐츠 회귀 검증 (부모 아크·reach·기억·생일 CG 필수세트 등 31종)
+  # build와 독립 병렬로 돌되, deploy가 둘 다에 의존한다 (2026-07-13 게이트 승격).
+  # 이전엔 PR 체크 전용이었으나 main 직접 push 시 검증 없이 배포되는 구멍이 있어 배포 게이트로 전환.
   content-verify:
     runs-on: ubuntu-latest
     steps:
@@ -78,7 +78,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs: [build, content-verify]
     steps:
       - uses: actions/deploy-pages@v4
         id: deployment
