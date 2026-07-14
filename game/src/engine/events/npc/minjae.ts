@@ -74,7 +74,13 @@ export const MINJAE_EVENTS = [
     id: 'minjae-birthday',
     title: '민재 생일',
     description: '오늘이 민재 생일이다.\n교실에서 누군가 "야 민재 생일이래!" 하고 외쳤다.\n민재가 살짝 당황하면서도 웃는다. "아, 뭐 별 거 아닌데..."',
-    week: 7,
+    // W7→W13 이동(2026-07-14): midterm-1(W7)과 둘 다 ANNUAL이라 매년 경합 —
+    // speakers 휴리스틱이 생일을 우선해 Y2+ 중간고사 준비 이벤트가 영구 가려지던 버그.
+    // annual vs annual은 우선순위로 못 풀어 주차 분리 (선례: yuna-birthday W37→W38).
+    // W9 안은 기각: minjae-pressure(FOLLOWUP, 발동 창 [9,18,35,39])가 생일 resolve 직후
+    // 같은 주에 연쇄 발동해 "생일 축하 → 엄마 질책 전화" 톤 충돌 + 동일 NPC 2연속이 됨.
+    // W13 = 전 학년(초/중/고) 시험 주간·고정 이벤트·정확 슬롯 조건 무충돌 (고등 모의고사 W11-12 회피).
+    week: 13,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     speakers: ['minjae'],
