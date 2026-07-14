@@ -6,6 +6,10 @@ import { getReachForWeek } from '../../src/engine/events/selection';
 import { HIGH_REACH_EVENTS } from '../../src/engine/events/reachHigh';
 import { NEW_NPC_REACH_EVENTS } from '../../src/engine/events/reachNew';
 
+// 부모 특성 게이트가 하나도 안 걸리는 중립 상태 — 실제 ParentStrength에 없는 센티널이라 캐스트로 명시.
+// (getParentMods는 includes()만 쓰므로 미매칭 값 = 보정 0. 실값을 넣으면 초기 스탯/효율이 바뀜)
+const NEUTRAL_PARENTS = ['neutral', 'neutral'] as unknown as [import('../../src/engine/types').ParentStrength, import('../../src/engine/types').ParentStrength];
+
 const cuts = [...HIGH_REACH_EVENTS, ...NEW_NPC_REACH_EVENTS].map((e) => ({
   id: e.id, npc: e.reach!.npc, tier: e.reach!.tier, year: e.reach!.year,
 }));
@@ -14,7 +18,7 @@ let pass = 0;
 const fails: string[] = [];
 
 for (const c of cuts) {
-  const s = createInitialState('male', ['neutral', 'neutral'], { rngSeed: 12345 });
+  const s = createInitialState('male', NEUTRAL_PARENTS, { rngSeed: 12345 });
   s.year = c.year;
   s.week = 10;            // 학기 중(비방학)
   s.isVacation = false;

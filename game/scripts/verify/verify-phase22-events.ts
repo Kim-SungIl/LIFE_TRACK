@@ -33,7 +33,7 @@ const NEW_EVENT_SPECS: Array<{ id: string; npcId: string; threshold: number; min
   { id: 'minjae-crumbled-note', npcId: 'minjae', threshold: 70 },
 ];
 
-const RETOOLED_DOYUN_COMIC = { id: 'doyun-comic-share', npcId: 'doyun', threshold: 30 };
+const RETOOLED_DOYUN_COMIC: { id: string; npcId: string; threshold: number; minWeek?: number } = { id: 'doyun-comic-share', npcId: 'doyun', threshold: 30 };
 
 let passed = 0;
 let failed = 0;
@@ -80,7 +80,7 @@ console.log('\n[3] 친밀도 도달 시 condition === true');
 for (const spec of [...NEW_EVENT_SPECS, RETOOLED_DOYUN_COMIC]) {
   const ev = GAME_EVENTS.find(e => e.id === spec.id);
   if (!ev || !ev.condition) continue;
-  const minWeek = 'minWeek' in spec ? spec.minWeek : undefined;
+  const minWeek = spec.minWeek;
   const s = makeState(spec.npcId, spec.threshold, true, 1, minWeek ?? 20);
   const result = ev.condition(s);
   check(`  ${spec.id} (intimacy=${spec.threshold}${minWeek ? `, week=${minWeek}` : ''}) fires`, result === true);

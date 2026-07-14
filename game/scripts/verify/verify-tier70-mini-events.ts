@@ -167,7 +167,7 @@ for (const spec of TIER70_SEEDS) {
   check(`${spec.id} memorySlotDraft = ${spec.expectMemorySlot ? 'YES' : 'no'}`, has === spec.expectMemorySlot);
   if (seed.memorySlotDraft) {
     check(`${spec.id} importance === 3`, seed.memorySlotDraft.importance === 3, `actual=${seed.memorySlotDraft.importance}`);
-    check(`${spec.id} npcIds 포함`, seed.memorySlotDraft.npcIds.includes(spec.npcId));
+    check(`${spec.id} npcIds 포함`, !!seed.memorySlotDraft.npcIds?.includes(spec.npcId));
   }
 }
 

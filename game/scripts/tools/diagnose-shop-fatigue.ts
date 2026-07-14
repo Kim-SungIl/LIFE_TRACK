@@ -200,7 +200,7 @@ for (const cat of Object.keys(byCategory) as ItemCategory[]) {
 
 // 효과 타입별 분포
 const byEffect: Record<ItemEffectType, number> = {
-  instant: 0, buff: 0, event_unlock: 0, npc_intimacy: 0,
+  instant: 0, buff: 0, npc_intimacy: 0,
 };
 for (const it of SHOP_ITEMS) {
   for (const e of it.effects) byEffect[e.type]++;
@@ -225,12 +225,12 @@ console.log(`  purchaseMessage:${withCustomMsg}/${SHOP_ITEMS.length}`);
 
 // 가벼운 vs 무거운 결정
 // 가벼운: price <= 2 + instant 효과만 + maxPerWeek 있음 (반복형)
-// 무거운: price >= 5 or requireYear/Stat or event_unlock (일회성·조건부)
+// 무거운: price >= 5 or requireYear/Stat (일회성·조건부)
 const light = SHOP_ITEMS.filter(i =>
   i.price <= 2 && i.effects.every(e => e.type === 'instant' || e.type === 'buff') && !i.requireYear && !i.requireStat
 );
 const heavy = SHOP_ITEMS.filter(i =>
-  i.price >= 5 || i.requireYear || i.requireStat || i.effects.some(e => e.type === 'event_unlock')
+  i.price >= 5 || i.requireYear || i.requireStat
 );
 const medium = SHOP_ITEMS.length - light.length - heavy.length;
 console.log('\n결정 무게:');
@@ -276,7 +276,6 @@ for (const item of deadItems) {
   if (item.price >= 5) reasons.push(`고가(${item.price})`);
   if (item.requireYear) reasons.push(`Y${item.requireYear}+`);
   if (item.requireStat) reasons.push(`${item.requireStat.stat}${item.requireStat.min}+`);
-  if (item.effects.some(e => e.type === 'event_unlock')) reasons.push('event_unlock');
   if (item.seasonal) reasons.push('방학한정');
   console.log(`  ${item.id.padEnd(18)} price=${String(item.price).padStart(4)}  [${reasons.join(', ') || 'low-value'}]`);
 }

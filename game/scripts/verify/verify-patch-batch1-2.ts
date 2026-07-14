@@ -17,7 +17,7 @@ import { readFileSync } from 'fs';
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
 import { migrateLoadedState } from '../../src/engine/stateMigration';
 import { generateExamResult } from '../../src/engine/examSystem';
-import { applyItemEffects, SHOP_ITEMS } from '../../src/engine/shopSystem';
+import { applyItemEffects, SHOP_ITEMS, type ShopItem } from '../../src/engine/shopSystem';
 import { GAME_EVENTS } from '../../src/engine/events';
 import type { GameState, ParentStrength } from '../../src/engine/types';
 
@@ -74,9 +74,9 @@ console.log('\n=== P2. NPC 친밀도 음수 클램프 (shopSystem) ===');
   // junha를 의도적으로 intimacy = 5로 설정 후 -100 효과 (강제 음수 진입)
   const npc = s.npcs.find(n => n.id === 'junha')!;
   npc.intimacy = 5;
-  const fakeItem = {
-    id: 'test-item', name: 'test', category: 'gift' as const, price: 0, week: 1,
-    description: '', effects: [{ type: 'npc_intimacy' as const, npcBonus: -100 }],
+  const fakeItem: ShopItem = {
+    id: 'test-item', name: 'test', category: 'gift', price: 0, emoji: '🧪',
+    description: '', effects: [{ type: 'npc_intimacy', npcBonus: -100 }],
   };
   const { newState } = applyItemEffects(fakeItem, s, 'junha');
   const finalIntimacy = newState.npcs.find(n => n.id === 'junha')!.intimacy;

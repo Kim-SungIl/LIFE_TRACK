@@ -202,7 +202,7 @@ console.log('\n=== P17. strict 표시 노이즈 — 임계값 통과 주만 표�
   // strict 부스트(routineWeeksBoost=1)는 routineWeeks 2/5/7 → +1로 3/6/8 도달 시 rBonus 변화
   // 그 외 주에는 표시 노이즈 없어야
 
-  function runOneWeek(routineWeeksStart: number): boolean | undefined {
+  function runOneWeek(routineWeeksStart: number): boolean {
     let s = createInitialState('male', ['strict', 'wealth'], { rngSeed: 1234567 });
     s.routineSlot2 = 'self-study';
     s.routineSlot3 = 'self-study';
@@ -211,7 +211,7 @@ console.log('\n=== P17. strict 표시 노이즈 — 임계값 통과 주만 표�
     s.routineSlot3Weeks = routineWeeksStart;
     s.fatigue = 30; // 회복/적용에 영향 없도록 중간값
     s = processWeek(s);
-    return s.weekLog?.parentBonusesApplied?.some(b => b.parent === 'strict');
+    return s.weekLog?.parentBonusesApplied?.some(b => b.parent === 'strict') ?? false;
   }
 
   // routineWeeks 0 → 1 (부스트 후 1) → baseBonus 0, rBonus 0 (1주는 임계값 미만) → 표시 안 됨
