@@ -2,3 +2,7 @@
 
 # 일회성 CLI 검수 raw 덤프(codex/cursor/agent 출력) — 재생성 가능, 추적 안 함
 docs/*-out/
+
+# 로컬 전용 작업 디렉토리(세션 스크래치·리뷰 덤프·임시 산출물) — 재생성 가능, 추적 안 함
+scratchpad/
+tmp/
