@@ -7,7 +7,7 @@
 // 데이터/로직 분리 P3-9 (2026-05-29).
 
 import { GameState } from './types';
-import { seededRandom } from './rng';
+import { seededRandomTalk } from './rng';
 import { getSchoolLevel } from './backgrounds';
 import {
   MiniTalkEvent,
@@ -26,7 +26,7 @@ export type { MiniTalkEvent } from './talkData';
 
 function pickRandomLine(state: GameState, pool: string[]): string {
   if (pool.length === 0) return '오늘은 별 다른 일 없이 지나갔다.';
-  const idx = Math.floor(seededRandom(state) * pool.length);
+  const idx = Math.floor(seededRandomTalk(state) * pool.length);
   return pool[idx];
 }
 
