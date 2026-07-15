@@ -12,6 +12,7 @@ import {
   recordMilestoneForYear, yearToPhaseTag, lintRecallText,
 } from '../../src/engine/memorySystem';
 import { GAME_EVENTS } from '../../src/engine/events';
+import { NPC_MINI_EVENTS } from '../../src/engine/talkData/miniEvents';
 import type { GameState, EventChoice, GameEvent, MemorySlot } from '../../src/engine/types';
 
 let passed = 0, failed = 0;
@@ -45,6 +46,28 @@ assert('"academic 8 올렸다" 금지', lintRecallText('academic을 8 올렸다'
 assert('"멘탈 +3" 금지', lintRecallText('멘탈 +3').length > 0);
 assert('"A등급" 금지', lintRecallText('A등급 획득').length > 0);
 assert('"커피 얼룩" 통과', lintRecallText('책상 위 커피 얼룩만 늘어가던, 중2의 긴 겨울.').length === 0);
+
+console.log('\n=== 2b. 전 콘텐츠 recallText 금지어 전수 검사 ===');
+// 런타임 lint는 console.warn뿐이고 CI는 부모 미니 풀만 검사해서(verify-parent-phase2a)
+// NPC 미니·이벤트 선택지 draft가 사각지대였다 (PR #312 검수에서 실위반 발견).
+// 길이(20~35자) 규약은 기존 27건이 벗어나 있어 여기선 금지 패턴만 게이트한다.
+{
+  const bad: string[] = [];
+  for (const e of GAME_EVENTS) {
+    for (const c of [...(e.choices ?? []), ...(e.femaleChoices ?? [])]) {
+      if (c.memorySlotDraft && lintRecallText(c.memorySlotDraft.recallText).length > 0) {
+        bad.push(`${e.id}: "${c.memorySlotDraft.recallText}"`);
+      }
+    }
+  }
+  for (const m of NPC_MINI_EVENTS) {
+    const drafts = [m.memorySlotDraft, ...(m.choices ?? []).map(c => c.memorySlotDraft)];
+    for (const d of drafts) {
+      if (d && lintRecallText(d.recallText).length > 0) bad.push(`${m.id}: "${d.recallText}"`);
+    }
+  }
+  assert('GAME_EVENTS + NPC 미니 draft 금지 패턴 0건', bad.length === 0, bad.join(' / '));
+}
 
 console.log('\n=== 3. applyMemorySlotFromChoice 기본 동작 ===');
 {
