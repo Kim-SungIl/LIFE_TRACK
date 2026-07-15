@@ -57,6 +57,7 @@ export interface GameState {
   memorySlots: MemorySlot[];        // 최대 12 (카테고리당 2)
   milestoneScenes: MilestoneScene[]; // 학년별 1개, 최대 7
   rngSeed: number;                  // 결정론적 RNG 시드 (이벤트 선택용)
+  talkRngSeed: number;              // 잡담 전용 RNG 시드 (rngSeed와 분리 — 클릭이 진행 굴림에 영향 없게)
   hardCrisisYears: number[];        // 하드위기 발동 연도 (연간 1회 가드)
   // M6: 자연 회복 감소 모드 (도전 모드) — 상점 의존성·의사결정 부담 강화
   useReducedRecovery?: boolean;

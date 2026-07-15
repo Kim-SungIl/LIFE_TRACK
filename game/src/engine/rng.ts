@@ -11,6 +11,21 @@ export function seededRandom(state: GameState): number {
   return state.rngSeed / m;
 }
 
+// 잡담(말걸기) 전용 RNG — 게임 진행 시드(rngSeed)와 분리한다.
+// 잡담은 무한 클릭 가능한데, 진행 시드를 공유하면 클릭 횟수만큼 이후 시험·이벤트
+// 굴림 시퀀스가 밀려 결정론이 깨지고 리롤 익스플로잇 여지가 생긴다.
+// rngSeed에서 1회 파생해 별도 스트림으로 굴린다(0 고정 방지).
+export function deriveTalkSeed(rngSeed: number): number {
+  return ((rngSeed ^ 0x9e3779b9) >>> 0) || 1;
+}
+
+export function seededRandomTalk(state: GameState): number {
+  if (!state.talkRngSeed) state.talkRngSeed = deriveTalkSeed(state.rngSeed);
+  const a = 1664525, c = 1013904223, m = 0x100000000;
+  state.talkRngSeed = (Math.imul(a, state.talkRngSeed) + c) >>> 0;
+  return state.talkRngSeed / m;
+}
+
 export function hashInitialState(seedInput: {
   gender: string;
   parents: readonly string[];

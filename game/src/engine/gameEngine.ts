@@ -3,7 +3,7 @@ import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity 
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
-import { seededRandom, hashInitialState } from './rng';
+import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
@@ -98,6 +98,7 @@ export function createInitialState(
     memorySlots: [],
     milestoneScenes: [],
     rngSeed: options?.rngSeed ?? hashInitialState({ gender, parents }),
+    talkRngSeed: deriveTalkSeed(options?.rngSeed ?? hashInitialState({ gender, parents })),
     hardCrisisYears: [],
     // M6: 자연 회복 감소 모드 (도전 모드)
     useReducedRecovery: options?.useReducedRecovery ?? false,

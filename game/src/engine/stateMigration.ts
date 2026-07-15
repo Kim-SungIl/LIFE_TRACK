@@ -2,7 +2,7 @@
 // gameEngine.ts 에서 추출 (P2-6). store 로드와 processWeek 양쪽에서 사용 — SAVE_VERSION 비격상 유지.
 // 새 필드 추가 시 여기 한 곳만 수정.
 import { GameState } from './types';
-import { hashInitialState } from './rng';
+import { hashInitialState, deriveTalkSeed } from './rng';
 import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
@@ -39,6 +39,14 @@ export function migrateLoadedState(state: GameState): GameState {
     rngSeed: (state.rngSeed && state.rngSeed !== 0)
       ? state.rngSeed
       : hashInitialState({ gender: state.gender, parents: migratedParents }),
+    // 잡담 전용 시드 백필 — 구세이브는 rngSeed에서 파생(0이면 방지). 진행 시드와 분리.
+    talkRngSeed: (state.talkRngSeed && state.talkRngSeed !== 0)
+      ? state.talkRngSeed
+      : deriveTalkSeed(
+          (state.rngSeed && state.rngSeed !== 0)
+            ? state.rngSeed
+            : hashInitialState({ gender: state.gender, parents: migratedParents }),
+        ),
     hardCrisisYears: state.hardCrisisYears || [],
     // 슬롯별 루틴 카운터 — 구세이브의 단일 routineWeeks 값을 양 슬롯에 복제 (호환)
     routineSlot2Weeks: state.routineSlot2Weeks

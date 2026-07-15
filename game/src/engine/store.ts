@@ -3,7 +3,7 @@ import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './ty
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
-import { ShopItem, applyItemEffects } from './shopSystem';
+import { ShopItem, applyItemEffects, canBuyItem } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
@@ -396,6 +396,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   buyItem: (item, targetNpcId) => {
     const s = get().state;
     if (!s) return [];
+    // 엔진 계층 방어 — UI 버튼은 canBuyItem으로 게이팅되지만, 우회 호출 시
+    // 시즌·주간 한도·학년·스탯·중복 buff 게이트가 무시되지 않도록 여기서도 검증.
+    const gate = canBuyItem(item, s, s.weekPurchases || {});
+    if (!gate.ok) return gate.reason ? [gate.reason] : [];
     const { newState, messages } = applyItemEffects(item, s, targetNpcId);
     // 구매 횟수 추적
     newState.weekPurchases = { ...newState.weekPurchases };

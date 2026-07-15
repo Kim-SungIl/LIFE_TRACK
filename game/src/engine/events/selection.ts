@@ -182,11 +182,13 @@ export function getEventForWeek(state: GameState): EventSelection {
     e.year === state.year && SOFT_CRISIS_IDS.has(e.id)
   ).length;
   if (softCrisisThisYear < 2) {
-    const softCrisis = GAME_EVENTS.find(e =>
+    // followup/hardCrisis 경로와 동일하게 pickByPriority(speakers tiebreak 없음) —
+    // priority 미부여 시 stable sort라 기존 find(배열 순서)와 완전 동일하게 동작.
+    const softCrisis = pickByPriority(GAME_EVENTS.filter(e =>
       SOFT_CRISIS_IDS.has(e.id) &&
       e.condition && e.condition(state) &&
       !state.events.some(prev => prev.id === e.id)
-    );
+    ), false);
     if (softCrisis) return noPatch(softCrisis);
   }
 
