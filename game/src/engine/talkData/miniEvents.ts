@@ -328,6 +328,13 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     },
   },
   {
+    id: 'talk_seoa_h30_unchanged_pen',
+    npcId: 'seoa', intimacyMin: 30, yearMin: 5,
+    description: '"고등학교 오니까 다들 펜을 조용한 걸로 바꾸더라. 나만 아직 이거 써."\n서아가 예의 그 사각거리는 펜을 살짝 흔들어 보인다. "…시끄러우면 말해. 아니다, 말해도 안 바꿀 거지만."\n말끝을 흐리면서도, 펜은 이미 노트 위로 돌아가 있다.',
+    effects: { intimacy: 2, stats: { mental: 1 } },
+    message: '서아의 안 바꾼 펜 — 멘탈 +1, 친밀도 +2',
+  },
+  {
     id: 'talk_seoa_h50_margin_line',
     npcId: 'seoa', intimacyMin: 50, yearMin: 5,
     description: '"모의고사 끝나기 전에 시간 남으면, 문제지 귀퉁이에 한 줄씩 적어. 다들 답 고치느라 아무도 안 보거든. 제일 조용한 원고지야."\n서아가 문제지를 접어 귀퉁이만 보이게 내민다. 수식 사이에 수식이 아닌 글씨가 한 줄 서 있다.',
