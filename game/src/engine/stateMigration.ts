@@ -91,5 +91,12 @@ export function migrateLoadedState(state: GameState): GameState {
     }
   }
 
+  // 손상 세이브 방어: phase='result'인데 weekLog가 없으면(정상 플레이선 불가 — 외부 편집/절단)
+  // 결산 화면 대신 메인으로 조용히 떨어지던 불일치를 명시적으로 일상(weekday)으로 정리.
+  // currentEvent 케이스(위)와 대칭 — phase가 렌더 가능한 상태와 항상 일치하도록 보장.
+  if (result.phase === 'result' && !result.weekLog) {
+    result.phase = 'weekday';
+  }
+
   return result;
 }

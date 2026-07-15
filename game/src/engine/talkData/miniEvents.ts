@@ -296,25 +296,26 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     },
   },
   // ===== 신규 3인 (서아·시우·예린) — 캐스트 밸런스 검수 ⑤ 후속: 말걸기 경제 편입 =====
-  // seoa는 중1(Y2) 데뷔라 중학 톤(무게이트)+고교 톤(yearMin 5) 이중 사다리, siwoo/yerin은 고1 데뷔라 yearMin 5.
+  // seoa는 중1(Y2) 데뷔라 중학 톤(yearMax 4)+고교 톤(yearMin 5) 이중 사다리, siwoo/yerin은 고1 데뷔라 yearMin 5.
+  // 중학 톤에 yearMax 4를 둬 고교에서 중학 이벤트가 배열 순서상 고교 톤보다 먼저 뜨던 누수를 차단(학교급별 분리).
   // 70+ 회상 draft는 importance 3 고정(후회카드 편중 방지). 발주: docs/mini-events-new-npc-commission-2026-07-15.md
   {
     id: 'talk_seoa_30_pen_sound',
-    npcId: 'seoa', intimacyMin: 30,
+    npcId: 'seoa', intimacyMin: 30, yearMax: 4,
     description: '"이 펜, 사각거리는 소리 때문에 써. 하나 남는데… 줄까. 아니다, 소리를 나눠 갖자는 게 말이 되나."\n서아가 필통에서 똑같은 펜 한 자루를 꺼내 내민다. 말은 도로 주워 담으면서, 손은 그대로 두고 있다.',
     effects: { intimacy: 2, stats: { mental: 1 } },
     message: '서아의 펜 한 자루 — 멘탈 +1, 친밀도 +2',
   },
   {
     id: 'talk_seoa_50_one_sentence',
-    npcId: 'seoa', intimacyMin: 50,
+    npcId: 'seoa', intimacyMin: 50, yearMax: 4,
     description: '"한 문장만. 다는 아직. …다음 문장이 이것보다 나은데. 방금 말은 취소."\n서아가 손바닥으로 노트를 반쯤 가린 채 한 줄만 보여준다. 다 읽을 때까지 숨을 참고 있다.',
     effects: { intimacy: 3, stats: { mental: 1, talent: 1 } },
     message: '서아의 한 문장 — 멘탈 +1, 재능 +1, 친밀도 +3',
   },
   {
     id: 'talk_seoa_70_diary_and_then',
-    npcId: 'seoa', intimacyMin: 70,
+    npcId: 'seoa', intimacyMin: 70, yearMax: 4,
     description: '"초등학교 때 일기, 전부 \'그리고\'에서 끝냈어. 마침표 찍으면 그날이 진짜 끝나버릴 것 같아서. 검사 도장은 매번 받았지만."\n서아가 픽 웃고는, 웃음이 다 내려가기 전에 창밖으로 고개를 돌린다.',
     effects: { intimacy: 4, stats: { mental: 2 }, fatigue: -1 },
     message: '서아의 마침표 없는 일기 — 멘탈 +2, 피로 -1, 친밀도 +4',
