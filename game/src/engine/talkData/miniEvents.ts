@@ -296,7 +296,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
     },
   },
   // ===== 신규 3인 (서아·시우·예린) — 캐스트 밸런스 검수 ⑤ 후속: 말걸기 경제 편입 =====
-  // seoa는 중2 데뷔라 중학 톤(무게이트)+고교 톤(yearMin 5) 이중 사다리, siwoo/yerin은 고1 데뷔라 yearMin 5.
+  // seoa는 중1(Y2) 데뷔라 중학 톤(무게이트)+고교 톤(yearMin 5) 이중 사다리, siwoo/yerin은 고1 데뷔라 yearMin 5.
   // 70+ 회상 draft는 importance 3 고정(후회카드 편중 방지). 발주: docs/mini-events-new-npc-commission-2026-07-15.md
   {
     id: 'talk_seoa_30_pen_sound',
@@ -399,14 +399,14 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   {
     id: 'talk_yerin_70_missed_bus',
     npcId: 'yerin', intimacyMin: 70, yearMin: 5,
-    description: '"방금 그거 타면 환승까지 최적이었는데."\n밤 정류장, 예린이 의자에서 일어나지 않는다. "…네 줄 왜 미산정이냐고 물었지. 등급을 매기면 결산이 서고, 결산이 서면 손절가가 생겨." 딱 거기까지만 말하고, 다음 버스가 올 때까지 노선표만 본다.',
+    description: '"방금 그거 타면 환승까지 최적이었는데."\n밤 정류장, 예린이 의자에서 일어나지 않는다. "…네 줄만 왜 미산정인지, 말한 적 없었지. 등급을 매기면 결산이 서고, 결산이 서면 손절가가 생겨." 딱 거기까지만 말하고, 다음 버스가 올 때까지 노선표만 본다.',
     effects: { intimacy: 4, stats: { mental: 2 }, fatigue: 1 },
     message: '예린이 그냥 보낸 버스 — 멘탈 +2, 피로 +1, 친밀도 +4',
     memorySlotDraft: {
       category: 'discovery',
       importance: 3,
       toneTag: 'melancholy',
-      recallText: '손절가가 생길까 봐 끝내 등급을 안 매기던 줄 하나.',
+      recallText: '손절가가 생길까 봐 끝내 값을 매기지 않던 줄 하나.',
       npcIds: ['yerin'],
     },
   },
