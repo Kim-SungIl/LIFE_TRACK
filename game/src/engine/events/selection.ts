@@ -13,14 +13,16 @@ import { absWeek } from '../weekMath';
 // ANNUAL_EVENT_IDS에 등록된 후속(반장 선거 후속 등)은 매년 재발동 허용
 
 export function getFollowupForWeek(state: GameState, excludeLocation?: string): GameEvent | null {
-  return GAME_EVENTS.find(e =>
+  // getEventForWeek 내부 followup 경로와 동일하게 pickByPriority(speakers tiebreak 없음)로 통일.
+  // 복수 followup 동시 적격 시 selectionPriority 존중 — priority 미부여 시 stable sort라 기존 find와 동일.
+  return pickByPriority(GAME_EVENTS.filter(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
     (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id)) &&
     // 같은 장소 이벤트 연쇄 방지 (농구→축구 같은 어색한 연결 차단)
     // DIRECT_SEQUEL_IDS는 자연스러운 직접 후속이라 같은 장소도 허용 (선거→결과 등)
     (!excludeLocation || e.location !== excludeLocation || DIRECT_SEQUEL_IDS.has(e.id))
-  ) || null;
+  ), false) || null;
 }
 
 // 절대 주차 (학년 경계에서 음수가 안 나오도록) — 쿨다운 비교용
