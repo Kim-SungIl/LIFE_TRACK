@@ -4,6 +4,7 @@ import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
+import { scaleIntimacyChange } from './intimacyScaling';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
@@ -602,21 +603,9 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
 
 // ===== NPC 친밀도 변화량 구간별 감쇠 =====
 // 원본 +10 이상(현재 +8 이상)인 큰 이벤트와 음수는 면제. 그 외 양수만 친밀도 구간별 효율 적용.
-// 0~39: 100% (낯선이 → 친구, 진입은 빠르게)
-// 40~59: 80%  (친구 → 친한 친구)
-// 60~79: 60%  (친한 친구 → 절친 직전)
-// 80~100: 25% (절친 plateau — 천장 효과)
-// floor + max(1): 효율 누수 차단하되 양수 효과는 최소 +1 보장 (0 소멸 방지).
-export function scaleIntimacyChange(delta: number, currentIntimacy: number): number {
-  if (delta <= 0) return delta;
-  if (delta >= 8) return delta;
-  let multiplier: number;
-  if (currentIntimacy < 40) multiplier = 1.0;
-  else if (currentIntimacy < 60) multiplier = 0.8;
-  else if (currentIntimacy < 80) multiplier = 0.6;
-  else multiplier = 0.25;
-  return Math.max(1, Math.floor(delta * multiplier));
-}
+// scaleIntimacyChange는 intimacyScaling.ts로 추출(순환 import 방지) — 위에서 import 후
+// 여기서 재export해 기존 importer(store 등)의 경로를 보존한다.
+export { scaleIntimacyChange };
 
 // ===== 이벤트 스탯 효과 구간별 감쇠 (QA C3-B) =====
 // 문제: 활동(applyActivity)은 getDiminishingReturn 으로 70+ 구간에서 강하게 눌리는데,
@@ -677,7 +666,8 @@ function applyNpcActivitySelection(state: GameState, npcActivityMap?: Record<str
   for (const npcId of Object.values(npcActivityMap)) {
     const npc = state.npcs.find(n => n.id === npcId);
     if (npc) {
-      npc.intimacy = Math.min(100, npc.intimacy + 3);
+      // 구간 감쇠 경유 — raw +3은 고구간(80+)에서도 자연감소를 압도해 전원 만렙 수렴을 유발했다.
+      npc.intimacy = Math.min(100, npc.intimacy + scaleIntimacyChange(3, npc.intimacy));
       npc.lastInteractionWeek = absWeek(state.year, state.week); // 관계 신호: 동행 = 상호작용
     }
   }
