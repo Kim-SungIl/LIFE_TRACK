@@ -430,7 +430,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         applyVisibleTalkEffects(newState, ev.effects);
         if (ev.effects.intimacy && ev.npcId) {
           const target = newState.npcs.find(n => n.id === ev.npcId);
-          if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
+          if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + scaleIntimacyChange(ev.effects.intimacy, target.intimacy)));
         }
         // 관계 신호: 미니 이벤트를 본 NPC는 상호작용 기록(친밀도 변화 무관 — 말을 건 것 자체가 만남)
         { const t = newState.npcs.find(n => n.id === npcId); if (t) t.lastInteractionWeek = absWeek(newState.year, newState.week); }

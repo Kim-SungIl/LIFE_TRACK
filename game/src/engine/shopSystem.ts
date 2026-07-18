@@ -1,6 +1,7 @@
 import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
 import { cloneGameState } from './stateClone';
 import { absWeek } from './relationshipSignals';
+import { scaleIntimacyChange } from './intimacyScaling';
 
 // ===== 아이템 타입 =====
 export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
@@ -234,7 +235,9 @@ export function applyItemEffects(
         if (targetNpcId && effect.npcBonus) {
           const npc = newState.npcs.find(n => n.id === targetNpcId);
           if (npc) {
-            npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + effect.npcBonus));
+            // 구간 감쇠 경유(exemptMajorReward=false) — 선물은 반복 구매 가능하므로 큰 단발 보상
+            // 면제 대상이 아니다. 면제 시 +15 선물로 돈을 써서 관계를 무한히 살 수 있어 우회 봉합.
+            npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaleIntimacyChange(effect.npcBonus, npc.intimacy, false)));
             npc.lastInteractionWeek = absWeek(newState.year, newState.week); // 관계 신호: 선물 = 상호작용
             messages.push(`${npc.name}에게 ${item.name}을 줬다! 친밀도가 올랐다.`);
           }
