@@ -11,7 +11,7 @@
 import { createInitialState, processWeek, scaleIntimacyChange } from '../../src/engine/gameEngine';
 import { getFollowupForWeek } from '../../src/engine/events';
 import { SHOP_ITEMS, applyItemEffects, canBuyItem, limitKey, type ShopItem } from '../../src/engine/shopSystem';
-import type { GameState } from '../../src/engine/types';
+import type { GameState, ParentStrength } from '../../src/engine/types';
 
 const SEEDS = [101, 202, 303, 404, 505, 606, 707, 808];
 const STAT_KEYS: readonly string[] = ['academic', 'social', 'talent', 'mental', 'health'];
@@ -22,9 +22,27 @@ function requireItem(id: string): ShopItem {
   return item;
 }
 // 선물 구매 우선순위 — 강한 것부터. concert/movie는 limitGroup 'outing' 공유 슬롯이라
-// concert(+12)를 먼저 시도하면 movie는 canBuyItem에서 자동 차단된다(공유 슬롯 소진).
+// concert를 먼저 시도하면 movie는 canBuyItem에서 자동 차단된다(공유 슬롯 소진).
 // 주간 캡(small 1 / outing 1 / birthday 생일주+1) 하에 "돈으로 살 수 있는 최대 친밀도"를 계측.
-const GIFT_ITEMS = ['birthday-gift', 'concert-ticket', 'movie-ticket', 'small-gift'].map(requireItem);
+const GIFT_ORDER = ['birthday-gift', 'concert-ticket', 'movie-ticket', 'small-gift'];
+
+// 선물 친밀도(npcBonus) 값 스케일 비교용 — id→npcBonus 오버라이드.
+// 소스(shopSystem)를 안 건드리고 값 스케일별 before/after를 한 번에 측정한다.
+type GiftScale = Record<string, number>;
+const SCALES: { label: string; scale: GiftScale | null }[] = [
+  { label: '종전 5/8/12/15', scale: { 'small-gift': 5, 'movie-ticket': 8, 'concert-ticket': 12, 'birthday-gift': 15 } },
+  { label: '중간 3/5/7/9', scale: { 'small-gift': 3, 'movie-ticket': 5, 'concert-ticket': 7, 'birthday-gift': 9 } },
+  { label: '채택 2/4/6/8(현재)', scale: null }, // null = 소스(shopSystem) 실값 — 회귀 방지 겸용
+];
+
+// 스케일을 적용한 선물 아이템(npc_intimacy effect의 npcBonus만 치환한 얕은 복제)
+function giftsWithScale(scale: GiftScale | null): ShopItem[] {
+  return GIFT_ORDER.map(id => {
+    const base = requireItem(id);
+    if (!scale || scale[id] == null) return base;
+    return { ...base, effects: base.effects.map(e => e.type === 'npc_intimacy' ? { ...e, npcBonus: scale[id] } : e) };
+  });
+}
 
 interface SeedResult {
   seed: number;
@@ -46,8 +64,8 @@ function intimacyGain(ch: { npcEffects?: { intimacyChange: number }[] }): number
   return (ch.npcEffects ?? []).reduce((s, ne) => s + Math.max(0, ne.intimacyChange), 0);
 }
 
-function runRelationshipMaxing(seed: number, policy: Policy = 'maxing'): SeedResult {
-  let s = createInitialState('male', ['emotional', 'wealth'], { rngSeed: seed });
+function runRelationshipMaxing(seed: number, policy: Policy = 'maxing', giftItems: ShopItem[] = giftsWithScale(null), traits: [ParentStrength, ParentStrength] = ['emotional', 'wealth']): SeedResult {
+  let s = createInitialState('male', traits, { rngSeed: seed });
   s.routineSlot2 = 'club';
   s.routineSlot3 = 'light-exercise';
 
@@ -117,7 +135,7 @@ function runRelationshipMaxing(seed: number, policy: Policy = 'maxing'): SeedRes
     // store.buyItem과 동일하게 limitKey로 weekPurchases를 수동 증가시켜 캡을 반영한다.
     if (policy === 'maxing') {
       s.weekPurchases = { ...(s.weekPurchases ?? {}) };
-      for (const gift of GIFT_ITEMS) {
+      for (const gift of giftItems) {
         const target = s.npcs.filter(n => n.met && n.intimacy < 95).sort((a, b) => a.intimacy - b.intimacy)[0];
         if (!target) break;
         if (!canBuyItem(gift, s, s.weekPurchases).ok) continue;
@@ -176,30 +194,32 @@ function main() {
   const eventsBest = SEEDS.map(s => runRelationshipMaxing(s, 'events-best'));
   summarize('이벤트만·최적선택 (동행·선물 0, 돈 0) — 진짜 이벤트 천장', eventsBest);
 
-  const results = SEEDS.map(s => runRelationshipMaxing(s, 'maxing'));
-  summarize('관계 최대화 (동행+선물, 주간 캡 적용) — 착취 천장', results);
-
-  console.log('\n=== 관계 최대화 상세 ===');
-  console.log('seed  | met | mean시밀 | ≥95 | ≥85 | ≥70 | 잔고(만) | 선물수 | 선물지출(만)');
-  console.log('------|-----|---------|-----|-----|-----|---------|--------|-----------');
-  for (const r of results) {
-    console.log(
-      `${String(r.seed).padStart(5)} | ${String(r.metCount).padStart(3)} | ` +
-      `${r.meanIntimacy.toFixed(1).padStart(7)} | ${String(r.atMax).padStart(3)} | ` +
-      `${String(r.high).padStart(3)} | ${String(r.warm).padStart(3)} | ` +
-      `${r.money.toFixed(0).padStart(7)} | ${String(r.giftsBought).padStart(6)} | ${r.giftSpend.toFixed(0).padStart(9)}`,
-    );
+  // 선물 값 스케일 비교 — 관계 최대화 정책을 스케일별로 돌려 값 하향 효과 계측.
+  // 부자(주5만·무한자금)와 비부자(주3만·예산제약) 두 렌즈로: 값 하향은 예산제약 플레이어에게 물린다.
+  const n = SEEDS.length;
+  const avgOf = (rs: SeedResult[], f: (r: SeedResult) => number) => rs.reduce((s, r) => s + f(r), 0) / n;
+  const budgets: { label: string; traits: [ParentStrength, ParentStrength] }[] = [
+    { label: '부자 (주5만·무한자금)', traits: ['emotional', 'wealth'] },
+    { label: '비부자 (주3만·예산제약)', traits: ['emotional', 'resilience'] },
+  ];
+  for (const { label: blabel, traits } of budgets) {
+    console.log(`\n=== 선물 값 스케일 × ${blabel} (관계 최대화, 캡 적용) ===`);
+    console.log('스케일          | mean | Y1말 | 만렙≥95 | ≥85 | ≥70 | 선물수 | 선물지출 | 잔고(만)');
+    console.log('----------------|------|------|--------|-----|-----|--------|---------|--------');
+    for (const { label, scale } of SCALES) {
+      const items = giftsWithScale(scale);
+      const rs = SEEDS.map(s => runRelationshipMaxing(s, 'maxing', items, traits));
+      console.log(
+        `${label.padEnd(15)} | ${avgOf(rs, r => r.meanIntimacy).toFixed(1).padStart(4)} | ` +
+        `${avgOf(rs, r => r.meanIntimacyY1).toFixed(1).padStart(4)} | ` +
+        `${avgOf(rs, r => r.atMax).toFixed(1).padStart(6)} | ${avgOf(rs, r => r.high).toFixed(1).padStart(3)} | ` +
+        `${avgOf(rs, r => r.warm).toFixed(1).padStart(3)} | ` +
+        `${avgOf(rs, r => r.giftsBought).toFixed(1).padStart(6)} | ${avgOf(rs, r => r.giftSpend).toFixed(0).padStart(7)} | ${avgOf(rs, r => r.money).toFixed(0).padStart(6)}`,
+      );
+    }
   }
-
-  const n = results.length;
-  const avg = (f: (r: SeedResult) => number) => results.reduce((s, r) => s + f(r), 0) / n;
-  console.log('\n=== 평균 ===');
-  console.log(`met NPC: ${avg(r => r.metCount).toFixed(1)}`);
-  console.log(`평균 친밀도: ${avg(r => r.meanIntimacy).toFixed(1)}`);
-  console.log(`만렙(≥95) NPC 수: ${avg(r => r.atMax).toFixed(1)}   ← ★ 관계 희소성 핵심 지표`);
-  console.log(`높음(≥85) NPC 수: ${avg(r => r.high).toFixed(1)}`);
-  console.log(`친함(≥70) NPC 수: ${avg(r => r.warm).toFixed(1)}`);
-  console.log(`잔고: ${avg(r => r.money).toFixed(0)}만   선물구매: ${avg(r => r.giftsBought).toFixed(1)}회   선물지출: ${avg(r => r.giftSpend).toFixed(0)}만`);
+  console.log('\n※ 부자: 무한자금이라 값 내려도 선물만 더 삼(천장 불변) — 값이 안 물림.');
+  console.log('  비부자: 예산이 병목 → 값 하향이 만렙수·mean을 실제로 끌어내림 ← 값 조정의 진짜 대상.');
 }
 
 main();
