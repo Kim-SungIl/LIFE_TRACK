@@ -3,7 +3,7 @@ import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './ty
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
-import { ShopItem, applyItemEffects, canBuyItem } from './shopSystem';
+import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
@@ -401,9 +401,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const gate = canBuyItem(item, s, s.weekPurchases || {});
     if (!gate.ok) return gate.reason ? [gate.reason] : [];
     const { newState, messages } = applyItemEffects(item, s, targetNpcId);
-    // 구매 횟수 추적
+    // 구매 횟수 추적 (limitGroup 공유 슬롯은 그룹 키로 합산)
+    const key = limitKey(item);
     newState.weekPurchases = { ...newState.weekPurchases };
-    newState.weekPurchases[item.id] = (newState.weekPurchases[item.id] || 0) + 1;
+    newState.weekPurchases[key] = (newState.weekPurchases[key] || 0) + 1;
     set({ state: newState });
     return messages;
   },

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { SHOP_ITEMS, SHOP_CATEGORIES, canBuyItem, ItemCategory, ShopItem } from '../engine/shopSystem';
+import { SHOP_ITEMS, SHOP_CATEGORIES, canBuyItem, limitKey, ItemCategory, ShopItem } from '../engine/shopSystem';
 import { josa } from '../engine/korean';
 import { GameState, STAT_LABELS, StatKey } from '../engine/types';
 
@@ -105,8 +105,8 @@ export function Shop({ state, onBuy, onClose }: Props) {
           {items.map(item => {
             const check = canBuyItem(item, state, state.weekPurchases || {});
             const effects = describeEffects(item);
-            // 주간 재고 계산
-            const weekBought = (state.weekPurchases || {})[item.id] || 0;
+            // 주간 재고 계산 (limitGroup 공유 슬롯은 그룹 키로 합산)
+            const weekBought = (state.weekPurchases || {})[limitKey(item)] || 0;
             const hasLimit = !!item.maxPerWeek;
             const remaining = hasLimit ? (item.maxPerWeek! - weekBought) : null;
             // 이미 적용 중인 버프 확인

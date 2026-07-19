@@ -10,7 +10,7 @@
 
 import { createInitialState, processWeek, scaleIntimacyChange } from '../../src/engine/gameEngine';
 import { getFollowupForWeek } from '../../src/engine/events';
-import { SHOP_ITEMS, applyItemEffects, canBuyItem, type ShopItem } from '../../src/engine/shopSystem';
+import { SHOP_ITEMS, applyItemEffects, canBuyItem, limitKey, type ShopItem } from '../../src/engine/shopSystem';
 import type { GameState } from '../../src/engine/types';
 
 const SEEDS = [101, 202, 303, 404, 505, 606, 707, 808];
@@ -21,7 +21,10 @@ function requireItem(id: string): ShopItem {
   if (!item) throw new Error(`${id} 아이템을 찾을 수 없음`);
   return item;
 }
-const GIFT = requireItem('birthday-gift');
+// 선물 구매 우선순위 — 강한 것부터. concert/movie는 limitGroup 'outing' 공유 슬롯이라
+// concert(+12)를 먼저 시도하면 movie는 canBuyItem에서 자동 차단된다(공유 슬롯 소진).
+// 주간 캡(small 1 / outing 1 / birthday 생일주+1) 하에 "돈으로 살 수 있는 최대 친밀도"를 계측.
+const GIFT_ITEMS = ['birthday-gift', 'concert-ticket', 'movie-ticket', 'small-gift'].map(requireItem);
 
 interface SeedResult {
   seed: number;
@@ -30,6 +33,7 @@ interface SeedResult {
   giftSpend: number;
   metCount: number;
   meanIntimacy: number;
+  meanIntimacyY1: number; // Y1 말(중1 진급 시점) met 평균 — 버스트 구매 억제 효과 관측용
   atMax: number; // >=95
   high: number; // >=85
   warm: number; // >=70
@@ -49,6 +53,7 @@ function runRelationshipMaxing(seed: number, policy: Policy = 'maxing'): SeedRes
 
   let giftsBought = 0;
   let giftSpend = 0;
+  let meanIntimacyY1 = 0; // Y1 종료 시점 스냅샷
 
   for (let week = 0; week < 336; week++) {
     s.weekendChoices = ['hang-out', 'club'];
@@ -107,18 +112,32 @@ function runRelationshipMaxing(seed: number, policy: Policy = 'maxing'): SeedRes
       if (fu) s.currentEvent = fu;
     }
 
-    // 선물: 최저 친밀도 met NPC가 아직 95 미만이면 생일선물(+15) 1개 (낭비 방지)
-    const giftTarget = policy === 'maxing'
-      ? s.npcs.filter(n => n.met && n.intimacy < 95).sort((a, b) => a.intimacy - b.intimacy)[0]
-      : undefined;
-    if (giftTarget && canBuyItem(GIFT, s, s.weekPurchases ?? {}).ok) {
-      const { newState } = applyItemEffects(GIFT, s, giftTarget.id);
-      s = newState;
-      giftsBought++;
-      giftSpend += GIFT.price;
+    // 선물: 주간 캡을 존중해 살 수 있는 선물을 우선순위대로 전부 구매(가장 낮은 met NPC 대상).
+    // canBuyItem이 maxPerWeek/limitGroup(공유 슬롯)/requireBirthday를 강제하고,
+    // store.buyItem과 동일하게 limitKey로 weekPurchases를 수동 증가시켜 캡을 반영한다.
+    if (policy === 'maxing') {
+      s.weekPurchases = { ...(s.weekPurchases ?? {}) };
+      for (const gift of GIFT_ITEMS) {
+        const target = s.npcs.filter(n => n.met && n.intimacy < 95).sort((a, b) => a.intimacy - b.intimacy)[0];
+        if (!target) break;
+        if (!canBuyItem(gift, s, s.weekPurchases).ok) continue;
+        const { newState } = applyItemEffects(gift, s, target.id);
+        s = newState;
+        const key = limitKey(gift);
+        s.weekPurchases = { ...(s.weekPurchases ?? {}) };
+        s.weekPurchases[key] = (s.weekPurchases[key] || 0) + 1;
+        giftsBought++;
+        giftSpend += gift.price;
+      }
     }
 
-    if (s.phase === 'year-end') { s.week = 1; s.year++; s.phase = 'weekday'; }
+    if (s.phase === 'year-end') {
+      if (s.year === 1) {
+        const m = s.npcs.filter(n => n.met);
+        meanIntimacyY1 = m.length ? m.reduce((sum, n) => sum + n.intimacy, 0) / m.length : 0;
+      }
+      s.week = 1; s.year++; s.phase = 'weekday';
+    }
     if (s.phase === 'ending') break;
   }
 
@@ -131,6 +150,7 @@ function runRelationshipMaxing(seed: number, policy: Policy = 'maxing'): SeedRes
     giftSpend,
     metCount: met.length,
     meanIntimacy,
+    meanIntimacyY1,
     atMax: met.filter(n => n.intimacy >= 95).length,
     high: met.filter(n => n.intimacy >= 85).length,
     warm: met.filter(n => n.intimacy >= 70).length,
@@ -141,6 +161,7 @@ function summarize(label: string, results: SeedResult[]) {
   const n = results.length;
   const avg = (f: (r: SeedResult) => number) => results.reduce((s, r) => s + f(r), 0) / n;
   console.log(`\n[${label}] met ${avg(r => r.metCount).toFixed(1)} | mean ${avg(r => r.meanIntimacy).toFixed(1)} | ` +
+    `Y1말 ${avg(r => r.meanIntimacyY1).toFixed(1)} | ` +
     `≥95 ${avg(r => r.atMax).toFixed(1)} | ≥85 ${avg(r => r.high).toFixed(1)} | ≥70 ${avg(r => r.warm).toFixed(1)} | ` +
     `잔고 ${avg(r => r.money).toFixed(0)}만 | 선물 ${avg(r => r.giftsBought).toFixed(1)}회/${avg(r => r.giftSpend).toFixed(0)}만`);
 }
@@ -156,7 +177,7 @@ function main() {
   summarize('이벤트만·최적선택 (동행·선물 0, 돈 0) — 진짜 이벤트 천장', eventsBest);
 
   const results = SEEDS.map(s => runRelationshipMaxing(s, 'maxing'));
-  summarize('관계 최대화 (동행+선물) — 착취 천장', results);
+  summarize('관계 최대화 (동행+선물, 주간 캡 적용) — 착취 천장', results);
 
   console.log('\n=== 관계 최대화 상세 ===');
   console.log('seed  | met | mean시밀 | ≥95 | ≥85 | ≥70 | 잔고(만) | 선물수 | 선물지출(만)');
