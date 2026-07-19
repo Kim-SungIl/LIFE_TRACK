@@ -119,14 +119,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'small-gift', name: '작은 선물', description: '작지만 마음이 담긴 선물.',
     price: 1, category: 'gift', emoji: '🎁',
-    effects: [{ type: 'npc_intimacy', npcBonus: 5 }],
+    effects: [{ type: 'npc_intimacy', npcBonus: 2 }],
     maxPerWeek: 1, // 돈으로 관계 무한 구매 차단
   },
   {
     id: 'movie-ticket', name: '영화 티켓', description: '같이 영화 보러 가자!',
     price: 2, category: 'gift', emoji: '🎬',
     effects: [
-      { type: 'npc_intimacy', npcBonus: 8 },
+      { type: 'npc_intimacy', npcBonus: 4 },
       { type: 'instant', stat: 'mental', value: 3 },
     ],
     // 영화·공연은 "직접 나가서 함께하는" 외출이라 몸이 하나 → 주 1회 공유 슬롯
@@ -135,14 +135,14 @@ export const SHOP_ITEMS: ShopItem[] = [
   {
     id: 'birthday-gift', name: '생일 선물 세트', description: '특별한 날을 위한 특별한 선물.',
     price: 5, category: 'gift', emoji: '🎂',
-    effects: [{ type: 'npc_intimacy', npcBonus: 15 }],
+    effects: [{ type: 'npc_intimacy', npcBonus: 8 }],
     maxPerWeek: 1, requireBirthday: true, // 생일인 친구가 있을 때만
   },
   {
     id: 'concert-ticket', name: '공연/전시 티켓', description: '함께 보면 더 좋은 공연.',
     price: 4, category: 'gift', emoji: '🎵',
     effects: [
-      { type: 'npc_intimacy', npcBonus: 12 },
+      { type: 'npc_intimacy', npcBonus: 6 },
       { type: 'instant', stat: 'mental', value: 5 },
     ],
     requireYear: 3, // 중2부터
