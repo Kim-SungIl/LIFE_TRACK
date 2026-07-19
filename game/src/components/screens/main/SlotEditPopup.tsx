@@ -2,6 +2,7 @@ import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
 import { ActivityPicker } from '../../ActivityPicker';
+import { Dialog } from '../../Dialog';
 
 type Props = {
   editingSlot: string;
@@ -27,14 +28,11 @@ export function SlotEditPopup({
   onSetRoutine, setNpcSelectFor, setLastReaction,
 }: Props) {
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      zIndex: 250,
-    }} onClick={() => setEditingSlot(null)}>
-      <div onClick={e => e.stopPropagation()} style={{
+    <Dialog onClose={() => setEditingSlot(null)} align="bottom" zIndex={250} maxWidth={600}
+      labelledBy="slot-edit-title"
+      contentStyle={{
         background: 'linear-gradient(180deg, rgba(42,34,48,0.99), rgba(23,21,28,0.99))',
-        borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
+        borderRadius: '20px 20px 0 0', width: '100%',
         maxHeight: '92vh', minHeight: '70vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 -4px 30px rgba(0,0,0,0.5)',
       }}>
@@ -44,7 +42,7 @@ export function SlotEditPopup({
           borderBottom: '1px solid rgba(255,255,255,0.08)',
         }}>
           <div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>
+            <div id="slot-edit-title" style={{ fontSize: '1.1rem', fontWeight: 700 }}>
               {editingSlot === 'routine1' ? '📚 방과후 활동' :
                editingSlot === 'routine2' ? '🌙 저녁 활동' :
                '☀️ 주말 활동'}
@@ -53,20 +51,20 @@ export function SlotEditPopup({
               {editingSlot.startsWith('routine') ? '매주 반복되는 루틴을 골라주세요' : '이번 주말에 할 활동을 골라주세요'}
             </div>
           </div>
-          <span onClick={() => setEditingSlot(null)} style={{
+          <button type="button" className="btn-reset" onClick={() => setEditingSlot(null)} aria-label="닫기" style={{
             fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer',
             padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)',
-          }}>✕ 닫기</span>
+          }}>✕ 닫기</button>
         </div>
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
           {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 — 디폴트 상태(routineSlot3=null)도 강조하지 않음. */}
           {editingSlot === 'routine2' && (
-            <div onClick={() => {
+            <button type="button" className="btn-reset" onClick={() => {
               if (state.routineSlot2) { onSetRoutine(state.routineSlot2, null); }
               setEditingSlot(null);
             }} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
-              borderRadius: 10, cursor: 'pointer',
+              borderRadius: 10, cursor: 'pointer', width: '100%', textAlign: 'left',
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.06)',
             }}>
@@ -75,7 +73,7 @@ export function SlotEditPopup({
                 <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>자유시간</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>쉬면서 멘탈 회복 + 피로 감소</div>
               </div>
-            </div>
+            </button>
           )}
           <ActivityPicker
             key={editingSlot}
@@ -164,7 +162,6 @@ export function SlotEditPopup({
             })()}
           />
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

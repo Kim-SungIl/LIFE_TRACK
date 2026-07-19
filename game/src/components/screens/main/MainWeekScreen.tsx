@@ -7,7 +7,7 @@ import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
 import { ShopItem } from '../../../engine/shopSystem';
-import { TalkActionResult } from '../../../engine/store';
+import { TalkActionResult, getLastSavedAt } from '../../../engine/store';
 import { Shop } from '../../Shop';
 import { Tutorial } from '../../Tutorial';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
@@ -210,12 +210,23 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
 
       {/* 저장 실패 경고 — 진행 손실을 사용자가 모른 채 지나가지 않게 (storage full/사파리 프라이빗 등) */}
       {saveFailed && (
-        <div style={{
+        <div role="alert" aria-live="assertive" style={{
           background: 'rgba(217,100,88,0.15)', border: '1px solid rgba(217,100,88,0.4)',
           borderRadius: 10, padding: '8px 14px', marginBottom: 10,
           fontSize: '0.75rem', fontWeight: 600, textAlign: 'center', color: 'var(--red)',
         }}>
           ⚠️ 진행 상황이 저장되지 않았어요 — 브라우저 저장 공간을 확인해 주세요
+        </div>
+      )}
+      {/* 자동 저장 인디케이터 — "저장됐는지" 신뢰 회복. 라이브 텍스트는 '자동 저장됨' 고정(스팸 방지),
+          시각은 aria-hidden으로 시각 전용. */}
+      {!saveFailed && getLastSavedAt() && (
+        <div aria-live="polite" style={{
+          textAlign: 'center', fontSize: '0.66rem', color: 'var(--text-muted)',
+          marginTop: -4, marginBottom: 10,
+        }}>
+          💾 자동 저장됨
+          <span aria-hidden="true"> · {new Date(getLastSavedAt()!).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
         </div>
       )}
 
@@ -338,11 +349,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       )}
 
       {/* 상점 버튼 */}
-      <div
+      <button
+        type="button" className="btn-reset"
         onClick={() => { setShowShop(true); setNpcDetailFor(null); setNpcSelectFor(null); }}
         style={{
           background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)',
-          borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+          borderRadius: 12, padding: '10px 14px', marginBottom: 10, width: '100%',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           cursor: 'pointer', border: '1px solid rgba(224,179,84,0.15)',
           transition: 'all 0.15s',
@@ -360,7 +372,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
             </div>
           )}
         </div>
-      </div>
+      </button>
 
       {/* 선택 안내 메시지 */}
       {currentSlots === 0 && !routineTooExpensive && (state.isVacation || state.routineSlot2) && (

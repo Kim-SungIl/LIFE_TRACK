@@ -35,11 +35,13 @@ export function WeekPlanner({
     const isClickable = !isFixed && onClick;
     const shouldHighlight = isEmpty && !isFixed; // 빈 선택 슬롯은 항상 강조
     return (
-      <div
+      <button
+        type="button"
+        disabled={!isClickable}
         onClick={() => isClickable && onClick!()}
-        className={shouldHighlight ? 'slot-pulse' : ''}
+        className={`btn-reset ${shouldHighlight ? 'slot-pulse' : ''}`}
         style={{
-          display: 'flex', alignItems: 'center', gap: 10,
+          display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
           padding: '10px 12px', marginBottom: 4, borderRadius: 10,
           cursor: isClickable ? 'pointer' : 'default',
           background: isFixed ? 'rgba(255,255,255,0.03)' :
@@ -88,7 +90,7 @@ export function WeekPlanner({
             {isEmpty ? '▶' : '✎'}
           </div>
         )}
-      </div>
+      </button>
     );
   };
 

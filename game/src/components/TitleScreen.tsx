@@ -70,6 +70,8 @@ export function TitleScreen() {
 
   const handleStart = () => {
     if (selected.length === 2 && gender) {
+      // 기존 저장이 있으면 새 게임이 무경고로 덮어쓰지 않게 확인 — 데이터 손실 방지.
+      if (savedData && !window.confirm('진행 중인 저장이 있어요. 새 게임을 시작하면 기존 저장은 삭제됩니다. 계속할까요?')) return;
       startGame(gender, selected as [ParentStrength, ParentStrength], { useReducedRecovery });
     }
   };
@@ -152,7 +154,8 @@ export function TitleScreen() {
           </div>
 
           <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
-            <div
+            <button
+              type="button" className="btn-reset" aria-label="남자 주인공으로 시작"
               onClick={() => { setGender('male'); setPhase('intro'); }}
               style={{
                 width: 200, padding: '28px 20px 22px', borderRadius: 20,
@@ -161,13 +164,14 @@ export function TitleScreen() {
                 cursor: 'pointer', transition: 'all 0.2s',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--blue)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--blue)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'none'; }}
             >
               <Portrait characterId="player_m" size={140} expression="neutral" year={1} />
-            </div>
+            </button>
 
-            <div
+            <button
+              type="button" className="btn-reset" aria-label="여자 주인공으로 시작"
               onClick={() => { setGender('female'); setPhase('intro'); }}
               style={{
                 width: 200, padding: '28px 20px 22px', borderRadius: 20,
@@ -176,11 +180,11 @@ export function TitleScreen() {
                 cursor: 'pointer', transition: 'all 0.2s',
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--accent)'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'transparent'; (e.currentTarget as HTMLDivElement).style.transform = 'none'; }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.transform = 'translateY(-4px)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.transform = 'none'; }}
             >
               <Portrait characterId="player_f" size={140} expression="neutral" year={1} />
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -203,14 +207,15 @@ export function TitleScreen() {
         {MEMORIES.map(m => {
           const isSelected = selected.includes(m.id);
           return (
-            <div
+            <button
               key={m.id}
+              type="button" className="btn-reset" aria-pressed={isSelected}
               onClick={() => toggle(m.id)}
               style={{
                 background: isSelected ? 'rgba(224,138,91,0.14)' : 'var(--bg-card)',
                 border: isSelected ? '2px solid var(--accent)' : '2px solid transparent',
                 borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'all 0.2s', width: '100%', textAlign: 'left', display: 'block',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
@@ -230,7 +235,7 @@ export function TitleScreen() {
                   ✓ 선택됨
                 </div>
               )}
-            </div>
+            </button>
           );
         })}
       </div>
