@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
+import { josa } from '../../engine/korean';
 import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender, ToneTag, ExamResult, EXAM_TYPE_LABELS } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
 import { Portrait } from '../Portrait';
@@ -301,7 +302,7 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
           </div>
         )}
         <div className="ye-stagger" style={{ animationDelay: '120ms', fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)', textShadow: TEXT_SHADOW, marginBottom: 6 }}>
-          {readonly ? yearName : `${yearName}이 끝났다`}
+          {readonly ? yearName : `${josa(yearName, '이/가')} 끝났다`}
         </div>
         <div className="ye-stagger" style={{ animationDelay: '240ms', fontSize: '0.9rem', color: 'var(--text-secondary)', textShadow: TEXT_SHADOW, marginBottom: 26 }}>
           {subtitle}
@@ -432,7 +433,7 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
           }}
           onClick={readonly ? onClose : onAdvance}
         >
-          {readonly ? '닫기' : nextGradeName ? `${nextGradeName}으로` : '다음으로'}
+          {readonly ? '닫기' : nextGradeName ? `${josa(nextGradeName, '으로/로')}` : '다음으로'}
         </button>
       </div>
     </BgWrapper>

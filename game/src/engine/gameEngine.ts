@@ -5,6 +5,7 @@ import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
 import { scaleIntimacyChange } from './intimacyScaling';
+import { josa } from './korean';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
@@ -781,9 +782,9 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
       const r2 = ACTIVITIES.find(a => a.id === state.routineSlot2);
       const r2Cost = r2 ? getActivityCost(r2, state.year) : 0;
       if (r2 && r2Cost > 0 && state.money < r2Cost) {
-        log.messages.push(`💰 돈이 부족해서 ${r2.name}을 못 했다...`);
+        log.messages.push(`💰 돈이 부족해서 ${josa(r2.name, '을/를')} 못 했다...`);
       } else if (!r2 || !canApplyActivity(state, r2.id)) {
-        log.messages.push(`⚠ 지금은 ${r2?.name || '설정된 활동'}을 할 수 없어 건너뛰었다.`);
+        log.messages.push(`⚠ 지금은 ${josa(r2?.name || '설정된 활동', '을/를')} 할 수 없어 건너뛰었다.`);
       } else {
         applyActivity(state, state.routineSlot2, log, r2Bonus);
         state.routineSlot2Weeks++;
@@ -793,9 +794,9 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
       const r3 = ACTIVITIES.find(a => a.id === state.routineSlot3);
       const r3Cost = r3 ? getActivityCost(r3, state.year) : 0;
       if (r3 && r3Cost > 0 && state.money < r3Cost) {
-        log.messages.push(`💰 돈이 부족해서 ${r3.name}을 못 했다...`);
+        log.messages.push(`💰 돈이 부족해서 ${josa(r3.name, '을/를')} 못 했다...`);
       } else if (!r3 || !canApplyActivity(state, r3.id)) {
-        log.messages.push(`⚠ 지금은 ${r3?.name || '설정된 활동'}을 할 수 없어 건너뛰었다.`);
+        log.messages.push(`⚠ 지금은 ${josa(r3?.name || '설정된 활동', '을/를')} 할 수 없어 건너뛰었다.`);
       } else {
         applyActivity(state, state.routineSlot3, log, r3Bonus);
         state.routineSlot3Weeks++;
@@ -821,12 +822,12 @@ function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number
     const act = ACTIVITIES.find(a => a.id === choice);
     const actCost = act ? getActivityCost(act, state.year) : 0;
     if (act && actCost > 0 && state.money < actCost) {
-      log.messages.push(`💰 돈이 부족해서 ${act.name}을 못 했다...`);
+      log.messages.push(`💰 돈이 부족해서 ${josa(act.name, '을/를')} 못 했다...`);
       continue;
     }
     // 학년/학기/방학횟수 게이트 — UI를 안 거친 입력 방어 (canApplyActivity SSOT)
     if (!act || !canApplyActivity(state, choice)) {
-      log.messages.push(`⚠ 지금은 ${act?.name || '선택한 활동'}을 할 수 없어 건너뛰었다.`);
+      log.messages.push(`⚠ 지금은 ${josa(act?.name || '선택한 활동', '을/를')} 할 수 없어 건너뛰었다.`);
       continue;
     }
     applyActivity(state, choice, log);

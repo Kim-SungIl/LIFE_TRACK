@@ -2,6 +2,7 @@ import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
 import { cloneGameState } from './stateClone';
 import { absWeek } from './relationshipSignals';
 import { scaleIntimacyChange } from './intimacyScaling';
+import { josa } from './korean';
 
 // ===== 아이템 타입 =====
 export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
@@ -239,7 +240,7 @@ export function applyItemEffects(
             // 면제 대상이 아니다. 면제 시 +15 선물로 돈을 써서 관계를 무한히 살 수 있어 우회 봉합.
             npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaleIntimacyChange(effect.npcBonus, npc.intimacy, false)));
             npc.lastInteractionWeek = absWeek(newState.year, newState.week); // 관계 신호: 선물 = 상호작용
-            messages.push(`${npc.name}에게 ${item.name}을 줬다! 친밀도가 올랐다.`);
+            messages.push(`${npc.name}에게 ${josa(item.name, '을/를')} 줬다! 친밀도가 올랐다.`);
           }
         }
         break;
@@ -247,7 +248,7 @@ export function applyItemEffects(
   }
 
   if (messages.length === 0) {
-    messages.push(item.purchaseMessage || `${item.name}을(를) 구매했다!`);
+    messages.push(item.purchaseMessage || `${josa(item.name, '을/를')} 구매했다!`);
   }
 
   return { newState, messages };
