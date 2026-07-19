@@ -3,6 +3,20 @@ import { cloneGameState } from './stateClone';
 import { absWeek } from './relationshipSignals';
 import { scaleIntimacyChange } from './intimacyScaling';
 import { josa } from './korean';
+import { GAME_EVENTS } from './events/data';
+
+// ===== 생일 주차 맵 (npcId → week) =====
+// '*-birthday' 이벤트에서 파생 — 이벤트 주차가 바뀌면 자동 추종(드리프트 방지).
+// requireBirthday 게이트가 참조: "만난 친구의 생일 주차"인지 판정.
+const BIRTHDAY_WEEK_BY_NPC: Record<string, number> = (() => {
+  const map: Record<string, number> = {};
+  for (const ev of GAME_EVENTS) {
+    if (!ev.id.endsWith('-birthday')) continue;
+    const npcId = ev.speakers?.[0];
+    if (npcId && typeof ev.week === 'number') map[npcId] = ev.week;
+  }
+  return map;
+})();
 
 // ===== 아이템 타입 =====
 export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
@@ -19,8 +33,10 @@ export interface ShopItem {
   effects: ItemEffect[];
   // 제한
   maxPerWeek?: number;      // 주간 구매 제한
+  limitGroup?: string;      // 주간 한도 공유 그룹 (여러 아이템이 슬롯 공유 — 없으면 id 단위)
   requireYear?: number;     // 최소 학년
   requireStat?: { stat: StatKey; min: number }; // 스탯 조건
+  requireBirthday?: boolean; // 만난 친구의 생일 주차에만 구매 가능
   seasonal?: boolean;       // 기간 한정
   purchaseMessage?: string; // 구매 시 커스텀 메시지 (없으면 기본 "구매 완료" 문구)
 }
@@ -104,6 +120,7 @@ export const SHOP_ITEMS: ShopItem[] = [
     id: 'small-gift', name: '작은 선물', description: '작지만 마음이 담긴 선물.',
     price: 1, category: 'gift', emoji: '🎁',
     effects: [{ type: 'npc_intimacy', npcBonus: 5 }],
+    maxPerWeek: 1, // 돈으로 관계 무한 구매 차단
   },
   {
     id: 'movie-ticket', name: '영화 티켓', description: '같이 영화 보러 가자!',
@@ -112,11 +129,14 @@ export const SHOP_ITEMS: ShopItem[] = [
       { type: 'npc_intimacy', npcBonus: 8 },
       { type: 'instant', stat: 'mental', value: 3 },
     ],
+    // 영화·공연은 "직접 나가서 함께하는" 외출이라 몸이 하나 → 주 1회 공유 슬롯
+    maxPerWeek: 1, limitGroup: 'outing',
   },
   {
     id: 'birthday-gift', name: '생일 선물 세트', description: '특별한 날을 위한 특별한 선물.',
     price: 5, category: 'gift', emoji: '🎂',
     effects: [{ type: 'npc_intimacy', npcBonus: 15 }],
+    maxPerWeek: 1, requireBirthday: true, // 생일인 친구가 있을 때만
   },
   {
     id: 'concert-ticket', name: '공연/전시 티켓', description: '함께 보면 더 좋은 공연.',
@@ -126,6 +146,7 @@ export const SHOP_ITEMS: ShopItem[] = [
       { type: 'instant', stat: 'mental', value: 5 },
     ],
     requireYear: 3, // 중2부터
+    maxPerWeek: 1, limitGroup: 'outing', // 영화 티켓과 슬롯 공유
   },
 
   // ===== 자기표현 (패션) =====
@@ -165,6 +186,11 @@ export const SHOP_CATEGORIES: Record<ItemCategory, { name: string; emoji: string
   opportunity:{ name: '특별', emoji: '🌟', desc: '대회, 캠프, 기회' },
 };
 
+// 주간 한도 카운트 키 — limitGroup이 있으면 그룹 단위로 합산, 없으면 아이템 단위.
+export function limitKey(item: ShopItem): string {
+  return item.limitGroup ?? item.id;
+}
+
 // ===== 구매 가능 여부 체크 =====
 export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Record<string, number>): { ok: boolean; reason?: string } {
   if (state.money < item.price) return { ok: false, reason: '돈이 부족해요' };
@@ -176,8 +202,12 @@ export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Reco
     const val = state.stats[item.requireStat.stat];
     if (val < item.requireStat.min) return { ok: false, reason: `${STAT_LABELS[item.requireStat.stat]} ${item.requireStat.min} 이상 필요` };
   }
+  if (item.requireBirthday) {
+    const hasBirthday = state.npcs.some(n => n.met && BIRTHDAY_WEEK_BY_NPC[n.id] === state.week);
+    if (!hasBirthday) return { ok: false, reason: '생일인 친구가 있을 때만' };
+  }
   if (item.maxPerWeek) {
-    const bought = weekPurchases[item.id] || 0;
+    const bought = weekPurchases[limitKey(item)] || 0;
     if (bought >= item.maxPerWeek) return { ok: false, reason: '이번 주 구매 한도 초과' };
   }
   if (item.seasonal && !state.isVacation) return { ok: false, reason: '방학 기간에만 구매 가능' };
