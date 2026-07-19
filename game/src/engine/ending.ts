@@ -189,7 +189,17 @@ function determineCareer(state: GameState): { path: string; detail: string } {
 }
 
 // ===== 주요 NPC 근황 =====
-function getTopNpcStories(state: GameState, limit = 2): string[] {
+// 그 NPC와 얽힌 가장 인상적인 회상 한 조각(recallText)을 골라 근황에 엮는다 —
+// 96개 reach/미니이벤트 기억의 구체성을 엔딩 클라이맥스에서 회수(고정 템플릿 평탄화 해소).
+// 상처(betrayal)는 후회 레이어 소관이라 "아직 이어진 사이" 근황엔 쓰지 않는다.
+function bestRecallFor(state: GameState, npcId: string): string | null {
+  const mems = (state.memorySlots || [])
+    .filter(m => m.category !== 'betrayal' && (m.npcIds?.includes(npcId) ?? false))
+    .sort((a, b) => (b.importance - a.importance) || (b.year - a.year) || (b.week - a.week));
+  return mems.length > 0 ? mems[0].recallText : null;
+}
+
+function getTopNpcStories(state: GameState, limit = 3): string[] {
   const sorted = [...state.npcs]
     .filter(n => n.met && n.intimacy >= 50)
     .sort((a, b) => b.intimacy - a.intimacy)
@@ -197,9 +207,12 @@ function getTopNpcStories(state: GameState, limit = 2): string[] {
 
   const stories: string[] = [];
   for (const npc of sorted) {
-    if (npc.intimacy >= 85) stories.push(`${npc.name}와는 지금도 가장 친한 친구다.`);
-    else if (npc.intimacy >= 70) stories.push(`${npc.name}와는 종종 연락한다. 좋은 기억으로 남아 있다.`);
-    else stories.push(`${npc.name}와는 가끔 생각나는 사이다.`);
+    const frame = npc.intimacy >= 85 ? `${npc.name}와는 지금도 가장 친한 친구다.`
+      : npc.intimacy >= 70 ? `${npc.name}와는 종종 연락한다. 좋은 기억으로 남아 있다.`
+      : `${npc.name}와는 가끔 생각나는 사이다.`;
+    // 구체 회상이 있으면 한 조각 덧붙여 그 관계만의 결을 남긴다. 없으면 티어 템플릿 그대로.
+    const recall = bestRecallFor(state, npc.id);
+    stories.push(recall ? `${frame} ${recall}` : frame);
   }
   return stories;
 }
