@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, isStorageSaveFailed } from '../engine/store';
+import { josa } from '../engine/korean';
 import { getWeekLabel } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
 import { StatKey, STAT_LABELS } from '../engine/types';
@@ -245,7 +246,7 @@ export function GameScreen() {
           }
           // 첫 만남 알림 추가
           for (const name of newMeets) {
-            effects.unshift({ text: `🤝 ${name}와(과) 알게 되었다!`, color: 'var(--yellow)' });
+            effects.unshift({ text: `🤝 ${josa(name, '와/과')} 알게 되었다!`, color: 'var(--yellow)' });
           }
           setEventResultData({ message: choice.message, effects, event: evt, choiceIndex: index });
         }}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { SHOP_ITEMS, SHOP_CATEGORIES, canBuyItem, ItemCategory, ShopItem } from '../engine/shopSystem';
+import { josa } from '../engine/korean';
 import { GameState, STAT_LABELS, StatKey } from '../engine/types';
 
 interface Props {
@@ -213,7 +214,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
               <div key={npc.id}
                 onClick={() => {
                   onBuy(npcSelectItem, npc.id);
-                  setBuyMessage(`${npcSelectItem.emoji} ${npc.name}에게 ${npcSelectItem.name}을 줬다!`);
+                  setBuyMessage(`${npcSelectItem.emoji} ${npc.name}에게 ${josa(npcSelectItem.name, '을/를')} 줬다!`);
                   setNpcSelectItem(null);
                   setTimeout(() => setBuyMessage(null), 2000);
                 }}

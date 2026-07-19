@@ -2,6 +2,7 @@
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
 import { GameState, ParentStrength } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
+import { josa } from './korean';
 
 // ===== 행복 등급 =====
 // mental + social 조합으로 한 해/일생의 행복도를 5단계로 분류.
@@ -207,9 +208,9 @@ function getTopNpcStories(state: GameState, limit = 3): string[] {
 
   const stories: string[] = [];
   for (const npc of sorted) {
-    const frame = npc.intimacy >= 85 ? `${npc.name}와는 지금도 가장 친한 친구다.`
-      : npc.intimacy >= 70 ? `${npc.name}와는 종종 연락한다. 좋은 기억으로 남아 있다.`
-      : `${npc.name}와는 가끔 생각나는 사이다.`;
+    const frame = npc.intimacy >= 85 ? `${josa(npc.name, '와/과')}는 지금도 가장 친한 친구다.`
+      : npc.intimacy >= 70 ? `${josa(npc.name, '와/과')}는 종종 연락한다. 좋은 기억으로 남아 있다.`
+      : `${josa(npc.name, '와/과')}는 가끔 생각나는 사이다.`;
     // 구체 회상이 있으면 한 조각 덧붙여 그 관계만의 결을 남긴다. 없으면 티어 템플릿 그대로.
     const recall = bestRecallFor(state, npc.id);
     stories.push(recall ? `${frame} ${recall}` : frame);
