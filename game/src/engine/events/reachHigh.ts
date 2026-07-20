@@ -118,7 +118,9 @@ export const HIGH_REACH_EVENTS = [
     femaleDescription: '체대 입시 연습 중 지훈이 발목을 크게 접질렸다는 소식. 수업도 제치고 달려가니, 보건실 침대에 앉은 지훈이 너를 보고 멈칫한다.\n"…너 수업은? 야, 그렇다고 진짜 오냐." 핀잔 같은 말인데, 안도한 얼굴을 숨기지 못한다. "역시 너밖에 없네."',
     speakers: ['jihun'],
     location: 'classroom',
-    background: 'school_bench',
+    // 본문이 '보건실 침대' — school_bench(교정 벤치)와 불일치. infirmary는 신규 발주 에셋
+    // (docs/cg-prompts-backgrounds-2026-07.md). 생성 전까지는 location(classroom) 폴백으로 동작.
+    background: 'infirmary',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'jihun'); return !!n?.met && n.intimacy >= 95 && s.year === 6 && !s.isVacation; },
     choices: [
       { text: '"당연히 오지. 많이 아파?" 발목부터 살핀다', effects: { mental: 1, health: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 5 }], message: '"엄살은 아닌데… 좀 아파." 늘 괜찮다던 녀석이, 발목 대신 너를 한 번 본다.', timeCost: 1 },

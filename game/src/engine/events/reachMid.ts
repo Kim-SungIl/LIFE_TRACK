@@ -525,7 +525,9 @@ export const MID_REACH_EVENTS = [
     description: '비 오는 날 현관 처마 밑, "유나가 예고로 전학 간대, 피아노로 승부 본다더라"는 소문이 돈다. 사실이냐 묻자, 유나가 처음으로 웃지 않는다.\n"응. 갈지도 몰라." 그 침묵이 곧 작별의 예고처럼 들린다.',
     speakers: ['yuna'],
     location: 'school_gate',
-    background: 'school_entrance_rain',
+    // 본문이 '현관 처마 밑' — 기존 school_gate_{school}_rain 에셋이 정확히 맞음 (Y3→middle).
+    // school_entrance_rain 키는 siwoo-demolished-ground(철거 골목 빗속) 전용으로 재지정 (2026-07-20 배경 발주 검수).
+    background: 'school_gate_{school}_rain',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 88 && s.year === 3 && !s.isVacation; },
     choices: [
       { text: '"안 웃어도 돼. 지금은."', effects: { mental: 2 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 빗줄기를 본다. "…고마워. 안 웃어도 된다는 말." ', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
