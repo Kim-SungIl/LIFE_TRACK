@@ -1,7 +1,7 @@
 import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
 import { cloneGameState } from './stateClone';
 import { absWeek } from './relationshipSignals';
-import { scaleIntimacyChange } from './intimacyScaling';
+import { applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { GAME_EVENTS } from './events/data';
 
@@ -266,9 +266,9 @@ export function applyItemEffects(
         if (targetNpcId && effect.npcBonus) {
           const npc = newState.npcs.find(n => n.id === targetNpcId);
           if (npc) {
-            // 구간 감쇠 경유(exemptMajorReward=false) — 선물은 반복 구매 가능하므로 큰 단발 보상
-            // 면제 대상이 아니다. 면제 시 +15 선물로 돈을 써서 관계를 무한히 살 수 있어 우회 봉합.
-            npc.intimacy = Math.max(0, Math.min(100, npc.intimacy + scaleIntimacyChange(effect.npcBonus, npc.intimacy, false)));
+            // 반복 grind 소프트캡 경유 — 선물은 반복 구매 가능하므로 캡 이상은 이벤트로만.
+            // (감쇠 exemptMajorReward=false + 소프트캡: 돈으로 관계를 무한히 살 수 없게 이중 봉합)
+            npc.intimacy = applyGrindIntimacyGain(npc.intimacy, effect.npcBonus);
             npc.lastInteractionWeek = absWeek(newState.year, newState.week); // 관계 신호: 선물 = 상호작용
             messages.push(`${npc.name}에게 ${josa(item.name, '을/를')} 줬다! 친밀도가 올랐다.`);
           }

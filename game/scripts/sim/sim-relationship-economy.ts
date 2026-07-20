@@ -11,6 +11,7 @@
 import { createInitialState, processWeek, scaleIntimacyChange } from '../../src/engine/gameEngine';
 import { getFollowupForWeek } from '../../src/engine/events';
 import { SHOP_ITEMS, applyItemEffects, canBuyItem, limitKey, type ShopItem } from '../../src/engine/shopSystem';
+import { INTIMACY_GRIND_SOFTCAP } from '../../src/engine/intimacyScaling';
 import type { GameState, ParentStrength } from '../../src/engine/types';
 
 const SEEDS = [101, 202, 303, 404, 505, 606, 707, 808];
@@ -136,7 +137,8 @@ function runRelationshipMaxing(seed: number, policy: Policy = 'maxing', giftItem
     if (policy === 'maxing') {
       s.weekPurchases = { ...(s.weekPurchases ?? {}) };
       for (const gift of giftItems) {
-        const target = s.npcs.filter(n => n.met && n.intimacy < 95).sort((a, b) => a.intimacy - b.intimacy)[0];
+        // 소프트캡 이상 NPC는 선물 이득 0이라 대상에서 제외(합리적 봇 — 낭비 구매 방지).
+        const target = s.npcs.filter(n => n.met && n.intimacy < INTIMACY_GRIND_SOFTCAP).sort((a, b) => a.intimacy - b.intimacy)[0];
         if (!target) break;
         if (!canBuyItem(gift, s, s.weekPurchases).ok) continue;
         const { newState } = applyItemEffects(gift, s, target.id);

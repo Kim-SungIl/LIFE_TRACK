@@ -4,7 +4,7 @@ import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
-import { scaleIntimacyChange } from './intimacyScaling';
+import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
@@ -667,8 +667,9 @@ function applyNpcActivitySelection(state: GameState, npcActivityMap?: Record<str
   for (const npcId of Object.values(npcActivityMap)) {
     const npc = state.npcs.find(n => n.id === npcId);
     if (npc) {
-      // 구간 감쇠 경유 — raw +3은 고구간(80+)에서도 자연감소를 압도해 전원 만렙 수렴을 유발했다.
-      npc.intimacy = Math.min(100, npc.intimacy + scaleIntimacyChange(3, npc.intimacy));
+      // 반복 grind 소프트캡 경유 — 동행은 무한 반복 가능하므로 캡 이상은 이벤트로만.
+      // (구간 감쇠 + max(1) 바닥의 80+ 무한상승을 소프트캡으로 차단)
+      npc.intimacy = applyGrindIntimacyGain(npc.intimacy, 3);
       npc.lastInteractionWeek = absWeek(state.year, state.week); // 관계 신호: 동행 = 상호작용
     }
   }
