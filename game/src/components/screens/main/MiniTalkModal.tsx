@@ -3,6 +3,7 @@ import { MiniTalkEvent } from '../../../engine/talkSystem';
 import { MemorySlotDraft, StatKey, STAT_LABELS } from '../../../engine/types';
 import { STAT_ICONS } from '../shared';
 import { Portrait } from '../../Portrait';
+import { Dialog } from '../../Dialog';
 
 type Props = {
   result: MiniTalkEvent;
@@ -109,23 +110,18 @@ export function MiniTalkModal({ result, year, onDismiss, onCloseAll, onSelectCho
   };
 
   return (
-    <div onClick={onDismiss} style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-      padding: '24px 0', overflowY: 'auto', zIndex: 110,
-    }}>
-      <div
-        onClick={e => e.stopPropagation()}
-        className={isMemory ? 'mt-card mt-card--memory' : 'mt-card'}
-        style={{
-          background: isMemory
-            ? 'linear-gradient(135deg, rgba(30,27,36,0.99), rgba(18,16,22,0.99))'
-            : 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
-          borderRadius: 16, padding: 24, width: '85%', maxWidth: 360, textAlign: 'center',
-          margin: 'auto', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto',
-          border: isMemory ? '1px solid rgba(229,192,123,0.45)' : '1px solid rgba(224,138,91,0.4)',
-        }}
-      >
+    <Dialog onClose={onDismiss} ariaLabel={header.text} align="top" zIndex={110} maxWidth={360}
+      overlayStyle={{ background: 'rgba(0,0,0,0.8)', padding: '24px 0', overflowY: 'auto' }}
+      contentClassName={isMemory ? 'mt-card mt-card--memory' : 'mt-card'}
+      contentStyle={{
+        background: isMemory
+          ? 'linear-gradient(135deg, rgba(30,27,36,0.99), rgba(18,16,22,0.99))'
+          : 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
+        borderRadius: 16, padding: 24, width: '85%', textAlign: 'center',
+        margin: 'auto', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto',
+        border: isMemory ? '1px solid rgba(229,192,123,0.45)' : '1px solid rgba(224,138,91,0.4)',
+      }}
+    >
         <div style={{
           fontSize: '0.72rem', letterSpacing: '0.08em', color: header.color,
           fontWeight: 700, marginBottom: 12,
@@ -228,7 +224,6 @@ export function MiniTalkModal({ result, year, onDismiss, onCloseAll, onSelectCho
             onClick={onCloseAll}
           >닫기</button>
         )}
-      </div>
-    </div>
+    </Dialog>
   );
 }

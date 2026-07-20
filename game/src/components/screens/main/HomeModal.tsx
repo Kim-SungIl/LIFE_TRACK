@@ -1,6 +1,7 @@
 import { ParentStrength } from '../../../engine/types';
 import { PARENT_ICONS, breakSentences } from '../shared';
 import { Portrait } from '../../Portrait';
+import { Dialog } from '../../Dialog';
 
 type Props = {
   parents: readonly ParentStrength[];
@@ -41,13 +42,10 @@ export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Pro
   // 잡담을 건네거나 이벤트가 있을 땐 부모가 환하게(happy로 크로스페이드), 평소엔 차분히
   const parentsHappy = Boolean(smalltalk) || hasEvent;
   return (
-    <div onClick={onClose} style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
+    <Dialog onClose={onClose} labelledBy="home-modal-title" maxWidth={360}
+      contentStyle={{
         background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
-        borderRadius: 16, padding: 24, width: '85%', maxWidth: 360, textAlign: 'center',
+        borderRadius: 16, padding: 24, textAlign: 'center',
         border: '1px solid rgba(224,138,91,0.25)',
       }}>
         {/* 엄마·아빠 일러스트 헤더 — 이모지(🏠) 대신, NPC 모달과 톤 일관 */}
@@ -55,7 +53,7 @@ export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Pro
           <ParentFace id="mother" happy={parentsHappy} />
           <ParentFace id="father" happy={parentsHappy} />
         </div>
-        <div style={{ fontSize: '1rem', fontWeight: 700 }}>가정</div>
+        <div id="home-modal-title" style={{ fontSize: '1rem', fontWeight: 700 }}>가정</div>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 4 }}>
           엄마와 아빠가 만든 우리 집 분위기
         </div>
@@ -96,7 +94,6 @@ export function HomeModal({ parents, smalltalk, hasEvent, onTalk, onClose }: Pro
           </button>
           <button className="btn btn-secondary" style={{ flex: 1, whiteSpace: 'nowrap' }} onClick={onClose}>닫기</button>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

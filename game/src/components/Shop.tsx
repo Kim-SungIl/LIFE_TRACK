@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SHOP_ITEMS, SHOP_CATEGORIES, canBuyItem, limitKey, ItemCategory, ShopItem } from '../engine/shopSystem';
 import { josa } from '../engine/korean';
 import { GameState, STAT_LABELS, StatKey } from '../engine/types';
+import { Dialog } from './Dialog';
 
 interface Props {
   state: GameState;
@@ -55,23 +56,21 @@ export function Shop({ state, onBuy, onClose }: Props) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-      zIndex: 150,
-    }}>
-      <div style={{
+    <>
+    <Dialog onClose={onClose} align="bottom" zIndex={150} maxWidth={600} labelledBy="shop-title"
+      overlayStyle={{ background: 'rgba(0,0,0,0.8)' }}
+      contentStyle={{
         background: 'linear-gradient(180deg, rgba(42,34,48,0.98), rgba(23,21,28,0.99))',
-        borderRadius: '20px 20px 0 0', width: '100%', maxWidth: 600,
+        borderRadius: '20px 20px 0 0', width: '100%',
         maxHeight: '92vh', minHeight: '70vh', display: 'flex', flexDirection: 'column',
       }}>
         {/* 헤더 */}
         <div style={{ padding: '16px 20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>🛒 상점</div>
+            <div id="shop-title" style={{ fontSize: '1.1rem', fontWeight: 700 }}>🛒 상점</div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>현재 돈: {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원</div>
           </div>
-          <span onClick={onClose} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 8px' }}>닫기 ✕</span>
+          <button type="button" className="btn-reset" onClick={onClose} style={{ fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px 8px' }}>닫기 ✕</button>
         </div>
 
         {/* 카테고리 탭 */}
@@ -80,7 +79,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
             const info = SHOP_CATEGORIES[cat];
             const isActive = selectedCat === cat;
             return (
-              <div key={cat} onClick={() => setSelectedCat(cat)} style={{
+              <button key={cat} type="button" className="btn-reset" aria-pressed={isActive} onClick={() => setSelectedCat(cat)} style={{
                 padding: '6px 12px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
                 fontSize: '0.78rem', fontWeight: isActive ? 700 : 400,
                 background: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
@@ -88,7 +87,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                 transition: 'all 0.15s',
               }}>
                 {info.emoji} {info.name}
-              </div>
+              </button>
             );
           })}
         </div>
@@ -194,24 +193,17 @@ export function Shop({ state, onBuy, onClose }: Props) {
             </div>
           </div>
         )}
-      </div>
+      </Dialog>
 
       {/* NPC 선택 모달 (선물용) */}
       {npcSelectItem && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          zIndex: 200,
-        }}>
-          <div style={{
-            background: 'var(--bg-secondary)', borderRadius: 16, padding: 24,
-            width: '85%', maxWidth: 360,
-          }}>
-            <div style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 12 }}>
+        <Dialog onClose={() => setNpcSelectItem(null)} zIndex={200} maxWidth={360} labelledBy="shop-gift-title"
+          contentStyle={{ background: 'var(--bg-secondary)', borderRadius: 16, padding: 24 }}>
+            <div id="shop-gift-title" style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 12 }}>
               {npcSelectItem.emoji} {npcSelectItem.name} — 누구에게 줄까?
             </div>
             {state.npcs.filter(n => n.met).map(npc => (
-              <div key={npc.id}
+              <button key={npc.id} type="button" className="btn-reset"
                 onClick={() => {
                   onBuy(npcSelectItem, npc.id);
                   setBuyMessage(`${npcSelectItem.emoji} ${npc.name}에게 ${josa(npcSelectItem.name, '을/를')} 줬다!`);
@@ -219,7 +211,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                   setTimeout(() => setBuyMessage(null), 2000);
                 }}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                  display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', width: '100%', textAlign: 'left',
                   background: 'rgba(255,255,255,0.04)', borderRadius: 10, marginBottom: 6,
                   cursor: 'pointer', border: '1px solid transparent', transition: 'all 0.15s',
                 }}
@@ -231,15 +223,14 @@ export function Shop({ state, onBuy, onClose }: Props) {
                   <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{npc.name}</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>친밀도 {Math.round(npc.intimacy)}</div>
                 </div>
-              </div>
+              </button>
             ))}
             <button onClick={() => setNpcSelectItem(null)}
               style={{ marginTop: 8, width: '100%', padding: '8px', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '0.82rem' }}>
               취소
             </button>
-          </div>
-        </div>
+        </Dialog>
       )}
-    </div>
+    </>
   );
 }

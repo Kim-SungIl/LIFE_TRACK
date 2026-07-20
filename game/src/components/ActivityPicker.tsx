@@ -79,11 +79,13 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
             border: selectedInCat.length > 0 ? '1px solid rgba(224,138,91,0.3)' : '1px solid rgba(255,255,255,0.1)',
           }}>
             {/* 카테고리 헤더 */}
-            <div
+            <button
+              type="button" className="btn-reset"
               onClick={() => setExpandedCat(isExpanded ? null : cat)}
+              aria-expanded={isExpanded}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 14px', cursor: 'pointer',
+                padding: '12px 14px', cursor: 'pointer', width: '100%',
                 background: isExpanded ? 'rgba(255,255,255,0.03)' : 'transparent',
               }}
             >
@@ -104,15 +106,17 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   {isExpanded ? '▲' : '▼'}
                 </span>
               </div>
-            </div>
+            </button>
 
             {/* 펼쳐진 활동 목록 */}
             {isExpanded && (
               <div style={{ padding: '0 10px 10px' }}>
                 {/* 수치 보기 토글 */}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 4 }}>
-                  <span
-                    onClick={(e) => { e.stopPropagation(); setShowDetail(!showDetail); }}
+                  <button
+                    type="button" className="btn-reset"
+                    onClick={() => setShowDetail(!showDetail)}
+                    aria-pressed={showDetail}
                     style={{
                       fontSize: '0.65rem', color: showDetail ? 'var(--blue)' : 'var(--text-muted)',
                       cursor: 'pointer', padding: '1px 6px', borderRadius: 4,
@@ -120,7 +124,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                     }}
                   >
                     {showDetail ? '수치 ON' : '수치 보기'}
-                  </span>
+                  </button>
                 </div>
 
                 {catActivities.map(a => {
@@ -167,9 +171,12 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   }
 
                   return (
-                    <div key={a.id}
-                      onClick={() => !disabled && onToggle(a.id)}
+                    <button key={a.id} type="button" className="btn-reset"
+                      disabled={disabled}
+                      aria-pressed={isSel}
+                      onClick={() => onToggle(a.id)}
                       style={{
+                        display: 'block', width: '100%', textAlign: 'left',
                         padding: compact ? '8px 10px' : '10px 12px',
                         marginTop: 4, borderRadius: 10, cursor: disabled ? 'not-allowed' : 'pointer',
                         background: isSel ? 'rgba(224,138,91,0.25)' : 'rgba(255,255,255,0.06)',
@@ -317,7 +324,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           ))}
                         </div>
                       )}
-                    </div>
+                    </button>
                   );
                 })}
               </div>

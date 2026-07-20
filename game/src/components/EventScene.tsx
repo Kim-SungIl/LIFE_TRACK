@@ -565,8 +565,10 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 animation: 'es-fade-in 0.4s ease',
               }}
             >
-              <span
-                onClick={isFirstPage ? undefined : retreatPage}
+              <button
+                type="button" className="btn-reset" aria-label="이전 페이지"
+                disabled={isFirstPage}
+                onClick={retreatPage}
                 style={{
                   cursor: isFirstPage ? 'not-allowed' : 'pointer',
                   opacity: isFirstPage ? 0.3 : 1,
@@ -575,12 +577,14 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 }}
               >
                 ◀ 이전
-              </span>
+              </button>
               <span style={{ opacity: 0.6, fontVariantNumeric: 'tabular-nums' }}>
                 {safePageIndex + 1} / {pages.length}
               </span>
-              <span
-                onClick={isLastPage ? undefined : advancePage}
+              <button
+                type="button" className="btn-reset" aria-label="다음 페이지"
+                disabled={isLastPage}
+                onClick={advancePage}
                 style={{
                   cursor: isLastPage ? 'not-allowed' : 'pointer',
                   opacity: isLastPage ? 0.3 : 1,
@@ -589,7 +593,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 }}
               >
                 다음 ▶
-              </span>
+              </button>
             </div>
           )}
 
@@ -606,10 +610,13 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
               const cost = choice.moneyEffect && choice.moneyEffect < 0 ? -choice.moneyEffect : 0;
               const insufficient = cost > 0 && state ? state.money < cost : false;
               return (
-              <div
+              <button
+                type="button" className="btn-reset"
                 key={originalIndex}
-                onClick={() => { if (!insufficient) handleChoice(originalIndex); }}
+                disabled={insufficient}
+                onClick={() => handleChoice(originalIndex)}
                 style={{
+                  display: 'block', width: '100%', textAlign: 'left',
                   padding: '12px 16px',
                   borderRadius: 12,
                   background: insufficient ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
@@ -633,18 +640,26 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#fff', wordBreak: 'keep-all', overflowWrap: 'break-word' }}>
                   {choice.text}
                 </div>
+                {/* 선택 전 비용 사전 표시 — 감당 가능해도 노출(비가역 선택의 시행착오 완화) */}
+                {cost > 0 && !insufficient && (
+                  <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--yellow)', marginTop: 4 }}>
+                    💰 비용 {cost}만원
+                  </div>
+                )}
                 {insufficient && (
                   <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--red, #d96a6a)', marginTop: 4 }}>
                     💰 돈이 부족합니다 (보유 {state?.money ?? 0}만 / 필요 {cost}만)
                   </div>
                 )}
-              </div>
+              </button>
               );
             })}
             {(allInsufficient || visibleChoices.length === 0) && (
-              <div
+              <button
+                type="button" className="btn-reset"
                 onClick={() => handleChoice(-1)}
                 style={{
+                  display: 'block', width: '100%', textAlign: 'left',
                   padding: '12px 16px',
                   borderRadius: 12,
                   background: 'rgba(255,255,255,0.06)',
@@ -666,7 +681,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 4 }}>
                   지금은 감당하기 어렵다. 조용히 자리를 뜬다.
                 </div>
-              </div>
+              </button>
             )}
           </div>
         </div>

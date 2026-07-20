@@ -94,6 +94,33 @@ body {
   display: inline-block;
 }
 
+/* ===== 접근성 (Phase 1) ===== */
+/* 키보드 포커스 링 — 마우스 클릭엔 안 뜨고 Tab 이동 시에만.
+   outline은 모던 브라우저에서 요소의 border-radius를 자동으로 따라간다. */
+:focus-visible {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) { outline: none; }
+
+/* div/span → <button> 전환용 유틸: 네이티브 버튼 크롬을 제거해
+   시각은 기존 그대로 두고 시맨틱(키보드/포커스/role)만 얻는다.
+   기존 인라인 스타일(cursor:pointer 등)은 그대로 유지되도록 최소만 리셋. */
+.btn-reset {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: none;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: pointer;
+  width: auto;
+}
+.btn-reset:disabled { cursor: not-allowed; }
+
 /* ===== 카드 ===== */
 .card {
   background: var(--bg-card);

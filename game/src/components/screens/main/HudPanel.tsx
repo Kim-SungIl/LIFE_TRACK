@@ -77,10 +77,14 @@ export const HudPanel = memo(function HudPanel({
               const justFired = parentBonusesApplied?.some(b => b.parent === p);
               const isActive = activeParentTip === p;
               return (
-                <span
+                <button
                   key={p}
+                  type="button" className="btn-reset"
+                  aria-label={`가정 — ${PARENT_TIP_SHORT[p]}`}
                   onMouseEnter={() => setActiveParentTip(p)}
                   onMouseLeave={() => setActiveParentTip(prev => prev === p ? null : prev)}
+                  onFocus={() => setActiveParentTip(p)}
+                  onBlur={() => setActiveParentTip(prev => prev === p ? null : prev)}
                   onClick={() => { setActiveParentTip(null); onOpenHome(); }}
                   style={{
                     width: 22, height: 22, borderRadius: '50%',
@@ -90,26 +94,28 @@ export const HudPanel = memo(function HudPanel({
                     cursor: 'pointer', userSelect: 'none',
                     animation: justFired ? 'parentChipPulse 0.6s ease' : 'none',
                   }}
-                >{PARENT_ICONS[p]}</span>
+                >{PARENT_ICONS[p]}</button>
               );
             })}
             {/* 클릭 가능 affordance — "💬 가정" 라벨로 진입점 명시 */}
-            <span
+            <button
+              type="button" className="btn-reset"
               onClick={() => { setActiveParentTip(null); onOpenHome(); }}
               style={{
                 marginLeft: 4, fontSize: '0.65rem', color: 'var(--accent-soft)',
                 cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
               }}
-            >💬 가정</span>
+            >💬 가정</button>
             {/* 기록장 — 지난 학년을 다시 넘겨본다(읽기 전용). 조용한 고스트 톤. */}
             {onOpenAlbum && (
-              <span
+              <button
+                type="button" className="btn-reset"
                 onClick={() => { setActiveParentTip(null); onOpenAlbum(); }}
                 style={{
                   marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
                   cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
                 }}
-              >📖 기록장</span>
+              >📖 기록장</button>
             )}
           </div>
           {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (

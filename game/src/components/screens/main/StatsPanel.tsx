@@ -14,9 +14,11 @@ export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
   const [expandedStat, setExpandedStat] = useState<StatKey | null>(null);
   return (
     <div data-tutorial="stats" style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '8px 12px', marginBottom: 10 }}>
-      <div
+      <button
+        type="button" className="btn-reset"
         onClick={() => setShowStats(!showStats)}
-        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '2px 0' }}
+        aria-expanded={showStats}
+        style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', padding: '2px 0', width: '100%' }}
       >
         <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>📊 능력치</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -35,7 +37,7 @@ export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
           )}
           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{showStats ? '▲' : '▼'}</span>
         </div>
-      </div>
+      </button>
       {showStats && (
         <div style={{ marginTop: 6 }}>
           {(Object.keys(stats) as StatKey[]).map(key => {
@@ -44,7 +46,7 @@ export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
             const desc = getStatDescription(key, year);
             return (
               <div key={key}>
-                <div style={{ display: 'flex', alignItems: 'center', padding: '3px 0', cursor: 'pointer' }} onClick={() => setExpandedStat(isExp ? null : key)}>
+                <button type="button" className="btn-reset" style={{ display: 'flex', alignItems: 'center', padding: '3px 0', cursor: 'pointer', width: '100%', textAlign: 'left' }} onClick={() => setExpandedStat(isExp ? null : key)} aria-expanded={isExp}>
                   <span style={{ width: 20, fontSize: '0.75rem' }}>{STAT_ICONS[key]}</span>
                   <span style={{ width: 28, fontSize: '0.72rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
                   <div style={{ flex: 1, height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 5, margin: '0 6px', position: 'relative', overflow: 'hidden' }}>
@@ -53,7 +55,7 @@ export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
                   <span style={{ width: 16, fontSize: '0.68rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
                   <span style={{ minWidth: 56, fontSize: '0.6rem', color: grade.color, opacity: 0.85, marginLeft: 4 }}>{STAT_FLAVOR_LABELS[key][grade.grade]}</span>
                   <span style={{ width: 22, fontSize: '0.62rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(stats[key])}</span>
-                </div>
+                </button>
                 {isExp && (
                   <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '6px 10px', margin: '2px 0 4px 20px', fontSize: '0.68rem', lineHeight: 1.5 }}>
                     <div style={{ color: 'var(--text-primary)' }}>{desc.what}</div>

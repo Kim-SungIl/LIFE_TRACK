@@ -1,5 +1,6 @@
 import { GameState, NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
+import { Dialog } from '../../Dialog';
 import { breakSentences } from '../shared';
 import { relationshipSignal } from '../../../engine/relationshipSignals';
 
@@ -21,17 +22,14 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
   const intimacyLabel = npc.intimacy >= 70 ? '절친' : npc.intimacy >= 40 ? '친구' : '아는 사이';
   const signal = relationshipSignal(npc, state);
   return (
-    <div onClick={onClose} style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100,
-    }}>
-      <div onClick={e => e.stopPropagation()} style={{
+    <Dialog onClose={onClose} labelledBy="npc-detail-name" maxWidth={340}
+      contentStyle={{
         background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
-        borderRadius: 16, padding: 24, width: '85%', maxWidth: 340, textAlign: 'center',
+        borderRadius: 16, padding: 24, textAlign: 'center',
         border: '1px solid rgba(255,255,255,0.1)',
       }}>
         <Portrait characterId={npc.id} size={72} expression="neutral" year={state.year} />
-        <div style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
+        <div id="npc-detail-name" style={{ fontSize: '1.1rem', fontWeight: 700, marginTop: 12 }}>{npc.name}</div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
           {npc.intimacy >= 30 ? npc.description : '같은 학교 친구'}
         </div>
@@ -69,7 +67,6 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
           <button className="btn btn-primary" style={{ flex: 1 }} onClick={onTalk}>말 걸기</button>
           <button className="btn btn-secondary" style={{ flex: 1 }} onClick={onClose}>닫기</button>
         </div>
-      </div>
-    </div>
+    </Dialog>
   );
 }

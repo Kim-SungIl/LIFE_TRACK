@@ -56,9 +56,11 @@ interface SaveData {
 
 function saveToStorage(state: GameState) {
   try {
-    const data: SaveData = { version: SAVE_VERSION, state, savedAt: new Date().toISOString() };
+    const savedAt = new Date().toISOString();
+    const data: SaveData = { version: SAVE_VERSION, state, savedAt };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     storageSaveFailed = false;
+    lastSavedAt = savedAt;
   } catch {
     // storage full/unavailable — 진행은 계속하되 UI가 배너로 알릴 수 있게 플래그만 세운다.
     storageSaveFailed = true;
@@ -69,6 +71,9 @@ function saveToStorage(state: GameState) {
 // 렌더 시점에 이 getter를 읽으면 항상 최신이다 (진행 손실을 사용자가 모른 채 지나가지 않게).
 let storageSaveFailed = false;
 export function isStorageSaveFailed(): boolean { return storageSaveFailed; }
+// 마지막 저장 성공 시각(ISO) — HUD 저장 인디케이터용. 위와 동일하게 렌더 시점 최신.
+let lastSavedAt: string | null = null;
+export function getLastSavedAt(): string | null { return lastSavedAt; }
 
 export function loadFromStorage(): SaveData | null {
   try {
