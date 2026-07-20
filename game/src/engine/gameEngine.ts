@@ -1006,4 +1006,44 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   return newState;
 }
 
+// ===== 주 확정 프리뷰 (UX Phase 2) =====
+// 확정 전에 이번 주 계획의 예상 결과를 미리 보여준다. 순수·입력 불변인 processWeek 를
+// 그대로 재실행해 결과를 현재와 diff — 별도 계산식을 두지 않아 엔진과 드리프트가 없다.
+// 랜덤 이벤트는 processWeek 안에서 "pending 굴림"만 하고 효과는 이후 EventScene 에서
+// 해소되므로, 여기서 나오는 피로/능력치 예측치는 계획 활동에 대해 결정론적이다.
+export interface WeekPreview {
+  fatigueBefore: number;
+  fatigueAfter: number;
+  fatigueDelta: number;
+  // raw 수치 비공개 원칙 — 능력치는 방향(↑/↓)만. 피로는 HUD 에 이미 숫자로 노출되므로 예외.
+  statHints: { key: StatKey; dir: 'up' | 'down' }[];
+  burnoutRisk: boolean; // 확정 후 피로 80+ (고피로 구간 진입)
+}
+
+export function predictWeekOutcome(
+  state: GameState,
+  plannedChoices: string[],
+  npcActivityMap?: Record<string, string>,
+): WeekPreview {
+  // 확정 흐름과 동일한 입력 구성 — 아직 store 에 안 쓰인 주말/방학 선택을 주입.
+  const input: GameState = state.isVacation
+    ? { ...state, vacationChoices: plannedChoices }
+    : { ...state, weekendChoices: plannedChoices };
+  const after = processWeek(input, npcActivityMap);
+  const fatigueBefore = Math.round(state.fatigue);
+  const fatigueAfter = Math.round(after.fatigue);
+  const STAT_KEYS: StatKey[] = ['academic', 'social', 'health', 'talent', 'mental'];
+  const statHints = STAT_KEYS
+    .map(key => ({ key, delta: after.stats[key] - state.stats[key] }))
+    .filter(s => Math.abs(s.delta) >= 0.5) // 자연 감쇠 등 미세 변화는 노이즈로 컷
+    .map(s => ({ key: s.key, dir: s.delta > 0 ? ('up' as const) : ('down' as const) }));
+  return {
+    fatigueBefore,
+    fatigueAfter,
+    fatigueDelta: fatigueAfter - fatigueBefore,
+    statHints,
+    burnoutRisk: fatigueAfter >= 80,
+  };
+}
+
 // 엔딩 산정·진로 판정·NPC 근황은 ending.ts 로 이동.

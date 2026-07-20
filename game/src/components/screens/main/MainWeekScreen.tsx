@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { GameState } from '../../../engine/types';
-import { getWeekLabel, getMonthLabel } from '../../../engine/gameEngine';
+import { GameState, STAT_LABELS } from '../../../engine/types';
+import { getWeekLabel, getMonthLabel, predictWeekOutcome } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
 import { getExamSchedule } from '../../../engine/examSystem';
@@ -94,6 +94,15 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
     return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
   })();
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
+  // 확정 가능 여부 — 프리뷰 노출/버튼 disabled 공용 판정 (SSOT).
+  const confirmDisabled = (!state.isVacation && !state.routineSlot2) || !!routineTooExpensive;
+
+  // Phase 2 — 확정 시 예상 결과 프리뷰. 순수 processWeek 재실행 diff(gameEngine).
+  // 계획(루틴/주말선택/동행)·현재 상태가 바뀔 때만 재계산.
+  const weekPreview = useMemo(
+    () => predictWeekOutcome(state, selectedActivities, npcChoices),
+    [state, selectedActivities, npcChoices],
+  );
 
   // 이번 주 누적 활동 비용 — 루틴 + 사용자가 고른 활동들 (HUD 잔액 옆 실시간 표시용)
   const selectedActivityCost = selectedInstances.reduce(
@@ -387,10 +396,48 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         </div>
       )}
 
+      {/* Phase 2 — 확정 전 예상 결과 프리뷰 (계획 확정 가능할 때만) */}
+      {!confirmDisabled && (() => {
+        const p = weekPreview;
+        const afterColor = getFatigueDisplay(p.fatigueAfter).color;
+        return (
+          <div aria-live="polite" style={{
+            marginBottom: 8, padding: '9px 14px', borderRadius: 10,
+            background: p.burnoutRisk ? 'rgba(214,110,110,0.10)' : 'rgba(255,255,255,0.05)',
+            border: p.burnoutRisk ? '1px solid rgba(214,110,110,0.35)' : '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: '0.82rem' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>😴 예상 피로</span>
+              <span style={{ color: 'var(--text-muted)' }}>{p.fatigueBefore}</span>
+              <span style={{ color: 'var(--text-muted)' }}>→</span>
+              <span style={{ color: afterColor, fontWeight: 700 }}>{p.fatigueAfter}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.74rem' }}>
+                ({p.fatigueDelta >= 0 ? '+' : ''}{p.fatigueDelta})
+              </span>
+              {p.burnoutRisk && (
+                <span style={{ color: 'var(--red)', fontSize: '0.72rem', fontWeight: 700 }}>⚠️ 번아웃 위험</span>
+              )}
+            </div>
+            {p.statHints.length > 0 && (
+              <div style={{ marginTop: 4, fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {p.statHints.map(h => (
+                  <span key={h.key}>
+                    {STAT_LABELS[h.key]} <span style={{ color: h.dir === 'up' ? 'var(--green)' : 'var(--text-secondary)' }}>{h.dir === 'up' ? '↑' : '↓'}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div style={{ marginTop: 3, fontSize: '0.66rem', color: 'var(--text-muted)', opacity: 0.8 }}>
+              이벤트 결과에 따라 달라질 수 있어요
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 확정 버튼 */}
       <div data-tutorial="confirm" style={{ paddingBottom: 20 }}>
         <button className="btn btn-primary"
-          disabled={(!state.isVacation && !state.routineSlot2) || !!routineTooExpensive}
+          disabled={confirmDisabled}
           onClick={handleConfirm}
         >
           {routineTooExpensive
