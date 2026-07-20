@@ -254,6 +254,7 @@ export const REACH_EVENTS = [
     description: '도서코너 앞 게시판에 작은 종이가 붙어 있다.\n"이번 주 책 세 권 읽기"\n수빈이가 옆에서 말한다.\n"나도 할 건데, 너도 할래? 안 해도 되고."\n부담 없어 보이는 척하는 목소리가 오히려 수빈 같다.',
     speakers: ['subin'],
     location: 'library',
+    background: 'library_{school}',
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 30 && s.year === 1 && !s.isVacation;
@@ -284,6 +285,7 @@ export const REACH_EVENTS = [
     description: '점심 후 복도. 수빈이가 작은 열쇠고리를 꺼낸다.\n"엄마가 과일 사 오실 때 마트에서 주던 거… 나 하나 남았어."\n손바닥에 올려준다.\n"책갈피 대신 써도 되고, 그냥 가지고 있어도 돼."',
     speakers: ['subin'],
     location: 'hallway',
+    background: 'hallway_{school}',
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 50 && s.year === 1 && !s.isVacation;
@@ -480,6 +482,8 @@ export const REACH_EVENTS = [
     description: '도윤이가 조용히 손짓해.\n"야, 여기 와봐. 여기 앉아서 보면 하늘이 진짜 잘 보여. 선생님들도 몰라."',
     speakers: ['doyun'],
     location: 'gym',
+    // 실내 체육관(gymnasium)이 아니라 운동장 스탠드 뒤 하늘 보는 야외 컷 — clear_sky가 장면 정합
+    background: 'clear_sky',
     condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
       return !!doyun?.met && doyun.intimacy >= 40 && s.year === 1 && !s.isVacation;
@@ -562,6 +566,7 @@ export const REACH_EVENTS = [
     description: '교실 구석. 민재가 책상 서랍을 열었다 닫는다.\n손 안에는 말없이 구겨진 쪽지 하나.\n"…별거 아니야."\n말끝을 잘라 버리는 게 별거 같다는 걸 알고 있어서 더 말이 안 나온다.',
     speakers: ['minjae'],
     location: 'classroom',
+    background: 'classroom_{school}_afternoon',
     condition: (s) => {
       const minjae = s.npcs.find(n => n.id === 'minjae');
       return !!minjae?.met && minjae.intimacy >= 70 && s.year === 1 && !s.isVacation;

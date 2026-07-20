@@ -333,16 +333,23 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const primarySpeaker = speakerIds.length > 0 ? speakerIds[0] : null;
 
   // Background: prefer event.background (new system), fall back to location-based
+  // 명시 background가 미생성 에셋(404)이어도 location 후보로 이어지게 체인을 합친다 —
+  // 계획 에셋 선참조(16종 미생성) 상태에서 그라데이션 단독 노출을 최소화.
+  // location 후보에도 학교급 변형을 포함 (hallway/library 등 실물 에셋은 _elementary/_middle/_high로만 존재).
   const location = event.location;
+  const bgSchoolLevel = getSchoolLevel(year);
   const resolvedEventBg = event.background ? getEventBackground(event.background, year) : undefined;
-  const bgCandidates = resolvedEventBg
-    ? [`${BASE_URL}${resolvedEventBg.replace(/^\//, '')}`]
-    : location ? [
+  const bgCandidates = [
+    ...(resolvedEventBg ? [`${BASE_URL}${resolvedEventBg.replace(/^\//, '')}`] : []),
+    ...(location ? [
+      `${BASE_URL}images/backgrounds/${location}_${bgSchoolLevel}_afternoon.png`,
+      `${BASE_URL}images/backgrounds/${location}_${bgSchoolLevel}.png`,
       `${BASE_URL}images/backgrounds/${location}_afternoon.png`,
       `${BASE_URL}images/backgrounds/${location}_evening.png`,
       `${BASE_URL}images/backgrounds/${location}_spring.png`,
       `${BASE_URL}images/backgrounds/${location}.png`,
-    ] : [];
+    ] : []),
+  ];
   const gradientBg = location
     ? (LOCATION_GRADIENTS[location] || DEFAULT_GRADIENT)
     : DEFAULT_GRADIENT;
