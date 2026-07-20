@@ -29,7 +29,7 @@ export function SlotEditPopup({
 }: Props) {
   return (
     <Dialog onClose={() => setEditingSlot(null)} align="bottom" zIndex={250} maxWidth={600}
-      labelledBy="slot-edit-title"
+      labelledBy="slot-edit-title" focusKey={editingSlot}
       contentStyle={{
         background: 'linear-gradient(180deg, rgba(42,34,48,0.99), rgba(23,21,28,0.99))',
         borderRadius: '20px 20px 0 0', width: '100%',
