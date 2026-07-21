@@ -285,10 +285,12 @@ export function calculateEnding(state: GameState) {
   const parentEpilogue = buildParentEpilogue(state);
 
   // v1.2 회상 레이어 (크래시 보험: 빈 배열도 안전)
-  const memorialHighlights = selectMemorialHighlights(state);
-  // 후회카드 — "한 일" 회고가 인용한 문장을 제외해 이중 노출 방지(0장 허용)
-  const usedTexts = new Set(memorialHighlights.map(h => h.recallText));
-  const regretHighlights = selectRegretHighlights(state, usedTexts);
+  // 레이어 순서 역전: 후회("미처 닿지 못한 것")를 먼저 자기 점수로 top-2 확보한 뒤,
+  // 그 본문(화해 마감 제외)을 회고 excludeTexts로 넘긴다. 회고가 후회 재료를 importance로
+  // 선점해 후회카드가 0장 되던 문제 해소 + 이중 노출 방지(회고는 후회가 쓴 문장을 피함).
+  const regretHighlights = selectRegretHighlights(state);
+  const regretUsedTexts = new Set(regretHighlights.filter(h => !h.isClosing).map(h => h.recallText));
+  const memorialHighlights = selectMemorialHighlights(state, regretUsedTexts);
   const yearClosings = [...(state.milestoneScenes || [])]
     .sort((a, b) => a.year - b.year)
     .map(ms => ms.summaryText || `${ms.year}학년의 기억.`);
