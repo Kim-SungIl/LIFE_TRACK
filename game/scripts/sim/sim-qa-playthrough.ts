@@ -216,13 +216,17 @@ function runPersona(p: Persona, seed: number): Result {
     })(),
     ...(() => {
       const slots = s.memorySlots ?? [];
-      const REGRET_TONES = new Set(['regret', 'betrayal', 'melancholy']);
+      // selectRegretHighlights 풀 정의와 일치: 톤(regret/melancholy/burden) OR 카테고리(failure/betrayal/bypass/unspoken_debt).
+      // (구버전은 betrayal을 톤처럼 세고 burden을 빠뜨려 풀 크기를 오측정했음)
+      const REGRET_TONES = new Set(['regret', 'melancholy', 'burden']);
+      const REGRET_CATEGORIES = new Set(['failure', 'betrayal', 'bypass', 'unspoken_debt']);
       const toneCounts: Record<string, number> = {};
       const regretRecalls: string[] = [];
       for (const sl of slots) {
         const t = (sl as { toneTag?: string }).toneTag ?? 'none';
+        const cat = (sl as { category?: string }).category ?? '';
         toneCounts[t] = (toneCounts[t] ?? 0) + 1;
-        if (REGRET_TONES.has(t)) regretRecalls.push((sl as { recallText?: string }).recallText ?? '');
+        if (REGRET_TONES.has(t) || REGRET_CATEGORIES.has(cat)) regretRecalls.push((sl as { recallText?: string }).recallText ?? '');
       }
       return { regretSlots: regretRecalls.length, regretRecalls, toneCounts };
     })(),
@@ -418,7 +422,7 @@ function main() {
   console.log(`tier별: t30=${tierCount(30)}  t50=${tierCount(50)}  t70=${tierCount(70)}  t80(tier90딥)=${tierCount(80)}  (딥 고유 ${deepUnique.length}종: ${deepUnique.join(',')})`);
 
   // ===== 후회카드 재료 측정 (Phase 0) =====
-  console.log(`\n--- 후회카드 재료 (regret/betrayal/melancholy 슬롯) ---`);
+  console.log(`\n--- 후회카드 재료 (regret/melancholy/burden 톤 OR failure/betrayal/bypass/unspoken_debt 카테고리) ---`);
   const regretCounts = allRuns.map(r => r.regretSlots);
   const avgRegret = Math.round(regretCounts.reduce((a, b) => a + b, 0) / allRuns.length * 10) / 10;
   const runsWith2plus = allRuns.filter(r => r.regretSlots >= 2).length;

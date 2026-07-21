@@ -200,8 +200,21 @@ export interface MemorialHighlight {
   isClosing?: boolean;   // 후회카드 전용 — 화해 마감 한 줄(자책으로 끝나지 않게)
 }
 
-export function selectMemorialHighlights(state: GameState): MemorialHighlight[] {
-  const slots = state.memorySlots || [];
+// ===== 후회 풀 판정 (selectRegretHighlights 소관) =====
+// "미처 닿지 못한 것" 재료: 후회 톤(regret/melancholy/burden) 또는 후회 카테고리
+// (failure/betrayal/bypass/unspoken_debt). 회고("한 일")가 이 재료를 importance로 선점해
+// 후회 레이어가 0장 되던 문제는 ending.ts에서 레이어 순서를 역전(후회 먼저 → 회고가 제외)해 해소.
+const REGRET_TONES: ToneTag[] = ['regret', 'melancholy', 'burden'];
+const REGRET_CATEGORIES: MemoryCategory[] = ['failure', 'betrayal', 'bypass', 'unspoken_debt'];
+function isRegretPoolSlot(s: MemorySlot): boolean {
+  return (s.toneTag != null && REGRET_TONES.includes(s.toneTag)) || REGRET_CATEGORIES.includes(s.category);
+}
+
+// excludeTexts: 후회 레이어가 먼저 고른 recallText를 제외(레이어 순서 역전 — ending.ts에서
+// selectRegretHighlights를 먼저 호출해 그 본문을 넘긴다). 회고가 후회 재료를 선점해
+// "미처 닿지 못한 것"이 0장 되던 문제를, 후회가 자기 점수로 top-2를 먼저 확보하게 해 해소.
+export function selectMemorialHighlights(state: GameState, excludeTexts: Set<string> = new Set()): MemorialHighlight[] {
+  const slots = (state.memorySlots || []).filter(s => !excludeTexts.has(s.recallText));
   const parents = state.parents || [];
   const result: MemorySlot[] = [];
 
@@ -281,8 +294,9 @@ export function selectMemorialHighlights(state: GameState): MemorialHighlight[] 
 //    peak 친밀도 추적 신규 필드는 의도적으로 도입하지 않음(가벼운 스코프 유지).
 //  - 톤: 죄책감 X. 담담한 인정 + 마지막 한 줄만 따뜻한 화해(isClosing).
 //  - 0장 허용: 후회 소재가 없는 플레이엔 섹션 자체를 안 띄움(억지 생성 금지·폴백 없음).
-const REGRET_TONES: ToneTag[] = ['regret', 'melancholy', 'burden'];
-const REGRET_CATEGORIES: MemoryCategory[] = ['failure', 'betrayal', 'bypass', 'unspoken_debt'];
+//  - 레이어 순서 역전: ending.ts가 이 함수를 먼저 호출해 top-2를 확보한 뒤, 그 본문 recallText를
+//    selectMemorialHighlights의 excludeTexts로 넘겨 회고가 후회 재료를 선점하지 못하게 한다.
+//    풀 판정은 isRegretPoolSlot(상단 공유) 사용.
 // 대상 비특정 — 후회 풀엔 또래뿐 아니라 부모·자기(번아웃) 슬롯도 섞이므로
 // "그 애" 같은 또래 전제 표현을 피하고 헤더("닿지 못한")와 콜백한다.
 const REGRET_CLOSING = '그때의 나를 탓하지 않기로 했다. 닿지 못한 채로도, 그 마음들은 있었다.';
@@ -301,9 +315,7 @@ export function selectRegretHighlights(
       return !!npc?.met && npc.intimacy <= 30;
     });
 
-  const inRegretPool = (s: MemorySlot): boolean =>
-    (s.toneTag != null && REGRET_TONES.includes(s.toneTag)) ||
-    REGRET_CATEGORIES.includes(s.category);
+  const inRegretPool = isRegretPoolSlot;
 
   // 점수 = importance + 관계 가산점(드리프트 +1.5 / 일반 NPC 슬롯 +0.5)
   const score = (s: MemorySlot): number =>
