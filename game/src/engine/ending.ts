@@ -193,14 +193,17 @@ function determineCareer(state: GameState): { path: string; detail: string } {
 // 그 NPC와 얽힌 가장 인상적인 회상 한 조각(recallText)을 골라 근황에 엮는다 —
 // 96개 reach/미니이벤트 기억의 구체성을 엔딩 클라이맥스에서 회수(고정 템플릿 평탄화 해소).
 // 상처(betrayal)는 후회 레이어 소관이라 "아직 이어진 사이" 근황엔 쓰지 않는다.
-function bestRecallFor(state: GameState, npcId: string): string | null {
+function bestRecallFor(state: GameState, npcId: string, excludeTexts: Set<string> = new Set()): string | null {
   const mems = (state.memorySlots || [])
     .filter(m => m.category !== 'betrayal' && (m.npcIds?.includes(npcId) ?? false))
     .sort((a, b) => (b.importance - a.importance) || (b.year - a.year) || (b.week - a.week));
-  return mems.length > 0 ? mems[0].recallText : null;
+  // 후회 본문으로 이미 쓰인 recallText는 피하고 차선 기억으로 내려간다 — 이중노출 방지 + 구체성 유지.
+  // (전부 제외되는 degenerate 경우에만 최고 기억으로 폴백해 구체성을 우선)
+  const preferred = mems.find(m => !excludeTexts.has(m.recallText));
+  return (preferred ?? mems[0])?.recallText ?? null;
 }
 
-function getTopNpcStories(state: GameState, limit = 3): string[] {
+function getTopNpcStories(state: GameState, excludeTexts: Set<string> = new Set(), limit = 3): string[] {
   const sorted = [...state.npcs]
     .filter(n => n.met && n.intimacy >= 50)
     .sort((a, b) => b.intimacy - a.intimacy)
@@ -212,7 +215,7 @@ function getTopNpcStories(state: GameState, limit = 3): string[] {
       : npc.intimacy >= 70 ? `${josa(npc.name, '와/과')}는 종종 연락한다. 좋은 기억으로 남아 있다.`
       : `${josa(npc.name, '와/과')}는 가끔 생각나는 사이다.`;
     // 구체 회상이 있으면 한 조각 덧붙여 그 관계만의 결을 남긴다. 없으면 티어 템플릿 그대로.
-    const recall = bestRecallFor(state, npc.id);
+    const recall = bestRecallFor(state, npc.id, excludeTexts);
     stories.push(recall ? `${frame} ${recall}` : frame);
   }
   return stories;
@@ -255,9 +258,6 @@ export function calculateEnding(state: GameState) {
   const suneung = state.examResults.find(e => e.examType === 'suneung');
   const suneungGrade = suneung?.mockGrade ?? null;
 
-  // NPC 근황
-  const npcStories = getTopNpcStories(state);
-
   // 엔딩 타이틀 (진로 기반 + 성취/행복으로 수식)
   let title = career.path;
   let description = career.detail;
@@ -291,6 +291,8 @@ export function calculateEnding(state: GameState) {
   const regretHighlights = selectRegretHighlights(state);
   const regretUsedTexts = new Set(regretHighlights.filter(h => !h.isClosing).map(h => h.recallText));
   const memorialHighlights = selectMemorialHighlights(state, regretUsedTexts);
+  // NPC 근황도 후회 본문을 제외(차선 기억 폴백) — 이중노출 0을 엔딩 전체 레이어로 완결.
+  const npcStories = getTopNpcStories(state, regretUsedTexts);
   const yearClosings = [...(state.milestoneScenes || [])]
     .sort((a, b) => a.year - b.year)
     .map(ms => ms.summaryText || `${ms.year}학년의 기억.`);
