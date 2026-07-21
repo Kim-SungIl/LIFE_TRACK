@@ -74,6 +74,7 @@ interface Result {
   regretCardBody: number;
   regretCardShown: boolean;
   regretMemorialOverlap: number;
+  regretNpcStoryOverlap: number;
   finalMentalState: string;
   totalWeeksPlayed: number;
   eventsResolved: number;
@@ -213,6 +214,14 @@ function runPersona(p: Persona, seed: number): Result {
     regretMemorialOverlap: (() => {
       const mem = new Set((ending.memorialHighlights ?? []).map(h => h.recallText));
       return (ending.regretHighlights ?? []).filter(h => !h.isClosing && mem.has(h.recallText)).length;
+    })(),
+    // npcStories↔regret 교차노출 — npcStory 문자열에 regret 본문 recallText가 임베드(substring)됐는지.
+    // bestRecallFor가 betrayal만 제외해 betrayal 아닌 후회풀 슬롯이 양쪽 노출될 수 있음(선재 이슈 계측).
+    regretNpcStoryOverlap: (() => {
+      const stories = ending.npcStories ?? [];
+      return (ending.regretHighlights ?? [])
+        .filter(h => !h.isClosing)
+        .filter(h => stories.some(st => st.includes(h.recallText))).length;
     })(),
     ...(() => {
       const slots = s.memorySlots ?? [];
@@ -453,6 +462,9 @@ function main() {
   console.log(`카드 노출 run: ${shownRuns}/${allRuns.length} (${Math.round(shownRuns / allRuns.length * 100)}%) / 0장 run ${allRuns.length - shownRuns}`);
   console.log(`본문 장수 분포(화해 제외): ${fmtDist(bodyDist)} / run당 평균 ${avgBody}장 (최대 2 정상)`);
   console.log(`회고와 이중노출 총합 (0이어야 정상): ${overlapTotal}`);
+  const npcOverlapRuns = allRuns.filter(r => r.regretNpcStoryOverlap > 0).length;
+  const npcOverlapTotal = allRuns.reduce((a, r) => a + r.regretNpcStoryOverlap, 0);
+  console.log(`NPC근황과 교차노출: ${npcOverlapRuns}/${allRuns.length} run (${Math.round(npcOverlapRuns / allRuns.length * 100)}%), 총 ${npcOverlapTotal}건`);
 
   console.log(`\n결과 JSON: ${outDir}/qa-<persona>.json (시드별 배열) + qa-agg.json`);
 }
