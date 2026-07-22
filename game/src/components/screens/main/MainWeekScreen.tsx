@@ -8,6 +8,7 @@ import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../..
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
 import { ShopItem } from '../../../engine/shopSystem';
 import { TalkActionResult, getLastSavedAt } from '../../../engine/store';
+import { isNpcEnrolled } from '../../../engine/relationshipSignals';
 import { Shop } from '../../Shop';
 import { Tutorial } from '../../Tutorial';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
@@ -129,8 +130,13 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
   const homeHasEvent = getEligibleParentClimax(state) != null
     || (state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0);
-  // met NPC 목록 — NpcSelectModal memo 안정성 위해 npcs ref 변경 시에만 재계산
-  const metNpcs = useMemo(() => state.npcs.filter(n => n.met), [state.npcs]);
+  // 동행 후보 = met + 재적(같은 학교) — 전출 도윤/졸업 공백기 하은은 주말 동행에서 제외.
+  // NpcSelectModal memo 안정성 위해 npcs ref(+ 재적 판정 입력인 year/events) 변경 시에만 재계산.
+  const companionNpcs = useMemo(
+    () => state.npcs.filter(n => n.met && isNpcEnrolled(n, state)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.npcs, state.year, state.events],
+  );
 
   // memo된 자식들에게 넘기는 콜백 — 안정 ref 보장
   const handleOpenHome = useCallback(() => setShowHomeModal(true), []);
@@ -315,7 +321,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {/* NPC 선택 모달 */}
       {npcSelectFor && (
         <NpcSelectModal
-          metNpcs={metNpcs}
+          metNpcs={companionNpcs}
           year={state.year}
           npcSelectFor={npcSelectFor}
           onSelect={handleSelectNpc}

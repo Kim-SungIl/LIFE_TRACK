@@ -68,6 +68,18 @@ export function npcDeparture(npc: NpcState, state: GameState): { note: string } 
   return state.events.some(e => e.id === d.eventId) ? { note: d.note } : null;
 }
 
+// ===== 재적(같은 학교) 여부 — 주말 동행 후보 필터 =====
+// 전학 가거나 졸업해서 지금 같은 학교에 없는 친구와 주말 동행이 잡히는 디제시스 붕괴 방지
+// (밸런스 검수 ⑥). 관계 패널 노출과는 별개 — 떠난 친구도 패널엔 잔상으로 남는다(#331).
+//  - doyun: 전출 이벤트 발동 후 부재 (npcDeparture와 동일 SSOT).
+//  - haeun: 1년 위 선배. Y4(중학 졸업 뒤 공백)·Y7(고교 졸업 뒤)은 다른 학교/대학 —
+//    reach 사다리(Y2·Y3 / Y5·Y6)와 일치. 재회(haeun-reunion) 전인 Y5도 같은 고교 재학이라 재적.
+export function isNpcEnrolled(npc: NpcState, state: GameState): boolean {
+  if (npcDeparture(npc, state)) return false;
+  if (npc.id === 'haeun') return state.year !== 4 && state.year !== 7;
+  return true;
+}
+
 // 우선순위: 임박 > 방치 > 최근 (하나만 노출).
 // 임박: 다음 실제 도달 임계(nextIntimacyThreshold) 5점 이내 아래 → 곧 더 깊은 무언가가 열림.
 // 방치/최근: lastInteractionWeek가 있을 때만. 감쇠 하한 20·약함이라 "잃는다"가 아니라 "멀어지는 중" 톤.
