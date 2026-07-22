@@ -442,7 +442,9 @@ export const MID_REACH_EVENTS = [
     ],
   },
 
-  // ===================== 유나 (yuna) — 피아노 변질→회복+작별 =====================
+  // ===================== 유나 (yuna) — 피아노 변질→예고 기로→잔류+회복 =====================
+  // Y3 전학 소문(transfer-rumor)은 Y4 clearing-locker에서 "예고 안 감(잔류)"으로 명시 해소된다.
+  // → 고등 아크(reachHigh yuna-hs-*, npc/yuna.ts yuna-smile)의 "같은 일반고 재학" 전제와 정합.
   {
     id: 'yuna-metronome',
     reach: { npc: 'yuna', tier: 72, year: 2 },
@@ -522,7 +524,7 @@ export const MID_REACH_EVENTS = [
     id: 'yuna-transfer-rumor',
     reach: { npc: 'yuna', tier: 88, year: 3 },
     title: '전학 소문, 웃지 않음',
-    description: '비 오는 날 현관 처마 밑, "유나가 예고로 전학 간대, 피아노로 승부 본다더라"는 소문이 돈다. 사실이냐 묻자, 유나가 처음으로 웃지 않는다.\n"응. 갈지도 몰라." 그 침묵이 곧 작별의 예고처럼 들린다.',
+    description: '비 오는 날 현관 처마 밑, "유나가 예고로 전학 간대, 피아노로 승부 본다더라"는 소문이 돈다. 사실이냐 묻자, 유나가 처음으로 웃지 않는다.\n"응. 갈지도 몰라." 그 침묵이 한참 빗소리를 머금는다.',
     speakers: ['yuna'],
     location: 'school_gate',
     // 본문이 '현관 처마 밑' — 기존 school_gate_{school}_rain 에셋이 정확히 맞음 (Y3→middle).
@@ -531,7 +533,7 @@ export const MID_REACH_EVENTS = [
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 88 && s.year === 3 && !s.isVacation; },
     choices: [
       { text: '"안 웃어도 돼. 지금은."', effects: { mental: 2 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 빗줄기를 본다. "…고마워. 안 웃어도 된다는 말." ', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
-      { text: '"가도 너 피아노 들으러 갈게"', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…진짜 올 거야?" 유나가 처음으로 눈을 마주친다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
+      { text: '"가든 안 가든, 네 피아노 들으러 갈게"', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…진짜 올 거야?" 유나가 처음으로 눈을 마주친다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
       { text: '"안 갔으면 좋겠다, 솔직히" 붙잡음', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 잠깐 말이 없다. "…나도." 빗소리만 가득하다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'melancholy', recallText: '전학 소문에 처음 안 웃던 처마 밑.', npcIds: ['yuna'] } },
     ],
   },
@@ -554,30 +556,30 @@ export const MID_REACH_EVENTS = [
     id: 'yuna-clearing-locker',
     reach: { npc: 'yuna', tier: 89, year: 4 },
     title: '사물함 정리',
-    description: '2학기 중반, 아직 종업식까지는 한참 남았는데 유나가 벌써 사물함을 비우고 있다. 안 쓰는 악보, 받은 상장, 빌렸던 책을 종이가방에 담는다.\n"미리 정리해두면 떠날 때 안 무거워."',
+    description: '2학기 중반. 유나가 사물함에서 예고 입시 자료를 하나씩 꺼내 종이가방에 담고 있다. 요강, 콩쿠르 안내문, 연습 계획표.\n"…나 예고는 안 가기로 했어. 원서, 안 냈어." 담담한데 어딘가 후련한 얼굴이다.',
     speakers: ['yuna'],
     location: 'hallway',
     background: 'locker_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 89 && s.year === 4 && !s.isVacation; },
     choices: [
-      { text: '"내가 받아둘 거 있으면 줘"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 빌렸던 책 한 권을 건넨다. "…이건 네가 가질래?"', timeCost: 1 },
-      { text: '"벌써 정리해? 아직 시간 많잖아"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…그래도 미리 하는 게 나아." 유나 손이 잠깐 멈춘다.', timeCost: 1 },
-      { text: '"그 상장은 버리지 마, 네가 잘한 거잖아"', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 상장을 다시 종이가방에 넣는다. "…알았어. 안 버릴게."', timeCost: 1 },
+      { text: '"잘 생각했어. 네 속도로 가"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 요강을 종이가방에 마저 넣는다. "…네가 그렇게 말해주니까, 진짜 괜찮은 것 같다."', timeCost: 1 },
+      { text: '"후회 안 하겠어?"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }], message: '"…모르지. 근데 지금은 이게 맞아." 유나 손이 잠깐 멈춘다.', timeCost: 1 },
+      { text: '"그 상장은 버리지 마, 네가 잘한 거잖아"', effects: { talent: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }], message: '유나가 상장을 다시 종이가방에 넣는다. "…이건 안 버릴게. 예고를 안 갈 뿐이지, 피아노를 놓는 건 아니니까."', timeCost: 1 },
     ],
   },
   {
     id: 'yuna-last-recital',
     reach: { npc: 'yuna', tier: 92, year: 4 },
-    title: '마지막 콩쿠르, 마지막 곡',
-    description: '곧 예고로 떠나는 유나가 빈 음악실에서 "마지막으로 콩쿠르 곡 말고, 그냥 좋아하는 곡 한 번만 쳐도 돼?" 하고 묻는다. 평가도 등수도 없는 연주. 곡이 끝나고\n"아 맞다… 나 이거 좋아했었네."',
+    title: '등수 없는 곡',
+    description: '유나가 빈 음악실에서 "콩쿠르 곡 말고, 그냥 좋아하는 곡 한 번만 쳐도 돼?" 하고 묻는다. 예고도, 등수도 내려놓은 자리. 평가 없는 연주가 끝나고\n"아 맞다… 나 이거 좋아했었네."',
     speakers: ['yuna'],
     location: 'music_room',
     background: 'music_room_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 92 && s.year === 4 && !s.isVacation; },
     choices: [
-      { text: '"지금 그 표정, 처음 봐. 진짜 같애."', effects: { talent: 1, mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '유나가 건반에서 손을 떼고 환하게 웃는다. 처음으로, 역할 없이.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
-      { text: '"어디 가서 치든 이 곡 들으면 너 생각할게"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '"…그럼 나도 칠 때마다 너 생각할게." 유나 목소리가 살짝 떨린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
-      { text: '"한 곡만 더. 마지막이니까."', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…좋아. 딱 한 곡만 더." 유나가 다시 건반에 손을 올린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '마지막 곡, 좋아함 되찾고 떠난 유나.', npcIds: ['yuna'] } },
+      { text: '"지금 그 표정, 처음 봐. 진짜 같애."', effects: { talent: 1, mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '유나가 건반에서 손을 떼고 환하게 웃는다. 처음으로, 역할 없이.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '등수 내려놓은 곡에서, 좋아함을 되찾은 유나.', npcIds: ['yuna'] } },
+      { text: '"이제 그 표정으로 계속 치면 되겠다"', effects: { social: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '"…응. 등수 말고, 이런 걸로." 유나가 고개를 끄덕인다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '등수 내려놓은 곡에서, 좋아함을 되찾은 유나.', npcIds: ['yuna'] } },
+      { text: '"한 곡만 더. 듣고 싶어서."', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '"…좋아. 딱 한 곡만 더." 유나가 다시 건반에 손을 올린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 7, toneTag: 'warm', recallText: '등수 내려놓은 곡에서, 좋아함을 되찾은 유나.', npcIds: ['yuna'] } },
     ],
   },
 

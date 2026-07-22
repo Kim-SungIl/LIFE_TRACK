@@ -55,8 +55,8 @@ export function nextIntimacyThreshold(npc: NpcState, state: GameState): number |
 // 감지 = state.events에 그 이벤트 id 존재(발동 기록 SSOT, reach 신호와 동일 방식).
 // 대상은 "떠난 뒤 다시 등장하지 않는" NPC만:
 //  - doyun: Y2 W2 학군 이사(school-split) 후 재등장 이벤트 전무 → clean transfer-out.
-//  - yuna 제외: last-recital(Y4 예고전학) 후에도 Y5~Y7 고교 이벤트(yuna-hs-*, yuna-smile)에
-//    라이브 등장하는 선재 아크 충돌 → "떠났는데 계속 나옴" 모순이라 잔상 대상에서 뺀다(아크 정합성은 별도 후속).
+//  - yuna 제외: 애초에 전출하지 않는다. Y3 예고 전학 "소문"은 Y4 clearing-locker에서 "안 감(잔류)"으로
+//    해소되고, 고교(Y5~7 yuna-hs-*, yuna-smile) 내내 같은 학교에 재학 → 떠나는 NPC가 아니다.
 //  - haeun 제외: Y3 졸업 후 haeun-reunion으로 재회 → 영구 전출 아님. junha 제외: 전입(전학 옴).
 const NPC_DEPARTURE: Record<string, { eventId: string; note: string }> = {
   doyun: { eventId: 'doyun-school-split', note: '다른 학교로 떠난 뒤' },
