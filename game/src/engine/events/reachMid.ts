@@ -428,13 +428,16 @@ export const MID_REACH_EVENTS = [
   },
   {
     id: 'minjae-name-in-blank',
-    reach: { npc: 'minjae', tier: 92, year: 4 },
+    // t92→90 하향(밸런스 검수 ③): Y4 고티어 과밀(4명×3컷 t84~92) + t88 후 16주 쿨다운에 밀려
+    // 도달 run의 78%가 미발동 → 90 하향으로 66%까지 개선(264 run 쌍시드 실측). 잔여 미발동은
+    // 학년 후반 도달 run의 구조적 한계로 수용 — Y5+ 컷이 서사 연속성을 잇는다.
+    reach: { npc: 'minjae', tier: 90, year: 4 },
     title: '빈칸에 적은 이름',
     description: '진학 자기소개서 양식 앞, "자신을 한 단어로 표현하시오" 빈칸에서 민재가 오래 멈춘다. 늘 정답을 적던 손이 처음으로 떨린다. 그러다 천천히 자기 이름을 적는다.\n"정답 말고… 그냥 나로 시작해보려고."',
     speakers: ['minjae'],
     location: 'classroom',
     background: 'classroom_middle_afternoon',
-    condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 92 && s.year === 4 && !s.isVacation; },
+    condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 90 && s.year === 4 && !s.isVacation; },
     choices: [
       { text: '"좋은 답이야. 그게 제일 정답이야"', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }], message: '민재가 자기 이름을 한참 들여다본다. "…응. 그렇게 생각할래."', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'breakthrough', recallText: '빈칸에 정답 대신 제 이름 적던 날.', npcIds: ['minjae'] } },
       { text: '"진짜 괜찮겠어? 1등 아닌 너로 시작하는 거" 되묻기', effects: { mental: 1, academic: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }], message: '민재가 잠깐 멈칫하더니 천천히 고개를 끄덕인다. "…응. 처음으로 진짜 그러고 싶어."', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'breakthrough', recallText: '빈칸에 정답 대신 제 이름 적던 날.', npcIds: ['minjae'] } },
