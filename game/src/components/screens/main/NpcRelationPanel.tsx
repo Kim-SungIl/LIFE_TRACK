@@ -29,12 +29,16 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
           const intimacyLabel = n.intimacy >= 70 ? '절친' : n.intimacy >= 40 ? '친구' : '아는 사이';
           const signal = relationshipSignal(n, state);
           return (
-            <div key={n.id}
+            <button
+              key={n.id}
+              type="button"
+              className="btn-reset"
               onClick={() => onSelect(n.id)}
+              aria-label={`${n.name} 상세 보기`}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
-                transition: 'background 0.15s',
+                transition: 'background 0.15s', width: '100%', textAlign: 'left',
                 // 잔상: 카드 전체를 살짝 가라앉힌다(조용한 변화는 포트레이트/카드 톤으로만).
                 // 흑백(초상)과 겹치므로 opacity는 0.6으로 — note 가독성 확보.
                 opacity: departed ? 0.6 : 1,
@@ -71,7 +75,7 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
                   </>
                 )}
               </div>
-            </div>
+            </button>
           );
         })}
       </div>

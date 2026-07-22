@@ -154,11 +154,19 @@ function HeroGallery({ items }: { items: CgItem[] }) {
       {multi && (
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingBottom: 12 }}>
           {items.map((_, i) => (
-            <button key={i} aria-label={`${i + 1}번째 장면 보기`} onClick={() => goTo(i)} style={{
-              width: i === idx ? 18 : 6, height: 6, borderRadius: 3, border: 'none', padding: 0, cursor: 'pointer',
-              background: i === idx ? 'var(--accent-soft)' : 'rgba(255,255,255,0.25)',
-              transition: 'width 0.2s, background 0.2s',
-            }} />
+            <button
+              key={i}
+              type="button"
+              className="btn-reset"
+              aria-label={`${i + 1}번째 장면 보기`}
+              aria-pressed={i === idx}
+              onClick={() => goTo(i)}
+              style={{
+                width: i === idx ? 18 : 6, height: 6, borderRadius: 3, border: 'none', padding: 0, cursor: 'pointer',
+                background: i === idx ? 'var(--accent-soft)' : 'rgba(255,255,255,0.25)',
+                transition: 'width 0.2s, background 0.2s',
+              }}
+            />
           ))}
         </div>
       )}
@@ -292,15 +300,24 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
         {readonly && reachedYears && reachedYears.length > 0 && (
           <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
             {reachedYears.map(y => (
-              <button key={y} onClick={() => onSelectYear?.(y)} style={{
-                fontSize: '0.74rem', padding: '4px 11px', borderRadius: 14, cursor: 'pointer',
-                border: '1px solid var(--accent-soft)',
-                background: y === year ? 'rgba(224,138,91,0.18)' : 'transparent',
-                color: y === year ? 'var(--accent-soft)' : 'var(--text-muted)',
-              }}>{YEAR_NAMES[y - 1] || `${y}학년`}</button>
+              <button
+                key={y}
+                type="button"
+                className="btn-reset"
+                aria-pressed={y === year}
+                onClick={() => onSelectYear?.(y)}
+                style={{
+                  fontSize: '0.74rem', padding: '4px 11px', borderRadius: 14, cursor: 'pointer',
+                  border: '1px solid var(--accent-soft)',
+                  background: y === year ? 'rgba(224,138,91,0.18)' : 'transparent',
+                  color: y === year ? 'var(--accent-soft)' : 'var(--text-muted)',
+                }}
+              >{YEAR_NAMES[y - 1] || `${y}학년`}</button>
             ))}
           </div>
         )}
+        {/* 학년 전환·진입 시 본문만 polite 안내 (탭 컨트롤은 라이브 리전 밖) */}
+        <div aria-live="polite">
         <div className="ye-stagger" style={{ animationDelay: '120ms', fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)', textShadow: TEXT_SHADOW, marginBottom: 6 }}>
           {readonly ? yearName : `${josa(yearName, '이/가')} 끝났다`}
         </div>
@@ -419,6 +436,8 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
             )}
           </div>
         )}
+
+        </div>
 
         {/* CTA — 진행 모드: 실제 학년 넘김 / 기록장 모드: 닫고 게임으로 복귀. 고스트 톤 + 늦은 등장. */}
         <button

@@ -63,6 +63,7 @@ export function WeeklyResultScreen({
   return (
     <BgWrapper {...bgProps}>
       <div className="fade-in">
+        <div aria-live="polite">
         {/* 일기 스타일 결산 */}
         <div style={{ textAlign: 'center', marginBottom: 16, marginTop: 8 }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{bgProps.bg.mood} {weekInfo}</div>
@@ -320,6 +321,7 @@ export function WeeklyResultScreen({
             📅 {upcomingEvents.map(e => e.text).join(' · ')}
           </div>
         )}
+        </div>
 
         <button className="btn btn-primary" onClick={onContinue}>다음 주로 →</button>
       </div>

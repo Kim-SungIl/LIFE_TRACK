@@ -28,6 +28,7 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
   return (
     <BgWrapper {...bgProps}>
       <div className="ending-screen fade-in" style={{ minHeight: 'auto', padding: 0 }}>
+        <div aria-live="polite">
         <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 8 }}>7년의 여정이 끝났습니다</div>
         <div className="ending-title">{ending.title}</div>
         <div className="ending-desc">{ending.description}</div>
@@ -176,6 +177,7 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
         {/* 다회차 유도 문구 */}
         <div style={{ fontSize: '0.8rem', color: 'var(--accent-soft)', marginBottom: 16, textAlign: 'center', fontStyle: 'italic' }}>
           다른 길은 어땠을까?
+        </div>
         </div>
 
         <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => window.location.reload()}>
