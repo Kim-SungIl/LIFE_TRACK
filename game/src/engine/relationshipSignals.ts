@@ -50,6 +50,24 @@ export function nextIntimacyThreshold(npc: NpcState, state: GameState): number |
   return best;
 }
 
+// ===== 전출(전학으로 떠난) 잔상 =====
+// 지정 "작별" 이벤트가 발동한 NPC는 관계 패널에서 "떠난 자리"(흐린 잔상)로 표시한다.
+// 감지 = state.events에 그 이벤트 id 존재(발동 기록 SSOT, reach 신호와 동일 방식).
+// 대상은 "떠난 뒤 다시 등장하지 않는" NPC만:
+//  - doyun: Y2 W2 학군 이사(school-split) 후 재등장 이벤트 전무 → clean transfer-out.
+//  - yuna 제외: last-recital(Y4 예고전학) 후에도 Y5~Y7 고교 이벤트(yuna-hs-*, yuna-smile)에
+//    라이브 등장하는 선재 아크 충돌 → "떠났는데 계속 나옴" 모순이라 잔상 대상에서 뺀다(아크 정합성은 별도 후속).
+//  - haeun 제외: Y3 졸업 후 haeun-reunion으로 재회 → 영구 전출 아님. junha 제외: 전입(전학 옴).
+const NPC_DEPARTURE: Record<string, { eventId: string; note: string }> = {
+  doyun: { eventId: 'doyun-school-split', note: '다른 학교로 떠난 뒤' },
+};
+
+export function npcDeparture(npc: NpcState, state: GameState): { note: string } | null {
+  const d = NPC_DEPARTURE[npc.id];
+  if (!d) return null;
+  return state.events.some(e => e.id === d.eventId) ? { note: d.note } : null;
+}
+
 // 우선순위: 임박 > 방치 > 최근 (하나만 노출).
 // 임박: 다음 실제 도달 임계(nextIntimacyThreshold) 5점 이내 아래 → 곧 더 깊은 무언가가 열림.
 // 방치/최근: lastInteractionWeek가 있을 때만. 감쇠 하한 20·약함이라 "잃는다"가 아니라 "멀어지는 중" 톤.
