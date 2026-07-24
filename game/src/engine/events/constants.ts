@@ -9,7 +9,7 @@ export const FOLLOWUP_EVENT_IDS = new Set([
   'class-president-win', 'class-president-lose', 'class-president-vice',
   'class-president-2-win', 'class-president-2-lose',
   'class-president-nudge',
-  'haeun-meet', 'haeun-advice', 'haeun-vending', 'haeun-brother', 'haeun-counselor', 'haeun-reunion',
+  'haeun-meet', 'haeun-advice', 'haeun-vending', 'haeun-brother', 'haeun-counselor', 'haeun-reunion', 'haeun-hs-curve',
   'jihun-basketball', 'jihun-secret', 'jihun-fight', 'jihun-support', 'jihun-promise',
   'subin-bridge', 'subin-lonely', 'subin-divorce', 'subin-dream', 'subin-farewell',
   'minjae-sports', 'minjae-exam-chat',
