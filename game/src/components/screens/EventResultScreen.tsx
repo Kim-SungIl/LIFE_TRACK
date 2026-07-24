@@ -121,30 +121,28 @@ export function EventResultScreen({
             />
           </div>
         )}
-        {/* 결과 메시지 + 효과 — 선택 직후 갱신되므로 스크린리더에 polite 안내 */}
-        <div aria-live="polite">
-          <div style={{
-            background: 'rgba(22,19,27,0.92)', backdropFilter: 'blur(12px)',
-            borderRadius: 16, padding: '24px 20px', marginBottom: 20,
-            border: '1px solid rgba(255,255,255,0.1)',
-          }}>
-            <div style={{ fontSize: '1.15rem', lineHeight: 1.8, fontStyle: 'italic', whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word', color: 'rgba(255,255,255,0.95)', textAlign: 'center' }}>
-              {breakSentences(eventResultData.message)}
+        {/* 결과 메시지 */}
+        <div style={{
+          background: 'rgba(22,19,27,0.92)', backdropFilter: 'blur(12px)',
+          borderRadius: 16, padding: '24px 20px', marginBottom: 20,
+          border: '1px solid rgba(255,255,255,0.1)',
+        }}>
+          <div style={{ fontSize: '1.15rem', lineHeight: 1.8, fontStyle: 'italic', whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word', color: 'rgba(255,255,255,0.95)', textAlign: 'center' }}>
+            {breakSentences(eventResultData.message)}
+          </div>
+        </div>
+        {/* 효과 배지 */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
+          {eventResultData.effects.map((eff, i) => (
+            <div key={i} style={{
+              background: eff.text.includes('알게 되었다') ? 'rgba(229,192,123,0.15)' : 'rgba(255,255,255,0.08)',
+              borderRadius: 8, padding: '10px 16px', fontSize: eff.text.includes('알게 되었다') ? '1.0rem' : '0.9rem',
+              fontWeight: 600, color: eff.color,
+              border: eff.text.includes('알게 되었다') ? '1px solid rgba(229,192,123,0.3)' : 'none',
+            }}>
+              {eff.text}
             </div>
-          </div>
-          {/* 효과 배지 */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
-            {eventResultData.effects.map((eff, i) => (
-              <div key={i} style={{
-                background: eff.text.includes('알게 되었다') ? 'rgba(229,192,123,0.15)' : 'rgba(255,255,255,0.08)',
-                borderRadius: 8, padding: '10px 16px', fontSize: eff.text.includes('알게 되었다') ? '1.0rem' : '0.9rem',
-                fontWeight: 600, color: eff.color,
-                border: eff.text.includes('알게 되었다') ? '1px solid rgba(229,192,123,0.3)' : 'none',
-              }}>
-                {eff.text}
-              </div>
-            ))}
-          </div>
+          ))}
         </div>
         <button className="btn btn-primary" onClick={onContinue}>
           계속 →
