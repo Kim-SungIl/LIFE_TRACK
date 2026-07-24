@@ -158,4 +158,39 @@ export const HAEUN_EVENTS = [
         message: '"뭐야, 1년 만에 보는 건데 그렇게 시큰둥해?" 하은이가 어깨를 쳤다. "점심 같이 먹자. 급식 맛있는 거 알려줄게." 여전히 선배다.' },
     ],
   },
+  {
+    // 학업 소프트캡(effectiveAcademic: 고교 academic 80 초과분 0.5배)의 "말로 하는" 가시화.
+    // 중학교 상위권 스탯도 고교에선 석차가 내려앉는 체감을 하은이 설명한다. 수치·공식은 비노출(질감만).
+    // FOLLOWUP_EVENT_IDS 등록(constants.ts) — reunion과 동일하게 윈도우 내 조건 충족 시 100% 확정 발동.
+    //   (미등록 시 조건부 랜덤 경로로 빠져 reach 후순위·50%가 됨 — 3자 검수 지적 반영.)
+    // 조건: Y5 1학기 첫 중간고사(W8) 직후(W9~16), academic>=80인데 석차가 상위 3위 밖(기대 미달)일 때.
+    // 자기노출 수위는 rooftop(t28)/leaving보다 얕게 유지 — "챙기되 자기은폐" 아크 순서 보존.
+    id: 'haeun-hs-curve',
+    title: '여기 온 애들 절반은',
+    description: '고1 첫 시험 성적표를 받아 든 복도. 등수가 생각만큼 안 나왔다. 그 표정을 읽었는지 하은 선배가 옆에 와 선다.\n"중학교 땐 늘 앞이었지?" 옅게 웃는다. "여기 온 애들, 절반이 중학교 때 1등이었어. 나도 그랬고."',
+    location: 'hallway',
+    background: 'hallway_{school}',
+    speakers: ['haeun'],
+    condition: (s) => {
+      const haeun = s.npcs.find(n => n.id === 'haeun');
+      if (!haeun?.met || haeun.intimacy < 26 || s.year !== 5 || s.isVacation) return false;
+      if (s.week < 9 || s.week > 16) return false;
+      if (s.stats.academic < 80) return false;
+      // Y5 첫 중간고사(W8)만 대상 — 윈도우(W9~16)엔 기말(W17)이 아직 없어 midterm으로 충분·의도 명확.
+      const exam = s.examResults.find(e => e.year === 5 && e.examType === 'midterm');
+      return !!exam && exam.rank !== null && exam.rank > 3;
+    },
+    choices: [
+      { text: '"그럼 여기선 어떻게 해야 해요?"', effects: { academic: 1, mental: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }],
+        message: '"똑같이 해선 똑같은 데 머물러. 여긴 다들 그 똑같이는 하니까." 하은이 어깨를 툭 친다. "근데 그걸 안다는 것부터가 시작이야. 넌 오늘 알았고."',
+        memorySlotDraft: { category: 'growth', importance: 5, toneTag: 'breakthrough', recallText: '고1 첫 시험, 여기 절반이 1등이었다던 선배.', npcIds: ['haeun'] } },
+      { text: '"…좀 무섭네요, 솔직히"', effects: { mental: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 4 }],
+        message: '"무서운 거 정상이야." 하은이 잠깐 말이 없다. "…그게 여기서 제일 정직한 대답이거든." 더는 말하지 않는다.' },
+      { text: '"선배도 그랬어요?"', effects: { social: 1 },
+        npcEffects: [{ npcId: 'haeun', intimacyChange: 3 }],
+        message: '"당연하지. 안 그런 사람이 이상한 거야." 별거 아니라는 듯 어깨를 으쓱한다.' },
+    ],
+  },
 ] satisfies readonly GameEvent[];
