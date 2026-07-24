@@ -412,7 +412,8 @@ function main() {
   console.log(`번아웃 발생 run: ${overall.burnoutRuns}/${allRuns.length} (${Math.round(overall.burnoutRuns / allRuns.length * 100)}%)`);
   const maxTiredAll = Math.max(...allRuns.map(r => r.maxConsecutiveTired));
   const lockRuns = allRuns.filter(r => r.maxConsecutiveTired >= 100).length;
-  console.log(`최장 연속 tired: ${maxTiredAll}주 / 100주+ 락 run: ${lockRuns} (데스스파이럴 가드: 0이어야 정상)`);
+  // 100주+ 락은 오류 아님 — 만성 탈진은 실패엔딩(재수/쉼표)으로 라우팅됨(#266). 무휴식 grind 페르소나에서 예상되는 값.
+  console.log(`최장 연속 tired: ${maxTiredAll}주 / 100주+ 락 run: ${lockRuns} (만성 탈진 → 실패엔딩 라우팅, grind 페르소나 예상값 — #266)`);
   console.log(`성취:  ${fmtDist(overall.achievement)}`);
   console.log(`행복:  ${fmtDist(overall.happiness)}`);
   console.log(`수능:  ${fmtDist(overall.suneung)}`);
