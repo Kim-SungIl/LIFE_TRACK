@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { getLastSavedAt } from '../engine/store';
+import { getLastSavedAt, deleteSave } from '../engine/store';
 
 type Props = { children: ReactNode };
 type State = { hasError: boolean };
@@ -16,6 +16,15 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
   }
+
+  // 저장된 상태 자체가 크래시 원인이면 새로고침만으로는 같은 화면으로 되돌아온다(루프).
+  // 마지막 탈출구로 저장 삭제 후 처음부터 — 되돌릴 수 없으므로 확인을 받는다.
+  private handleReset = () => {
+    if (window.confirm('저장된 진행을 삭제하고 처음부터 시작할까요?\n이 동작은 되돌릴 수 없어요.')) {
+      deleteSave();
+      window.location.reload();
+    }
+  };
 
   render() {
     if (!this.state.hasError) return this.props.children;
@@ -62,6 +71,17 @@ export class ErrorBoundary extends Component<Props, State> {
         >
           새로고침
         </button>
+        <div style={{ marginTop: 20, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+          새로고침해도 계속 같은 문제가 생기나요?<br />
+          <button
+            type="button"
+            className="btn-reset"
+            onClick={this.handleReset}
+            style={{ color: 'var(--text-secondary)', textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            저장 삭제하고 처음부터 시작
+          </button>
+        </div>
       </div>
     );
   }
