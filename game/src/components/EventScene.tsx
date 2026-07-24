@@ -100,6 +100,7 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
         <img
           src={src}
           alt={npcId}
+          decoding="async"
           style={{
             height,
             width: 'auto',
@@ -414,6 +415,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
           <img
             src={bgImageUrl}
             alt={location || 'background'}
+            decoding="async"
             style={{
               width: '100%',
               height: '100%',

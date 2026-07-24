@@ -19,6 +19,7 @@ export function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: 
       {bg.image && !bgImgError && (
         <img
           src={`${import.meta.env.BASE_URL}${bg.image.replace(/^\//, '')}`} alt=""
+          decoding="async"
           style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, pointerEvents: 'none' }}
           onError={onImgError}
         />
