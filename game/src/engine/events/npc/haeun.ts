@@ -176,7 +176,8 @@ export const HAEUN_EVENTS = [
       if (!haeun?.met || haeun.intimacy < 26 || s.year !== 5 || s.isVacation) return false;
       if (s.week < 9 || s.week > 16) return false;
       if (s.stats.academic < 80) return false;
-      const exam = s.examResults.find(e => e.year === 5 && (e.examType === 'midterm' || e.examType === 'final'));
+      // Y5 첫 중간고사(W8)만 대상 — 윈도우(W9~16)엔 기말(W17)이 아직 없어 midterm으로 충분·의도 명확.
+      const exam = s.examResults.find(e => e.year === 5 && e.examType === 'midterm');
       return !!exam && exam.rank !== null && exam.rank > 3;
     },
     choices: [
