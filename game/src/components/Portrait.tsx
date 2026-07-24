@@ -47,6 +47,7 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
         <img
           src={src}
           alt={`${characterId} ${expr}`}
+          decoding="async"
           style={{
             width: size,
             height: size * 1.25,
