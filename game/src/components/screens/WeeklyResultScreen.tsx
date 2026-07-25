@@ -1,4 +1,5 @@
 import { GameState, Stats, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, Track, WeekLog, getGrade } from '../../engine/types';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, type UpcomingEvent } from './shared';
@@ -26,6 +27,7 @@ export function WeeklyResultScreen({
   weekLog, stats, fatigue, money, gender, year, mentalState, track,
   bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, onContinue,
 }: WeeklyResultScreenProps) {
+  const reducedMotion = usePrefersReducedMotion();
   // Hero — 이번 주의 핵심 한 줄. 마지막 📖 > milestone[0] 순.
   // 이벤트가 그 주의 "사건"이고 milestone은 누적 스탯 임계치 이벤트라 사건 우선이 자연스러움.
   // milestone은 어차피 아래 ⭐ 성장 영역에 따로 표시되므로 hero에서 빠져도 정보 손실 없음.
@@ -143,7 +145,7 @@ export function WeeklyResultScreen({
                   display: 'inline-flex', alignItems: 'center', gap: 4,
                   fontSize: '0.72rem', color: 'var(--text-secondary)',
                   background: 'rgba(255,255,255,0.04)', padding: '3px 8px', borderRadius: 8,
-                  animation: 'parentBonusPulse 0.6s ease',
+                  animation: reducedMotion ? 'none' : 'parentBonusPulse 0.6s ease',
                 }}>
                   <span style={{ fontSize: '0.85rem' }}>{PARENT_ICONS[b.parent] || '🎓'}</span>
                   <span>{b.what}</span>

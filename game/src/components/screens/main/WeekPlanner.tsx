@@ -1,5 +1,6 @@
 import { GameState } from '../../../engine/types';
 import { ACTIVITIES, getActivityCost } from '../../../engine/activities';
+import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 
 type Props = {
   state: GameState;
@@ -22,6 +23,7 @@ export function WeekPlanner({
   routineTooExpensive, routineCost, maxComboWeeks,
   slot2ComboWeeks, slot3ComboWeeks, maxSlots,
 }: Props) {
+  const reducedMotion = usePrefersReducedMotion();
   const labelFor = (w: number) => w >= 8 ? '🔥 ' : w >= 6 ? '⭐ ' : w >= 3 ? '✨ ' : '';
   const routineComboLabel = labelFor(maxComboWeeks);
 
@@ -56,7 +58,7 @@ export function WeekPlanner({
                      isEmpty && !isFixed ? '0 0 6px rgba(224,138,91,0.15)' : 'none',
           transition: 'all 0.15s',
           opacity: isFixed ? 0.6 : 1,
-          animation: shouldHighlight ? 'slotPulse 2s ease-in-out infinite' : 'none',
+          animation: shouldHighlight && !reducedMotion ? 'slotPulse 2s ease-in-out infinite' : 'none',
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
@@ -192,7 +194,7 @@ export function WeekPlanner({
                 marginTop: 8, padding: '8px 10px', borderRadius: 8,
                 background: 'rgba(224,179,84,0.15)', border: '1px solid rgba(224,179,84,0.3)',
                 fontSize: '0.72rem', color: 'var(--yellow)', lineHeight: 1.4,
-                textAlign: 'center', animation: 'pulse-soft 2s ease-in-out infinite',
+                textAlign: 'center', animation: reducedMotion ? 'none' : 'pulse-soft 2s ease-in-out infinite',
               }}>
                 <div style={{ fontWeight: 600, marginBottom: 2 }}>주말 활동이 비어있어요!</div>
                 <div style={{ fontSize: '0.65rem', opacity: 0.85 }}>토/일 슬롯을 탭해서 활동을 선택하세요</div>

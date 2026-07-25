@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 
 interface TutorialStep {
   target: string;
@@ -57,6 +58,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [waitDone, setWaitDone] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -203,7 +205,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
             : '0 0 20px rgba(224,138,91,0.3)',
           pointerEvents: 'none',
           transition: 'all 0.3s ease',
-          animation: isInteractive ? 'tutorial-pulse 1.5s ease-in-out infinite' : 'none',
+          animation: isInteractive && !reducedMotion ? 'tutorial-pulse 1.5s ease-in-out infinite' : 'none',
         }} />
       )}
 
@@ -250,7 +252,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
             <div style={{
               fontSize: '0.78rem', color: 'var(--yellow)',
               textAlign: 'center', marginBottom: 12,
-              animation: 'tutorial-pulse 1.5s ease-in-out infinite',
+              animation: reducedMotion ? 'none' : 'tutorial-pulse 1.5s ease-in-out infinite',
             }}>
               👆 위 영역을 직접 눌러 보세요!
             </div>
