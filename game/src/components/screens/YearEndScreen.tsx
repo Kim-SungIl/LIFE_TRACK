@@ -194,7 +194,7 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
       overflow: 'hidden', background: `${cat.color}22`, boxShadow: `0 0 0 1.5px ${cat.color}88`,
       filter: toneFilter(slot.toneTag),
     }}>
-      <img src={cat.art} alt="" decoding="async" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      <img src={cat.art} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         onError={e => {
           const img = e.currentTarget;
           img.style.display = 'none';
