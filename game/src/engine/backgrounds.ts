@@ -3,12 +3,24 @@ export interface BgInfo {
   image?: string;
   overlay: string;
   mood: string;
+  levelOverlay?: string;
 }
 
 export function getSchoolLevel(year: number): 'elementary' | 'middle' | 'high' {
   if (year <= 1) return 'elementary';
   if (year <= 4) return 'middle';
   return 'high';
+}
+
+// 학교급 색온도 tint — 계절 overlay 위에 1겹 가산되는 배경 전용 레이어.
+// 초=따뜻(앰버)→중=중립→고=차가움(블루): 유년의 온기가 입시의 냉기로 식는 정서 서사.
+// 극절제 alpha(0.03~0.05) — 눈치 못 챌 정도의 질감. 배경 레이어에만 얹혀 캐릭터 CG 무영향.
+function getLevelTint(level: 'elementary' | 'middle' | 'high'): string {
+  switch (level) {
+    case 'elementary': return 'rgba(255,200,150,0.05)'; // 따뜻·노스탤지어
+    case 'middle':     return 'rgba(215,205,220,0.03)'; // 전환기·중립
+    case 'high':       return 'rgba(150,180,230,0.05)'; // 긴장·서늘함
+  }
 }
 
 export function getEventBackground(bgKey: string | undefined, year: number): string | undefined {
@@ -18,6 +30,13 @@ export function getEventBackground(bgKey: string | undefined, year: number): str
 }
 
 export function getBackground(week: number, isVacation: boolean, mentalState: string, year: number = 1): BgInfo {
+  const base = getSeasonBackground(week, isVacation, mentalState, year);
+  // 번아웃은 자체 다크 무드 유지 — 학교급 tint 제외.
+  if (mentalState === 'burnout') return base;
+  return { ...base, levelOverlay: getLevelTint(getSchoolLevel(year)) };
+}
+
+function getSeasonBackground(week: number, isVacation: boolean, mentalState: string, year: number): BgInfo {
   const level = getSchoolLevel(year);
   const classroom = `/images/backgrounds/classroom_${level}_afternoon.png`;
 

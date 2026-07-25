@@ -25,6 +25,9 @@ export function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: 
         />
       )}
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: bg.overlay, pointerEvents: 'none' }} />
+      {bg.levelOverlay && (
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: bg.levelOverlay, pointerEvents: 'none' }} />
+      )}
       <div style={{ position: 'relative', zIndex: 1, padding: 20, maxWidth: 600, margin: '0 auto' }}>
         {children}
       </div>
