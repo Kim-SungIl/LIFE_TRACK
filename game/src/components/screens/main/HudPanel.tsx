@@ -1,6 +1,7 @@
 import { memo, useState } from 'react';
 import { GameState, ParentStrength, ParentBonusApplied } from '../../../engine/types';
 import { getParentMods } from '../../../engine/parentModifiers';
+import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../../Portrait';
 import { PARENT_ICONS } from '../shared';
 
@@ -51,6 +52,7 @@ export const HudPanel = memo(function HudPanel({
 }: Props) {
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글. HUD 전용 로컬 state.
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
   const mods = getParentMods(parents);
   return (
     <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
@@ -92,7 +94,7 @@ export const HudPanel = memo(function HudPanel({
                     border: '1px solid rgba(224,138,91,0.4)',
                     display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
                     cursor: 'pointer', userSelect: 'none',
-                    animation: justFired ? 'parentChipPulse 0.6s ease' : 'none',
+                    animation: justFired && !reducedMotion ? 'parentChipPulse 0.6s ease' : 'none',
                   }}
                 >{PARENT_ICONS[p]}</button>
               );
