@@ -23,3 +23,13 @@ export function prefetchAsset(url: string | null | undefined): void {
 export function prefetchAssets(urls: (string | null | undefined)[]): void {
   for (const u of urls) prefetchAsset(u);
 }
+
+/** 메인 스레드 idle 때 한 번 실행 (requestIdleCallback, 없으면 setTimeout). */
+export function runWhenIdle(task: () => void): () => void {
+  if (typeof window.requestIdleCallback === 'function') {
+    const id = window.requestIdleCallback(() => task());
+    return () => window.cancelIdleCallback(id);
+  }
+  const id = window.setTimeout(task, 1);
+  return () => window.clearTimeout(id);
+}
