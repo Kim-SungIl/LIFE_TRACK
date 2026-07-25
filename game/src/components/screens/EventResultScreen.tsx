@@ -64,7 +64,7 @@ export function EventResultScreen({
       {showFallback && (
         <>
           <div style={{ position: 'absolute', inset: 0 }}>
-            {bgImgUrl && <img src={bgImgUrl} alt="" data-bg-idx="0" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} onError={e => {
+            {bgImgUrl && <img src={bgImgUrl} alt="" data-bg-idx="0" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6 }} onError={e => {
               const img = e.target as HTMLImageElement;
               const idx = parseInt(img.dataset.bgIdx || '0') + 1;
               if (idx < bgImgCandidates.length) {
@@ -84,6 +84,7 @@ export function EventResultScreen({
             <img
               src={`${BASE}images/characters/${characterStagePrefix(gender === 'male' ? 'player_m' : 'player_f', year)}_fullbody.png`}
               alt=""
+              decoding="async"
               style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
             />
