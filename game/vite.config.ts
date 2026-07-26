@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { promises as fs } from 'node:fs'
@@ -63,5 +64,8 @@ export default defineConfig({
   define: {
     // 릴리즈 빌드(GEN_WEBP=1)에서만 true → webpSrc가 .png→.webp 스왑
     __WEBP_ENABLED__: JSON.stringify(process.env.GEN_WEBP === '1'),
+  },
+  test: {
+    include: ['src/engine/__tests__/**/*.test.ts'],
   },
 })
