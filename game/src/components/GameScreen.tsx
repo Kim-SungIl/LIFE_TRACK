@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, lazy, Suspense, type ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, isStorageSaveFailed } from '../engine/store';
 import { josa } from '../engine/korean';
@@ -8,14 +8,41 @@ import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
 import { characterStagePrefixByLevel } from '../engine/characterAssets';
 import { getResultDialogue } from '../engine/dialogues';
-import { prefetchAssets } from '../engine/assetPrefetch';
-import { EventScene } from './EventScene';
+import { prefetchAssets, runWhenIdle } from '../engine/assetPrefetch';
 import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
-import { YearEndScreen } from './screens/YearEndScreen';
-import { EndingScreen } from './screens/EndingScreen';
-import { EventResultScreen } from './screens/EventResultScreen';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
+
+// 비-부팅 화면만 lazy — MainWeekScreen / WeeklyResultScreen / TitleScreen 은 첫 페인트·고빈도라 eager 유지.
+const EventScene = lazy(() =>
+  import('./EventScene').then((m) => ({ default: m.EventScene })),
+);
+const YearEndScreen = lazy(() =>
+  import('./screens/YearEndScreen').then((m) => ({ default: m.YearEndScreen })),
+);
+const EndingScreen = lazy(() =>
+  import('./screens/EndingScreen').then((m) => ({ default: m.EndingScreen })),
+);
+const EventResultScreen = lazy(() =>
+  import('./screens/EventResultScreen').then((m) => ({ default: m.EventResultScreen })),
+);
+
+/** Suspense fallback — 기존 톤 배경만 유지한 조용한 빈 화면 (깜빡임·스피너 없음).
+ *  시각적으론 빈 배경이지만, 청크 로딩을 스크린리더에 1회 알린다(로드 후 재-suspend 없어 무음). */
+function ScreenChunkFallback() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)' }}
+    >
+      <span style={{
+        position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+        overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+      }}>불러오는 중…</span>
+    </div>
+  );
+}
 
 // GameScreen 은 phase 라우터 — 각 화면(year-end / ending / event / event-result / weekly / main)으로 위임.
 // 이벤트 결과(eventResultData)·CG 로딩은 화면 전환을 가르므로 여기서 소유한다. 주간 결산은 phase==='result'.
@@ -97,6 +124,26 @@ export function GameScreen() {
   const [eventResultData, setEventResultData] = useState<EventResultData | null>(null);
   // 기록장 — 지난 학년 회상(읽기 전용). null이면 닫힘. phase를 안 건드리는 로컬 오버레이.
   const [albumYear, setAlbumYear] = useState<number | null>(null);
+
+  // 이벤트 화면 청크 prefetch — 메인 화면 idle 때 한 번만. 첫 이벤트 진입 Suspense 플래시 완화.
+  const eventChunksPrefetched = useRef(false);
+  const onMainScreen = Boolean(
+    state
+    && !eventResultData
+    && state.phase !== 'event'
+    && state.phase !== 'year-end'
+    && state.phase !== 'ending'
+    && state.phase !== 'result',
+  );
+  useEffect(() => {
+    if (!onMainScreen || eventChunksPrefetched.current) return;
+    return runWhenIdle(() => {
+      if (eventChunksPrefetched.current) return;
+      eventChunksPrefetched.current = true;
+      void import('./EventScene');
+      void import('./screens/EventResultScreen');
+    });
+  }, [onMainScreen]);
   const [cgLoaded, setCgLoaded] = useState(false);
   // CG 후보 cascade가 모두 실패하면 true → 배경+주인공 fallback 다시 표시
   const [cgError, setCgError] = useState(false);
@@ -132,31 +179,37 @@ export function GameScreen() {
   // 기록장 오버레이 — 메인 화면 반환부에서 fixed 오버레이로 겹쳐 그린다(읽기 전용, phase 무변경).
   // 이전엔 여기서 early-return으로 화면을 통째로 갈아끼워 MainWeekScreen이 언마운트됐고,
   // 그 로컬 state(주말 활동/NPC 동행 선택)가 기록장을 열 때마다 소실됐다.
+  // YearEndScreen은 lazy라 내부 Suspense로만 받아 MainWeek가 통째로 fallback 되지 않게 한다.
   const albumOverlay = albumYear !== null ? (
     <div style={{ position: 'fixed', inset: 0, zIndex: 300, overflowY: 'auto' }}>
-      <YearEndScreen
-        year={albumYear}
-        gender={state.gender}
-        memorySlots={state.memorySlots ?? []}
-        milestoneScenes={state.milestoneScenes ?? []}
-        stats={state.stats}
-        bgProps={bgProps}
-        onAdvance={() => {}}
-        readonly
-        examResults={state.examResults ?? []}
-        reachedYears={Array.from({ length: Math.max(0, state.year - 1) }, (_, i) => i + 1)}
-        onSelectYear={setAlbumYear}
-        onClose={() => setAlbumYear(null)}
-      />
+      <Suspense fallback={<ScreenChunkFallback />}>
+        <YearEndScreen
+          year={albumYear}
+          gender={state.gender}
+          memorySlots={state.memorySlots ?? []}
+          milestoneScenes={state.milestoneScenes ?? []}
+          stats={state.stats}
+          bgProps={bgProps}
+          onAdvance={() => {}}
+          readonly
+          examResults={state.examResults ?? []}
+          reachedYears={Array.from({ length: Math.max(0, state.year - 1) }, (_, i) => i + 1)}
+          onSelectYear={setAlbumYear}
+          onClose={() => setAlbumYear(null)}
+        />
+      </Suspense>
     </div>
   ) : null;
 
-  // ===== 이벤트 결과 — 비주얼 노벨 배경 유지 =====
+  // ===== phase 분기 (단일 Suspense로 lazy 청크 로딩) =====
+  let phaseContent: ReactNode;
+
+  // 이벤트 결과 — 비주얼 노벨 배경 유지.
   // 방금 내린 선택의 결과 연출이라 어떤 phase보다 우선한다. 특히 학년말 주(W48) 이벤트에서
   // year-end/ending보다 먼저 체크해야 결과 화면이 학년말 일기장에 묻히지 않는다.
   // onContinue로 닫으면 다음 render에서 phase(result/year-end/ending/event)로 자연 분기.
   if (eventResultData) {
-    return (
+    phaseContent = (
       <EventResultScreen
         gender={state.gender}
         year={state.year}
@@ -168,11 +221,9 @@ export function GameScreen() {
         onContinue={() => { setEventResultData(null); setCgLoaded(false); setCgError(false); }}
       />
     );
-  }
-
-  // ===== v1.2 학년말 일기장 (Y1~Y6) =====
-  if (state.phase === 'year-end') {
-    return (
+  } else if (state.phase === 'year-end') {
+    // ===== v1.2 학년말 일기장 (Y1~Y6) =====
+    phaseContent = (
       <YearEndScreen
         year={state.year}
         gender={state.gender}
@@ -183,11 +234,9 @@ export function GameScreen() {
         onAdvance={advanceFromYearEnd}
       />
     );
-  }
-
-  // ===== 엔딩 =====
-  if (state.phase === 'ending' && endingData) {
-    return (
+  } else if (state.phase === 'ending' && endingData) {
+    // ===== 엔딩 =====
+    phaseContent = (
       <EndingScreen
         ending={endingData}
         track={state.track}
@@ -197,12 +246,10 @@ export function GameScreen() {
         bgProps={bgProps}
       />
     );
-  }
-
-  // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
-  // eventResultData가 세팅돼 있으면 결과 화면을 먼저 보여준 뒤, "계속 →" 클릭 후 followup 이벤트로 넘어감
-  if (state.currentEvent && state.phase === 'event' && !eventResultData) {
-    return (
+  } else if (state.currentEvent && state.phase === 'event') {
+    // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
+    // eventResultData가 세팅돼 있으면 결과 화면을 먼저 보여준 뒤, "계속 →" 클릭 후 followup 이벤트로 넘어감
+    phaseContent = (
       <EventScene
         event={state.currentEvent}
         gender={state.gender}
@@ -252,12 +299,10 @@ export function GameScreen() {
         }}
       />
     );
-  }
-
-  // ===== 주간 결산 =====
-  if (state.phase === 'result' && state.weekLog) {
+  } else if (state.phase === 'result' && state.weekLog) {
+    // ===== 주간 결산 =====
     const { color: fatigueColor } = getFatigueDisplay(state.fatigue);
-    return (
+    phaseContent = (
       <WeeklyResultScreen
         weekLog={state.weekLog}
         stats={state.stats}
@@ -275,31 +320,37 @@ export function GameScreen() {
         onContinue={() => setPhase('weekday')}
       />
     );
+  } else {
+    // ===== 메인 게임 화면 =====
+    phaseContent = (
+      <>
+        <MainWeekScreen
+          state={state}
+          bgProps={bgProps}
+          saveFailed={isStorageSaveFailed()}
+          onOpenAlbum={() => setAlbumYear(state.year - 1)}
+          onSetRoutine={setRoutine}
+          onTalkNpc={talkToNpc}
+          onTalkHome={talkToHome}
+          onResolveParentChoice={resolveParentTalkChoice}
+          onBuyItem={buyItem}
+          onConfirmWeek={(activities, npcChoices) => {
+            if (state.isVacation) setVacationChoices(activities);
+            else setWeekendChoices(activities);
+            // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
+            setNpcActivityMap(npcChoices);
+            // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
+            advanceWeek();
+          }}
+        />
+        {albumOverlay}
+      </>
+    );
   }
 
-  // ===== 메인 게임 화면 =====
   return (
-    <>
-      <MainWeekScreen
-        state={state}
-        bgProps={bgProps}
-        saveFailed={isStorageSaveFailed()}
-        onOpenAlbum={() => setAlbumYear(state.year - 1)}
-        onSetRoutine={setRoutine}
-        onTalkNpc={talkToNpc}
-        onTalkHome={talkToHome}
-        onResolveParentChoice={resolveParentTalkChoice}
-        onBuyItem={buyItem}
-        onConfirmWeek={(activities, npcChoices) => {
-          if (state.isVacation) setVacationChoices(activities);
-          else setWeekendChoices(activities);
-          // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
-          setNpcActivityMap(npcChoices);
-          // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
-          advanceWeek();
-        }}
-      />
-      {albumOverlay}
-    </>
+    <Suspense fallback={<ScreenChunkFallback />}>
+      {phaseContent}
+    </Suspense>
   );
 }
