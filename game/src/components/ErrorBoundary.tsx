@@ -38,7 +38,7 @@ export class ErrorBoundary extends Component<Props, State> {
       <div
         role="alert"
         style={{
-          minHeight: '100vh',
+          minHeight: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

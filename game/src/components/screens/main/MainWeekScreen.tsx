@@ -440,8 +440,11 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         );
       })()}
 
-      {/* 확정 버튼 */}
-      <div data-tutorial="confirm" style={{ paddingBottom: 20 }}>
+      {/* 고정 CTA 높이만큼 스크롤 여백 확보 — 마지막 콘텐츠(프리뷰)가 하단 바에 가리지 않도록 */}
+      <div aria-hidden="true" style={{ height: 'calc(80px + env(safe-area-inset-bottom))' }} />
+
+      {/* 확정 버튼 — 하단 고정(sticky CTA). .bottom-action = position:fixed + safe-area */}
+      <div data-tutorial="confirm" className="bottom-action">
         <button className="btn btn-primary"
           disabled={confirmDisabled}
           onClick={handleConfirm}

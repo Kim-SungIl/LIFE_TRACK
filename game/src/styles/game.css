@@ -26,21 +26,21 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
 #root {
   max-width: 600px;
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
 }
 
 /* ===== 공통 ===== */
 .screen {
   padding: 20px;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -330,7 +330,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   text-align: center;
   padding: 40px 20px;
   background:
@@ -509,7 +509,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   text-align: center;
   padding: 40px 20px;
 }
@@ -595,7 +595,9 @@ body {
   padding-bottom: 80px;
 }
 
-/* ===== 하단 고정 버튼 ===== */
+/* ===== 하단 고정 버튼 =====
+   z-index 15: 페이지 콘텐츠(1)·HUD 툴팁(20 위치 반대편) 위, 모든 모달/다이얼로그(≥100) 아래.
+   safe-area: 홈 인디케이터와 겹치지 않게 하단 inset 추가. */
 .bottom-action {
   position: fixed;
   bottom: 0;
@@ -604,6 +606,8 @@ body {
   width: 100%;
   max-width: 600px;
   padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 15;
   background: linear-gradient(transparent, var(--bg-primary) 30%);
 }
 
