@@ -351,7 +351,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       `${BASE_URL}images/backgrounds/${location}_spring.png`,
       `${BASE_URL}images/backgrounds/${location}.png`,
     ] : []),
-  ];
+  ].map(webpSrc);
   const gradientBg = location
     ? (LOCATION_GRADIENTS[location] || DEFAULT_GRADIENT)
     : DEFAULT_GRADIENT;
