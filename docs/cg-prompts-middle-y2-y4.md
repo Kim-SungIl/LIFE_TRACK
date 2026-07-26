@@ -229,7 +229,9 @@ Mood: a moment glossed over — a smile that hides more than it shows.
 ```
 After-school empty Korean middle school classroom, late afternoon light. Minjae (reference
 — thin silver square/rimless glasses, neat short hair, pale skin, navy blazer) at a desk,
-eyes faintly red, gripping a pen but writing nothing, the pen now set down on the desk.
+eyes visibly RED-RIMMED from held-back tears (subtle but unmistakable — 1st-gen missed
+this), gripping a pen but writing nothing, the pen now set down on the desk. [_f] variant:
+protagonist player_f MUST wear the red ribbon (middle female uniform — 1st-gen missed it).
 Protagonist has quietly sat down in the adjacent seat in silence, no words, just present.
 A long shared stillness between them. Soft golden light, empty desks, dust in the air.
 Mood: a long wordless silence — the first time minjae's real voice is about to come out.
@@ -586,9 +588,9 @@ Mood: the weight of the year's last exam — everything riding on this one.
 
 ---
 
-## 📋 산출 요약 (파일 목록 SSOT — 총 64장, 2026-07-25 성별 페어 개정)
+## 📋 산출 요약 (파일 목록 SSOT — 총 61장, 2026-07-26 doyun 공유 예외 반영)
 
-**P1 (기억 이벤트) — `middle/` 48장** (표기 `×2` = `_m` + `_f` 페어):
+**P1 (기억 이벤트) — `middle/` 45장** (표기 `×2` = `_m` + `_f` 페어):
 - `minjae-jealousy_c0×2 / _c1×2 / _c2×2` (6)
 - `minjae-effort_c0×2 / _c1×2` (4)
 - `minjae-honest_c0×2 / _c2×2` (4 — c1 드래프트 없음 제외)
@@ -598,7 +600,7 @@ Mood: the weight of the year's last exam — everything riding on this one.
 - `middle-burnout_c0×2 / _c1×2 / _c2×2` (6)
 - `family-strain_c0×2 / _c1×2 / _c2×2` (6)
 - `haeun-distance_c0 / _c1 / _c2` (3 — 전부 공유: 소품·손 클로즈업)
-- `doyun-school-split_c0×2 / _c1×2 / _c2×2` (6)
+- `doyun-school-split_c0 / _c1 / _c2` (3 — 공유 예외: 1차 검수에서 후드·뒷모습 완전 중성 확정)
 
 **P2 (마일스톤 ANNUAL) — `middle/` 12장**, choice 무관 `_m`/`_f` 페어:
 - `middle-school-entrance_m/_f` · `middle2-start_m/_f` · `middle3-start_m/_f`
@@ -627,7 +629,7 @@ Mood: the weight of the year's last exam — everything riding on this one.
 
 > 결과: "도윤이가 '오 진짜? 좋지!!!' 답했지만, 약속은 결국 잡히지 않았다." (discovery/regret/6)
 
-**파일명** `middle/doyun-school-split_c0_m.png` + `_c0_f.png` (페어 — 실루엣도 머리·체형으로 성별 드러남, Y1 도윤컷 선례)
+**파일명** `middle/doyun-school-split_c0.png` (공유 단일 — 1차 생성 검수에서 후드+완전 뒷모습으로 성별 표지 없음 확정, 페어 지정에서 공유 예외로 승격)
 ```
 A 13-year-old Korean kid (protagonist, back view or side silhouette, face hidden/downcast)
 alone in their own bedroom in the evening, sitting on the floor or bed, holding a smartphone.
@@ -644,7 +646,7 @@ different time. Bittersweet, not bitter.
 
 > 결과: "'응. 너도 잘 지내.' 도윤이의 답도 짧았다. 그렇게 카톡 창이 닫혔다." (failure/regret/7)
 
-**파일명** `middle/doyun-school-split_c1_m.png` + `_c1_f.png` (페어)
+**파일명** `middle/doyun-school-split_c1.png` (공유 단일 — 동일 사유)
 ```
 Same bedroom-evening setting, protagonist (back/side silhouette, face hidden). Phone screen
 shows a very short exchange — one tiny sent bubble, one tiny reply bubble, both BLURRED/
@@ -658,13 +660,15 @@ Mood: a relationship closing in two short lines — quiet regret of words not sa
 
 > 결과: "하루, 이틀, 일주일이 지나자 답할 수 없는 분위기가 됐다." (failure/regret/7)
 
-**파일명** `middle/doyun-school-split_c2_m.png` + `_c2_f.png` (페어)
+**파일명** `middle/doyun-school-split_c2.png` (공유 단일 — 동일 사유. ⚠️ 1차 생성분은 채팅 방향 역전으로 재생성 대상)
 ```
-Same bedroom-evening setting. The phone lies face-up on the desk or floor, screen showing
-a single last received chat bubble left unanswered — bubble text BLURRED/illegible (no
-readable characters), an empty reply field below it. Protagonist (back view / out of frame,
-only a shoulder or hand at the edge) NOT touching the phone — frozen, unable to type.
-Indoor casual, NO uniform.
+Same bedroom-evening setting. The phone lies face-up on the desk or floor. CRITICAL chat
+layout — the story is "his message, never answered by me": the LAST (bottom-most) bubble is
+a RECEIVED bubble on the LEFT (gray/white), text blurred/illegible; below it only an EMPTY
+reply input bar. Do NOT draw a sent (right/blue) bubble as the last message, NO read
+checkmarks on a sent bubble, and NO "typing..." indicator dots — nobody is typing.
+Protagonist (back view / out of frame, only a shoulder or hand at the edge) NOT touching
+the phone — frozen, unable to type. Indoor casual, NO uniform.
 Several days implied (a calendar / faint time passing). Dim cooling light.
 Mood: the ache of a message you couldn't bring yourself to answer — a spring that quietly faded.
 ```
