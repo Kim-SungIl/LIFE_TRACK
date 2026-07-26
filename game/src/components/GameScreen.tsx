@@ -9,6 +9,7 @@ import { getBackground, getSchoolLevel } from '../engine/backgrounds';
 import { characterStagePrefixByLevel } from '../engine/characterAssets';
 import { getResultDialogue } from '../engine/dialogues';
 import { prefetchAssets, runWhenIdle } from '../engine/assetPrefetch';
+import { webpSrc } from '../engine/assetWebp';
 import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
@@ -117,7 +118,7 @@ export function GameScreen() {
       `images/backgrounds/school_road_morning.png`,
       `images/backgrounds/home_evening.png`,
       `images/backgrounds/bedroom_night.png`,
-    ]);
+    ].map(webpSrc));
   }, [playerGender, schoolLevel, isElementarySprite]);
 
   // 주간 결산 화면은 state.phase==='result'로 표현 (새로고침 후에도 유지). 로컬 boolean 제거.

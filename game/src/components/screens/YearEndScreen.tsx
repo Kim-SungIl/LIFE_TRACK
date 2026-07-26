@@ -3,6 +3,7 @@ import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
 import { josa } from '../../engine/korean';
 import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender, ToneTag, ExamResult, EXAM_TYPE_LABELS } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
+import { webpSrc } from '../../engine/assetWebp';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 
@@ -138,7 +139,7 @@ function HeroGallery({ items }: { items: CgItem[] }) {
       <div ref={ref} className={multi ? 'ye-gallery ye-gallery-multi' : 'ye-gallery'} onScroll={multi ? onScroll : undefined}>
         {items.map(({ slot, cg }) => (
           <div key={slot.id}>
-            <img src={cg} alt="" decoding="async" loading="lazy" style={{ width: '100%', height: 200, maxHeight: 200, objectFit: 'cover', objectPosition: 'center 30%', display: 'block', filter: toneFilter(slot.toneTag) }}
+            <img src={webpSrc(cg)} alt="" decoding="async" loading="lazy" style={{ width: '100%', height: 200, maxHeight: 200, objectFit: 'cover', objectPosition: 'center 30%', display: 'block', filter: toneFilter(slot.toneTag) }}
               onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             <div style={{ padding: '12px 16px 14px' }}>
               <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic' }}>
@@ -194,7 +195,7 @@ function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; siz
       overflow: 'hidden', background: `${cat.color}22`, boxShadow: `0 0 0 1.5px ${cat.color}88`,
       filter: toneFilter(slot.toneTag),
     }}>
-      <img src={cat.art} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      <img src={webpSrc(cat.art)} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         onError={e => {
           const img = e.currentTarget;
           img.style.display = 'none';

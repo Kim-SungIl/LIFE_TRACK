@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
+import { webpSrc } from '../engine/assetWebp';
 import { CharacterAvatar, NPC_APPEARANCES, mentalToExpression, type AvatarExpression } from './CharacterAvatar';
 
 interface Props {
@@ -45,7 +46,7 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <img
-          src={src}
+          src={webpSrc(src)}
           alt={`${characterId} ${expr}`}
           decoding="async"
           style={{

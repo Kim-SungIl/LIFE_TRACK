@@ -4,6 +4,7 @@ import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIEN
 import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 import { prefetchAssets } from '../engine/assetPrefetch';
+import { webpSrc } from '../engine/assetWebp';
 import { CG_MANIFEST } from '../cg-manifest.generated';
 
 const BASE_URL = import.meta.env.BASE_URL;
@@ -98,7 +99,7 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
         transition: 'filter 0.3s',
       }}>
         <img
-          src={src}
+          src={webpSrc(src)}
           alt={npcId}
           decoding="async"
           style={{
@@ -413,7 +414,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       }}>
         {bgImageUrl && !bgError && (
           <img
-            src={bgImageUrl}
+            src={webpSrc(bgImageUrl)}
             alt={location || 'background'}
             decoding="async"
             style={{
