@@ -3,6 +3,7 @@ import { ParentStrength } from '../engine/types';
 import { useGameStore } from '../engine/store';
 import { loadFromStorage } from '../engine/store';
 import { Portrait } from './Portrait';
+import { ConfirmDialog } from './ConfirmDialog';
 
 // 부모 선택 = 어린 시절 기억 장면
 const MEMORIES: { id: ParentStrength; scene: string; detail: string; icon: string }[] = [
@@ -52,6 +53,8 @@ export function TitleScreen() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [selected, setSelected] = useState<ParentStrength[]>([]);
   const [useReducedRecovery, setUseReducedRecovery] = useState(false); // M6: 도전 모드
+  // 기존 저장 덮어쓰기 확인 — window.confirm 대체(Phase 3)
+  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
   const startGame = useGameStore(s => s.startGame);
   const loadSavedGame = useGameStore(s => s.loadSavedGame);
   const savedData = loadFromStorage();
@@ -68,11 +71,17 @@ export function TitleScreen() {
     }
   };
 
+  const doStart = () => {
+    if (selected.length === 2 && gender) {
+      startGame(gender, selected as [ParentStrength, ParentStrength], { useReducedRecovery });
+    }
+  };
+
   const handleStart = () => {
     if (selected.length === 2 && gender) {
-      // 기존 저장이 있으면 새 게임이 무경고로 덮어쓰지 않게 확인 — 데이터 손실 방지.
-      if (savedData && !window.confirm('진행 중인 저장이 있어요. 새 게임을 시작하면 기존 저장은 삭제됩니다. 계속할까요?')) return;
-      startGame(gender, selected as [ParentStrength, ParentStrength], { useReducedRecovery });
+      // 기존 저장이 있으면 새 게임이 무경고로 덮어쓰지 않게 확인 — 데이터 손실 방지(인게임 다이얼로그, Phase 3).
+      if (savedData) { setShowOverwriteConfirm(true); return; }
+      doStart();
     }
   };
 
@@ -288,6 +297,18 @@ export function TitleScreen() {
           }
         </button>
       </div>
+
+      {showOverwriteConfirm && (
+        <ConfirmDialog
+          title="새 게임을 시작할까요?"
+          message={'진행 중인 저장이 있어요.\n새 게임을 시작하면 기존 저장은 삭제됩니다.'}
+          confirmLabel="새로 시작"
+          cancelLabel="취소"
+          danger
+          onConfirm={doStart}
+          onCancel={() => setShowOverwriteConfirm(false)}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { ShopItem } from '../../../engine/shopSystem';
 import { TalkActionResult, getLastSavedAt } from '../../../engine/store';
 import { isNpcEnrolled } from '../../../engine/relationshipSignals';
 import { Shop } from '../../Shop';
+import { ConfirmDialog } from '../../ConfirmDialog';
 import { Tutorial } from '../../Tutorial';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
 import { breakSentences, getFatigueDisplay, getUpcomingEvents } from '../shared';
@@ -63,6 +64,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   });
   // A-3: 확정 버튼 더블탭 락 — 렌더 갱신 사이 빠른 두 번째 클릭으로 processWeek가 두 번 도는 것 차단
   const confirmLockRef = useRef(false);
+  // 주말 활동 미선택 확인 — window.confirm 대체(Phase 3)
+  const [showRestConfirm, setShowRestConfirm] = useState(false);
 
   // 의존: week/year/totalWeeksPlayed (primitives) — 한 주가 진행될 때만 새 라인 뽑고,
   // 말걸기 같은 로컬 state 변경에는 영향 안 받게 한다.
@@ -152,18 +155,22 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
     [npcDetail?.id, npcDetail?.intimacy, state],
   );
 
-  const handleConfirm = () => {
-    if (confirmLockRef.current) return;
-    // 주말 활동 미선택 시 확인 팝업
-    if (!state.isVacation && selectedActivities.length === 0) {
-      if (!window.confirm('주말 활동을 선택하지 않았어요!\n정말 이번 주말은 쉴까요?')) {
-        return;
-      }
-    }
+  // 확정 본처리 — 더블탭 락 후 주 진행. 확인 다이얼로그 통과분과 공용.
+  const proceedConfirm = () => {
     confirmLockRef.current = true;
     setTimeout(() => { confirmLockRef.current = false; }, 500);
     onConfirmWeek(selectedActivities, npcChoices);
     setSelectedActivities([]); setNpcChoices({}); setLastReaction(null);
+  };
+
+  const handleConfirm = () => {
+    if (confirmLockRef.current) return;
+    // 주말 활동 미선택 시 확인 — 인게임 다이얼로그(Phase 3)
+    if (!state.isVacation && selectedActivities.length === 0) {
+      setShowRestConfirm(true);
+      return;
+    }
+    proceedConfirm();
   };
 
   // NPC 선택 모달에서 친구 선택 — 슬롯/레거시 분기 후 활동·동행 기록
@@ -467,6 +474,17 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         state={state}
         onBuy={(item: ShopItem, npcId?: string) => onBuyItem(item, npcId)}
         onClose={() => setShowShop(false)}
+      />
+    )}
+    {/* 주말 활동 미선택 확인 (window.confirm 대체) */}
+    {showRestConfirm && (
+      <ConfirmDialog
+        title="이번 주말, 쉴까요?"
+        message={'주말 활동을 선택하지 않았어요.\n정말 이번 주말은 쉴까요?'}
+        confirmLabel="쉴래요"
+        cancelLabel="다시 고를래요"
+        onConfirm={() => { setShowRestConfirm(false); proceedConfirm(); }}
+        onCancel={() => setShowRestConfirm(false)}
       />
     )}
     {/* 튜토리얼 — 슬롯 편집 중엔 CSS로만 숨김 (언마운트하면 step 리셋됨) */}
