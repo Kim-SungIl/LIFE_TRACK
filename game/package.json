@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
+    "test": "vitest run",
     "check": "tsc -b && vite build",
     "verify:events": "tsx scripts/verify/verify-events-split.ts",
     "verify:save-load": "tsx scripts/verify/verify-save-load.ts",
@@ -35,6 +36,7 @@
     "tsx": "^4.19.2",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.57.0",
-    "vite": "^8.0.1"
+    "vite": "^8.0.1",
+    "vitest": "^4.1.10"
   }
 }
