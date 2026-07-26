@@ -272,7 +272,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
         }
       }
     }
-    prefetchAssets(candidates);
+    prefetchAssets(candidates.map(webpSrc));
   }, [event.id, gender, year, event.choices.length, event.femaleChoices]);
 
   // Gender-specific description/choices

@@ -5,8 +5,10 @@
 // 런타임 지원 감지는 생략한다.
 declare const __WEBP_ENABLED__: boolean;
 
-/** png 경로를 릴리즈 빌드에서 webp로 스왑. 쿼리/해시는 보존, png가 아니면 그대로. */
+/** png 경로를 릴리즈 빌드에서 webp로 스왑. 쿼리/해시는 보존, png가 아니면 그대로.
+ *  vite define가 없는 순수 node 실행(tsx 스크립트가 컴포넌트 체인을 import하는 경우)에서
+ *  ReferenceError가 나지 않도록 typeof 가드. */
 export function webpSrc(path: string): string {
-  if (!__WEBP_ENABLED__) return path;
+  if (typeof __WEBP_ENABLED__ === 'undefined' || !__WEBP_ENABLED__) return path;
   return path.replace(/\.png($|[?#])/i, '.webp$1');
 }
