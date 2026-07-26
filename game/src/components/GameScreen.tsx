@@ -27,13 +27,20 @@ const EventResultScreen = lazy(() =>
   import('./screens/EventResultScreen').then((m) => ({ default: m.EventResultScreen })),
 );
 
-/** Suspense fallback — 기존 톤 배경만 유지한 조용한 빈 화면 (깜빡임·스피너 없음). */
+/** Suspense fallback — 기존 톤 배경만 유지한 조용한 빈 화면 (깜빡임·스피너 없음).
+ *  시각적으론 빈 배경이지만, 청크 로딩을 스크린리더에 1회 알린다(로드 후 재-suspend 없어 무음). */
 function ScreenChunkFallback() {
   return (
     <div
-      aria-hidden
+      role="status"
+      aria-live="polite"
       style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)' }}
-    />
+    >
+      <span style={{
+        position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
+        overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
+      }}>불러오는 중…</span>
+    </div>
   );
 }
 
