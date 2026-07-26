@@ -2,6 +2,7 @@ import { GameState } from '../../engine/types';
 import { LOCATION_GRADIENTS, DEFAULT_GRADIENT, getEventBackground } from '../../engine/backgrounds';
 import { characterStagePrefix } from '../../engine/characterAssets';
 import { resolveEventCgRelPaths } from '../../engine/eventCg';
+import { webpSrc } from '../../engine/assetWebp';
 import { breakSentences, EventResultData } from './shared';
 
 interface EventResultScreenProps {
@@ -26,14 +27,14 @@ export function EventResultScreen({
   const bgGradient = resultLocation ? (LOCATION_GRADIENTS[resultLocation] || DEFAULT_GRADIENT) : DEFAULT_GRADIENT;
   // 배경 이미지: event.background 우선, 없으면 location 기반 폴백
   const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, year) : undefined;
-  const bgImgCandidates = resolvedEventBg
+  const bgImgCandidates = (resolvedEventBg
     ? [`${BASE}${resolvedEventBg.replace(/^\//, '')}`]
     : resultLocation ? [
       `${BASE}images/backgrounds/${resultLocation}_afternoon.png`,
       `${BASE}images/backgrounds/${resultLocation}_evening.png`,
       `${BASE}images/backgrounds/${resultLocation}_spring.png`,
       `${BASE}images/backgrounds/${resultLocation}.png`,
-    ] : [];
+    ] : []).map(webpSrc);
   const bgImgUrl = bgImgCandidates.length > 0 ? bgImgCandidates[0] : null;
 
   // 이벤트 결과 이미지 폴백 체인:
@@ -49,7 +50,7 @@ export function EventResultScreen({
   // CG 후보 해석은 eventCg.ts 공통 함수로 위임 — YearEndScreen 썸네일과 동일 폴백 정책 공유.
   // 매니페스트로 1차 필터링된 상대경로를 URL로 변환(자산 부재 시 직렬 404 비용 제거).
   const eventImgCandidates: string[] = eventId
-    ? resolveEventCgRelPaths(eventId, ci, gender, year).map(rel => `${BASE}images/events/${rel}`)
+    ? resolveEventCgRelPaths(eventId, ci, gender, year).map(rel => webpSrc(`${BASE}images/events/${rel}`))
     : [];
   const eventImgPrimary = eventImgCandidates[0] ?? null;
 
@@ -82,7 +83,7 @@ export function EventResultScreen({
             zIndex: 5, pointerEvents: 'none',
           }}>
             <img
-              src={`${BASE}images/characters/${characterStagePrefix(gender === 'male' ? 'player_m' : 'player_f', year)}_fullbody.png`}
+              src={webpSrc(`${BASE}images/characters/${characterStagePrefix(gender === 'male' ? 'player_m' : 'player_f', year)}_fullbody.png`)}
               alt=""
               decoding="async"
               style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
