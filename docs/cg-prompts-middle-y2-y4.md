@@ -28,7 +28,9 @@ Resolution: 1440x810 (16:9) or 1080x1440 (3:4 portrait — for character close-u
 ```
 no elementary clothing, no high school (no high-school setting/older proportions),
 no adult features, no exaggerated anime eyes, no sexualization,
-no modern flashy smartphones (plain 2010s~2020s smartphone OK), no tie on middle-stage uniform
+no modern flashy smartphones (plain 2010s~2020s smartphone OK), no tie on middle-stage uniform,
+no readable text anywhere (NO Korean/English letters on screens, posters, papers, chalkboards —
+AI text renders corrupted; use blurred/abstract shapes for chat bubbles and writing)
 ```
 
 > ⚠️ 중학생은 초등(사복)과 고등(넥타이·성숙한 비율)의 중간. 교복은 **navy blazer + 흰 셔츠 (넥타이 없음)**.
@@ -45,11 +47,14 @@ public/images/events/middle/
 ```
 - gender 분기 있는 컷: `middle/{eventId}_c{ci}_m.png` + `middle/{eventId}_c{ci}_f.png`
 - gender 무관 컷: `middle/{eventId}_c{ci}.png`
-- choice 무관 단일 컷(마일스톤): `middle/{eventId}.png`
+- choice 무관 마일스톤 컷: `middle/{eventId}_m.png` + `middle/{eventId}_f.png` (리졸버 2순위 `{sl}/{id}_{g}` 폴백)
 
-> 본 담당 이벤트는 모두 **gender 영향이 낮은 장면**(주인공이 화면 비중 작거나 뒷모습/소품 위주,
-> 또는 NPC·소품 중심)이라 별도 명시 없으면 **gender 무관 단일 컷**(`_c{ci}` 또는 무접미사)으로 충분.
-> 주인공이 정면 비중 큰 컷만 `_m`/`_f` 분기.
+> **성별 정책 (2026-07-25 개정)**: 주인공의 몸이 화면에 보이는 컷은 **전부 `_m`/`_f` 페어**로 제작한다.
+> Y1·고등 배치 관례(high/ 220장 페어 vs 공유 4장)와 일치 — 교복 실루엣(스커트/바지)과 머리 모양은
+> 뒷모습에서도 성별이 드러나므로 "뒷모습이라 무관" 처리하지 않는다. **공유 단일 컷은 소품·손
+> 클로즈업 또는 NPC 단독 구도만** (본 배치에선 school-festival c1, haeun-distance 3컷).
+> 페어 제작 시 장면·구도·조명 동일, **주인공 마커만 교체** (player_m ↔ player_f, spec L163-283).
+> 최종 파일 목록 SSOT는 문서 말미 "📋 산출 요약" — 각 컷 헤더의 구식 'gender 무관' 표기보다 우선.
 
 ---
 
@@ -143,7 +148,7 @@ P2 = 마일스톤 ANNUAL (EventResultScreen 학년 변곡점 연출)
 ## 🔴 P1 — minjae-jealousy — 굳어진 민재
 
 **발동**: Y2~3, minjae met & intimacy≥30, academic≥45, 학기중(쉬는 시간 교실).
-**CG**: c0, c1, c2 (3장). gender 무관(민재 중심, 주인공 반응 보조) → `_c{ci}` 단일.
+**CG**: c0, c1, c2 × `_m`/`_f` (6장) — 주인공 몸 등장(전신/반신) → 페어.
 **배경**: `classroom_middle_afternoon`.
 
 ### [c0] `middle/minjae-jealousy_c0.png` — 어색하게 먼저 자리를 뜬다 (betrayal/regret/5)
@@ -185,7 +190,7 @@ Mood: competitive but companionable — rivalry acknowledged out loud, a spark o
 ## 🔴 P1 — minjae-effort — 새벽의 비밀
 
 **발동**: Y2+, minjae intimacy≥25, `minjae-ranking` 이벤트 후, 학기중. 불 꺼진 빈 교실에 스탠드 하나.
-**CG**: c0, c1 (2장). gender 무관 → `_c{ci}` 단일.
+**CG**: c0, c1 × `_m`/`_f` (4장) — 주인공 등장(문가 서 있음/맞장구) → 페어.
 **배경**: `classroom_middle_sunset` (촬영 리스트 `classroom_{school}_sunset` → middle).
 
 ### [c0] `middle/minjae-effort_c0.png` — "너 공부 많이 하는구나" 솔직하게 (discovery/warm/6)
@@ -217,14 +222,16 @@ Mood: a moment glossed over — a smile that hides more than it shows.
 ## 🔴 P1 — minjae-honest — 교실에 남은 민재
 
 **발동**: Y4+(중3), minjae intimacy≥55, 학기중. 방과후 빈 교실, 눈이 붉은 민재가 펜만 쥠.
-**CG**: c0, c2 (2장). ⚠️ choiceIndex 주의 — c0=옆에 앉음, c2=그냥 지나침. c1(가볍게 묻는다)은 드래프트 없음→CG 불요.
+**CG**: c0, c2 × `_m`/`_f` (4장) — 주인공 등장 → 페어. ⚠️ choiceIndex 주의 — c0=옆에 앉음, c2=그냥 지나침. c1(가볍게 묻는다)은 드래프트 없음→CG 불요.
 **배경**: `classroom_middle_afternoon`.
 
 ### [c0] `middle/minjae-honest_c0.png` — 아무 말 없이 옆에 앉는다 (reconciliation/warm/7)
 ```
 After-school empty Korean middle school classroom, late afternoon light. Minjae (reference
 — thin silver square/rimless glasses, neat short hair, pale skin, navy blazer) at a desk,
-eyes faintly red, gripping a pen but writing nothing, the pen now set down on the desk.
+eyes visibly RED-RIMMED from held-back tears (subtle but unmistakable — 1st-gen missed
+this), gripping a pen but writing nothing, the pen now set down on the desk. [_f] variant:
+protagonist player_f MUST wear the red ribbon (middle female uniform — 1st-gen missed it).
 Protagonist has quietly sat down in the adjacent seat in silence, no words, just present.
 A long shared stillness between them. Soft golden light, empty desks, dust in the air.
 Mood: a long wordless silence — the first time minjae's real voice is about to come out.
@@ -248,7 +255,7 @@ Mood: the regret of a light left on — a door not opened.
 ## 🔴 P1 — school-festival (중학분) — 학교 축제
 
 **발동**: Y≥2 (중·고 공통, 본 문서는 **middle분만**), W30. 축제 준비 교실, 푸드트럭. 수빈이가 홍보 손듦.
-**CG**: c0, c1, c2 (3장). gender 무관 → `_c{ci}` 단일. (고등 버전은 별도 작업자 — `high/...`)
+**CG**: c0·c2 × `_m`/`_f` + c1 공유 (5장) — c1은 손+장부 클로즈업이라 공유(고등판 `school-festival_c1` 선례 동일), c0·c2는 주인공 등장 → 페어. (고등 버전은 생성 완료 — `high/`)
 **배경**: `festival_classroom` (middle 교복으로 구체화).
 
 ### [c0] `middle/school-festival_c0.png` — 수빈이랑 홍보 담당 (courage/resolve/5)
@@ -289,7 +296,7 @@ Mood: the ache of having opted out — left out while everyone else made the mem
 ## 🔴 P1 — yuna-study (중학분) — 유나의 부탁
 
 **발동**: academic≥50 & year≠7 (중학분 = Y2~4), W34. 도서관 책상, 유나가 수학 7번 물음.
-**CG**: c0, c1 (2장). gender 무관 → `_c{ci}` 단일. (고등 버전은 별도 작업자)
+**CG**: c0, c1 × `_m`/`_f` (4장) — 주인공 등장 → 페어 (고등판 `yuna-study_c0_f/m` 선례 동일). femaleChoices는 텍스트 동일(같은 장면)이라 별도 컷 불요.
 **배경**: `library_middle` (촬영 리스트 `library_{school}` → middle).
 
 ### [c0] `middle/yuna-study_c0.png` — "같이 하자" 가르쳐준다 (discovery/warm/5)
@@ -321,18 +328,19 @@ Mood: a missed small kindness — her too-light departing back lingers.
 ## 🔴 P1 — school-trip-middle — 수학여행 신청서
 
 **발동**: Y2(중1), W28. 담임이 신청서 배포(경주 2박3일, 10만원). speaker = jihun.
-**CG**: c0, c1 (2장). gender 무관 → `_c{ci}` 단일. c2(미룬다)는 드래프트 없음→CG 불요.
+**CG**: c0, c1 × `_m`/`_f` (4장) — 주인공 등장 → 페어. c2(미룬다)는 드래프트 없음→CG 불요.
 **배경**: c0 = 경주 숙소 복도(밤) / c1 = `classroom_middle_afternoon`(텅 빈 교실).
 
 ### [c0] `middle/school-trip-middle_c0.png` — 신청서를 낸다 (discovery/warm/6)
 ```
 Nighttime hallway of a Korean school-trip lodging (Gyeongju, 경주 수학여행). Two middle
-school boys crouched/sitting on the corridor floor secretly cooking instant ramen on a
+schoolers crouched/sitting on the corridor floor secretly cooking instant ramen on a
 small portable burner, steam rising from a pot. Jihun (reference — short MESSY black hair,
 athletic build, big confident grin showing teeth) leaning in laughing; protagonist
-(player_m, soft center-part hair, no glasses) grinning beside him, finger to lips "shh".
-Both in casual night clothes / loosened uniform. Dim corridor lamps, room doors lining the
-hall, a mischievous late-night warmth.
+([_m] player_m, soft center-part hair, no glasses / [_f] player_f, dark brown straight
+shoulder-length hair) grinning beside him, finger to lips "shh". Both in casual night
+clothes / loosened uniform. Dim corridor lamps, room doors lining the hall, a mischievous
+late-night warmth.
 Mood: forbidden-snack adventure, two friends, the funniest kind of getting-caught night.
 ```
 > 한글 메모: "간다." 경주 밤 숙소 복도에서 지훈이랑 몰래 라면. 걸려서 혼났지만 더 웃김. recallText="숙소 복도의 라면 냄새."
@@ -352,7 +360,7 @@ Mood: the quiet hollow of being left behind — the room too big without everyon
 ## 🔴 P1 — middle-burnout — 중2의 긴 겨울
 
 **발동**: **Y3 전용**(중2), idleWeeks≥3 & mental≤55. 밤 자기 방 책상. 주인공 단독 위주.
-**CG**: c0, c1, c2 (3장). gender 무관(방·주인공 단독, 사복) → `_c{ci}` 단일.
+**CG**: c0, c1, c2 × `_m`/`_f` (6장) — 주인공 단독 컷(몸·머리 보임) → 페어. 사복이지만 체형·머리로 성별 드러남.
 **배경**: `bedroom_night`.
 
 ### [c0] `middle/middle-burnout_c0.png` — 억지로 공부한다 (failure/regret/7)
@@ -393,7 +401,7 @@ Mood: warmth of a friend who just listens — "힘들어" said out loud at last.
 
 **발동**: Y3~6 (중·고 공통, 식탁 장면이라 **common 권고도 가능하나 본 담당은 middle 작성**), idleWeeks≥4 또는 (mental≤45 & academic≤55).
 저녁 식탁, 아빠 "뭐 하는 거니". 가족 장면(NPC 마커 없음, 부모는 spec L703-744 성인).
-**CG**: c0, c1, c2 (3장). gender 무관(주인공 사복, 식탁) → `_c{ci}` 단일.
+**CG**: c0, c1, c2 × `_m`/`_f` (6장) — 주인공 등장 → 페어 (사복이어도 실루엣 성별 드러남).
 **배경**: `dinner_table`.
 
 > 메모: shotlist 권고상 집 식탁이라 common 1세트로도 충분(교복 무관). 본 문서는 middle 디렉토리 버전을
@@ -438,16 +446,16 @@ Mood: the table's air finally releasing — honesty that lets the family back in
 ## 🔴 P1 — haeun-distance — 하은 선배의 편지
 
 **발동**: **Y4 전용**(중3), haeun intimacy 40~80, 학기중. ⚠️ speaker 없음 — **편지/사물함 컷**(하은 본인 미등장).
-**CG**: c0, c1, c2 (3장). gender 무관(소품·손·뒷모습 위주) → `_c{ci}` 단일.
+**CG**: c0, c1, c2 공유 단일 (3장) — 전 컷 소품·손 클로즈업(얼굴 미노출 유지)이라 본 배치의 공유 예외.
 **배경**: `hallway_middle` (촬영 리스트 `hallway_{school}` → middle).
 
 ### [c0] `middle/haeun-distance_c0.png` — 답장을 써서 우편함에 넣는다 (reconciliation/warm/5)
 ```
 Korean middle school hallway by a wall of lockers, afternoon. Close-ish on the
 protagonist's hands sliding a handwritten reply letter (folded paper) into a school mail
-box / drop box; or a quiet shot of them just having posted it, turning to walk back down
-the sunlit corridor with an oddly lightened, relieved expression. A folded note + pen
-implied (they spent an hour writing it). Warm low afternoon light through hallway windows.
+box / drop box — hands and sleeve only, face NOT shown (shared genderless cut; keep
+framing at the hands/box, uniform sleeve generic navy). A folded note + pen implied (they
+spent an hour writing it). Warm low afternoon light through hallway windows.
 NOTE: haeun herself does NOT appear — this is a letter/locker-centric scene.
 Mood: the quiet relief of replying — a goodbye answered with care.
 ```
@@ -481,12 +489,13 @@ Mood: some relationships end like this — a memory filed away, no grief.
 # 🟠 P2 — 마일스톤 ANNUAL (EventResultScreen)
 
 > ANNUAL은 기억 슬롯을 만들지 않으나 결과 화면에서 CG를 표시 → 학년 변곡점 연출.
-> 전부 choice 무관 **공통 1장** 권장. 파일명 `middle/{eventId}.png` (choiceIndex 미지정 폴백 활용).
+> 전부 choice 무관, **성별 페어** `middle/{eventId}_m.png` + `middle/{eventId}_f.png`
+> (리졸버 2순위 `{sl}/{id}_{g}` 폴백 — 고등 선례 `high-school-entrance_f/m`, `high3-start_f/m` 동일).
 
 ## 🟠 middle-school-entrance — 중학교 입학식
 
 **발동**: Y2, W1. speaker = subin. 새 교복 입고 중학교 교문, 긴장+설렘.
-**파일**: `middle/middle-school-entrance.png` (공통 1장).
+**파일**: `middle/middle-school-entrance_m.png` + `_f.png` (페어 — 주인공 정면 비중 큼).
 **배경**: `school_gate_middle`.
 ```
 First day of Korean middle school, at the school gate. The protagonist standing just
@@ -503,7 +512,7 @@ Mood: a big new beginning — heart racing, "can I do well here?" softened by a 
 ## 🟠 middle2-start — 중2, 시작
 
 **발동**: Y3, W1. 중2 개학 교실, 창밖 벚꽃, 후배 생긴 뿌듯함.
-**파일**: `middle/middle2-start.png` (공통 1장).
+**파일**: `middle/middle2-start_m.png` + `_f.png` (페어).
 **배경**: `classroom_middle_spring` (촬영 리스트 `classroom_{school}_spring` → middle).
 ```
 First day of the new school year in a Korean middle school classroom, now familiar and
@@ -517,7 +526,7 @@ Mood: comfortable belonging — the awkward-but-proud feeling of being an upperc
 ## 🟠 middle3-start — 중3, 마지막 해
 
 **발동**: Y4, W1. 중3 첫날, 진지해진 교실 "고등학교 진학".
-**파일**: `middle/middle3-start.png` (공통 1장).
+**파일**: `middle/middle3-start_m.png` + `_f.png` (페어).
 **배경**: `classroom_middle` (촬영 리스트 `classroom_{school}` → middle).
 ```
 First day of the final middle-school year, Korean classroom. The mood is noticeably more
@@ -532,7 +541,7 @@ Mood: the seriousness of a last year — high school looming on the horizon.
 ## 🟠 middle-school-graduation — 중학교 졸업식
 
 **발동**: Y4, W46. speakers = jihun, subin, minjae, yuna. 졸업식 강당, 4인 단체사진, 눈 빨갛게.
-**파일**: `middle/middle-school-graduation.png` (c0 단체사진 컷이 대표 → 공통/c0).
+**파일**: `middle/middle-school-graduation_m.png` + `_f.png` (페어 — 5인 단체에 주인공 포함, 고등 선례 `high-school-graduation_f/m`).
 **배경**: `auditorium_middle`.
 ```
 Korean middle school graduation day, in the auditorium. The protagonist taking a final
@@ -550,7 +559,7 @@ Mood: tearful warm farewell — "let's meet again in high school", the close of 
 ## 🟠 midterm-1 (중학분) — 첫 중간고사
 
 **발동**: Y≥2 (중·고 공통, 본 문서 **middle분만**), W7. 쉬는시간에도 책 편 교실. (고등 버전 별도 작업자)
-**파일**: `middle/midterm-1.png` (공통 1장).
+**파일**: `middle/midterm-1_m.png` + `_f.png` (페어).
 **배경**: `classroom_middle` (촬영 리스트 `classroom_{school}` → middle).
 ```
 Korean middle school classroom in the week before midterm exams, the atmosphere shifted —
@@ -565,7 +574,7 @@ Mood: the pre-exam pressure settling over the room — first midterms of middle 
 ## 🟠 final-exam-2 (중학분) — 기말고사
 
 **발동**: Y≥2 (중·고 공통, 본 문서 **middle분만**), W37. 2학기 기말, 올해 마지막 시험의 무게. (고등 버전 별도)
-**파일**: `middle/final-exam-2.png` (공통 1장).
+**파일**: `middle/final-exam-2_m.png` + `_f.png` (페어).
 **배경**: `classroom_middle` (촬영 리스트 `classroom_{school}` → middle).
 ```
 Korean middle school classroom during the second-semester final exams, late in the year.
@@ -579,23 +588,27 @@ Mood: the weight of the year's last exam — everything riding on this one.
 
 ---
 
-## 📋 산출 요약 (파일 목록)
+## 📋 산출 요약 (파일 목록 SSOT — 총 61장, 2026-07-26 doyun 공유 예외 반영)
 
-**P1 (기억 이벤트)** — 모두 `middle/` :
-- `minjae-jealousy_c0 / _c1 / _c2`
-- `minjae-effort_c0 / _c1`
-- `minjae-honest_c0 / _c2` (c1 드래프트 없음 제외)
-- `school-festival_c0 / _c1 / _c2` (middle분)
-- `yuna-study_c0 / _c1` (middle분)
-- `school-trip-middle_c0 / _c1` (c2 드래프트 없음 제외)
-- `middle-burnout_c0 / _c1 / _c2`
-- `family-strain_c0 / _c1 / _c2`
-- `haeun-distance_c0 / _c1 / _c2`
+**P1 (기억 이벤트) — `middle/` 45장** (표기 `×2` = `_m` + `_f` 페어):
+- `minjae-jealousy_c0×2 / _c1×2 / _c2×2` (6)
+- `minjae-effort_c0×2 / _c1×2` (4)
+- `minjae-honest_c0×2 / _c2×2` (4 — c1 드래프트 없음 제외)
+- `school-festival_c0×2 / _c1(공유) / _c2×2` (5)
+- `yuna-study_c0×2 / _c1×2` (4)
+- `school-trip-middle_c0×2 / _c1×2` (4 — c2 드래프트 없음 제외)
+- `middle-burnout_c0×2 / _c1×2 / _c2×2` (6)
+- `family-strain_c0×2 / _c1×2 / _c2×2` (6)
+- `haeun-distance_c0 / _c1 / _c2` (3 — 전부 공유: 소품·손 클로즈업)
+- `doyun-school-split_c0 / _c1 / _c2` (3 — 공유 예외: 1차 검수에서 후드·뒷모습 완전 중성 확정)
 
-**P2 (마일스톤 ANNUAL)** — 모두 `middle/`, 공통 1장 :
-- `middle-school-entrance` · `middle2-start` · `middle3-start`
-- `middle-school-graduation` (c0 단체 대표)
-- `midterm-1` (middle분) · `final-exam-2` (middle분)
+**P2 (마일스톤 ANNUAL) — `middle/` 12장**, choice 무관 `_m`/`_f` 페어:
+- `middle-school-entrance_m/_f` · `middle2-start_m/_f` · `middle3-start_m/_f`
+- `middle-school-graduation_m/_f` (단체 대표)
+- `midterm-1_m/_f` · `final-exam-2_m/_f`
+
+**고등 보충 — `high/` 4장** (동일 이벤트 Y5+ 발동분, 문서 말미 §고등 시험컷 참조):
+- `high/midterm-1_m/_f` · `high/final-exam-2_m/_f`
 
 ---
 
@@ -616,13 +629,14 @@ Mood: the weight of the year's last exam — everything riding on this one.
 
 > 결과: "도윤이가 '오 진짜? 좋지!!!' 답했지만, 약속은 결국 잡히지 않았다." (discovery/regret/6)
 
-**파일명** `middle/doyun-school-split_c0.png`
+**파일명** `middle/doyun-school-split_c0.png` (공유 단일 — 1차 생성 검수에서 후드+완전 뒷모습으로 성별 표지 없음 확정, 페어 지정에서 공유 예외로 승격)
 ```
 A 13-year-old Korean kid (protagonist, back view or side silhouette, face hidden/downcast)
 alone in their own bedroom in the evening, sitting on the floor or bed, holding a smartphone.
-Phone screen lit, showing a Korean messaging app chat (generic, no brand): a long hopeful
-message just sent ("우리 만나서 밥이라도 먹자"), reply bubble "오 진짜? 좋지!!!" — but the
-chat trails off, no follow-up scheduling. Indoor casual home wear (NO school uniform visible).
+Phone screen lit, showing a generic messaging app chat (no brand): one long hopeful sent
+bubble and one short cheerful reply bubble — bubble text BLURRED/illegible (no readable
+characters) — and below them the chat visibly trails off, empty, no follow-up. Indoor
+casual home wear (NO school uniform visible).
 Through window: blue evening sky, a single streetlamp on.
 Mood: a promise made that quietly never happens — first lesson that different schools mean
 different time. Bittersweet, not bitter.
@@ -632,11 +646,12 @@ different time. Bittersweet, not bitter.
 
 > 결과: "'응. 너도 잘 지내.' 도윤이의 답도 짧았다. 그렇게 카톡 창이 닫혔다." (failure/regret/7)
 
-**파일명** `middle/doyun-school-split_c1.png`
+**파일명** `middle/doyun-school-split_c1.png` (공유 단일 — 동일 사유)
 ```
 Same bedroom-evening setting, protagonist (back/side silhouette, face hidden). Phone screen
-shows a very short exchange: "잘 가" sent, "응. 너도 잘 지내." reply — then the thumb hovering
-over a closed/dimming chat. The screen is about to go dark. Indoor casual wear, NO uniform.
+shows a very short exchange — one tiny sent bubble, one tiny reply bubble, both BLURRED/
+illegible (no readable characters) — then the thumb hovering over a dimming chat. The
+screen is about to go dark. Indoor casual wear, NO uniform.
 Dim warm room, single lamp, cold blue light from the phone on the face/hand.
 Mood: a relationship closing in two short lines — quiet regret of words not said.
 ```
@@ -645,13 +660,48 @@ Mood: a relationship closing in two short lines — quiet regret of words not sa
 
 > 결과: "하루, 이틀, 일주일이 지나자 답할 수 없는 분위기가 됐다." (failure/regret/7)
 
-**파일명** `middle/doyun-school-split_c2.png`
+**파일명** `middle/doyun-school-split_c2.png` (공유 단일 — 동일 사유. ⚠️ 1차 생성분은 채팅 방향 역전으로 재생성 대상)
 ```
-Same bedroom-evening setting. The phone lies face-up on the desk or floor, screen showing
-Doyun's last unanswered message ("...미리 말 못해서 미안~~") marked READ (읽음) but with no reply,
-a "1" read-mark gone. Protagonist (back view / out of frame, only a shoulder or hand at the
-edge) NOT touching the phone — frozen, unable to type. Indoor casual, NO uniform.
+Same bedroom-evening setting. The phone lies face-up on the desk or floor. CRITICAL chat
+layout — the story is "his message, never answered by me": the LAST (bottom-most) bubble is
+a RECEIVED bubble on the LEFT (gray/white), text blurred/illegible; below it only an EMPTY
+reply input bar. Do NOT draw a sent (right/blue) bubble as the last message, NO read
+checkmarks on a sent bubble, and NO "typing..." indicator dots — nobody is typing.
+Protagonist (back view / out of frame, only a shoulder or hand at the edge) NOT touching
+the phone — frozen, unable to type. Indoor casual, NO uniform.
 Several days implied (a calendar / faint time passing). Dim cooling light.
 Mood: the ache of a message you couldn't bring yourself to answer — a spring that quietly faded.
 ```
 
+
+---
+
+# 📅 고등 시험컷 보충 (Y5+ 발동분 — `high/` 디렉토리)
+
+> midterm-1·final-exam-2는 Y≥2 공통 이벤트인데 고등판 CG가 미생성 상태(리졸버는 middle→high 폴백을
+> 하지 않음). 중등판과 같은 장면 언어로 **교복·연령만 고등 사양**으로 바꿔 함께 생성한다.
+> 고등 사양: 17~19세, 성숙한 비율, navy blazer + white shirt + **남주 navy TIE / 여주 red ribbon +
+> plaid skirt** (`docs/cg-prompts-high-y5-y7.md` L219 — 여고생은 넥타이 아님). Negative의 "no tie"는
+> 고등 남주판에 적용하지 않음.
+
+## 🟠 midterm-1 (고등분) — `high/midterm-1_m.png` + `_f.png`
+```
+Korean HIGH school classroom in the week before midterm exams — even during break time
+students have their textbooks open, heads down studying. The protagonist ([_m] player_m /
+[_f] player_f, HIGH uniform: navy blazer + white shirt + tie, more mature proportions,
+17~19) among them, a focused exam-season tension heavier than middle school — grades now
+tied to college entrance. Daytime classroom light, stacks of workbooks and vocabulary
+cards on desks.
+Mood: exam-season pressure, high-school edition — quieter, heavier, more at stake.
+```
+
+## 🟠 final-exam-2 (고등분) — `high/final-exam-2_m.png` + `_f.png`
+```
+Korean HIGH school classroom during second-semester final exams, late in the year. The
+last test of the year, straight onto the record that colleges will see. The protagonist
+([_m] player_m, navy tie / [_f] player_f, red ribbon + plaid skirt — HIGH uniform, mature
+proportions) at a desk
+mid-exam or in tense final review, tired determined focus. Cooler late-autumn light,
+exam papers on desks, a hushed serious room.
+Mood: the year's last exam with college on the horizon — weight beyond the classroom.
+```
