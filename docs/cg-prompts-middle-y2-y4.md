@@ -676,8 +676,9 @@ Mood: the ache of a message you couldn't bring yourself to answer — a spring t
 
 > midterm-1·final-exam-2는 Y≥2 공통 이벤트인데 고등판 CG가 미생성 상태(리졸버는 middle→high 폴백을
 > 하지 않음). 중등판과 같은 장면 언어로 **교복·연령만 고등 사양**으로 바꿔 함께 생성한다.
-> 고등 사양: 17~19세, navy blazer + white shirt + **TIE** + 성숙한 비율 (`docs/cg-prompts-high-y5-y7.md`
-> 공통 가이드 준수). Negative의 "no tie" 항목은 고등판에 적용하지 않음.
+> 고등 사양: 17~19세, 성숙한 비율, navy blazer + white shirt + **남주 navy TIE / 여주 red ribbon +
+> plaid skirt** (`docs/cg-prompts-high-y5-y7.md` L219 — 여고생은 넥타이 아님). Negative의 "no tie"는
+> 고등 남주판에 적용하지 않음.
 
 ## 🟠 midterm-1 (고등분) — `high/midterm-1_m.png` + `_f.png`
 ```
@@ -694,7 +695,8 @@ Mood: exam-season pressure, high-school edition — quieter, heavier, more at st
 ```
 Korean HIGH school classroom during second-semester final exams, late in the year. The
 last test of the year, straight onto the record that colleges will see. The protagonist
-([_m] player_m / [_f] player_f, HIGH uniform with tie, mature proportions) at a desk
+([_m] player_m, navy tie / [_f] player_f, red ribbon + plaid skirt — HIGH uniform, mature
+proportions) at a desk
 mid-exam or in tense final review, tired determined focus. Cooler late-autumn light,
 exam papers on desks, a hushed serious room.
 Mood: the year's last exam with college on the horizon — weight beyond the classroom.
