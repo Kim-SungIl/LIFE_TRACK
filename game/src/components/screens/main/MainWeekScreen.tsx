@@ -8,8 +8,9 @@ import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../..
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
 import { ShopItem } from '../../../engine/shopSystem';
 import { TalkActionResult, getLastSavedAt } from '../../../engine/store';
-import { isNpcEnrolled } from '../../../engine/relationshipSignals';
+import { isNpcEnrolled, relationshipSignal, npcDeparture } from '../../../engine/relationshipSignals';
 import { Shop } from '../../Shop';
+import { Dialog } from '../../Dialog';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import { Tutorial } from '../../Tutorial';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
@@ -66,6 +67,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const confirmLockRef = useRef(false);
   // 주말 활동 미선택 확인 — window.confirm 대체(Phase 3)
   const [showRestConfirm, setShowRestConfirm] = useState(false);
+  // 친구 관계 시트 — 진입카드에서 열림(Phase 5 IA)
+  const [showRelations, setShowRelations] = useState(false);
 
   // 의존: week/year/totalWeeksPlayed (primitives) — 한 주가 진행될 때만 새 라인 뽑고,
   // 말걸기 같은 로컬 state 변경에는 영향 안 받게 한다.
@@ -324,8 +327,41 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         />
       )}
 
-      {/* NPC 관계 — 만난 친구만 표시 */}
-      <NpcRelationPanel state={state} onSelect={setNpcDetailFor} />
+      {/* NPC 관계 — 진입카드 요약(1줄) → 탭 시 하단 시트로 전체 리스트 (Phase 5 IA).
+          의사결정 단서(방치 친구 경고 / 절친)는 요약에 남겨 한눈 비교 보존. */}
+      {(() => {
+        const metNpcs = state.npcs.filter(n => n.met);
+        if (metNpcs.length === 0) return null;
+        const present = metNpcs.filter(n => !npcDeparture(n, state));
+        const warnFriend = present.find(n => relationshipSignal(n, state)?.tone === 'warn');
+        const closest = [...present].sort((a, b) => b.intimacy - a.intimacy)[0];
+        const cue = warnFriend
+          ? { text: `⚠️ ${warnFriend.name} 챙기기`, color: 'var(--yellow)' }
+          : closest && closest.intimacy >= 70
+            ? { text: `${closest.name} 절친`, color: 'var(--gold)' }
+            : closest && closest.intimacy >= 40
+              ? { text: `${closest.name} 친구`, color: 'var(--green)' }
+              : null;
+        return (
+          <button
+            type="button" className="btn-reset" data-tutorial="npc"
+            onClick={() => setShowRelations(true)}
+            aria-haspopup="dialog"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%', background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)',
+              borderRadius: 12, padding: '10px 14px', marginBottom: 10, cursor: 'pointer',
+              border: '1px solid rgba(255,255,255,0.05)', textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>👥 친구 {metNpcs.length}명</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem' }}>
+              {cue && <span style={{ color: cue.color, fontWeight: 600 }}>{cue.text}</span>}
+              <span style={{ color: 'var(--text-muted)' }}>›</span>
+            </span>
+          </button>
+        );
+      })()}
 
       {/* NPC 선택 모달 */}
       {npcSelectFor && (
@@ -336,6 +372,20 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           onSelect={handleSelectNpc}
           onCancel={() => setNpcSelectFor(null)}
         />
+      )}
+
+      {/* 친구 관계 시트 — 진입카드에서 열림. 기존 NpcRelationPanel 재사용, 탭하면 상세로 */}
+      {showRelations && (
+        <Dialog
+          onClose={() => setShowRelations(false)}
+          align="bottom" maxWidth={600} ariaLabel="친구 관계"
+          contentStyle={{
+            background: 'var(--bg-secondary)', borderRadius: '16px 16px 0 0',
+            padding: '10px 14px 20px', maxHeight: '80dvh', overflowY: 'auto',
+          }}
+        >
+          <NpcRelationPanel state={state} onSelect={(id) => { setShowRelations(false); setNpcDetailFor(id); }} />
+        </Dialog>
       )}
 
       {/* NPC 상세 모달 */}
@@ -414,7 +464,10 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {/* Phase 2 — 확정 전 예상 결과 프리뷰 (계획 확정 가능할 때만) */}
       {!confirmDisabled && (() => {
         const p = weekPreview;
-        const afterColor = getFatigueDisplay(p.fatigueAfter).color;
+        // Phase 6: 정확 수치(45→62 (+17)) 대신 방향 + 결과 상태 라벨 — 계산기화 완화,
+        // '선택의 무게' 신호(더 지침/회복·번아웃 위험)는 유지. 상세 델타는 주간 결산에서.
+        const afterDisplay = getFatigueDisplay(p.fatigueAfter);
+        const fatigueDir = p.fatigueDelta > 0 ? 'up' : p.fatigueDelta < 0 ? 'down' : 'flat';
         return (
           <div aria-live="polite" style={{
             marginBottom: 8, padding: '9px 14px', borderRadius: 10,
@@ -423,12 +476,10 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: '0.82rem' }}>
               <span style={{ color: 'var(--text-secondary)' }}>😴 예상 피로</span>
-              <span style={{ color: 'var(--text-muted)' }}>{p.fatigueBefore}</span>
-              <span style={{ color: 'var(--text-muted)' }}>→</span>
-              <span style={{ color: afterColor, fontWeight: 700 }}>{p.fatigueAfter}</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.74rem' }}>
-                ({p.fatigueDelta >= 0 ? '+' : ''}{p.fatigueDelta})
+              <span aria-hidden="true" style={{ color: fatigueDir === 'up' ? 'var(--red)' : fatigueDir === 'down' ? 'var(--green)' : 'var(--text-muted)', fontWeight: 700 }}>
+                {fatigueDir === 'up' ? '↑' : fatigueDir === 'down' ? '↓' : '→'}
               </span>
+              <span style={{ color: afterDisplay.color, fontWeight: 700 }}>{afterDisplay.label}</span>
               {p.burnoutRisk && (
                 <span style={{ color: 'var(--red)', fontSize: '0.72rem', fontWeight: 700 }}>⚠️ 번아웃 위험</span>
               )}
