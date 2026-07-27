@@ -1,15 +1,16 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { getLastSavedAt, deleteSave } from '../engine/store';
+import { ConfirmDialog } from './ConfirmDialog';
 
 type Props = { children: ReactNode };
-type State = { hasError: boolean };
+type State = { hasError: boolean; showResetConfirm: boolean };
 
 // 렌더 크래시 시 화이트스크린 대신 복구 UI.
 // 진행은 store localStorage 자동저장으로 대개 보존되어 있으므로, 새로고침으로 이어하기를 유도한다.
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { hasError: false };
+  state: State = { hasError: false, showResetConfirm: false };
 
-  static getDerivedStateFromError(): State {
+  static getDerivedStateFromError(): Partial<State> {
     return { hasError: true };
   }
 
@@ -18,12 +19,14 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   // 저장된 상태 자체가 크래시 원인이면 새로고침만으로는 같은 화면으로 되돌아온다(루프).
-  // 마지막 탈출구로 저장 삭제 후 처음부터 — 되돌릴 수 없으므로 확인을 받는다.
+  // 마지막 탈출구로 저장 삭제 후 처음부터 — 되돌릴 수 없으므로 확인을 받는다(인게임 다이얼로그, Phase 3).
   private handleReset = () => {
-    if (window.confirm('저장된 진행을 삭제하고 처음부터 시작할까요?\n이 동작은 되돌릴 수 없어요.')) {
-      deleteSave();
-      window.location.reload();
-    }
+    this.setState({ showResetConfirm: true });
+  };
+
+  private confirmReset = () => {
+    deleteSave();
+    window.location.reload();
   };
 
   render() {
@@ -35,10 +38,11 @@ export class ErrorBoundary extends Component<Props, State> {
       : null;
 
     return (
+      <>
       <div
         role="alert"
         style={{
-          minHeight: '100vh',
+          minHeight: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -83,6 +87,18 @@ export class ErrorBoundary extends Component<Props, State> {
           </button>
         </div>
       </div>
+      {this.state.showResetConfirm && (
+        <ConfirmDialog
+          title="처음부터 시작할까요?"
+          message={'저장된 진행을 삭제하고 처음부터 시작합니다.\n이 동작은 되돌릴 수 없어요.'}
+          confirmLabel="삭제하고 시작"
+          cancelLabel="취소"
+          danger
+          onConfirm={this.confirmReset}
+          onCancel={() => this.setState({ showResetConfirm: false })}
+        />
+      )}
+      </>
     );
   }
 }

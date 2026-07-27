@@ -71,8 +71,9 @@ export const HudPanel = memo(function HudPanel({
             {mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}
           </div>
         )}
-        {/* 부모 칩 — 22×22 발동 시 펄스. 호버/탭하면 absolute popover로 설명 노출 (layout shift 방지) */}
-        {/* 클릭하면 부모 모달 — 인라인 "💬 가정" 라벨로 클릭 가능 affordance 명시 */}
+        {/* 부모 칩 — 22×22 발동 시 펄스. 칩의 역할은 '부모 강점 설명 노출'(정보). (Phase 4)
+            데스크톱은 hover, 터치/키보드는 탭·포커스로 툴팁을 토글한다(layout shift 방지 absolute popover).
+            Home 진입은 칩이 아니라 아래 "💬 가정" 버튼이 전담 — 터치에서 정보 보려다 Home으로 튕기던 문제 해소. */}
         <div style={{ marginTop: 4, position: 'relative' }}>
           <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             {parents.map(p => {
@@ -82,12 +83,12 @@ export const HudPanel = memo(function HudPanel({
                 <button
                   key={p}
                   type="button" className="btn-reset"
-                  aria-label={`가정 — ${PARENT_TIP_SHORT[p]}`}
-                  onMouseEnter={() => setActiveParentTip(p)}
-                  onMouseLeave={() => setActiveParentTip(prev => prev === p ? null : prev)}
-                  onFocus={() => setActiveParentTip(p)}
-                  onBlur={() => setActiveParentTip(prev => prev === p ? null : prev)}
-                  onClick={() => { setActiveParentTip(null); onOpenHome(); }}
+                  aria-label={`${PARENT_TIP_SHORT[p]} 강점 설명`}
+                  aria-expanded={isActive}
+                  aria-controls={isActive ? 'parent-tip-popover' : undefined}
+                  // 순수 탭/활성화 토글 — hover/focus 자동표시를 두면 클릭이 방금 세팅된 상태를
+                  // 뒤집어 툴팁이 안 열리고(데스크톱·키보드), 터치 emulated-hover에서도 깨진다.
+                  onClick={() => setActiveParentTip(prev => (prev === p ? null : p))}
                   style={{
                     width: 22, height: 22, borderRadius: '50%',
                     background: isActive ? 'rgba(224,138,91,0.28)' : 'rgba(224,138,91,0.12)',
@@ -121,7 +122,7 @@ export const HudPanel = memo(function HudPanel({
             )}
           </div>
           {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (
-            <div style={{
+            <div id="parent-tip-popover" role="tooltip" style={{
               position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 20,
               padding: '5px 8px', borderRadius: 6,
               background: 'rgba(20,16,28,0.92)', backdropFilter: 'blur(4px)',

@@ -118,7 +118,7 @@ export function MiniTalkModal({ result, year, onDismiss, onCloseAll, onSelectCho
           ? 'linear-gradient(135deg, rgba(30,27,36,0.99), rgba(18,16,22,0.99))'
           : 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
         borderRadius: 16, padding: 24, width: '85%', textAlign: 'center',
-        margin: 'auto', maxHeight: 'calc(100vh - 48px)', overflowY: 'auto',
+        margin: 'auto', maxHeight: 'calc(100dvh - 48px)', overflowY: 'auto',
         border: isMemory ? '1px solid rgba(229,192,123,0.45)' : '1px solid rgba(224,138,91,0.4)',
       }}
     >

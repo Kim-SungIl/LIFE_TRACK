@@ -26,21 +26,21 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
 }
 
 #root {
   max-width: 600px;
   margin: 0 auto;
-  min-height: 100vh;
+  min-height: 100dvh;
   position: relative;
 }
 
 /* ===== 공통 ===== */
 .screen {
   padding: 20px;
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }
@@ -77,7 +77,10 @@ body {
   background: var(--accent);
   color: white;
 }
-.btn-primary:hover { background: var(--accent-soft); transform: translateY(-1px); }
+/* hover는 마우스 기기에만 — 터치에서 탭 후 hover가 눌러붙는(sticky) 잔상 방지 */
+@media (hover: hover) {
+  .btn-primary:hover { background: var(--accent-soft); transform: translateY(-1px); }
+}
 .btn-primary:disabled { background: #444; cursor: not-allowed; transform: none; }
 
 .btn-secondary {
@@ -85,7 +88,9 @@ body {
   color: var(--text-primary);
   border: 1px solid #333;
 }
-.btn-secondary:hover { background: var(--bg-card-hover); }
+@media (hover: hover) {
+  .btn-secondary:hover { background: var(--bg-card-hover); }
+}
 
 .btn-small {
   padding: 8px 16px;
@@ -131,7 +136,9 @@ body {
   transition: all 0.2s;
 }
 
-.card:hover { border-color: rgba(255,255,255,0.15); }
+@media (hover: hover) {
+  .card:hover { border-color: rgba(255,255,255,0.15); }
+}
 
 .card-selected {
   border-color: var(--accent) !important;
@@ -199,7 +206,9 @@ body {
   text-align: center;
 }
 
-.activity-card:hover { border-color: var(--blue); background: var(--bg-card-hover); }
+@media (hover: hover) {
+  .activity-card:hover { border-color: var(--blue); background: var(--bg-card-hover); }
+}
 .activity-card.selected { border-color: var(--accent); background: rgba(224,138,91,0.16); }
 .activity-card.disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -321,7 +330,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   text-align: center;
   padding: 40px 20px;
   background:
@@ -485,7 +494,9 @@ body {
   text-align: center;
 }
 
-.parent-card:hover { border-color: var(--blue); }
+@media (hover: hover) {
+  .parent-card:hover { border-color: var(--blue); }
+}
 .parent-card.selected { border-color: var(--accent); background: rgba(224,138,91,0.16); }
 
 .parent-card-emoji { font-size: 1.5rem; margin-bottom: 4px; }
@@ -498,7 +509,7 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  min-height: 100dvh;
   text-align: center;
   padding: 40px 20px;
 }
@@ -584,7 +595,9 @@ body {
   padding-bottom: 80px;
 }
 
-/* ===== 하단 고정 버튼 ===== */
+/* ===== 하단 고정 버튼 =====
+   z-index 15: 페이지 콘텐츠(1)·HUD 툴팁(20 위치 반대편) 위, 모든 모달/다이얼로그(≥100) 아래.
+   safe-area: 홈 인디케이터와 겹치지 않게 하단 inset 추가. */
 .bottom-action {
   position: fixed;
   bottom: 0;
@@ -593,6 +606,8 @@ body {
   width: 100%;
   max-width: 600px;
   padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 15;
   background: linear-gradient(transparent, var(--bg-primary) 30%);
 }
 
@@ -623,4 +638,37 @@ body {
    세로 스택으로 전환해 각 카드를 풀폭으로. 600px 데스크톱/태블릿에선 2단 유지. */
 @media (max-width: 520px) {
   .week-grid { flex-direction: column; }
+}
+
+/* ===== 터치 press 피드백 (Phase 1) =====
+   벤치 교훈(Uma/Stardew: 탭 즉시 반응)과 사용자 직접 지적("눌러도 반응 없음") 반영.
+   :hover는 위에서 마우스 기기로 분리했고, 여기서 전 기기 공통 눌림 피드백을 준다.
+   btn-reset은 transition이 없어 press 복원이 뚝 끊기므로 최소 transition만 부여. */
+.btn-reset { transition: transform 0.12s ease, filter 0.12s ease; }
+
+/* 눌림 즉시 반응 — scale 축소 + 살짝 어둡게. disabled/비활성 카드는 제외. */
+.btn:not(:disabled):active,
+.btn-reset:not(:disabled):active,
+.tab-item:active,
+.parent-card:active {
+  transform: scale(0.97);
+  filter: brightness(0.93);
+}
+/* 면적이 큰 카드류는 더 미세하게(과한 튐 방지) */
+.activity-card:not(.disabled):active {
+  transform: scale(0.98);
+  filter: brightness(0.95);
+}
+
+/* 동작 최소화 사용자: 움직임(scale)은 끄되 밝기 변화로 피드백은 유지 —
+   "반응이 아예 없다"로 회귀하지 않도록. */
+@media (prefers-reduced-motion: reduce) {
+  .btn:not(:disabled):active,
+  .btn-reset:not(:disabled):active,
+  .tab-item:active,
+  .parent-card:active,
+  .activity-card:not(.disabled):active {
+    transform: none;
+    filter: brightness(0.85);
+  }
 }
