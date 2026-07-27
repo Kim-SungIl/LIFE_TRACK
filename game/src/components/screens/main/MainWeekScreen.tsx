@@ -476,7 +476,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: '0.82rem' }}>
               <span style={{ color: 'var(--text-secondary)' }}>😴 예상 피로</span>
-              <span aria-hidden="true" style={{ color: fatigueDir === 'up' ? 'var(--red)' : fatigueDir === 'down' ? 'var(--green)' : 'var(--text-muted)', fontWeight: 700 }}>
+              <span role="img" aria-label={fatigueDir === 'up' ? '늘어남' : fatigueDir === 'down' ? '줄어듦' : '유지'} style={{ color: fatigueDir === 'up' ? 'var(--red)' : fatigueDir === 'down' ? 'var(--green)' : 'var(--text-muted)', fontWeight: 700 }}>
                 {fatigueDir === 'up' ? '↑' : fatigueDir === 'down' ? '↓' : '→'}
               </span>
               <span style={{ color: afterDisplay.color, fontWeight: 700 }}>{afterDisplay.label}</span>
