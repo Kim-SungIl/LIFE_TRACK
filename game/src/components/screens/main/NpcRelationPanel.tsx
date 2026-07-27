@@ -19,7 +19,7 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
     (npcDeparture(a, state) ? 1 : 0) - (npcDeparture(b, state) ? 1 : 0));
 
   return (
-    <div data-tutorial="npc" style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
+    <div style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
       <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 친구</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {ordered.map(n => {
