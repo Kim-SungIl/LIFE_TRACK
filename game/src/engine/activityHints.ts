@@ -35,13 +35,8 @@ export function activityHints(a: Activity, s: GameState, companionEligible = tru
   if (a.category === 'rest' && (s.mentalState !== 'normal' || s.fatigue >= 60)) {
     hints.push({ text: '🌙 지금 필요함', tone: 'good' });
   }
-  // 고구간 학업 효율 — study 계열만(academic이 부차 효과인 talent 활동 오경보 방지). academic>=80에서:
-  // 무료(cost===0)는 ×0.1 소프트캡(gameEngine:234) → 효율 낮음 / 유료(cost>0)는 면제이나 주당+2 캡으로 절대이득은 작음.
-  if (a.category === 'study' && s.stats.academic >= 80) {
-    if (cost === 0) hints.push({ text: '📉 고구간 효율 낮음', tone: 'warn' });
-    else if (cost > 0) hints.push({ text: '🎯 유료라 효율 유지', tone: 'good' });
-    // cost<0(용돈 버는 학업 활동)은 소프트캡 면제이나 "유료"도 아니므로 무표시.
-  }
+  // 고구간 학업 효율 신호는 제거 — 소프트캡 메커니즘을 계산기 언어('효율 낮음/유지')로 직접 노출해
+  // "숫자 대신 학교생활" 정체성과 충돌(사용자 피드백). 소프트캡 자체는 엔진에 그대로 유지.
   // 💛 관계 유지 — NPC 동행 선택이 열리는 활동만(친밀도 +3 → 자연감쇠 상쇄). category가 아니라 동행 집합 기준.
   // 루틴 슬롯(companionEligible=false)은 동행 선택이 없어 +3이 안 붙으므로 제외(false-positive 방지).
   if (companionEligible && NPC_COMPANION_ACTIVITIES.includes(a.id)) {

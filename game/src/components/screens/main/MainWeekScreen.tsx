@@ -333,15 +333,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         const metNpcs = state.npcs.filter(n => n.met);
         if (metNpcs.length === 0) return null;
         const present = metNpcs.filter(n => !npcDeparture(n, state));
+        // 상태 라벨(절친/친구)은 '지훈 친구'처럼 어색해서 제거(사용자 피드백).
+        // 챙길 친구(방치 warn)가 있을 때만 행동 단서를 남긴다.
         const warnFriend = present.find(n => relationshipSignal(n, state)?.tone === 'warn');
-        const closest = [...present].sort((a, b) => b.intimacy - a.intimacy)[0];
         const cue = warnFriend
           ? { text: `⚠️ ${warnFriend.name} 챙기기`, color: 'var(--yellow)' }
-          : closest && closest.intimacy >= 70
-            ? { text: `${closest.name} 절친`, color: 'var(--gold)' }
-            : closest && closest.intimacy >= 40
-              ? { text: `${closest.name} 친구`, color: 'var(--green)' }
-              : null;
+          : null;
         return (
           <button
             type="button" className="btn-reset" data-tutorial="npc"
