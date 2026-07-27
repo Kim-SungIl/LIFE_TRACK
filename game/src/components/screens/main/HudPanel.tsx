@@ -85,10 +85,9 @@ export const HudPanel = memo(function HudPanel({
                   type="button" className="btn-reset"
                   aria-label={`${PARENT_TIP_SHORT[p]} 강점 설명`}
                   aria-expanded={isActive}
-                  onMouseEnter={() => setActiveParentTip(p)}
-                  onMouseLeave={() => setActiveParentTip(prev => prev === p ? null : prev)}
-                  onFocus={() => setActiveParentTip(p)}
-                  onBlur={() => setActiveParentTip(prev => prev === p ? null : prev)}
+                  aria-controls={isActive ? 'parent-tip-popover' : undefined}
+                  // 순수 탭/활성화 토글 — hover/focus 자동표시를 두면 클릭이 방금 세팅된 상태를
+                  // 뒤집어 툴팁이 안 열리고(데스크톱·키보드), 터치 emulated-hover에서도 깨진다.
                   onClick={() => setActiveParentTip(prev => (prev === p ? null : p))}
                   style={{
                     width: 22, height: 22, borderRadius: '50%',
@@ -123,7 +122,7 @@ export const HudPanel = memo(function HudPanel({
             )}
           </div>
           {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (
-            <div style={{
+            <div id="parent-tip-popover" role="tooltip" style={{
               position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 20,
               padding: '5px 8px', borderRadius: 6,
               background: 'rgba(20,16,28,0.92)', backdropFilter: 'blur(4px)',

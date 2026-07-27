@@ -156,7 +156,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   );
 
   // 확정 본처리 — 더블탭 락 후 주 진행. 확인 다이얼로그 통과분과 공용.
+  // 락 체크를 여기서도 — 다이얼로그 확인 버튼은 handleConfirm 게이트를 안 거치므로(초고속 더블탭 방어).
   const proceedConfirm = () => {
+    if (confirmLockRef.current) return;
     confirmLockRef.current = true;
     setTimeout(() => { confirmLockRef.current = false; }, 500);
     onConfirmWeek(selectedActivities, npcChoices);
