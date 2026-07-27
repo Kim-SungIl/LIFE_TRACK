@@ -19,7 +19,7 @@ export const MONEY_SINK_EVENTS = [
         fatigueEffect: 6,
         moneyEffect: -10,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }, { npcId: 'minjae', intimacyChange: 1 }],
-        message: '경주 밤, 숙소 복도에서 지훈이랑 몰래 라면을 끓였다. 걸려서 혼났지만 그게 더 웃겼다.',
+        message: '경주 밤, 숙소 복도에서 지훈이랑 몰래 컵라면을 먹었다. 걸려서 혼났지만 그게 더 웃겼다.',
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
