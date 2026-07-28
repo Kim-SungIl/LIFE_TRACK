@@ -481,11 +481,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
                 <span style={{ color: 'var(--red)', fontSize: '0.72rem', fontWeight: 700 }}>⚠️ 번아웃 위험</span>
               )}
             </div>
+            {/* 스탯 힌트 — 더 조용하게: 초록 강조 제거, 전부 muted 위스퍼 톤(hide-numbers). 방향만 은은히. */}
             {p.statHints.length > 0 && (
-              <div style={{ marginTop: 4, fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 3, fontSize: '0.68rem', color: 'var(--text-muted)', opacity: 0.85, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {p.statHints.map(h => (
-                  <span key={h.key}>
-                    {STAT_LABELS[h.key]} <span style={{ color: h.dir === 'up' ? 'var(--green)' : 'var(--text-secondary)' }}>{h.dir === 'up' ? '↑' : '↓'}</span>
+                  <span key={h.key} aria-label={`${STAT_LABELS[h.key]} ${h.dir === 'up' ? '오름' : '내림'}`}>
+                    {STAT_LABELS[h.key]} <span aria-hidden="true">{h.dir === 'up' ? '↑' : '↓'}</span>
                   </span>
                 ))}
               </div>
