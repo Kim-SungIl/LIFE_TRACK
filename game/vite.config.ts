@@ -66,6 +66,8 @@ export default defineConfig({
     __WEBP_ENABLED__: JSON.stringify(process.env.GEN_WEBP === '1'),
   },
   test: {
-    include: ['src/engine/__tests__/**/*.test.ts'],
+    // 엔진 순수함수(node) + 컴포넌트(jsdom — 각 파일 상단 @vitest-environment 지시자로 전환)
+    include: ['src/engine/__tests__/**/*.test.ts', 'src/components/**/__tests__/**/*.test.tsx'],
+    setupFiles: ['src/test/setup.ts'],
   },
 })
