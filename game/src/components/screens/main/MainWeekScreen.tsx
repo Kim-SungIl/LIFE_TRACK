@@ -333,15 +333,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         const metNpcs = state.npcs.filter(n => n.met);
         if (metNpcs.length === 0) return null;
         const present = metNpcs.filter(n => !npcDeparture(n, state));
+        // 상태 라벨(절친/친구)은 '지훈 친구'처럼 어색해서 제거(사용자 피드백).
+        // 챙길 친구(방치 warn)가 있을 때만 행동 단서를 남긴다.
         const warnFriend = present.find(n => relationshipSignal(n, state)?.tone === 'warn');
-        const closest = [...present].sort((a, b) => b.intimacy - a.intimacy)[0];
         const cue = warnFriend
           ? { text: `⚠️ ${warnFriend.name} 챙기기`, color: 'var(--yellow)' }
-          : closest && closest.intimacy >= 70
-            ? { text: `${closest.name} 절친`, color: 'var(--gold)' }
-            : closest && closest.intimacy >= 40
-              ? { text: `${closest.name} 친구`, color: 'var(--green)' }
-              : null;
+          : null;
         return (
           <button
             type="button" className="btn-reset" data-tutorial="npc"
@@ -484,11 +481,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
                 <span style={{ color: 'var(--red)', fontSize: '0.72rem', fontWeight: 700 }}>⚠️ 번아웃 위험</span>
               )}
             </div>
+            {/* 스탯 힌트 — 더 조용하게: 초록 강조 제거, 전부 muted 위스퍼 톤(hide-numbers). 방향만 은은히. */}
             {p.statHints.length > 0 && (
-              <div style={{ marginTop: 4, fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 3, fontSize: '0.68rem', color: 'var(--text-muted)', opacity: 0.85, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {p.statHints.map(h => (
-                  <span key={h.key}>
-                    {STAT_LABELS[h.key]} <span style={{ color: h.dir === 'up' ? 'var(--green)' : 'var(--text-secondary)' }}>{h.dir === 'up' ? '↑' : '↓'}</span>
+                  <span key={h.key} aria-label={`${STAT_LABELS[h.key]} ${h.dir === 'up' ? '오름' : '내림'}`}>
+                    {STAT_LABELS[h.key]} <span aria-hidden="true">{h.dir === 'up' ? '↑' : '↓'}</span>
                   </span>
                 ))}
               </div>
