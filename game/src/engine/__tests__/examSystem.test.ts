@@ -21,7 +21,9 @@ const SUBJECT_KEYS: SubjectKey[] = [
   'artsPhysical',
 ];
 
-/** examSystem clamp 기본 범위 + mockGrade 상한을 소스에서 읽는다. */
+/** examSystem clamp 기본 범위(score 0~100)와 rank 상한을 소스에서 읽어 하드코딩을 피한다.
+ *  mockGradeMax는 9등급제 고정 상한(toMockGrade 최하 분기 = 9)이라 소스 파싱 없이 상수로 둔다. */
+const MOCK_GRADE_MAX = 9;
 function readExamBounds(): { scoreMin: number; scoreMax: number; mockGradeMax: number; rankMax: number } {
   const src = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), '../examSystem.ts'),
@@ -29,15 +31,13 @@ function readExamBounds(): { scoreMin: number; scoreMax: number; mockGradeMax: n
   );
   const clamp = src.match(/function clamp\(v: number, min\s*=\s*(\d+),\s*max\s*=\s*(\d+)\)/);
   const rank = src.match(/clamp\([^,]+,\s*1,\s*(\d+)\)/);
-  // toMockGrade 최하 분기는 return 9
-  const mockMax = src.match(/return 9;\s*\n\}/);
-  if (!clamp || !rank || !mockMax) {
+  if (!clamp || !rank) {
     throw new Error('exam bounds not found in examSystem.ts');
   }
   return {
     scoreMin: Number(clamp[1]),
     scoreMax: Number(clamp[2]),
-    mockGradeMax: 9,
+    mockGradeMax: MOCK_GRADE_MAX,
     rankMax: Number(rank[1]),
   };
 }
@@ -147,7 +147,7 @@ describe('generateExamResult', () => {
     expect(result.comment.length).toBeGreaterThan(0);
     expect(result.parentReaction.length).toBeGreaterThan(0);
     expect(result.teacherReaction.length).toBeGreaterThan(0);
-    expect(typeof result.mentalDelta).toBe('number');
+    expect(Number.isFinite(result.mentalDelta)).toBe(true);
   });
 
   it('elementary unit-test has null rank and elementaryGrade on subjects', () => {
@@ -183,7 +183,7 @@ describe('generateMockExamResult', () => {
     expect(result.mockGrade!).toBeGreaterThanOrEqual(1);
     expect(result.mockGrade!).toBeLessThanOrEqual(mockGradeMax);
     expectSubjectScoresInRange(result, scoreMin, scoreMax, { artsPhysicalFixed: 0 });
-    expect(typeof result.mentalDelta).toBe('number');
+    expect(Number.isFinite(result.mentalDelta)).toBe(true);
     expect(result.comment.length).toBeGreaterThan(0);
   });
 });
@@ -217,6 +217,6 @@ describe('generateSuneungResult', () => {
     expect(a.comment.length).toBeGreaterThan(0);
     expect(a.parentReaction.length).toBeGreaterThan(0);
     expect(a.teacherReaction.length).toBeGreaterThan(0);
-    expect(typeof a.mentalDelta).toBe('number');
+    expect(Number.isFinite(a.mentalDelta)).toBe(true);
   });
 });

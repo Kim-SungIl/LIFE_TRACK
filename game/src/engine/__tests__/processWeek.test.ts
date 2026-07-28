@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { createInitialState, processWeek } from '../gameEngine';
 import type { GameState, ParentStrength } from '../types';
@@ -33,12 +30,7 @@ describe('processWeek', () => {
 
   it('advances rngSeed (seededRandom call order is a contract)', () => {
     // gameEngine.ts prepareWeekContext: seededRandom 2회 호출 순서는 rngSeed 전진 계약.
-    const engineSrc = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '../gameEngine.ts'),
-      'utf8',
-    );
-    expect(engineSrc).toMatch(/seededRandom 2회 호출 순서는 rngSeed 전진/);
-
+    // 시드 전진 + 시드 순서 의존 필드를 스냅샷으로 고정해 회귀를 잡는다.
     const input = fixture();
     const inputSeed = input.rngSeed;
     const after = processWeek(input);
