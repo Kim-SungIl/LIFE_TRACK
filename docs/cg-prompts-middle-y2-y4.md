@@ -334,16 +334,20 @@ Mood: a missed small kindness — her too-light departing back lingers.
 ### [c0] `middle/school-trip-middle_c0.png` — 신청서를 낸다 (discovery/warm/6)
 ```
 Nighttime hallway of a Korean school-trip lodging (Gyeongju, 경주 수학여행). Two middle
-schoolers crouched/sitting on the corridor floor secretly cooking instant ramen on a
-small portable burner, steam rising from a pot. Jihun (reference — short MESSY black hair,
-athletic build, big confident grin showing teeth) leaning in laughing; protagonist
-([_m] player_m, soft center-part hair, no glasses / [_f] player_f, dark brown straight
-shoulder-length hair) grinning beside him, finger to lips "shh". Both in casual night
-clothes / loosened uniform. Dim corridor lamps, room doors lining the hall, a mischievous
-late-night warmth.
+schoolers crouched/sitting on the corridor floor secretly eating steaming CUP RAMEN —
+instant noodle cups with lids peeled back, chopsticks, and beside them a small ELECTRIC
+coffee pot / cordless electric kettle sitting on its power base (전기 커피포트 — plastic
+body, power cord visible, clearly an electric appliance). NO gas burner, NO pot, NO open
+flame, NO stovetop kettle (fire/heating gear is not allowed on Korean school trips —
+cup ramen with electric-pot water is the realistic sneaky snack). Jihun
+(reference — short MESSY black hair, athletic build, big confident grin showing teeth)
+leaning in laughing; protagonist ([_m] player_m, soft center-part hair, no glasses /
+[_f] player_f, dark brown straight shoulder-length hair) grinning beside him, finger to
+lips "shh". Both in casual night clothes / loosened uniform. Dim corridor lamps, room
+doors lining the hall, a mischievous late-night warmth.
 Mood: forbidden-snack adventure, two friends, the funniest kind of getting-caught night.
 ```
-> 한글 메모: "간다." 경주 밤 숙소 복도에서 지훈이랑 몰래 라면. 걸려서 혼났지만 더 웃김. recallText="숙소 복도의 라면 냄새."
+> 한글 메모: "간다." 경주 밤 숙소 복도에서 지훈이랑 몰래 컵라면(버너·냄비·일반 주전자 금지 — 물은 커피포트/전기포트). 걸려서 혼났지만 더 웃김. recallText="숙소 복도의 라면 냄새."
 
 ### [c1] `middle/school-trip-middle_c1.png` — 불참 (betrayal/regret/4)
 ```
