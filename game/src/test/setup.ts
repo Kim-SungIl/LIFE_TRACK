@@ -15,3 +15,30 @@ if (typeof document !== 'undefined') {
     get(this: HTMLElement) { return this.parentElement; },
   });
 }
+
+// Node 22+가 메서드 없는 자체 localStorage 전역(--localstorage-file 필요)을 노출하고,
+// 이게 vitest의 jsdom 전역 주입과 충돌해 jsdom 환경에서도 진짜 Storage가 없다
+// (window.localStorage === undefined 확인). bare `localStorage` 참조(store.ts 저장/로드)가
+// 스텁으로 흘러 조용히 실패하므로, 메서드가 없으면 인메모리 Storage로 교체한다.
+function makeMemoryStorage(): Storage {
+  let map = new Map<string, string>();
+  return {
+    get length() { return map.size; },
+    key: (i: number) => [...map.keys()][i] ?? null,
+    getItem: (k: string) => map.get(k) ?? null,
+    setItem: (k: string, v: string) => { map.set(k, String(v)); },
+    removeItem: (k: string) => { map.delete(k); },
+    clear: () => { map = new Map(); },
+  };
+}
+const brokenLocalStorage = (() => {
+  try { return typeof localStorage === 'undefined' || typeof localStorage.setItem !== 'function'; }
+  catch { return true; }
+})();
+if (brokenLocalStorage) {
+  const storage = makeMemoryStorage();
+  Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true, writable: true });
+  if (typeof window !== 'undefined') {
+    Object.defineProperty(window, 'localStorage', { value: storage, configurable: true, writable: true });
+  }
+}
