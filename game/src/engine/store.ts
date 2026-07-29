@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
-import { migrateLoadedState } from './stateMigration';
+import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
@@ -46,7 +46,6 @@ export type TalkActionResult =
   | { kind: 'smalltalk'; line: string };
 
 const SAVE_KEY = 'lifetrack_save';
-const SAVE_VERSION = 1;
 
 interface SaveData {
   version: number;
@@ -57,7 +56,7 @@ interface SaveData {
 function saveToStorage(state: GameState) {
   try {
     const savedAt = new Date().toISOString();
-    const data: SaveData = { version: SAVE_VERSION, state, savedAt };
+    const data: SaveData = { version: CURRENT_SAVE_VERSION, state, savedAt };
     localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     storageSaveFailed = false;
     lastSavedAt = savedAt;
@@ -80,8 +79,13 @@ export function loadFromStorage(): SaveData | null {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw) as SaveData;
-    if (data.version !== SAVE_VERSION || !data.state) return null;
-    return data;
+    if (!data.state) return null;
+    // 스탬프 정규화(버전 도입 이전/손상 세이브 = v1). 과거 버전은 버리지 않는다 —
+    // loadSavedGame에서 단계형 마이그레이션(runSaveMigrations)으로 살린다.
+    // 미래 버전(구버전 앱에서 신버전 세이브를 여는 다운그레이드)만 로드 거부.
+    const version = Number.isInteger(data.version) && data.version >= 1 ? data.version : 1;
+    if (version > CURRENT_SAVE_VERSION) return null;
+    return { ...data, version };
   } catch {
     return null;
   }
@@ -275,7 +279,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   loadSavedGame: () => {
     const save = loadFromStorage();
     if (!save) return false;
-    set({ state: migrateLoadedState(save.state) });
+    // 단계형(버전 격상) → 정규화(백필·재수화) 순서 — step은 격상 전 구조를 전제로 쓴다.
+    set({ state: migrateLoadedState(runSaveMigrations(save.state, save.version)) });
     return true;
   },
 

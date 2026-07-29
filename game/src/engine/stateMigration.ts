@@ -1,12 +1,47 @@
-// 구세이브 호환 — 누락 필드 백필 + 리네임 마이그레이션 + 직렬화 손실된 함수 필드 복원.
-// gameEngine.ts 에서 추출 (P2-6). store 로드와 processWeek 양쪽에서 사용 — SAVE_VERSION 비격상 유지.
-// 새 필드 추가 시 여기 한 곳만 수정.
+// 구세이브 호환 — 두 레이어로 나뉜다:
+//  1) 단계형(versioned) 마이그레이션: 세이브에 찍힌 version → 현재 version까지 step을 순차 적용.
+//     필드 의미가 바뀌는 breaking 변경만 step으로 쓴다. 로드 시 1회 실행.
+//  2) 버전 무관 정규화(migrateLoadedState): 누락 필드 백필 + 리네임 + 직렬화 손실 함수 복원.
+//     store 로드와 processWeek 양쪽에서 매번 실행 — 반드시 멱등·저비용. 단순 필드 추가는 전부 이쪽.
+// gameEngine.ts 에서 추출 (P2-6). 새 필드 추가 시 migrateLoadedState 한 곳만 수정.
 import { GameState } from './types';
 import { hashInitialState, deriveTalkSeed } from './rng';
 import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
 
+// ===== 1) 단계형 마이그레이션 =====
+// 과거엔 store가 version !== SAVE_VERSION이면 세이브를 통째로 버렸다(격상 = 전 세이브 증발).
+// 이제 과거 버전은 step 순차 적용으로 살리고, 미래 버전(다운그레이드)만 로드를 거부한다(store).
+export const CURRENT_SAVE_VERSION = 1;
+
+type MigrationStep = (state: GameState) => GameState;
+
+// key n = "version n 세이브를 n+1로 올리는" 순수 함수. 단계는 연속이어야 한다(결번 금지).
+// 격상 절차: 여기에 step 추가 + CURRENT_SAVE_VERSION 증가 + stateMigration.test.ts에 케이스 추가.
+const MIGRATION_STEPS: Record<number, MigrationStep> = {};
+
+// fromVersion(세이브 스탬프)부터 toVersion까지 순차 적용. steps/toVersion 주입은 테스트 전용
+// (파이프라인 역학 검증) — 런타임(store 로드)은 기본값만 쓴다.
+export function runSaveMigrations(
+  state: GameState,
+  fromVersion: number,
+  steps: Record<number, MigrationStep> = MIGRATION_STEPS,
+  toVersion: number = CURRENT_SAVE_VERSION,
+): GameState {
+  let s = state;
+  // 스탬프가 없거나 이상한 세이브는 v1 간주(버전 도입 이후 유일한 과거 버전이 1).
+  let v = Number.isInteger(fromVersion) && fromVersion >= 1 ? fromVersion : 1;
+  while (v < toVersion) {
+    const step = steps[v];
+    if (!step) break; // 결번 = step 등록 누락(개발 오류). 남은 단계 강행보다 현 상태 보존이 안전.
+    s = step(s);
+    v++;
+  }
+  return s;
+}
+
+// ===== 2) 버전 무관 정규화·재수화 =====
 export function migrateLoadedState(state: GameState): GameState {
   // 'gene' → 'resilience' 리네임 마이그레이션 (구세이브 호환)
   const migratedParents = state.parents
