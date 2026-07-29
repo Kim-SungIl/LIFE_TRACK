@@ -28,6 +28,12 @@ All characters MUST share the same base face style.
 Only vary details like hair, expression, accessories, and personality.
 ```
 
+### 세계관 비주얼 캐논 — 교명 (2026-07-29 확정)
+
+- 고등 교명 캐논 = **"한빛고등학교"** (교훈: 성실·정직·도전). 출처: `high/yerin-not-a-trade_c0_m` 교문 현판 — 생성기 창작이었으나 사후 캐논으로 채택(재생성 0장).
+- 신규 컷의 "읽히는 텍스트 금지" 원칙은 그대로 — 교명을 **의도적으로 그려 넣지 않는다**. 이 캐논은 우발적으로 또렷하게 생성된 교명·현판의 **검수 정합 기준**으로만 쓴다: "한빛고등학교"면 수용, 다른 교명이면 재생성.
+- 초·중등 교명은 미확정(또렷한 교명이 생성된 컷 없음) — 필요해지면 그때 결정한다.
+
 ---
 
 ## 2. Image Type Rules
@@ -597,6 +603,10 @@ Same character, chest-up. Calm dreamy gaze, earphone cord visible, slight distan
 Background: soft pastel pink-blue gradient.
 ```
 
+> **고등(High) 헤어 기장 캐논 (2026-07-29 확정)**: 중등 "slightly past shoulders" → 고등 **past the chest**(중→고 성장 고증).
+> `high/seoa-ending-page_c0_f`·`high/seoa-both-earphones-again_m`의 가슴 아래 기장을 스펙으로 수용 — 어깨 기장으로 재생성하지 않는다.
+> 신규 서아 고등 발주는 "long straight dark-brown hair past the chest"로 지시 (cg-prompts-new-npc-portraits.md 고등 포트레이트 프롬프트와 일치).
+
 ---
 
 ### 5-5. Year 5~7 NPCs (High school)
@@ -769,7 +779,7 @@ watermark, harsh directional shadows, different art style, distorted face, extra
 | yuna | 유나 | F | All | Caramel wavy hair, star clip, bright smile, no glasses | subin: lighter hair, more energetic, star clip vs star earrings |
 | doyun | 박도윤 | M | Elem~Mid | Neat black side-part, soccer keychain, leader aura | jihun: neat vs messy, composed vs playful |
 | haeun | 김하은 | F | Mid | Dark brown bob, round glasses, red book, shy smile | yuna: darker bob + glasses + red book vs caramel wave + star clip |
-| seoa | 윤서아 | F | Mid | Long straight brown, hair clip, earphones, notebook | yuna: no glasses, longer hair, dreamy vs studious |
+| seoa | 윤서아 | F | Mid | Long straight brown (Mid: past shoulders → High: past chest), hair clip, earphones, notebook | yuna: no glasses, longer hair, dreamy vs studious |
 | junha | 김준하 | M | High | Dark brown messy, thick eyebrows, sturdy, ill-fitting blazer | player_m: sharper jaw, broader, more rugged |
 | siwoo | 한시우 | M | High | Medium brown covering forehead, tall lean, slouched, tumbler | junha: leaner, taller, more reserved |
 | yerin | 강예린 | F | High | Wavy brown ends, elegant earrings, planner, polished | subin: longer wavy hair, sharper gaze, calculated |
