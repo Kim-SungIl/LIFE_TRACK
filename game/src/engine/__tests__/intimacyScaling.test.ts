@@ -74,9 +74,8 @@ describe('applyGrindIntimacyGain', () => {
     // 79 + scaled(양수) → min(80, ...) — 캡을 넘기지 않음
     expect(applyGrindIntimacyGain(INTIMACY_GRIND_SOFTCAP - 1, 10)).toBe(INTIMACY_GRIND_SOFTCAP);
     expect(applyGrindIntimacyGain(70, 50)).toBeLessThanOrEqual(INTIMACY_GRIND_SOFTCAP);
-    expect(applyGrindIntimacyGain(50, 5)).toBe(
-      Math.min(INTIMACY_GRIND_SOFTCAP, 50 + scaleIntimacyChange(5, 50, false)),
-    );
+    // 50은 [40,60) 밴드(×0.8) → 50 + floor(5*0.8)=4 = 54 (softcap 80 미도달)
+    expect(applyGrindIntimacyGain(50, 5)).toBe(54);
   });
 
   it('clamps negative rawDelta into 0~100', () => {
