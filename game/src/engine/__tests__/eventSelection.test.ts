@@ -6,6 +6,9 @@ import type { GameState, ParentStrength } from '../types';
 
 const PARENTS: [ParentStrength, ParentStrength] = ['strict', 'emotional'];
 const RNG_SEED = 42;
+// RNG 경로(determinism) 테스트 전용 시드 — EVENT_DENSITY 감축(0.5→0.45/0.25) 후 seed 42는
+// Y1 W8에서 두 롤이 모두 실패해 null이 되므로, 이벤트가 실제 발화하는 시드로 특성을 고정한다.
+const RNG_PATH_SEED = 2;
 
 function fixture(overrides: Partial<GameState> = {}): GameState {
   return Object.assign(createInitialState('male', PARENTS, { rngSeed: RNG_SEED }), overrides);
@@ -29,7 +32,7 @@ describe('getEventForWeek', () => {
     it('is deterministic across independent clones with the same rngSeed (deep-equal)', () => {
       // ⚠️ getEventForWeek는 conditional/학교랜덤 분기에서 seededRandom(state)로 rngSeed를 mutate.
       // 같은 state를 두 번 호출하면 결과가 달라질 수 있으므로, 동일 시드의 독립 clone으로 검증한다.
-      const make = () => fixture({ year: 1, week: 8 }); // fixed/followup/crisis 없는 조용한 주 → RNG 분기
+      const make = () => fixture({ year: 1, week: 8, rngSeed: RNG_PATH_SEED }); // fixed/followup/crisis 없는 조용한 주 → RNG 분기
       const a = structuredClone(make());
       const b = structuredClone(make());
 
@@ -37,18 +40,18 @@ describe('getEventForWeek', () => {
       const rb = getEventForWeek(b);
 
       expect(ra).toEqual(rb);
-      // 손계산 스냅샷: seed 42에서 Y1 W8 RNG 경로 → class-prank, patch 없음
-      expect(selectionKey(ra)).toEqual({ eventId: 'class-prank', patch: null });
+      // 손계산 스냅샷: seed 2에서 Y1 W8 RNG 경로 → found-money, patch 없음
+      expect(selectionKey(ra)).toEqual({ eventId: 'found-money', patch: null });
       expect(a.rngSeed).toBe(b.rngSeed);
-      expect(a.rngSeed).not.toBe(RNG_SEED);
+      expect(a.rngSeed).not.toBe(RNG_PATH_SEED);
     });
 
     it('same state called twice on RNG path can diverge (mutation contract)', () => {
-      const state = fixture({ year: 1, week: 8 });
+      const state = fixture({ year: 1, week: 8, rngSeed: RNG_PATH_SEED });
       const first = getEventForWeek(state).event?.id ?? null;
       const second = getEventForWeek(state).event?.id ?? null;
       // 첫 호출이 rngSeed를 전진시켜 두 번째 굴림이 달라짐 — 현재 동작 고정
-      expect(first).toBe('class-prank');
+      expect(first).toBe('found-money');
       expect(second).not.toBe(first);
     });
   });
