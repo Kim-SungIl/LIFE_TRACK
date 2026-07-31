@@ -8,6 +8,18 @@ import { GAME_EVENTS } from './data';
 import { SCHOOL_LIFE_EVENTS } from './school-life';
 import { absWeek } from '../weekMath';
 
+// ===== 사건 예산 (선택 풀 발화율) =====
+// 학기 사건 주율을 ~79% → 65~70%로 낮추는 2차 감축 (1차: school-life 0.7→0.5).
+// school-life(잡사건)만 깎고 conditional은 유지 — 신규 NPC 첫만남·반장 질감·부모 압박이
+// conditional 풀이라, 여길 깎으면 관계 진입과 서사 전제가 같이 굶는다.
+// 8시드 실측(scripts/sim/sim-event-frequency.ts): 0.45/0.25에서 학기 사건 주율 65.9~67.9%,
+// conditional 총량 ~100(감축 전 98.6와 동일 — 쿨다운 피드백), school 58.6→31.5,
+// fixed/followup/reach/위기 불변.
+export const EVENT_DENSITY = {
+  conditional: 0.45, // getEventForWeek 4번 티어
+  schoolLife: 0.25,  // getEventForWeek 5번 티어
+  chain: 0.45,       // resolveEventChain의 조건부 추가 픽 (주율이 아니라 주당 몰림에 영향)
+} as const;
 
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
 // ANNUAL_EVENT_IDS에 등록된 후속(반장 선거 후속 등)은 매년 재발동 허용
@@ -101,7 +113,7 @@ export function getReachForWeek(state: GameState): GameEvent | null {
   return eligible.sort((a, b) => a.reach!.tier - b.reach!.tier)[0];
 }
 
-// fixed/followup 이벤트 resolve 후 chain용 — 도달형 우선, 없으면 일반 조건부 1개(50%).
+// fixed/followup 이벤트 resolve 후 chain용 — 도달형 우선, 없으면 일반 조건부 1개(EVENT_DENSITY.chain).
 // 같은 주(week+year)에 한 번만 호출되도록 호출자가 가드
 export function getConditionalForWeek(state: GameState): GameEvent | null {
   const reach = getReachForWeek(state);
@@ -109,7 +121,7 @@ export function getConditionalForWeek(state: GameState): GameEvent | null {
 
   const candidates = pickConditionalCandidates(state);
   if (candidates.length === 0) return null;
-  if (seededRandom(state) < 0.5) {
+  if (seededRandom(state) < EVENT_DENSITY.chain) {
     return candidates[Math.floor(seededRandom(state) * candidates.length)];
   }
   return null;
@@ -199,22 +211,22 @@ export function getEventForWeek(state: GameState): EventSelection {
   const reach = getReachForWeek(state);
   if (reach) return noPatch(reach);
 
-  // 4. 조건부 상태 이벤트 (피로/멘탈 등) — 50% 확률
+  // 4. 조건부 상태 이벤트 (피로/멘탈 등) — EVENT_DENSITY.conditional 확률
   // 위기 ID는 위에서 이미 처리했으므로 중복 제거
   const conditionalEvents = pickConditionalCandidates(state);
-  if (conditionalEvents.length > 0 && seededRandom(state) < 0.5) {
+  if (conditionalEvents.length > 0 && seededRandom(state) < EVENT_DENSITY.conditional) {
     return noPatch(conditionalEvents[Math.floor(seededRandom(state) * conditionalEvents.length)]);
   }
 
-  // 5. 학교생활 랜덤 이벤트 — 50% 확률
+  // 5. 학교생활 랜덤 이벤트 — EVENT_DENSITY.schoolLife 확률
   // (방학엔 개별 이벤트 condition의 !isVacation으로 원천 차단 → 학기 주에만 발동)
-  // 70%→50%: 학기 주 이벤트 발생률 ~85%→~77%로 완화, "매주 뭔가 터지는" 압박 축소.
+  // 감축 이력: 0.7→0.5(~85%→~77%), 0.5→0.25(~79%→~66%, conditional 0.5→0.45와 함께).
   // 다중시드 sim 측정치는 scripts/sim/sim-event-frequency.ts 참고.
   const availableSchoolEvents = SCHOOL_LIFE_EVENTS.filter(e =>
     (!e.condition || e.condition(state)) &&
     !state.events.some(prev => prev.id === e.id && weeksSince(state, prev) < 6)
   );
-  if (availableSchoolEvents.length > 0 && seededRandom(state) < 0.5) {
+  if (availableSchoolEvents.length > 0 && seededRandom(state) < EVENT_DENSITY.schoolLife) {
     return noPatch(availableSchoolEvents[Math.floor(seededRandom(state) * availableSchoolEvents.length)]);
   }
 
