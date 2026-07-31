@@ -11,9 +11,7 @@ const RNG_SEED = 42;
 
 // selectRegretHighlights 계약 상수 — memorySystem.ts와 동일.
 // (소스 주석 문자열을 파싱하지 않음 — 값 변경 시 이 상수·케이스를 함께 갱신)
-const DRIFT_INTIMACY_MAX = 30; // met && intimacy<=30 → 드리프트 +1.5
-const DRIFT_BONUS = 1.5;
-const NPC_BONUS = 0.5;
+const DRIFT_INTIMACY_MAX = 30; // met && intimacy<=30 → 드리프트 +1.5 (일반 npc는 +0.5)
 const REGRET_CLOSING =
   '그때의 나를 탓하지 않기로 했다. 닿지 못한 채로도, 그 마음들은 있었다.';
 
@@ -151,10 +149,7 @@ describe('selectRegretHighlights', () => {
       ],
     });
 
-    // score 손계산: drift 5+DRIFT_BONUS(1.5)=6.5 > npc 5+NPC_BONUS(0.5)=5.5 > alone 5.0
-    expect(5 + DRIFT_BONUS).toBe(6.5);
-    expect(5 + NPC_BONUS).toBe(5.5);
-
+    // score 손계산: drift 5+1.5=6.5 > npc 5+0.5=5.5 > alone 5.0 → 선정 순서를 함수 출력으로 검증
     const body = selectRegretHighlights(state).filter(h => !h.isClosing);
     expect(body.map(h => h.recallText)).toEqual([driftText, npcText]);
   });

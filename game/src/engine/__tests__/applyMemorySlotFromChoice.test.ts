@@ -3,7 +3,6 @@ import { createInitialState } from '../gameEngine';
 import {
   ANNUAL_EVENT_IDS,
   applyMemorySlotFromChoice,
-  yearToPhaseTag,
 } from '../memorySystem';
 import type {
   EventChoice,
@@ -130,9 +129,8 @@ describe('applyMemorySlotFromChoice', () => {
     expect(slot.recallText).toBe(d.recallText);
     expect(slot.npcIds).toEqual(['jihun']);
     expect(slot.toneTag).toBe('warm');
-    // phaseTag는 yearToPhaseTag(state.year)와 일치 — year 5 → late (손계산)
+    // phaseTag는 year 5 → late (yearToPhaseTag 규약, 손계산 리터럴)
     expect(slot.phaseTag).toBe('late');
-    expect(slot.phaseTag).toBe(yearToPhaseTag(5));
   });
 
   it('creates a slot at exactly MIN_IMPORTANCE_TO_SLOT (inclusive gate)', () => {

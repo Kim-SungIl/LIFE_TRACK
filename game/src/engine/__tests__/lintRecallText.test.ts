@@ -20,11 +20,9 @@ describe('lintRecallText', () => {
     expect(lintRecallText('스탯을 의식하던 방학.').length).toBeGreaterThan(0);
   });
 
-  it('returns [] for clean Korean recall text (20~35 chars)', () => {
-    // 정상 회상문 — 금지 패턴 없음, 길이도 콘텐츠 가이드(20~35자) 안
+  it('returns [] for clean Korean recall text', () => {
+    // 정상 회상문 — 금지 패턴 없음. (lintRecallText는 길이를 검사하지 않으므로 길이 단언은 두지 않음)
     const clean = '처음으로 손을 들어 말했던 그날의 교실.';
-    expect(clean.length).toBeGreaterThanOrEqual(20);
-    expect(clean.length).toBeLessThanOrEqual(35);
     expect(lintRecallText(clean)).toEqual([]);
 
     expect(lintRecallText('운동장 끝에서 이름을 부르던 봄날.')).toEqual([]);
