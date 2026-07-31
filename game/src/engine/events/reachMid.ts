@@ -354,16 +354,16 @@ export const MID_REACH_EVENTS = [
   {
     id: 'minjae-dawn-on-hand',
     reach: { npc: 'minjae', tier: 70, year: 3 },
-    title: '새벽이 묻은 손등',
-    description: '아침 등굣길, 민재가 평소처럼 태연하다. 그런데 단어장을 건네받다 손등에 볼펜으로 빽빽이 적힌 영단어가 보인다. 종이가 모자라 손에까지 적은 새벽.\n"아, 이거… 지워진 줄 알았는데." 소매로 급히 가린다.',
+    title: '새벽이 밴 단어장',
+    description: '아침 등굣길, 민재가 평소처럼 태연하게 단어장을 내민다. 받으려는데—표지가 새까맣게 닳아 반질거리고, 귀퉁이는 다 해졌고, 페이지 사이로 색색의 인덱스가 삐죽하다. 표지 맨 위엔 "3:40"이라고 작게 적힌 새벽 시각.\n"아, 그거… 오래 봐서 그래." 민재가 슬쩍 손을 들어 가린다.',
     speakers: ['minjae'],
     location: 'school_gate',
     background: 'school_road_morning',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 70 && s.year === 3; },
     choices: [
-      { text: '"안 지워도 돼. 그거 멋있는데"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…멋있긴." 그러면서도 소매를 슬쩍 내린다.', timeCost: 1 },
+      { text: '"그렇게 안 가려도 돼. 이만큼 본 건데"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…가린 건 아니고." 그러면서도 든 손으로 표지 위를 슬쩍 덮는다.', timeCost: 1 },
       { text: '"몇 시까지 한 거야 대체" 걱정', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '"…기억 안 나." 민재가 얼버무린다.', timeCost: 1 },
-      { text: '못 본 척 단어장만 받는다 배려의 외면', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '민재가 잠깐 너를 본다. 못 본 척해준 걸 안다는 눈빛이다.', timeCost: 1 },
+      { text: '못 본 척, 단어장 얘긴 않는다 배려의 외면', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '민재가 잠깐 너를 본다. 못 본 척해준 걸 안다는 눈빛이다.', timeCost: 1 },
     ],
   },
   {
