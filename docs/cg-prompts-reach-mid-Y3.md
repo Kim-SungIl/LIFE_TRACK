@@ -37,10 +37,11 @@
 
 ## 민재 (minjae) — Y3
 
-### minjae-dawn-on-hand — 새벽이 묻은 손등 (tier 70)
+### minjae-dawn-on-hand — 새벽이 밴 단어장 (tier 70)
 파일: `middle/minjae-dawn-on-hand.png` | 등장: minjae
-> Morning bus stop, backlit. **Minjae** (thin square glasses, navy blazer) — as he hands over a vocabulary booklet, just a **few small ballpoint English words on the BACK of one hand, near the knuckles only** (he ran out of paper at dawn) are briefly glimpsed; he yanks his sleeve down to hide it. **Palm is clean, wrist and forearm are clean and stay covered by the blazer sleeve — writing ONLY on the back of the hand, sparse, not covering the whole hand.** Caught, faintly flustered. Soft backlight. Mood: the performance of "fine" peeled back one layer. 3:4 portrait.
-> ⚠️ Negative: NO writing on the palm, NO writing on the wrist or forearm, do NOT cover the whole hand/arm in ink — only a sparse few words on the back of one hand.
+> Morning school road, soft light, backlit. **Minjae** (thin square glasses, navy blazer, white shirt) holds out a **well-worn pocket vocabulary booklet** to the viewer — the booklet is the clear focus in the foreground: **its cover is darkened and glossy from being handled countless times, corners frayed and dog-eared, page edges swollen and rippled, layers of highlighter bleeding through the fore-edge, and a few tiny handwritten dawn timestamps ("3:40") inked inside the front cover.** He is faintly flustered, his palm already starting to cover the booklet as if to take it back. Soft morning light. Mood: the performance of "fine" peeled back one layer — how hard he studied shown by the worn object, not stated by him. 3:4 portrait, booklet prominent.
+> ⚠️ Negative: NO English words or ink writing on his hand or skin — the story is carried by the worn booklet, not his body. Keep his thin square glasses. No photorealistic / 3D / live-action. Do not leave the booklet clean/new — it must look heavily used.
+> 🔁 v2 재기획(2026-07): 1차 컨셉(손등에 영단어)은 개연성 약함+렌더 계속 어색 → 흔적을 **손등 글씨 → 손때로 닳은 단어장**으로 이전. 감정 비트·티어·"새벽" 모티프 유지, 신체 낙서 제거. 이벤트 텍스트도 동반 개정(reachMid.ts). id/파일명은 안정성 위해 `minjae-dawn-on-hand` 유지(내부 키).
 
 ### minjae-displayed-model — 전시된 모범생 (tier 76)
 파일: `middle/minjae-displayed-model.png` | 등장: minjae + 엄마(실루엣)
