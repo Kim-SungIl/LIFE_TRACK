@@ -61,6 +61,7 @@ export function createInitialState(
     isVacation: false,
     weekLog: null,
     npcs: [
+      // met: true 초기값에 부팅 first-week 장면·튜토리얼 '친구' 스텝(npc 카드 렌더)이 의존한다.
       { id: 'jihun', name: '지훈', intimacy: 40, description: '초등학교 때부터 알던 소꿉친구', emoji: '😄', met: true,
         greeting: '야! 오늘도 같이 놀자!', personality: '활발하고 운동을 좋아하는 소꿉친구. 항상 먼저 말을 걸어준다.' },
       { id: 'subin', name: '수빈', intimacy: 25, description: '같은 동네에 사는 같은 학원 친구', emoji: '😊', met: false,

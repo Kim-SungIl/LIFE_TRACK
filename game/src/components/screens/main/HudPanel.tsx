@@ -102,7 +102,7 @@ export const HudPanel = memo(function HudPanel({
             })}
             {/* 클릭 가능 affordance — "💬 가정" 라벨로 진입점 명시 */}
             <button
-              type="button" className="btn-reset"
+              type="button" className="btn-reset" data-tutorial="home"
               onClick={() => { setActiveParentTip(null); onOpenHome(); }}
               style={{
                 marginLeft: 4, fontSize: '0.65rem', color: 'var(--accent-soft)',
