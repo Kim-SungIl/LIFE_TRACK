@@ -30,10 +30,12 @@ const store = useGameStore;
 const PARENTS: [ParentStrength, ParentStrength] = ['wealth', 'emotional'];
 
 // 새 게임을 시작한 뒤 원하는 상황으로 state를 덮어쓴다.
+// startGame은 부팅 장면(first-week, phase='event')으로 시작하므로(튜토리얼 지연),
+// 중간 상태를 조립하는 이 하네스는 장면을 걷어낸 weekday 기준선에서 출발한다.
 function setupState(overrides: Partial<GameState>): GameState {
   store.getState().startGame('male', PARENTS);
   const base = store.getState().state!;
-  const next: GameState = { ...base, ...overrides };
+  const next: GameState = { ...base, currentEvent: null, phase: 'weekday', ...overrides };
   store.setState({ state: next, npcActivityMap: {} });
   return next;
 }

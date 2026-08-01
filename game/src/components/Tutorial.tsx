@@ -1,53 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
-
-interface TutorialStep {
-  target: string;
-  title: string;
-  desc: string;
-  position: 'top' | 'bottom';
-  interactive?: boolean;  // true면 하이라이트 영역 클릭 가능
-  waitFor?: string;       // 이 data-tutorial-done 값이 나타나면 자동 진행
-  doneDesc?: string;      // waitFor 충족 후 보여줄 메시지
-}
-
-const STEPS: TutorialStep[] = [
-  {
-    target: 'hud',
-    title: '내 상태',
-    desc: '캐릭터, 날짜, 피로, 용돈이 표시돼요.',
-    position: 'bottom',
-  },
-  {
-    target: 'stats',
-    title: '능력치',
-    desc: '학업, 인기, 특기, 멘탈, 체력 5가지예요.\n눌러서 펼치면 상세 내용을 볼 수 있어요!',
-    position: 'bottom',
-    interactive: true,
-  },
-  {
-    target: 'routine',
-    title: '평일 일과',
-    desc: '이게 이번 주 시간표예요!\n주중엔 학교가 끝나면 방과후·저녁 시간이 있어요.\n\n왼쪽 빈 칸을 터치해서 방과후 활동을 골라 보세요!',
-    position: 'bottom',
-    interactive: true,
-    waitFor: 'routine-done',
-    doneDesc: '잘했어요! 방과후 루틴은 매주 자동 반복돼요.\n바꾸고 싶으면 언제든 터치하면 돼요.',
-  },
-  {
-    target: 'routine',
-    title: '주말 활동',
-    desc: '이번엔 주말이에요!\n오른쪽 토요일·일요일 빈 칸을 터치해서\n주말에 할 활동도 골라 보세요!',
-    position: 'bottom',
-    interactive: true,
-  },
-  {
-    target: 'confirm',
-    title: '한 주 보내기',
-    desc: '시간표를 다 채웠으면 이 버튼을 눌러\n한 주를 보내세요!\n\n정답은 없어요. 자유롭게 플레이하세요!',
-    position: 'top',
-  },
-];
+import { STEPS } from './tutorialSteps';
 
 interface Props {
   onComplete: () => void;

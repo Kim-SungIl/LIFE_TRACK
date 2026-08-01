@@ -4,7 +4,7 @@ import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scal
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
-import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
+import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 import { PARENT_MINI_EVENTS } from './talkData';
@@ -259,8 +259,9 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
       // W48 학년말/졸업 주 이벤트 종료 → processWeek가 미뤄둔 학년 전환을 지금 수행.
       applyYearTransition(state);
     } else {
-      // 일반 주: 주간 결산 화면으로 (phase='result')
-      state.phase = 'result';
+      // 일반 주: 주간 결산 화면으로. 결산할 로그가 없으면(부팅 first-week 장면) 계획 화면으로 복귀 —
+      // 이전엔 phase='result'로 두고 GameScreen의 weekLog 가드에 우연히 의존했다.
+      state.phase = state.weekLog ? 'result' : 'weekday';
     }
   }
 }
@@ -271,6 +272,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startGame: (gender, parents, options) => {
     const initial = createInitialState(gender, parents, options);
+    // 튜토리얼 지연 — 시스템 설명보다 첫 장면(first-week, 지훈 재회)이 먼저 오도록 phase='event'로 부팅.
+    // MainWeekScreen이 이벤트 동안 마운트되지 않아 튜토리얼 게이트는 장면 종료 후 첫 계획 화면에서 열리고,
+    // week:1로 기록되므로 첫 주 결산의 fixed 선택에서 중복 발동하지 않는다.
+    const firstScene = GAME_EVENTS.find(e => e.id === 'first-week');
+    if (firstScene) {
+      initial.currentEvent = { ...firstScene };
+      initial.phase = 'event';
+    }
     set({ state: initial });
     saveToStorage(initial);
     localStorage.removeItem('lifetrack_tutorial_done');
