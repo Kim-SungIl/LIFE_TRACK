@@ -87,16 +87,60 @@ console.log(`(대부분의 미매칭은 CG 미지정 이벤트로 정상 — 전
 // 같은 학년대에서 일부 (선택지×성별) 조합만 CG가 있는 이벤트 = 변형 누락 의심.
 // 의도된 부분 CG일 수 있어 빌드는 막지 않되, 작성자 검토용으로 노출한다.
 const byLevel = new Map<string, { hit: number; miss: number }>();
+const missByLevel = new Map<string, string[]>(); // `${eventId}@${level}` → 미커버 조합(`c{ci}_{g}`) 목록
 for (const r of rows) {
   const k = `${r.eventId}@${r.level}`;
   const e = byLevel.get(k) ?? { hit: 0, miss: 0 };
-  if (r.hit) e.hit++; else e.miss++;
+  if (r.hit) { e.hit++; } else {
+    e.miss++;
+    const m = missByLevel.get(k) ?? [];
+    m.push(`c${r.ci}_${r.gender}`);
+    missByLevel.set(k, m);
+  }
   byLevel.set(k, e);
 }
-const partial = [...byLevel.entries()].filter(([, v]) => v.hit > 0 && v.miss > 0).sort();
+// 의도된 부분 커버 allowlist — `${eventId}@${level}` → 예상 미커버 조합(`c{ci}_{g}`).
+// 감사(2026-08) 결과 "옵트아웃/중간 분기엔 CG 미부여"라는 일관된 CG 예산 설계로 확인된 케이스.
+// 키만이 아니라 *예상 미커버 조합까지 정확히 일치*할 때만 정상 처리 → allowlist 이벤트가
+// 다른 형태로 회귀(에셋 유실·조합 스왑)하거나 신규 갭이 생기면 경고로 잡힌다(codex P2).
+//   • 옵트아웃 분기 생략(안 함/미룸/스킵/사양엔 그릴 장면 없음)
+//   • c0+c2만 그리고 중간(c1) 생략하는 2-CG 예산
+//   • doyun-meet는 남/녀 라우트가 별도 id(…/…-f)라 반대 성별 조합은 상대 이벤트가 커버
+const INTENDED_PARTIAL = new Map<string, string[]>([
+  // 옵트아웃 분기(마지막 선택지) CG 생략
+  ['school-trip-middle@middle', ['c2_f', 'c2_m']],            // c2 "좀 더 생각해볼게"(미룸)
+  ['club-academy-choice-y5@high', ['c2_f', 'c2_m']],         // c2 "알아서 할게"(옵트아웃)
+  ['doyun-meet-elementary@elementary', ['c0_f', 'c1_f', 'c2_f', 'c2_m']],   // 남 라우트: c2 사양 + 女는 -f가 커버
+  ['doyun-meet-elementary-f@elementary', ['c0_m', 'c1_m', 'c2_f', 'c2_m']], // 女 라우트: c2 사양 + 男은 본편이 커버
+  ['graduation-prep-elementary@elementary', ['c1_f', 'c1_m']], // c1 "나중에 보면 되지"(스킵)
+  ['graduation-prep-high@high', ['c1_f', 'c1_m']],           // c1 "그냥 평소 옷"(간소·스킵)
+  // c0+c2만, 중간(c1) 생략하는 2-CG 예산
+  ['minjae-honest@middle', ['c1_f', 'c1_m']],               // c1 "집에 안 가?"(가볍게)
+  ['minjae-dream@high', ['c1_f', 'c1_m']],                  // c1 "일단 가서 생각해도"(현실적 유보)
+  ['junha-cook@high', ['c1_f', 'c1_m']],                    // c1 "대학은 어떻게 할 거야?"(현실적 질문)
+]);
+
+// 실제 미커버 조합이 예상과 정확히 같은가(회귀/스왑/신규 갭 감지).
+function matchesIntended(k: string): boolean {
+  const expected = INTENDED_PARTIAL.get(k);
+  if (!expected) return false;
+  const actual = [...(missByLevel.get(k) ?? [])].sort();
+  const exp = [...expected].sort();
+  return actual.length === exp.length && actual.every((v, i) => v === exp[i]);
+}
+
+const partialAll = [...byLevel.entries()].filter(([, v]) => v.hit > 0 && v.miss > 0).sort();
+const intended = partialAll.filter(([k]) => matchesIntended(k));
+const partial = partialAll.filter(([k]) => !matchesIntended(k));
+if (intended.length > 0) {
+  console.log(`\nℹ️  의도된 부분 커버 (${intended.length}건 — allowlist 일치, 정상): ${intended.map(([k]) => k).join(', ')}`);
+}
 if (partial.length > 0) {
-  console.warn(`\n⚠️  부분 커버 경고 (${partial.length}건 — 변형 누락 의심, 검토 권장):`);
-  for (const [k, v] of partial) console.warn(`   ${k} → ${v.hit}/${v.hit + v.miss} 커버`);
+  console.warn(`\n⚠️  부분 커버 경고 (${partial.length}건 — 신규 변형 누락/회귀 의심, 검토 권장):`);
+  for (const [k, v] of partial) {
+    const tag = INTENDED_PARTIAL.has(k) ? ' [allowlist와 조합 불일치 — 회귀 의심]' : '';
+    console.warn(`   ${k} → ${v.hit}/${v.hit + v.miss} 커버 (미커버: ${[...(missByLevel.get(k) ?? [])].sort().join(',')})${tag}`);
+  }
 }
 
 // === 필수 CG 세트 검증 (HARD FAIL 대상) ===
