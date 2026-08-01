@@ -66,6 +66,24 @@ describe('canBuyItem', () => {
     });
   });
 
+  it('rejects requireBirthday items when no met friend has a birthday this week', () => {
+    // 생일 주차는 GAME_EVENTS의 *-birthday 이벤트에서 파생(jihun 14 등) — week 1은 누구의 생일도 아님.
+    const state = fixture({ money: 10, year: 1, week: 1 });
+    expect(canBuyItem(item({ id: 'cake-x', price: 1, requireBirthday: true }), state, {})).toEqual({
+      ok: false,
+      reason: '생일인 친구가 있을 때만',
+    });
+  });
+
+  it('allows requireBirthday items when a met friend has a birthday this week', () => {
+    // jihun 생일 주차 = 14. met인 친구의 생일 주차면 게이트 통과.
+    const state = fixture({ money: 10, year: 1, week: 14 });
+    state.npcs.find(n => n.id === 'jihun')!.met = true;
+    expect(canBuyItem(item({ id: 'cake-x', price: 1, requireBirthday: true }), state, {})).toEqual({
+      ok: true,
+    });
+  });
+
   it('rejects when maxPerWeek is exceeded via weekPurchases[limitKey]', () => {
     const state = fixture({ money: 10, year: 1 });
     const shopItem = item({ id: 'snack-x', price: 1, maxPerWeek: 2, limitGroup: 'outing' });

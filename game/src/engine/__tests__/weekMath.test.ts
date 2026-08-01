@@ -24,8 +24,7 @@ describe('absWeek', () => {
     expect(absWeek(7, WEEKS_PER_YEAR)).toBe(336);
   });
 
-  it('returns a finite number for typical in-range inputs', () => {
-    expect(Number.isFinite(absWeek(4, 20))).toBe(true);
+  it('locks a mid-game in-range value', () => {
     expect(absWeek(4, 20)).toBe(164); // 3*48 + 20
   });
 });
