@@ -93,9 +93,33 @@ for (const r of rows) {
   if (r.hit) e.hit++; else e.miss++;
   byLevel.set(k, e);
 }
-const partial = [...byLevel.entries()].filter(([, v]) => v.hit > 0 && v.miss > 0).sort();
+// 의도된 부분 커버 allowlist — `${eventId}@${level}` 키.
+// 감사(2026-08) 결과 "옵트아웃/중간 분기엔 CG 미부여"라는 일관된 CG 예산 설계로 확인된 케이스.
+// 여기 있는 건 정상으로 처리하고, allowlist 밖의 신규 부분 커버만 검토 대상으로 경고한다.
+//   • 옵트아웃 분기 생략(안 함/미룸/스킵/사양엔 그릴 장면 없음)
+//   • c0+c2만 그리고 중간(c1) 생략하는 2-CG 예산
+const INTENDED_PARTIAL = new Set<string>([
+  // 옵트아웃 분기(마지막 선택지) CG 생략
+  'school-trip-middle@middle',        // c2 "좀 더 생각해볼게"(미룸)
+  'club-academy-choice-y5@high',      // c2 "알아서 할게"(옵트아웃)
+  'doyun-meet-elementary@elementary', // c2 "오늘은 좀…"(사양)
+  'doyun-meet-elementary-f@elementary', // c2 못 본 척(사양)
+  'graduation-prep-elementary@elementary', // c1 "나중에 보면 되지"(스킵)
+  'graduation-prep-high@high',        // c1 "그냥 평소 옷"(간소·스킵)
+  // c0+c2만, 중간(c1) 생략하는 2-CG 예산
+  'minjae-honest@middle',             // c1 "집에 안 가?"(가볍게)
+  'minjae-dream@high',                // c1 "일단 가서 생각해도"(현실적 유보)
+  'junha-cook@high',                  // c1 "대학은 어떻게 할 거야?"(현실적 질문)
+]);
+
+const partialAll = [...byLevel.entries()].filter(([, v]) => v.hit > 0 && v.miss > 0).sort();
+const partial = partialAll.filter(([k]) => !INTENDED_PARTIAL.has(k));
+const intended = partialAll.filter(([k]) => INTENDED_PARTIAL.has(k));
+if (intended.length > 0) {
+  console.log(`\nℹ️  의도된 부분 커버 (${intended.length}건 — allowlist, 정상): ${intended.map(([k]) => k).join(', ')}`);
+}
 if (partial.length > 0) {
-  console.warn(`\n⚠️  부분 커버 경고 (${partial.length}건 — 변형 누락 의심, 검토 권장):`);
+  console.warn(`\n⚠️  부분 커버 경고 (${partial.length}건 — allowlist에 없는 신규 변형 누락 의심, 검토 권장):`);
   for (const [k, v] of partial) console.warn(`   ${k} → ${v.hit}/${v.hit + v.miss} 커버`);
 }
 
