@@ -176,10 +176,16 @@ const DOYUN_DEFAULT = {
   sourceEvents: ['doyun-school-split'],
 };
 const DOYUN_VARIANTS: NpcClosureVariant[] = [
-  // 여주(관찰자·거리감 호감 아크): 앨범 동그라미가 코드의 마커(doyun-meet-elementary-f c1 recallText).
-  { match: s => choseF(s, 'doyun-graduation-sign', 0) || choseF(s, 'doyun-graduation-sign', 1),
+  // 여주(관찰자·거리감 호감 아크): 앨범 동그라미는 첫 만남 c1("살짝 웃어준다")에서만 시작되는
+  // 모티프(doyun-meet-elementary-f c1 recallText) — 그 선택 없이 동그라미를 단정하면 거짓(codex P2).
+  { match: s => (choseF(s, 'doyun-graduation-sign', 0) || choseF(s, 'doyun-graduation-sign', 1))
+      && chose(s, 'doyun-meet-elementary-f', 1),
     sourceEvents: ['doyun-graduation-sign', 'doyun-meet-elementary-f'],
     text: '도윤이 소식은 가끔 건너서 듣는다. 졸업앨범 그 얼굴에 그린 동그라미는, 아직 지우지 않았다.' },
+  // 여주 폴백(동그라미 미성립): c0/c1 둘 다 도윤이 앨범에 한 줄을 적어주는 장면이라 안전한 모티프.
+  { match: s => choseF(s, 'doyun-graduation-sign', 0) || choseF(s, 'doyun-graduation-sign', 1),
+    sourceEvents: ['doyun-graduation-sign'],
+    text: '도윤이 소식은 가끔 건너서 듣는다. 그 애 앨범에 적어준 한 줄을, 요즘도 가끔 생각한다.' },
   // 남주(재회 약속 + 연락 시도): 약속은 끝내 안 지켜지는 게 코드의 결말 — 재회를 단정하지 않는다.
   { match: s => chose(s, 'doyun-graduation-sign', 0) && !choseF(s, 'doyun-graduation-sign', 0)
       && chose(s, 'doyun-school-split', 0),

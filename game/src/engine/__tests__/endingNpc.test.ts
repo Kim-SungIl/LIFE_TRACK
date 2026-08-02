@@ -117,10 +117,18 @@ describe('도윤 — 전출 NPC 별도 레인', () => {
     ])).npcStories;
     expect(plain[0]).toContain('마지막이 된 카톡 창');
 
-    const female = calculateEnding(stateWith({ doyun: 20 }, [
+    // 동그라미는 첫 만남 c1이 있어야 성립 — 없으면 여주 폴백(앨범 한 줄)로 내려간다 (codex P2)
+    const femaleNoCircle = calculateEnding(stateWith({ doyun: 20 }, [
       resolved('doyun-graduation-sign', 1, true), resolved('doyun-window-school', 1),
     ])).npcStories;
-    expect(female[0]).toContain('동그라미');
+    expect(femaleNoCircle[0]).not.toContain('동그라미');
+    expect(femaleNoCircle[0]).toContain('앨범에 적어준 한 줄');
+
+    const femaleCircle = calculateEnding(stateWith({ doyun: 20 }, [
+      resolved('doyun-meet-elementary-f', 1, true), resolved('doyun-graduation-sign', 1, true),
+      resolved('doyun-window-school', 1),
+    ])).npcStories;
+    expect(femaleCircle[0]).toContain('동그라미');
   });
 
   it('도윤은 친밀도가 높아도 티어 흐름에 섞이지 않는다(레인 1줄만)', () => {
