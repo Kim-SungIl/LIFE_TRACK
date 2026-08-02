@@ -3,6 +3,9 @@
 import { GameState, ParentStrength } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';
+import {
+  DEPARTED_NPC_ID, MIN_INTIMACY, isClosureExcluded, resolveDepartedClosure, resolveNpcClosure,
+} from './endingNpc';
 
 // ===== 행복 등급 =====
 // mental + social 조합으로 한 해/일생의 행복도를 5단계로 분류.
@@ -193,9 +196,12 @@ function determineCareer(state: GameState): { path: string; detail: string } {
 // 그 NPC와 얽힌 가장 인상적인 회상 한 조각(recallText)을 골라 근황에 엮는다 —
 // 96개 reach/미니이벤트 기억의 구체성을 엔딩 클라이맥스에서 회수(고정 템플릿 평탄화 해소).
 // 상처(betrayal)는 후회 레이어 소관이라 "아직 이어진 사이" 근황엔 쓰지 않는다.
-function bestRecallFor(state: GameState, npcId: string, excludeTexts: Set<string> = new Set()): string | null {
+// excludeEventIds: NPC 클로저 variant가 딛고 선 이벤트발 기억 제외 — "프레임=회상" 동문반복 방지.
+function bestRecallFor(state: GameState, npcId: string, excludeTexts: Set<string> = new Set(),
+  excludeEventIds: Set<string> = new Set()): string | null {
   const mems = (state.memorySlots || [])
-    .filter(m => m.category !== 'betrayal' && (m.npcIds?.includes(npcId) ?? false))
+    .filter(m => m.category !== 'betrayal' && (m.npcIds?.includes(npcId) ?? false)
+      && !excludeEventIds.has(m.sourceEventId))
     .sort((a, b) => (b.importance - a.importance) || (b.year - a.year) || (b.week - a.week));
   // 후회 본문으로 이미 쓰인 recallText는 피하고 차선 기억으로 내려간다 — 이중노출 방지 + 구체성 유지.
   // (전부 제외되는 degenerate 경우에만 최고 기억으로 폴백해 구체성을 우선)
@@ -203,20 +209,31 @@ function bestRecallFor(state: GameState, npcId: string, excludeTexts: Set<string
   return (preferred ?? mems[0])?.recallText ?? null;
 }
 
+// NPC별 전용 클로저(endingNpc.ts) 우선, 미등록 id만 범용 티어 템플릿 폴백.
+// 도윤은 전출 후 친밀도가 항상 바닥이라 티어 흐름에서 빼고, 이력 게이트 별도 레인으로 끝에 1줄.
 function getTopNpcStories(state: GameState, excludeTexts: Set<string> = new Set(), limit = 3): string[] {
   const sorted = [...state.npcs]
-    .filter(n => n.met && n.intimacy >= 50)
+    .filter(n => n.met && n.id !== DEPARTED_NPC_ID && n.intimacy >= MIN_INTIMACY
+      && !isClosureExcluded(state, n.id))
     .sort((a, b) => b.intimacy - a.intimacy)
     .slice(0, limit);
 
   const stories: string[] = [];
   for (const npc of sorted) {
-    const frame = npc.intimacy >= 85 ? `${josa(npc.name, '와/과')}는 지금도 가장 친한 친구다.`
-      : npc.intimacy >= 70 ? `${josa(npc.name, '와/과')}는 종종 연락한다. 좋은 기억으로 남아 있다.`
-      : `${josa(npc.name, '와/과')}는 가끔 생각나는 사이다.`;
-    // 구체 회상이 있으면 한 조각 덧붙여 그 관계만의 결을 남긴다. 없으면 티어 템플릿 그대로.
-    const recall = bestRecallFor(state, npc.id, excludeTexts);
+    const closure = resolveNpcClosure(state, npc.id, npc.intimacy);
+    const frame = closure?.text
+      ?? (npc.intimacy >= 85 ? `${josa(npc.name, '와/과')}는 지금도 가장 친한 친구다.`
+        : npc.intimacy >= 70 ? `${josa(npc.name, '와/과')}는 종종 연락한다. 좋은 기억으로 남아 있다.`
+        : `${josa(npc.name, '와/과')}는 가끔 생각나는 사이다.`);
+    // 구체 회상이 있으면 한 조각 덧붙여 그 관계만의 결을 남긴다. 없으면 프레임 그대로.
+    const recall = bestRecallFor(state, npc.id, excludeTexts, closure?.excludeEventIds);
     stories.push(recall ? `${frame} ${recall}` : frame);
+  }
+
+  const departed = resolveDepartedClosure(state);
+  if (departed) {
+    const recall = bestRecallFor(state, DEPARTED_NPC_ID, excludeTexts, departed.excludeEventIds);
+    stories.push(recall ? `${departed.text} ${recall}` : departed.text);
   }
   return stories;
 }
