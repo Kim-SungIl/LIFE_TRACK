@@ -61,7 +61,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const [showShop, setShowShop] = useState(false);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
-    try { return !localStorage.getItem('lifetrack_tutorial_done'); } catch { return false; }
+    // ever_seen은 새 게임에도 유지되는 영속 플래그 — 한 번이라도 튜토리얼을 본/건너뛴 반복 플레이어는 자동 스킵.
+    // (startGame이 매번 지우는 tutorial_done과 달리 wipe하지 않음)
+    try {
+      return !localStorage.getItem('lifetrack_tutorial_done')
+        && !localStorage.getItem('lifetrack_tutorial_ever_seen');
+    } catch { return false; }
   });
   // A-3: 확정 버튼 더블탭 락 — 렌더 갱신 사이 빠른 두 번째 클릭으로 processWeek가 두 번 도는 것 차단
   const confirmLockRef = useRef(false);
@@ -545,7 +550,11 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         routineSet={!!state.routineSlot2}
         onComplete={() => {
           setShowTutorial(false);
-          try { localStorage.setItem('lifetrack_tutorial_done', '1'); } catch { /* storage unavailable */ }
+          // done(이번 게임) + ever_seen(영속) 동시 세팅 — 완료/건너뛰기 후 반복 플레이는 자동 스킵.
+          try {
+            localStorage.setItem('lifetrack_tutorial_done', '1');
+            localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+          } catch { /* storage unavailable */ }
         }}
       />
       </div>
