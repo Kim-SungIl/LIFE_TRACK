@@ -92,5 +92,7 @@ describe('ErrorBoundary', () => {
     fireEvent.click(screen.getByRole('button', { name: '저장 삭제하고 처음부터 시작' }));
     fireEvent.click(screen.getByRole('button', { name: '삭제하고 시작' }));
     expect(mockedDeleteSave).toHaveBeenCalledTimes(1);
+    // confirmReset 계약: deleteSave 후 reload까지 — reload 제거 회귀를 잡는다(mock은 beforeEach 설치).
+    expect(window.location.reload).toHaveBeenCalledTimes(1);
   });
 });
