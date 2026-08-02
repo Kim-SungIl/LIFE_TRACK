@@ -248,6 +248,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     setBgError(false);
     setPageIndex(0);
     setMaxPageReached(0);
+    setChoiceIntroDismissed(false);
   }, [event.id]);
 
   // 선택지 결과 CG prefetch — 사용자가 선택지 보는 동안 manifest에 존재하는
@@ -283,6 +284,13 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const visibleChoices: { choice: EventChoice; originalIndex: number }[] = eventChoices
     .map((choice, originalIndex) => ({ choice, originalIndex }))
     .filter(({ choice }) => !choice.condition || (state ? choice.condition(state) : true));
+
+  // 첫 플레이 첫 장면(지훈 재회)에서만 선택지 안내 오버레이 — 튜토리얼을 아직 본 적 없는 플레이어 한정.
+  // (튜토리얼 완료 시 lifetrack_tutorial_ever_seen 세팅 → 반복 플레이어는 이 안내도 안 봄)
+  const showChoiceHint = event.id === 'first-week' && (() => {
+    try { return !localStorage.getItem('lifetrack_tutorial_ever_seen'); } catch { return false; }
+  })();
+  const [choiceIntroDismissed, setChoiceIntroDismissed] = useState(false);
 
   // B-2 안전망: 모든 보이는 선택지가 비용 부족으로 잠겼는지 체크 → "지나친다" fallback 노출
   const allInsufficient = visibleChoices.length > 0 && visibleChoices.every(({ choice }) => {
@@ -696,6 +704,50 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
           </div>
         </div>
       </div>
+
+      {/* 첫 플레이 안내 오버레이 — 선택지가 뜨는 순간 씬(지훈) 위를 덮어 확실히 인지시킨다.
+          첫 장면(first-week) + 튜토리얼 미경험자 한정. '골라볼게요!'로 닫으면 선택지 조작 가능. */}
+      {showChoiceHint && hasReachedEnd && !choiceIntroDismissed && (
+        <div
+          onClick={() => setChoiceIntroDismissed(true)}
+          style={{
+            position: 'absolute', inset: 0, zIndex: 60,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24, background: 'rgba(0,0,0,0.74)', backdropFilter: 'blur(3px)',
+            animation: 'es-choice-fade-up 0.3s ease both',
+          }}
+        >
+          <div
+            role="dialog" aria-label="선택 안내" aria-modal="true"
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 340, textAlign: 'center',
+              background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
+              border: '1px solid rgba(224,138,91,0.45)', borderRadius: 18,
+              padding: '28px 24px 22px', boxShadow: '0 14px 44px rgba(0,0,0,0.55)',
+            }}
+          >
+            <div style={{ fontSize: '2rem', marginBottom: 10 }}>👆</div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 12, color: '#fff' }}>
+              이제 선택할 차례예요
+            </div>
+            <div style={{ fontSize: '0.92rem', lineHeight: 1.7, color: 'var(--text-secondary)', marginBottom: 22 }}>
+              정답은 없어요. 마음이 가는 대로 하나 골라 보세요.<br />
+              <span style={{ color: 'var(--accent)', fontWeight: 600 }}>고른 선택에 따라 이야기가 조금씩 달라져요.</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setChoiceIntroDismissed(true)}
+              style={{
+                width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 10,
+                padding: '13px 28px', color: '#fff', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              골라볼게요!
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
