@@ -361,7 +361,7 @@ export const MID_REACH_EVENTS = [
     background: 'school_road_morning',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 70 && s.year === 3; },
     choices: [
-      { text: '"그렇게 안 가려도 돼. 이만큼 본 건데"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…가린 건 아니고." 그러면서도 든 손으로 표지 위를 슬쩍 덮는다.', timeCost: 1 },
+      { text: '"그렇게 안 숨겨도 돼. 이만큼 본 건데"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…숨긴 건 아니고." 그러면서도 든 손으로 표지 위를 슬쩍 덮는다.', timeCost: 1 },
       { text: '"몇 시까지 한 거야 대체" 걱정', effects: { mental: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '"…기억 안 나." 민재가 얼버무린다.', timeCost: 1 },
       { text: '못 본 척, 단어장 얘긴 않는다 배려의 외면', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 2 }], message: '민재가 잠깐 너를 본다. 못 본 척해준 걸 안다는 눈빛이다.', timeCost: 1 },
     ],
