@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SHOP_ITEMS, SHOP_CATEGORIES, canBuyItem, limitKey, ItemCategory, ShopItem } from '../engine/shopSystem';
 import { josa } from '../engine/korean';
 import { GameState, STAT_LABELS, StatKey } from '../engine/types';
+import { isNpcInteractable } from '../engine/relationshipSignals';
 import { Dialog } from './Dialog';
 
 interface Props {
@@ -37,7 +38,8 @@ export function Shop({ state, onBuy, onClose }: Props) {
   const categories = Object.keys(SHOP_CATEGORIES) as ItemCategory[];
   const items = SHOP_ITEMS.filter(i => i.category === selectedCat && (!i.requireYear || state.year >= i.requireYear));
 
-  const metNpcs = state.npcs.filter(n => n.met);
+  // 선물 대상 = 지금 만날 수 있는 친구만. 전출·졸업으로 부재 중인 친구는 제외(엔진 게이트와 동일 SSOT).
+  const metNpcs = state.npcs.filter(n => isNpcInteractable(n, state));
 
   const handleBuy = (item: ShopItem) => {
     // 선물 아이템이면 NPC 선택 필요
@@ -202,7 +204,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
             <div id="shop-gift-title" style={{ fontSize: '1rem', fontWeight: 700, marginBottom: 12 }}>
               {npcSelectItem.emoji} {npcSelectItem.name} — 누구에게 줄까?
             </div>
-            {state.npcs.filter(n => n.met).map(npc => (
+            {metNpcs.map(npc => (
               <button key={npc.id} type="button" className="btn-reset"
                 onClick={() => {
                   onBuy(npcSelectItem, npc.id);

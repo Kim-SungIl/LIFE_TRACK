@@ -22,6 +22,9 @@ export type RelationSignal = { text: string; tone: 'warn' | 'good' | 'info' } | 
 //  - mini: yearMin/yearMax·gender 통과 + 미발동(talkEventsFired)인 것만.
 export function nextIntimacyThreshold(npc: NpcState, state: GameState): number | null {
   if (!npc.met) return null; // 호출 경로(met 필터)가 보장하지만 직접 호출 대비 방어적으로 명시.
+  // 부재 중이면 임계를 약속하지 않는다 — 말 걸기·선물이 막힌 상대에게 "곧 열린다"는 도달 불가 약속이다.
+  // (이 함수는 mini 필터를 인라인 재구현하므로 talkSystem 게이트만으론 여기까지 안 막힌다.)
+  if (npcAbsence(npc, state)) return null;
   let best: number | null = null;
   const consider = (t: number) => { if (t > npc.intimacy && (best === null || t < best)) best = t; };
 
@@ -80,10 +83,37 @@ export function isNpcEnrolled(npc: NpcState, state: GameState): boolean {
   return true;
 }
 
+// ===== 부재(지금 같은 학교에 없음) — 표시·상호작용 공용 SSOT =====
+// npcDeparture(영구 전출)의 일반화. 전출뿐 아니라 "졸업해서 없는" 구간도 같은 잔상으로 다룬다.
+// note는 이별/공백/졸업을 구분한다 — 하은 Y4는 Y5 재회가 예정된 일시 공백이라 이별 톤을 쓰지 않는다.
+// stageYear: 잔상 초상의 학교급을 부재 시점으로 고정("그때 그대로 멈춘" 잔상 — 떠난 뒤 성장한 얼굴을
+//            현재 학년으로 렌더하면 잔상 의도와 어긋난다). 도윤=Y1(초등), 하은 Y4=Y3(중등), Y7=Y6(고등).
+export type NpcAbsence = { note: string; stageYear: number };
+
+export function npcAbsence(npc: NpcState, state: GameState): NpcAbsence | null {
+  if (npcDeparture(npc, state)) return { note: '다른 학교로 떠난 뒤', stageYear: 1 };
+  if (npc.id === 'haeun') {
+    if (state.year === 4) return { note: '졸업하고 다른 학교로 간 뒤', stageYear: 3 };
+    if (state.year === 7) return { note: '고등학교를 졸업한 뒤', stageYear: 6 };
+  }
+  return null;
+}
+
+// 말 걸기·선물처럼 "지금 만나서 하는" 상호작용의 단일 게이트.
+// UI 우회가 불가하도록 엔진(store.talkToNpc / shopSystem)에서도 이 함수를 본다.
+// 관계 패널 카드 노출은 여기 걸리지 않는다 — 떠난 친구도 잔상으로 남는다(#331).
+export function isNpcInteractable(npc: NpcState, state: GameState): boolean {
+  return npc.met && !npcAbsence(npc, state);
+}
+
 // 우선순위: 임박 > 방치 > 최근 (하나만 노출).
 // 임박: 다음 실제 도달 임계(nextIntimacyThreshold) 5점 이내 아래 → 곧 더 깊은 무언가가 열림.
 // 방치/최근: lastInteractionWeek가 있을 때만. 감쇠 하한 20·약함이라 "잃는다"가 아니라 "멀어지는 중" 톤.
 export function relationshipSignal(npc: NpcState, state: GameState): RelationSignal {
+  // 부재 중인 친구에겐 신호를 띄우지 않는다. "요즘 뜸하다"는 챙기라는 행동 단서인데
+  // 상호작용이 막혀 lastInteractionWeek를 갱신할 방법이 없어 영구 잔소리가 된다.
+  // 부재 자체는 패널/모달이 npcAbsence.note로 따로 말한다.
+  if (npcAbsence(npc, state)) return null;
   const th = nextIntimacyThreshold(npc, state);
   if (th !== null && npc.intimacy >= th - 5 && npc.intimacy < th) {
     return { text: '✨ 곧 더 가까워질 듯', tone: 'good' };

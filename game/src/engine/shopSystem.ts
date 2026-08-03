@@ -1,6 +1,6 @@
 import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
 import { cloneGameState } from './stateClone';
-import { absWeek } from './relationshipSignals';
+import { absWeek, isNpcInteractable } from './relationshipSignals';
 import { applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { GAME_EVENTS } from './events/data';
@@ -265,7 +265,10 @@ export function applyItemEffects(
       case 'npc_intimacy':
         if (targetNpcId && effect.npcBonus) {
           const npc = newState.npcs.find(n => n.id === targetNpcId);
-          if (npc) {
+          // 부재(전출·졸업) 중인 친구에겐 선물을 건넬 수 없다 — 말 걸기와 동일 게이트.
+          // 잡담(친밀도 0)보다 큰 구멍이었다: 선물은 반복 구매라 소프트캡 80까지 밀어올릴 수 있고,
+          // 그렇게 유지한 친밀도는 후회 레이어의 드리프트 가산(≤30)까지 없애 이별의 회수를 깎는다.
+          if (npc && isNpcInteractable(npc, newState)) {
             // 반복 grind 소프트캡 경유 — 선물은 반복 구매 가능하므로 캡 이상은 이벤트로만.
             // (감쇠 exemptMajorReward=false + 소프트캡: 돈으로 관계를 무한히 살 수 없게 이중 봉합)
             npc.intimacy = applyGrindIntimacyGain(npc.intimacy, effect.npcBonus);

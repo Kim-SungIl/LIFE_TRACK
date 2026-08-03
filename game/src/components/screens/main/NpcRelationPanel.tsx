@@ -1,6 +1,6 @@
 import { GameState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
-import { relationshipSignal, npcDeparture } from '../../../engine/relationshipSignals';
+import { relationshipSignal, npcAbsence } from '../../../engine/relationshipSignals';
 
 type Props = {
   state: GameState;
@@ -14,16 +14,16 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
   const metNpcs = state.npcs.filter(n => n.met);
   if (metNpcs.length === 0) return null;
 
-  // 떠난(전출) 친구는 흐린 "잔상"으로 아래에 모아 표시 — 있는 친구가 먼저.
+  // 부재(전출·졸업) 친구는 흐린 "잔상"으로 아래에 모아 표시 — 있는 친구가 먼저.
   const ordered = [...metNpcs].sort((a, b) =>
-    (npcDeparture(a, state) ? 1 : 0) - (npcDeparture(b, state) ? 1 : 0));
+    (npcAbsence(a, state) ? 1 : 0) - (npcAbsence(b, state) ? 1 : 0));
 
   return (
     <div style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
       <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>👥 친구</div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         {ordered.map(n => {
-          const departed = npcDeparture(n, state);
+          const absent = npcAbsence(n, state);
           // 친구 게이지 색 = 능력치 등급 색 언어(STAT_GRADES)와 통일 — 아는 사이(E 회색) → 친구(B 우수=초록) → 절친(A 최상=골드)
           const intimacyColor = n.intimacy >= 70 ? '#e5c07b' : n.intimacy >= 40 ? '#8fb573' : '#8a8078';
           const intimacyLabel = n.intimacy >= 70 ? '절친' : n.intimacy >= 40 ? '친구' : '아는 사이';
@@ -41,19 +41,19 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
                 transition: 'background 0.15s', width: '100%', textAlign: 'left',
                 // 잔상: 카드 전체를 살짝 가라앉힌다(조용한 변화는 포트레이트/카드 톤으로만).
                 // 흑백(초상)과 겹치므로 opacity는 0.6으로 — note 가독성 확보.
-                opacity: departed ? 0.6 : 1,
+                opacity: absent ? 0.6 : 1,
               }}
             >
-              {/* 떠난 친구는 초상을 흑백으로 — "그때 그대로 멈춘" 잔상 */}
-              <div style={{ filter: departed ? 'grayscale(1)' : 'none', flexShrink: 0, display: 'flex' }}>
-                <Portrait characterId={n.id} size={36} expression="neutral" year={state.year} />
+              {/* 부재 친구는 초상을 흑백 + 부재 시점 학교급으로 — "그때 그대로 멈춘" 잔상 */}
+              <div style={{ filter: absent ? 'grayscale(1)' : 'none', flexShrink: 0, display: 'flex' }}>
+                <Portrait characterId={n.id} size={36} expression="neutral" year={absent?.stageYear ?? state.year} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{n.name}</div>
-                {departed ? (
-                  // 떠난 친구: 살아있는 게이지 대신 "떠난 자리" 한 줄만 남긴다.
+                {absent ? (
+                  // 부재 친구: 살아있는 게이지 대신 "떠난 자리" 한 줄만 남긴다.
                   <div style={{ fontSize: '0.65rem', color: '#8a8078', marginTop: 4, fontStyle: 'italic' }}>
-                    {departed.note}
+                    {absent.note}
                   </div>
                 ) : (
                   <>

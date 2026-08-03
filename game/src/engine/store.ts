@@ -9,7 +9,7 @@ import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestone
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 import { PARENT_MINI_EVENTS } from './talkData';
 import { applyParentIntimacyDelta } from './parentIntimacy';
-import { absWeek } from './relationshipSignals';
+import { absWeek, isNpcInteractable } from './relationshipSignals';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
 function applyVisibleTalkEffects(
@@ -437,6 +437,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!s) return { kind: 'smalltalk', line: '' };
     const npc = s.npcs.find(n => n.id === npcId);
     if (!npc) return { kind: 'smalltalk', line: '' };
+    // 부재(전출·졸업) 중인 친구에겐 말을 걸 수 없다 — UI는 버튼을 안 그리지만 엔진에서도 막는다.
+    // 반드시 cloneGameState/getNpcSmalltalk 앞에서 반환할 것: 잡담 경로는 seededRandomTalk로
+    // rngSeed를 전진시키므로, 여기서 새면 부재 카드를 누른 횟수만큼 밸런스 RNG가 흔들린다.
+    if (!isNpcInteractable(npc, s)) return { kind: 'smalltalk', line: '' };
 
     // 친밀도 30+ 일 때만 미니 이벤트 후보 — 그 외엔 잡담 한 줄
     const eligible = npc.intimacy >= 30 && s.npcEventPendingThisWeek;
