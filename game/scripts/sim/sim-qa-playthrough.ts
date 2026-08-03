@@ -10,6 +10,7 @@ import { createInitialState, processWeek, hashInitialState, getWeekInfo } from '
 import { NPC_COMPANION_ACTIVITIES } from '../../src/engine/activities';
 import { calculateEnding, calculateHappinessGrade } from '../../src/engine/ending';
 import { resolveEventLikeStore, talkToNpcLikeStore } from '../lib/y1-sim-resolve';
+import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import { getAvailableNpcEvents } from '../../src/engine/talkSystem';
 import { NPC_MINI_EVENTS } from '../../src/engine/talkData';
 import type { GameState, ParentStrength, EventChoice } from '../../src/engine/types';
@@ -140,9 +141,12 @@ function runPersona(p: Persona, seed: number): Result {
     if (p.talk) {
       if (p.talkFocus) {
         // 집중 측정: 대상 NPC가 met이면 그 NPC에게만 말걸기 (focused ceiling 측정)
-        if (s.npcs.find(n => n.id === p.talkFocus && n.met)) s = talkToNpcLikeStore(s, p.talkFocus);
+        if (s.npcs.find(n => n.id === p.talkFocus && isNpcInteractable(n, s))) s = talkToNpcLikeStore(s, p.talkFocus);
       } else {
-        const candidates = s.npcs.filter(n => n.met).sort((a, b) => b.intimacy - a.intimacy);
+        // 부재(전출·졸업) 친구는 플레이어가 고를 수 없다. met만으로 뽑으면 게이트에 걸려 no-op이 되고
+        // 그 주 말걸기가 통째로 날아가 미니톡·친밀도가 과소 측정된다(특히 ?? candidates[0]가
+        // 친밀도 최고값인 부재 하은을 집으면 Y4·Y7 48주가 전부 유실).
+        const candidates = s.npcs.filter(n => isNpcInteractable(n, s)).sort((a, b) => b.intimacy - a.intimacy);
         const target = candidates.find(n => n.intimacy >= 30 && getAvailableNpcEvents(s, n.id).length > 0)
           ?? candidates[0];
         if (target) s = talkToNpcLikeStore(s, target.id);
