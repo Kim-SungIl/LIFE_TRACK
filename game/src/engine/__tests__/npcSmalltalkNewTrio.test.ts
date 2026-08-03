@@ -19,10 +19,10 @@ function talkState(npcId: string, intimacy: number, year: number): GameState {
 }
 
 describe('신규 3인 스몰톡 풀', () => {
-  it.each([
+  it.each<[string, number]>([
     ['seoa', 4], ['seoa', 6], ['siwoo', 6], ['yerin', 6],
   ])('%s(Y%i)는 폴백이 아닌 캐릭터 대사를 돌려준다', (npcId, year) => {
-    const line = getNpcSmalltalk(talkState(npcId as string, 20, year as number), npcId as string);
+    const line = getNpcSmalltalk(talkState(npcId, 20, year), npcId);
     expect(line).not.toBe(FALLBACK);
     expect(line.startsWith('"')).toBe(true);
   });
