@@ -4,9 +4,15 @@ import react from '@vitejs/plugin-react'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-// 릴리즈 빌드(GEN_WEBP=1)에서만 dist/images의 png를 webp로 트랜스코딩한다.
+// 릴리즈 빌드(GEN_WEBP=1)에서만 dist/images의 png를 webp로 트랜스코딩하고 원본 png를 지운다.
 // 소스(public/images)는 건드리지 않으므로 병렬 CG 작업과 무충돌. 일반 build/check는 no-op.
 // webpSrc는 런타임 png 폴백이 없으므로, 생성 실패는 조용히 넘기지 않고 릴리즈 빌드를 중단시킨다.
+//
+// png 삭제가 필수인 이유: 런타임 참조는 전부 webpSrc를 경유해 .webp만 요청하므로
+// dist에 남은 png는 단 한 번도 안 읽히는 순수 dead weight다(1.0GB). 남겨두면 배포 산출물이
+// ~1.1GB가 되어 GitHub Pages 사이트 한도(1GB)에 걸린다. 지우면 실측 1039.9MB → 61.4MB(5.9%).
+// 전제: 모든 이미지 소비 지점이 webpSrc를 경유한다 (<img src>·prefetch·onError 폴백 체인 전부).
+//   새 이미지 참조를 추가할 때 webpSrc를 빠뜨리면 릴리즈에서 404가 되므로 반드시 경유시킬 것.
 function webpGenPlugin(): Plugin {
   const enabled = process.env.GEN_WEBP === '1'
   return {
@@ -23,6 +29,8 @@ function webpGenPlugin(): Plugin {
       const { default: sharp } = await import('sharp')
       const imagesDir = path.join(options.dir ?? 'dist', 'images')
       let count = 0
+      let pngBytes = 0
+      let webpBytes = 0
       const failures: string[] = []
       const walk = async (dir: string): Promise<void> => {
         const entries = await fs.readdir(dir, { withFileTypes: true })
@@ -36,6 +44,10 @@ function webpGenPlugin(): Plugin {
           const dest = full.replace(/\.png$/i, '.webp')
           try {
             await sharp(full).webp({ quality: 82, effort: 5 }).toFile(dest)
+            // 변환 성공한 png만 삭제 — 실패분은 남겨두고 아래에서 빌드를 중단시킨다.
+            pngBytes += (await fs.stat(full)).size
+            webpBytes += (await fs.stat(dest)).size
+            await fs.unlink(full)
             count++
           } catch (err) {
             failures.push(`${full}: ${(err as Error).message}`)
@@ -53,7 +65,9 @@ function webpGenPlugin(): Plugin {
       if (count === 0) {
         this.error(`[webp-gen] 생성된 webp 0개 — ${imagesDir} 확인 필요. 릴리즈 빌드 중단.`)
       }
-      console.log(`[webp-gen] ${count}개 webp 생성 완료`)
+      const mb = (b: number) => (b / 1048576).toFixed(1)
+      console.log(`[webp-gen] ${count}개 webp 생성 + 원본 png 삭제 완료 — `
+        + `${mb(pngBytes)}MB → ${mb(webpBytes)}MB (${(webpBytes / pngBytes * 100).toFixed(1)}%)`)
     },
   }
 }

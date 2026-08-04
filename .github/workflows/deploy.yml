@@ -35,10 +35,14 @@ jobs:
         working-directory: ./game
         run: npm run lint
 
-      # 게이트 2 — 타입체크 + 번들 빌드 (tsc -b && vite build)
-      - name: Typecheck & Build
+      # 게이트 2 — 타입체크 + 번들 빌드 + 이미지 webp 트랜스코딩 (GEN_WEBP=1)
+      # build:release 를 쓰는 이유: 런타임(webpSrc)은 .webp만 요청하는데 일반 build는 png를
+      # 그대로 남겨 배포되어, 실서버가 생 png 1.0GB를 서비스하고 .webp는 404가 됐다.
+      # release 경로는 webp 생성 후 원본 png를 지워 배포 산출물을 1.0GB→64MB로 떨어뜨린다.
+      # PR에서도 같은 경로를 돌려야 webp 누락(=실서버 404)을 머지 전에 잡을 수 있다.
+      - name: Typecheck & Build (release — webp)
         working-directory: ./game
-        run: npm run build
+        run: npm run build:release
 
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
