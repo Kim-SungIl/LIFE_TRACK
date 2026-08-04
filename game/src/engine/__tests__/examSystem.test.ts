@@ -322,4 +322,46 @@ describe('컨디션 귀인 (조건부 시험 코멘트)', () => {
       expect(elem.comment).not.toMatch(/시험지 앞에서 자꾸 멍해졌다/);
     });
   });
+
+  // 뮤테이션 검수에서 드러난 구멍 보강 (HIGH_FATIGUE를 60→95로 옮겨도 위 테스트는 전부 통과했다).
+  // 위 테스트들은 임계값을 소스에서 읽으므로 "동작"은 잠그지만 "임계 위치"는 안 잠근다.
+  // 진짜 불변식은 **침묵 구간이 없어야 한다**는 것 — 점수가 실질적으로 깎이는 피로 구간이라면
+  // 반드시 그 원인을 지목해야 한다. HIGH_FATIGUE가 페널티 구간보다 높게 밀리면 이 테스트가 잡는다.
+  it('점수가 깎이는 피로 구간에 침묵 구간이 없다', () => {
+    const scoreAt = (fatigue: number) => {
+      const r = generateMockExamResult(
+        cloneForExam(highState({ mentalState: 'normal', fatigue })), 'normal');
+      return { score: r.average, comment: r.comment };
+    };
+    const base = scoreAt(0).score;
+    // 결정론적 rand(±12)가 섞이므로, 노이즈를 넘는 하락(≥5점)만 "실질 하락"으로 본다.
+    const MATERIAL_DROP = 5;
+    const silent: number[] = [];
+    for (let f = 10; f <= 100; f += 10) {
+      const { score, comment } = scoreAt(f);
+      const dropped = base - score >= MATERIAL_DROP;
+      // 강한 단계 + 약한 단계 모두 "원인을 지목함"으로 인정 (톤은 달라도 귀인은 귀인)
+      const attributed = /손이 안 나갔다|잠이 모자란|머리가 하얘|집중이 끝까지 안 갔다/.test(comment);
+      if (dropped && !attributed) silent.push(f);
+    }
+    expect(silent, `피로 ${silent.join('/')}에서 점수는 깎였는데 원인을 지목하지 않는다`).toEqual([]);
+  });
+
+  // 위 테스트는 "지목했는지"만 본다 — HIGH_FATIGUE를 위로 밀면 약한 단계가 전 구간을 덮어
+  // 침묵은 없지만 가장 심한 피로에도 가벼운 문장이 붙는다(뮤테이션 M6로 확인). 톤↔심각도를 잠근다.
+  it('가장 점수가 깎이는 피로 구간에는 강한 문장이 붙는다', () => {
+    const sweep = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(fatigue => {
+      const r = generateMockExamResult(
+        cloneForExam(highState({ mentalState: 'normal', fatigue })), 'normal');
+      return { fatigue, score: r.average, comment: r.comment };
+    });
+    const worst = sweep.reduce((a, b) => (b.score < a.score ? b : a));
+    expect(worst.comment, `최악 구간(피로 ${worst.fatigue})에 약한 문장이 붙었다`)
+      .toMatch(/잠이 모자란/);
+    expect(worst.comment).not.toMatch(/집중이 끝까지 안 갔다/);
+  });
+  // 뮤테이션 검수 결과(8종): 7종 CAUGHT. 유일한 미검출은 HIGH_FATIGUE 60→75인데,
+  // 이는 동일 페널티 밴드(-6은 60~79) 안에서의 톤 조정이라 회귀가 아니라 튜닝이다 —
+  // 잠그려면 60을 하드코딩해야 하고 그건 [[project_contract_test_mutation_check]]가 피하려는
+  // false lock 쪽에 가깝다. 밴드를 넘는 이동(60→95)은 위 테스트가 잡는다.
 });

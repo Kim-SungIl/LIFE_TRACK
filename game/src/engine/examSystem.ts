@@ -373,10 +373,15 @@ function generateComment(
 ): string {
   if (state.mentalState === 'burnout') return '컨디션이 최악이었다. 시험 중에 멍하니 앉아있었다...';
   if (state.mentalState === 'tired') return '피곤한 상태로 시험을 봤다. 실력 발휘가 안 됐다.';
-  // 고피로(mentalState는 normal이지만 fatigue가 높은 구간)도 getCommonMod에서 -6~-10을 맞는다.
+  // 고피로(mentalState는 normal이지만 fatigue가 높은 구간)도 getCommonMod에서 -3~-10을 맞는다.
   // 초등은 페널티가 -2로 약하고 코멘트 톤이 격려체라 제외 — 중등·고등만 원인을 지목한다.
-  if (schoolLevel !== 'elementary' && state.fatigue >= HIGH_FATIGUE) {
-    return '시험지 앞에서 자꾸 멍해졌다. 공부를 안 한 게 아니라, 쉬지를 못했다.';
+  if (schoolLevel !== 'elementary') {
+    if (state.fatigue >= HIGH_FATIGUE) {
+      return '시험지 앞에서 자꾸 멍해졌다. 공부를 안 한 게 아니라, 쉬지를 못했다.';
+    }
+    if (state.fatigue >= MILD_FATIGUE) {
+      return '아는 건 다 썼는데 마지막 몇 문제에서 힘이 빠졌다.';
+    }
   }
 
   const best = (Object.keys(subjects) as SubjectKey[]).reduce((a, b) => subjects[a].score > subjects[b].score ? a : b);
@@ -500,16 +505,23 @@ function generateTeacherReaction(
 //   느낌과 원인만 말한다. 밸런스는 손대지 않는다.
 //
 // 반환 null = 컨디션이 성적을 깎지 않았음(정상 코멘트로 폴백).
-type ConditionCause = 'burnout' | 'tired' | 'fatigue';
+type ConditionCause = 'burnout' | 'tired' | 'fatigue' | 'fatigueMild';
 
-// 고피로 임계 60 = fatiguePenalty가 -6으로 커지는 구간(<40:0 / <60:-3 / <80:-6 / 이상:-9).
-// mentalState가 normal이어도 여기 걸리면 등급이 실질적으로 깎이므로 침묵하면 안 된다.
+// 피로 임계는 페널티 곡선의 실제 변곡점에 맞춘다 —
+//   mock:  <40:0 / <60:-3 / <80:-6 / 이상:-9   (generateMockExamResult)
+//   내신:  <20:+3 / <40:0 / <60:-3 / <80:-6 / 이상:-10  (getCommonMod, 중등·고등)
+// 두 단계로 나누는 이유: 잘 쉰 학생(+3) 대비 피로 40~59는 6점 스윙으로 등급컷 근처에선
+// 한 등급이 왔다갔다 하지만, 그 구간에 "며칠째 잠이 모자란" 같은 강한 문장을 쓰면 과하다.
+// 약한 단계를 따로 둬서 "점수가 깎이는데 아무 말도 안 하는 구간"을 없애면서 톤을 지킨다.
+// (계약 테스트 '침묵 구간이 없다'가 이 정합을 잠근다 — 임계를 페널티 구간 위로 밀면 실패한다.)
+const MILD_FATIGUE = 40;
 const HIGH_FATIGUE = 60;
 
 function conditionCause(state: GameState): ConditionCause | null {
   if (state.mentalState === 'burnout') return 'burnout';
   if (state.mentalState === 'tired') return 'tired';
   if (state.fatigue >= HIGH_FATIGUE) return 'fatigue';
+  if (state.fatigue >= MILD_FATIGUE) return 'fatigueMild';
   return null;
 }
 
@@ -520,6 +532,8 @@ const MOCK_CONDITION_COMMENT: Record<ConditionCause, string> = {
   // tired: 기존엔 등급 코멘트로 흘러가 "더 공부하라"는 잘못된 신호를 줬다.
   tired: '아는 문제였는데 손이 안 나갔다. 실력이 아니라 몸이 문제였다.',
   fatigue: '풀 수 있는 문제를 놓쳤다. 며칠째 잠이 모자란 게 답안지에 그대로 남았다.',
+  // 약한 단계 — 원인은 짚되 톤은 가볍게(피로 40~59는 흔한 구간이라 과한 문장은 잔소리가 된다)
+  fatigueMild: '집중이 끝까지 안 갔다. 조금 더 쉬고 봤으면 달랐을 것 같다.',
 };
 
 function generateMockComment(mockGrade: number, state: GameState): string {
@@ -554,6 +568,7 @@ const MOCK_CONDITION_TEACHER: Record<ConditionCause, string> = {
   burnout: '"성적 얘기는 나중에 하자. 지금은 좀 쉬어야 해. 이건 노력으로 되는 게 아니야."',
   tired: '"공부량 문제가 아니야. 너 요즘 잠 몇 시간 자니? 거기서부터 손 봐야 해."',
   fatigue: '"문제집 더 푸는 걸론 안 올라가. 주말에 하루는 진짜로 쉬어. 그게 공부야."',
+  fatigueMild: '"실력은 붙었어. 시험날 컨디션만 맞추면 한 등급은 더 나온다."',
 };
 
 function generateMockTeacherReaction(mockGrade: number, state: GameState): string {
@@ -574,6 +589,7 @@ const SUNEUNG_CONDITION_COMMENT: Record<ConditionCause, string> = {
   burnout: '7년을 달려와서, 가장 중요한 날에 몸이 멈춰 섰다. 실력을 쓸 기회조차 없었다.',
   tired: '아는 문제였다. 다 아는 문제였는데, 그날의 나는 그걸 꺼낼 힘이 없었다.',
   fatigue: '마지막 몇 달을 갈아넣은 대가를 하필 그날 치렀다. 조금 덜 하고 더 잤어야 했다.',
+  fatigueMild: '실력만큼은 나왔을까. 그날 아침의 무거웠던 머리가 오래 마음에 남았다.',
 };
 
 function generateSuneungComment(mockGrade: number, state: GameState): string {
