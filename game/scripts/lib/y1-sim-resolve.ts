@@ -13,6 +13,7 @@ import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from '../../sr
 import { scaleStatChange, scaleIntimacyChange } from '../../src/engine/gameEngine';
 import { applyParentIntimacyDelta } from '../../src/engine/parentIntimacy';
 import { absWeek } from '../../src/engine/weekMath';
+import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import { getAvailableNpcEvents, getNpcSmalltalk } from '../../src/engine/talkSystem';
 import { cloneGameState } from '../../src/engine/stateClone';
 import type { GameState } from '../../src/engine/types';
@@ -157,6 +158,9 @@ export function talkToNpcLikeStore(state: GameState, npcId: string): GameState {
   const s = state;
   const npc = s.npcs.find(n => n.id === npcId);
   if (!npc) return state;
+  // store.talkToNpc와 동일: 부재(전출·졸업) 친구는 말 걸기 자체가 막힌다.
+  // 미러가 이 게이트를 빠뜨리면 sim이 존재하지 않는 게임을 측정한다(하네스 드리프트).
+  if (!isNpcInteractable(npc, s)) return state;
 
   // 친밀도 30+ & 이번 주 pending일 때만 미니 이벤트 후보 — 그 외엔 잡담 한 줄
   const eligible = npc.intimacy >= 30 && s.npcEventPendingThisWeek;

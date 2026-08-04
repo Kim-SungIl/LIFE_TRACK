@@ -19,6 +19,7 @@ import { GAME_EVENTS } from '../../src/engine/events';
 import { SCHOOL_LIFE_EVENTS } from '../../src/engine/events/school-life';
 import { FOLLOWUP_EVENT_IDS } from '../../src/engine/events/constants';
 import type { GameState, ParentStrength } from '../../src/engine/types';
+import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 
 const WEEKS = 336; // 7년 × 48주
 const schoolLifeIds = new Set(SCHOOL_LIFE_EVENTS.map(e => e.id));
@@ -82,7 +83,8 @@ function runOnce(seed: number, gender: 'male' | 'female', parents: [ParentStreng
     if (st.phase === 'weekday') {
       // 사교형: 주마다 met NPC 전원 + 집에 말걸기 (미니톡/부모 이벤트 발동 — 주당 각 1개, pending 소비)
       if (mode === 'social') {
-        for (const n of st.npcs) { if (n.met) api.talkToNpc(n.id); }
+        // 부재(전출·졸업) 친구는 말 걸기 불가 — 플레이어가 실제로 할 수 있는 것만 시행한다.
+        for (const n of st.npcs) { if (isNpcInteractable(n, st)) api.talkToNpc(n.id); }
         const r = api.talkToHome();
         if (r.kind === 'event' && r.event.choices && r.event.choices.length > 0) {
           api.resolveParentTalkChoice(r.event.id, 0);

@@ -8,7 +8,7 @@ import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../..
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
 import { ShopItem } from '../../../engine/shopSystem';
 import { TalkActionResult, getLastSavedAt } from '../../../engine/store';
-import { isNpcEnrolled, relationshipSignal, npcDeparture } from '../../../engine/relationshipSignals';
+import { isNpcEnrolled, isNpcInteractable, relationshipSignal } from '../../../engine/relationshipSignals';
 import { Shop } from '../../Shop';
 import { Dialog } from '../../Dialog';
 import { ConfirmDialog } from '../../ConfirmDialog';
@@ -337,7 +337,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {(() => {
         const metNpcs = state.npcs.filter(n => n.met);
         if (metNpcs.length === 0) return null;
-        const present = metNpcs.filter(n => !npcDeparture(n, state));
+        // 부재(전출·졸업) 친구는 챙길 수 없다 — 말 걸기가 막혀 lastInteractionWeek 갱신 수단이 없으므로
+        // warn cue에 올리면 해소 불가능한 잔소리가 된다(전출만 걸러선 졸업한 하은이 통과했다).
+        const present = metNpcs.filter(n => isNpcInteractable(n, state));
         // 상태 라벨(절친/친구)은 '지훈 친구'처럼 어색해서 제거(사용자 피드백).
         // 챙길 친구(방치 warn)가 있을 때만 행동 단서를 남긴다.
         const warnFriend = present.find(n => relationshipSignal(n, state)?.tone === 'warn');

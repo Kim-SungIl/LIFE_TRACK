@@ -210,6 +210,18 @@ function isRegretPoolSlot(s: MemorySlot): boolean {
   return (s.toneTag != null && REGRET_TONES.includes(s.toneTag)) || REGRET_CATEGORIES.includes(s.category);
 }
 
+// 그 NPC와의 가장 무거운 기억 한 줄 — 부재(전출·졸업) 친구의 상세 카드에서 인사말 자리를 대신한다.
+// 이미 플레이어가 획득한 문장의 읽기 전용 반사다(신규 대사 0줄·친밀도 0·RNG 미호출) —
+// 떠난 친구가 "지금" 새로 반응하면 이별 서사가 깎이므로, 새 대사 대신 기억을 다시 읽게 한다.
+// 카테고리는 걸러내지 않는다: 상처(betrayal)도 그 관계의 일부이고, 여기는 "아직 이어진 사이"를
+// 주장하는 자리가 아니라 회상 자리다(엔딩 npcStories의 betrayal 제외와 목적이 다름).
+export function bestNpcRecall(state: GameState, npcId: string): string | null {
+  const mems = (state.memorySlots || [])
+    .filter(m => m.npcIds?.includes(npcId) ?? false)
+    .sort((a, b) => (b.importance - a.importance) || (b.year - a.year) || (b.week - a.week));
+  return mems[0]?.recallText ?? null;
+}
+
 // excludeTexts: 후회 레이어가 먼저 고른 recallText를 제외(레이어 순서 역전 — ending.ts에서
 // selectRegretHighlights를 먼저 호출해 그 본문을 넘긴다). 회고가 후회 재료를 선점해
 // "미처 닿지 못한 것"이 0장 되던 문제를, 후회가 자기 점수로 top-2를 먼저 확보하게 해 해소.

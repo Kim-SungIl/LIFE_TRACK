@@ -7,8 +7,9 @@
 // - 장면·선택을 지시하는 문장은 전부 variant(chose/fired 게이트) 뒤에 둔다. variant는 위에서부터
 //   첫 매치 — 구체 조건이 앞. 매치 시 sourceEvents 발 recallText 를 회상 후보에서 제외해
 //   "프레임=회상" 동문반복을 막는다.
-// - 도윤은 전출 후 상호작용 불가 + 주간 자연 감쇠(floor 20)로 엔딩 시점 친밀도가 항상 20대라
-//   티어 흐름으로는 영구 사문 — 친밀도 무관 이력 게이트의 별도 레인(departed)으로 회수한다.
+// - 도윤은 전출 후 상호작용 불가(말 걸기·선물 게이트 = relationshipSignals.isNpcInteractable) +
+//   주간 자연 감쇠(floor 20)로 엔딩 시점 친밀도가 항상 20대라 티어 흐름으로는 영구 사문 —
+//   친밀도 무관 이력 게이트의 별도 레인(departed)으로 회수한다.
 import { GameState } from './types';
 
 // ===== 이벤트 이력 조회 — resolvedChoice 해석의 단일 진입점 =====
