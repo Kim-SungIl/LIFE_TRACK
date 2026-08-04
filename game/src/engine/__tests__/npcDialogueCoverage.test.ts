@@ -57,6 +57,21 @@ describe('getNpcDialogue — 전 캐스트 커버리지', () => {
     }
   });
 
+  it('도윤의 "6학년도 끝" 인사말은 겨울방학에만 나온다 (여름방학엔 2학기가 남아 모순)', () => {
+    const summer = new Set<string>();
+    for (let i = 0; i < 60; i++) {
+      summer.add(getNpcDialogue('doyun', 55, stateAt({ year: 1, week: 22, isVacation: true })));
+    }
+    expect([...summer].some(l => l.includes('6학년도 끝'))).toBe(false);
+    expect([...summer].some(l => l.includes('중학교 가면'))).toBe(false);
+
+    const winter = new Set<string>();
+    for (let i = 0; i < 60; i++) {
+      winter.add(getNpcDialogue('doyun', 55, stateAt({ year: 1, week: 45, isVacation: true })));
+    }
+    expect([...winter].some(l => l.includes('6학년도 끝'))).toBe(true);
+  });
+
   it('미등록 id는 여전히 방어적으로 "..."을 반환한다 (폴백 계약 유지)', () => {
     expect(getNpcDialogue('nobody-here', 50, stateAt())).toBe(EMPTY);
   });
