@@ -286,7 +286,7 @@ export function generateMockExamResult(
 
   const comment = generateMockComment(mockGrade, state);
   const parentReaction = generateMockParentReaction(mockGrade, state);
-  const teacherReaction = generateMockTeacherReaction(mockGrade);
+  const teacherReaction = generateMockTeacherReaction(mockGrade, state);
 
   return {
     subjects,
@@ -346,7 +346,7 @@ export function generateSuneungResult(state: GameState): ExamResult {
     average: suneungScore,
     rank: null,
     prevRank: null,
-    comment: generateSuneungComment(mockGrade),
+    comment: generateSuneungComment(mockGrade, state),
     parentReaction: generateSuneungParentReaction(mockGrade, state),
     teacherReaction: generateSuneungTeacherReaction(mockGrade),
     examType: 'suneung',
@@ -373,6 +373,11 @@ function generateComment(
 ): string {
   if (state.mentalState === 'burnout') return '컨디션이 최악이었다. 시험 중에 멍하니 앉아있었다...';
   if (state.mentalState === 'tired') return '피곤한 상태로 시험을 봤다. 실력 발휘가 안 됐다.';
+  // 고피로(mentalState는 normal이지만 fatigue가 높은 구간)도 getCommonMod에서 -6~-10을 맞는다.
+  // 초등은 페널티가 -2로 약하고 코멘트 톤이 격려체라 제외 — 중등·고등만 원인을 지목한다.
+  if (schoolLevel !== 'elementary' && state.fatigue >= HIGH_FATIGUE) {
+    return '시험지 앞에서 자꾸 멍해졌다. 공부를 안 한 게 아니라, 쉬지를 못했다.';
+  }
 
   const best = (Object.keys(subjects) as SubjectKey[]).reduce((a, b) => subjects[a].score > subjects[b].score ? a : b);
   const worst = (Object.keys(subjects) as SubjectKey[]).reduce((a, b) => subjects[a].score < subjects[b].score ? a : b);
@@ -483,10 +488,43 @@ function generateTeacherReaction(
   return '"무난하게 잘 하고 있어. 꾸준히 하자."';
 }
 
+// ===== 컨디션 귀인 (조건부 서사) =====
+// 시험 점수를 실제로 깎은 게 실력이 아니라 컨디션일 때, 그 사실을 서사로 지목한다.
+// 배경: mockScore = ea*0.98 + mental*0.15 + 피로패널티 + 상태패널티 인데
+//   상태패널티(tired -8 / burnout -15)와 피로패널티(최대 -9)의 합이 최대 -17로,
+//   학업 80 초과분이 0.5배로 눌리는 것(82→91 올려도 실효 +4.5)보다 3배 이상 크다.
+//   즉 "공부량"보다 "컨디션"이 등급을 지배하는데, 기존 코멘트는 burnout 한 줄만 언급하고
+//   tired·고피로는 침묵해서 플레이어가 성적이 왜 안 나오는지 알 방법이 없었다
+//   (능력치는 학업 A로 잘 나와 있고, 담임은 "약한 과목 공략"이라는 엉뚱한 처방을 준다).
+// 원칙: 수치·메커니즘은 노출하지 않는다("피로 59", "-8점" 금지). hide-numbers 정체성 유지 —
+//   느낌과 원인만 말한다. 밸런스는 손대지 않는다.
+//
+// 반환 null = 컨디션이 성적을 깎지 않았음(정상 코멘트로 폴백).
+type ConditionCause = 'burnout' | 'tired' | 'fatigue';
+
+// 고피로 임계 60 = fatiguePenalty가 -6으로 커지는 구간(<40:0 / <60:-3 / <80:-6 / 이상:-9).
+// mentalState가 normal이어도 여기 걸리면 등급이 실질적으로 깎이므로 침묵하면 안 된다.
+const HIGH_FATIGUE = 60;
+
+function conditionCause(state: GameState): ConditionCause | null {
+  if (state.mentalState === 'burnout') return 'burnout';
+  if (state.mentalState === 'tired') return 'tired';
+  if (state.fatigue >= HIGH_FATIGUE) return 'fatigue';
+  return null;
+}
+
 // ===== 모의고사 반응 =====
 
+const MOCK_CONDITION_COMMENT: Record<ConditionCause, string> = {
+  burnout: '컨디션이 최악이었다. 시험지를 보면서 머리가 하얘졌다...',
+  // tired: 기존엔 등급 코멘트로 흘러가 "더 공부하라"는 잘못된 신호를 줬다.
+  tired: '아는 문제였는데 손이 안 나갔다. 실력이 아니라 몸이 문제였다.',
+  fatigue: '풀 수 있는 문제를 놓쳤다. 며칠째 잠이 모자란 게 답안지에 그대로 남았다.',
+};
+
 function generateMockComment(mockGrade: number, state: GameState): string {
-  if (state.mentalState === 'burnout') return '컨디션이 최악이었다. 시험지를 보면서 머리가 하얘졌다...';
+  const cause = conditionCause(state);
+  if (cause) return MOCK_CONDITION_COMMENT[cause];
   if (mockGrade <= 2) return '전국 상위권. 이 페이스면 원하는 대학 갈 수 있다.';
   if (mockGrade <= 4) return '나쁘지 않은 성적이지만, 목표를 높이려면 더 필요하다.';
   if (mockGrade <= 6) return '중간 정도. 지금부터 올리면 아직 가능성은 있다.';
@@ -510,7 +548,17 @@ function generateMockParentReaction(mockGrade: number, state: GameState): string
   return '"음... 좀 더 노력이 필요할 것 같아."';
 }
 
-function generateMockTeacherReaction(mockGrade: number): string {
+// 담임은 "처방"을 주는 화자다. 컨디션이 병목일 때 과목 공략을 처방하면 오진이 되므로,
+// 그때는 처방 자체를 바꾼다 — 이 게임에서 담임은 유일하게 "덜 하라"고 말할 수 있는 어른이다.
+const MOCK_CONDITION_TEACHER: Record<ConditionCause, string> = {
+  burnout: '"성적 얘기는 나중에 하자. 지금은 좀 쉬어야 해. 이건 노력으로 되는 게 아니야."',
+  tired: '"공부량 문제가 아니야. 너 요즘 잠 몇 시간 자니? 거기서부터 손 봐야 해."',
+  fatigue: '"문제집 더 푸는 걸론 안 올라가. 주말에 하루는 진짜로 쉬어. 그게 공부야."',
+};
+
+function generateMockTeacherReaction(mockGrade: number, state: GameState): string {
+  const cause = conditionCause(state);
+  if (cause) return MOCK_CONDITION_TEACHER[cause];
   if (mockGrade <= 2) return '"이 성적이면 충분해. 컨디션 관리에 집중하자."';
   if (mockGrade <= 4) return '"가능성은 있어. 약한 과목 집중 공략하자."';
   if (mockGrade <= 6) return '"지금부터 진짜 시작이야. 아직 늦지 않았어."';
@@ -519,7 +567,18 @@ function generateMockTeacherReaction(mockGrade: number): string {
 
 // ===== 수능 반응 =====
 
-function generateSuneungComment(mockGrade: number): string {
+// 7년의 결말인데 기존엔 state를 아예 안 받아, 번아웃 상태로 수능을 봐도 컨디션 언급이 0이었다.
+// 수능은 다시 못 보는 시험이라 "쉬어라"는 처방이 성립하지 않는다 —
+// 조언이 아니라 회한으로 남긴다(엔딩 후회 레이어와 같은 톤).
+const SUNEUNG_CONDITION_COMMENT: Record<ConditionCause, string> = {
+  burnout: '7년을 달려와서, 가장 중요한 날에 몸이 멈춰 섰다. 실력을 쓸 기회조차 없었다.',
+  tired: '아는 문제였다. 다 아는 문제였는데, 그날의 나는 그걸 꺼낼 힘이 없었다.',
+  fatigue: '마지막 몇 달을 갈아넣은 대가를 하필 그날 치렀다. 조금 덜 하고 더 잤어야 했다.',
+};
+
+function generateSuneungComment(mockGrade: number, state: GameState): string {
+  const cause = conditionCause(state);
+  if (cause) return SUNEUNG_CONDITION_COMMENT[cause];
   if (mockGrade <= 2) return '12년의 노력이 빛을 발했다. 원하는 곳에 갈 수 있다.';
   if (mockGrade <= 4) return '나쁘지 않은 결과다. 선택지가 열려 있다.';
   if (mockGrade <= 6) return '아쉬운 결과지만, 인생은 수능이 전부가 아니다.';
