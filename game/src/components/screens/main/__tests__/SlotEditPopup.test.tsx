@@ -3,7 +3,7 @@
 // 헤더 분기·닫기·루틴 필터/자유시간/자동진행, weekend N칸 인접-동일-id 기록,
 // 동행 라우팅, 재편집 슬롯 한도, 방학 vacationLimit(pendingVacUse) 합산.
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { SlotEditPopup } from '../SlotEditPopup';
 import {
   ACTIVITIES,
@@ -52,10 +52,12 @@ function multiSlotVacation(slots: number): Activity {
   );
 }
 
-function vacationWithLimit(limit: number): Activity {
+// vacationLimit 검증용 — slots까지 지정한다. 용량(canSelect)이 disabled 사유로 끼어들지 않게
+// "여러 인스턴스를 깔고도 한 칸 더 들어갈 여유"를 만들 수 있는 활동이어야 한다.
+function vacationLimited(limit: number, slots: number): Activity {
   return pickActivity(
-    a => a.seasonGate === 'vacation-only' && a.vacationLimit === limit && a.slots >= 1,
-    `vacationLimit=${limit} 방학 활동이 없습니다`,
+    a => a.seasonGate === 'vacation-only' && a.vacationLimit === limit && a.slots === slots,
+    `vacationLimit=${limit}·slots=${slots} 방학 활동이 없습니다`,
   );
 }
 
@@ -205,31 +207,42 @@ describe('SlotEditPopup 헤더·닫기', () => {
 });
 
 describe('SlotEditPopup routine 목록 필터', () => {
-  it('routine1/2에서는 slots===1 && category!==rest만 노출되고, rest·다칸 활동은 없다', () => {
-    const multi = pickActivity(
-      a => a.slots >= 2 && a.category !== 'rest',
-      '다칸·비rest 활동이 없습니다',
-    );
-    const restAct = pickActivity(a => a.category === 'rest' && a.slots === 1, 'rest 1칸 활동이 없습니다');
-    const state = makeState();
-    renderPopup({
-      editingSlot: 'routine1',
-      state,
-      activities: [...getAvailableActivities(state), multi, restAct],
-    });
+  // routine1·routine2는 같은 필터 식을 공유하지만, 테스트가 routine1만 렌더하면
+  // routine2 경로가 갈라져 나갔을 때 잡지 못한다 → 두 슬롯 모두 렌더한다.
+  it.each(['routine1', 'routine2'] as const)(
+    '%s에서는 slots===1 && category!==rest만 노출되고, rest 카테고리·다칸 활동은 없다',
+    (slot) => {
+      const multi = pickActivity(
+        a => a.slots >= 2 && a.category !== 'rest',
+        '다칸·비rest 활동이 없습니다',
+      );
+      const restAct = pickActivity(a => a.category === 'rest' && a.slots === 1, 'rest 1칸 활동이 없습니다');
+      const occupied = oneSlotNonRest();
+      const state = makeState({ routineSlot2: occupied.id });
+      renderPopup({
+        editingSlot: slot,
+        state,
+        activities: [...getAvailableActivities(state), multi, restAct],
+      });
 
-    expect(
-      screen.getAllByRole('button').some(
-        el => el.getAttribute('aria-expanded') !== null && (el.textContent ?? '').includes(CAT_LABEL.rest),
-      ),
-    ).toBe(false);
+      // rest 카테고리는 헤더 자체가 렌더되지 않는다(해당 카테고리 활동 0개)
+      expect(
+        screen.getAllByRole('button').some(
+          el => el.getAttribute('aria-expanded') !== null && (el.textContent ?? '').includes(CAT_LABEL.rest),
+        ),
+      ).toBe(false);
 
-    expandCategory(oneSlotNonRest().category);
-    expect(screen.queryByRole('button', { name: (_n, el) => {
-      if (el?.getAttribute('aria-pressed') == null) return false;
-      return (el.textContent ?? '').includes(multi.name);
-    } })).not.toBeInTheDocument();
-  });
+      // 다칸 활동은 '어느 카테고리를 펼쳐도' 없다 — 접힌 카테고리에 숨어 통과하는 것을 막으려
+      // 렌더된 카테고리를 전부 펼친 뒤 확인한다.
+      for (const header of screen.getAllByRole('button')) {
+        if (header.getAttribute('aria-expanded') === 'false') fireEvent.click(header);
+      }
+      const multiBtn = screen.queryAllByRole('button').find(
+        el => el.getAttribute('aria-pressed') != null && (el.textContent ?? '').includes(multi.name),
+      );
+      expect(multiBtn).toBeUndefined();
+    },
+  );
 
   it('routine2에서는 state.routineSlot2와 같은 id가 목록에서 제외된다', () => {
     const occupied = oneSlotNonRest();
@@ -480,47 +493,44 @@ describe('SlotEditPopup 재편집·방학 한도', () => {
     expect(btn).not.toBeDisabled();
   });
 
-  it('vacationLimit 합산: 다른 슬롯에 이미 배치된 인스턴스는 disabled, 편집 중 슬롯의 1인스턴스는 제외되어 가능', () => {
-    const limited = vacationWithLimit(1);
+  // 이 계약은 교란 요인 두 개를 먼저 제거해야 의미가 생긴다:
+  //  (a) 용량 — maxSlots를 넉넉히(6) 줘 currentSlots + slots <= maxSlots가 항상 참이므로
+  //      disabled가 뜬다면 사유는 vacationLimit뿐이다.
+  //  (b) isSel — 편집 중 슬롯의 활동은 selected로 내려가 vacLimitReached가 항상 false다.
+  //      따라서 "편집 중 1인스턴스 제외"는 disabled로는 관측 불가 → 잔여 배지 텍스트로 잠근다.
+  it('vacationLimit 합산: 다른 슬롯 배치분이 한도를 채우면 disabled, 편집 중 슬롯의 1인스턴스는 잔여 표시에서 빠진다', () => {
+    const limited = vacationLimited(2, 2); // 2칸·방학당 2회
     const state = makeState({ isVacation: true, money: 999, vacationActivityCounts: {} });
-    const placed = Array.from({ length: limited.slots }, () => limited.id);
-    // 슬롯0부터 배치, 남는 칸이 있으면 빈 채움
-    const selected = [...placed];
-    while (selected.length < 4) selected.push('');
-    // 빈 문자열은 collapse에서 skip — ActivityPicker selected 하이라이트용으로는 id만
+    const placed = [limited.id, limited.id, limited.id, limited.id]; // 인접 2칸 × 2인스턴스
 
-    // 다른 슬롯(비어 있는 weekend4) 편집 → pendingUse=1 → disabled
-    const { unmount } = render(
-      <SlotEditPopup
-        editingSlot={`weekend${placed.length + 1}`}
-        setEditingSlot={vi.fn()}
-        state={state}
-        activities={getAvailableActivities(state)}
-        selectedActivities={placed}
-        setSelectedActivities={vi.fn()}
-        npcChoices={{}}
-        maxSlots={4}
-        currentSlots={placed.length}
-        availableMoney={999}
-        onSetRoutine={vi.fn()}
-        setNpcSelectFor={vi.fn()}
-        setLastReaction={vi.fn()}
-      />,
-    );
-    const disabledBtn = activityButton(limited);
-    expect(disabledBtn).toBeDisabled();
-    unmount();
+    // (1) 빈 슬롯(weekend5) 편집 → 편집 중 활동 없음 → pendingUse=2 = limit → 한도 도달
+    renderPopup({
+      editingSlot: 'weekend5',
+      state,
+      activities: getAvailableActivities(state),
+      selectedActivities: placed,
+      maxSlots: 6,
+      currentSlots: 4,
+      availableMoney: 999,
+    });
+    const reached = activityButton(limited);
+    expect(reached).toBeDisabled();
+    expect(within(reached).getByText('이번 방학 한도 도달')).toBeInTheDocument();
+    cleanup();
 
-    // 편집 중 슬롯(weekend1) 재선택 → 인스턴스 제외 → disabled 아님
+    // (2) 그 활동이 놓인 슬롯(weekend1) 편집 → 편집 중 1인스턴스가 카운트에서 빠져 (1/2)
     renderPopup({
       editingSlot: 'weekend1',
       state,
       activities: getAvailableActivities(state),
       selectedActivities: placed,
-      maxSlots: 4,
-      currentSlots: placed.length,
+      maxSlots: 6,
+      currentSlots: 4,
       availableMoney: 999,
     });
-    expect(activityButton(limited)).not.toBeDisabled();
+    const editing = activityButton(limited);
+    expect(
+      within(editing).getByText(`방학당 ${limited.vacationLimit}회 (1/${limited.vacationLimit})`),
+    ).toBeInTheDocument();
   });
 });
