@@ -394,10 +394,12 @@ describe('컨디션 귀인 (조건부 시험 코멘트)', () => {
     // 수능 당일 컨디션이 점수에 안 들어간다는 사실 자체를 못박는다. 이게 깨지면(= 산식에
     // 컨디션이 들어가면) 위 "그 몇 달" 문장은 오히려 부정확해지므로 같이 재검토해야 한다.
     it('수능 점수는 당일 컨디션과 무관하다 (문장 층위의 근거)', () => {
-      const scores = [
+      const conditions: Partial<GameState>[] = [
         { mentalState: 'normal', fatigue: 0 }, { mentalState: 'normal', fatigue: 95 },
         { mentalState: 'tired', fatigue: 95 }, { mentalState: 'burnout', fatigue: 95 },
-      ].map(ov => generateSuneungResult(cloneForExam(highState({ week: 35, ...ov }))).average);
+      ];
+      const scores = conditions.map(
+        ov => generateSuneungResult(cloneForExam(highState({ week: 35, ...ov }))).average);
       expect(new Set(scores).size, `수능 점수가 당일 컨디션에 따라 달라졌다: ${scores.join('/')}`).toBe(1);
     });
 
