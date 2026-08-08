@@ -143,7 +143,7 @@ interface NpcDialoguePool {
   priority: number;
 }
 
-const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
+export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
   jihun: [
     { priority: 100, condition: (int) => int >= 80, lines: [
       '야, 너 오늘 뭐해? 같이 놀자!',
@@ -382,12 +382,18 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
   // ===== 인사말 공백 4인 편입 (2026-08-04) =====
   // 이전엔 이 4명의 키가 없어 getNpcDialogue가 '...'을 반환 → 상세 카드 인사말이 빈 채로 떴다
   // (재적 중에도. 도윤은 Y1, 서아·시우·예린은 등장 이후 상시). 잡담 풀(#367)의 남은 절반.
-  // 톤 SSOT는 talkData/npcSmalltalk·miniEvents와 아크 이벤트. 상위 reach 전용 모티프
+  // 톤 SSOT는 talkData/npcSmalltalk·miniEvents와 아크 이벤트 — 단, **문장을 가져오면 안 된다**.
+  // NpcDetailModal은 인사말과 잡담을 같은 말풍선 자리에 연속으로 띄우므로(카드 → '말 걸기'),
+  // 문장이 겹치면 말을 걸어도 아무 일도 안 일어난 것처럼 보인다. 회귀 가드는
+  // __tests__/npcDialogueCoverage.test.ts의 '잡담 풀과 문장이 겹치지 않는다'.
+  // 상위 reach 전용 모티프
   // (서아 찢어 맡긴 페이지·끝 문장, 시우 소실점·텀블러 수수, 예린 미수금·결산선)는 쓰지 않는다 —
   // 그 컷을 안 본 런에서 거짓이 되고, 본 런에서도 절정을 인사말이 선점한다(#364에서 세운 원칙).
   // 학교급 분기 없음: 서아는 Y2~Y7을 걸치므로 중·고 어디서나 성립하는 소재(노트·펜·이어폰·창가)만 썼다.
   doyun: [
-    // Y1 전용 — Y2 W2 전출 후엔 부재 잔상 카드(회상 1줄)로 빠져 이 풀이 안 쓰인다(#371).
+    // 사실상 Y1 전용 — 부재 판정(npcAbsence)은 연도가 아니라 doyun-school-split 발동 기록을 보고,
+    // 그 이벤트는 Y2 W2 고정이라 Y2 W1 한 주는 아직 이 풀이 쓰인다(그 시점엔 플레이어도 전출을
+    // 모르므로 의도된 상태). 그 뒤로는 부재 잔상 카드(회상 1줄)로 빠진다(#371).
     { priority: 100, condition: (int) => int >= 80, lines: [
       '너한테는 괜찮은 척 안 해도 되겠지. 좀 피곤하다, 오늘.',
       '나 진짜 잘하고 싶은 건 축구인데. 엄마는 학원 얘기만 해.',
@@ -396,14 +402,14 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     ]},
     { priority: 80, condition: (int) => int >= 50, lines: [
       '점심에 축구할 건데, 너도 나올래? 한 명이면 편이 맞아.',
-      '만화책 다음 권 가져왔어. 순번표에 네 이름 위에 적어놨어.',
-      '칠판 순번 내가 대신 지웠어. 뭐, 별거 아니야.',
+      '만화책 다음 권 가져왔어. 이번엔 네가 먼저 봐.',
+      '칠판 당번 내가 대신 했어. 뭐, 별거 아니야.',
       '오늘 체육 두 시간이래. 이런 날은 학교 오는 게 낫지.',
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
       '어, 왔어? 오늘 뭐 할 거야?',
       '선생님이 또 나 부르시네. 금방 올게.',
-      '무릎 좀 까졌는데 괜찮아. 진짜 괜찮아.',
+      '체육복 무릎 쪽 터졌어. 엄마한텐 말 안 할 거야. 뭐, 괜찮아.',
     ]},
     { priority: 0, condition: () => true, lines: [
       '어, 안녕.',
@@ -415,9 +421,10 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '나 시험 잘 봐야 되는데. 잘 봐야 축구 계속 하래.',
       '너는 준비 다 했지? 나도 뭐, 괜찮아.',
     ]},
-    // 겨울방학(W43+)만 — "6학년도 끝"은 2학기가 남은 여름방학(W20~24)에 뜨면 학사일정과 모순.
-    // 도윤은 Y2 W2에 전출하므로 이 겨울이 마지막 방학이라는 게 회고적으로 맞다.
-    { priority: 86, condition: (_, s) => s.isVacation && s.week >= 43, lines: [
+    // 겨울방학 중 졸업식 전(W43~45)만 — "6학년도 끝"은 미래형이라 두 방향으로 모순이 난다:
+    // 2학기가 남은 여름방학(W20~24)에 뜨면 이르고, 초등 졸업식(Y1 W46, events/school.ts:218) 뒤인
+    // W46~48에 뜨면 이미 끝난 뒤다. 도윤은 Y2 W2에 전출하므로 이 겨울이 마지막이라는 건 맞다.
+    { priority: 86, condition: (_, s) => s.isVacation && s.week >= 43 && s.week <= 45, lines: [
       '방학 지나면 우리 6학년도 끝이네. 좀 이상하다.',
       '중학교 가면 반 갈리겠지. 뭐, 그래도 괜찮아.',
       '겨울엔 운동장이 얼어서 공이 잘 안 굴러. 그래도 나오지만.',
@@ -437,13 +444,13 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     ]},
     { priority: 80, condition: (int) => int >= 50, lines: [
       '한 줄만 보여줄까. 한 줄만이야.',
-      '이 문장, 소리 내서 읽으면 이상해. 네가 한번 읽어볼래?',
+      '여기 한 줄만 자꾸 걸려. 눈으로 읽을 땐 괜찮은데.',
       '방금 쓴 거 지웠어. 봤어? 안 봤으면 됐어.',
       '조용한 데 갈 거야. …같이 갈 거면 말 안 걸어도 돼.',
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
       '어, 왔네. 이거 쓰던 중인데 급한 건 아니야.',
-      '이 펜, 소리 때문에 써. 조용한 펜은 쓴 것 같지가 않아서.',
+      '노트 두 권째야. 한 권은 다 못 채우고 덮었고.',
       '창가 자리 비었어. 알려주는 거야, 그냥.',
     ]},
     { priority: 0, condition: () => true, lines: [
@@ -453,32 +460,32 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     ]},
     { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '시험기간엔 다들 조용해져서 좋아. 나만 원래대로고.',
-      '문제집 사이에 노트 끼워놨어. 들키면 좀 창피한데.',
+      '시험기간엔 문제집이 제일 두꺼운 가림막이야. 그것만 좋아.',
       '외운 건 다 잊어버릴 텐데, 어제 쓴 한 줄은 기억나. 이상하지.',
     ]},
     { priority: 85, condition: (_, s) => s.isVacation, lines: [
       '방학엔 하루에 두 장씩 쓰기로 했어. 지킬지는 모르겠고.',
       '방학이라 도서실이 비어서 좋아. 자리 안 뺏겨.',
-      '개학하면 이거 다 쓸 수 있을까. …물어본 건 아니야.',
+      '방학이 길어서 좋아. 개학이 오는 것만 빼고.',
     ]},
   ],
   siwoo: [
     // 파일 헤더 규칙 준수: 감정 형용사 0, 사물·공간·동선으로만 말한다(events/npc/siwoo.ts).
     { priority: 100, condition: (int) => int >= 80, lines: [
-      '옥상 문 열려 있어. 바람 방향이 어제랑 달라.',
+      '옥상 문, 오늘은 안 잠갔어. 두 번 확인했고.',
       '이 시간엔 이 자리에 빛이 들어와. 네가 앉던 자리야.',
       '오늘 도면 한 장 더 그렸어. 볼 사람이 있으면 펼치고.',
-      '텀블러 두 개 가져왔어. 하나는 안 비었어.',
+      '물통 두 개 챙겨왔어. 하나는 손잡이가 왼쪽이야.',
     ]},
     { priority: 80, condition: (int) => int >= 50, lines: [
       '저 크레인 오늘 각도가 바뀌었어. 사흘 만이야.',
-      '이 복도, 오후 두 시엔 반대편 끝까지 해가 들어. 지금이야.',
-      '매점 줄은 왼쪽이 빨라. 기둥 때문에 다들 오른쪽으로 서.',
-      '공터에 뭐가 서는지 보러 갈 건데. 두 골목만 틀면 돼.',
+      '이 복도, 그림자가 한쪽으로만 누워. 지금 네가 선 데가 경계야.',
+      '매점 문은 미는 쪽이 하나뿐이야. 다들 확인 안 하고 당겨.',
+      '오늘은 지반 파는 날이야. 단면은 하루만 보여.',
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
-      '이 계단, 마지막 세 칸은 색이 옅어. 다들 뛰어내려서.',
-      '후문 옆 벽돌이 제일 오래됐어. 색이 다 다르게 바래.',
+      '이 층만 바닥재가 두 종류야. 경계에서 발소리가 바뀌어.',
+      '후문 담장, 아래 세 줄만 이음매가 달라. 나중에 덧쌓은 거야.',
       '어. 여기 서 있으면 운동장이 다 보여.',
     ]},
     { priority: 0, condition: () => true, lines: [
@@ -499,21 +506,21 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
   ],
   yerin: [
     { priority: 100, condition: (int) => int >= 80, lines: [
-      '너한테 쓰는 시간은 회수 계획을 안 세워. 처음부터 그런 계좌야.',
-      '오늘 하루 결산하면 적자야. 근데 지금은 흑자.',
-      '네 줄만 계산이 안 서. 계산 실수는 아니고.',
-      '삼 분만 앉아. …아니다, 시간은 안 재기로 했지.',
+      '너랑 있을 때만 스톱워치를 안 켜. 습관인데 안 고쳐지네.',
+      '오늘은 손실이 컸어. 방금 한 항목만 부호가 반대고.',
+      '오늘 일정 다 지웠어. 지운 자리는 안 채웠고.',
+      '십 분이라고 했는데. …아니다, 오늘은 안 잴게.',
     ]},
     { priority: 80, condition: (int) => int >= 50, lines: [
-      '이거 너 해. 나한텐 감가 끝난 자료야.',
-      '오답 노트 양식 새로 짰어. 네 거도 하나 뽑아뒀어. 재고 처리야.',
-      '자습 삼십 분만 옆에 앉을게. 집중력은 전염되는 자산이라.',
-      '네 필기는 정확해. 평가야. 칭찬은 원가가 들거든.',
+      '책상에 뭐 하나 올려뒀어. 반납은 안 받아.',
+      '양식 하나 개정했어. 구버전은 폐기 예정이고, 그건 너 써.',
+      '옆자리 비었으면 앉을게. 자리값은 안 받아.',
+      '네 필기, 오차가 없어. 그건 감정이 아니고 실측이야.',
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
-      '삼 분만. 그 이상은 이자 붙어.',
-      '모의고사는 등수보다 표준점수야. 이런 거 나 원래 유료야.',
-      '급식 줄 서는 시간 대비 효용이 낮아. 매점이 우위야.',
+      '십 분까지야. 그 뒤로는 다른 일정 있어.',
+      '등수는 소문이고 표준점수가 장부야. 헷갈리는 애가 반이야.',
+      '오늘 반찬은 원가 미달이야. 나는 안 서.',
     ]},
     { priority: 0, condition: () => true, lines: [
       '용건?',
@@ -521,13 +528,13 @@ const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '단가부터 말해. 시간도 원가야.',
     ]},
     { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
-      '경쟁률 떴어. 다들 우는데 나는 계산이 서.',
+      '이번 시험은 예상치가 이미 나와 있어. 다들 표정만 미리 우는 거고.',
       '이번 범위는 투자 대비 회수가 좋아. 앞 단원은 버려도 돼.',
       '시험 끝나고 정산하자. 뭘 정산하는지는 그때 정하고.',
     ]},
     { priority: 85, condition: (_, s) => s.isVacation, lines: [
       '방학은 복리야. 지금 한 시간이 학기 중 세 시간.',
-      '방학 계획표 짰어. 네 칸도 있는데, 왜 넣었는지는 묻지 마.',
+      '방학 계획표 짰어. 시간당 단가까지 계산해놨고.',
       '방학엔 학원 단가가 올라. 그래도 갈 거야.',
     ]},
   ],
@@ -538,7 +545,9 @@ export function getNpcDialogue(npcId: string, intimacy: number, state: GameState
   if (!pools) return '...';
   const sorted = [...pools].sort((a, b) => b.priority - a.priority);
   for (const pool of sorted) {
-    if (pool.condition(intimacy, state)) {
+    // 빈 풀은 건너뛴다 — lines[Math.floor(Math.random() * 0)]는 undefined를 string으로 흘려보내
+    // 말풍선이 빈 채로 뜨고, `!== '...'` 단언은 그걸 통과시킨다.
+    if (pool.lines.length > 0 && pool.condition(intimacy, state)) {
       return pool.lines[Math.floor(Math.random() * pool.lines.length)];
     }
   }
