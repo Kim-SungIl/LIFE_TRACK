@@ -135,4 +135,27 @@ describe('인사말 ↔ 잡담 문장 중복 금지', () => {
     }
     expect(collisions).toEqual([]);
   });
+
+  // 정확 일치만으로는 '옥상 문 오늘 열려 있어' ↔ '옥상 문, 오늘은 안 잠갔어' 같은 근사 중복을 놓친다.
+  // 판별자를 실측해 고른 임계다: LCS 7자(전역)는 오탐 14건이라 게이트 불가, 문두 6자는 위 옥상 문
+  // 사례를 6번째 글자에서 놓쳐(오늘'은' vs 오늘'열') 뮤테이션 테스트에 걸리지 않았다. 문두 5자가
+  // 목표 유형을 잡으면서 남는 오탐이 0인 지점이다.
+  // 같은 NPC 안에서만 비교한다 — 서로 다른 캐릭터의 문두가 겹치는 건 연속 노출이 아니라 무해하다.
+  const HEAD = 5;
+
+  it('같은 NPC의 인사말과 잡담이 문두를 공유하지 않는다 (근사 중복)', () => {
+    const collisions: string[] = [];
+    for (const id of ALL_NPC_IDS) {
+      const smalltalk = smalltalkLinesOf(id);
+      for (const pool of NPC_DIALOGUES[id] ?? []) {
+        for (const line of pool.lines) {
+          const head = norm(line).slice(0, HEAD);
+          if (head.length < HEAD) continue;
+          const twin = smalltalk.find(s => norm(s).slice(0, HEAD) === head);
+          if (twin) collisions.push(`${id} p${pool.priority}\n    인사말: ${line}\n    잡담  : ${twin}`);
+        }
+      }
+    }
+    expect(collisions).toEqual([]);
+  });
 });

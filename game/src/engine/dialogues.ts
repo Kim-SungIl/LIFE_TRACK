@@ -149,7 +149,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '야, 너 오늘 뭐해? 같이 놀자!',
       '너 아니면 누구한테 말하겠어. 들어봐.',
       '우리 진짜 오래 알았다, 그치?',
-      '너랑 있으면 시간 가는 줄 모르겠어.',
+      '벌써 이 시간이네. 오늘 진짜 빨리 갔다.',
       '나중에 커서도 계속 친구하자.',
     ]},
     { priority: 80, condition: (int) => int >= 50, lines: [
@@ -194,7 +194,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '야, 오늘 학원 끝나고 떡볶이 먹으러 갈래?',
       '인스타 봤어? 웃긴 거 보내줄게!',
       '이번 주말에 뭐 해? 나 심심한데~',
-      '너랑 있으면 편해서 좋다. 힘 안 빼도 되니까.',
+      '힘 안 빼고 있어도 되는 사람, 너밖에 없어.',
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
       '안녕! 오늘도 파이팅~',
@@ -209,7 +209,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '시험이다~ 카페에서 같이 공부할래?',
       '나 혼자 하면 집중이 안 돼. 같이 하자!',
-      '시험 끝나면 놀자. 약속이다!',
+      '이거 끝나면 놀자. 약속이다!',
     ]},
     { priority: 85, condition: (_, s) => s.isVacation, lines: [
       '방학이다! 어디 여행 가고 싶다~',
@@ -229,7 +229,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '이번 시험 어땠어? 나? 뭐 그냥 그랬어. (의식하는 눈빛)',
       '야, 솔직히 너 아니었으면 나 이만큼 안 올랐을 거야.',
       '점심 같이 먹을래? 아 참, 너 요즘 바쁘구나.',
-      '쉬는 시간에 웹툰이나 보자. 공부 얘기 말고.',
+      '잠깐 웹툰이나 보자. 공부 얘기 말고.',
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
       '어, 안녕. 오늘도 열심히 하네.',
@@ -318,7 +318,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '급식에서 저거 먹지 마, 그거 맛없어.',
     ]},
     { priority: 40, condition: (int) => int >= 10, lines: [
-      '야, 존댓말 하지 마. 어색해.',
+      '선배 소리 그만해. 그냥 이름 불러.',
       '후배~ 오늘 하루 어땠어?',
       '복도에서 뛰지 마, 다친다.',
     ]},
@@ -329,7 +329,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     ]},
     { priority: 90, condition: (_, s) => isExamPeriod(s.year, s.week), lines: [
       '시험 기간이지? 이 단원은 이렇게 정리하면 돼.',
-      '너무 무리하지 마. 멘탈이 더 중요해.',
+      '오늘은 좀 일찍 접어. 그게 더 남는 거야.',
       '시험 끝나면 같이 뭐 맛있는 거 먹자.',
     ]},
     { priority: 85, condition: (_, s) => s.isVacation, lines: [
@@ -408,7 +408,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
       '어, 왔어? 오늘 뭐 할 거야?',
-      '선생님이 또 나 부르시네. 금방 올게.',
+      '나 잠깐 교무실 갔다 올게. 금방이야.',
       '체육복 무릎 쪽 터졌어. 엄마한텐 말 안 할 거야. 뭐, 괜찮아.',
     ]},
     { priority: 0, condition: () => true, lines: [
@@ -446,10 +446,10 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '한 줄만 보여줄까. 한 줄만이야.',
       '여기 한 줄만 자꾸 걸려. 눈으로 읽을 땐 괜찮은데.',
       '방금 쓴 거 지웠어. 봤어? 안 봤으면 됐어.',
-      '조용한 데 갈 거야. …같이 갈 거면 말 안 걸어도 돼.',
+      '나 지금 나갈 건데. 따라와도 되고, 말은 안 걸어도 돼.',
     ]},
     { priority: 60, condition: (int) => int >= 30, lines: [
-      '어, 왔네. 이거 쓰던 중인데 급한 건 아니야.',
+      '어, 왔네. 하던 거 있는데 나중에 해도 돼.',
       '노트 두 권째야. 한 권은 다 못 채우고 덮었고.',
       '창가 자리 비었어. 알려주는 거야, 그냥.',
     ]},
@@ -472,7 +472,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
   siwoo: [
     // 파일 헤더 규칙 준수: 감정 형용사 0, 사물·공간·동선으로만 말한다(events/npc/siwoo.ts).
     { priority: 100, condition: (int) => int >= 80, lines: [
-      '옥상 문, 오늘은 안 잠갔어. 두 번 확인했고.',
+      '난간 페인트 새로 칠했더라. 손자국이 아직 하나도 없어.',
       '이 시간엔 이 자리에 빛이 들어와. 네가 앉던 자리야.',
       '오늘 도면 한 장 더 그렸어. 볼 사람이 있으면 펼치고.',
       '물통 두 개 챙겨왔어. 하나는 손잡이가 왼쪽이야.',
