@@ -188,16 +188,21 @@ export function WeekPlanner({
               );
             })()}
 
-            {/* 주말 미선택 경고 */}
+            {/* 주말 미선택 안내 — 경고가 아니라 조작 힌트다.
+                예전엔 노란 경고가 맥박치며 "비어있어요! 채우세요"라고 재촉했는데, 실측상
+                주말을 비우는 게 최적해인 구간이 있다(피로가 학업 총량을 깎는 구조 —
+                컨디션이 공부량을 지배한다). 담임은 "덜 해라"라고 말하는데 플래너가 매주
+                "더 채워라"라고 재촉하면 두 화자가 반대로 말하는 셈이라 톤을 중립으로 낮췄다.
+                슬롯이 탭 가능하다는 발견성만 남기고 압박은 걷어낸다. */}
             {selectedActivities.length === 0 && state.routineSlot2 && (
               <div style={{
                 marginTop: 8, padding: '8px 10px', borderRadius: 8,
-                background: 'rgba(224,179,84,0.15)', border: '1px solid rgba(224,179,84,0.3)',
-                fontSize: '0.72rem', color: 'var(--yellow)', lineHeight: 1.4,
-                textAlign: 'center', animation: reducedMotion ? 'none' : 'pulse-soft 2s ease-in-out infinite',
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
+                fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.4,
+                textAlign: 'center',
               }}>
-                <div style={{ fontWeight: 600, marginBottom: 2 }}>주말 활동이 비어있어요!</div>
-                <div style={{ fontSize: '0.65rem', opacity: 0.85 }}>토/일 슬롯을 탭해서 활동을 선택하세요</div>
+                <div style={{ fontWeight: 600, marginBottom: 2 }}>이번 주말은 비워뒀어요</div>
+                <div style={{ fontSize: '0.65rem', opacity: 0.85 }}>쉬는 것도 한 주의 선택이에요. 채우려면 토/일을 탭하세요</div>
               </div>
             )}
           </div>

@@ -260,27 +260,46 @@ describe('WeekPlanner 경고·콤보·주말 미선택', () => {
     expect(screen.queryByText(/루틴 보너스 활성/)).not.toBeInTheDocument();
   });
 
-  it('주말 미선택 경고는 selectedActivities가 비고 routineSlot2가 있을 때만 뜬다', () => {
+  it('주말 미선택 안내는 selectedActivities가 비고 routineSlot2가 있을 때만 뜬다', () => {
     const act = oneSlotFree();
     const { unmount } = renderPlanner({
       state: makeState({ isVacation: false, routineSlot2: act.id }),
       selectedActivities: [],
     });
-    expect(screen.getByText('주말 활동이 비어있어요!')).toBeInTheDocument();
+    expect(screen.getByText('이번 주말은 비워뒀어요')).toBeInTheDocument();
     unmount();
 
     const { unmount: u2 } = renderPlanner({
       state: makeState({ isVacation: false, routineSlot2: null }),
       selectedActivities: [],
     });
-    expect(screen.queryByText('주말 활동이 비어있어요!')).not.toBeInTheDocument();
+    expect(screen.queryByText('이번 주말은 비워뒀어요')).not.toBeInTheDocument();
     u2();
 
     renderPlanner({
       state: makeState({ isVacation: false, routineSlot2: act.id }),
       selectedActivities: [act.id],
     });
-    expect(screen.queryByText('주말 활동이 비어있어요!')).not.toBeInTheDocument();
+    expect(screen.queryByText('이번 주말은 비워뒀어요')).not.toBeInTheDocument();
+  });
+
+  // 실측상 주말을 비우는 게 최적해인 구간이 있다(피로가 학업 총량을 깎는 구조).
+  // 예전 문구는 노란 경고가 맥박치며 "비어있어요! 채우세요"라고 재촉해 최적 플레이를 말렸다.
+  // 안내는 남기되 압박은 없어야 한다 — 경고 어휘·경고색·맥박 애니메이션 금지.
+  it('주말 미선택 안내가 재촉 톤으로 돌아가지 않는다 (경고 어휘·경고색·맥박 없음)', () => {
+    const act = oneSlotFree();
+    renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id }),
+      selectedActivities: [],
+    });
+    // 재촉 어휘가 없다
+    expect(screen.queryByText(/비어있어요|채우세요|선택하세요/)).not.toBeInTheDocument();
+    // 쉬는 것이 유효한 선택임을 알린다
+    expect(screen.getByText(/쉬는 것도 한 주의 선택/)).toBeInTheDocument();
+
+    const box = screen.getByText('이번 주말은 비워뒀어요').parentElement as HTMLElement;
+    expect(box.style.animation).toBe('');
+    expect(box.style.color).not.toContain('--yellow');
   });
 });
 
