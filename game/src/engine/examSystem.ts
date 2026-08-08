@@ -223,7 +223,7 @@ export function generateExamResult(
   // 총평/반응 생성
   const comment = generateComment(subjects, average, state, schoolLevel);
   const parentReaction = generateParentReaction(rank, prevRank, average, state, schoolLevel);
-  const teacherReaction = generateTeacherReaction(subjects, rank, state, schoolLevel);
+  const teacherReaction = generateTeacherReaction(subjects, rank, state, schoolLevel, average);
 
   // 멘탈 후처리
   const mentalDelta = getExamMentalDelta(average, schoolLevel);
@@ -371,33 +371,21 @@ function generateComment(
   state: GameState,
   schoolLevel: SchoolLevel,
 ): string {
-  if (state.mentalState === 'burnout') return '컨디션이 최악이었다. 시험 중에 멍하니 앉아있었다...';
-  if (state.mentalState === 'tired') return '피곤한 상태로 시험을 봤다. 실력 발휘가 안 됐다.';
-  // 고피로(mentalState는 normal이지만 fatigue가 높은 구간)도 getCommonMod에서 -3~-10을 맞는다.
-  // 초등은 페널티가 -2로 약하고 코멘트 톤이 격려체라 제외 — 중등·고등만 원인을 지목한다.
-  if (schoolLevel !== 'elementary') {
-    if (state.fatigue >= HIGH_FATIGUE) {
-      return '시험지 앞에서 자꾸 멍해졌다. 공부를 안 한 게 아니라, 쉬지를 못했다.';
-    }
-    if (state.fatigue >= MILD_FATIGUE) {
-      return '아는 건 다 썼는데 마지막 몇 문제에서 힘이 빠졌다.';
-    }
-  }
-
   const best = (Object.keys(subjects) as SubjectKey[]).reduce((a, b) => subjects[a].score > subjects[b].score ? a : b);
   const worst = (Object.keys(subjects) as SubjectKey[]).reduce((a, b) => subjects[a].score < subjects[b].score ? a : b);
 
-  if (schoolLevel === 'elementary') {
-    if (average >= 75) return `이번 단원평가 잘 봤다! 특히 ${LABELS[best]}을 잘했어.`;
-    if (average >= 45) return '무난하게 잘 했어. 꾸준히 하면 돼!';
-    return '조금 어려웠지? 다음엔 더 잘할 수 있을 거야.';
-  }
+  const base = schoolLevel === 'elementary'
+    ? (average >= 75 ? `이번 단원평가 잘 봤다! 특히 ${LABELS[best]}을 잘했어.`
+      : average >= 45 ? '무난하게 잘 했어. 꾸준히 하면 돼!'
+      : '조금 어려웠지? 다음엔 더 잘할 수 있을 거야.')
+    : average >= 85 ? `전반적으로 훌륭한 성적. 특히 ${LABELS[best]}에서 두각을 드러냈다.`
+    : average >= 70 ? `안정적인 성적이지만, ${LABELS[worst]}은 좀 더 노력이 필요하다.`
+    : average >= 50 ? `중간 정도의 성적. ${LABELS[best]}은 강점이지만 전반적으로 아쉽다.`
+    : average >= 30 ? `공부에 시간을 더 쏟아야 할 것 같다. ${LABELS[best]}만 그나마 버텼다.`
+    : '전체적으로 많이 부족하다. 기초부터 다시 잡아야 할 것 같다.';
 
-  if (average >= 85) return `전반적으로 훌륭한 성적. 특히 ${LABELS[best]}에서 두각을 드러냈다.`;
-  if (average >= 70) return `안정적인 성적이지만, ${LABELS[worst]}은 좀 더 노력이 필요하다.`;
-  if (average >= 50) return `중간 정도의 성적. ${LABELS[best]}은 강점이지만 전반적으로 아쉽다.`;
-  if (average >= 30) return `공부에 시간을 더 쏟아야 할 것 같다. ${LABELS[best]}만 그나마 버텼다.`;
-  return '전체적으로 많이 부족하다. 기초부터 다시 잡아야 할 것 같다.';
+  // 컨디션 귀인은 아래 "컨디션 귀인" 섹션의 SSOT(internalConditionCause)를 쓴다.
+  return withCondition(base, internalConditionCause(state, schoolLevel), average < POOR_INTERNAL_AVERAGE, INTERNAL_CONDITION_COMMENT);
 }
 
 // ===== 부모 반응 =====
@@ -467,7 +455,16 @@ function generateTeacherReaction(
   rank: number | null,
   state: GameState,
   schoolLevel: SchoolLevel,
+  average: number,
 ): string {
+  // 총평이 컨디션을 지목했는데 담임만 과목 처방을 주면 같은 카드에서 두 줄이 어긋난다
+  // (총평 "마지막 몇 문제에서 힘이 빠졌다" 바로 밑에 담임 "기초가 부족한 과목이 있어").
+  // 초등 담임은 격려체 톤이라 제외한다.
+  if (schoolLevel !== 'elementary') {
+    const cause = internalConditionCause(state, schoolLevel);
+    if (cause && average < POOR_INTERNAL_AVERAGE) return CONDITION_TEACHER[cause];
+  }
+
   const artsGrade = subjects.artsPhysical.grade;
   const mainGrades = [subjects.korean.grade, subjects.english.grade, subjects.math.grade, subjects.socialScience.grade];
   const hasS = mainGrades.includes('S');
@@ -513,7 +510,7 @@ type ConditionCause = 'burnout' | 'tired' | 'fatigue' | 'fatigueMild';
 // 두 단계로 나누는 이유: 잘 쉰 학생(+3) 대비 피로 40~59는 6점 스윙으로 등급컷 근처에선
 // 한 등급이 왔다갔다 하지만, 그 구간에 "며칠째 잠이 모자란" 같은 강한 문장을 쓰면 과하다.
 // 약한 단계를 따로 둬서 "점수가 깎이는데 아무 말도 안 하는 구간"을 없애면서 톤을 지킨다.
-// (계약 테스트 '침묵 구간이 없다'가 이 정합을 잠근다 — 임계를 페널티 구간 위로 밀면 실패한다.)
+// (계약 테스트 '침묵 구간이 없다' / '깎이지 않은 구간은 지목하지 않는다'가 이 정합을 양방향으로 잠근다.)
 const MILD_FATIGUE = 40;
 const HIGH_FATIGUE = 60;
 
@@ -524,6 +521,53 @@ function conditionCause(state: GameState): ConditionCause | null {
   if (state.fatigue >= MILD_FATIGUE) return 'fatigueMild';
   return null;
 }
+
+// 초등은 피로 페널티가 피로 0→100 전 구간을 합쳐도 4점이라(getCommonMod: <30:+2 / <60:0 / 이상:-2)
+// "점수는 깎이는데 침묵" 문제가 성립하지 않는다. 톤(격려체)을 지키려 피로 단계는 빼되,
+// 실제로 -8/-3을 맞는 burnout·tired는 초등에서도 지목한다.
+function internalConditionCause(state: GameState, schoolLevel: SchoolLevel): ConditionCause | null {
+  const cause = conditionCause(state);
+  if (!cause) return null;
+  if (schoolLevel === 'elementary' && cause !== 'burnout' && cause !== 'tired') return null;
+  return cause;
+}
+
+// 컨디션이 나빴다는 것과 그게 이 성적을 만들었다는 것은 다른 얘기다.
+// 초판은 둘을 구분하지 않아 양방향으로 틀렸다 — 피로 45로 1등급을 받은 학생에게 담임이
+// "한 등급은 더 나온다"고 했고(1등급 위는 없다), 학업 5로 9등급을 받은 학생에게는
+// "실력은 붙었어"라고 했다. 게다가 등급 코멘트 14줄이 시험 카드의 80%에서 밀려났다.
+// 그래서 결과가 실제로 나빴을 때만 총평을 대체하고, 잘 봤을 때는 성취를 남긴 채 원인만 덧붙인다.
+const POOR_MOCK_GRADE = 3;        // 1~2등급 = "컨디션에도 불구하고 해냈다" — 성취를 지우지 않는다
+const POOR_INTERNAL_AVERAGE = 70; // generateComment의 '안정적인 성적' 컷과 같은 선
+
+const CONDITION_ASIDE: Record<ConditionCause, string> = {
+  burnout: '몸이 무너진 채로 받아낸 성적이라, 마냥 웃을 수만은 없었다.',
+  tired: '지친 채로 낸 성적이다. 온전한 몸이었으면 어땠을까.',
+  fatigue: '잠을 줄여 만든 성적이라는 게 계속 마음에 걸렸다.',
+  fatigueMild: '조금 더 쉬고 봤으면 더 나았을 것 같다.',
+};
+
+// 대체할지 덧붙일지의 단일 분기점. 세 시험(내신·모의·수능)이 전부 이걸 통과한다.
+function withCondition(
+  base: string,
+  cause: ConditionCause | null,
+  resultIsPoor: boolean,
+  dominant: Record<ConditionCause, string>,
+  aside: Record<ConditionCause, string> = CONDITION_ASIDE,
+): string {
+  if (!cause) return base;
+  return resultIsPoor ? dominant[cause] : `${base} ${aside[cause]}`;
+}
+
+// 내신 총평 — 컨디션이 결과를 지배했을 때 쓰는 문장.
+// 문장이 실력을 단정하지 않게 쓴다: "아는 건 다 썼는데"를 바닥 성적(avg 25)에 붙이면
+// 바로 아래 담임의 "기초가 부족한 과목이 있어"와 두 줄 간격으로 모순된다.
+const INTERNAL_CONDITION_COMMENT: Record<ConditionCause, string> = {
+  burnout: '컨디션이 최악이었다. 시험 중에 멍하니 앉아있었다...',
+  tired: '피곤한 상태로 시험을 봤다. 실력 발휘가 안 됐다.',
+  fatigue: '시험지 앞에서 자꾸 멍해졌다. 며칠째 제대로 쉬지를 못했다.',
+  fatigueMild: '마지막 몇 문제에서 힘이 빠졌다. 끝까지 붙잡고 있질 못했다.',
+};
 
 // ===== 모의고사 반응 =====
 
@@ -537,13 +581,12 @@ const MOCK_CONDITION_COMMENT: Record<ConditionCause, string> = {
 };
 
 function generateMockComment(mockGrade: number, state: GameState): string {
-  const cause = conditionCause(state);
-  if (cause) return MOCK_CONDITION_COMMENT[cause];
-  if (mockGrade <= 2) return '전국 상위권. 이 페이스면 원하는 대학 갈 수 있다.';
-  if (mockGrade <= 4) return '나쁘지 않은 성적이지만, 목표를 높이려면 더 필요하다.';
-  if (mockGrade <= 6) return '중간 정도. 지금부터 올리면 아직 가능성은 있다.';
-  if (mockGrade <= 8) return '갈 길이 멀다. 기본기부터 다시 잡아야 한다.';
-  return '심각한 상황이다. 전략적으로 접근해야 한다.';
+  const base = mockGrade <= 2 ? '전국 상위권. 이 페이스면 원하는 대학 갈 수 있다.'
+    : mockGrade <= 4 ? '나쁘지 않은 성적이지만, 목표를 높이려면 더 필요하다.'
+    : mockGrade <= 6 ? '중간 정도. 지금부터 올리면 아직 가능성은 있다.'
+    : mockGrade <= 8 ? '갈 길이 멀다. 기본기부터 다시 잡아야 한다.'
+    : '심각한 상황이다. 전략적으로 접근해야 한다.';
+  return withCondition(base, conditionCause(state), mockGrade >= POOR_MOCK_GRADE, MOCK_CONDITION_COMMENT);
 }
 
 function generateMockParentReaction(mockGrade: number, state: GameState): string {
@@ -564,16 +607,21 @@ function generateMockParentReaction(mockGrade: number, state: GameState): string
 
 // 담임은 "처방"을 주는 화자다. 컨디션이 병목일 때 과목 공략을 처방하면 오진이 되므로,
 // 그때는 처방 자체를 바꾼다 — 이 게임에서 담임은 유일하게 "덜 하라"고 말할 수 있는 어른이다.
-const MOCK_CONDITION_TEACHER: Record<ConditionCause, string> = {
+// 대사가 등급을 단정하지 않게 쓴다 — 이 담임은 1등급 학생에게도 9등급 학생에게도 같은 줄을 말한다.
+// 초판의 "실력은 붙었어 / 한 등급은 더 나온다"는 1등급(위가 없다)과 9등급(실력이 안 붙었다)
+// 양쪽에서 거짓이었고, "공부량 문제가 아니야"도 바닥 성적에서는 오진이었다.
+const CONDITION_TEACHER: Record<ConditionCause, string> = {
   burnout: '"성적 얘기는 나중에 하자. 지금은 좀 쉬어야 해. 이건 노력으로 되는 게 아니야."',
-  tired: '"공부량 문제가 아니야. 너 요즘 잠 몇 시간 자니? 거기서부터 손 봐야 해."',
-  fatigue: '"문제집 더 푸는 걸론 안 올라가. 주말에 하루는 진짜로 쉬어. 그게 공부야."',
-  fatigueMild: '"실력은 붙었어. 시험날 컨디션만 맞추면 한 등급은 더 나온다."',
+  tired: '"공부 얘기는 그다음에 하자. 너 요즘 잠 몇 시간 자니? 거기서부터 손 봐야 해."',
+  fatigue: '"문제집을 더 늘리는 걸론 안 올라가. 주말에 하루는 진짜로 쉬어. 그게 공부야."',
+  fatigueMild: '"시험날 몸이 안 받쳐주면 준비한 게 그대로 새 나가. 거기부터 맞추자."',
 };
 
 function generateMockTeacherReaction(mockGrade: number, state: GameState): string {
   const cause = conditionCause(state);
-  if (cause) return MOCK_CONDITION_TEACHER[cause];
+  // 잘 본 시험에서 담임까지 처방을 바꾸면 "잘했다"는 말이 카드에서 통째로 사라진다.
+  // 1~2등급 대사는 이미 "컨디션 관리에 집중하자"라 귀인과 어긋나지도 않는다.
+  if (cause && mockGrade >= POOR_MOCK_GRADE) return CONDITION_TEACHER[cause];
   if (mockGrade <= 2) return '"이 성적이면 충분해. 컨디션 관리에 집중하자."';
   if (mockGrade <= 4) return '"가능성은 있어. 약한 과목 집중 공략하자."';
   if (mockGrade <= 6) return '"지금부터 진짜 시작이야. 아직 늦지 않았어."';
@@ -585,20 +633,35 @@ function generateMockTeacherReaction(mockGrade: number, state: GameState): strin
 // 7년의 결말인데 기존엔 state를 아예 안 받아, 번아웃 상태로 수능을 봐도 컨디션 언급이 0이었다.
 // 수능은 다시 못 보는 시험이라 "쉬어라"는 처방이 성립하지 않는다 —
 // 조언이 아니라 회한으로 남긴다(엔딩 후회 레이어와 같은 톤).
+//
+// 단 수능은 산식이 다르다. suneungScore는 직전 모의 2회와 내신 평균으로만 만들어지고
+// (suneungBase = mock1*0.40 + mock2*0.50 + internalAvg*0.10), 수능 주차의 fatigue·mentalState는
+// 결과에 1점도 들어가지 않는다. 초판은 그걸 모르고 "그날 몸이 멈춰 섰다"고 썼는데,
+// 실측하면 정상/고피로/tired/burnout 네 케이스가 전부 같은 점수·같은 등급이 나왔다.
+// 즉 "그날"의 인과는 거짓이다. 참인 인과는 계절 단위다 — 그 몇 달의 컨디션이 모의고사를
+// 깎았고, 그 모의고사가 수능 점수가 됐다. 그래서 문장을 전부 그 층위로 다시 썼다.
 const SUNEUNG_CONDITION_COMMENT: Record<ConditionCause, string> = {
-  burnout: '7년을 달려와서, 가장 중요한 날에 몸이 멈춰 섰다. 실력을 쓸 기회조차 없었다.',
-  tired: '아는 문제였다. 다 아는 문제였는데, 그날의 나는 그걸 꺼낼 힘이 없었다.',
-  fatigue: '마지막 몇 달을 갈아넣은 대가를 하필 그날 치렀다. 조금 덜 하고 더 잤어야 했다.',
-  fatigueMild: '실력만큼은 나왔을까. 그날 아침의 무거웠던 머리가 오래 마음에 남았다.',
+  burnout: '마지막 해를 무너진 채로 보냈다. 시험장에 앉기 전에 이미 기울어 있었다.',
+  tired: '지친 채로 통과한 몇 달이 그대로 성적표가 됐다. 실력이 아니라 몸이 문제였다.',
+  fatigue: '마지막 몇 달을 갈아넣은 대가를 성적표로 치렀다. 조금 덜 하고 더 잤어야 했다.',
+  fatigueMild: '끝까지 몸이 가벼워지질 않았다. 그 몇 달이 조금만 달랐다면 어땠을까.',
+};
+
+// 잘 본 수능에 회한만 남기면 7년의 결말에서 성취가 통째로 지워진다.
+// (초판 재현: 2등급인데 총평은 "실력을 쓸 기회조차 없었다", 담임은 "축하한다"였다.)
+const SUNEUNG_ASIDE: Record<ConditionCause, string> = {
+  burnout: '무너진 몸으로 끝까지 버텨서 받아낸 결과였다.',
+  tired: '지친 몇 달을 통과하고도 받아낸 결과였다.',
+  fatigue: '잠을 줄여가며 버틴 몇 달이 헛되지는 않았다.',
+  fatigueMild: '끝까지 개운하진 않았지만, 결과는 나왔다.',
 };
 
 function generateSuneungComment(mockGrade: number, state: GameState): string {
-  const cause = conditionCause(state);
-  if (cause) return SUNEUNG_CONDITION_COMMENT[cause];
-  if (mockGrade <= 2) return '12년의 노력이 빛을 발했다. 원하는 곳에 갈 수 있다.';
-  if (mockGrade <= 4) return '나쁘지 않은 결과다. 선택지가 열려 있다.';
-  if (mockGrade <= 6) return '아쉬운 결과지만, 인생은 수능이 전부가 아니다.';
-  return '기대만큼은 아니었다. 하지만 다른 길도 있다.';
+  const base = mockGrade <= 2 ? '12년의 노력이 빛을 발했다. 원하는 곳에 갈 수 있다.'
+    : mockGrade <= 4 ? '나쁘지 않은 결과다. 선택지가 열려 있다.'
+    : mockGrade <= 6 ? '아쉬운 결과지만, 인생은 수능이 전부가 아니다.'
+    : '기대만큼은 아니었다. 하지만 다른 길도 있다.';
+  return withCondition(base, conditionCause(state), mockGrade >= POOR_MOCK_GRADE, SUNEUNG_CONDITION_COMMENT, SUNEUNG_ASIDE);
 }
 
 function generateSuneungParentReaction(mockGrade: number, state: GameState): string {
