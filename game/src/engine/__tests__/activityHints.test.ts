@@ -86,6 +86,24 @@ describe('activityHints — ⚠ 지금 피로 위험', () => {
     const withResOver = withStats(makeState({ fatigue: 38, parents: ['resilience', 'info'] }), mental);
     expect(texts(activityHints(sweaty, withResOver))).toContain('⚠ 지금 피로 위험');
   });
+
+  // a.fatigue > 0 가드 — 피로를 안 늘리는 활동(휴식류)은 아무리 지쳐 있어도 경고를 달지 않는다.
+  // 이 가드가 없으면 같은 카드에 '🌙 지금 필요함'과 '⚠ 지금 피로 위험'이 동시에 붙는 모순이 난다.
+  // 위 케이스들은 전부 school-sports(fatigue=9)라 가드가 항상 참이어서 이 분기를 못 잡는다.
+  it('피로가 0·음수인 활동은 고피로/저멘탈에서도 경고가 없다 (같은 상태에서 피로 활동은 뜬다)', () => {
+    const parents: GameState['parents'] = ['info', 'wealth'];
+    // proj>=85 경로와 mental<40 경로를 동시에 만족하는 상태 — 가드만 남는 유일한 차이
+    const exhausted = withStats(makeState({ fatigue: 90, parents }), 30);
+
+    const zeroFatigue = hintAct({ id: 'zero-fatigue', category: 'study', fatigue: 0 });
+    const recovering = hintAct({ id: 'recovering', category: 'talent', fatigue: -10 });
+    const tiring = hintAct({ id: 'tiring', category: 'study', fatigue: 5 });
+
+    expect(texts(activityHints(zeroFatigue, exhausted))).not.toContain('⚠ 지금 피로 위험');
+    expect(texts(activityHints(recovering, exhausted))).not.toContain('⚠ 지금 피로 위험');
+    // 양성 짝 — 같은 상태에서 피로가 붙는 활동은 경고한다(상태가 아니라 가드가 이유임을 확정)
+    expect(texts(activityHints(tiring, exhausted))).toContain('⚠ 지금 피로 위험');
+  });
 });
 
 describe('activityHints — 💸 돈 부담 큼', () => {
