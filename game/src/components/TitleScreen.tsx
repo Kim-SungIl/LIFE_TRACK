@@ -58,6 +58,7 @@ export function TitleScreen() {
   const startGame = useGameStore(s => s.startGame);
   const loadSavedGame = useGameStore(s => s.loadSavedGame);
   const savedData = loadFromStorage();
+  const assetBase = import.meta.env.BASE_URL;
   // 도전 모드는 한 번 엔딩을 본 사람에게만 노출 (신규 유저가 멋모르고 켜는 것 방지)
   const hasCleared = (() => {
     try { return localStorage.getItem('lifetrack_has_cleared') === '1'; } catch { return false; }
@@ -86,22 +87,47 @@ export function TitleScreen() {
   };
 
   // 타이틀 화면
-  // 시각 순서(브랜드보다 정서 진입 우선): 캐릭터 → 로고 → 서브 → 카피 → CTA → 저장 메타
-  // 포트레이트는 장식이 아니라 게임 정체성·성별 선택 예고 요소.
+  // 첫 화면은 저장/시작 허브이면서 게임의 표지 역할을 한다.
   if (phase === 'title') {
     return (
       <div className="title-screen">
-        <div className="title-screen__portraits" aria-hidden="true">
-          <Portrait characterId="player_m" size={100} expression="neutral" year={1} />
-          <Portrait characterId="player_f" size={100} expression="neutral" year={1} />
+        <div className="title-screen__bg" aria-hidden="true" />
+
+        <div className="title-screen__cast" aria-hidden="true">
+          <img
+            className="title-screen__figure title-screen__figure--male"
+            src={`${assetBase}images/characters/player_m_elementary_fullbody.png`}
+            alt=""
+            decoding="async"
+          />
+          <img
+            className="title-screen__figure title-screen__figure--female"
+            src={`${assetBase}images/characters/player_f_elementary_fullbody.png`}
+            alt=""
+            decoding="async"
+          />
         </div>
 
-        <div className="title-logo">LIFE TRACK</div>
-        <div className="title-sub">선택의 결과</div>
+        <div className="title-screen__kicker">LIFE TRACK</div>
+        <h1 className="title-logo">7년의 시간표</h1>
+        <div className="title-sub">어른이 되기 전, 매주 하나씩 남긴 선택</div>
+
+        <div className="title-screen__years" aria-label="초등학교 6학년부터 고등학교 3학년까지">
+          <span>초6</span>
+          <span>중1</span>
+          <span>중2</span>
+          <span>중3</span>
+          <span>고1</span>
+          <span>고2</span>
+          <span>고3</span>
+        </div>
+
         <div className="title-screen__pitch">
           초등학교 6학년부터 고등학교 3학년까지.<br />
-          7년간의 선택이 인생을 만든다.
+          작은 선택들이 친구, 성적, 마음의 방향을 바꾼다.
         </div>
+
+        <div className="title-screen__actions">
         {savedData && (
           <>
             <button className="btn btn-primary" onClick={() => loadSavedGame()}>
@@ -113,12 +139,13 @@ export function TitleScreen() {
             </div>
           </>
         )}
-        <button
-          className={`btn ${savedData ? 'btn-secondary' : 'btn-primary'}`}
-          onClick={() => setPhase('gender')}
-        >
-          새 게임
-        </button>
+          <button
+            className={`btn ${savedData ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={() => setPhase('gender')}
+          >
+            새 게임
+          </button>
+        </div>
       </div>
     );
   }
