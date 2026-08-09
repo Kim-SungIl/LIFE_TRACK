@@ -6,7 +6,7 @@
 // 비어 있으면 경고를 띄우고 확정할 때마다 "정말?"이라고 되물어, 최적 플레이에만 336주 내내
 // 마찰을 붙였다. 여기서 잠그는 건 두 가지다 — 되묻기는 1회로 끝날 것, 톤은 중립일 것.
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, act } from '@testing-library/react';
 import { MainWeekScreen } from '../MainWeekScreen';
 import { makeState } from '../../../../test/fixtures';
 import { getBackground } from '../../../../engine/backgrounds';
@@ -75,13 +75,38 @@ describe('주말 비우고 확정', () => {
     expect(onConfirmWeek).toHaveBeenCalledTimes(1);
   });
 
-  it('취소하면 진행하지 않고 플래그도 남기지 않는다', () => {
+  // 위 케이스는 "localStorage를 미리 세팅하고 새로 렌더"라 setRestAcked(true)의 React state 경로를
+  // 타지 않는다. 실제 플레이는 컴포넌트가 마운트된 채로 주가 넘어가므로 이쪽이 주 경로다.
+  // 주의: proceedConfirm이 500ms 더블탭 락을 건다(confirmLockRef). 타이머를 안 넘기면
+  // 두 번째 클릭이 락에 막혀 "다이얼로그가 안 뜬다"가 엉뚱한 이유로 참이 된다.
+  it('같은 세션에서 한 번 확인하면 그 뒤로는 안 묻는다 (React state 경로)', () => {
+    vi.useFakeTimers();
+    try {
+      const { onConfirmWeek } = renderScreen();
+
+      fireEvent.click(screen.getByRole('button', { name: '주말은 쉰다' }));
+      fireEvent.click(screen.getByRole('button', { name: '쉬어갈게요' }));
+      expect(onConfirmWeek).toHaveBeenCalledTimes(1);
+
+      act(() => { vi.advanceTimersByTime(600); }); // 더블탭 락 해제
+      fireEvent.click(screen.getByRole('button', { name: '주말은 쉰다' }));
+
+      expect(screen.queryByText('이번 주말은 쉬어요')).not.toBeInTheDocument();
+      expect(onConfirmWeek).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('취소하면 진행하지 않고 플래그도 남기지 않으며, 주말 슬롯 편집기가 열린다', () => {
     const { onConfirmWeek } = renderScreen();
 
     fireEvent.click(screen.getByRole('button', { name: '주말은 쉰다' }));
     fireEvent.click(screen.getByRole('button', { name: '활동 고를래요' }));
     expect(onConfirmWeek).not.toHaveBeenCalled();
     expect(localStorage.getItem(REST_ACK)).toBeNull();
+    // 라벨이 "활동 고를래요"이므로 실제로 고를 수 있는 화면이 떠야 한다.
+    expect(screen.getByText('☀️ 주말 활동')).toBeInTheDocument();
   });
 
   it('확인 문구가 쉬는 선택을 실수로 취급하지 않는다', () => {

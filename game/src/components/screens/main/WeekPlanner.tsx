@@ -202,7 +202,10 @@ export function WeekPlanner({
                 textAlign: 'center',
               }}>
                 <div style={{ fontWeight: 600, marginBottom: 2 }}>이번 주말은 비워뒀어요</div>
-                <div style={{ fontSize: '0.65rem', opacity: 0.85 }}>쉬는 것도 한 주의 선택이에요. 채우려면 토/일을 탭하세요</div>
+                {/* opacity 금지 — 이 카드는 rgba(42,34,48,0.85)라 배경 사진이 비쳐 올라온다.
+                    0.85를 얹으면 실배경에서 대비가 4.27~4.64로 떨어져 WCAG AA(4.5) 미달.
+                    위계는 폰트 크기(0.72 vs 0.65)와 굵기로만 준다. */}
+                <div style={{ fontSize: '0.65rem' }}>쉬는 것도 한 주의 선택이에요. 채우려면 토/일을 탭하세요</div>
               </div>
             )}
           </div>

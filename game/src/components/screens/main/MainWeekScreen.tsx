@@ -555,7 +555,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           try { localStorage.setItem('lifetrack_rest_ack', '1'); } catch { /* 저장 실패해도 진행엔 영향 없음 */ }
           proceedConfirm();
         }}
-        onCancel={() => setShowRestConfirm(false)}
+        // 라벨이 약속한 대로 토요일 슬롯 편집기를 실제로 연다 — 닫기만 하면 플래너로 돌아갈 뿐이라
+        // 플레이어가 슬롯을 다시 찾아 탭해야 했다(라벨과 동작 불일치).
+        onCancel={() => { setShowRestConfirm(false); setEditingSlot('weekend1'); }}
       />
     )}
     {/* 튜토리얼 — 슬롯 편집 중엔 CSS로만 숨김 (언마운트하면 step 리셋됨) */}
