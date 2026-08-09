@@ -7,7 +7,7 @@
  * 출력: <dir>/qa-<persona>.json (페르소나별) + 콘솔 요약표
  */
 import { createInitialState, processWeek, hashInitialState, getWeekInfo } from '../../src/engine/gameEngine';
-import { NPC_COMPANION_ACTIVITIES } from '../../src/engine/activities';
+import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../../src/engine/activities';
 import { calculateEnding, calculateHappinessGrade } from '../../src/engine/ending';
 import { resolveEventLikeStore, talkToNpcLikeStore } from '../lib/y1-sim-resolve';
 import { isNpcInteractable } from '../../src/engine/relationshipSignals';
@@ -95,6 +95,19 @@ interface Result {
   maxConsecutiveTired: number;
   avgFatigue: number;
   tiredRate: number;   // tired/burnout 주 비율 (%)
+  // ===== 돈 계측 =====
+  // 기존 페르소나는 루틴 2칸이 전부 무료 활동이라 "매주 반복되는 고정비"가 한 번도 안 켜졌다.
+  // finalMoney 하나만 봐서는 "돈이 남아돈다"는 결론밖에 안 나온다(측정 아티팩트).
+  // 아래 지표는 유료 루틴을 켠 페르소나에서 실제로 돈이 마르는지, 마르면 무슨 일이 생기는지를 본다.
+  moneyByYear: Record<number, number>;     // 학년 종료 시점 잔액
+  minMoney: number;                        // 7년 최저 잔액
+  // 주의: 잔액은 매주 용돈 지급 뒤에 읽히므로 "수입 미만"으로 재면 항상 0이 나온다.
+  // 의미 있는 신호는 "다음 주 루틴비를 못 낼 상태로 주를 마쳤는가"다.
+  brokeWeeks: number;
+  routineWeeks: number;                    // 루틴이 돌아야 했던 학기 주 수 (스킵률 분모)
+  routineSkippedForMoney: number;          // 돈이 없어 방과후 루틴이 안 돌아간 슬롯 수
+  weekendSkippedForMoney: number;          // 돈이 없어 주말/방학 활동이 스킵된 슬롯 수
+  routineSpend: number;                    // 7년 누적 루틴 지출(실제 집행분)
 }
 
 function runPersona(p: Persona, seed: number): Result {
@@ -105,6 +118,11 @@ function runPersona(p: Persona, seed: number): Result {
   let maxConsecutiveTired = 0;   // 데스 스파이럴/영구락 회귀 가드
   let fatigueSum = 0, weekCount = 0;   // 평균 fatigue (중간 과부하 밴드 확인용)
   let tiredWeeks = 0;
+  // 돈 계측 — 스킵은 로그 메시지가 유일한 신호다(엔진이 카운터를 안 남김).
+  // applyRoutineActivities / applyWeekendActivities 둘 다 '💰 돈이 부족해서 …' 를 push한다.
+  const moneyByYear: Record<number, number> = {};
+  let minMoney = s.money, brokeWeeks = 0;
+  let routineSkippedForMoney = 0, weekendSkippedForMoney = 0, routineSpend = 0, routineWeeks = 0;
   const peakIntimacy: Record<string, number> = {};  // 드리프트(감쇠) 전 최고점 — scarcity 측정용
   const yearPeaks: Record<string, Record<number, number>> = {};  // npc → year → 그 학년 내 최고점 (학년 게이트 tier 도달성)
 
@@ -134,7 +152,39 @@ function runPersona(p: Persona, seed: number): Result {
         }
       }
     }
+    const yearBefore = s.year;
+    const wasVacation = getWeekInfo(s.week).isVacation;
     s = processWeek(s, npcMap);
+
+    // ── 돈 계측 ──
+    // 스킵 판정은 로그 메시지로만 가능하다. 루틴/주말이 같은 문구를 쓰므로 활동 이름으로 가른다
+    // (그래서 유료 페르소나는 루틴과 주말에 서로 다른 활동을 쓴다).
+    {
+      const msgs = (s.weekLog?.messages ?? []).filter(m => m.includes('돈이 부족해서'));
+      const routineNames = [s.routineSlot2, s.routineSlot3]
+        .map(id => id ? ACTIVITIES.find(a => a.id === id)?.name : null)
+        .filter((n): n is string => !!n);
+      for (const m of msgs) {
+        if (routineNames.some(n => m.includes(n))) routineSkippedForMoney++;
+        else weekendSkippedForMoney++;
+      }
+      let nextRoutineCost = 0;
+      if (!wasVacation) {
+        routineWeeks++;
+        for (const id of [s.routineSlot2, s.routineSlot3]) {
+          if (!id) continue;
+          const act = ACTIVITIES.find(a => a.id === id);
+          if (!act) continue;
+          const cost = getActivityCost(act, yearBefore);
+          nextRoutineCost += cost;
+          if (cost > 0 && !msgs.some(m => m.includes(act.name))) routineSpend += cost;
+        }
+      }
+      minMoney = Math.min(minMoney, s.money);
+      // 다음 주 루틴비를 못 낼 상태로 주를 마쳤는가 — UI의 routineTooExpensive와 같은 판정.
+      if (nextRoutineCost > 0 && s.money < nextRoutineCost) brokeWeeks++;
+      moneyByYear[yearBefore] = Math.round(s.money);
+    }
 
     // 말걸기 — processWeek가 npcEventPendingThisWeek를 굴린 직후, 친밀도 최상위 met NPC에게.
     // pending이면 발동 가능한 NPC를 우선 (미니톡 fire 극대화 → tier 도달 측정).
@@ -249,6 +299,13 @@ function runPersona(p: Persona, seed: number): Result {
     maxConsecutiveTired,
     avgFatigue: Math.round((fatigueSum / Math.max(1, weekCount)) * 10) / 10,
     tiredRate: Math.round((tiredWeeks / Math.max(1, weekCount)) * 100),
+    moneyByYear,
+    minMoney: Math.round(minMoney),
+    brokeWeeks,
+    routineWeeks,
+    routineSkippedForMoney,
+    weekendSkippedForMoney,
+    routineSpend: Math.round(routineSpend),
   };
 }
 
@@ -279,6 +336,25 @@ const PERSONAS: Persona[] = [
   { name: 'focus-siwoo', label: '시우 집중(고1 데뷔 몰빵+동행)', gender: 'male', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'siwoo', companionFocus: 'siwoo' },
   { name: 'focus-yerin', label: '예린 집중(고1 데뷔 몰빵+동행)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'yerin', companionFocus: 'yerin' },
   { name: 'all-friends-max', label: '전원 친구(관계 극한+동행 분산)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, companionSpread: true },
+
+  // ===== 유료 루틴 (2026-08-09 추가) =====
+  // ⚠ 해석 주의: 이 하네스는 processWeek(엔진)만 돌린다. 엔진은 잔액이 모자라면 그 슬롯을
+  // **조용히 스킵**하지만(applyRoutineActivities의 '💰 돈이 부족해서' 분기), 실제 게임은
+  // MainWeekScreen의 routineTooExpensive가 **루틴 2칸 합계** 기준으로 확정 버튼을 잠근다.
+  // 즉 인게임에서는 "스킵"이 아니라 "루틴을 바꾸기 전엔 주를 넘길 수 없음"으로 나타난다.
+  // → routineSkippedForMoney는 "엔진이 스킵했을 주", brokeWeeks는 "UI가 막았을 주"로 읽을 것.
+  // 여기까지의 페르소나는 routineSlot2/3가 전부 무료 활동(self-study·club·creative·coding·
+  // light-exercise)이라 **매주 반복되는 고정비 채널이 한 번도 안 켜졌다**. 그래서 "돈이 남아돈다"는
+  // 결론이 나왔는데, 그건 게임의 절반만 측정한 것이다. 루틴은 학기 중 매주 2칸이 과금되고
+  // (applyRoutineActivities → applyActivity), 잔액이 모자라면 그 슬롯이 통째로 스킵된다.
+  // 주간 수입은 3만(wealth 5만)인데 학원은 Y1 2 / Y3 3 / Y6 4만, PT는 2만이다.
+  // 주의: 루틴과 주말에 같은 활동을 쓰면 스킵 로그를 어느 쪽인지 가를 수 없다(위 계측 코드 참조).
+  { name: 'paid-routine-poor', label: '유료루틴: 학원+PT / 무-wealth', gender: 'male', parents: ['strict', 'freedom'], routineSlot2: 'academy', routineSlot3: 'gym', weekend: ['self-study', 'rest'], vacation: ['self-study', 'rest', 'rest'], policy: 'academic', talk: true },
+  { name: 'paid-routine-rich', label: '유료루틴: 학원+PT / wealth', gender: 'male', parents: ['wealth', 'freedom'], routineSlot2: 'academy', routineSlot3: 'gym', weekend: ['self-study', 'rest'], vacation: ['self-study', 'rest', 'rest'], policy: 'academic', talk: true },
+  { name: 'paid-routine-double-academy', label: '유료루틴: 학원×2 (최대 고정비)', gender: 'male', parents: ['strict', 'freedom'], routineSlot2: 'academy', routineSlot3: 'internet-lecture', weekend: ['self-study', 'rest'], vacation: ['self-study', 'rest', 'rest'], policy: 'academic', talk: true },
+  { name: 'paid-full-spend', label: '유료루틴+유료주말(예체능) 풀지출', gender: 'female', parents: ['strict', 'freedom'], routineSlot2: 'academy', routineSlot3: 'gym', weekend: ['art-lesson', 'rest'], vacation: ['art-lesson', 'rest', 'rest'], policy: 'balanced', talk: true },
+  // 대조군 — 위와 모든 조건이 같고 루틴만 무료. 유료화의 순효과를 이 쌍으로 읽는다.
+  { name: 'free-routine-control', label: '대조군: 동일 조건 / 무료 루틴', gender: 'male', parents: ['strict', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'light-exercise', weekend: ['self-study', 'rest'], vacation: ['self-study', 'rest', 'rest'], policy: 'academic', talk: true },
 ];
 
 // ===== 분포 집계 헬퍼 =====
@@ -300,6 +376,14 @@ interface PersonaAgg {
   avgFatigue: number;
   tiredRate: number;
   maxTired: number;
+  // 돈 — moneyMean(최종 잔액) 하나로는 "쌓였다"만 보이고 도중에 말랐는지가 안 보인다.
+  minMoneyMean: number;
+  brokeWeeksMean: number;
+  routineSkipRate: number;   // 루틴이 돌아야 했던 학기 주 대비 스킵 비율(%)
+  routineSkipMean: number;
+  weekendSkipMean: number;
+  routineSpendMean: number;
+  moneyY2Mean: number;   // 중2 종료 잔액 — 기존 백로그가 "529만원"이라고 적은 지점
 }
 
 function tally(into: Record<string, number>, key: string): void {
@@ -357,6 +441,15 @@ function aggregate(p: Persona, runs: Result[]): PersonaAgg {
     avgFatigue: Math.round((runs.reduce((a, r) => a + r.avgFatigue, 0) / runs.length) * 10) / 10,
     tiredRate: Math.round(runs.reduce((a, r) => a + r.tiredRate, 0) / runs.length),
     maxTired: Math.max(...runs.map(r => r.maxConsecutiveTired)),
+    minMoneyMean: Math.round(runs.reduce((a, r) => a + r.minMoney, 0) / runs.length),
+    brokeWeeksMean: Math.round(runs.reduce((a, r) => a + r.brokeWeeks, 0) / runs.length),
+    routineSkipRate: Math.round(
+      (runs.reduce((a, r) => a + r.routineSkippedForMoney, 0) /
+       Math.max(1, runs.reduce((a, r) => a + r.routineWeeks * 2, 0))) * 100),
+    routineSkipMean: Math.round(runs.reduce((a, r) => a + r.routineSkippedForMoney, 0) / runs.length),
+    weekendSkipMean: Math.round(runs.reduce((a, r) => a + r.weekendSkippedForMoney, 0) / runs.length),
+    routineSpendMean: Math.round(runs.reduce((a, r) => a + r.routineSpend, 0) / runs.length),
+    moneyY2Mean: Math.round(runs.reduce((a, r) => a + (r.moneyByYear[2] ?? 0), 0) / runs.length),
   };
 }
 
@@ -394,6 +487,24 @@ function main() {
       pad(fmtDist(a.achievementDist), 10),
       pad(fmtDist(a.happinessDist), 8),
       pad(fmtDist(a.suneungDist), 12),
+    );
+  }
+
+  // ===== 돈 흐름 =====
+  // 최종 잔액만 보면 전부 "쌓였다"로 보인다. 루틴 고정비를 켠 페르소나가 도중에 마르는지,
+  // 말라서 루틴이 실제로 안 돌아간 주가 몇 주인지가 이 표의 목적이다.
+  console.log(`\n=== 돈 흐름 (평균 / ${SEEDS} 시드) ===`);
+  console.log(pad('persona', 30), pad('중2末', 8), pad('최종', 8), pad('최저', 7), pad('빠듯주', 8), pad('루틴스킵', 14), pad('주말스킵', 9), pad('루틴지출', 9));
+  for (const a of aggs) {
+    console.log(
+      pad(a.persona, 30),
+      pad(`${a.moneyY2Mean}만`, 8),
+      pad(`${a.moneyMean}만`, 8),
+      pad(`${a.minMoneyMean}만`, 7),
+      pad(`${a.brokeWeeksMean}주`, 8),
+      pad(`${a.routineSkipMean}슬롯(${a.routineSkipRate}%)`, 14),
+      pad(`${a.weekendSkipMean}회`, 9),
+      pad(`${a.routineSpendMean}만`, 9),
     );
   }
 
