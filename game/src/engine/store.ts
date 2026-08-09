@@ -282,6 +282,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     set({ state: initial });
     saveToStorage(initial);
+    // tutorial_done만 지운다 — 새 판마다 튜토리얼을 다시 띄우기 위해서다.
+    // 영속 플래그(lifetrack_tutorial_ever_seen / has_cleared / rest_ack)는 **의도적으로 남긴다**:
+    // 셋 다 "플레이어가 한 번 배운 것"이라 새 판이라고 다시 가르칠 이유가 없다.
+    // rest_ack = 주말을 비우는 게 실수가 아님을 한 번 확인한 표시(MainWeekScreen).
+    // 여기에 removeItem을 추가하면 그 되묻기가 매 판 부활하니 주의.
     localStorage.removeItem('lifetrack_tutorial_done');
   },
 

@@ -260,27 +260,54 @@ describe('WeekPlanner 경고·콤보·주말 미선택', () => {
     expect(screen.queryByText(/루틴 보너스 활성/)).not.toBeInTheDocument();
   });
 
-  it('주말 미선택 경고는 selectedActivities가 비고 routineSlot2가 있을 때만 뜬다', () => {
+  it('주말 미선택 안내는 selectedActivities가 비고 routineSlot2가 있을 때만 뜬다', () => {
     const act = oneSlotFree();
     const { unmount } = renderPlanner({
       state: makeState({ isVacation: false, routineSlot2: act.id }),
       selectedActivities: [],
     });
-    expect(screen.getByText('주말 활동이 비어있어요!')).toBeInTheDocument();
+    expect(screen.getByText('이번 주말은 비워뒀어요')).toBeInTheDocument();
     unmount();
 
     const { unmount: u2 } = renderPlanner({
       state: makeState({ isVacation: false, routineSlot2: null }),
       selectedActivities: [],
     });
-    expect(screen.queryByText('주말 활동이 비어있어요!')).not.toBeInTheDocument();
+    expect(screen.queryByText('이번 주말은 비워뒀어요')).not.toBeInTheDocument();
     u2();
 
     renderPlanner({
       state: makeState({ isVacation: false, routineSlot2: act.id }),
       selectedActivities: [act.id],
     });
-    expect(screen.queryByText('주말 활동이 비어있어요!')).not.toBeInTheDocument();
+    expect(screen.queryByText('이번 주말은 비워뒀어요')).not.toBeInTheDocument();
+  });
+
+  // 실측상 주말을 비우는 게 최적해인 구간이 있다(피로가 학업 총량을 깎는 구조).
+  // 예전 문구는 노란 경고가 맥박치며 "비어있어요! 채우세요"라고 재촉해 최적 플레이를 말렸다.
+  // 안내는 남기되 압박은 없어야 한다 — 경고 어휘·경고색·맥박 애니메이션 금지.
+  it('주말 미선택 안내가 재촉 톤으로 돌아가지 않는다 (경고 어휘·경고색·맥박 없음)', () => {
+    const act = oneSlotFree();
+    renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id }),
+      selectedActivities: [],
+    });
+    // 재촉 어휘가 없다
+    expect(screen.queryByText(/비어있어요|채우세요|선택하세요/)).not.toBeInTheDocument();
+    // 쉬는 것이 유효한 선택임을 알린다
+    expect(screen.getByText(/쉬는 것도 한 주의 선택/)).toBeInTheDocument();
+
+    const box = screen.getByText('이번 주말은 비워뒀어요').parentElement as HTMLElement;
+    // 정확 일치로 잠근다 — not.toContain('--yellow')는 "그 문자열 금지"일 뿐이라
+    // 같은 경고색을 hex 리터럴(#e0b354)로 쓰면 그대로 통과한다(뮤테이션에서 실증됨).
+    expect(box.style.color).toBe('var(--text-secondary)');
+    // 맥박은 인라인·클래스 양쪽 다 막는다 — CSS 클래스로 옮기는 우회를 차단.
+    expect(box.style.animation).toBe('');
+    expect(box.className).toBe('');
+    // 이 카드는 rgba(42,34,48,0.85)라 배경 사진이 비쳐 올라온다. 서브라인에 opacity를 얹으면
+    // 실배경 대비가 4.27~4.64로 떨어져 WCAG AA(4.5) 미달 — 위계는 폰트 크기로만 준다.
+    const sub = screen.getByText(/쉬는 것도 한 주의 선택/) as HTMLElement;
+    expect(sub.style.opacity).toBe('');
   });
 });
 

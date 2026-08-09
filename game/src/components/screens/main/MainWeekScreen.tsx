@@ -72,6 +72,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const confirmLockRef = useRef(false);
   // 주말 활동 미선택 확인 — window.confirm 대체(Phase 3)
   const [showRestConfirm, setShowRestConfirm] = useState(false);
+  // 한 번이라도 "쉬어갈게요"를 고르면 이후로는 안 묻는다. 주말을 비우는 건 오조작이 아니라
+  // 유효한 수(구간에 따라 최적해)인데, 확정할 때마다 되묻으면 최적 플레이에만 336주 내내
+  // 추가 탭이 붙는다. tutorial_ever_seen과 같은 "한 번 배웠으면 그만 가르친다" 플래그.
+  const [restAcked, setRestAcked] = useState(() => {
+    try { return !!localStorage.getItem('lifetrack_rest_ack'); } catch { return false; }
+  });
   // 친구 관계 시트 — 진입카드에서 열림(Phase 5 IA)
   const [showRelations, setShowRelations] = useState(false);
 
@@ -175,8 +181,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
 
   const handleConfirm = () => {
     if (confirmLockRef.current) return;
-    // 주말 활동 미선택 시 확인 — 인게임 다이얼로그(Phase 3)
-    if (!state.isVacation && selectedActivities.length === 0) {
+    // 주말 활동 미선택 시 확인 — 인게임 다이얼로그(Phase 3). 이미 한 번 확인한 플레이어에겐 안 묻는다.
+    if (!state.isVacation && selectedActivities.length === 0 && !restAcked) {
       setShowRestConfirm(true);
       return;
     }
@@ -534,15 +540,24 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         onClose={() => setShowShop(false)}
       />
     )}
-    {/* 주말 활동 미선택 확인 (window.confirm 대체) */}
+    {/* 주말 활동 미선택 확인 (window.confirm 대체).
+        문구 주의: 피로 자연 회복(applyFatigueRecovery)은 슬롯과 무관하게 매주 돈다 —
+        비운다고 "더 회복"되는 게 아니라 활동이 얹는 피로가 안 붙는 것이다. 문구도 그 사실대로. */}
     {showRestConfirm && (
       <ConfirmDialog
-        title="이번 주말, 쉴까요?"
-        message={'주말 활동을 선택하지 않았어요.\n정말 이번 주말은 쉴까요?'}
-        confirmLabel="쉴래요"
-        cancelLabel="다시 고를래요"
-        onConfirm={() => { setShowRestConfirm(false); proceedConfirm(); }}
-        onCancel={() => setShowRestConfirm(false)}
+        title="이번 주말은 쉬어요"
+        message={'채우지 않은 주말은 그만큼 피로가 덜 쌓여요.\n쉬는 것도 한 주의 선택이에요.'}
+        confirmLabel="쉬어갈게요"
+        cancelLabel="활동 고를래요"
+        onConfirm={() => {
+          setShowRestConfirm(false);
+          setRestAcked(true);
+          try { localStorage.setItem('lifetrack_rest_ack', '1'); } catch { /* 저장 실패해도 진행엔 영향 없음 */ }
+          proceedConfirm();
+        }}
+        // 라벨이 약속한 대로 토요일 슬롯 편집기를 실제로 연다 — 닫기만 하면 플래너로 돌아갈 뿐이라
+        // 플레이어가 슬롯을 다시 찾아 탭해야 했다(라벨과 동작 불일치).
+        onCancel={() => { setShowRestConfirm(false); setEditingSlot('weekend1'); }}
       />
     )}
     {/* 튜토리얼 — 슬롯 편집 중엔 CSS로만 숨김 (언마운트하면 step 리셋됨) */}
