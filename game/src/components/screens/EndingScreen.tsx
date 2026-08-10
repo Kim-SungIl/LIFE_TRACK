@@ -2,6 +2,8 @@ import { EndingData } from '../../engine/ending';
 import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, getGrade } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';
+import { RunArchiveSummary } from './RunArchiveSummary';
+import type { RunDelta } from '../../engine/archive';
 
 interface EndingScreenProps {
   ending: EndingData;
@@ -10,6 +12,7 @@ interface EndingScreenProps {
   parents: readonly ParentStrength[];
   burnoutCount: number;
   bgProps: ScreenBgProps;
+  runDelta: RunDelta | null;
 }
 
 const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: string }> = {
@@ -22,7 +25,7 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
-export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgProps }: EndingScreenProps) {
+export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgProps, runDelta }: EndingScreenProps) {
   const trackLabel = track === 'humanities' ? '문과' : track === 'science' ? '이과' : null;
 
   return (
@@ -173,10 +176,8 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
           총합 {Math.round(Object.values(stats).reduce((a, b) => a + b, 0))}점 · 번아웃 {burnoutCount}회
         </div>
 
-        {/* 다회차 유도 문구 */}
-        <div style={{ fontSize: '0.8rem', color: 'var(--accent-soft)', marginBottom: 16, textAlign: 'center', fontStyle: 'italic' }}>
-          다른 길은 어땠을까?
-        </div>
+        {/* 다회차 유도 — 막연한 "다른 길은 어땠을까?" 대신 실제로 남아 있는 것을 이름으로 가리킨다 */}
+        <RunArchiveSummary runDelta={runDelta} />
 
         <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => window.location.reload()}>
           다시 시작하기

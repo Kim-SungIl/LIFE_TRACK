@@ -53,9 +53,10 @@ export function GameScreen() {
   const {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
-    resolveParentTalkChoice, setPhase,
+    resolveParentTalkChoice, setPhase, runDelta,
   } = useGameStore(useShallow(s => ({
     state: s.state,
+    runDelta: s.runDelta,
     setWeekendChoices: s.setWeekendChoices,
     setVacationChoices: s.setVacationChoices,
     setRoutine: s.setRoutine,
@@ -245,6 +246,7 @@ export function GameScreen() {
         parents={state.parents}
         burnoutCount={state.burnoutCount}
         bgProps={bgProps}
+        runDelta={runDelta}
       />
     );
   } else if (state.currentEvent && state.phase === 'event') {

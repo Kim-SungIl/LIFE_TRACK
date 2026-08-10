@@ -5,6 +5,8 @@ import { loadFromStorage } from '../engine/store';
 import { Portrait } from './Portrait';
 import { ConfirmDialog } from './ConfirmDialog';
 import { webpSrc } from '../engine/assetWebp';
+import { ArchiveScreen } from './screens/ArchiveScreen';
+import { loadArchive } from '../engine/archive';
 
 // 부모 선택 = 어린 시절 기억 장면
 const MEMORIES: { id: ParentStrength; scene: string; detail: string; icon: string }[] = [
@@ -46,7 +48,7 @@ const MEMORIES: { id: ParentStrength; scene: string; detail: string; icon: strin
   },
 ];
 
-type Phase = 'title' | 'intro' | 'gender' | 'select';
+type Phase = 'title' | 'intro' | 'gender' | 'select' | 'archive';
 type Gender = 'male' | 'female';
 
 export function TitleScreen() {
@@ -64,6 +66,7 @@ export function TitleScreen() {
   const hasCleared = (() => {
     try { return localStorage.getItem('lifetrack_has_cleared') === '1'; } catch { return false; }
   })();
+  const hasArchive = loadArchive().runs > 0;
 
   const toggle = (id: ParentStrength) => {
     if (selected.includes(id)) {
@@ -86,6 +89,10 @@ export function TitleScreen() {
       doStart();
     }
   };
+
+  if (phase === 'archive') {
+    return <ArchiveScreen onBack={() => setPhase('title')} />;
+  }
 
   // 타이틀 화면
   // 첫 화면은 저장/시작 허브이면서 게임의 표지 역할을 한다.
@@ -154,6 +161,14 @@ export function TitleScreen() {
           >
             새 게임
           </button>
+          {/* 기록실은 한 번이라도 끝까지 간 사람에게만 — 첫 플레이어에게 빈 목록을 권하지 않는다.
+              (도전 모드 노출이 hasCleared를 쓰는 것과 같은 판단) */}
+          {hasArchive && (
+            <button className="btn btn-secondary" onClick={() => setPhase('archive')}>
+              기록실
+              <span className="btn__sub">지금까지의 학창시절</span>
+            </button>
+          )}
         </div>
       </div>
     );
