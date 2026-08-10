@@ -178,6 +178,49 @@ describe('배선 — 돈 부족 vs 게이트 위반 메시지', () => {
   });
 });
 
+// 위 테스트는 "돈 부족만" / "게이트 위반만" 입력이라 검사 순서를 뒤집어도 통과한다.
+// gameEngine은 "돈 체크를 먼저(메시지 구분 유지), 그다음 canApplyActivity 게이트"를
+// 주말·루틴 두 자리에서 각각 수행하므로, 두 조건이 동시에 참인 입력으로 자리마다 잠근다.
+describe('배선 — 돈 부족과 게이트 위반이 동시일 때 우선순위', () => {
+  const paidVacationOnly = pickActivity(
+    a => a.seasonGate === 'vacation-only' && getActivityCost(a, 4) > 0 && !a.requires,
+    '유료·무requires vacation-only 활동 없음',
+  );
+  const shortMoney = getActivityCost(paidVacationOnly, 4) - 1;
+
+  function expectMoneyWins(state: GameState): void {
+    expect(state.weekLog?.messages.some(m => MONEY_SKIP.test(m))).toBe(true);
+    expect(state.weekLog?.messages.some(m => GATE_SKIP.test(m))).toBe(false);
+  }
+
+  it('주말 선택 — 학기 중 유료 vacation-only를 잔액 부족으로 고르면 💰만 뜬다', () => {
+    expectMoneyWins(runWeek({
+      week: semesterWeek(),
+      year: 4,
+      money: shortMoney,
+      weekendChoices: [paidVacationOnly.id],
+    }));
+  });
+
+  it('루틴 슬롯2 — 같은 조건에서 💰만 뜬다', () => {
+    expectMoneyWins(runWeek({
+      week: semesterWeek(),
+      year: 4,
+      money: shortMoney,
+      routineSlot2: paidVacationOnly.id,
+    }));
+  });
+
+  it('루틴 슬롯3 — 같은 조건에서 💰만 뜬다', () => {
+    expectMoneyWins(runWeek({
+      week: semesterWeek(),
+      year: 4,
+      money: shortMoney,
+      routineSlot3: paidVacationOnly.id,
+    }));
+  });
+});
+
 describe('배선 — 방학 한도 초과', () => {
   it('한도 있는 활동을 초과 배치하면 한도까지만 적용되고 나머지는 스킵된다', () => {
     const limited = pickActivity(
