@@ -33,6 +33,11 @@ interface Persona {
   companionFocus?: string; // 주말/방학 동행 활동(+3)을 이 NPC에게 몰빵 (met 이후부터)
   companionSpread?: boolean; // 동행을 최저 친밀도 met NPC에게 분산 (전원 친구 상한 측정)
   tutoringY6?: boolean;  // Y6+ 주말 슬롯에 집중과외 투입 (돈 sink 측정)
+  // 알바 밸브 측정 — part-time은 unlockYear 4(중3)이고 requires도 year>=4다(activities.ts:216).
+  // processWeek는 돈만 보고 unlock/requires를 안 보므로 tutoringY6과 동일하게 **하네스에서 수동 게이트**한다.
+  // 이 게이트를 빼면 Y1~Y3에 존재하지 않는 수입이 생겨 측정 자체가 거짓이 된다.
+  partTimeY4?: boolean;        // Y4+ 주말 1슬롯을 알바로 (Y1~3은 p.weekend 그대로)
+  partTimeVacationY4?: boolean; // Y4+ 방학 1슬롯도 알바로 (밸브 상한 측정)
 }
 
 // 선택지 정책 — effects 를 보고 인덱스 선택. tie 면 첫 번째.
@@ -131,8 +136,12 @@ function runPersona(p: Persona, seed: number): Result {
     // Y5+ 집중과외 투입 — requires(year>=5)를 하네스에서 수동 게이트 (processWeek는 돈만 체크)
     s.weekendChoices = (p.tutoringY6 && s.year >= 5)
       ? ['private-tutoring', p.weekend[1] ?? 'rest']
-      : p.weekend;
-    s.vacationChoices = p.vacation;
+      : (p.partTimeY4 && s.year >= 4)
+        ? ['part-time', p.weekend[1] ?? 'rest']
+        : p.weekend;
+    s.vacationChoices = (p.partTimeVacationY4 && s.year >= 4)
+      ? ['part-time', p.vacation[1] ?? 'rest', p.vacation[2] ?? 'rest']
+      : p.vacation;
 
     // 동행(+3) — UI npcActivityMap 시뮬. 이번 주 실제 돌아갈 슬롯(학기=주말/방학=방학)의
     // 동행 가능 활동에만 배정 (processWeek는 map을 무조건 적용하므로 주차 정합 필수).
@@ -355,6 +364,13 @@ const PERSONAS: Persona[] = [
   { name: 'paid-full-spend', label: '유료루틴+유료주말(예체능) 풀지출', gender: 'female', parents: ['strict', 'freedom'], routineSlot2: 'academy', routineSlot3: 'gym', weekend: ['art-lesson', 'rest'], vacation: ['art-lesson', 'rest', 'rest'], policy: 'balanced', talk: true },
   // 대조군 — 위와 모든 조건이 같고 루틴만 무료. 유료화의 순효과를 이 쌍으로 읽는다.
   { name: 'free-routine-control', label: '대조군: 동일 조건 / 무료 루틴', gender: 'male', parents: ['strict', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'light-exercise', weekend: ['self-study', 'rest'], vacation: ['self-study', 'rest', 'rest'], policy: 'academic', talk: true },
+
+  // 알바 밸브 — paid-routine-poor와 **모든 조건이 동일**하고 주말 1슬롯만 Y4+에 알바로 바뀐다.
+  // 이 쌍의 차이가 곧 밸브의 순효과다. 알바는 Y4(중3)부터라 Y1~Y3은 paid-routine-poor와 완전히 같고,
+  // 그 구간의 적자는 밸브로 메울 수 없다는 사실이 결과에 그대로 남는다.
+  { name: 'paid-routine-parttime', label: '유료루틴+주말알바(Y4~)', gender: 'male', parents: ['strict', 'freedom'], routineSlot2: 'academy', routineSlot3: 'gym', weekend: ['self-study', 'rest'], vacation: ['self-study', 'rest', 'rest'], policy: 'academic', talk: true, partTimeY4: true },
+  // 밸브 상한 — 주말+방학 모두 알바. 이것도 못 메우면 알바로는 해결이 안 되는 것이다.
+  { name: 'paid-routine-parttime-max', label: '유료루틴+주말/방학알바(Y4~)', gender: 'male', parents: ['strict', 'freedom'], routineSlot2: 'academy', routineSlot3: 'gym', weekend: ['self-study', 'rest'], vacation: ['self-study', 'rest', 'rest'], policy: 'academic', talk: true, partTimeY4: true, partTimeVacationY4: true },
 ];
 
 // ===== 분포 집계 헬퍼 =====
