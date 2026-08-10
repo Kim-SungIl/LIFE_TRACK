@@ -342,7 +342,7 @@ body {
   background:
     linear-gradient(180deg, rgba(18, 15, 20, 0.08) 0%, rgba(18, 15, 20, 0.46) 42%, rgba(18, 15, 20, 0.92) 82%),
     linear-gradient(90deg, rgba(18, 15, 20, 0.30), rgba(18, 15, 20, 0.04) 42%, rgba(18, 15, 20, 0.28)),
-    url('/images/backgrounds/school_road_morning.png') center / cover no-repeat;
+    var(--title-bg-image, none) center / cover no-repeat;
   transform: scale(1.02);
   pointer-events: none;
   z-index: 0;
@@ -535,7 +535,7 @@ body {
 
 @media (max-height: 740px) {
   .title-screen__cast {
-    inset-bottom: 40dvh;
+    bottom: 40dvh;
     height: clamp(210px, 40dvh, 310px);
   }
 
@@ -558,7 +558,7 @@ body {
 
 @media (min-width: 520px) and (min-height: 820px) {
   .title-screen__cast {
-    inset-bottom: 39dvh;
+    bottom: 39dvh;
   }
 }
 
