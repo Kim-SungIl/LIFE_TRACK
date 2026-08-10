@@ -104,8 +104,9 @@ function q1BalanceSheet() {
   }
 
   console.log('\n[용돈 모델]');
-  console.log('  freedom/normal:  주 +3 - 생활비 1.2 = net +1.8/주');
-  console.log('  wealth:          주 +8 - 생활비 2.5 = net +5.5/주');
+  // v8.2: 학교급 곡선(parentModifiers.getWeeklyIncome). livingCost는 v8.1에서 0으로 통합됨.
+  console.log('  기본 부모:  초 +4 / 중 +5 / 고 +5 (생활비 0)');
+  console.log('  wealth:     초 +6 / 중 +7 / 고 +7 (전 구간 +2)');
 
   console.log('\n[주간 피로 balance — self-study + light-exercise 루틴, 주말 휴식 없음 가정]');
   // self-study +5, light-exercise +2 (health가 낮으면 그대로, 30+면 -1 감소 적용)

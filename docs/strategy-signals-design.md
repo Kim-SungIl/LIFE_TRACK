@@ -33,7 +33,7 @@
 | `⚠ 지금 피로 위험` | `a.fatigue > 0` & **실제 tired 게이트 근접**: `(s.stats.mental < 40 && s.fatigue > 45) \|\| s.fatigue >= 85` | tired 진입 게이트 gameEngine.ts:482-484 (strict `>`, mental 동반 필요) |
 | `📉 고구간 효율 낮음` | **`academic` 효과가 있는** 활동 & `getActivityCost(a,year)===0` & 해당 stat ≥ 80 | 무료활동 소프트캡 ×0.1은 **전 스탯** 적용 gameEngine.ts:234 (study 전용 아님 — 문구를 "고구간"으로) |
 | `🎯 유료라 효율 유지` | `academic` 효과 & `getActivityCost(a,year) > 0` & academic ≥ 80 | 유료는 소프트캡 면제 gameEngine.ts:234. **단 주당+2 성장캡(line 240권역)으로 절대 이득은 작을 수 있음 → "돌파" 아닌 "유지" 톤** |
-| `💸 돈 부담 큼` | `getActivityCost(a,year) >= weeklyIncome*2` (wealth 부모는 소득↑라 고정 15 부적합) | weeklyIncome 3/5 parentModifiers.ts:55 |
+| `💸 돈 부담 큼` | `getActivityCost(a,year) >= getWeeklyIncome(s.parents, s.year)*2` (wealth 부모는 소득↑라 고정 15 부적합) | v8.2: 용돈이 학교급 곡선(기본 4/5/5, wealth +2)이 되어 `ParentMods.weeklyIncome` 필드는 삭제됨 → `parentModifiers.getWeeklyIncome(parents, year)`. 임계는 초 8 / 중·고 10(기본 부모). 실제 판정이 뒤집히는 활동은 `family-trip`(8만원) 하나 |
 | `🌙 지금 필요함` (초록) | rest 활동 & (`s.mentalState !== 'normal'` 또는 `s.fatigue >= 60`) | 회복 휴리스틱(엄밀 게이트 아님, 넛지) |
 | `💛 관계 유지` (초록) | social 활동 & npcEffects 보유 | 동행 +3 gameEngine.ts:671 |
 
@@ -46,13 +46,14 @@
 ## 구현 — 순수 함수 분리 (`game/src/engine/activityHints.ts`, 신규)
 ```ts
 export type ActivityHint = { text: string; tone: 'warn' | 'good' };
-export function activityHints(a: Activity, s: GameState, weeklyIncome: number): ActivityHint[] {
+// 실구현은 weeklyIncome을 인자로 받지 않고 getWeeklyIncome(s.parents, s.year)로 내부 조회한다(v8.2).
+export function activityHints(a: Activity, s: GameState, companionEligible = true): ActivityHint[] {
   const hints: ActivityHint[] = [];
   const cost = getActivityCost(a, s.year);
   const hasAcademic = (a.effects.academic ?? 0) > 0;
   if (a.fatigue > 0 && ((s.stats.mental < 40 && s.fatigue > 45) || s.fatigue >= 85))
     hints.push({ text: '⚠ 지금 피로 위험', tone: 'warn' });
-  if (cost >= weeklyIncome * 2) hints.push({ text: '💸 돈 부담 큼', tone: 'warn' });
+  if (cost >= getWeeklyIncome(s.parents, s.year) * 2) hints.push({ text: '💸 돈 부담 큼', tone: 'warn' });
   if (a.category === 'rest' && (s.mentalState !== 'normal' || s.fatigue >= 60))
     hints.push({ text: '🌙 지금 필요함', tone: 'good' });
   if (hasAcademic && s.stats.academic >= 80)

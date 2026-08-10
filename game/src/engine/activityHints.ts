@@ -4,7 +4,7 @@
 // 설계: docs/strategy-signals-design.md (#5)
 import { Activity, GameState } from './types';
 import { getActivityCost, NPC_COMPANION_ACTIVITIES } from './activities';
-import { getParentMods } from './parentModifiers';
+import { getParentMods, getWeeklyIncome } from './parentModifiers';
 
 export type ActivityHint = { text: string; tone: 'warn' | 'good' };
 
@@ -28,7 +28,7 @@ export function activityHints(a: Activity, s: GameState, companionEligible = tru
     hints.push({ text: '⚠ 지금 피로 위험', tone: 'warn' });
   }
   // 💸 돈 부담 — 주당소득 2배 이상(고정 임계 대신 상대 기준: wealth 부모는 소득이 높음).
-  if (cost >= mods.weeklyIncome * 2) {
+  if (cost >= getWeeklyIncome(s.parents, s.year) * 2) {
     hints.push({ text: '💸 돈 부담 큼', tone: 'warn' });
   }
   // 🌙 회복 필요 — 지친 상태에서의 휴식 권장(엄밀 게이트 아닌 넛지).

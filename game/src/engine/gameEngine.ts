@@ -7,7 +7,7 @@ import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
 import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { recordMilestoneForYear } from './memorySystem';
-import { getParentMods } from './parentModifiers';
+import { getParentMods, getWeeklyIncome } from './parentModifiers';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
@@ -38,7 +38,8 @@ export function createInitialState(
   if (mods.initStatBonus.academic) stats.academic += mods.initStatBonus.academic;
   if (mods.initStatBonus.mental) stats.mental += mods.initStatBonus.mental;
   if (mods.initStatBonus.health) stats.health += mods.initStatBonus.health;
-  const money = mods.weeklyIncome;
+  // 초기 자금 = 첫 주 용돈. Y1 고정이라 초등 구간값(기본 4 / wealth 6).
+  const money = getWeeklyIncome(parents, 1);
   // freedom의 별도 효과는 idle 페널티 완화 + 방학 슬롯 +1로 처리됨
 
   return {
@@ -675,7 +676,7 @@ function prepareWeekContext(state: GameState): void {
 // 용돈 지급 + 생활비 차감 (v6, parentModifiers SSOT). econMods를 반환해 idle 페널티와 공유.
 function applyAllowanceAndLiving(state: GameState, log: WeekLog): ReturnType<typeof getParentMods> {
   const econMods = getParentMods(state.parents);
-  const netMoney = Math.round((econMods.weeklyIncome - econMods.livingCost) * 10) / 10;
+  const netMoney = Math.round((getWeeklyIncome(state.parents, state.year) - econMods.livingCost) * 10) / 10;
   if (state.parents.includes('wealth')) {
     log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
   }

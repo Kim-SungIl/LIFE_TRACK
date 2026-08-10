@@ -1,11 +1,15 @@
 import { Activity, GameState } from './types';
+import { getSchoolLevel } from './backgrounds';
 
 // 학년별 비용 차등 헬퍼 — 현실 고증 (초등 종합반 < 중등 입시 < 고등 단과)
 // yearlyCost가 정의된 활동만 학년 차등, 그 외는 base moneyCost 그대로.
+//
+// 학교급 경계는 backgrounds.getSchoolLevel(기존 SSOT, 8개 모듈 공용)을 쓴다. 인라인 사본이었을 때는
+// 수입 곡선(parentModifiers.getWeeklyIncome)과 경계가 어긋날 수 있었고, 비용과 수입이 서로 다른
+// 지점에서 꺾이면 "학원비만 오르고 용돈은 그대로"인 구간이 생긴다(v8.1까지 실제로 그랬다).
 export function getActivityCost(activity: Pick<Activity, 'moneyCost' | 'yearlyCost'>, year: number): number {
   if (!activity.yearlyCost) return activity.moneyCost;
-  const level = year <= 1 ? 'elementary' : year <= 4 ? 'middle' : 'high';
-  return activity.yearlyCost[level] ?? activity.moneyCost;
+  return activity.yearlyCost[getSchoolLevel(year)] ?? activity.moneyCost;
 }
 
 // NPC 동행 선택이 열리는 활동(선택 시 친밀도 +3 부여) — SlotEditPopup·activityHints 공용 SSOT.

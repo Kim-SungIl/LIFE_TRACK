@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { activityHints } from '../activityHints';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../activities';
-import { getParentMods } from '../parentModifiers';
+import { getParentMods, getWeeklyIncome } from '../parentModifiers';
 import { makeState } from '../../test/fixtures';
 import type { Activity, GameState, Stats } from '../types';
 
@@ -108,16 +108,47 @@ describe('activityHints — ⚠ 지금 피로 위험', () => {
 
 describe('activityHints — 💸 돈 부담 큼', () => {
   it('cost가 weeklyIncome*2 바로 아래면 안 뜨고, 이상이면 뜬다', () => {
-    // 기본 부모(비-wealth) weeklyIncome=3 → 임계 6
-    const state = makeState({ parents: ['info', 'emotional'] });
-    const income = getParentMods(state.parents).weeklyIncome;
-    expect(income).toBe(3);
+    // 기본 부모(비-wealth) 초등(Y1) 용돈=4 → 임계 8
+    const state = makeState({ parents: ['info', 'emotional'], year: 1 });
+    const income = getWeeklyIncome(state.parents, state.year);
+    expect(income).toBe(4);
     const below = hintAct({ id: 'test-cost-below', category: 'study', moneyCost: income * 2 - 1 });
     const at = hintAct({ id: 'test-cost-at', category: 'study', moneyCost: income * 2 });
-    expect(getActivityCost(below, state.year)).toBe(5);
-    expect(getActivityCost(at, state.year)).toBe(6);
+    expect(getActivityCost(below, state.year)).toBe(7);
+    expect(getActivityCost(at, state.year)).toBe(8);
     expect(texts(activityHints(below, state))).not.toContain('💸 돈 부담 큼');
     expect(texts(activityHints(at, state))).toContain('💸 돈 부담 큼');
+  });
+
+  // 실제 콘텐츠 잠금 — 위 케이스는 합성 활동이라 ACTIVITIES가 바뀌어도 안 움직인다.
+  // 임계가 6(고정) → 8/10/10(곡선)으로 바뀌면서 판정이 실제로 뒤집히는 활동은 family-trip(8만원)
+  // **하나뿐**이다: 초등은 8>=8로 계속 경고, 중·고는 8<10이라 경고가 사라진다.
+  // 이건 규칙("주당소득 2배" 상대 기준)이 의도대로 작동한 결과이지 회귀가 아니다 —
+  // 8만원은 수입 3만 시절 2.7주치였지만 5만이면 1.6주치라 실제로 덜 부담스러워졌다.
+  // 의도임을 못 박아 두어, 나중에 누가 되돌리려면 이 테스트를 마주하게 한다.
+  it('family-trip(8만원)은 초등에서만 경고가 뜨고 중·고에서는 사라진다 (상대 임계의 의도된 결과)', () => {
+    const trip = pickActivity(a => a.id === 'family-trip', 'family-trip 활동이 없습니다');
+    const parents: GameState['parents'] = ['info', 'emotional'];
+    // 비용이 학년 무관 8만원임을 먼저 고정 — 활동 데이터가 바뀌면 이 케이스의 전제가 깨진다.
+    for (const year of [1, 2, 5]) expect(getActivityCost(trip, year)).toBe(8);
+
+    expect(texts(activityHints(trip, makeState({ parents, year: 1 })))).toContain('💸 돈 부담 큼');
+    expect(texts(activityHints(trip, makeState({ parents, year: 2 })))).not.toContain('💸 돈 부담 큼');
+    expect(texts(activityHints(trip, makeState({ parents, year: 5 })))).not.toContain('💸 돈 부담 큼');
+    // wealth(초등 6 → 임계 12)는 초등에서도 안 뜬다 — 상대 기준이 부모 경제력을 타는 것도 잠근다.
+    expect(texts(activityHints(trip, makeState({ parents: ['wealth', 'info'], year: 1 })))).not.toContain('💸 돈 부담 큼');
+  });
+
+  // 임계가 연차를 타는지 — 용돈이 학교급 곡선(4/5/5)이라 같은 비용도 학년에 따라 판정이 갈린다.
+  // 호출부가 연차를 잃고 상수를 쓰면(= v8.1 구조로 회귀) 이 케이스가 깨진다.
+  it('같은 비용 9만원이 초등(임계 8)에서는 뜨고 고등(임계 10)에서는 안 뜬다', () => {
+    const act = hintAct({ id: 'test-cost-year', category: 'study', moneyCost: 9 });
+    const elementary = makeState({ parents: ['info', 'emotional'], year: 1 });
+    const high = makeState({ parents: ['info', 'emotional'], year: 5 });
+    expect(getWeeklyIncome(elementary.parents, 1)).toBe(4);
+    expect(getWeeklyIncome(high.parents, 5)).toBe(5);
+    expect(texts(activityHints(act, elementary))).toContain('💸 돈 부담 큼');
+    expect(texts(activityHints(act, high))).not.toContain('💸 돈 부담 큼');
   });
 });
 
