@@ -9,6 +9,7 @@
 // 학원+PT를 고정 루틴으로 깔면 무-wealth 기준 169주가 막혔다. 곡선을 4/5/5로 바꿔 해소.
 import { describe, expect, it } from 'vitest';
 import { createInitialState, processWeek } from '../gameEngine';
+import { ACTIVITIES, getActivityCost } from '../activities';
 import { getWeeklyIncome } from '../parentModifiers';
 import type { GameState, ParentStrength } from '../types';
 
@@ -71,13 +72,65 @@ describe('주간 용돈 곡선 — 엔진 경로', () => {
   });
 
   // 이 게임의 주력 고정비 — 이게 수입을 넘으면 MainWeekScreen의 routineTooExpensive가
-  // 확정 버튼을 잠근다(주를 못 넘김). 학교급마다 "학원+PT ≤ 용돈"인지 직접 확인한다.
-  it('학원+PT 고정비가 어느 학교급에서도 주간 용돈을 넘지 않는다 (기본 부모)', () => {
-    const academyPlusGym = { elementary: 2 + 2, middle: 3 + 2, high: 4 + 2 };
-    expect(getWeeklyIncome(PLAIN, ELEMENTARY)).toBeGreaterThanOrEqual(academyPlusGym.elementary);
-    expect(getWeeklyIncome(PLAIN, MIDDLE_FIRST)).toBeGreaterThanOrEqual(academyPlusGym.middle);
-    // 고등만 -1만원/주 — 의도된 적자(알바 unlockYear 4가 이미 열려 있어 탈출구가 있다).
-    // 등호가 아니라 부등호로 두면 "고등도 균형(4/5/6)"으로 바뀌어도 통과하므로 정확히 -1을 잠근다.
-    expect(getWeeklyIncome(PLAIN, HIGH_FIRST) - academyPlusGym.high).toBe(-1);
+  // 확정 버튼을 잠근다(주를 못 넘김). 학교급마다 "학원+PT vs 용돈"을 직접 확인한다.
+  //
+  // ⚠ 고정비를 리터럴로 적지 말 것. { elementary: 2+2, ... } 로 하드코딩했더니 학원 yearlyCost를
+  //   { 3, 5, 6 }으로 올려 169주 막힘 버그를 그대로 재도입해도 전 테스트가 통과했다(false lock).
+  //   비용은 반드시 ACTIVITIES에서 getActivityCost로 유도해 **수입축과 비용축 양쪽**을 잠근다.
+  const routineCostAt = (year: number) => {
+    const academy = ACTIVITIES.find(a => a.id === 'academy');
+    const gym = ACTIVITIES.find(a => a.id === 'gym');
+    if (!academy || !gym) throw new Error('academy/gym 활동이 없습니다 — 고정비 계산 불가');
+    return getActivityCost(academy, year) + getActivityCost(gym, year);
+  };
+
+  it('학원+PT 고정비가 초·중에서는 주간 용돈 이내다 (기본 부모)', () => {
+    // 초등 수지균형이 이 PR의 핵심 — 여기가 음수면 이벤트 수입 적립이 안 되고
+    // 그 상태로 중학교에 들어가면 초기자금을 25만 줘도 막힘이 안 풀린다.
+    expect(getWeeklyIncome(PLAIN, ELEMENTARY) - routineCostAt(ELEMENTARY)).toBe(0);
+    expect(getWeeklyIncome(PLAIN, MIDDLE_FIRST) - routineCostAt(MIDDLE_FIRST)).toBe(0);
+    expect(getWeeklyIncome(PLAIN, MIDDLE_LAST) - routineCostAt(MIDDLE_LAST)).toBe(0);
+  });
+
+  it('고등은 학기 중 -1만원/주다 (등호가 아니라 정확히 -1 — 4/5/6으로 풀려도 잡는다)', () => {
+    expect(getWeeklyIncome(PLAIN, HIGH_FIRST) - routineCostAt(HIGH_FIRST)).toBe(-1);
+    expect(getWeeklyIncome(PLAIN, HIGH_LAST) - routineCostAt(HIGH_LAST)).toBe(-1);
+    // wealth는 같은 구간에서 +1 — 부모 경제력으로 부호가 갈리는 지점이 고등학교다.
+    expect(getWeeklyIncome(RICH, HIGH_FIRST) - routineCostAt(HIGH_FIRST)).toBe(1);
+  });
+
+  // 위 -1은 **학기 중 루틴 원장**의 값이고 연간 적자가 아니다. 루틴은 방학에 아예 안 돌지만
+  // (applyRoutineActivities의 `if (!state.isVacation)`) 용돈은 48주 전부 지급되므로,
+  // 방학 활동이 무료인 빌드는 방학 11주에 지출 없이 적립한다 → 고등 1년은 순증이다.
+  // 고등 -1의 실제 기능은 "학기 중 유료 주말/방학까지 얹으면 선택을 강요받는다"이지
+  // "알바 없이는 버틸 수 없다"가 아니다. 이 사실을 테스트로 고정해 서술이 다시 어긋나지 않게 한다.
+  it('방학엔 루틴 과금이 없어 고등 1년은 순증이다 (학기 -1이 연간 적자가 아니다)', () => {
+    const SCHOOL_WEEKS = 37;   // W1~19 + W25~42
+    const VACATION_WEEKS = 11; // W20~24 + W43~48
+    expect(SCHOOL_WEEKS + VACATION_WEEKS).toBe(48);
+
+    // ⚠ 두 수치 모두 **엔진에서 유도**한다. vacationNet을 income으로 가정해 적으면
+    //   applyRoutineActivities의 `if (!state.isVacation)` 게이트를 지워도 통과한다(false lock).
+    const withRoutine = (week: number, isVacation: boolean): number => {
+      const s = createInitialState('male', PLAIN, { rngSeed: RNG_SEED });
+      const next = processWeek(Object.assign(s, {
+        year: HIGH_FIRST, week, isVacation,
+        routineSlot2: 'academy', routineSlot3: 'gym',
+        weekendChoices: [], vacationChoices: [],   // 주말·방학 지출 0 → 루틴 과금만 남는다
+        money: 999,                                // 잔액 부족 스킵을 배제(스킵되면 과금이 사라져 게이트와 구분 불가)
+      }));
+      return next.weekLog!.moneyChange;
+    };
+
+    const schoolNet = withRoutine(3, false);
+    const vacationNet = withRoutine(21, true);   // 여름방학 W20~24 중 한 주
+
+    expect(schoolNet).toBe(getWeeklyIncome(PLAIN, HIGH_FIRST) - routineCostAt(HIGH_FIRST));
+    expect(schoolNet).toBe(-1);
+    // 방학 주는 루틴비가 전혀 안 빠져 용돈 전액이 남는다
+    expect(vacationNet).toBe(getWeeklyIncome(PLAIN, HIGH_FIRST));
+    expect(vacationNet).toBeGreaterThan(schoolNet);
+    // 연간 합산이 순증 — 학기 적자를 방학 적립이 덮는다
+    expect(SCHOOL_WEEKS * schoolNet + VACATION_WEEKS * vacationNet).toBeGreaterThan(0);
   });
 });
