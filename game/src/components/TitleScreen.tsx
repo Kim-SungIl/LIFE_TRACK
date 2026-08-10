@@ -4,6 +4,7 @@ import { useGameStore } from '../engine/store';
 import { loadFromStorage } from '../engine/store';
 import { Portrait } from './Portrait';
 import { ConfirmDialog } from './ConfirmDialog';
+import { webpSrc } from '../engine/assetWebp';
 
 // 부모 선택 = 어린 시절 기억 장면
 const MEMORIES: { id: ParentStrength; scene: string; detail: string; icon: string }[] = [
@@ -91,18 +92,26 @@ export function TitleScreen() {
   if (phase === 'title') {
     return (
       <div className="title-screen">
-        <div className="title-screen__bg" aria-hidden="true" />
+        {/* 배경 사진은 CSS가 아니라 여기서 주입한다 — 릴리즈 빌드는 png를 지우므로(webp-gen)
+            webpSrc를 경유해야 하는데, 번들된 CSS의 url()은 플러그인이 스왑해주지 않는다. */}
+        <div
+          className="title-screen__bg"
+          aria-hidden="true"
+          style={{
+            '--title-bg-image': `url(${webpSrc(`${assetBase}images/backgrounds/school_road_morning.png`)})`,
+          } as React.CSSProperties}
+        />
 
         <div className="title-screen__cast" aria-hidden="true">
           <img
             className="title-screen__figure title-screen__figure--male"
-            src={`${assetBase}images/characters/player_m_elementary_fullbody.png`}
+            src={webpSrc(`${assetBase}images/characters/player_m_elementary_fullbody.png`)}
             alt=""
             decoding="async"
           />
           <img
             className="title-screen__figure title-screen__figure--female"
-            src={`${assetBase}images/characters/player_f_elementary_fullbody.png`}
+            src={webpSrc(`${assetBase}images/characters/player_f_elementary_fullbody.png`)}
             alt=""
             decoding="async"
           />
