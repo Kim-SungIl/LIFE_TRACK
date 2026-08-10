@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
+import { playSfx } from '../audio/sfx';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
 import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
@@ -242,6 +243,17 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     injectKeyframes();
   }, []);
 
+  // 이벤트 등장음 — "변화는 또렷이" 축.
+  // ref로 마지막 발음 id를 들고 있는 이유: StrictMode(개발 모드)는 이펙트를 두 번 호출해서
+  // 종소리가 겹쳐 울린다. 프로덕션은 한 번이지만, 모드에 따라 소리가 달라지는 것 자체가
+  // 디버깅을 흐리게 하므로 **id당 정확히 한 번**으로 못 박는다(향후 리마운트에도 안전).
+  const lastAppearRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastAppearRef.current === event.id) return;
+    lastAppearRef.current = event.id;
+    playSfx('eventAppear');
+  }, [event.id]);
+
   // Reset state when event changes — event.id가 바뀌면 페이지/배경 로드 상태를 동기 리셋(의도된 prop 동기화, cascading 아님)
   useEffect(() => {
     setBgLoaded(false);
@@ -324,6 +336,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const hasReachedEnd = maxPageReached >= pages.length - 1;
   const advancePage = () => {
     if (!isLastPage) {
+      playSfx('page');
       const next = safePageIndex + 1;
       setPageIndex(next);
       // 같은 핸들러에서 함께 set → React가 배치, flicker 없이 동시 반영
@@ -331,7 +344,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
     }
   };
   const retreatPage = () => {
-    if (!isFirstPage) setPageIndex(p => p - 1);
+    if (!isFirstPage) { playSfx('page'); setPageIndex(p => p - 1); }
   };
 
   // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
@@ -398,6 +411,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
 
   // 선택 즉시 부모에 위임 — 결과 화면은 부모가 eventResultData 경로로 그림
   const handleChoice = (index: number) => {
+    playSfx('select');
     onChoice(index);
   };
 

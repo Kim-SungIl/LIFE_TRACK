@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
@@ -173,6 +174,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   // 락 체크를 여기서도 — 다이얼로그 확인 버튼은 handleConfirm 게이트를 안 거치므로(초고속 더블탭 방어).
   const proceedConfirm = () => {
     if (confirmLockRef.current) return;
+    // 이 게임에서 가장 자주 반복되는 동작(7년 = 336주) — 소리도 여기가 기준점이 된다.
+    playSfx('confirm');
     confirmLockRef.current = true;
     setTimeout(() => { confirmLockRef.current = false; }, 500);
     onConfirmWeek(selectedActivities, npcChoices);

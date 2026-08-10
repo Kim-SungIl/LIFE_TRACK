@@ -1,4 +1,6 @@
 import { EndingData } from '../../engine/ending';
+import { useEffect, useRef } from 'react';
+import { playSfx } from '../../audio/sfx';
 import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, getGrade } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';
@@ -27,6 +29,15 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 // 7년의 여정을 마친 후 — phase === 'ending'
 export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgProps, runDelta }: EndingScreenProps) {
   const trackLabel = track === 'humanities' ? '문과' : track === 'science' ? '이과' : null;
+
+  // 엔딩 진입음 — 7년의 끝. 가장 길고 낮은 소리로, 화면이 뜨는 순간 한 번만.
+  // ref 가드는 StrictMode 이중 호출로 화음이 겹쳐 울리는 것을 막는다(2.2초짜리라 특히 티가 난다).
+  const endingPlayedRef = useRef(false);
+  useEffect(() => {
+    if (endingPlayedRef.current) return;
+    endingPlayedRef.current = true;
+    playSfx('ending');
+  }, []);
 
   return (
     <BgWrapper {...bgProps}>
