@@ -117,6 +117,7 @@ export function clearArchive(): void {
   try { localStorage.removeItem(ARCHIVE_KEY); } catch { /* noop */ }
 }
 
-// 티어 기반 조회(npcTierRows/unmetNames)는 두지 않는다 — 7년을 돌려보면 어떤 빌드로도 10명
-// 전원이 절친에 도달해서 티어로는 판이 구분되지 않는다(실측). 기록실이 말하는 축은
-// npcStoryPool의 이야기 커버리지다. npcPeak은 그 결론과 무관하게 원천 데이터로만 남겨둔다.
+// 티어 기반 조회(npcTierRows/unmetNames)는 두지 않는다 — 친밀도는 동행·말걸기를 얼마나
+// 쓰느냐에 따라 전원 절친까지도, 최고 62까지도 나온다(실측). 플레이 습관을 재는 것이지
+// 콘텐츠를 얼마나 봤는지를 재지 못한다. 기록실이 말하는 축은 npcStoryPool의 이야기
+// 커버리지다. npcPeak은 그 결론과 무관하게 원천 데이터로만 남겨둔다.
