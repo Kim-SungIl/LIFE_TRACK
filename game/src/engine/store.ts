@@ -10,6 +10,8 @@ import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligib
 import { PARENT_MINI_EVENTS } from './talkData';
 import { applyParentIntimacyDelta } from './parentIntimacy';
 import { absWeek, isNpcInteractable } from './relationshipSignals';
+import { commitRun, type RunDelta } from './archive';
+import { calculateEnding } from './ending';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
 function applyVisibleTalkEffects(
@@ -97,6 +99,9 @@ export function deleteSave() {
 
 interface GameStore {
   state: GameState | null;
+  // 이번 판이 기록에 무엇을 처음 더했는지 — 엔딩 화면 전용. 세이브에 넣지 않는 이유는
+  // 스키마 마이그레이션 없이 끝내려는 것 + 새로고침 후엔 "이번 판" 개념이 이미 지난 일이기 때문.
+  runDelta: RunDelta | null;
   npcActivityMap: Record<string, string>; // activityId -> npcId
   startGame: (gender: 'male' | 'female', parents: [ParentStrength, ParentStrength], options?: { useReducedRecovery?: boolean }) => void;
   loadSavedGame: () => boolean;
@@ -266,8 +271,29 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
   }
 }
 
+/**
+ * 런간 기록 적립 — phase가 'ending'으로 **처음** 넘어가는 순간에만 적립한다.
+ *
+ * 왜 전이 감지인가: 엔딩 진입 경로가 하나가 아니다. Y7 W48은 대기 이벤트 유무에 따라
+ * processWeek(advanceWeekCounter) 또는 resolveEvent(resolveEventChain)에서 applyYearTransition을
+ * 거쳐 곧장 'ending'이 된다 — **year-end를 경유하지 않는다**. 그래서 advanceFromYearEnd에
+ * 적립을 매달아 뒀더니 실제 플레이에서 한 번도 안 걸렸다(디버그 패널로만 발동).
+ *
+ * 반대로 엔딩 화면의 useEffect에 걸면 안 된다 — 새로고침·리마운트마다 완주 횟수가 부푼다.
+ * "이전 phase가 ending이 아니었다"가 한 판에 정확히 한 번을 보장하는 유일한 조건이다.
+ */
+function commitOnEnding(prev: GameState, next: GameState): RunDelta | null {
+  if (next.phase !== 'ending' || prev.phase === 'ending') return null;
+  try {
+    return commitRun(next, calculateEnding(next).title);
+  } catch {
+    return null;   // 기록 실패가 엔딩을 막지 않는다
+  }
+}
+
 export const useGameStore = create<GameStore>((set, get) => ({
   state: null,
+  runDelta: null,
   npcActivityMap: {},
 
   startGame: (gender, parents, options) => {
@@ -280,7 +306,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       initial.currentEvent = { ...firstScene };
       initial.phase = 'event';
     }
-    set({ state: initial });
+    set({ state: initial, runDelta: null });
     saveToStorage(initial);
     // tutorial_done만 지운다 — 새 판마다 튜토리얼을 다시 띄우기 위해서다.
     // 영속 플래그(lifetrack_tutorial_ever_seen / has_cleared / rest_ack)는 **의도적으로 남긴다**:
@@ -294,13 +320,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const save = loadFromStorage();
     if (!save) return false;
     // 단계형(버전 격상) → 정규화(백필·재수화) 순서 — step은 격상 전 구조를 전제로 쓴다.
-    set({ state: migrateLoadedState(runSaveMigrations(save.state, save.version)) });
+    set({ state: migrateLoadedState(runSaveMigrations(save.state, save.version)), runDelta: null });
     return true;
   },
 
   resetGame: () => {
     deleteSave();
-    set({ state: null, npcActivityMap: {} });
+    // 기록(lifetrack_archive)은 지우지 않는다 — 새 게임은 한 판을 리셋하는 것이지
+    // 지금까지의 학창시절들을 없애는 게 아니다.
+    set({ state: null, runDelta: null, npcActivityMap: {} });
   },
 
   setRoutine: (slot2, slot3) => {
@@ -341,7 +369,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (newState.phase !== 'event' && newState.phase !== 'year-end' && newState.phase !== 'ending') {
       newState.phase = 'result';
     }
-    set({ state: newState, npcActivityMap: {} });
+    const runDelta = commitOnEnding(s, newState);
+    set({ state: newState, npcActivityMap: {}, ...(runDelta ? { runDelta } : {}) });
   },
 
   resolveEvent: (choiceIndex) => {
@@ -389,7 +418,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // followup/conditional/milestone chain + 학년 전환·결산 분기 (location은 clone 이전 원본)
     resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
 
-    set({ state: newState });
+    const runDelta = commitOnEnding(s, newState);
+    set({ state: newState, ...(runDelta ? { runDelta } : {}) });
     return applied;
   },
 
@@ -406,6 +436,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.week = 1;
     newState.year++;
     newState.currentEvent = null;
+    // 방어적 분기 — 정상 플레이에서 Y7은 year-end를 거치지 않으므로 여기 도달하지 않는다
+    // (applyYearTransition이 곧장 'ending'으로 보낸다). 디버그 패널 경로만 여기를 지난다.
     if (newState.year > 7) {
       newState.phase = 'ending';
     } else {
@@ -414,7 +446,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.semester = nextInfo.semester;
       newState.isVacation = nextInfo.isVacation;
     }
-    set({ state: newState });
+    const runDelta = commitOnEnding(s, newState);
+    set({ state: newState, ...(runDelta ? { runDelta } : {}) });
   },
 
   buyItem: (item, targetNpcId) => {
@@ -587,7 +620,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.week = 1;
     newState.phase = 'ending';
     newState.currentEvent = null;
-    set({ state: newState });
+    const runDelta = commitOnEnding(s, newState);
+    set({ state: newState, ...(runDelta ? { runDelta } : {}) });
   },
 
   debugSetStat: (key, value) => {

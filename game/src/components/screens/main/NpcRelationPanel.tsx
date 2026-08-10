@@ -1,6 +1,7 @@
 import { GameState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { relationshipSignal, npcAbsence } from '../../../engine/relationshipSignals';
+import { intimacyTier, INTIMACY_TIER_LABEL } from '../../../engine/npcRoster';
 
 type Props = {
   state: GameState;
@@ -25,8 +26,9 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
         {ordered.map(n => {
           const absent = npcAbsence(n, state);
           // 친구 게이지 색 = 능력치 등급 색 언어(STAT_GRADES)와 통일 — 아는 사이(E 회색) → 친구(B 우수=초록) → 절친(A 최상=골드)
-          const intimacyColor = n.intimacy >= 70 ? '#e5c07b' : n.intimacy >= 40 ? '#8fb573' : '#8a8078';
-          const intimacyLabel = n.intimacy >= 70 ? '절친' : n.intimacy >= 40 ? '친구' : '아는 사이';
+          const tier = intimacyTier(n.intimacy);
+          const intimacyColor = tier === 'best' ? '#e5c07b' : tier === 'friend' ? '#8fb573' : '#8a8078';
+          const intimacyLabel = INTIMACY_TIER_LABEL[tier];
           const signal = relationshipSignal(n, state);
           return (
             <button

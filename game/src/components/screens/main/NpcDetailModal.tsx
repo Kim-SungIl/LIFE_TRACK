@@ -4,6 +4,7 @@ import { Dialog } from '../../Dialog';
 import { breakSentences } from '../shared';
 import { npcAbsence, relationshipSignal } from '../../../engine/relationshipSignals';
 import { bestNpcRecall } from '../../../engine/memorySystem';
+import { intimacyTier, INTIMACY_TIER_LABEL } from '../../../engine/npcRoster';
 
 const SIGNAL_COLOR = { warn: '#d9a05b', good: '#8fb573', info: '#8a8078' } as const;
 
@@ -24,8 +25,9 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
   // 그대로 있는 모달이 열렸다(같은 화면이 한 친구를 두 상태로 말하던 모순).
   const absent = npcAbsence(npc, state);
   const recall = absent ? bestNpcRecall(state, npc.id) : null;
-  const intimacyColor = npc.intimacy >= 70 ? 'var(--accent-soft)' : npc.intimacy >= 40 ? 'var(--yellow)' : 'var(--text-muted)';
-  const intimacyLabel = npc.intimacy >= 70 ? '절친' : npc.intimacy >= 40 ? '친구' : '아는 사이';
+  const tier = intimacyTier(npc.intimacy);
+  const intimacyColor = tier === 'best' ? 'var(--accent-soft)' : tier === 'friend' ? 'var(--yellow)' : 'var(--text-muted)';
+  const intimacyLabel = INTIMACY_TIER_LABEL[tier];
   const signal = relationshipSignal(npc, state);
   return (
     <Dialog onClose={onClose} labelledBy="npc-detail-name" maxWidth={340}
