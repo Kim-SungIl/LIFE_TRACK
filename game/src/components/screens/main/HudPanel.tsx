@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { GameState, ParentStrength, ParentBonusApplied } from '../../../engine/types';
-import { getParentMods } from '../../../engine/parentModifiers';
+import { getParentMods, getWeeklyIncome } from '../../../engine/parentModifiers';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../../Portrait';
 import { PARENT_ICONS } from '../shared';
@@ -38,7 +38,9 @@ const PARENT_TIP_SHORT: Record<string, string> = {
 };
 const PARENT_TIP_DESC: Record<string, string> = {
   emotional: '엄마/아빠가 자주 물어봐주고 안아준다. 지친 주에 피로 회복 보조.',
-  wealth: '용돈이 풍족해 학원·도구를 부담 없이 쓸 수 있다. 매주 용돈 +6만원.',
+  // 절대액이 아니라 가산분으로 쓴다 — 용돈이 학교급 곡선(4/5/5)이라 절대액은 학년마다 달라진다.
+  // (v8.0의 "+6만원"이 v8.1 하향 뒤에도 남아 있던 걸 v8.2에서 정정)
+  wealth: '용돈이 풍족해 학원·도구를 부담 없이 쓸 수 있다. 매주 용돈 +2만원.',
   info: '엄마가 학원·인강 정보를 잘 안다. 학원·자습 효율 +10%.',
   strict: '정해진 시간에 책상 — 루틴이 한 주 더 길게 유지된다.',
   resilience: '타고난 체력 — 피로 증가 -15%.',
@@ -153,7 +155,7 @@ export const HudPanel = memo(function HudPanel({
             </span>
           )}
         </div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{mods.weeklyIncome - mods.livingCost}만원 입금</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{getWeeklyIncome(parents, year) - mods.livingCost}만원 입금</div>
       </div>
     </div>
   );

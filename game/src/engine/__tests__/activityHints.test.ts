@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { activityHints } from '../activityHints';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../activities';
-import { getParentMods } from '../parentModifiers';
+import { getParentMods, getWeeklyIncome } from '../parentModifiers';
 import { makeState } from '../../test/fixtures';
 import type { Activity, GameState, Stats } from '../types';
 
@@ -108,16 +108,28 @@ describe('activityHints — ⚠ 지금 피로 위험', () => {
 
 describe('activityHints — 💸 돈 부담 큼', () => {
   it('cost가 weeklyIncome*2 바로 아래면 안 뜨고, 이상이면 뜬다', () => {
-    // 기본 부모(비-wealth) weeklyIncome=3 → 임계 6
-    const state = makeState({ parents: ['info', 'emotional'] });
-    const income = getParentMods(state.parents).weeklyIncome;
-    expect(income).toBe(3);
+    // 기본 부모(비-wealth) 초등(Y1) 용돈=4 → 임계 8
+    const state = makeState({ parents: ['info', 'emotional'], year: 1 });
+    const income = getWeeklyIncome(state.parents, state.year);
+    expect(income).toBe(4);
     const below = hintAct({ id: 'test-cost-below', category: 'study', moneyCost: income * 2 - 1 });
     const at = hintAct({ id: 'test-cost-at', category: 'study', moneyCost: income * 2 });
-    expect(getActivityCost(below, state.year)).toBe(5);
-    expect(getActivityCost(at, state.year)).toBe(6);
+    expect(getActivityCost(below, state.year)).toBe(7);
+    expect(getActivityCost(at, state.year)).toBe(8);
     expect(texts(activityHints(below, state))).not.toContain('💸 돈 부담 큼');
     expect(texts(activityHints(at, state))).toContain('💸 돈 부담 큼');
+  });
+
+  // 임계가 연차를 타는지 — 용돈이 학교급 곡선(4/5/5)이라 같은 비용도 학년에 따라 판정이 갈린다.
+  // 호출부가 연차를 잃고 상수를 쓰면(= v8.1 구조로 회귀) 이 케이스가 깨진다.
+  it('같은 비용 9만원이 초등(임계 8)에서는 뜨고 고등(임계 10)에서는 안 뜬다', () => {
+    const act = hintAct({ id: 'test-cost-year', category: 'study', moneyCost: 9 });
+    const elementary = makeState({ parents: ['info', 'emotional'], year: 1 });
+    const high = makeState({ parents: ['info', 'emotional'], year: 5 });
+    expect(getWeeklyIncome(elementary.parents, 1)).toBe(4);
+    expect(getWeeklyIncome(high.parents, 5)).toBe(5);
+    expect(texts(activityHints(act, elementary))).toContain('💸 돈 부담 큼');
+    expect(texts(activityHints(act, high))).not.toContain('💸 돈 부담 큼');
   });
 });
 

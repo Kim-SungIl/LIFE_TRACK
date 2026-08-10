@@ -50,8 +50,8 @@ console.log(`  Mental: ${initial.stats.mental}, Health: ${initial.stats.health}`
 console.log(`  Fatigue: ${initial.fatigue}`);
 
 console.log('\n5. 부모 강점 영향:');
-import { getParentMods } from '../../src/engine/parentModifiers';
+import { getParentMods, getWeeklyIncome } from '../../src/engine/parentModifiers';
 const mods = getParentMods(['wealth', 'info']);
 console.log(`  wealth+info 초기 보너스:`, mods.initStatBonus);
-console.log(`  주간 수입: ${mods.weeklyIncome}, 생활비: ${mods.livingCost}`);
+console.log(`  주간 수입(Y1): ${getWeeklyIncome(["wealth", "info"], 1)}, 생활비: ${mods.livingCost}`);
 console.log(`  학업 효율 보너스: +${(mods.studyEfficiencyBonus * 100).toFixed(0)}%`);
