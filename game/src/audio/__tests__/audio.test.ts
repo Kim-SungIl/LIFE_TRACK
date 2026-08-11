@@ -5,10 +5,13 @@
 // playSfx는 클릭 핸들러 안에서 직접 불리므로, 여기서 예외가 새면 그 상호작용 자체가 통째로 죽는다.
 // jsdom에는 AudioContext가 아예 없어서 이 파일은 그 "미지원 환경" 경로를 그대로 검증한다.
 import { describe, expect, it, beforeEach, vi } from 'vitest';
+import { createElement } from 'react';
+import { render } from '@testing-library/react';
 import {
   loadAudioSettings, getAudioSettings, setMuted, setVolume,
-  subscribeAudioSettings, unlockAudio, getAudioTarget, __resetAudioForTest,
+  subscribeAudioSettings, unlockAudio, getAudioTarget, isAudioRunning, __resetAudioForTest,
 } from '../audioEngine';
+import { useAudioUnlock } from '../useAudioUnlock';
 import { playSfx, listSfxIds, type SfxId } from '../sfx';
 
 beforeEach(() => {
@@ -119,6 +122,11 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
       state = 'running';
       currentTime = 0;
       sampleRate = 44100;
+      // 복구 배선 관측용. resumeRestores=true가 실제 브라우저 동작(resume하면 running으로 돌아옴)이고,
+      // false는 브라우저가 응답하지 않는 상황이다. **테스트가 state를 직접 되돌리지 않는 게 핵심** —
+      // 그러면 "누가 running으로 되돌리는가"를 테스트가 대신해줘서 제품의 공백을 못 잡는다.
+      resumeCalls = 0;
+      resumeRestores = true;
       destination = { kind: 'destination' };
       createGain() { connected.push('gain'); return { gain: makeParam(), connect: vi.fn(), disconnect: vi.fn() }; }
       createOscillator() {
@@ -142,7 +150,11 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
           start: (t: number) => started.push(t), stop: vi.fn(), onended: null,
         };
       }
-      resume() { return Promise.resolve(); }
+      resume() {
+        this.resumeCalls++;
+        if (this.resumeRestores) this.state = 'running';
+        return Promise.resolve();
+      }
       close() { return Promise.resolve(); }
     }
     (window as unknown as { AudioContext: unknown }).AudioContext = StubCtx;
@@ -167,24 +179,67 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
     expect(connected).toContain('filter');
   });
 
+  type LiveCtx = { state: string; resumeCalls: number; resumeRestores: boolean };
+  const liveCtx = (): LiveCtx =>
+    (getAudioTarget() as unknown as { ctx: LiveCtx }).ctx;
+
   // 탭을 백그라운드로 돌리면 브라우저가 컨텍스트를 suspended로 내린다. 그 상태에서 스케줄하면
   // 소리가 사라지는 게 아니라 **큐에 쌓였다가 복귀 순간 한꺼번에 터진다**(주 넘김 20번치가 동시에).
   // 그래서 running이 아닐 때는 노드를 만들지 않는 게 계약이다.
-  it('suspended 상태에서는 노드를 만들지 않는다 (복귀 시 몰아 터지는 것 방지)', () => {
+  it('suspended 상태에서는 노드를 만들지 않되, 복구를 건다', () => {
     const { started } = installStub();
     unlockAudio();
-    const ctx = (getAudioTarget() as unknown as { ctx: { state: string } }).ctx;
+    const ctx = liveCtx();
+    ctx.resumeRestores = false;   // 브라우저가 아직 응답하지 않는 상황
     ctx.state = 'suspended';
 
     expect(getAudioTarget()).toBeNull();
     playSfx('confirm');
     playSfx('eventAppear');
     expect(started).toHaveLength(0);
+    // 노드를 안 만드는 것만으로는 부족하다 — 복구 시도가 없으면 그대로 영구 무음이다.
+    expect(ctx.resumeCalls).toBeGreaterThan(0);
+  });
 
-    // running으로 돌아오면 다시 난다 — 영구 무음이 되면 그것도 버그다(양성 짝).
-    ctx.state = 'running';
-    playSfx('confirm');
+  // 회귀 방지(codex 리뷰 [MED]): resume을 부르는 곳이 unlockAudio뿐이면 그건 첫 제스처에서만
+  // 불리므로, 그 뒤 suspended로 떨어지면 되돌아올 길이 없어 세션 내내 무음이 된다.
+  // **여기서 state를 테스트가 되돌리지 않는다** — 되돌려주면 제품의 공백을 그대로 통과시킨다.
+  it('suspended로 떨어져도 스스로 회복해 다음 소리부터 다시 난다', () => {
+    const { started } = installStub();
+    unlockAudio();
+    const ctx = liveCtx();
+    ctx.state = 'suspended';      // resumeRestores는 기본 true = 실제 브라우저 동작
+
+    expect(getAudioTarget()).toBeNull();   // 이번 한 번은 포기한다(몰아 터짐 방지)
+    expect(started).toHaveLength(0);
+
+    playSfx('confirm');                    // 앞선 호출이 건 복구가 반영된 뒤
     expect(started.length).toBeGreaterThan(0);
+  });
+
+  // iOS 사파리는 전화·Siri로 오디오 세션을 뺏기면 'suspended'가 아니라 'interrupted'가 된다.
+  // suspended만 복구 대상으로 보면 이 상태가 그대로 남는다.
+  it("iOS의 'interrupted' 상태도 복구 대상이다", () => {
+    installStub();
+    unlockAudio();
+    const ctx = liveCtx();
+    ctx.state = 'interrupted';
+
+    unlockAudio();
+    expect(ctx.state).toBe('running');
+  });
+
+  it('음소거 중에는 복구도 걸지 않는다 (꺼둔 소리를 되살리려 들면 안 된다)', () => {
+    installStub();
+    unlockAudio();
+    const ctx = liveCtx();
+    setMuted(true);
+    ctx.resumeRestores = false;
+    ctx.state = 'suspended';
+    const before = ctx.resumeCalls;
+
+    playSfx('confirm');
+    expect(ctx.resumeCalls).toBe(before);
   });
 
   it('음소거 상태에서는 노드를 아예 만들지 않는다', () => {
@@ -211,5 +266,43 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
     const eventNodes = connected.filter(c => c === 'osc').length;
     expect(tapNodes).toBe(1);
     expect(eventNodes).toBeGreaterThan(tapNodes);
+  });
+});
+
+// 회귀 방지(codex 리뷰 [MED]): unlockAudio()를 "불렀다"와 해제가 "성립했다"는 다른 사건이다.
+// resume은 비동기고 컨텍스트 생성은 실패할 수 있는데, 호출 직후 무조건 리스너를 떼면
+// 그 한 번의 실패가 세션 전체의 영구 무음이 된다.
+describe('useAudioUnlock — 해제 실패 시 다음 제스처가 재시도한다', () => {
+  function installFlakyCtx(shouldFail: () => boolean) {
+    class FlakyCtx {
+      state = 'running';
+      currentTime = 0;
+      destination = { kind: 'destination' };
+      constructor() {
+        if (shouldFail()) throw new Error('컨텍스트 생성 실패');
+      }
+      createGain() {
+        return {
+          gain: { value: 0, cancelScheduledValues: vi.fn(), setTargetAtTime: vi.fn() },
+          connect: vi.fn(), disconnect: vi.fn(),
+        };
+      }
+      resume() { return Promise.resolve(); }
+      close() { return Promise.resolve(); }
+    }
+    (window as unknown as { AudioContext: unknown }).AudioContext = FlakyCtx;
+  }
+
+  it('첫 제스처에서 컨텍스트 생성이 실패해도 두 번째 제스처에서 살아난다', () => {
+    let fail = true;
+    installFlakyCtx(() => fail);
+    render(createElement(function Probe() { useAudioUnlock(); return null; }));
+
+    document.dispatchEvent(new Event('pointerdown'));
+    expect(isAudioRunning()).toBe(false);   // 첫 시도 실패
+
+    fail = false;
+    document.dispatchEvent(new Event('pointerdown'));
+    expect(isAudioRunning()).toBe(true);    // 리스너가 남아 있어야만 여기 도달한다
   });
 });

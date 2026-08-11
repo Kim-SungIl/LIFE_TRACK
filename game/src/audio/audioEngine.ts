@@ -100,16 +100,41 @@ export function unlockAudio(): void {
       return;
     }
   }
-  // 탭 전환 등으로 suspended가 된 경우 복구. resume()은 Promise를 던질 수 있어 삼킨다.
-  if (ctx.state === 'suspended') void ctx.resume().catch(() => { });
+  // running이 아닌 모든 상태를 복구 대상으로 본다. suspended만 보면 iOS 사파리의
+  // 'interrupted'(전화·Siri로 오디오 세션을 뺏긴 상태)가 그대로 남는다.
+  // resume()은 Promise를 던질 수 있어 삼킨다.
+  if (ctx.state !== 'running') void ctx.resume().catch(() => { });
   applyGain();
+}
+
+/**
+ * 지금 실제로 소리를 낼 수 있는 상태인가. 제스처 리스너를 뗄 시점 판단용이다 —
+ * unlockAudio()를 불렀다는 사실만으로는 해제가 성립했다는 보장이 없다(resume은 비동기).
+ */
+export function isAudioRunning(): boolean {
+  return ctx?.state === 'running';
+}
+
+/** 재시도해도 소용없는 환경인가(AudioContext 자체가 없음). 리스너를 영구히 뗄 근거. */
+export function isAudioUnsupported(): boolean {
+  return getAudioContextCtor() === null;
 }
 
 /** sfx.ts 전용 — 소리를 붙일 목적지. 아직 잠겨 있으면 null이고, 호출부는 조용히 포기해야 한다. */
 export function getAudioTarget(): { ctx: AudioContext; destination: GainNode } | null {
   if (!ctx || !masterGain) return null;
-  if (ctx.state !== 'running') return null;  // suspended 상태에서 스케줄하면 해제 시 한꺼번에 터진다
-  if (ensureSettings().muted) return null;   // 음소거면 노드를 만들 이유가 없다
+  if (ensureSettings().muted) return null;   // 음소거면 노드를 만들 이유가 없다(resume도 걸지 않는다)
+  if (ctx.state !== 'running') {
+    // 이번 소리는 포기한다 — suspended 상태에서 스케줄하면 사라지는 게 아니라
+    // 큐에 쌓였다가 복귀 순간 한꺼번에 터진다(주 넘김 20번치가 동시에).
+    //
+    // 다만 **복귀 시도는 여기서 건다**. resume()을 부르는 곳이 unlockAudio뿐이면 그건 첫
+    // 제스처에서 딱 한 번만 불리므로, 그 뒤 백그라운드 탭 suspend나 iOS interrupted로
+    // 떨어졌을 때 running으로 돌아올 길이 영영 없다(= 세션 내내 무음).
+    // 노드는 여전히 만들지 않으니 몰아 터짐은 재발하지 않고, 다음 상호작용부터 소리가 돌아온다.
+    void ctx.resume().catch(() => { });
+    return null;
+  }
   return { ctx, destination: masterGain };
 }
 
