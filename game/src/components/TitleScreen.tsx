@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AudioToggle } from './AudioToggle';
 import { ParentStrength } from '../engine/types';
 import { useGameStore } from '../engine/store';
 import { loadFromStorage } from '../engine/store';
@@ -108,6 +109,10 @@ export function TitleScreen() {
             '--title-bg-image': `url(${webpSrc(`${assetBase}images/backgrounds/school_road_morning.png`)})`,
           } as React.CSSProperties}
         />
+
+        {/* 소리 토글 — 첫 화면에서 끌 수 있어야 한다(무음을 기대하고 들어온 사람 배려).
+            배경/캐스트 위에 떠야 하므로 z-index를 준다. */}
+        <AudioToggle style={{ position: 'absolute', top: 10, right: 12, zIndex: 5 }} />
 
         <div className="title-screen__cast" aria-hidden="true">
           <img

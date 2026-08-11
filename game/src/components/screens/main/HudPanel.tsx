@@ -4,6 +4,7 @@ import { getParentMods, getWeeklyIncome } from '../../../engine/parentModifiers'
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../../Portrait';
 import { PARENT_ICONS } from '../shared';
+import { AudioToggle } from '../../AudioToggle';
 
 type Props = {
   parents: readonly ParentStrength[];
@@ -122,6 +123,7 @@ export const HudPanel = memo(function HudPanel({
                 }}
               >📖 기록장</button>
             )}
+            <AudioToggle style={{ marginLeft: 4 }} />
           </div>
           {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (
             <div id="parent-tip-popover" role="tooltip" style={{

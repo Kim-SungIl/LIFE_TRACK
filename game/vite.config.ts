@@ -81,7 +81,12 @@ export default defineConfig({
   },
   test: {
     // 엔진 순수함수(node) + 컴포넌트(jsdom — 각 파일 상단 @vitest-environment 지시자로 전환)
-    include: ['src/engine/__tests__/**/*.test.ts', 'src/components/**/__tests__/**/*.test.tsx'],
+    //
+    // src/** 전체를 훑는다. 이전에는 engine/components 두 경로만 나열했는데, 그러면 새 모듈의
+    // 테스트 파일이 **아무 경고 없이 실행되지 않는다**(audio 모듈 추가 때 실제로 겪었다 —
+    // 파일을 쓰고 초록을 봤는데 사실은 0개가 돌고 있었다). 경로를 늘릴 때마다 여기를 고쳐야
+    // 하는 구조 자체가 함정이라 패턴으로 바꾼다.
+    include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
     setupFiles: ['src/test/setup.ts'],
   },
 })
