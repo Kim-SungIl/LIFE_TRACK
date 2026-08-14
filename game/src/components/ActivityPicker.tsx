@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { playSfx } from '../audio/sfx';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
 import { activityHints } from '../engine/activityHints';
@@ -81,7 +82,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
             {/* 카테고리 헤더 */}
             <button
               type="button" className="btn-reset"
-              onClick={() => setExpandedCat(isExpanded ? null : cat)}
+              onClick={() => { playSfx('tap'); setExpandedCat(isExpanded ? null : cat); }}
               aria-expanded={isExpanded}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -174,7 +175,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                     <button key={a.id} type="button" className="btn-reset"
                       disabled={disabled}
                       aria-pressed={isSel}
-                      onClick={() => onToggle(a.id)}
+                      onClick={() => { playSfx('tap'); onToggle(a.id); }}
                       style={{
                         display: 'block', width: '100%', textAlign: 'left',
                         padding: compact ? '8px 10px' : '10px 12px',

@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { playSfx } from '../../audio/sfx';
 import { GameState } from '../../engine/types';
 import { LOCATION_GRADIENTS, DEFAULT_GRADIENT, getEventBackground } from '../../engine/backgrounds';
 import { characterStagePrefix } from '../../engine/characterAssets';
@@ -23,6 +25,21 @@ export function EventResultScreen({
 }: EventResultScreenProps) {
   const resultEvent = eventResultData.event;
   const resultLocation = resultEvent?.location;
+
+  // 결과 착지음 — **극성 없는 단일음이다.** 좋고 나쁨을 소리로 판정하지 않는 이유는
+  // sfx.ts의 `outcome` 주석에 데이터와 함께 적어뒀다(요약: 정서가 부정인 선택지의 96%가
+  // 수치는 양수라, 부호로 극성을 내면 이 게임의 애틋한 순간 대부분을 오독한다).
+  //
+  // EventScene의 등장음과 같은 ref 가드를 쓴다 — StrictMode 이중 호출과 리마운트에서
+  // 두 번 울리는 걸 막는다. 키는 이벤트 id + 선택 인덱스: 같은 이벤트라도 다른 선택이면
+  // 다른 결과 화면이고, 후속 이벤트로 같은 id가 다시 올 수도 있다.
+  const outcomeKey = `${resultEvent?.id ?? '?'}#${eventResultData.choiceIndex ?? '?'}`;
+  const lastOutcomeRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastOutcomeRef.current === outcomeKey) return;
+    lastOutcomeRef.current = outcomeKey;
+    playSfx('outcome');
+  }, [outcomeKey]);
   const BASE = import.meta.env.BASE_URL;
   const bgGradient = resultLocation ? (LOCATION_GRADIENTS[resultLocation] || DEFAULT_GRADIENT) : DEFAULT_GRADIENT;
   // 배경 이미지: event.background 우선, 없으면 location 기반 폴백

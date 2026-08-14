@@ -18,6 +18,26 @@ export type EventResultData = {
   choiceIndex?: number;
 };
 
+/**
+ * 주간 결산 소리의 방향 — **가장 크게 변한 축**의 부호로 정한다(합이 아니다).
+ *
+ * 5축(학업·멘탈·사교·건강·재능)은 단위가 다른 이종 축이라 더할 근거가 없고, 무엇보다
+ * 그 합계는 화면 어디에도 표시되지 않는다(축별 델타만 배지로 보인다). 합으로 방향을 내면
+ * 소리가 **화면에 없는 판정**을 주장하게 된다. 최대 변화 축을 쓰면 귀가 말하는 것과
+ * 눈에 가장 크게 보이는 배지가 일치한다.
+ *
+ * - 최대 변화가 ±0.5 미만이면 침묵(매주 울리면 신호가 아니라 소음이다).
+ * - 최대치가 동률인데 부호가 엇갈리면(학업 +3 / 멘탈 -3) 방향이 없는 주이므로 침묵.
+ */
+export function pickStatDirection(statChanges: Partial<Record<string, number>>): 'up' | 'down' | null {
+  const deltas = Object.values(statChanges).map(v => v ?? 0);
+  const peak = Math.max(...deltas.map(Math.abs), 0);
+  if (peak < 0.5) return null;
+  const dirs = new Set(deltas.filter(v => Math.abs(v) === peak).map(v => Math.sign(v)));
+  if (dirs.size !== 1) return null;
+  return dirs.has(1) ? 'up' : 'down';
+}
+
 // 결과 메시지 자동 줄바꿈 — 문장 끝(`.` `?` `!`, 따옴표 포함) 다음 공백에서 줄바꿈.
 // 말줄임표(`...`)는 문장 경계가 아니므로 앞이 `[.!?]`인 경우 분할 제외.
 export function breakSentences(text: string): string {

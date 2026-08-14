@@ -4,7 +4,7 @@ import { playSfx } from '../../audio/sfx';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
-import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, type UpcomingEvent } from './shared';
+import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -32,18 +32,16 @@ export function WeeklyResultScreen({
   const reducedMotion = usePrefersReducedMotion();
 
   // 주간 결산 등장음 — "변화는 또렷이" 축. 시험이 있는 주는 성적표가 그 주의 사건이므로
-  // examResult가 우선하고, 아니면 스탯 순변화의 방향(상승/하락)으로 한 번만 울린다.
-  // 스탯별로 각각 울리면 최대 5개가 겹쳐 시끄러워지므로 합으로 방향만 낸다.
+  // examResult가 우선하고, 아니면 스탯 변화의 방향으로 한 번만 울린다.
+  // 스탯별로 각각 울리면 최대 5개가 겹쳐 시끄러워지므로 방향 하나로 접는다.
+  // 접는 규칙(합이 아니라 최대 변화 축)의 근거는 pickStatDirection 주석에 있다.
   const lastLoggedRef = useRef<WeekLog | null>(null);
   useEffect(() => {
     if (lastLoggedRef.current === weekLog) return;   // StrictMode 이중 호출 방어
     lastLoggedRef.current = weekLog;
     if (weekLog.examResult) { playSfx('examResult'); return; }
-    const net = (Object.values(weekLog.statChanges) as (number | undefined)[])
-      .reduce<number>((sum, v) => sum + (v ?? 0), 0);
-    // 미세 변동(±0.5 미만)은 소리를 내지 않는다 — 매주 울리면 신호가 아니라 소음이 된다.
-    if (net >= 0.5) playSfx('statUp');
-    else if (net <= -0.5) playSfx('statDown');
+    const dir = pickStatDirection(weekLog.statChanges);
+    if (dir) playSfx(dir === 'up' ? 'statUp' : 'statDown');
   }, [weekLog]);
   // Hero — 이번 주의 핵심 한 줄. 마지막 📖 > milestone[0] 순.
   // 이벤트가 그 주의 "사건"이고 milestone은 누적 스탯 임계치 이벤트라 사건 우선이 자연스러움.
