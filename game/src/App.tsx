@@ -4,6 +4,7 @@ import { TitleScreen } from './components/TitleScreen';
 import { GameScreen } from './components/GameScreen';
 import { DebugPanel } from './components/DebugPanel';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import './styles/pretendard.css';  // @font-face 먼저 — game.css가 이 family를 참조한다
 import './styles/game.css';
 
 function App() {

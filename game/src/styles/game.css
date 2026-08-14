@@ -23,7 +23,11 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
 body {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* 'Pretendard Variable'이 번들된 가변 폰트(styles/pretendard.css의 @font-face),
+     'Pretendard'는 기기에 이미 설치돼 있는 경우를 위한 차선. 그 뒤가 시스템 폴백이다.
+     ※ 이 줄에 이름만 적고 @font-face를 안 두면 조용히 시스템 폰트로 렌더된다 —
+     실제로 이 게임이 오랫동안 그 상태였다. verify-fonts.ts가 그 재발을 막는다. */
+  font-family: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100dvh;
