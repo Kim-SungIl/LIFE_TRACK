@@ -1,4 +1,5 @@
 import { memo, useState } from 'react';
+import { playSfx } from '../../../audio/sfx';
 import { GameState, ParentStrength, ParentBonusApplied } from '../../../engine/types';
 import { getParentMods, getWeeklyIncome } from '../../../engine/parentModifiers';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
@@ -106,7 +107,7 @@ export const HudPanel = memo(function HudPanel({
             {/* 클릭 가능 affordance — "💬 가정" 라벨로 진입점 명시 */}
             <button
               type="button" className="btn-reset" data-tutorial="home"
-              onClick={() => { setActiveParentTip(null); onOpenHome(); }}
+              onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenHome(); }}
               style={{
                 marginLeft: 4, fontSize: '0.65rem', color: 'var(--accent-soft)',
                 cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
@@ -116,7 +117,7 @@ export const HudPanel = memo(function HudPanel({
             {onOpenAlbum && (
               <button
                 type="button" className="btn-reset"
-                onClick={() => { setActiveParentTip(null); onOpenAlbum(); }}
+                onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenAlbum(); }}
                 style={{
                   marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
                   cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',

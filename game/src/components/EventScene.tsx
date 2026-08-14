@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { playSfx } from '../audio/sfx';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
+import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
 import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
@@ -247,11 +248,15 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // ref로 마지막 발음 id를 들고 있는 이유: StrictMode(개발 모드)는 이펙트를 두 번 호출해서
   // 종소리가 겹쳐 울린다. 프로덕션은 한 번이지만, 모드에 따라 소리가 달라지는 것 자체가
   // 디버깅을 흐리게 하므로 **id당 정확히 한 번**으로 못 박는다(향후 리마운트에도 안전).
+  //
+  // 잡사건(school-life 풀)은 절반 무게로 내린다 — 등장음은 한 판에 150~200회 울리고,
+  // 그중 잡사건이 ~31회다(selection.ts 8시드 실측). 중요 이벤트를 키우는 게 아니라
+  // 잦은 쪽을 낮추는 방향이어야 소리가 "이번 건 크다"는 선행 힌트가 되지 않는다.
   const lastAppearRef = useRef<string | null>(null);
   useEffect(() => {
     if (lastAppearRef.current === event.id) return;
     lastAppearRef.current = event.id;
-    playSfx('eventAppear');
+    playSfx(SCHOOL_LIFE_EVENT_IDS.has(event.id) ? 'eventAppearMinor' : 'eventAppear');
   }, [event.id]);
 
   // Reset state when event changes — event.id가 바뀌면 페이지/배경 로드 상태를 동기 리셋(의도된 prop 동기화, cascading 아님)

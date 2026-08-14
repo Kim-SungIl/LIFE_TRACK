@@ -212,3 +212,12 @@ export const SCHOOL_LIFE_EVENTS = [
     condition: (s) => s.fatigue >= 30 && !s.isVacation,
   },
 ] satisfies readonly GameEvent[];
+
+/**
+ * 잡사건 ID 집합 — 등장음 등급 판정용(UI 전용, 선택 로직은 이 값을 쓰지 않는다).
+ *
+ * **위 배열에서 파생한다.** 손으로 나열하면 이벤트를 추가할 때 조용히 어긋나고,
+ * 그러면 새 잡사건만 큰 종소리로 울린다(드리프트가 소리로 새는 형태라 눈치채기 어렵다).
+ */
+export const SCHOOL_LIFE_EVENT_IDS: ReadonlySet<string> =
+  new Set(SCHOOL_LIFE_EVENTS.map(e => e.id));

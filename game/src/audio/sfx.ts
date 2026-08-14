@@ -27,6 +27,8 @@ export type SfxId =
   | 'confirm'      // 한 주 확정 — 진행의 앵커
   | 'page'         // 이벤트 페이지 넘김 (종이 질감)
   | 'eventAppear'  // 이벤트 등장 — 또렷이
+  | 'eventAppearMinor' // 잡사건(school-life) 등장 — 같은 종, 절반 무게
+  | 'outcome'      // 이벤트 결과 착지 — **극성 없음** (아래 주석 참조)
   | 'statUp'
   | 'statDown'
   | 'examResult'   // 시험 결과 공개
@@ -86,6 +88,41 @@ const SFX: Record<SfxId, SfxSpec> = {
       { freq: A4, dur: 0.90, gain: 0.22, type: 'sine' },
       { freq: E5, at: 0.02, dur: 0.75, gain: 0.10, type: 'sine' },
       { freq: A5, at: 0.04, dur: 0.55, gain: 0.05, type: 'sine' },
+    ],
+  },
+
+  // 잡사건(school-life 풀) 등장 — 같은 종이되 무게를 절반으로.
+  //
+  // **등급화는 아래로만 한다.** 이벤트 등장은 한 판에 150~200회 울린다(학기 사건 주율 66%,
+  // selection.ts의 8시드 실측). 그 횟수에 gain 0.22는 이 게임에서 청각 피로 1순위다.
+  // 중요 이벤트를 더 키우는 방향은 금지 — 0.22는 이어폰 없는 스피커 환경의 상한이고,
+  // 소리 크기가 "이번 이벤트는 크다"를 **선택 전에** 알려주는 힌트가 된다.
+  eventAppearMinor: {
+    tones: [
+      { freq: A4, dur: 0.45, gain: 0.11, type: 'sine' },
+      { freq: E5, at: 0.02, dur: 0.35, gain: 0.05, type: 'sine' },
+    ],
+  },
+
+  // 이벤트 결과 착지 — **의도적으로 극성이 없다. 좋고 나쁨을 판정하지 않는다.**
+  //
+  // 처음엔 outcomeGood/outcomeBad 2종을 만들려 했다. 이벤트 데이터를 세어보고 기각했다:
+  // toneTag가 붙은 선택지 213건 중 정서가 부정 계열(melancholy·regret·burden)인 76건에서
+  // **73건(96%)이 수치는 전부 양수다.** 예: reachMid.ts의 유나 조명 부스 컷은
+  // effects{talent+1,mental+1} + 유나 ♥4인데 toneTag는 melancholy이고 회상 문구는
+  // "무대 대신 조명 부스 고른 유나."다. 부호로 극성을 내면 이 게임이 가장 공들인 애틋한
+  // 순간 대부분에 밝은 상승음이 붙는다. 예외가 아니라 규칙이다.
+  //
+  // 배지는 초록/빨강으로 칠해도 되는데 소리는 안 되는 이유는 **주장의 크기가 달라서**다.
+  // "📚 학업 +2"를 초록으로 칠하는 건 그 숫자의 부호를 말할 뿐이고, 소리 하나는 그 순간
+  // 전체의 의미를 말한다. 이 게임은 결과를 판정해주는 게임이 아니라 나중에 되짚는 게임이다.
+  //
+  // 그래서 완전5도(A4+E4)를 고정으로 겹친다 — 상승도 하강도 아니라 방향이 없다.
+  // 여기에 글라이드(toFreq)를 넣거나 한쪽을 올리면 그 순간 극성음이 되므로 넣지 말 것.
+  outcome: {
+    tones: [
+      { freq: A4, dur: 0.30, gain: 0.08, type: 'sine' },
+      { freq: E4, at: 0.01, dur: 0.34, gain: 0.05, type: 'sine' },
     ],
   },
 

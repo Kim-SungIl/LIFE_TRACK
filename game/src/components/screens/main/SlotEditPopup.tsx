@@ -1,3 +1,4 @@
+import { playSfx } from '../../../audio/sfx';
 import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
@@ -51,7 +52,7 @@ export function SlotEditPopup({
               {editingSlot.startsWith('routine') ? '매주 반복되는 루틴을 골라주세요' : '이번 주말에 할 활동을 골라주세요'}
             </div>
           </div>
-          <button type="button" className="btn-reset" onClick={() => setEditingSlot(null)} aria-label="닫기" style={{
+          <button type="button" className="btn-reset" onClick={() => { playSfx('tap'); setEditingSlot(null); }} aria-label="닫기" style={{
             fontSize: '0.85rem', color: 'var(--text-muted)', cursor: 'pointer',
             padding: '6px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.06)',
           }}>✕ 닫기</button>
@@ -60,6 +61,7 @@ export function SlotEditPopup({
           {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 — 디폴트 상태(routineSlot3=null)도 강조하지 않음. */}
           {editingSlot === 'routine2' && (
             <button type="button" className="btn-reset" onClick={() => {
+              playSfx('tap');
               if (state.routineSlot2) { onSetRoutine(state.routineSlot2, null); }
               setEditingSlot(null);
             }} style={{
