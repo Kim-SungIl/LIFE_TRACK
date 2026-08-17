@@ -1,6 +1,7 @@
 import { useGameStore } from './engine/store';
 import { useAudioUnlock } from './audio/useAudioUnlock';
 import { useAudioLifecycle } from './audio/useAudioLifecycle';
+import { useBgm } from './audio/useBgm';
 import { TitleScreen } from './components/TitleScreen';
 import { GameScreen } from './components/GameScreen';
 import { DebugPanel } from './components/DebugPanel';
@@ -14,6 +15,9 @@ function App() {
   useAudioUnlock();
   // 탭을 떠나면 재우고 돌아오면 깨운다(지속음이 백그라운드에서 계속 흐르는 것 방지).
   useAudioLifecycle();
+  // 배경음을 설정·오디오 준비 상태에 맞춘다. 켜고 끄는 주체가 여기다 — 이 훅이 없으면
+  // 🎵를 눌러도, 음소거를 풀어도 아무도 재생을 시작해주지 않는다.
+  useBgm();
 
   return (
     <>

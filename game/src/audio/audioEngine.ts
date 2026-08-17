@@ -18,11 +18,20 @@ const DEFAULT_VOLUME = 0.7;
 
 export interface AudioSettings {
   muted: boolean;
+  /**
+   * 배경음 켜짐. **기본값 false다.** 3자 검수 공통 권고 — 지속음은 원하지 않는 사용자에게
+   * 훨씬 거슬리고, 이 게임은 모바일 중심이라 꺼진 상태로 시작해 원하는 사람만 켜는 쪽이 안전하다.
+   *
+   * 음소거와 별개 축이다. "효과음만 켜기"가 흔한 요구여서 하나로 합칠 수 없다.
+   * 볼륨 설정은 두지 않았다 — 두 버스는 유니티 게인이 계약이고(버스 삽입으로 음량이 변하면
+   * sfx.ts의 게인 비율이 흔들린다), 배경음 음량은 테마의 노트 게인 자체로 조율한다.
+   */
+  bgmEnabled: boolean;
   /** 0.0 ~ 1.0 마스터 볼륨 */
   volume: number;
 }
 
-const DEFAULTS: AudioSettings = { muted: false, volume: DEFAULT_VOLUME };
+const DEFAULTS: AudioSettings = { muted: false, volume: DEFAULT_VOLUME, bgmEnabled: false };
 
 function clamp01(v: number): number {
   if (!Number.isFinite(v)) return DEFAULT_VOLUME;
@@ -37,6 +46,7 @@ export function loadAudioSettings(): AudioSettings {
     return {
       muted: typeof parsed.muted === 'boolean' ? parsed.muted : DEFAULTS.muted,
       volume: clamp01(typeof parsed.volume === 'number' ? parsed.volume : DEFAULTS.volume),
+      bgmEnabled: typeof parsed.bgmEnabled === 'boolean' ? parsed.bgmEnabled : DEFAULTS.bgmEnabled,
     };
   } catch {
     // 손상된 값/스토리지 차단(사파리 프라이빗 등) — 기본값으로 계속 간다.
@@ -73,6 +83,21 @@ let bgmGain: GainNode | null = null;
 let settings: AudioSettings = { ...DEFAULTS };
 let settingsLoaded = false;
 const listeners = new Set<(s: AudioSettings) => void>();
+// **"컨텍스트가 running이 됐다"는 설정 변화와 다른 사건이다.** resume()은 비동기라, 첫 제스처
+// 직후 동기로 물어보면 아직 suspended다. 일회음은 그 한 번을 버려도 되지만 지속음은 그때 못 켜면
+// 아무도 다시 켜주지 않는다 — 실제로 "🎵를 눌러도 다음 클릭까지 조용한" 증상이 나왔다(브라우저 실측).
+// bgm.ts가 이 신호를 받아 재생을 시작한다.
+const readyListeners = new Set<() => void>();
+
+function notifyReady(): void {
+  readyListeners.forEach(fn => { try { fn(); } catch { /* 구독자 오류가 오디오를 막지 않는다 */ } });
+}
+
+/** 컨텍스트가 실제로 running이 된 순간. 지속음을 켤 수 있는 유일하게 확실한 시점이다. */
+export function subscribeAudioReady(fn: () => void): () => void {
+  readyListeners.add(fn);
+  return () => { readyListeners.delete(fn); };
+}
 
 function ensureSettings(): AudioSettings {
   if (!settingsLoaded) {
@@ -120,7 +145,11 @@ export function unlockAudio(): void {
   // running이 아닌 모든 상태를 복구 대상으로 본다. suspended만 보면 iOS 사파리의
   // 'interrupted'(전화·Siri로 오디오 세션을 뺏긴 상태)가 그대로 남는다.
   // resume()은 Promise를 던질 수 있어 삼킨다.
-  if (ctx.state !== 'running') void ctx.resume().catch(() => { });
+  // **성공을 기다려서 알린다.** 여기서 동기로 넘어가면 호출부는 아직 suspended인 컨텍스트를 본다.
+  // 지속음은 그 한 번을 놓치면 다시 켜줄 사람이 없다.
+  if (ctx.state !== 'running') {
+    void ctx.resume().then(() => { applyGain(); notifyReady(); }).catch(() => { });
+  }
   applyGain();
 }
 
@@ -154,7 +183,11 @@ export function getAudioTarget(): { ctx: AudioContext; destination: GainNode } |
     // 제스처에서 딱 한 번만 불리므로, 그 뒤 백그라운드 탭 suspend나 iOS interrupted로
     // 떨어졌을 때 running으로 돌아올 길이 영영 없다(= 세션 내내 무음).
     // 노드는 여전히 만들지 않으니 몰아 터짐은 재발하지 않고, 다음 상호작용부터 소리가 돌아온다.
-    void ctx.resume().catch(() => { });
+    // 복귀에 성공하면 지속음도 다시 켤 수 있다 — 그 사건을 알린다.
+    // **이 알림은 중복이다**(뮤테이션으로 확인: 지워도 테스트가 통과한다). 배경음은 자기 루프
+    // 타이머가 잠긴 걸 발견해 스스로 복구하므로 이쪽에 의존하지 않는다. 그래도 남기는 이유는
+    // 사용자가 뭔가 누르는 순간이 루프 타이머보다 이를 수 있어 복귀가 조금 더 빨라지기 때문이다.
+    void ctx.resume().then(notifyReady).catch(() => { });
     return null;
   }
   return { ctx, destination: sfxGain };
@@ -173,7 +206,7 @@ export function getAudioTarget(): { ctx: AudioContext; destination: GainNode } |
 export function getBgmTarget(): { ctx: AudioContext; destination: GainNode } | null {
   if (!ctx || !bgmGain) return null;
   if (ctx.state !== 'running') {
-    void ctx.resume().catch(() => { });
+    void ctx.resume().then(notifyReady).catch(() => { });
     return null;
   }
   return { ctx, destination: bgmGain };
@@ -188,6 +221,14 @@ export function setMuted(muted: boolean): void {
   settings = { ...settings, muted };
   persist(settings);
   applyGain();
+  listeners.forEach(fn => fn({ ...settings }));
+}
+
+export function setBgmEnabled(bgmEnabled: boolean): void {
+  ensureSettings();
+  settings = { ...settings, bgmEnabled };
+  persist(settings);
+  // 실제로 재생을 켜고 끄는 건 이 알림을 받은 bgm.ts다 — 엔진은 음악을 모른다.
   listeners.forEach(fn => fn({ ...settings }));
 }
 
@@ -223,7 +264,8 @@ export function suspendAudioForBackground(): void {
  */
 export function resumeAudioFromBackground(): void {
   if (!ctx || ctx.state === 'running') return;
-  void ctx.resume().catch(() => { });
+  // 복귀가 성립한 뒤 알린다 — 백그라운드에서 멈춘 지속음을 여기서 다시 켠다.
+  void ctx.resume().then(() => { applyGain(); notifyReady(); }).catch(() => { });
   applyGain();
 }
 
@@ -242,4 +284,5 @@ export function __resetAudioForTest(): void {
   settings = { ...DEFAULTS };
   settingsLoaded = false;
   listeners.clear();
+  readyListeners.clear();
 }
