@@ -262,15 +262,15 @@ export function setBgmVolume(bgmVolume: number): void {
 /**
  * 탭을 떠났을 때 호출한다. 컨텍스트를 suspend해서 배경에서 계속 울리지 않게 한다.
  * (지속음이 없던 시절에는 필요 없었다 — SFX는 상호작용에만 울리므로 탭을 떠나면 자연히 멈췄다.)
- * 복귀는 resumeAudio() 또는 다음 상호작용의 자기치유(getAudioTarget)가 담당한다.
+ * 복귀는 resumeAudioFromBackground() 또는 다음 상호작용의 자기치유(getAudioTarget)가 담당한다.
  */
-export function suspendAudio(): void {
+export function suspendAudioForBackground(): void {
   if (!ctx || ctx.state === 'suspended' || ctx.state === 'closed') return;
   void ctx.suspend().catch(() => { });
 }
 
 /** 탭으로 돌아왔을 때. 컨텍스트가 없으면 아무 일도 하지 않는다(첫 제스처 전). */
-export function resumeAudio(): void {
+export function resumeAudioFromBackground(): void {
   if (!ctx || ctx.state === 'running' || ctx.state === 'closed') return;
   void ctx.resume().then(notifyReady).catch(() => { });
 }

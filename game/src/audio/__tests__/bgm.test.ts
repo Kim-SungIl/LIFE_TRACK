@@ -21,6 +21,7 @@ import {
   startBgm, stopBgm, isBgmPlaying, syncBgmWithSettings, getMainTheme, __resetBgmForTest,
 } from '../bgm';
 import { useAudioUnlock } from '../useAudioUnlock';
+import { useAudioLifecycle } from '../useAudioLifecycle';
 import { playSfx } from '../sfx';
 
 // ===== 스텁 AudioContext =====
@@ -315,8 +316,11 @@ describe('resume이 비동기여도 배경음이 켜진다', () => {
 });
 
 // ===== 5. 탭 수명 (배선) =====
-describe('탭 이탈·복귀 배선 (useAudioUnlock)', () => {
-  function Harness() { useAudioUnlock(); return null; }
+// 수명 처리의 주인은 useAudioLifecycle이다(#393에서 들어온 훅). 이 브랜치가 useAudioUnlock에
+// 따로 만들었던 처리기를 그쪽으로 합치면서, 계약은 그대로 두고 대상만 옮겼다.
+describe('탭 이탈·복귀 배선 (useAudioLifecycle)', () => {
+  // 해제(제스처)와 수명은 서로 다른 훅이 맡는다 — 두 훅을 함께 걸어야 실제 앱과 같아진다.
+  function Harness() { useAudioUnlock(); useAudioLifecycle(); return null; }
 
   const setVisibility = (v: 'hidden' | 'visible') => {
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v });

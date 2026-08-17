@@ -15,10 +15,8 @@
 // 조용해졌다(소리가 상호작용에만 울리므로). 지속음은 그렇지 않아서, 떠날 때 명시적으로 끊고
 // 돌아올 때 다시 켜야 한다. 안 그러면 다른 탭에서 작업하는 내내 음악이 흐른다.
 import { useEffect } from 'react';
-import {
-  isAudioRunning, isAudioUnsupported, unlockAudio, suspendAudio, resumeAudio,
-} from './audioEngine';
-import { startBgm, stopBgm, syncBgmWithSettings } from './bgm';
+import { isAudioRunning, isAudioUnsupported, unlockAudio } from './audioEngine';
+import { startBgm, syncBgmWithSettings } from './bgm';
 
 const GESTURES = ['pointerdown', 'keydown', 'touchend'] as const;
 
@@ -45,20 +43,6 @@ export function useAudioUnlock(): void {
   // 배경음을 다시 켜주는 사람이 없다 — 지속음에서 가장 빠지기 쉬운 배선이다.
   useEffect(() => syncBgmWithSettings(), []);
 
-  // 탭 이탈/복귀
-  useEffect(() => {
-    const onHidden = () => { stopBgm(); suspendAudio(); };
-    const onVisible = () => { resumeAudio(); startBgm(); };
-    const onVisibility = () => {
-      if (document.visibilityState === 'hidden') onHidden();
-      else onVisible();
-    };
-    // pagehide도 잡는다 — iOS 사파리는 앱 전환 시 visibilitychange를 건너뛰는 경우가 있다.
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('pagehide', onHidden);
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('pagehide', onHidden);
-    };
-  }, []);
+  // 탭 이탈/복귀는 여기서 다루지 않는다 — useAudioLifecycle이 유일한 주인이다.
+  // (#393과 이 브랜치가 각자 수명 처리기를 만들어 둘 다 돌던 것을 한쪽으로 모았다.)
 }

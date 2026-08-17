@@ -9,9 +9,11 @@ import { createElement } from 'react';
 import { render } from '@testing-library/react';
 import {
   loadAudioSettings, getAudioSettings, setMuted, setVolume,
-  subscribeAudioSettings, unlockAudio, getAudioTarget, isAudioRunning, __resetAudioForTest,
+  subscribeAudioSettings, unlockAudio, getAudioTarget, getBgmTarget, isAudioRunning,
+  __resetAudioForTest,
 } from '../audioEngine';
 import { useAudioUnlock } from '../useAudioUnlock';
+import { useAudioLifecycle } from '../useAudioLifecycle';
 import { playSfx, listSfxIds, type SfxId } from '../sfx';
 
 beforeEach(() => {
@@ -113,6 +115,12 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
   function installStub() {
     const started: number[] = [];
     const connected: string[] = [];
+    // 게인 노드의 배선 관측용 — "누가 누구에게 연결됐는가"까지 봐야 버스 구조가 잠긴다.
+    // 노드 개수만 세면 bgmGain을 masterGain이 아니라 destination에 직접 붙여도 통과한다
+    // (= 음소거가 BGM에 안 걸리는 버그).
+    const links: [string, string][] = [];
+    const gains: { id: string; gain: { value: number } }[] = [];
+    let gainSeq = 0;
     const makeParam = () => ({
       setValueAtTime: vi.fn(), linearRampToValueAtTime: vi.fn(),
       exponentialRampToValueAtTime: vi.fn(), setTargetAtTime: vi.fn(),
@@ -128,7 +136,17 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
       resumeCalls = 0;
       resumeRestores = true;
       destination = { kind: 'destination' };
-      createGain() { connected.push('gain'); return { gain: makeParam(), connect: vi.fn(), disconnect: vi.fn() }; }
+      createGain() {
+        connected.push('gain');
+        const node = {
+          id: `gain${gainSeq++}`,
+          gain: makeParam(),
+          connect: (t: { id?: string; kind?: string }) => { links.push([node.id, t?.id ?? t?.kind ?? '?']); },
+          disconnect: vi.fn(),
+        };
+        gains.push(node);
+        return node;
+      }
       createOscillator() {
         connected.push('osc');
         return {
@@ -155,10 +173,18 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
         if (this.resumeRestores) this.state = 'running';
         return Promise.resolve();
       }
+      // 실제 브라우저처럼 상태를 스스로 바꾼다. 테스트가 state를 대신 내려주면
+      // "재우는 주체가 제품에 없는" 상태도 초록이 된다(#386에서 겪은 실패 방식).
+      suspend() {
+        this.suspendCalls++;
+        this.state = 'suspended';
+        return Promise.resolve();
+      }
+      suspendCalls = 0;
       close() { return Promise.resolve(); }
     }
     (window as unknown as { AudioContext: unknown }).AudioContext = StubCtx;
-    return { started, connected };
+    return { started, connected, links, gains };
   }
 
   it('해제 후 playSfx가 실제로 오실레이터를 만들고 시작시킨다', () => {
@@ -229,7 +255,9 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
     expect(ctx.state).toBe('running');
   });
 
-  it('음소거 중에는 복구도 걸지 않는다 (꺼둔 소리를 되살리려 들면 안 된다)', () => {
+  // 아래 두 계약은 **단발 효과음 한정**이다. 지속음(BGM)에까지 적용하면 음소거 해제 후
+  // 되살릴 주체가 없어 세션 내내 무음이 된다 — 짝이 되는 BGM 계약은 아래 describe에 있다.
+  it('음소거 중에는 복구도 걸지 않는다 — 효과음 한정 (꺼둔 소리를 되살리려 들면 안 된다)', () => {
     installStub();
     unlockAudio();
     const ctx = liveCtx();
@@ -242,7 +270,7 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
     expect(ctx.resumeCalls).toBe(before);
   });
 
-  it('음소거 상태에서는 노드를 아예 만들지 않는다', () => {
+  it('음소거 상태에서는 효과음 노드를 아예 만들지 않는다', () => {
     const { started } = installStub();
     unlockAudio();
     setMuted(true);
@@ -266,6 +294,147 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
     const eventNodes = connected.filter(c => c === 'osc').length;
     expect(tapNodes).toBe(1);
     expect(eventNodes).toBeGreaterThan(tapNodes);
+  });
+
+  // BGM 선행 배선 — 아직 BGM은 없지만, 계약을 먼저 잠가 둔다.
+  // 단발 효과음 계약을 지속음에 그대로 쓰면 "음소거 해제 후 영영 무음"이 나므로,
+  // 두 목적지가 **다르게 동작한다**는 것이 핵심이다.
+  describe('버스 분리 — 효과음과 지속음(BGM)', () => {
+    it('효과음과 BGM은 서로 다른 버스로 나간다', () => {
+      installStub();
+      unlockAudio();
+      const sfx = getAudioTarget();
+      const bgm = getBgmTarget();
+      expect(sfx).not.toBeNull();
+      expect(bgm).not.toBeNull();
+      expect(sfx!.destination).not.toBe(bgm!.destination);
+    });
+
+    it('해제 시 게인 노드가 3개(master·sfx·bgm) 만들어진다', () => {
+      const { connected } = installStub();
+      unlockAudio();
+      expect(connected.filter(c => c === 'gain')).toHaveLength(3);
+    });
+
+    // getBgmTarget이 음소거를 검사하지 않아도 되는 **근거**가 이 배선이다.
+    // BGM 버스가 masterGain을 안 거치면 음소거가 BGM에 안 걸려서, 위 계약이 통째로 무너진다.
+    it('두 버스 모두 masterGain을 거쳐 나간다 — 음소거가 BGM에도 걸리는 근거', () => {
+      const { links, gains } = installStub();
+      unlockAudio();
+      const [master, sfx, bgm] = gains;      // 생성 순서: master → sfx → bgm
+
+      expect(links).toContainEqual([master.id, 'destination']);
+      expect(links).toContainEqual([sfx.id, master.id]);
+      expect(links).toContainEqual([bgm.id, master.id]);
+      // 어느 버스도 destination에 직접 붙지 않는다(마스터 우회 금지)
+      expect(links).not.toContainEqual([sfx.id, 'destination']);
+      expect(links).not.toContainEqual([bgm.id, 'destination']);
+    });
+
+    // 효과음 버스는 유니티여야 한다. sfx.ts의 게인 비율(tap 0.05 ↔ eventAppear 0.22)이 설계의
+    // 핵심이라, 중간 버스에 배수가 걸리는 순간 "크롬은 조용히, 변화는 또렷이"가 흔들린다.
+    //
+    // **BGM 버스는 유니티가 아니다** — bgmVolume이 이 버스만 조절한다(그래서 버스를 나눴다).
+    // 초기값 0에서 applyGain이 bgmVolume까지 올리므로, 여기서 1을 기대하면 안 된다.
+    it('효과음 버스는 유니티 게인이다 — 버스 삽입으로 효과음 음량이 변하지 않는다', () => {
+      const { gains } = installStub();
+      unlockAudio();
+      const [, sfx] = gains;
+      expect(sfx.gain.value).toBe(1);
+    });
+
+    // 이 파일에서 가장 중요한 계약. getBgmTarget에 음소거 검사를 넣으면 여기서 걸린다.
+    it('음소거해도 BGM 목적지는 유지된다 — 해제 시 되살릴 주체가 없으면 영구 무음이 된다', () => {
+      installStub();
+      unlockAudio();
+      setMuted(true);
+
+      expect(getAudioTarget()).toBeNull();     // 단발은 이번 한 방을 포기한다
+      expect(getBgmTarget()).not.toBeNull();   // 지속음은 목적지를 계속 쥐고 있는다
+
+      setMuted(false);
+      expect(getBgmTarget()).not.toBeNull();
+    });
+
+    it('BGM도 suspended에서는 포기하되 복구를 건다', () => {
+      installStub();
+      unlockAudio();
+      const ctx = liveCtx();
+      ctx.resumeRestores = false;
+      ctx.state = 'suspended';
+      const before = ctx.resumeCalls;
+
+      expect(getBgmTarget()).toBeNull();       // 몰아 터짐 방지는 지속음도 같다
+      expect(ctx.resumeCalls).toBeGreaterThan(before);
+    });
+  });
+
+  // 탭 이탈 처리. **state를 테스트가 내려주지 않는다** — 스텁의 suspend()가 실제 브라우저처럼
+  // 스스로 바꾸므로, 제품에 재우는 주체가 없으면 이 테스트들은 통과할 수 없다.
+  describe('useAudioLifecycle — 탭을 떠나면 재우고 돌아오면 깨운다', () => {
+    type CtxWithSuspend = { state: string; suspendCalls: number; resumeCalls: number };
+    const live = (): CtxWithSuspend =>
+      (getBgmTarget() as unknown as { ctx: CtxWithSuspend }).ctx;
+
+    function setVisibility(v: 'hidden' | 'visible'): void {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => v });
+    }
+
+    function mountLifecycle() {
+      return render(createElement(function Probe() { useAudioLifecycle(); return null; }));
+    }
+
+    it('visibilitychange(hidden)에서 재우고, 돌아오면 깨운다', () => {
+      installStub();
+      unlockAudio();
+      const ctx = live();
+      mountLifecycle();
+
+      setVisibility('hidden');
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(ctx.state).toBe('suspended');
+
+      setVisibility('visible');
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(ctx.state).toBe('running');
+    });
+
+    // iOS 사파리는 앱 전환·화면 잠금에서 visibilitychange를 안 주는 경우가 있다.
+    // pagehide까지 듣지 않으면 모바일에서 BGM이 계속 울린다.
+    it('pagehide에서도 재우고, pageshow(bfcache 복귀)에서 깨운다', () => {
+      installStub();
+      unlockAudio();
+      const ctx = live();
+      mountLifecycle();
+
+      window.dispatchEvent(new Event('pagehide'));
+      expect(ctx.state).toBe('suspended');
+
+      window.dispatchEvent(new Event('pageshow'));
+      expect(ctx.state).toBe('running');
+    });
+
+    it('언마운트 후에는 더 이상 반응하지 않는다 (리스너 누수 방지)', () => {
+      installStub();
+      unlockAudio();
+      const ctx = live();
+      const { unmount } = mountLifecycle();
+      unmount();
+
+      const before = ctx.suspendCalls;
+      window.dispatchEvent(new Event('pagehide'));
+      expect(ctx.suspendCalls).toBe(before);
+      expect(ctx.state).toBe('running');
+    });
+
+    it('컨텍스트가 없어도(첫 제스처 전) 이벤트가 예외를 내지 않는다', () => {
+      mountLifecycle();   // unlockAudio를 부르지 않은 상태
+      setVisibility('hidden');
+      expect(() => document.dispatchEvent(new Event('visibilitychange'))).not.toThrow();
+      expect(() => window.dispatchEvent(new Event('pagehide'))).not.toThrow();
+      setVisibility('visible');
+      expect(() => window.dispatchEvent(new Event('pageshow'))).not.toThrow();
+    });
   });
 });
 
