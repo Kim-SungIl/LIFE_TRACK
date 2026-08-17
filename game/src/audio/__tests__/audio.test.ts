@@ -331,14 +331,16 @@ describe('sfx — 브라우저 경로 (AudioContext 스텁)', () => {
       expect(links).not.toContainEqual([bgm.id, 'destination']);
     });
 
-    // 버스를 끼우면서 음량이 달라지면 안 된다. sfx.ts의 게인 비율(tap 0.05 ↔ eventAppear 0.22)이
-    // 설계의 핵심이라, 중간 버스에 배수가 걸리는 순간 "크롬은 조용히, 변화는 또렷이"가 흔들린다.
-    it('두 버스는 유니티 게인(1.0)이다 — 버스 삽입으로 음량이 변하지 않는다', () => {
+    // 효과음 버스는 유니티여야 한다. sfx.ts의 게인 비율(tap 0.05 ↔ eventAppear 0.22)이 설계의
+    // 핵심이라, 중간 버스에 배수가 걸리는 순간 "크롬은 조용히, 변화는 또렷이"가 흔들린다.
+    //
+    // **BGM 버스는 유니티가 아니다** — bgmVolume이 이 버스만 조절한다(그래서 버스를 나눴다).
+    // 초기값 0에서 applyGain이 bgmVolume까지 올리므로, 여기서 1을 기대하면 안 된다.
+    it('효과음 버스는 유니티 게인이다 — 버스 삽입으로 효과음 음량이 변하지 않는다', () => {
       const { gains } = installStub();
       unlockAudio();
-      const [, sfx, bgm] = gains;
+      const [, sfx] = gains;
       expect(sfx.gain.value).toBe(1);
-      expect(bgm.gain.value).toBe(1);
     });
 
     // 이 파일에서 가장 중요한 계약. getBgmTarget에 음소거 검사를 넣으면 여기서 걸린다.

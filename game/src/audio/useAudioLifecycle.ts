@@ -14,17 +14,23 @@
 //
 // document/window를 나눠 거는 것도 의도다. visibilitychange는 document 이벤트고,
 // pagehide/pageshow는 window 이벤트다(document에 걸면 브라우저에 따라 안 온다).
+//
+// **지속음은 컨텍스트를 재우는 것만으로 부족하다.** suspend는 그래프를 얼릴 뿐이라 예약된
+// 노트가 그대로 남아 있고, 복귀하면 떠날 때의 마디에서 이어진다. 몇 분 자리를 비웠다 오면
+// 그 시간만큼 곡이 밀려 있는 셈이다. 그래서 떠날 때 배경음을 끊고 돌아올 때 다시 건다.
 import { useEffect } from 'react';
 import { resumeAudioFromBackground, suspendAudioForBackground } from './audioEngine';
+import { startBgm, stopBgm } from './bgm';
 
 export function useAudioLifecycle(): void {
   useEffect(() => {
     const onVisibility = () => {
-      if (document.visibilityState === 'hidden') suspendAudioForBackground();
-      else resumeAudioFromBackground();
+      if (document.visibilityState === 'hidden') onHide();
+      else onShow();
     };
-    const onHide = () => suspendAudioForBackground();
-    const onShow = () => resumeAudioFromBackground();
+    const onHide = () => { stopBgm(); suspendAudioForBackground(); };
+    // 순서가 중요하다 — 깨우기 전에 startBgm을 부르면 suspended라 조용히 실패한다.
+    const onShow = () => { resumeAudioFromBackground(); startBgm(); };
 
     document.addEventListener('visibilitychange', onVisibility);
     window.addEventListener('pagehide', onHide);
