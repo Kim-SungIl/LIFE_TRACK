@@ -353,6 +353,29 @@ describe('탭 이탈·복귀 배선 (useAudioLifecycle)', () => {
     expect(isBgmPlaying(), '복귀하면 제품이 다시 켠다').toBe(true);
   });
 
+  // 위 두 경로는 탭 이벤트가 알려주는 경우다. 알려주지 않는 경우도 있다 — iOS 통화·Siri로
+  // 오디오 세션을 뺏기거나 브라우저가 백그라운드 탭을 스로틀링하면 컨텍스트만 조용히
+  // suspended로 떨어진다. 그때는 **루프 타이머가 다음 예약을 하러 왔다가** 잠긴 걸 발견하고
+  // 복구를 걸어야 한다. 그러지 않으면 사용자가 뭔가 누를 때까지 배경음이 돌아오지 않는다.
+  it('탭 이벤트 없이 컨텍스트만 잠겨도 루프 타이머가 스스로 복구한다', async () => {
+    installStub();
+    // 가짜 타이머는 재생 시작 **전에** 켠다 — 뒤에 켜면 이미 만들어진 실제 타이머를 추적하지
+    // 못해 advanceTimersByTime이 아무 일도 하지 않고 단언이 공허하게 통과한다.
+    vi.useFakeTimers();
+    setBgmEnabled(true);
+    render(createElement(Harness));
+    act(() => { document.dispatchEvent(new Event('pointerdown', { bubbles: true })); });
+    expect(isBgmPlaying(), '먼저 재생 중이어야 한다').toBe(true);
+
+    // 상태만 바꾸고 복구는 **제품이** 하게 둔다. 테스트가 되돌리면 복구 주체의 부재를 못 잡는다.
+    const ctx = getBgmTarget()!.ctx as unknown as { state: string };
+    ctx.state = 'suspended';
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+    expect(isBgmPlaying(), '복구 신호로 다시 켜진다').toBe(true);
+    vi.useRealTimers();
+  });
+
   it('pagehide에서도 멈춘다 (iOS 앱 전환)', () => {
     installStub();
     setBgmEnabled(true);
