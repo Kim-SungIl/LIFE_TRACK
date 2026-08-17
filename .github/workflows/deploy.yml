@@ -44,6 +44,14 @@ jobs:
         working-directory: ./game
         run: npm run build:release
 
+      # 게이트 2b — 배포 산출물의 폰트 정합성. **여기서만 확인 가능한 것들이다:**
+      # base('/LIFE_TRACK/')가 붙은 폰트 경로(어긋나면 실서버에서 폰트 전부 404인데, 증상이
+      # "그냥 시스템 폰트로 보임"이라 눈으로 구분되지 않는다) · 미니파이 후 unicode-range 잔존 ·
+      # OFL 고지 동봉. content-verify job은 별도 러너라 dist를 볼 수 없어서 이 job에 둔다.
+      - name: Verify dist fonts
+        working-directory: ./game
+        run: npm run verify:dist-fonts
+
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
