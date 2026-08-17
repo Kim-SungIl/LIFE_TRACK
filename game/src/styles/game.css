@@ -714,6 +714,26 @@ body {
   .fade-in { animation: none; }
 }
 
+/* ===== 화면 전환 (ScreenTransition) =====
+   불투명도만 움직인다. translate를 주면 화면이 min-height:100dvh라 아래쪽에 body 색
+   틈이 생긴다. 배경색(--bg-primary #17151c)과 각 화면 그라디언트(#1a1a2e 계열)가 모두
+   어두워서, 불투명도만으로도 "어둠에서 밝아지는" 장면 전환으로 읽힌다. */
+@keyframes screenEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 주 넘김·이벤트 등 고빈도 화면 — 짧게. 한 판에 150~200회 지나간다. */
+.screen-enter { animation: screenEnter 0.19s ease-out; }
+
+/* 학년말·엔딩 등 드문 장면 — 길게. 여기만 길게 두는 게 설계다(ScreenTransition.tsx 주석). */
+.screen-enter-slow { animation: screenEnter 0.34s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter,
+  .screen-enter-slow { animation: none; }
+}
+
 /* ===== 탭 네비게이션 ===== */
 .tab-bar {
   display: flex;
