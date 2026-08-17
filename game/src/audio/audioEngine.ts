@@ -57,8 +57,19 @@ function getAudioContextCtor(): Ctor | null {
   return w.AudioContext ?? w.webkitAudioContext ?? null;
 }
 
+// 버스 구조 — destination ← masterGain ← { sfxGain, bgmGain }.
+//
+// 왜 나누는가: 음소거·마스터 볼륨은 masterGain 하나로 충분하지만, **효과음과 BGM은 성격이 다르다.**
+// 효과음은 한 번 울리고 끝나는 단발이고 BGM은 계속 흐르는 지속음이라, 나중에 한쪽만 줄이거나
+// (대화 중 BGM 덕킹) 한쪽만 끄는 요구가 반드시 생긴다. 소리가 붙은 뒤에 버스를 쪼개려면 이미
+// 배선된 호출부를 전부 건드려야 하므로, BGM이 들어오기 전인 지금 나눠 둔다.
+//
+// 두 버스 모두 유니티 게인(1.0)으로 시작한다 — **효과음의 실제 음량은 이 변경으로 달라지지 않는다.**
+// sfx.ts의 게인 비율(tap 0.05 ↔ eventAppear 0.22)이 설계의 핵심이라, 여기서 배수를 걸면 그 원칙이 깨진다.
 let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
+let sfxGain: GainNode | null = null;
+let bgmGain: GainNode | null = null;
 let settings: AudioSettings = { ...DEFAULTS };
 let settingsLoaded = false;
 const listeners = new Set<(s: AudioSettings) => void>();
@@ -95,8 +106,14 @@ export function unlockAudio(): void {
       masterGain = ctx.createGain();
       masterGain.gain.value = 0;  // applyGain이 램프로 올린다(부팅 팝 방지)
       masterGain.connect(ctx.destination);
+      sfxGain = ctx.createGain();
+      sfxGain.gain.value = 1;
+      sfxGain.connect(masterGain);
+      bgmGain = ctx.createGain();
+      bgmGain.gain.value = 1;
+      bgmGain.connect(masterGain);
     } catch {
-      ctx = null; masterGain = null;
+      ctx = null; masterGain = null; sfxGain = null; bgmGain = null;
       return;
     }
   }
@@ -120,9 +137,14 @@ export function isAudioUnsupported(): boolean {
   return getAudioContextCtor() === null;
 }
 
-/** sfx.ts 전용 — 소리를 붙일 목적지. 아직 잠겨 있으면 null이고, 호출부는 조용히 포기해야 한다. */
+/**
+ * **단발 효과음 전용**(sfx.ts) — 소리를 붙일 목적지. 아직 잠겨 있으면 null이고, 호출부는 조용히 포기해야 한다.
+ *
+ * 이 계약은 "이번 한 방을 포기해도 되는 소리"에만 맞는다. 음소거면 null을 주는데, 지속음이 이걸 쓰면
+ * 음소거를 **해제해도 아무도 다시 켜주지 않아** 그 세션 내내 조용해진다. 지속음은 getBgmTarget을 쓸 것.
+ */
 export function getAudioTarget(): { ctx: AudioContext; destination: GainNode } | null {
-  if (!ctx || !masterGain) return null;
+  if (!ctx || !sfxGain) return null;
   if (ensureSettings().muted) return null;   // 음소거면 노드를 만들 이유가 없다(resume도 걸지 않는다)
   if (ctx.state !== 'running') {
     // 이번 소리는 포기한다 — suspended 상태에서 스케줄하면 사라지는 게 아니라
@@ -135,7 +157,26 @@ export function getAudioTarget(): { ctx: AudioContext; destination: GainNode } |
     void ctx.resume().catch(() => { });
     return null;
   }
-  return { ctx, destination: masterGain };
+  return { ctx, destination: sfxGain };
+}
+
+/**
+ * **지속음 전용**(BGM) — 목적지는 bgmGain이다.
+ *
+ * getAudioTarget과 딱 한 군데가 다르다: **음소거를 이유로 null을 주지 않는다.** 음소거는 이미
+ * masterGain이 0으로 처리하므로 들리지 않는 건 같지만, 스케줄러는 목적지를 계속 쥐고 있어
+ * 음소거를 해제하는 순간 흐르던 자리에서 다시 들린다. 여기서 null을 주면 해제 시점에 스케줄러를
+ * 되살릴 주체가 없어 세션 내내 무음이 된다 — 단발 효과음 계약을 지속음에 그대로 쓰면 나는 사고다.
+ *
+ * running이 아닐 때 포기하는 것은 같다. suspended에서 스케줄하면 복귀 순간 몰아서 터진다.
+ */
+export function getBgmTarget(): { ctx: AudioContext; destination: GainNode } | null {
+  if (!ctx || !bgmGain) return null;
+  if (ctx.state !== 'running') {
+    void ctx.resume().catch(() => { });
+    return null;
+  }
+  return { ctx, destination: bgmGain };
 }
 
 export function getAudioSettings(): AudioSettings {
@@ -158,6 +199,34 @@ export function setVolume(volume: number): void {
   listeners.forEach(fn => fn({ ...settings }));
 }
 
+/**
+ * 탭이 백그라운드로 갔을 때 — 컨텍스트를 재운다.
+ *
+ * 단발 효과음만 있던 시절엔 없어도 티가 안 났다(짧고, 백그라운드에서 울릴 일 자체가 드물다).
+ * 지속음이 들어오면 얘기가 달라진다 — 탭을 옮겨도 BGM이 계속 흐르고, 여러 탭을 열면 겹친다.
+ * suspend는 그래프를 얼리는 것이라 잘라내는 소리(클릭 노이즈)가 나지 않는다.
+ *
+ * 컨텍스트를 close하지 않는 이유: close는 되돌릴 수 없어 복귀 시 재생성 + 첫 제스처 대기가
+ * 다시 필요해진다. 탭을 돌아오는 건 제스처가 아니므로 그대로 영구 무음이 된다.
+ */
+export function suspendAudioForBackground(): void {
+  if (!ctx || ctx.state !== 'running') return;
+  void ctx.suspend().catch(() => { });
+}
+
+/**
+ * 탭으로 돌아왔을 때 — 재개한다.
+ *
+ * getAudioTarget도 running이 아니면 resume을 걸지만, 그건 **다음 상호작용이 있어야** 걸린다.
+ * 그러면 돌아온 뒤 첫 소리 한 번은 조용히 버려지고, BGM은 사용자가 뭔가 누를 때까지 침묵한다.
+ * 복귀 자체를 신호로 삼아 먼저 깨워 둔다.
+ */
+export function resumeAudioFromBackground(): void {
+  if (!ctx || ctx.state === 'running') return;
+  void ctx.resume().catch(() => { });
+  applyGain();
+}
+
 export function subscribeAudioSettings(fn: (s: AudioSettings) => void): () => void {
   listeners.add(fn);
   return () => { listeners.delete(fn); };
@@ -168,6 +237,8 @@ export function __resetAudioForTest(): void {
   try { ctx?.close(); } catch { /* 이미 닫힘 */ }
   ctx = null;
   masterGain = null;
+  sfxGain = null;
+  bgmGain = null;
   settings = { ...DEFAULTS };
   settingsLoaded = false;
   listeners.clear();
