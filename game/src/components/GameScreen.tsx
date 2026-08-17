@@ -13,6 +13,7 @@ import { webpSrc } from '../engine/assetWebp';
 import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
+import { ScreenTransition, type TransitionPace } from './ScreenTransition';
 
 // 비-부팅 화면만 lazy — MainWeekScreen / WeeklyResultScreen / TitleScreen 은 첫 페인트·고빈도라 eager 유지.
 const EventScene = lazy(() =>
@@ -205,12 +206,19 @@ export function GameScreen() {
 
   // ===== phase 분기 (단일 Suspense로 lazy 청크 로딩) =====
   let phaseContent: ReactNode;
+  // 전환 페이드용 화면 정체성. **분기마다 phaseContent와 같은 자리에서 함께 지정한다** —
+  // 별도 함수로 분기 조건을 다시 쓰면 라우터와 어긋나서(예: 결과 화면인데 키는 'main')
+  // 전환이 엉뚱한 타이밍에 돌게 된다. 새 분기를 추가하면 키도 같이 적어야 한다.
+  let screenKey: string;
+  let screenPace: TransitionPace = 'normal';
 
   // 이벤트 결과 — 비주얼 노벨 배경 유지.
   // 방금 내린 선택의 결과 연출이라 어떤 phase보다 우선한다. 특히 학년말 주(W48) 이벤트에서
   // year-end/ending보다 먼저 체크해야 결과 화면이 학년말 일기장에 묻히지 않는다.
   // onContinue로 닫으면 다음 render에서 phase(result/year-end/ending/event)로 자연 분기.
   if (eventResultData) {
+    // 같은 선택의 결과 화면 안에서는 키가 고정 — cgLoaded 등으로 다시 페이드되지 않는다.
+    screenKey = `event-result:${eventResultData.event?.id ?? '?'}#${eventResultData.choiceIndex ?? '?'}`;
     phaseContent = (
       <EventResultScreen
         gender={state.gender}
@@ -225,6 +233,8 @@ export function GameScreen() {
     );
   } else if (state.phase === 'year-end') {
     // ===== v1.2 학년말 일기장 (Y1~Y6) =====
+    screenKey = `year-end:${state.year}`;
+    screenPace = 'slow';        // 한 판 6회 — 드문 장면이라 길게
     phaseContent = (
       <YearEndScreen
         year={state.year}
@@ -238,6 +248,8 @@ export function GameScreen() {
     );
   } else if (state.phase === 'ending' && endingData) {
     // ===== 엔딩 =====
+    screenKey = 'ending';
+    screenPace = 'slow';        // 한 판 1회
     phaseContent = (
       <EndingScreen
         ending={endingData}
@@ -252,6 +264,8 @@ export function GameScreen() {
   } else if (state.currentEvent && state.phase === 'event') {
     // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
     // eventResultData가 세팅돼 있으면 결과 화면을 먼저 보여준 뒤, "계속 →" 클릭 후 followup 이벤트로 넘어감
+    // 연쇄 이벤트도 id가 바뀌므로 사이사이 전환이 들어간다. pace는 normal 고정 — 고빈도다.
+    screenKey = `event:${state.currentEvent.id}`;
     phaseContent = (
       <EventScene
         event={state.currentEvent}
@@ -305,6 +319,7 @@ export function GameScreen() {
   } else if (state.phase === 'result' && state.weekLog) {
     // ===== 주간 결산 =====
     const { color: fatigueColor } = getFatigueDisplay(state.fatigue);
+    screenKey = `weekly:${state.year}-${state.week}`;
     phaseContent = (
       <WeeklyResultScreen
         weekLog={state.weekLog}
@@ -325,6 +340,9 @@ export function GameScreen() {
     );
   } else {
     // ===== 메인 게임 화면 =====
+    // 주 안에서는 키가 고정이라 루틴 조작으로 페이드가 돌지 않는다. 주 넘김은
+    // main → weekly → main 으로 키가 두 번 바뀌면서 전환이 붙는다.
+    screenKey = `main:${state.year}-${state.week}`;
     phaseContent = (
       <>
         <MainWeekScreen
@@ -353,7 +371,9 @@ export function GameScreen() {
 
   return (
     <Suspense fallback={<ScreenChunkFallback />}>
-      {phaseContent}
+      <ScreenTransition transitionKey={screenKey} pace={screenPace}>
+        {phaseContent}
+      </ScreenTransition>
     </Suspense>
   );
 }
