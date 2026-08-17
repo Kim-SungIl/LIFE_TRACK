@@ -1,4 +1,19 @@
-/* Pretendard Variable — 동적 서브셋 (자동 생성물에 헤더만 덧댐, 손으로 고치지 말 것)
+/*!
+Copyright (c) 2021 Kil Hyung-jin, with Reserved Font Name Pretendard.
+https://github.com/orioncactus/pretendard
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+This license is copied below, and is also available with a FAQ at:
+http://scripts.sil.org/OFL
+*/
+/* 위 고지는 bang 주석(느낌표로 여는 주석)이라 미니파이 후에도 dist CSS에 남는다. 일반 주석은
+ * esbuild가 전부 제거해서, 폰트 바이너리만 배포되고 고지는 사라진다. 그리고 **반드시 파일
+ * 최상단이어야 한다** — 일반 주석 뒤로 밀면 bang이어도 제거된다(실측으로 확인했다).
+ * OFL 1.1은 재배포 시 저작권 고지와 라이선스 사본을 함께 요구한다. 사본은 두 곳에 있다:
+ * src/assets/fonts/pretendard/OFL.txt(리포용)와 public/fonts/OFL.txt(배포용 — public은
+ * dist로 그대로 복사된다). 잔존 여부는 verify-dist-fonts.ts가 빌드 뒤에 확인한다.
+ *
+ * Pretendard Variable — 동적 서브셋 (자동 생성물에 헤더만 덧댐, 손으로 고치지 말 것)
  *
  * 출처: https://github.com/orioncactus/pretendard (SIL Open Font License 1.1)
  * 라이선스 전문은 같은 폴더의 assets/fonts/pretendard/OFL.txt. OFL은 재배포 시 라이선스
@@ -19,14 +34,6 @@
  * 프로덕션 base가 '/LIFE_TRACK/'이라(vite.config.ts) 절대경로가 깨지기 때문 —
  * src/ 아래 두면 Vite가 base와 해시를 붙여 다시 써준다.
  */
-/*
-Copyright (c) 2021 Kil Hyung-jin, with Reserved Font Name Pretendard.
-https://github.com/orioncactus/pretendard
-
-This Font Software is licensed under the SIL Open Font License, Version 1.1.
-This license is copied below, and is also available with a FAQ at:
-http://scripts.sil.org/OFL
-*/
 /* [0] */
 @font-face {
 	font-family: 'Pretendard Variable';
