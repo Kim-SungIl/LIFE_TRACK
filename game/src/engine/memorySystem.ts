@@ -35,7 +35,16 @@ function getCategoryBias(parents: readonly ParentStrength[], cat: MemoryCategory
 }
 
 // ===== ANNUAL 이벤트 (슬롯 생성 금지 대상, 부록 B.4) =====
-// 단일 소스 — events.ts의 getEventForWeek도 이 Set을 import해서 사용
+//
+// 이 Set은 **기억 슬롯을 만들지 않는다**는 뜻만 갖는다(아래 applyMemorySlotFromChoice 게이트).
+// 매년 오는 의례라 "그 해의 특별한 한 컷"이 될 수 없어서다.
+//
+// 재발동 허용은 별개 개념이라 ANNUAL_REFIRE_IDS로 분리했다(바로 아래). 원래 한 Set이
+// 두 역할을 겸했는데, 그래서 "축제를 매년 열고 싶다"가 곧 "축제 기억 슬롯 3건을 버린다"가
+// 되어 선택지가 없었다. 두 축은 독립이어야 한다:
+//   - 매년 재발동 + 슬롯 있음  → 첫 발동에서 슬롯 1개 (중복은 아래 sourceEventId 가드가 막는다)
+//   - 매년 재발동 + 슬롯 없음  → 기존 ANNUAL 28종
+//   - 1회 발동  + 슬롯 있음  → 대부분의 서사 이벤트
 export const ANNUAL_EVENT_IDS = new Set<string>([
   'elementary-graduation', 'middle-school-entrance', 'middle-school-graduation',
   'high-school-entrance', 'suneung-eve', 'suneung-done', 'high-school-graduation',
@@ -51,6 +60,17 @@ export const ANNUAL_EVENT_IDS = new Set<string>([
   // 정기 시험 — 중/고 매년 발동 (year 가드는 이벤트 자체에 있음)
   'midterm-1', 'mock-exam-prep', 'mock-exam-prep-2', 'final-exam-2',
 ]);
+
+// ===== 매년 재발동 허용 이벤트 =====
+// selection.ts의 단일 소스 — 이 Set에 있으면 "이미 발동했다"는 이유로 후보에서 빠지지 않는다
+// (고정주차 경로 + followup 경로 양쪽).
+//
+// **슬롯 금지와는 무관하다.** 슬롯을 남기면서 매년 열리는 이벤트를 만들 수 있고, 그때 슬롯은
+// applyMemorySlotFromChoice의 sourceEventId 중복 가드 때문에 첫 발동 1개만 생긴다.
+//
+// 현재는 ANNUAL_EVENT_IDS와 원소가 같다(분리 시점의 동작 보존). 슬롯을 지키면서 매년 열려야
+// 하는 이벤트는 **이 Set에만** 추가할 것 — ANNUAL_EVENT_IDS에 넣으면 슬롯이 조용히 사라진다.
+export const ANNUAL_REFIRE_IDS = new Set<string>(ANNUAL_EVENT_IDS);
 
 // ===== importance 임계값 (부록 C) =====
 const MIN_IMPORTANCE_TO_SLOT = 3;
