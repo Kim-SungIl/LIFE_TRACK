@@ -39,7 +39,7 @@ export const RANDOM_EVENTS = [
         message: '혼자만의 시간도 나쁘지 않다. ... 정말?',
       },
       {
-        text: '같은 반 아이에게 말을 걸어본다',
+        text: '같은 반 애에게 말을 걸어본다',
         effects: { social: 3, mental: 2 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }],
         message: '"같이 먹어도 돼?" "어, 그래!" 용기를 냈더니 생각보다 쉬웠다.',

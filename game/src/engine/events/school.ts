@@ -416,7 +416,9 @@ export const SCHOOL_MIDDLE_HIGH = [
   {
     id: 'high3-start',
     title: '고3, 마지막 시작',
-    description: '마지막 학년이다.\n교실에 들어서는데 분위기가 무겁다. 칠판 위에 "D-xxx" 카운트다운이 적혀 있다.\n12년의 학교생활이 이 한 해로 끝난다.\n\n...복잡한 감정이 든다.',
+    // D-238 = 수능(Y7 W35, getExamSchedule의 SSOT) − 개학(W1) = 34주 × 7일.
+    // 이 이벤트는 week:1 고정이라 이 숫자가 항상 맞는다. HudPanel의 "수능까지 34주"와 같은 값.
+    description: '마지막 학년이다.\n교실에 들어서는데 분위기가 무겁다. 칠판 위에 "D-238" 카운트다운이 적혀 있다.\n12년의 학교생활이 이 한 해로 끝난다.\n\n...복잡한 감정이 든다.',
     week: 1,
     condition: (s) => s.year === 7,
     location: 'classroom',
@@ -594,7 +596,9 @@ export const SCHOOL_MIDDLE_HIGH = [
   // 중등/고등 중간고사 이벤트 (W7 — 중간고사 W8 전주)
   {
     id: 'midterm-1',
-    title: '첫 중간고사',
+    // ANNUAL_EVENT_IDS 등재라 Y2~Y7 매년 재발동한다(한 런 최대 6회 실측).
+    // 제목에 '첫'을 두면 중2~고3에도 '첫 중간고사'가 되므로 학년 무관 표현으로 고정.
+    title: '중간고사',
     description: '중간고사가 다가온다. 교실 분위기가 달라졌다.\n다들 쉬는 시간에도 책을 펴고 있다.',
     week: 7,
     location: 'classroom',
@@ -652,7 +656,7 @@ export const SCHOOL_MIDDLE_HIGH = [
   {
     id: 'subin-academy',
     title: '수빈이와 학원',
-    description: '학원 복도에서 수빈이가 다른 반 아이들과 웃으며 얘기하고 있다.\n나를 발견하자 "야, 너도 김쌤 반이야? 김쌤 숙제 진짜 많지 않아? 쉬는 시간에 편의점 가자~"',
+    description: '학원 복도에서 수빈이가 다른 반 애들과 웃으며 얘기하고 있다.\n나를 발견하자 "야, 너도 김쌤 반이야? 김쌤 숙제 진짜 많지 않아? 쉬는 시간에 편의점 가자~"',
     week: 5,
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
@@ -673,7 +677,7 @@ export const SCHOOL_MIDDLE_HIGH = [
         text: '"나 복습 좀 해야 해" — 거절한다',
         effects: { academic: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: -2 }],
-        message: '"아 그래? 알겠어~" 수빈이가 금방 다른 아이를 데리고 갔다. 아쉬울 틈도 없다.',
+        message: '"아 그래? 알겠어~" 수빈이가 금방 다른 애를 데리고 갔다. 아쉬울 틈도 없다.',
       },
     ],
   },
@@ -689,7 +693,7 @@ export const SCHOOL_MIDDLE_HIGH = [
         text: '"내가 할게!" — 대표로 나선다',
         effects: { social: 4, health: 2, mental: 3 },
         fatigueEffect: 5,
-        message: '반 대표로 달렸다! 1등은 아니었지만 다들 고마워했다. 이름을 기억하는 아이가 늘었다.',
+        message: '반 대표로 달렸다! 1등은 아니었지만 다들 고마워했다. 이름을 기억하는 애가 늘었다.',
         timeCost: 1,
       },
       {
@@ -724,11 +728,21 @@ export const SCHOOL_MIDDLE_HIGH = [
         effects: { mental: 5, social: 2 },
         message: '해방감이 밀려온다. 이게 방학이지!',
       },
+      // 벌이 선택지는 학년으로 가른다 — winter-start(알바 year>=4 / 심부름 year<4)와 같은 패턴.
+      // 조건 없이 두면 초6이 방학에 알바를 뛰는 선택지가 열린다.
       {
-        text: '"돈 좀 모아야겠다"',
+        text: '"돈 좀 모아야겠다" — 알바 자리를 찾는다',
         effects: {},
         moneyEffect: 3,
         message: '용돈 벌 방법을 찾아봤다. 뭐라도 해봐야지.',
+        condition: (s) => s.year >= 4,
+      },
+      {
+        text: '"용돈 좀 모아야겠다" — 집안일을 돕는다',
+        effects: { mental: 1 },
+        moneyEffect: 1,
+        message: '설거지랑 빨래 개는 걸 맡았다. 엄마가 "방학이라 그래도 손이 하나 늘었네" 하며 용돈을 줬다.',
+        condition: (s) => s.year < 4,
       },
     ],
   },
@@ -930,7 +944,9 @@ export const SCHOOL_MIDDLE_HIGH = [
   {
     id: 'mock-exam-prep-2',
     title: '9월 모의고사',
-    description: '9월 모의고사가 다가온다.\n"이번 모의 성적이 수시 지원 기준이야" — 선생님의 말에 교실이 조용해졌다.',
+    // ANNUAL 등재 + year>=5라 고1·고2·고3에 모두 나온다. '수시 지원 기준'은 고3 담임 대사라
+    // 학년 무관하게 참인 문장으로 교체 (학년별 분기는 title/description이 정적이라 불가).
+    description: '9월 모의고사가 다가온다.\n"이번 성적, 나중에 다 근거로 남는다" — 선생님의 말에 교실이 조용해졌다.',
     week: 32,
     location: 'classroom',
     background: 'classroom_{school}',
