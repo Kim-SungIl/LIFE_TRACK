@@ -178,7 +178,9 @@ export const PRESIDENT_ELECTION = [
     background: 'classroom_{school}',
     choices: [
       { text: '결과를 받아들인다', effects: { social: 1, mental: -1 },
-        message: '인기를 더 쌓아야겠다는 생각이 든다. 옆자리 친구가 "다음 학기엔 될 거야" 하며 어깨를 두드렸다.' },
+        // class-president-2는 조건 없는 ANNUAL이라 Y7 2학기에도 발동한다. 그 해엔 "다음 학기"가
+        // 존재하지 않으므로(고3 2학기가 마지막) 학년 무관하게 참인 위로로 바꾼다.
+        message: '인기를 더 쌓아야겠다는 생각이 든다. 옆자리 친구가 "아깝다, 진짜" 하며 어깨를 두드렸다.' },
     ],
   },
 ] satisfies readonly GameEvent[];

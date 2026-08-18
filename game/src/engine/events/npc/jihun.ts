@@ -158,14 +158,21 @@ export const JIHUN_EVENTS = [
   },
   {
     id: 'jihun-promise',
-    title: '졸업 후 약속',
-    description: '졸업이 다가온다. 지훈이가 학교 옥상으로 올라가자고 했다.\n바람이 분다. 지훈이가 멀리 보며 말한다.\n"야... 우리 진짜 오래 알았다, 그치?"\n"...어. 초등학교 때부터."',
+    // 원래 title '졸업 후 약속' / 지문 첫 문장 "졸업이 다가온다"였는데, 발동 창이 W40~42(학년말)이고
+    // 학년 게이트가 없어 실측 20/20 런에서 전부 Y2(중1)에 발동했다 — 졸업이 1년 반 남은 해다.
+    // year===7로 잠가봤더니 발동 0/20: 지훈 친밀도가 Y2에 74로 정점이고 Y7엔 60까지 내려가
+    // (졸업 학년 Y1 60 / Y4 67 / Y7 60) intimacy>=70이 졸업 학년에선 아예 성립하지 않는다.
+    // → 게이트로는 장면이 삭제되므로, 학년말이면 어느 해나 참인 문장으로 바꾼다.
+    title: '학년말 옥상',
+    description: '한 학년이 끝나간다. 지훈이가 학교 옥상으로 올라가자고 했다.\n바람이 분다. 지훈이가 멀리 보며 말한다.\n"야... 우리 진짜 오래 알았다, 그치?"\n"...어. 초등학교 때부터."',
     location: 'rooftop',
     background: 'rooftop',
     speakers: ['jihun'],
+    // year>=2: "초등학교 때부터"는 초6(Y1) 재학 중엔 어색하다. Y1은 실측 친밀도 60이라 t70에
+    // 어차피 닿지 않지만, 의도를 코드에 남긴다.
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
-      return !!jihun?.met && jihun.intimacy >= 70 && s.week >= 40 && !s.isVacation;
+      return !!jihun?.met && jihun.intimacy >= 70 && s.year >= 2 && s.week >= 40 && !s.isVacation;
     },
     choices: [
       {
