@@ -1,6 +1,8 @@
 import { EndingData } from '../../engine/ending';
 import { useEffect, useRef } from 'react';
 import { playSfx } from '../../audio/sfx';
+import { getBgmTrackId, setBgmTrack } from '../../audio/bgm';
+import { AudioToggle } from '../AudioToggle';
 import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, getGrade } from '../../engine/types';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';
@@ -39,9 +41,24 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
     playSfx('ending');
   }, []);
 
+  // 회상 테마로 갈아탄다. 진입음(A3→E4→C5→E5 상행)과 같은 조성이라 그 아르페지오가
+  // 테마의 도입부처럼 이어진다.
+  //
+  // **떠날 때 원래 곡으로 되돌린다.** 되돌리지 않으면 타이틀로 나가서 새 판을 시작해도
+  // 엔딩 곡이 계속 흐른다. 들어올 때의 곡을 기억해 두는 이유는, 나중에 화면별 곡이 늘어나도
+  // "직전 곡"이 항상 main이라고 가정하지 않기 위해서다.
+  useEffect(() => {
+    const previous = getBgmTrackId();
+    setBgmTrack('endingRecall');
+    return () => setBgmTrack(previous);
+  }, []);
+
   return (
     <BgWrapper {...bgProps}>
-      <div className="ending-screen fade-in" style={{ minHeight: 'auto', padding: 0 }}>
+      <div className="ending-screen fade-in" style={{ minHeight: 'auto', padding: 0, position: 'relative' }}>
+        {/* 이 화면에만 오디오 진입점이 없었다(타이틀·HUD에는 있다). 배경음이 흐르는데
+            끌 방법이 화면에 없으면 게임을 나가야 끌 수 있다. */}
+        <AudioToggle style={{ position: 'absolute', top: 0, right: 4, zIndex: 5 }} />
         <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: 8 }}>7년의 여정이 끝났습니다</div>
         <div className="ending-title">{ending.title}</div>
         <div className="ending-desc">{ending.description}</div>

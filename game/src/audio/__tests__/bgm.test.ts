@@ -18,7 +18,8 @@ import {
   unlockAudio, getAudioTarget, getBgmTarget, __resetAudioForTest,
 } from '../audioEngine';
 import {
-  startBgm, stopBgm, isBgmPlaying, syncBgmWithSettings, getMainTheme, __resetBgmForTest,
+  startBgm, stopBgm, isBgmPlaying, syncBgmWithSettings, getMainTheme,
+  setBgmTrack, getBgmTrackId, getBgmTrack, listBgmTrackIds, __resetBgmForTest,
 } from '../bgm';
 import { useAudioUnlock } from '../useAudioUnlock';
 import { useAudioLifecycle } from '../useAudioLifecycle';
@@ -477,8 +478,10 @@ describe('루프 스케줄', () => {
 });
 
 // ===== 7. 작곡 불변식 =====
-describe('테마 작곡 불변식', () => {
-  const theme = getMainTheme();
+// **곡마다 도는 것이 중요하다.** 곡을 추가하면서 규율을 빠뜨리면 여기서 걸린다 —
+// 한 곡만 검사하면 두 번째 곡은 아무 제약 없이 들어온다.
+describe.each(listBgmTrackIds())('테마 작곡 불변식 — %s', (id) => {
+  const theme = getBgmTrack(id);
 
   it('모든 노트가 루프 안에서 끝난다', () => {
     // 루프를 넘는 노트는 다음 루프의 같은 음과 겹쳐 점점 두꺼워진다.
@@ -509,10 +512,91 @@ describe('테마 작곡 불변식', () => {
     expect(maxNote * defaultBgmVolume).toBeLessThan(tapGain);
   });
 
+  it('파형은 sine/triangle뿐이다 (칩튠 음색은 이 게임의 톤과 어긋난다)', () => {
+    const bad = theme.notes.filter(n => n.type !== undefined && n.type !== 'sine' && n.type !== 'triangle');
+    expect(bad.map(n => n.type)).toEqual([]);
+  });
+});
+
+describe('메인 테마', () => {
   it('선율이 빈 곳을 남긴다 (촘촘하면 오래 머무는 화면에서 지친다)', () => {
+    const theme = getMainTheme();
     const sounding = theme.notes.reduce((s, n) => s + n.beats, 0);
     // 성부가 여럿이라 합이 루프를 넘을 수 있다 — 성부 수로 나눈 평균 밀도로 본다.
     const voices = 3;   // 저역 · 패드 · 선율
     expect(sounding / voices / theme.loopBeats).toBeLessThan(1);
+  });
+});
+
+describe('엔딩 회상 테마', () => {
+  const theme = getBgmTrack('endingRecall');
+  const C5 = 523.25;
+
+  // 이 곡의 정서적 결론. 엔딩 화면은 성취와 후회를 같은 지면에 놓으므로 승리로 끝나면 안 된다.
+  it('마지막 선율이 상승이 아니라 C5로 내려앉는다', () => {
+    const melody = theme.notes.filter(n => n.freq >= C5).sort((a, b) => a.beat - b.beat);
+    const last = melody[melody.length - 1];
+    expect(last.freq).toBe(C5);
+    expect(last.freq).toBeLessThan(Math.max(...melody.map(n => n.freq)));
+  });
+
+  // 32초 루프를 두세 바퀴 듣는 화면이다. 이음매가 비면 "루프가 돈다"는 사실이 드러난다.
+  it('루프 이음매를 포함해 소리가 끊기지 않는다', () => {
+    const wrapped = [...theme.notes, ...theme.notes.map(n => ({ ...n, beat: n.beat + theme.loopBeats }))];
+    const silent: string[] = [];
+    for (let b = 0; b < theme.loopBeats * 2; b += 0.05) {
+      if (!wrapped.some(n => b >= n.beat && b < n.beat + n.beats)) silent.push(b.toFixed(2));
+    }
+    expect(silent).toEqual([]);
+  });
+
+  // 주간 루프는 배경으로 물러나야 하지만 엔딩은 기억에 남아야 한다 — 역할이 다르다.
+  it('메인 테마보다 선율이 많다', () => {
+    const melodyCount = (notes: { freq: number }[]) => notes.filter(n => n.freq >= C5).length;
+    expect(melodyCount(theme.notes)).toBeGreaterThan(melodyCount(getMainTheme().notes));
+  });
+});
+
+// ===== 8. 곡 교체 =====
+describe('곡 교체 (화면이 곡을 고른다)', () => {
+  const hasFreq = (oscs: { freq: number }[], f: number) => oscs.some(o => Math.abs(o.freq - f) < 0.01);
+  const A2 = 110.00, G5 = 783.99;   // main에만 있는 음 / endingRecall에만 있는 음
+
+  it('기본 곡은 main이다', () => {
+    expect(getBgmTrackId()).toBe('main');
+  });
+
+  it('재생 중에 바꾸면 새 곡이 예약된다', () => {
+    const { oscs } = installStub();
+    unlockAudio();
+    setBgmEnabled(true);
+    startBgm();
+    expect(hasFreq(oscs, A2), 'main의 저역이 울린다').toBe(true);
+
+    oscs.length = 0;
+    setBgmTrack('endingRecall');
+    expect(getBgmTrackId()).toBe('endingRecall');
+    expect(hasFreq(oscs, G5), '엔딩 테마의 음이 울린다').toBe(true);
+    expect(hasFreq(oscs, A2), 'main의 저역은 더 이상 울리지 않는다').toBe(false);
+  });
+
+  // 곡 교체가 설정을 무시하고 소리를 켜면, 배경음을 꺼둔 사용자가 엔딩에서 음악을 듣게 된다.
+  it('배경음이 꺼져 있으면 곡만 바뀌고 소리는 나지 않는다', () => {
+    const { oscs } = installStub();
+    unlockAudio();
+    setBgmTrack('endingRecall');
+    expect(getBgmTrackId()).toBe('endingRecall');
+    expect(oscs).toHaveLength(0);
+    expect(isBgmPlaying()).toBe(false);
+  });
+
+  it('같은 곡으로 바꾸면 재시작하지 않는다 (StrictMode 이중 마운트)', () => {
+    const { oscs } = installStub();
+    unlockAudio();
+    setBgmEnabled(true);
+    startBgm();
+    const before = oscs.length;
+    setBgmTrack('main');
+    expect(oscs).toHaveLength(before);
   });
 });

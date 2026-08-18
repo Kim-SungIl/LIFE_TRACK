@@ -24,12 +24,14 @@ const A2 = 110.00;
 const E3 = 164.81;
 const A3 = 220.00;
 const C4 = 261.63;
+const D4 = 293.66;
 const E4 = 329.63;
 const G4 = 392.00;
 const A4 = 440.00;
 const C5 = 523.25;
 const D5 = 587.33;
 const E5 = 659.25;
+const G5 = 783.99;
 
 interface BgmNote {
   /** 루프 시작으로부터 몇 박째에 시작하는가 */
@@ -78,6 +80,74 @@ const MAIN_THEME: BgmTrack = {
     { beat: 13.0, freq: E4, beats: 2.0, gain: 0.032, type: 'triangle' },
   ],
 };
+
+/**
+ * 엔딩 회상 테마 — "돌아보면".
+ *
+ * 60 BPM · 32박(32초) 루프. 엔딩 회고 화면 전용이다.
+ *
+ * **정서 방향이 이 곡의 설계 조건이다.** 그 화면은 성취("돌아보면")와 후회("미처 닿지 못한 것")를
+ * 같은 지면에 놓는다. 그래서 승리도 비극도 아니어야 한다 — 잘했든 못했든 같은 곡이 흐른다.
+ * 마지막 두 음이 상승하지 않고 C5로 내려앉는 것이 그 판단이다(올라가며 끝내면 "승리"가 된다).
+ *
+ * 메인 테마와 달리 선율이 분명하다. 엔딩은 한 판의 끝이라 기억에 남아야 하는 자리이고,
+ * 배경으로 물러나 있어야 하는 주간 루프와 역할이 다르다. 다만 화면 체류가 1~2분이라
+ * 루프를 두세 바퀴 듣게 되므로, 짧은 C5–E5 동기를 변형해 돌려쓴다(반복 내성).
+ *
+ * 60 BPM이라 박과 초가 1:1이다 — beat 값을 초로 읽어도 된다.
+ */
+const ENDING_RECALL: BgmTrack = {
+  bpm: 60,
+  loopBeats: 32,
+  notes: [
+    { beat: 0, freq: A3, beats: 4, gain: 0.045, type: 'triangle' },
+    { beat: 0, freq: C4, beats: 3.6, gain: 0.035 },
+    { beat: 1, freq: C5, beats: 1.4, gain: 0.055 },
+    { beat: 3, freq: E5, beats: 1.4, gain: 0.055 },
+
+    { beat: 4, freq: E4, beats: 4, gain: 0.045, type: 'triangle' },
+    { beat: 5, freq: D5, beats: 1.4, gain: 0.055 },
+    { beat: 7, freq: C5, beats: 1.2, gain: 0.05 },
+
+    { beat: 8, freq: G4, beats: 4, gain: 0.04, type: 'triangle' },
+    { beat: 8, freq: D4, beats: 3.6, gain: 0.035 },
+    { beat: 9, freq: E5, beats: 1.4, gain: 0.055 },
+    { beat: 11, freq: G5, beats: 1.4, gain: 0.052 },
+
+    { beat: 12, freq: D4, beats: 4, gain: 0.04, type: 'triangle' },
+    { beat: 13, freq: E5, beats: 1.4, gain: 0.05 },
+    { beat: 15, freq: D5, beats: 1.4, gain: 0.052 },
+
+    { beat: 16, freq: A3, beats: 4, gain: 0.045, type: 'triangle' },
+    { beat: 16, freq: C4, beats: 3.6, gain: 0.035 },
+    { beat: 17, freq: C5, beats: 1.4, gain: 0.055 },
+    { beat: 19, freq: E5, beats: 1.4, gain: 0.055 },
+
+    { beat: 20, freq: E4, beats: 4, gain: 0.045, type: 'triangle' },
+    { beat: 21, freq: D5, beats: 1.4, gain: 0.052 },
+    { beat: 23, freq: C5, beats: 1.4, gain: 0.05 },
+
+    { beat: 24, freq: C4, beats: 4, gain: 0.04, type: 'triangle' },
+    { beat: 24, freq: G4, beats: 3.6, gain: 0.035 },
+    { beat: 25, freq: D5, beats: 1.5, gain: 0.05 },
+    { beat: 27, freq: E5, beats: 1.3, gain: 0.047 },
+
+    // 마지막 마디 — 올라가지 않고 C5로 내려앉는다
+    { beat: 28, freq: A3, beats: 4, gain: 0.045, type: 'triangle' },
+    { beat: 29, freq: C5, beats: 1.4, gain: 0.05 },
+    { beat: 31, freq: C5, beats: 0.9, gain: 0.04 },
+  ],
+};
+
+export type BgmId = 'main' | 'endingRecall';
+
+const TRACKS: Record<BgmId, BgmTrack> = {
+  main: MAIN_THEME,
+  endingRecall: ENDING_RECALL,
+};
+
+/** 지금 걸려 있는 곡. 화면이 바꾸고(setBgmTrack), 스케줄러는 이걸 읽는다. */
+let currentId: BgmId = 'main';
 
 /** 배경음 버스 앞단 로우패스 — 고역을 깎아 먹먹하고 따뜻하게. 텍스트를 읽는 화면이라 날카로우면 방해된다. */
 const LOWPASS_HZ = 1800;
@@ -128,13 +198,14 @@ function scheduleLoop(): void {
   // 탭 복귀)이 담당한다. 여기서 재시도 루프를 돌리면 잠긴 채로 타이머가 영원히 남는다.
   if (!target || !playing || !filter) { stopBgm(); return; }
   const { ctx } = target;
+  const track = TRACKS[currentId];
   try {
-    for (const note of MAIN_THEME.notes) {
-      scheduleNote(ctx, filter, MAIN_THEME, note, nextLoopAt);
+    for (const note of track.notes) {
+      scheduleNote(ctx, filter, track, note, nextLoopAt);
     }
   } catch { stopBgm(); return; }
 
-  const loopDur = beatsToSec(MAIN_THEME, MAIN_THEME.loopBeats);
+  const loopDur = beatsToSec(track, track.loopBeats);
   nextLoopAt += loopDur;
   // 다음 루프를 시작 LOOKAHEAD초 전에 스케줄한다. 음수가 되면(탭 복귀 직후 등) 즉시.
   const waitMs = Math.max(0, (nextLoopAt - ctx.currentTime - LOOKAHEAD) * 1000);
@@ -204,6 +275,28 @@ export function syncBgmWithSettings(): () => void {
   return () => { offSettings(); offReady(); };
 }
 
+/**
+ * 흐르는 곡을 바꾼다. 화면이 부르는 유일한 곡 선택 지점이다.
+ *
+ * 재생 중이면 즉시 갈아탄다 — 새 곡의 루프 경계를 기다리지 않는다. 엔딩 진입은 장면 전환이라
+ * 이전 곡이 마디를 마칠 때까지 끄는 게 오히려 어색하다.
+ *
+ * **설정을 무시하지 않는다.** 배경음이 꺼져 있거나 음소거면 곡만 갈아 끼우고 소리는 내지 않는다
+ * (startBgm이 그 판단을 갖고 있고, 여기서 다시 계산하면 판단이 두 곳에 생긴다).
+ */
+export function setBgmTrack(id: BgmId): void {
+  if (currentId === id) return;
+  currentId = id;
+  if (!playing) return;
+  stopBgm();
+  startBgm();
+}
+
+/** 지금 걸린 곡. 화면이 떠날 때 원래 곡으로 되돌리려면 들어올 때 이걸 기억해 둔다. */
+export function getBgmTrackId(): BgmId { return currentId; }
+
 /** 테스트·검증용 */
 export function getMainTheme(): BgmTrack { return MAIN_THEME; }
-export function __resetBgmForTest(): void { stopBgm(); nextLoopAt = 0; }
+export function getBgmTrack(id: BgmId): BgmTrack { return TRACKS[id]; }
+export function listBgmTrackIds(): BgmId[] { return Object.keys(TRACKS) as BgmId[]; }
+export function __resetBgmForTest(): void { stopBgm(); nextLoopAt = 0; currentId = 'main'; }
