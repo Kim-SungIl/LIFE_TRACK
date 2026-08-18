@@ -223,6 +223,68 @@ export const ACTIVITIES: Activity[] = [
     tags: ['수입', '고피로', '자립'],
   },
 
+  // === 학년 해금 계열 ===
+  {
+    id: 'free-semester', name: '자유학기 진로체험', slots: 1, fatigue: 4,
+    // 자유학기제는 중1 — 시험이 없는 해에 진로탐색·주제선택·예술체육을 한다. 학업 축이 아니다.
+    effects: { talent: 1.5, social: 1 }, moneyCost: 0, category: 'talent',
+    requires: (s) => s.year >= 2,
+    unlockYear: 2,
+    description: '자유학기 프로그램으로 이것저것 해본다.',
+    flavor: '시험이 없는 학기. 뭘 해도 성적표에 안 남는다는 게 이상하게 홀가분하다.',
+    tags: ['중학', '진로', '시험 없음'],
+  },
+  {
+    id: 'study-room', name: '독서실 정기권', slots: 1, fatigue: 4,
+    // 독학(1.5/f5/무료)의 유료 상위 — 환경을 사서 효율↑ 피로↓. 유료라 80+ 캡을 면제받는다.
+    effects: { academic: 2 }, moneyCost: 3, category: 'study',
+    requires: (s) => s.year >= 3 && s.money >= 3,
+    unlockYear: 3,
+    description: '독서실에 자리를 끊고 다닌다.',
+    flavor: '내 이름이 붙은 칸막이 자리. 앉으면 딴짓할 구실이 없어진다.',
+    tags: ['집중', '비용 있음', '내 자리'],
+  },
+  {
+    id: 'supplementary-class', name: '보충수업', slots: 1, fatigue: 5,
+    // 고등학교 방과후 보충 — 야자와 세트. 유료라 학업 80+ 캡을 면제받는다(무료 야자와의 대비).
+    effects: { academic: 1.8, social: 0.3 }, moneyCost: 2, category: 'study',
+    requires: (s) => s.year >= 5 && s.money >= 2,
+    unlockYear: 5,
+    description: '방과후 보충수업을 신청해 듣는다.',
+    flavor: '7교시가 끝나고 8교시가 시작된다. 창밖은 벌써 어둡다.',
+    tags: ['고등', '학교', '비용 있음'],
+  },
+  {
+    id: 'night-study', name: '야간자율학습', slots: 2, fatigue: 12,
+    // 2칸 무료 — 시간으로 값을 치른다. 학업은 80+에서 ×0.1 캡에 걸리지만 캡은 스탯별이라
+    // 사회성 쪽은 후반에도 살아남는다(같이 야자하는 친구). 유료 보충수업과 무료/유료 대비를 이룬다.
+    effects: { academic: 2, social: 1, mental: -1 }, moneyCost: 0, category: 'study',
+    requires: (s) => s.year >= 5,
+    unlockYear: 5,
+    description: '야자를 신청하고 밤까지 학교에 남는다.',
+    flavor: '10시 종이 울리면 우르르 나온다. 매점 불빛만 유난히 밝다.',
+    tags: ['고등', '장시간', '무료'],
+  },
+  {
+    id: 'practical-lesson', name: '입시 실기 레슨', slots: 1, fatigue: 7,
+    // 예체능 입시 — art-lesson(2.0/2만)의 상위. 특기 빌드의 80+ 통로.
+    effects: { talent: 2.8 }, moneyCost: 4, category: 'talent',
+    requires: (s) => s.year >= 6 && s.money >= 4,
+    unlockYear: 6,
+    description: '입시 실기를 전문 레슨으로 준비한다.',
+    flavor: '선생님이 시험장 기준으로 다시 잡아준다. 취미로 하던 것과는 다른 종류의 피로.',
+    tags: ['입시', '고비용', '특기 집중'],
+  },
+  {
+    id: 'mentoring', name: '후배 멘토링', slots: 1, fatigue: 4,
+    effects: { social: 1.2, academic: 0.8, mental: 0.5 }, moneyCost: 0, category: 'social',
+    requires: (s) => s.year >= 6,
+    unlockYear: 6,
+    description: '후배들의 공부를 봐준다.',
+    flavor: '설명하다 막히는 데가 내가 모르는 데였다. 가르치면서 내가 배운다.',
+    tags: ['고등', '관계', '가르치며 배움'],
+  },
+
   // ===== Phase 1: 방학 전용 활동 9종 =====
   // 무료 4개 (가난한 가정 보장)
   {

@@ -9,8 +9,20 @@ import {
   getAvailableActivities,
   isVacationLimitReached,
 } from '../activities';
+import { canBuyItem, limitKey, SHOP_ITEMS } from '../shopSystem';
 import type { Activity } from '../types';
 import { makeState } from '../../test/fixtures';
+
+const GRADE_UNLOCK_IDS = [
+  'free-semester',
+  'study-room',
+  'supplementary-class',
+  'night-study',
+  'practical-lesson',
+  'mentoring',
+] as const;
+
+const PAID_GRADE_UNLOCK_IDS = ['study-room', 'supplementary-class', 'practical-lesson'] as const;
 
 function pickActivity(pred: (a: Activity) => boolean, why: string): Activity {
   const found = ACTIVITIES.find(pred);
@@ -195,5 +207,73 @@ describe('collapseActivityChoices', () => {
     const twoSlot = pickActivity(a => a.slots === 2, 'slots===2 활동 없음');
     // timeCost로 뒷칸이 잘린 형태: [id]만 남음
     expect(collapseActivityChoices([twoSlot.id])).toEqual([twoSlot.id]);
+  });
+});
+
+describe('학년 해금 활동 6종 — 게이트 계약', () => {
+  it('해금 학년 경계 양방향: unlockYear-1에는 없고 unlockYear에는 있다', () => {
+    for (const id of GRADE_UNLOCK_IDS) {
+      const a = pickActivity(x => x.id === id, `${id} 없음`);
+      expect(a.unlockYear, `${id} unlockYear`).toEqual(expect.any(Number));
+      const year = a.unlockYear!;
+      const before = getAvailableActivities(makeState({ year: year - 1, money: 999, isVacation: false }));
+      const at = getAvailableActivities(makeState({ year, money: 999, isVacation: false }));
+      expect(before.some(x => x.id === id), `${id} year ${year - 1}`).toBe(false);
+      expect(at.some(x => x.id === id), `${id} year ${year}`).toBe(true);
+    }
+  });
+
+  it('unlockYear와 requires의 year 조건이 일치한다 (배지만 달고 차단 없는 상태 금지)', () => {
+    // passesActivityGates는 비공개 — 공개면(canApplyActivity)으로 동일 판정을 잠근다.
+    for (const id of GRADE_UNLOCK_IDS) {
+      const a = pickActivity(x => x.id === id, `${id} 없음`);
+      expect(a.unlockYear, `${id} unlockYear`).toEqual(expect.any(Number));
+      expect(typeof a.requires, `${id} requires`).toBe('function');
+      const year = a.unlockYear!;
+      expect(
+        canApplyActivity(makeState({ year: year - 1, money: 999, isVacation: false }), id),
+        `${id} year ${year - 1}`,
+      ).toBe(false);
+    }
+  });
+
+  it('유료 3종은 해금 학년이어도 잔액 cost-1이면 빠지고 cost이면 나온다', () => {
+    for (const id of PAID_GRADE_UNLOCK_IDS) {
+      const a = pickActivity(x => x.id === id, `${id} 없음`);
+      expect(a.unlockYear, `${id} unlockYear`).toEqual(expect.any(Number));
+      const cost = a.moneyCost;
+      const year = a.unlockYear!;
+      const under = getAvailableActivities(makeState({ year, money: cost - 1, isVacation: false }));
+      const exact = getAvailableActivities(makeState({ year, money: cost, isVacation: false }));
+      expect(under.some(x => x.id === id), `${id} money ${cost - 1}`).toBe(false);
+      expect(exact.some(x => x.id === id), `${id} money ${cost}`).toBe(true);
+    }
+  });
+
+  it('야자(night-study)는 2칸이고 사회성 효과가 있다', () => {
+    const night = pickActivity(a => a.id === 'night-study', 'night-study 없음');
+    expect(night.slots).toBe(2);
+    expect(night.effects.social).toBe(1);
+  });
+});
+
+describe('상점 게이트 — admission-briefing', () => {
+  const briefing = SHOP_ITEMS.find(i => i.id === 'admission-briefing');
+  if (!briefing) throw new Error('admission-briefing 없음');
+
+  it('Y4에서는 requireYear 사유로 구매 불가, Y5에서는 가능', () => {
+    const y4 = canBuyItem(briefing, makeState({ year: 4, money: 999 }), {});
+    expect(y4).toEqual({ ok: false, reason: '고1부터 구매 가능' });
+    const y5 = canBuyItem(briefing, makeState({ year: 5, money: 999 }), {});
+    expect(y5).toEqual({ ok: true });
+  });
+
+  it('maxPerWeek: 1이 두 번째 구매를 막는다', () => {
+    const y5 = makeState({ year: 5, money: 999 });
+    expect(canBuyItem(briefing, y5, {})).toEqual({ ok: true });
+    expect(canBuyItem(briefing, y5, { [limitKey(briefing)]: 1 })).toEqual({
+      ok: false,
+      reason: '이번 주 구매 한도 초과',
+    });
   });
 });
