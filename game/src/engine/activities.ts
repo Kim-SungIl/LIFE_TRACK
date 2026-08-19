@@ -246,7 +246,7 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'supplementary-class', name: '보충수업', slots: 1, fatigue: 5,
-    // 고등학교 방과후 보충 — 야자와 세트. 유료라 학업 80+ 캡을 면제받는다(무료 야자와의 대비).
+    // 고등학교 방과후 보충 — 자율학습과 세트. 유료라 학업 80+ 캡을 면제받는다(무료 자율학습과의 대비).
     effects: { academic: 1.8, social: 0.3 }, moneyCost: 2, category: 'study',
     requires: (s) => s.year >= 5 && s.money >= 2,
     unlockYear: 5,
@@ -255,14 +255,18 @@ export const ACTIVITIES: Activity[] = [
     tags: ['고등', '학교', '비용 있음'],
   },
   {
-    id: 'night-study', name: '야간자율학습', slots: 2, fatigue: 12,
+    // id는 세이브 호환(routineSlot/weekendChoice에 id가 저장됨) 때문에 'night-study' 유지.
+    // 표시명은 '야간자율학습'이 아니라 '학교 자율학습' — 2칸 활동은 SlotEditPopup의 루틴 필터
+    // (slots === 1)에 걸려 주말·방학 슬롯에만 뜬다. 평일 야자를 뜻하는 이름이면 배치 위치와 어긋난다.
+    // (평일 야자 자체는 이벤트·잡담 텍스트에 서사로 남아 있다.)
+    id: 'night-study', name: '학교 자율학습', slots: 2, fatigue: 12,
     // 2칸 무료 — 시간으로 값을 치른다. 학업은 80+에서 ×0.1 캡에 걸리지만 캡은 스탯별이라
-    // 사회성 쪽은 후반에도 살아남는다(같이 야자하는 친구). 유료 보충수업과 무료/유료 대비를 이룬다.
+    // 사회성 쪽은 후반에도 살아남는다(같이 자습하는 친구). 유료 보충수업과 무료/유료 대비를 이룬다.
     effects: { academic: 2, social: 1, mental: -1 }, moneyCost: 0, category: 'study',
     requires: (s) => s.year >= 5,
     unlockYear: 5,
-    description: '야자를 신청하고 밤까지 학교에 남는다.',
-    flavor: '10시 종이 울리면 우르르 나온다. 매점 불빛만 유난히 밝다.',
+    description: '자습실에 남아 하루를 통째로 쓴다.',
+    flavor: '문 여는 시간에 들어가 문 닫는 시간에 나온다. 매점 불빛만 유난히 밝다.',
     tags: ['고등', '장시간', '무료'],
   },
   {

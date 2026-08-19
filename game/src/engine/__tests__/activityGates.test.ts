@@ -250,7 +250,7 @@ describe('학년 해금 활동 6종 — 게이트 계약', () => {
     }
   });
 
-  it('야자(night-study)는 2칸이고 사회성 효과가 있다', () => {
+  it('자율학습(night-study)은 2칸이고 사회성 효과가 있다', () => {
     const night = pickActivity(a => a.id === 'night-study', 'night-study 없음');
     expect(night.slots).toBe(2);
     expect(night.effects.social).toBe(1);
