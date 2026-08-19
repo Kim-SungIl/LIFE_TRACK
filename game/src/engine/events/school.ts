@@ -596,7 +596,7 @@ export const SCHOOL_MIDDLE_HIGH = [
   // 중등/고등 중간고사 이벤트 (W7 — 중간고사 W8 전주)
   {
     id: 'midterm-1',
-    // ANNUAL_EVENT_IDS 등재라 Y2~Y7 매년 재발동한다(한 런 최대 6회 실측).
+    // ANNUAL_REFIRE_IDS 등재라 Y2~Y7 매년 재발동한다(한 런 최대 6회 실측).
     // 제목에 '첫'을 두면 중2~고3에도 '첫 중간고사'가 되므로 학년 무관 표현으로 고정.
     title: '중간고사',
     description: '중간고사가 다가온다. 교실 분위기가 달라졌다.\n다들 쉬는 시간에도 책을 펴고 있다.',

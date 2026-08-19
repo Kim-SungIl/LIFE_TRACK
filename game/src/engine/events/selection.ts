@@ -1,6 +1,7 @@
 import { GameEvent, GameState } from '../types';
 import { seededRandom } from '../rng';
-import { ANNUAL_EVENT_IDS } from '../memorySystem';
+// 재발동 여부만 본다 — 기억 슬롯 금지 셋(ANNUAL_EVENT_IDS)과는 다른 축이다.
+import { ANNUAL_REFIRE_IDS } from '../memorySystem';
 import {
   FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, HARD_CRISIS_IDS, SOFT_CRISIS_IDS,
 } from './constants';
@@ -22,7 +23,7 @@ export const EVENT_DENSITY = {
 } as const;
 
 // 고정 주차 이벤트 해결 후 followup 이벤트 가져오기 (주당 1회 제한)
-// ANNUAL_EVENT_IDS에 등록된 후속(반장 선거 후속 등)은 매년 재발동 허용
+// ANNUAL_REFIRE_IDS에 등록된 후속(반장 선거 후속 등)은 매년 재발동 허용
 
 export function getFollowupForWeek(state: GameState, excludeLocation?: string): GameEvent | null {
   // getEventForWeek 내부 followup 경로와 동일하게 pickByPriority(speakers tiebreak 없음)로 통일.
@@ -30,7 +31,7 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
   return pickByPriority(GAME_EVENTS.filter(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
-    (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id)) &&
+    (ANNUAL_REFIRE_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id)) &&
     // 같은 장소 이벤트 연쇄 방지 (농구→축구 같은 어색한 연결 차단)
     // DIRECT_SEQUEL_IDS는 자연스러운 직접 후속이라 같은 장소도 허용 (선거→결과 등)
     (!excludeLocation || e.location !== excludeLocation || DIRECT_SEQUEL_IDS.has(e.id))
@@ -161,7 +162,7 @@ export function getEventForWeek(state: GameState): EventSelection {
   const fixedCandidates = GAME_EVENTS.filter(e =>
     e.week === state.week &&
     (!e.condition || e.condition(state)) &&
-    (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
+    (ANNUAL_REFIRE_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   );
   const fixedEvent = pickByPriority(fixedCandidates);
   if (fixedEvent) return noPatch(fixedEvent);
@@ -171,7 +172,7 @@ export function getEventForWeek(state: GameState): EventSelection {
   const followup = pickByPriority(GAME_EVENTS.filter(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
-    (ANNUAL_EVENT_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
+    (ANNUAL_REFIRE_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))
   ), false);
   if (followup) return noPatch(followup);
 
