@@ -9,9 +9,9 @@
 // 80+ 소프트캡이 스탯별이라 후반까지 살아남는 유일한 축) 조용히 드리프트하면 근거가 사라진다.
 // 값을 의도적으로 바꿀 때는 아래 표를 같이 고치면 되고, 그때 rationale을 다시 읽게 된다.
 import { describe, expect, it } from 'vitest';
-import { ACTIVITIES, getAvailableActivities } from '../activities';
+import { ACTIVITIES, getActivityCost, getAvailableActivities } from '../activities';
 import { SHOP_ITEMS } from '../shopSystem';
-import type { Activity } from '../types';
+import type { Activity, GameState } from '../types';
 import { makeState } from '../../test/fixtures';
 
 interface BalanceSpec {
@@ -64,6 +64,31 @@ function pick(id: string): Activity {
   return found;
 }
 
+// 이 6종의 게이트 계약은 "학년과 돈만 본다"이다. makeState는 ('male', ['emotional','info']) 고정이라
+// requires에 부모 강점·성별·스탯 조건을 몰래 끼워도 기본 픽스처가 우연히 충족해 통과할 수 있다
+// (실측: `s.parents.includes('emotional')`, `s.gender === 'male'` 둘 다 MISS였다).
+// 그래서 경계 판정은 아래 픽스처 변형 전부에서 같은 결과가 나와야 한다.
+const FIXTURE_VARIANTS: { label: string; patch: Partial<GameState> }[] = [
+  { label: '기본(male·emotional/info)', patch: {} },
+  { label: 'female·strict/wealth', patch: { gender: 'female', parents: ['strict', 'wealth'] } },
+  { label: 'male·freedom/resilience', patch: { gender: 'male', parents: ['freedom', 'resilience'] } },
+];
+
+function availableIn(patch: Partial<GameState>, id: string): boolean {
+  return getAvailableActivities(makeState(patch)).some(a => a.id === id);
+}
+
+// 밸런스에 관여하는 선택 필드 — SPEC이 값을 선언하지 않은 것은 "없음"이 계약이다.
+// (`yearlyCost`는 getActivityCost가 moneyCost보다 우선 적용하고, seasonGate·vacationLimit·
+//  catchupBonus·parentEffect는 노출/효과를 조용히 바꾼다)
+const OPTIONAL_BALANCE_FIELDS = [
+  'yearlyCost',
+  'seasonGate',
+  'vacationLimit',
+  'catchupBonus',
+  'parentEffect',
+] as const;
+
 describe('학년 해금 6종 — 밸런스 수치 잠금', () => {
   for (const [id, spec] of Object.entries(SPEC)) {
     describe(`${id} (${spec.name})`, () => {
@@ -75,32 +100,62 @@ describe('학년 해금 6종 — 밸런스 수치 잠금', () => {
         expect(a.moneyCost).toBe(spec.moneyCost);
         expect(a.category).toBe(spec.category);
         expect(a.unlockYear).toBe(spec.unlockYear);
-        // 효과는 정확 일치 — 축 추가/삭제도 잡는다(야자 mental -1 제거 같은 "대가 삭제")
-        expect(a.effects).toEqual(spec.effects);
+        // 축 추가/삭제도 잡는다(야자 mental -1 제거 같은 "대가 삭제").
+        // toEqual은 값이 undefined인 키를 무시하므로 toStrictEqual — `{ health: undefined }` 추가가
+        // 통과하면 안 된다.
+        expect(a.effects).toStrictEqual(spec.effects);
       });
 
-      it('해금 학년 경계가 스펙 그대로다 (unlockYear-1 제외 / unlockYear 포함)', () => {
-        const rich = { money: 999, isVacation: false };
-        const before = getAvailableActivities(makeState({ year: spec.unlockYear - 1, ...rich }));
-        const at = getAvailableActivities(makeState({ year: spec.unlockYear, ...rich }));
-        expect(before.some(a => a.id === id)).toBe(false);
-        expect(at.some(a => a.id === id)).toBe(true);
+      it('실효 가격(getActivityCost)이 moneyCost와 같다 — yearlyCost로 우회되지 않는다', () => {
+        const a = pick(id);
+        // 엔진이 차감·소프트캡 판정에 쓰는 값은 moneyCost가 아니라 getActivityCost다.
+        // yearlyCost가 붙으면 그쪽이 이기므로, 무료 활동이 조용히 유료가 되어(= 80+ 캡 면제 대상)
+        // 이 파일의 rationale이 근거로 삼은 무료/유료 대비가 통째로 뒤집힌다.
+        for (let y = spec.unlockYear; y <= 7; y++) {
+          expect(getActivityCost(a, y), `${id} year ${y} 실효 가격`).toBe(spec.moneyCost);
+        }
+      });
+
+      it('SPEC에 없는 선택 필드는 붙어 있지 않다 (노출·비용 은닉 변경 방지)', () => {
+        const a = pick(id) as unknown as Record<string, unknown>;
+        for (const field of OPTIONAL_BALANCE_FIELDS) {
+          expect(a[field], `${id}.${field}`).toBeUndefined();
+        }
+      });
+
+      it('해금 학년 경계가 스펙 그대로다 (픽스처 변형·학기/방학 전부에서)', () => {
+        for (const { label, patch } of FIXTURE_VARIANTS) {
+          for (const isVacation of [false, true]) {
+            const base = { money: 999, isVacation, ...patch };
+            expect(
+              availableIn({ year: spec.unlockYear - 1, ...base }, id),
+              `${label} / 방학:${isVacation} / Y${spec.unlockYear - 1}`,
+            ).toBe(false);
+            expect(
+              availableIn({ year: spec.unlockYear, ...base }, id),
+              `${label} / 방학:${isVacation} / Y${spec.unlockYear}`,
+            ).toBe(true);
+          }
+        }
       });
 
       if (spec.moneyCost > 0) {
         it(`잔액 ${spec.moneyCost - 1}만이면 빠지고 ${spec.moneyCost}만이면 나온다 (가격 리터럴)`, () => {
-          const at = (money: number) =>
-            getAvailableActivities(makeState({ year: spec.unlockYear, money, isVacation: false }));
           // 기대값이 하드코딩이라 moneyCost와 requires를 정합하게 같이 낮춰도 여기서 걸린다
-          expect(at(spec.moneyCost - 1).some(a => a.id === id)).toBe(false);
-          expect(at(spec.moneyCost).some(a => a.id === id)).toBe(true);
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            const base = { year: spec.unlockYear, isVacation: false, ...patch };
+            expect(availableIn({ ...base, money: spec.moneyCost - 1 }, id), label).toBe(false);
+            expect(availableIn({ ...base, money: spec.moneyCost }, id), label).toBe(true);
+          }
         });
       } else {
         it('무료라 잔액 0에서도 나온다', () => {
-          const broke = getAvailableActivities(
-            makeState({ year: spec.unlockYear, money: 0, isVacation: false }),
-          );
-          expect(broke.some(a => a.id === id)).toBe(true);
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            expect(
+              availableIn({ year: spec.unlockYear, money: 0, isVacation: false, ...patch }, id),
+              label,
+            ).toBe(true);
+          }
         });
       }
     });
@@ -141,9 +196,12 @@ describe('학년 해금 6종 — 설계 의도 관계', () => {
   });
 
   it('무료 해금 3종이 있어 돈 없는 판에서도 학년마다 새 선택지가 열린다', () => {
-    const free = Object.entries(SPEC).filter(([, s]) => s.moneyCost === 0);
-    expect(free.map(([id]) => id).sort()).toEqual(['free-semester', 'mentoring', 'night-study']);
-    for (const [id] of free) expect(pick(id).moneyCost).toBe(0);
+    // 제품(ACTIVITIES)에서 파생한다 — SPEC을 필터해 SPEC 기준 목록과 비교하면 표가 표를 검사하는
+    // 자기참조가 되어, 실제 활동이 유료로 바뀌어도 SPEC만 안 고치면 침묵한다.
+    const freeUnlocks = Object.keys(SPEC)
+      .filter(id => getActivityCost(pick(id), 7) === 0)
+      .sort();
+    expect(freeUnlocks).toEqual(['free-semester', 'mentoring', 'night-study']);
   });
 });
 
@@ -163,7 +221,7 @@ describe('입시 설명회 — 상점 아이템 수치 잠금', () => {
   it('버프는 6주·study 한정·0.1이다', () => {
     const effects = briefing!.effects;
     expect(effects).toHaveLength(1);
-    expect(effects[0]).toEqual({
+    expect(effects[0]).toStrictEqual({
       type: 'buff',
       buffId: 'admission-briefing',
       buffDuration: 6,
@@ -171,5 +229,18 @@ describe('입시 설명회 — 상점 아이템 수치 잠금', () => {
       buffTarget: 'study',
       buffAmount: 0.1,
     });
+  });
+});
+
+describe('카탈로그 무결성 — id 중복', () => {
+  // 이 파일과 게이트 테스트 모두 `find(a => a.id === ...)`로 대상을 잡는다.
+  // find는 첫 항목만 보므로, 같은 id가 뒤에 하나 더 붙으면 전부 통과하면서
+  // 상점·활동 목록에는 중복 항목이 노출된다.
+  it.each([
+    ['ACTIVITIES', ACTIVITIES.map(a => a.id)],
+    ['SHOP_ITEMS', SHOP_ITEMS.map(i => i.id)],
+  ])('%s의 id는 고유하다', (_label, ids) => {
+    const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
+    expect(dupes).toEqual([]);
   });
 });
