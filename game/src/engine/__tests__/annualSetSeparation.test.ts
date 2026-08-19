@@ -19,9 +19,10 @@ import type { GameEvent, GameState, ParentStrength } from '../types';
 
 const PARENTS: [ParentStrength, ParentStrength] = ['strict', 'emotional'];
 
-// 두 셋 어디에도 없고, 고정주차이며 condition이 없는 실제 이벤트 — 재발동 판정 관찰용.
-const REFIRE_PROBE_ID = 'sports-day';
-// memorySlotDraft를 가진 실제 이벤트 — 슬롯 판정 관찰용.
+// 두 셋 어디에도 없고, 고정주차이며 condition이 없는 실제 이벤트 — "등재 안 하면 안 뜬다" 관찰용.
+// jihun-call은 1회성이 명시된 의도다(verify-fixed-event-priority.ts, npc/doyun.ts 주석 참조).
+const REFIRE_PROBE_ID = 'jihun-call';
+// memorySlotDraft를 가지면서 재발동 셋에만 등재된 실제 이벤트 — 이 조합이 두 셋 분리의 존재 이유다.
 const SLOT_PROBE_ID = 'school-festival';
 
 function findEvent(id: string): GameEvent {
@@ -59,15 +60,21 @@ function stateWithPriorFiring(id: string): GameState {
 }
 
 describe('ANNUAL 두 셋의 분리', () => {
-  it('전제: 두 프로브 이벤트는 어느 셋에도 없다', () => {
-    for (const id of [REFIRE_PROBE_ID, SLOT_PROBE_ID]) {
-      expect(ANNUAL_REFIRE_IDS.has(id), `${id} 가 재발동 셋에 이미 있으면 이 파일의 관찰이 무의미하다`).toBe(false);
-      expect(ANNUAL_EVENT_IDS.has(id), `${id} 가 슬롯 금지 셋에 이미 있으면 이 파일의 관찰이 무의미하다`).toBe(false);
-    }
+  it('전제: 재발동 프로브는 어느 셋에도 없다', () => {
+    expect(ANNUAL_REFIRE_IDS.has(REFIRE_PROBE_ID), `${REFIRE_PROBE_ID} 가 재발동 셋에 있으면 이 파일의 관찰이 무의미하다`).toBe(false);
+    expect(ANNUAL_EVENT_IDS.has(REFIRE_PROBE_ID), `${REFIRE_PROBE_ID} 가 슬롯 금지 셋에 있으면 이 파일의 관찰이 무의미하다`).toBe(false);
   });
 
-  it('분리 시점의 두 셋은 원소가 같다 (동작 보존)', () => {
-    expect([...ANNUAL_REFIRE_IDS].sort()).toEqual([...ANNUAL_EVENT_IDS].sort());
+  it('전제: 슬롯 프로브는 재발동 셋에만 있다 (두 셋 분리의 존재 이유)', () => {
+    expect(ANNUAL_REFIRE_IDS.has(SLOT_PROBE_ID), `${SLOT_PROBE_ID} 는 매년 열려야 한다`).toBe(true);
+    expect(ANNUAL_EVENT_IDS.has(SLOT_PROBE_ID), `${SLOT_PROBE_ID} 를 슬롯 금지 셋에 넣으면 기억 슬롯 3건이 조용히 사라진다`).toBe(false);
+    expect(findEvent(SLOT_PROBE_ID).choices.some(c => c.memorySlotDraft), '슬롯 draft가 없으면 이 프로브는 분리를 관찰하지 못한다').toBe(true);
+  });
+
+  it('"매년 재발동 + 슬롯 유지" 조합이 실제로 쓰이고 있다', () => {
+    // 이 차집합이 비면 두 셋을 나눌 이유가 사라진 것이다(= 다시 하나로 합쳐도 되는 상태).
+    const refireButKeepsSlot = [...ANNUAL_REFIRE_IDS].filter(id => !ANNUAL_EVENT_IDS.has(id));
+    expect(refireButKeepsSlot).toContain(SLOT_PROBE_ID);
   });
 
   it('슬롯 금지 셋의 모든 이벤트는 재발동도 허용된다 (매년 오는 의례라서 슬롯을 안 만든다)', () => {
@@ -94,6 +101,12 @@ describe('ANNUAL 두 셋의 분리', () => {
       const picked = getEventForWeek(stateWithPriorFiring(REFIRE_PROBE_ID)).event;
       expect(picked?.id).not.toBe(REFIRE_PROBE_ID);
     });
+
+    it('슬롯을 가진 재발동 이벤트도 실제로 다시 뜬다 (셋 조작 없음)', () => {
+      // 두 PR의 최종 산출물 — 축제가 Y2에 소진되지 않고 고등에서도 열린다.
+      const picked = getEventForWeek(stateWithPriorFiring(SLOT_PROBE_ID)).event;
+      expect(picked?.id).toBe(SLOT_PROBE_ID);
+    });
   });
 
   describe('슬롯 축 (memorySystem.ts)', () => {
@@ -105,14 +118,13 @@ describe('ANNUAL 두 셋의 분리', () => {
     };
 
     it('재발동 셋에만 있으면 슬롯이 생긴다 (매년 열리면서 기억도 남는 조합)', () => {
-      addRefire(SLOT_PROBE_ID);
+      // 셋을 건드리지 않는다 — school-festival의 실제 등재 상태가 이 조합이다.
       const state = fixture({ year: 5, week: 30 });
       applyMemorySlotFromChoice(state, findEvent(SLOT_PROBE_ID), slotChoiceIndex, slotDraftOf(SLOT_PROBE_ID));
       expect(state.memorySlots).toHaveLength(1);
     });
 
     it('슬롯 금지 셋에 있으면 슬롯이 안 생긴다', () => {
-      addRefire(SLOT_PROBE_ID);
       addAnnual(SLOT_PROBE_ID);
       const state = fixture({ year: 5, week: 30 });
       applyMemorySlotFromChoice(state, findEvent(SLOT_PROBE_ID), slotChoiceIndex, slotDraftOf(SLOT_PROBE_ID));
@@ -120,7 +132,6 @@ describe('ANNUAL 두 셋의 분리', () => {
     });
 
     it('재발동 이벤트가 여러 해 발동해도 슬롯은 1개다 (sourceEventId 중복 가드)', () => {
-      addRefire(SLOT_PROBE_ID);
       const state = fixture({ year: 5, week: 30 });
       const ev = findEvent(SLOT_PROBE_ID);
       applyMemorySlotFromChoice(state, ev, slotChoiceIndex, slotDraftOf(SLOT_PROBE_ID));

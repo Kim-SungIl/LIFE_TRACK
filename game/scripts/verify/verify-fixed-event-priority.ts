@@ -76,20 +76,68 @@ console.log('\n=== 1-bis. final-exam-2 매년 발동 (ANNUAL_REFIRE_IDS) ===');
   assert(ev?.id === 'final-exam-2', `Y3 W37 (Y2에 발동 이력 있음) → final-exam-2 (실제: ${ev?.id})`);
 }
 
-console.log('\n=== 2. W20 junha-birthday: summer-start보다 우선 ===');
+console.log('\n=== 2. junha-birthday W18 이동 — W20 summer-start 마스킹 해소 ===');
+// 이전 설계: junha-birthday가 W20이라 summer-start와 경합했고, 둘 다 ANNUAL이라
+// 우선순위로 풀 수 없었다(한쪽이 영구히 가려짐). 주차를 분리해 둘 다 살렸다.
 {
-  // Y6 W20: summer-start (no condition) vs junha-birthday (year>=6, intimacy>=10)
+  // Y6 W18: junha-birthday 발동 (year>=6, intimacy>=10)
+  const s = setupAt(18, 6);
+  meetNpc(s, 'junha', 30);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id === 'junha-birthday', `Y6 W18 junha 친밀도 30 → junha-birthday (실제: ${ev?.id})`);
+}
+{
+  // Y6 W18: junha 미만남 → junha-birthday 발동 안 됨
+  const s = setupAt(18, 6);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id !== 'junha-birthday', `Y6 W18 junha 미만남 → not junha-birthday (실제: ${ev?.id})`);
+}
+{
+  // Y6 W20: junha와 친해도 summer-start가 나온다 (더 이상 가려지지 않는다)
   const s = setupAt(20, 6);
   meetNpc(s, 'junha', 30);
   const ev = getEventForWeek(s).event;
-  assert(ev?.id === 'junha-birthday', `Y6 W20 junha 친밀도 30 → junha-birthday (실제: ${ev?.id})`);
+  assert(ev?.id === 'summer-start', `Y6 W20 junha 친밀도 30 → summer-start (실제: ${ev?.id})`);
+}
+
+console.log('\n=== 2-bis. 학교 의례 4종 매년 재발동 (발동 이력을 심은 상태) ===');
+// 기존 계약은 state.events가 빈 픽스처만 봤다. 그래서 "고정주차 1회성" 회귀를 감지하지 못했다
+// — 실플레이에서는 Y1~Y2에 이미 발동돼 있는 게 정상 상태다. 여기서는 이력을 심어서
+// ANNUAL_REFIRE_IDS 등재가 실제로 재발동을 여는지 확인한다.
+{
+  const cases: Array<{ id: string; week: number; year: number; firedYear: number }> = [
+    { id: 'winter-start', week: 43, year: 3, firedYear: 1 },
+    { id: 'summer-start', week: 20, year: 5, firedYear: 1 },
+    { id: 'sports-day', week: 10, year: 4, firedYear: 2 },
+    { id: 'school-festival', week: 31, year: 6, firedYear: 2 },
+  ];
+  for (const c of cases) {
+    const s = setupAt(c.week, c.year);
+    const def = GAME_EVENTS.find(e => e.id === c.id)!;
+    s.events.push({ ...def, condition: undefined, year: c.firedYear, week: c.week, resolvedChoice: 0 });
+    const ev = getEventForWeek(s).event;
+    assert(ev?.id === c.id, `Y${c.year} W${c.week} (Y${c.firedYear} 발동 이력 있음) → ${c.id} (실제: ${ev?.id})`);
+  }
 }
 {
-  // junha 못 만남 → summer-start fallback
-  const s = setupAt(20, 6);
-  // junha.met=false (default)
+  // 반대 방향 — summer-trip은 등재하지 않았으므로 이력이 있으면 다시 뜨지 않는다.
+  const s = setupAt(22, 5);
+  const def = GAME_EVENTS.find(e => e.id === 'summer-trip')!;
+  s.events.push({ ...def, condition: undefined, year: 4, week: 22, resolvedChoice: 0 });
   const ev = getEventForWeek(s).event;
-  assert(ev?.id === 'summer-start', `Y6 W20 junha 미만남 → summer-start (실제: ${ev?.id})`);
+  assert(ev?.id !== 'summer-trip', `Y5 W22 (Y4 발동 이력) → summer-trip 재발동 안 함 (실제: ${ev?.id})`);
+}
+{
+  // sports-day는 year>=2 — Y1 W10에서는 발동 자격이 없다.
+  const s = setupAt(10, 1);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id !== 'sports-day', `Y1 W10 → not sports-day (실제: ${ev?.id})`);
+}
+{
+  // summer-trip은 year>=4 — Y1 W22에서는 발동 자격이 없다.
+  const s = setupAt(22, 1);
+  const ev = getEventForWeek(s).event;
+  assert(ev?.id !== 'summer-trip', `Y1 W22 → not summer-trip (실제: ${ev?.id})`);
 }
 
 console.log('\n=== 3. W7/W13 분리 — midterm-1 vs minjae-birthday (2026-07-14 주차 이동) ===');

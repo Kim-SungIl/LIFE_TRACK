@@ -68,9 +68,19 @@ export const ANNUAL_EVENT_IDS = new Set<string>([
 // **슬롯 금지와는 무관하다.** 슬롯을 남기면서 매년 열리는 이벤트를 만들 수 있고, 그때 슬롯은
 // applyMemorySlotFromChoice의 sourceEventId 중복 가드 때문에 첫 발동 1개만 생긴다.
 //
-// 현재는 ANNUAL_EVENT_IDS와 원소가 같다(분리 시점의 동작 보존). 슬롯을 지키면서 매년 열려야
-// 하는 이벤트는 **이 Set에만** 추가할 것 — ANNUAL_EVENT_IDS에 넣으면 슬롯이 조용히 사라진다.
-export const ANNUAL_REFIRE_IDS = new Set<string>(ANNUAL_EVENT_IDS);
+// 슬롯을 지키면서 매년 열려야 하는 이벤트는 **이 Set에만** 추가할 것 —
+// ANNUAL_EVENT_IDS에 넣으면 슬롯이 조용히 사라진다.
+export const ANNUAL_REFIRE_IDS = new Set<string>([
+  ...ANNUAL_EVENT_IDS,
+
+  // ===== 매년 돌아오는 학교 의례 (슬롯 금지 셋에는 넣지 않는다) =====
+  // 전부 고정주차인데 학년 조건이 없어서 Y1~Y2에 소진되고 이후 5~6년간 안 나왔다(10/10 런 실측).
+  // 학교 축제·여름방학·겨울방학·체육대회가 7년 중 한 번뿐이던 상태다.
+  //
+  // school-festival은 memorySlotDraft 3건(importance 4~5)을 갖고 있어 예전 단일 Set 구조에서는
+  // 매년화가 곧 슬롯 포기였다. 이제 슬롯은 첫 발동 1개만 남고 이벤트는 매년 열린다.
+  'school-festival', 'sports-day', 'summer-start', 'winter-start',
+]);
 
 // ===== importance 임계값 (부록 C) =====
 const MIN_IMPORTANCE_TO_SLOT = 3;

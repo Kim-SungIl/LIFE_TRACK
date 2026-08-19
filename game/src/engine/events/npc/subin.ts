@@ -1,4 +1,5 @@
 import { GameEvent } from '../../types';
+import { absWeek } from '../../weekMath';
 
 export const SUBIN_EVENTS = [
   // ===== 수빈 이벤트 체인 =====
@@ -100,9 +101,21 @@ export const SUBIN_EVENTS = [
     location: 'cafe',
     background: 'cafe_study',
     speakers: ['subin'],
+    // 리드인 선행 조건 — 이 컷은 "승무원" 고백의 캡스톤이고, 리드인 subin-hs-firstdream(reach
+    // t55 Y5)이 "아직 아무한테도 말 안 했는데 / 네가 처음이야"로 그 고백을 예고한다.
+    // 그런데 이 이벤트는 FOLLOWUP이라 selection에서 reach보다 **먼저** 판정된다. 친밀도가
+    // 55와 60을 같은 주에 넘으면 캡스톤이 리드인을 앞질러서 리드인 대사가 거짓이 된다
+    // (school-festival 매년화로 수빈 친밀도가 오르면서 20/20 런에서 실제로 재현됐다).
+    // 4주 간격: 순서만 맞추면 reach가 그 주의 본 이벤트로 뜨고 체인이 곧바로 이 캡스톤을 붙여
+    //   한 주에 두 고백이 연달아 나온다(20/20 실측). 리드인이 리드인 구실을 하려면 사이가 벌어져야 한다.
+    // || year>=6: 리드인을 놓쳤거나 간격을 못 채운 플레이어도 캡스톤은 받게 하는 안전판.
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 60 && !s.isVacation && s.year >= 5;
+      const leadIn = s.events.find(e => e.id === 'subin-hs-firstdream');
+      const leadInSettled = !!leadIn
+        && absWeek(s.year, s.week) - absWeek(leadIn.year ?? s.year, leadIn.week ?? 0) >= 4;
+      return !!subin?.met && subin.intimacy >= 60 && !s.isVacation && s.year >= 5
+        && (leadInSettled || s.year >= 6);
     },
     choices: [
       {

@@ -150,7 +150,11 @@ export const JUNHA_EVENTS = [
   {
     id: 'junha-birthday', title: '준하 생일',
     description: '오늘이 준하 생일이다.\n준하가 반 전체에 주먹밥을 싸왔다.\n"생일이라고 뭘 받으면 이상하잖아. 내가 해온 거 먹어."',
-    week: 20,
+    // W20 → W18. W20은 여름방학 1주차(20~24)인데 이 이벤트는 교실에서 "반 전체에" 주먹밥을
+    // 돌리는 장면이라 시점이 어긋났다. 게다가 이 이벤트는 ANNUAL이라 W20에서 summer-start를
+    // 영구히 가렸다(annual vs annual은 우선순위로 못 푼다 — selection.ts pickByPriority 주석).
+    // W17은 1학기 기말이라 피하고 W18. 선례: yuna-birthday W37→W38, minjae-birthday W7→W13.
+    week: 18,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['junha'],
     condition: (s) => {
