@@ -114,6 +114,15 @@ export const SHOP_ITEMS: ShopItem[] = [
     effects: [{ type: 'buff', buffId: 'tablet', buffDuration: 24, buffTarget: 'all', buffAmount: 0.1 }],
     requireYear: 5, // 고1부터 (Y5=고1)
   },
+  {
+    // 루틴 슬롯에 "매주 입시 설명회"는 말이 안 되므로 활동이 아니라 상점 단발 구매로 둔다.
+    // 참고서(3주/+0.15)·문제집(2주/+0.2)보다 길고 약하게 — 정보는 오래 가되 즉효는 아니다.
+    id: 'admission-briefing', name: '입시 설명회', description: '입시 설명회에 다녀온다. 한동안 방향이 잡힌다.',
+    price: 3, category: 'growth', emoji: '🎓',
+    effects: [{ type: 'buff', buffId: 'admission-briefing', buffDuration: 6, buffTarget: 'study', buffAmount: 0.1 }],
+    requireYear: 5, // 고1부터
+    maxPerWeek: 1,
+  },
 
   // ===== 관계 아이템 (선물) =====
   {
