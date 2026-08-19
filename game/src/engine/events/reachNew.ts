@@ -62,7 +62,7 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'auditorium_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 85 && s.year === 4; },
     choices: [
-      { text: '"데리러 올 때까지 갖고 있을게" 약속한다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 페이지를 마저 손에 쥐여준다. 손이 잠깐 안 놓아진다. 4년간 끝을 못 고치는 줄 하나를, 내게 맡긴 셈이 된다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '끝을 데리러 오겠다며, 끝없는 줄을 찢어 쥐여줬다.', npcIds: ['seoa'] } },
+      { text: '"데리러 올 때까지 갖고 있을게" 약속한다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 페이지를 마저 손에 쥐여준다. 손이 잠깐 안 놓아진다. 3년간 끝을 못 고치는 줄 하나를, 내게 맡긴 셈이 된다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '끝을 데리러 오겠다며, 끝없는 줄을 찢어 쥐여줬다.', npcIds: ['seoa'] } },
       { text: '"지금 끝내주면 안 돼?" 되묻는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '"안 돼. 지금 쓰면 지금의 나로 끝나버려서." 살짝 웃으며 빈 끝을 일부러 남긴다.', timeCost: 1 },
       { text: '페이지를 받지만 약속은 하지 않는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 3 }], message: '"…그래. 약속은 적어둔 거랑 달라서, 자꾸 달라지니까." 끝없는 줄이 끝없는 채로 내 손에 남는다.', timeCost: 1 },
     ],
@@ -116,7 +116,7 @@ export const NEW_NPC_REACH_EVENTS = [
     id: 'seoa-ending-page',
     reach: { npc: 'seoa', tier: 90, year: 7 },
     title: '끝을 데려온 페이지',
-    description: '고등학교 졸업식 날. 4년 전 찢어 쥐여줬던 그 페이지 — 끝이 끊겨 있던 한 장 — 을 서아가 들고 나를 찾아온다. 음악실 첫날처럼 한쪽 이어폰을 뺀 채, 페이지를 가리지 않는다. 끊겨 있던 줄의 끝에 이제 글씨가 채워져 있다. 잉크 색이 4년 전과 다르다.\n서아: "기억나? 쓰는 사람 되면 끝을 데리러 온다고 했잖아. 알았어 — 작가가 돼서 끝이 오는 게 아니라, 읽어줄 한 사람이 생겨서 끝이 따라오는 거더라. 그래서 이 줄, 네가 문 열던 소리로 시작해. 경첩이 두 번 울리던, 그."',
+    description: '고등학교 졸업식 날. 3년 전 찢어 쥐여줬던 그 페이지 — 끝이 끊겨 있던 한 장 — 을 서아가 들고 나를 찾아온다. 음악실 첫날처럼 한쪽 이어폰을 뺀 채, 페이지를 가리지 않는다. 끊겨 있던 줄의 끝에 이제 글씨가 채워져 있다. 잉크 색이 3년 전과 다르다.\n서아: "기억나? 쓰는 사람 되면 끝을 데리러 온다고 했잖아. 알았어 — 작가가 돼서 끝이 오는 게 아니라, 읽어줄 한 사람이 생겨서 끝이 따라오는 거더라. 그래서 이 줄, 네가 문 열던 소리로 시작해. 경첩이 두 번 울리던, 그."',
     speakers: ['seoa'],
     location: 'auditorium',
     background: 'auditorium_high',

@@ -62,14 +62,16 @@ export const SCHOOL_LIFE_EVENTS = [
   },
   {
     id: 'lost-eraser', title: '지우개의 행방',
-    description: '시험 중에 지우개가 바닥에 떨어졌다.\n옆자리 아이가 자기 거를 반으로 잘라 준다.',
+    description: '시험 중에 지우개가 바닥에 떨어졌다.\n옆자리 애가 자기 거를 반으로 잘라 준다.',
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     choices: [
       { text: '"고마워!" — 감동받는다', effects: { social: 1, mental: 2 }, message: '작은 친절이 큰 감동이 됐다. 시험도 잘 본 것 같다.' },
       { text: '안 쓰고 그냥 시험 본다 (자존심)', effects: { academic: -1, mental: -1 }, message: '지우개 없이 시험 봤다. 아... 실수 고칠 걸.' },
     ],
-    condition: (s) => !s.isVacation,
+    // 지문·선택지·결과가 모두 "시험 중"이라 시험 기간 게이트가 필요하다.
+    // study-cafe와 같은 처방 — !isVacation만 두면 시험 아닌 주에도 "시험 중에"가 나온다.
+    condition: (s) => !s.isVacation && isExamPeriod(s.year, s.week),
   },
   {
     id: 'teacher-praise', title: '선생님의 칭찬',

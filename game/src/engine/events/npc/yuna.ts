@@ -98,14 +98,20 @@ export const YUNA_EVENTS = [
   {
     id: 'yuna-pressure',
     title: '1등의 무게',
-    description: '시험 기간. 항상 밝던 유나가 복도에서 멈춰 서 있다.\n가까이 가니 손이 떨리고 있다.\n"...나 또 1등 해야 해. 엄마가... 2등은 안 된대."\n처음 보는 표정이다.',
+    // 첫 문장이 "시험 기간."이었는데 발동 창(W30~40)에 시험 기간은 학년별 3~5주뿐이라
+    // 대부분의 발동에서 거짓이었다. 창은 M5 Phase 3에서 도달성을 위해 의도적으로 넓힌 것이고
+    // verify-event-fixes.ts가 W30~40 전 구간을 잠그고 있어, 게이트 대신 시점 주장을 뺀다.
+    description: '항상 밝던 유나가 복도에서 멈춰 서 있다.\n가까이 가니 손이 떨리고 있다.\n"...나 또 1등 해야 해. 엄마가... 2등은 안 된대."\n처음 보는 표정이다.',
     location: 'hallway',
     background: 'hallway_{school}',
     speakers: ['yuna'],
     // M5 Phase 3: intimacy 50→35, week 범위 30~40 확대, 여러 학년 가능
+    // year>=2: 학년 게이트가 없어 20/20 런에서 전부 Y1(초6)에 발동했다. 초등은 석차가 아예 null이라
+    //   (examSystem의 rank: elementary → null) "또 1등 해야 해 / 2등은 안 된대"가 시스템상 성립 불가.
     condition: (s) => {
       const yuna = s.npcs.find(n => n.id === 'yuna');
-      return !!yuna?.met && yuna.intimacy >= 35 && s.week >= 30 && s.week <= 40 && !s.isVacation;
+      return !!yuna?.met && yuna.intimacy >= 35 && s.year >= 2
+        && s.week >= 30 && s.week <= 40 && !s.isVacation;
     },
     choices: [
       {

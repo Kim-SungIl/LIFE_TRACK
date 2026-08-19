@@ -40,8 +40,10 @@ describe('getEventForWeek', () => {
       const rb = getEventForWeek(b);
 
       expect(ra).toEqual(rb);
-      // 손계산 스냅샷: seed 2에서 Y1 W8 RNG 경로 → found-money, patch 없음
-      expect(selectionKey(ra)).toEqual({ eventId: 'found-money', patch: null });
+      // 손계산 스냅샷: seed 2에서 Y1 W8 RNG 경로 → pe-class-hero, patch 없음
+      // (이전엔 found-money. lost-eraser에 isExamPeriod 게이트가 붙어 W8의 school-life 풀에서
+      //  빠지면서 같은 굴림이 다른 인덱스를 집는다 — 풀 구성이 바뀌면 이 id도 같이 갱신해야 한다.)
+      expect(selectionKey(ra)).toEqual({ eventId: 'pe-class-hero', patch: null });
       expect(a.rngSeed).toBe(b.rngSeed);
       expect(a.rngSeed).not.toBe(RNG_PATH_SEED);
     });
@@ -51,7 +53,8 @@ describe('getEventForWeek', () => {
       const first = getEventForWeek(state).event?.id ?? null;
       const second = getEventForWeek(state).event?.id ?? null;
       // 첫 호출이 rngSeed를 전진시켜 두 번째 굴림이 달라짐 — 현재 동작 고정
-      expect(first).toBe('found-money');
+      // id는 위 스냅샷과 같은 이유로 found-money → pe-class-hero 로 갱신됨.
+      expect(first).toBe('pe-class-hero');
       expect(second).not.toBe(first);
     });
   });
