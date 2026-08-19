@@ -66,7 +66,7 @@ console.log('=== 1. W37 시험 알림 / W38 yuna-birthday — 충돌 회피 검�
   assert(ev?.id !== 'yuna-birthday', `Y2 W38 yuna 친밀도 20 → not yuna-birthday (실제: ${ev?.id})`);
 }
 
-console.log('\n=== 1-bis. final-exam-2 매년 발동 (ANNUAL_EVENT_IDS) ===');
+console.log('\n=== 1-bis. final-exam-2 매년 발동 (ANNUAL_REFIRE_IDS) ===');
 {
   // Y3 W37: 이전에 final-exam-2가 발동된 적 있어도 ANNUAL이라 다시 발동
   const s = setupAt(37, 3);
