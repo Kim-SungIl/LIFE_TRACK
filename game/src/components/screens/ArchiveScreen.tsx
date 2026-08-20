@@ -18,11 +18,22 @@ function coverageColor(ratio: number): string {
  * 시우 1/8, 예린 1/6로 남는다. 반대로 엔딩·전체 이벤트에는 분모를 두지 않는다:
  * 엔딩 타이틀은 진로에 수식어가 붙는 조합이라 고정 목록이 없고, 없는 총계를 만들면
  * 달성률 게임이 된다.
+ *
+ * 그 분모는 **만난 사람에게만** 둔다. 적립층 이후 기록실은 완주 없이도 열리므로,
+ * 로스터를 그대로 그리면 아직 만나지 않은 인물의 이름·얼굴·이야기 총수가 함께 새어나간다
+ * (npcStoryRows의 everMet 주석 참조). 남은 인원 수도 세지 않는다 — 숫자를 붙이는 순간
+ * 감춘 의미가 없어지고 "6/10명 수집"이 된다.
  */
 export function ArchiveScreen({ onBack }: { onBack: () => void }) {
   const archive = loadArchive();
-  const rows = npcStoryRows(archive.events);
-  const barelyCount = rows.filter(isBarelyTouched).length;
+  const rows = npcStoryRows(archive.events, archive.npcPeak);
+  const visibleRows = rows.filter(r => r.everMet);
+  const hasUnmet = visibleRows.length < rows.length;
+  // 이정표 문구는 보이는 줄만 근거로 삼는다. 감춘 사람을 세면 "왜 그런 말이 뜨는지"
+  // 알 수 없는 힌트가 되고, 몇 명이 남았는지도 역산된다.
+  // runs 조건: 이 문구는 "다음 판에 그 학년에 곁에 있어라"는 말이라 완주 전에는 성립하지 않는다.
+  // 첫 판 도중이면 보이는 사람이 지훈뿐이고, 7년을 함께할 소꿉친구를 스치기만 한 사람이라 부르게 된다.
+  const barelyCount = archive.runs > 0 ? visibleRows.filter(isBarelyTouched).length : 0;
 
   return (
     <div className="screen fade-in" style={{ padding: '20px 16px', maxWidth: 420, margin: '0 auto' }}>
@@ -37,7 +48,7 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
           그 사람과 얽힌 이야기를 얼마나 봤는지
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {rows.map(r => {
+          {visibleRows.map(r => {
             const faded = r.seen === 0;
             const color = coverageColor(r.ratio);
             return (
@@ -62,6 +73,11 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
             );
           })}
         </div>
+        {hasUnmet && (
+          <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 10, fontStyle: 'italic', lineHeight: 1.6 }}>
+            아직 이름을 모르는 얼굴들이 있다.
+          </div>
+        )}
         {barelyCount > 0 && (
           <div style={{ fontSize: '0.76rem', color: 'var(--accent-soft)', marginTop: 10, fontStyle: 'italic', lineHeight: 1.6 }}>
             거의 스치기만 한 이름이 있다. 그 사람의 이야기는 그 학년에 곁에 있어야만 열린다.

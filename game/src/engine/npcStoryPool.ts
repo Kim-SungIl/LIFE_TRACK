@@ -37,15 +37,36 @@ export interface NpcStoryRow {
   seen: number;
   total: number;
   ratio: number;
+  /**
+   * 판을 가로질러 한 번이라도 만난 적이 있나 — 이름·얼굴을 보여줘도 되는지의 기준.
+   * 적립층이 들어온 뒤로 기록실은 완주 없이도 열리므로(1학년 2주만 하고 접어도 열린다)
+   * 로스터를 그대로 그리면 아직 만나지 않은 하은·준하·서아·시우·예린의 얼굴과 이름이,
+   * 각자의 이야기 총수까지 붙어서 노출된다. 그건 캐스팅 스포일러이면서 동시에
+   * "안 만난 사람의 분모"라 이 게임이 거부하는 달성률 표시가 된다.
+   */
+  everMet: boolean;
 }
 
-export function npcStoryRows(seenEventIds: readonly string[]): NpcStoryRow[] {
+/**
+ * npcPeak을 만남의 근거로 쓰는 이유: met인 NPC만 기록되고(archive.ts touchPeak),
+ * 즉시 적립 3경로 전부에서 갱신되므로 완주 없이도 살아 있다.
+ * `seen > 0`을 OR로 두는 건 npcPeak이 비어 있는 아주 오래된 기록 때문이다 —
+ * 그 사람 이야기를 봤다면 만난 것이므로, 그 경우에도 이름이 사라지지 않는다.
+ * 인자를 생략하면 `seen > 0`만 남아 **더 많이 감춰진다** — 스포일러 방향으로 안전하게 틀린다.
+ */
+export function npcStoryRows(
+  seenEventIds: readonly string[],
+  npcPeak: Readonly<Record<string, number>> = {},
+): NpcStoryRow[] {
   const seenSet = new Set(seenEventIds);
   return INITIAL_NPCS.map(n => {
     const pool = POOL.get(n.id) ?? new Set<string>();
     let seen = 0;
     for (const id of pool) if (seenSet.has(id)) seen++;
-    return { id: n.id, name: n.name, seen, total: pool.size, ratio: pool.size ? seen / pool.size : 1 };
+    return {
+      id: n.id, name: n.name, seen, total: pool.size, ratio: pool.size ? seen / pool.size : 1,
+      everMet: seen > 0 || npcPeak[n.id] !== undefined,
+    };
   });
 }
 

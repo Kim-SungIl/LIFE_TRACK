@@ -10,7 +10,11 @@ vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => `WEBP::${p}` 
 import { TitleScreen } from '../TitleScreen';
 import { RunArchiveSummary } from '../screens/RunArchiveSummary';
 import { EventResultScreen } from '../screens/EventResultScreen';
-import { clearArchive, accrueResolvedEvent, commitRun } from '../../engine/archive';
+import { ArchiveScreen } from '../screens/ArchiveScreen';
+import { clearArchive, loadArchive, accrueResolvedEvent, commitRun } from '../../engine/archive';
+import { INITIAL_NPCS } from '../../engine/npcRoster';
+import { isBarelyTouched, npcStoryRows } from '../../engine/npcStoryPool';
+import { GAME_EVENTS } from '../../engine/events';
 import { createInitialState } from '../../engine/gameEngine';
 import { useGameStore } from '../../engine/store';
 import type { GameEvent, GameState, ParentStrength } from '../../engine/types';
@@ -115,5 +119,99 @@ describe('이벤트 결과 화면의 CG는 발생 학년으로 해석된다', ()
       cgSrcs(container).some(s => s.includes('doyun-graduation-sign')),
       'middle에는 이 id의 CG가 없으므로 후보가 0개여야 한다 (이 단언이 깨지면 위 테스트가 무의미)',
     ).toBe(false);
+  });
+});
+
+// 적립층 이후 기록실은 완주 없이도 열린다(1학년 2주만 하고 접어도). 그래서 로스터를 그대로
+// 그리면 아직 만나지도 않은 인물의 이름·얼굴·이야기 총수가 첫 판 도중에 새어나간다.
+// 엔진 테스트로는 잡히지 않는다 — 감춤은 화면 한 줄(filter)이기 때문이다.
+describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', () => {
+  const NEVER_MET_IN_Y1 = ['서아', '시우', '예린', '하은', '준하'];
+
+  /** 이벤트 하나를 적립한다. metIds에 든 인물은 "만난 적 있음"으로 npcPeak에 남는다. */
+  function accrue(eventId: string, metIds: readonly string[]) {
+    const s = state({ events: [ev(eventId)] });
+    s.npcs = s.npcs.map(n => metIds.includes(n.id) ? { ...n, met: true, intimacy: 30 } : n);
+    accrueResolvedEvent(s);
+  }
+  // 지훈은 초기값이 met: true다(npcRoster.ts) — 첫 이벤트만 적립돼도 그는 항상 보인다.
+  const portraitAlts = () => screen.getAllByAltText(/ neutral$/).map(el => el.getAttribute('alt'));
+
+  it('첫 판 도중이면 지훈만 남고 미접촉 인물의 이름·초상화·분모가 전부 없다', () => {
+    accrue('some-solo-event', []);
+    render(<ArchiveScreen onBack={() => {}} />);
+
+    expect(screen.getByText('지훈')).toBeTruthy();
+    for (const name of NEVER_MET_IN_Y1) {
+      expect(screen.queryByText(name), `${name}는 만난 적이 없으므로 이름이 없어야 한다`).toBeNull();
+    }
+    expect(screen.queryByAltText('seoa neutral'), '초상화도 함께 사라져야 한다').toBeNull();
+    // 줄 수까지 잠근다 — 이름만 가리고 줄을 남기면 몇 명이 남았는지 세어진다.
+    expect(portraitAlts(), '보이는 줄은 만난 사람 수와 같아야 한다').toEqual(['jihun neutral']);
+  });
+
+  it('만난 사람은 이름과 초상화가 나온다', () => {
+    accrue('some-solo-event', ['seoa']);
+    render(<ArchiveScreen onBack={() => {}} />);
+
+    expect(screen.getByText('서아')).toBeTruthy();
+    expect(screen.getByAltText('seoa neutral')).toBeTruthy();
+  });
+
+  // npcPeak이 비어 있는 아주 오래된 기록에서 이름이 통째로 사라지지 않게 하는 OR 가지.
+  it('npcPeak에 없어도 그 사람 이야기를 봤다면 남는다 (레거시 기록)', () => {
+    accrue('seoa-onehalf-earphone', []);   // 서아 도달형 — 만나지 않은 채 이벤트만 적립된 상태
+    render(<ArchiveScreen onBack={() => {}} />);
+
+    expect(screen.getByText('서아'), '본 이야기가 있으면 만난 것으로 본다').toBeTruthy();
+  });
+
+  it('감춘 사람이 있을 때만 힌트가 뜨고, 수는 말하지 않는다', () => {
+    accrue('some-solo-event', []);
+    const { unmount } = render(<ArchiveScreen onBack={() => {}} />);
+    const hint = screen.getByText('아직 이름을 모르는 얼굴들이 있다.');
+    expect(hint.textContent, '남은 인원 수가 새면 감춘 의미가 없다').not.toMatch(/\d/);
+    unmount();
+
+    clearArchive();
+    accrue('some-solo-event', INITIAL_NPCS.map(n => n.id));
+    render(<ArchiveScreen onBack={() => {}} />);
+    expect(screen.queryByText('아직 이름을 모르는 얼굴들이 있다.'), '전원 만났으면 문구도 없다').toBeNull();
+  });
+
+  // "그 학년에 곁에 있어야 열린다"는 다음 판을 향한 말이다. 완주 전에 띄우면 보이는 사람이
+  // 지훈뿐인데 7년을 함께할 소꿉친구를 스치기만 한 사람이라 부르게 된다.
+  it('이정표 문구는 완주 전에는 뜨지 않고 완주 후에 뜬다', () => {
+    accrue('some-solo-event', []);
+    const { unmount } = render(<ArchiveScreen onBack={() => {}} />);
+    expect(screen.queryByText(/거의 스치기만 한 이름/)).toBeNull();
+    unmount();
+
+    commitRun(state({ events: [ev('some-solo-event')] }), '수도권 대학');
+    render(<ArchiveScreen onBack={() => {}} />);
+    expect(screen.getByText(/거의 스치기만 한 이름/)).toBeTruthy();
+  });
+  // 이정표 문구가 "감춘 사람의 0%"를 근거로 뜨면, 안 보이는 사람이 있다는 사실이 문구로 새고
+  // 보이는 사람을 다 봤어도 문구가 사라지지 않는다.
+  it('이정표는 감춘 사람을 세지 않는다', () => {
+    // 지훈만 화자인 이벤트 전부를 본 판. 그의 풀은 38개라 이 픽스처로 0.25 선을 넘는다.
+    // (정의에서 뽑으므로 콘텐츠가 늘면 픽스처도 같이 늘어난다 — 전제는 아래에서 직접 확인한다.)
+    const jihunSolo = GAME_EVENTS
+      .filter(e => !e.reach?.npc && e.speakers?.length === 1 && e.speakers[0] === 'jihun')
+      .map(e => e.id);
+    commitRun(state({ events: jihunSolo.map(ev) }), '수도권 대학');
+
+    const a = loadArchive();
+    const jihun = npcStoryRows(a.events, a.npcPeak).find(r => r.id === 'jihun')!;
+    expect(
+      isBarelyTouched(jihun),
+      '전제 붕괴: 지훈이 여전히 "스치기만 한" 쪽이라 이 테스트가 아무것도 구분하지 못한다',
+    ).toBe(false);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    expect(
+      screen.queryByText(/거의 스치기만 한 이름/),
+      '보이는 사람은 충분히 봤는데 문구가 떴다 — 감춘 사람의 0%를 세고 있다',
+    ).toBeNull();
   });
 });
