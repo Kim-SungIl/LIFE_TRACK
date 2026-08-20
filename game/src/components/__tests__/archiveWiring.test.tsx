@@ -3,7 +3,7 @@
 // 보지만, 아래 셋은 컴포넌트 한 줄이라 엔진 테스트로는 전부 그린인 채 되돌려질 수 있다
 // (검수에서 실제로 세 뮤테이션 모두 635개 전부 통과했다).
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => `WEBP::${p}` }));
 
@@ -14,6 +14,7 @@ import { ArchiveScreen } from '../screens/ArchiveScreen';
 import { clearArchive, loadArchive, accrueResolvedEvent, commitRun } from '../../engine/archive';
 import { INITIAL_NPCS } from '../../engine/npcRoster';
 import { isBarelyTouched, npcStoryRows } from '../../engine/npcStoryPool';
+import { npcAlbum, isSlotFilled } from '../../engine/npcAlbum';
 import { GAME_EVENTS } from '../../engine/events';
 import { createInitialState } from '../../engine/gameEngine';
 import { useGameStore } from '../../engine/store';
@@ -228,5 +229,59 @@ describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', 
       screen.queryByText(/거의 스치기만 한 이름/),
       '보이는 사람은 충분히 봤는데 문구가 떴다 — 감춘 사람의 0%를 세고 있다',
     ).toBeNull();
+  });
+});
+
+// 사람 줄이 문이 됐는지, 그리고 그 문이 목록을 **교체**하는지(아코디언이 아닌지) 잠근다.
+// 포화 상태의 지훈이 52칸이라, 목록 위에 펼치면 화면이 무너진다.
+describe('기록실 → 인물 앨범 드릴다운', () => {
+  /** 지훈이 화자인 첫 장면을 적립한다 — 실제 CG가 붙는 이벤트여야 칸이 채워진다. */
+  function accrueFirstWeek() {
+    accrueResolvedEvent(state({ events: [ev('first-week')] }));
+    const cg = loadArchive().cgFiles;
+    expect(cg.length, '전제: first-week에 CG가 붙어 있어야 이 테스트가 의미 있다').toBe(1);
+    return cg;
+  }
+
+  it('사람 줄을 누르면 앨범이 열리고 목록은 사라진다', () => {
+    accrueFirstWeek();
+    render(<ArchiveScreen onBack={() => {}} />);
+    expect(screen.getByText('👥 함께한 사람들')).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+
+    expect(screen.queryByText('👥 함께한 사람들'), '목록이 남아 있다 — 교체가 아니라 아코디언이다').toBeNull();
+    expect(screen.getByText('초6'), '학년 행이 없다').toBeTruthy();
+  });
+
+  it('학년 행마다 몇 개 중 몇 개인지 보여준다', () => {
+    accrueFirstWeek();
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+
+    const y1 = npcAlbum('jihun').find(b => b.key === 'y1')!;
+    expect(screen.getByText(`1 / ${y1.slots.length}`), '초6 행의 채움 수가 안 맞는다').toBeTruthy();
+  });
+
+  // 빈 칸에 그림을 싣는 순간 **안 본 그림을 받아오는** 것이 된다(장당 105KB).
+  it('안 본 칸은 이미지를 싣지 않는다', () => {
+    const cg = accrueFirstWeek();
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+
+    const filled = npcAlbum('jihun').flatMap(b => b.slots).filter(s => isSlotFilled(s, cg)).length;
+    expect(filled, '전제: 채운 칸이 있어야 한다').toBeGreaterThan(0);
+
+    // 초상화(alt가 "... neutral")를 뺀 나머지가 CG 타일이다.
+    const tiles = screen.getAllByRole('img').filter(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''));
+    expect(tiles.length, '안 본 칸이 이미지를 싣고 있다').toBe(filled);
+  });
+
+  it('돌아가기로 목록으로 복귀한다', () => {
+    accrueFirstWeek();
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+    fireEvent.click(screen.getByRole('button', { name: '돌아가기' }));
+    expect(screen.getByText('👥 함께한 사람들'), '목록으로 못 돌아왔다').toBeTruthy();
   });
 });
