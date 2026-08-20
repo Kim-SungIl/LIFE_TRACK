@@ -16,6 +16,20 @@ export type EventResultData = {
   effects: Record<string, string>[];
   event?: GameEvent;
   choiceIndex?: number;
+  // 이벤트가 **발생한** 학년. 선택 시점(resolveEvent 이전)의 값을 담는다.
+  //
+  // 왜 필요한가: W48 이벤트는 resolveEventChain 안에서 학년 전환이 끝난 뒤에 결과 화면이 뜬다.
+  // 그러니 결과 화면이 state.year를 그대로 읽으면 원리상 전환 후 학년으로 CG를 찾게 된다.
+  //
+  // **현재는 그 어긋남이 실제로 나지 않는다** — applyYearTransition은 Y1~Y6에서 phase만
+  // 'year-end'로 바꾸고 학년은 올리지 않으며(year++는 advanceFromYearEnd, 그때는 이미 이
+  // 화면이 닫혀 있다), 올리는 건 Y7→Y8뿐인데 둘 다 'high'라 학교급이 같다. 즉 이 필드는
+  // 방어용이다. 그래도 두는 이유: "결과 화면의 CG는 발생 학년으로 해석한다"를 전환 구현에
+  // 의존하지 않게 만든다. year++를 applyYearTransition으로 옮기는 리팩터가 오면 이게 없으면
+  // 조용히 깨진다(증상은 "다른 그림"이 아니라 **그림 없음** — 같은 id가 두 학교급에 다 있는
+  // 이벤트는 4개뿐이고 전부 고정주차라, 못 찾으면 후보 0개 → 그라데이션 폴백).
+  // 그 전제는 engine 테스트가 잠근다(applyYearTransition이 학교급을 바꾸지 않는다).
+  year?: number;
 };
 
 /**

@@ -67,7 +67,11 @@ export function TitleScreen() {
   const hasCleared = (() => {
     try { return localStorage.getItem('lifetrack_has_cleared') === '1'; } catch { return false; }
   })();
-  const hasArchive = loadArchive().runs > 0;
+  // 기록실은 "쌓인 게 있으면" 열린다 — 완주가 조건이 아니다. 중도에 그만둔 판의 이야기도
+  // 이제 적립되므로, runs만 보면 이벤트 100개를 본 사람에게 빈 선반을 감추는 셈이 된다.
+  // 도전 모드 게이트(hasCleared)는 그대로 완주 조건을 쓴다 — 둘은 다른 질문에 답한다.
+  const archive = loadArchive();
+  const hasArchive = archive.runs > 0 || archive.events.length > 0;
 
   const toggle = (id: ParentStrength) => {
     if (selected.includes(id)) {
@@ -166,8 +170,9 @@ export function TitleScreen() {
           >
             새 게임
           </button>
-          {/* 기록실은 한 번이라도 끝까지 간 사람에게만 — 첫 플레이어에게 빈 목록을 권하지 않는다.
-              (도전 모드 노출이 hasCleared를 쓰는 것과 같은 판단) */}
+          {/* 기록실은 쌓인 게 있는 사람에게만 — 첫 플레이어에게 빈 목록을 권하지 않는다.
+              완주가 조건이 아니다(중도에 그만둔 판의 이야기도 적립되므로). 도전 모드 노출은
+              여전히 hasCleared(진짜 완주)를 쓴다 — 둘은 다른 질문에 답한다. */}
           {hasArchive && (
             <button className="btn btn-secondary" onClick={() => setPhase('archive')}>
               기록실

@@ -222,7 +222,7 @@ export function GameScreen() {
     phaseContent = (
       <EventResultScreen
         gender={state.gender}
-        year={state.year}
+        year={eventResultData.year ?? state.year}
         eventResultData={eventResultData}
         cgLoaded={cgLoaded}
         cgError={cgError}
@@ -284,7 +284,7 @@ export function GameScreen() {
           // (choiceIndex=-1은 선택지별 CG(_c-1_)는 매칭 안 되지만, resolveEventCgRelPaths 폴백에
           // 선택지-무관 base/gender CG가 있어 그 이벤트에 존재하면 결과 화면에 표시될 수 있음 — 드문 cosmetic.)
           if (!choice || !applied) {
-            setEventResultData({ message: '잠시 머뭇거리다 자리를 떴다.', effects: [], event: evt, choiceIndex: index });
+            setEventResultData({ message: '잠시 머뭇거리다 자리를 떴다.', effects: [], event: evt, choiceIndex: index, year: state.year });
             return;
           }
           const effects: Record<string, string>[] = [];
@@ -312,7 +312,9 @@ export function GameScreen() {
           for (const name of newMeets) {
             effects.unshift({ text: `🤝 ${josa(name, '와/과')} 알게 되었다!`, color: 'var(--yellow)' });
           }
-          setEventResultData({ message: choice.message, effects, event: evt, choiceIndex: index });
+          // state는 resolve 이전 스냅샷(렌더 클로저)이라 state.year가 곧 발생 학년이다 — W48
+          // 학년 전환 후의 값이 아니다. 이 값이 결과 화면의 CG 해석 기준이 된다.
+          setEventResultData({ message: choice.message, effects, event: evt, choiceIndex: index, year: state.year });
         }}
       />
     );

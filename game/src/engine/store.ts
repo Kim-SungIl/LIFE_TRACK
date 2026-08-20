@@ -10,7 +10,10 @@ import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligib
 import { PARENT_MINI_EVENTS } from './talkData';
 import { applyParentIntimacyDelta } from './parentIntimacy';
 import { absWeek, isNpcInteractable } from './relationshipSignals';
-import { commitRun, type RunDelta } from './archive';
+import {
+  commitRun, beginRun, accrueFromState, accrueResolvedEvent, accrueTalk, accrueParentEvent,
+  type RunDelta,
+} from './archive';
 import { calculateEnding } from './ending';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
@@ -272,7 +275,11 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
 }
 
 /**
- * 런간 기록 적립 — phase가 'ending'으로 **처음** 넘어가는 순간에만 적립한다.
+ * 완주 정산 — phase가 'ending'으로 **처음** 넘어가는 순간에만 부른다.
+ *
+ * 이벤트·미니이벤트·CG는 이제 본 순간에 적립된다(accrue* 호출부 참조). 여기서 하는 일은
+ * 완주 게이트 축(runs·endings)을 올리고 "이번 판에서 처음 본 것"을 RunDelta로 정산하는 것뿐이다.
+ * runs는 이 스키마에서 유일한 비멱등 필드라, 중복 위험을 이 한 곳에 가둬 두는 게 핵심이다.
  *
  * 왜 전이 감지인가: 엔딩 진입 경로가 하나가 아니다. Y7 W48은 대기 이벤트 유무에 따라
  * processWeek(advanceWeekCounter) 또는 resolveEvent(resolveEventChain)에서 applyYearTransition을
@@ -306,6 +313,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       initial.currentEvent = { ...firstScene };
       initial.phase = 'event';
     }
+    // "이번 판에서 처음 본 이야기"의 기준선 리셋 — 세이브 덮어쓰기보다 먼저.
+    // 새 판의 유일한 진입점이 여기이므로 리셋 지점도 여기 한 곳이다(loadSavedGame은 건드리지 않는다).
+    beginRun();
     set({ state: initial, runDelta: null });
     saveToStorage(initial);
     // tutorial_done만 지운다 — 새 판마다 튜토리얼을 다시 띄우기 위해서다.
@@ -320,7 +330,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const save = loadFromStorage();
     if (!save) return false;
     // 단계형(버전 격상) → 정규화(백필·재수화) 순서 — step은 격상 전 구조를 전제로 쓴다.
-    set({ state: migrateLoadedState(runSaveMigrations(save.state, save.version)), runDelta: null });
+    const loaded = migrateLoadedState(runSaveMigrations(save.state, save.version));
+    // 즉시 적립이 배포되기 전에 만들어진 세이브는 이 판의 이벤트가 archive를 한 번도 지나지
+    // 않았다 — 여기서만 구제된다. 멱등이고, 이미 다 적립된 세이브면 쓰기 없이 끝난다.
+    accrueFromState(loaded);
+    set({ state: loaded, runDelta: null });
     return true;
   },
 
@@ -408,6 +422,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // 이벤트 기록 (선택 인덱스 + 발생주차 + 연차 + 성별 분기)
     recordResolvedEvent(newState, event, choiceIndex, occurrenceWeek, isFemale);
+    // 런간 기록 즉시 적립. 바로 위 recordResolvedEvent가 방금 push한 항목을 읽는다.
+    //
+    // CG의 발생 학년을 지키는 것은 이 호출 순서가 **아니다** — recordResolvedEvent가 항목에
+    // year를 박아 두므로(위 함수) 적립은 그 값을 읽고, resolveEventChain의 W48 학년 전환
+    // 뒤로 옮겨도 같은 파일이 적립된다(실측 확인). 순서가 실제로 정하는 건 touchPeak이
+    // 친밀도를 읽는 시점뿐이다. 여기 두는 이유는 "기록은 방금 일어난 일 옆에서" 정도의
+    // 가독성이고, 계약이 아니다.
+    accrueResolvedEvent(newState);
 
     // weekLog 메시지 + 이벤트 닫기
     if (newState.weekLog) {
@@ -500,6 +522,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
         newState.talkEventPressure = 0;
         newState.npcEventPendingThisWeek = false;
+        accrueTalk(newState, ev.id);
         set({ state: newState });
         return { kind: 'event', event: ev };
       }
@@ -529,6 +552,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.actedWithParentThisWeek = true;
       newState.parentTalkPressure = 0;
       newState.parentEventPendingThisWeek = false;
+      // 절정은 평생 1회 — 이 판을 완주하지 않으면 v1에서는 어디에도 남지 않았다.
+      // 실제 이벤트 id를 넘긴다(합성 키는 CG 리졸버에서 절대 매칭되지 않는다).
+      accrueParentEvent(newState, climax.id);
       set({ state: newState });
       return { kind: 'event', event: climax };
     }
@@ -554,6 +580,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         newState.actedWithParentThisWeek = true; // 부모와 상호작용 → 이번 주 평균 회귀 면제
         newState.parentTalkPressure = 0;
         newState.parentEventPendingThisWeek = false;
+        accrueParentEvent(newState, ev.id);
         set({ state: newState });
         return { kind: 'event', event: ev };
       }
@@ -589,6 +616,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.actedWithParentThisWeek = true;
     newState.parentTalkPressure = 0;
     newState.parentEventPendingThisWeek = false;
+    accrueParentEvent(newState, ev.id);
     set({ state: newState });
   },
 
