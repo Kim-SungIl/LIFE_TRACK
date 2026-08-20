@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { loadArchive } from '../../engine/archive';
 import { isBarelyTouched, npcStoryRows } from '../../engine/npcStoryPool';
 import { Portrait } from '../Portrait';
+import { NpcAlbumScreen } from './NpcAlbumScreen';
 
 // 관계 패널의 색 언어를 그대로 쓴다 — 많이 본 쪽이 골드.
 function coverageColor(ratio: number): string {
@@ -23,8 +25,13 @@ function coverageColor(ratio: number): string {
  * 로스터를 그대로 그리면 아직 만나지 않은 인물의 이름·얼굴·이야기 총수가 함께 새어나간다
  * (npcStoryRows의 everMet 주석 참조). 남은 인원 수도 세지 않는다 — 숫자를 붙이는 순간
  * 감춘 의미가 없어지고 "6/10명 수집"이 된다.
+ *
+ * 사람 줄은 그 사람의 앨범으로 들어가는 문이다. 아코디언으로 펼치지 않고 목록을 **교체**한다 —
+ * 포화 상태의 지훈이 52칸이라 목록 위에 얹으면 화면이 무너지고, 접으면 스크롤 위치를 잃는다.
+ * 앨범 안에서는 학년별로 "몇 개 중 몇 개"를 드러낸다(그게 그 화면의 목적이다).
  */
 export function ArchiveScreen({ onBack }: { onBack: () => void }) {
+  const [openNpc, setOpenNpc] = useState<string | null>(null);
   const archive = loadArchive();
   const rows = npcStoryRows(archive.events, archive.npcPeak);
   const visibleRows = rows.filter(r => r.everMet);
@@ -34,6 +41,18 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
   // runs 조건: 이 문구는 "다음 판에 그 학년에 곁에 있어라"는 말이라 완주 전에는 성립하지 않는다.
   // 첫 판 도중이면 보이는 사람이 지훈뿐이고, 7년을 함께할 소꿉친구를 스치기만 한 사람이라 부르게 된다.
   const barelyCount = archive.runs > 0 ? visibleRows.filter(isBarelyTouched).length : 0;
+
+  // 만나지 않은 사람의 앨범은 열 수 없다 — 줄이 없으니 문도 없지만, 문을 여는 쪽에서도
+  // 한 번 더 막는다(줄과 앨범이 서로 다른 판정을 쓰게 되면 감춤이 한쪽만 걸린다).
+  if (openNpc && visibleRows.some(r => r.id === openNpc)) {
+    return (
+      <NpcAlbumScreen
+        npcId={openNpc}
+        seenCgFiles={archive.cgFiles}
+        onBack={() => setOpenNpc(null)}
+      />
+    );
+  }
 
   return (
     <div className="screen fade-in" style={{ padding: '20px 16px', maxWidth: 420, margin: '0 auto' }}>
@@ -52,10 +71,10 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
             const faded = r.seen === 0;
             const color = coverageColor(r.ratio);
             return (
-              <div key={r.id} style={{
-                display: 'flex', alignItems: 'center', gap: 10,
+              <button key={r.id} onClick={() => setOpenNpc(r.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
                 background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
-                opacity: faded ? 0.45 : 1,
+                opacity: faded ? 0.45 : 1, border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit',
               }}>
                 <div style={{ filter: faded ? 'grayscale(1)' : 'none', flexShrink: 0, display: 'flex' }}>
                   <Portrait characterId={r.id} size={34} expression="neutral" year={7} />
@@ -69,7 +88,7 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
                 <span style={{ fontSize: '0.7rem', color, whiteSpace: 'nowrap', width: 46, textAlign: 'right', flexShrink: 0 }}>
                   {r.seen} / {r.total}
                 </span>
-              </div>
+              </button>
             );
           })}
         </div>
