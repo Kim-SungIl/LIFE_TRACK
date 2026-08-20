@@ -14,6 +14,7 @@ import { GAME_EVENTS } from './events';
 import { INITIAL_NPCS } from './npcRoster';
 import { getSchoolLevel } from './backgrounds';
 import { resolveEventCgRelPaths } from './eventCg';
+import { SOLO_ROOT, storyOwners } from './npcStoryPool';
 
 /** 학교급별 대표 학년 — resolver는 학년을 학교급으로만 쓰므로(eventCg의 getSchoolLevel) 이걸로 충분하다. */
 const LEVEL_YEAR = { elementary: 1, middle: 2, high: 5 } as const;
@@ -55,20 +56,18 @@ const LEVEL_LABEL: Record<Level, string> = {
  *     그 학교급의 "시절" 행에 담는다. 실측 55장(지훈 13 · 민재 14).
  */
 const ALBUM: Map<string, AlbumBucket[]> = (() => {
-  // npcId → 버킷키 → 슬롯. 귀속 규칙은 npcStoryPool의 POOL과 같아야 하므로 여기서 복제하지 않고
-  // 같은 규칙을 한 번 더 적는 대신, 아래 attribute()가 그 규칙의 단일 표현이다.
-  const perNpc = new Map<string, Map<string, AlbumSlot[]>>();
-  for (const n of INITIAL_NPCS) perNpc.set(n.id, new Map());
-
-  /** 그 이벤트가 누구의 기록에 잡히는가 — npcStoryPool.POOL과 동일 규칙(도달형은 대상 한 명). */
-  const attribute = (e: typeof GAME_EVENTS[number]): string[] => {
-    if (e.reach?.npc && perNpc.has(e.reach.npc)) return [e.reach.npc];
-    return (e.speakers ?? []).filter(id => perNpc.has(id));
-  };
+  // 뿌리 → 버킷키 → 슬롯. 귀속 판정은 **npcStoryPool.storyOwners 하나**를 쓴다 — 여기서 규칙을
+  // 복제하면 기록실의 커버리지 분모와 앨범 내용이 조용히 어긋난다.
+  const perRoot = new Map<string, Map<string, AlbumSlot[]>>();
+  for (const n of INITIAL_NPCS) perRoot.set(n.id, new Map());
+  const isNpc = (id: string) => perRoot.has(id);
+  // 주인 없는 장면(개학·시험·졸업 준비·번아웃·정체성 위기 등 18종/66장)도 자기 뿌리를 갖는다.
+  // 예전에는 여기서 버려서 앨범 어디에도 뜨지 않았다.
+  perRoot.set(SOLO_ROOT, new Map());
 
   for (const e of GAME_EVENTS) {
-    const owners = attribute(e);
-    if (owners.length === 0) continue;   // 화자·대상 없는 장면(19종)은 사람 앨범에 자리가 없다
+    const named = storyOwners(e, isNpc);
+    const owners = named.length > 0 ? named : [SOLO_ROOT];
     const nChoices = Math.max(1, e.choices?.length ?? 1);
 
     // 같은 (이벤트, 선택지)가 학교급마다 다른 그림을 가질 수 있으므로 학교급별로 칸을 만든다.
@@ -96,7 +95,7 @@ const ALBUM: Map<string, AlbumBucket[]> = (() => {
       const key = year === null ? level : `y${year}`;
       for (const slot of bySignature.values()) {
         for (const npcId of owners) {
-          const buckets = perNpc.get(npcId)!;
+          const buckets = perRoot.get(npcId)!;
           const list = buckets.get(key);
           if (list) list.push(slot); else buckets.set(key, [slot]);
         }
@@ -116,7 +115,7 @@ const ALBUM: Map<string, AlbumBucket[]> = (() => {
   ];
 
   const out = new Map<string, AlbumBucket[]>();
-  for (const [npcId, buckets] of perNpc) {
+  for (const [npcId, buckets] of perRoot) {
     out.set(npcId, ORDER
       .filter(o => (buckets.get(o.key)?.length ?? 0) > 0)
       .map(o => ({ key: o.key, label: o.label, slots: buckets.get(o.key)! })));

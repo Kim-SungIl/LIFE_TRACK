@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { npcAlbum, isSlotFilled, filledPath, type AlbumSlot } from '../../engine/npcAlbum';
 import { INITIAL_NPCS } from '../../engine/npcRoster';
+import { SOLO_ROOT } from '../../engine/npcStoryPool';
 import { webpSrc } from '../../engine/assetWebp';
 import { Portrait } from '../Portrait';
 
 const CELL = 44;
 const cgUrl = (rel: string) => webpSrc(`${import.meta.env.BASE_URL}images/events/${rel}`);
+// 사람이 없는 뿌리의 얼굴 자리 — 초상 대신 엠블럼을 쓴다(YearEndScreen이 쓰는 자산과 같은 것).
+const SOLO_EMBLEM = webpSrc(`${import.meta.env.BASE_URL}images/emblems/growth.png`);
 
 /**
  * 인물 앨범 — 기록실에서 사람 줄을 누르면 목록을 대신해 열린다.
@@ -28,6 +31,7 @@ export function NpcAlbumScreen({ npcId, seenCgFiles, onBack }: {
   onBack: () => void;
 }) {
   const [open, setOpen] = useState<AlbumSlot | null>(null);
+  const solo = npcId === SOLO_ROOT;
   const npc = INITIAL_NPCS.find(n => n.id === npcId);
   const buckets = npcAlbum(npcId);
   const openPath = open ? filledPath(open, seenCgFiles) : null;
@@ -36,11 +40,23 @@ export function NpcAlbumScreen({ npcId, seenCgFiles, onBack }: {
     <div className="screen fade-in" style={{ padding: '20px 16px', maxWidth: 420, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
         <div style={{ flexShrink: 0, display: 'flex' }}>
-          <Portrait characterId={npcId} size={40} expression="neutral" year={7} />
+          {solo ? (
+            <img
+              src={SOLO_EMBLEM}
+              alt="혼자 지나온 것"
+              style={{ width: 40, height: 50, objectFit: 'cover', borderRadius: 6 }}
+            />
+          ) : (
+            <Portrait characterId={npcId} size={40} expression="neutral" year={7} />
+          )}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '1.05rem', fontWeight: 700 }}>{npc?.name ?? npcId}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{npc?.description}</div>
+          <div style={{ fontSize: '1.05rem', fontWeight: 700 }}>
+            {solo ? '혼자 지나온 것' : (npc?.name ?? npcId)}
+          </div>
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            {solo ? '개학과 시험, 졸업 준비 — 곁에 아무도 없던 시간' : npc?.description}
+          </div>
         </div>
       </div>
 

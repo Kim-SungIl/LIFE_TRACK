@@ -15,6 +15,7 @@ import { clearArchive, loadArchive, accrueResolvedEvent, commitRun } from '../..
 import { INITIAL_NPCS } from '../../engine/npcRoster';
 import { isBarelyTouched, npcStoryRows } from '../../engine/npcStoryPool';
 import { npcAlbum, isSlotFilled } from '../../engine/npcAlbum';
+import { SOLO_ROOT, soloStoryRow } from '../../engine/npcStoryPool';
 import { GAME_EVENTS } from '../../engine/events';
 import { createInitialState } from '../../engine/gameEngine';
 import { useGameStore } from '../../engine/store';
@@ -318,5 +319,40 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     fireEvent.click(screen.getByRole('button', { name: '돌아가기' }));
     expect(screen.getByText('👥 함께한 사람들'), '목록으로 못 돌아왔다').toBeTruthy();
+  });
+});
+
+// 주인 없는 장면 줄. 이 줄이 없으면 수능 전야·번아웃·졸업 준비가 앨범 어디에도 뜨지 않는다.
+describe('기록실 — 혼자 지나온 것 줄', () => {
+  it('그런 장면을 본 적 있으면 줄이 생기고, 누르면 앨범이 열린다', () => {
+    accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
+    render(<ArchiveScreen onBack={() => {}} />);
+
+    const row = screen.getByRole('button', { name: /혼자 지나온 것/ });
+    expect(row, 'solo 줄이 없다').toBeTruthy();
+
+    fireEvent.click(row);
+    expect(screen.queryByText('👥 함께한 사람들'), '목록이 안 교체됐다').toBeNull();
+    expect(screen.getByText('개학과 시험, 졸업 준비 — 곁에 아무도 없던 시간')).toBeTruthy();
+    expect(npcAlbum(SOLO_ROOT).length, '전제: solo 앨범에 행이 있어야 한다').toBeGreaterThan(0);
+  });
+
+  it('아직 그런 장면을 안 봤으면 빈 방의 문을 만들지 않는다', () => {
+    accrueResolvedEvent(state({ events: [ev('first-week')] }));   // 지훈 장면 — solo가 아니다
+    expect(soloStoryRow(loadArchive().events).seen, '전제: solo 본 것이 0이어야 한다').toBe(0);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    expect(screen.queryByRole('button', { name: /혼자 지나온 것/ }), '빈 solo 줄이 떴다').toBeNull();
+    expect(screen.getByRole('button', { name: /지훈/ }), '사람 줄은 그대로 있어야 한다').toBeTruthy();
+  });
+
+  it('solo 앨범에는 초상화가 아니라 엠블럼이 뜬다', () => {
+    accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /혼자 지나온 것/ }));
+
+    const alts = screen.getAllByRole('img').map(el => el.getAttribute('alt'));
+    expect(alts.some(a => /neutral$/.test(a ?? '')), 'solo 앨범에 사람 초상화가 떴다').toBe(false);
+    expect(alts).toContain('혼자 지나온 것');
   });
 });

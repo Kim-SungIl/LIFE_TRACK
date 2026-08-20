@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { loadArchive } from '../../engine/archive';
-import { isBarelyTouched, npcStoryRows } from '../../engine/npcStoryPool';
+import { isBarelyTouched, npcStoryRows, soloStoryRow, SOLO_ROOT } from '../../engine/npcStoryPool';
+import { webpSrc } from '../../engine/assetWebp';
 import { Portrait } from '../Portrait';
 import { NpcAlbumScreen } from './NpcAlbumScreen';
 
@@ -42,9 +43,52 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
   // 첫 판 도중이면 보이는 사람이 지훈뿐이고, 7년을 함께할 소꿉친구를 스치기만 한 사람이라 부르게 된다.
   const barelyCount = archive.runs > 0 ? visibleRows.filter(isBarelyTouched).length : 0;
 
+  // 주인 없는 장면들(개학·시험·졸업 준비·번아웃·정체성 위기)도 앨범에 자리가 있다. 사람 줄과 같은
+  // 형태의 줄 하나로 두고 탭은 만들지 않는다 — 사람과 그림을 갈라놓으면 "누구와의 일"이라는
+  // 이 기록의 축이 흐려진다. **본 것이 하나라도 있을 때만** 올린다: 감출 사람이 없어 스포일러
+  // 문제는 없지만, 아직 아무것도 없는 방의 문을 미리 보여줄 이유도 없다.
+  const solo = soloStoryRow(archive.events);
+  const showSolo = solo.seen > 0;
+  const rowsToShow = showSolo ? [...visibleRows, solo] : visibleRows;
+
+  // 줄 마크업은 한 곳에만 둔다 — 사람 줄과 "혼자 지나온 것" 줄이 서로 다르게 생기면
+  // 같은 종류의 문이라는 게 안 읽힌다. 위치만 다르다("함께한 사람들" 헤더 밖).
+  const row = (r: typeof solo) => {
+    const faded = r.seen === 0;
+    const color = coverageColor(r.ratio);
+    return (
+      <button key={r.id} onClick={() => setOpenNpc(r.id)} style={{
+        display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
+        background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
+        opacity: faded ? 0.45 : 1, border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit',
+      }}>
+        <div style={{ filter: faded ? 'grayscale(1)' : 'none', flexShrink: 0, display: 'flex' }}>
+          {r.id === SOLO_ROOT ? (
+            <img
+              src={webpSrc(`${import.meta.env.BASE_URL}images/emblems/growth.png`)}
+              alt="혼자 지나온 것"
+              style={{ width: 34, height: 42, objectFit: 'cover', borderRadius: 5 }}
+            />
+          ) : (
+            <Portrait characterId={r.id} size={34} expression="neutral" year={7} />
+          )}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{r.name}</div>
+          <div style={{ height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${Math.round(r.ratio * 100)}%`, background: color, borderRadius: 3 }} />
+          </div>
+        </div>
+        <span style={{ fontSize: '0.7rem', color, whiteSpace: 'nowrap', width: 46, textAlign: 'right', flexShrink: 0 }}>
+          {r.seen} / {r.total}
+        </span>
+      </button>
+    );
+  };
+
   // 만나지 않은 사람의 앨범은 열 수 없다 — 줄이 없으니 문도 없지만, 문을 여는 쪽에서도
   // 한 번 더 막는다(줄과 앨범이 서로 다른 판정을 쓰게 되면 감춤이 한쪽만 걸린다).
-  if (openNpc && visibleRows.some(r => r.id === openNpc)) {
+  if (openNpc && rowsToShow.some(r => r.id === openNpc)) {
     return (
       <NpcAlbumScreen
         npcId={openNpc}
@@ -67,30 +111,7 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
           그 사람과 얽힌 이야기를 얼마나 봤는지
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {visibleRows.map(r => {
-            const faded = r.seen === 0;
-            const color = coverageColor(r.ratio);
-            return (
-              <button key={r.id} onClick={() => setOpenNpc(r.id)} style={{
-                display: 'flex', alignItems: 'center', gap: 10, width: '100%', textAlign: 'left',
-                background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
-                opacity: faded ? 0.45 : 1, border: 'none', cursor: 'pointer', font: 'inherit', color: 'inherit',
-              }}>
-                <div style={{ filter: faded ? 'grayscale(1)' : 'none', flexShrink: 0, display: 'flex' }}>
-                  <Portrait characterId={r.id} size={34} expression="neutral" year={7} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{r.name}</div>
-                  <div style={{ height: 5, background: 'rgba(255,255,255,0.1)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${Math.round(r.ratio * 100)}%`, background: color, borderRadius: 3 }} />
-                  </div>
-                </div>
-                <span style={{ fontSize: '0.7rem', color, whiteSpace: 'nowrap', width: 46, textAlign: 'right', flexShrink: 0 }}>
-                  {r.seen} / {r.total}
-                </span>
-              </button>
-            );
-          })}
+          {visibleRows.map(row)}
         </div>
         {hasUnmet && (
           <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 10, fontStyle: 'italic', lineHeight: 1.6 }}>
@@ -103,6 +124,12 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
           </div>
         )}
       </section>
+
+      {showSolo && (
+        <section style={{ marginBottom: 22 }}>
+          {row(solo)}
+        </section>
+      )}
 
       <section style={{ marginBottom: 22 }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 10 }}>

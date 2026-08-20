@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { npcAlbum, isSlotFilled, filledPath } from '../npcAlbum';
-import { npcStoryRows } from '../npcStoryPool';
+import { npcStoryRows, soloStoryRow, storyOwners, SOLO_ROOT } from '../npcStoryPool';
 import { resolveEventCgRelPaths } from '../eventCg';
 import { GAME_EVENTS } from '../events';
 import { getSchoolLevel } from '../backgrounds';
@@ -164,5 +164,82 @@ describe('앨범 채움 판정', () => {
     // 파일을 세면 남·여를 다 해본 사람의 앨범만 칸이 두 배가 된다. 칸은 그보다 적어야 한다.
     expect(slots.length).toBeLessThan(both.length);
     expect(slots.length).toBeGreaterThan(male.length - 1);
+  });
+});
+
+// 주인 없는 장면(개학·시험·졸업 준비·번아웃·정체성 위기)은 누락이 아니라 실제로 혼자 지나온
+// 시간이다. 예전에는 앨범 빌더가 여기서 버려서 **어디에도 뜨지 않았다**(69장 = 전체 CG의 16%).
+describe('혼자 지나온 것 (SOLO_ROOT)', () => {
+  it('사람 뿌리에 안 붙는 장면은 solo 뿌리로 간다', () => {
+    const solo = npcAlbum(SOLO_ROOT);
+    expect(solo.length, 'solo 앨범이 비었다 — 주인 없는 장면이 다시 버려지고 있다').toBeGreaterThan(0);
+    const slots = solo.flatMap(b => b.slots);
+    expect(slots.length).toBeGreaterThan(20);
+
+    // 이 게임에서 가장 무거운 장면들이 여기 있다. 하나라도 빠지면 앨범에서 볼 길이 없다.
+    for (const id of ['suneung-eve', 'middle-burnout', 'high-panic', 'identity-crisis', 'graduation-prep-high']) {
+      expect(slots.some(s => s.eventId === id), `${id}가 solo 앨범에 없다`).toBe(true);
+    }
+  });
+
+  it('solo 뿌리와 사람 뿌리는 겹치지 않는다', () => {
+    const soloIds = new Set(npcAlbum(SOLO_ROOT).flatMap(b => b.slots).map(s => s.eventId));
+    for (const r of npcStoryRows([])) {
+      for (const s of npcAlbum(r.id).flatMap(b => b.slots)) {
+        expect(soloIds.has(s.eventId), `${s.eventId}가 ${r.name}과 solo 양쪽에 있다`).toBe(false);
+      }
+    }
+  });
+
+  it('solo 줄은 본 것이 있을 때만 셀 수 있다', () => {
+    expect(soloStoryRow([]).seen).toBe(0);
+    expect(soloStoryRow([]).total).toBeGreaterThan(0);
+    expect(soloStoryRow(['suneung-eve']).seen).toBe(1);
+    // 사람 이벤트를 봐도 solo 카운트는 안 오른다(뿌리가 섞이면 두 줄이 같은 걸 센다).
+    expect(soloStoryRow(['first-week']).seen).toBe(0);
+  });
+
+  it('solo 뿌리는 사람 목록에 섞이지 않는다', () => {
+    expect(npcStoryRows([]).some(r => r.id === SOLO_ROOT), 'solo가 사람 줄로 새어 들어갔다').toBe(false);
+  });
+});
+
+// speakers는 "화면에 그려질 사람"이고 storyOf는 "누구의 이야기인가"다. 나누지 않으면
+// haeun-distance(떠난 하은이 남긴 편지)를 귀속시키려다 EventScene이 떠난 사람을 다시 세운다.
+describe('storyOf 귀속 (화면에 없어도 그 사람 이야기)', () => {
+  const known = (id: string) => npcStoryRows([]).some(r => r.id === id);
+
+  it('haeun-distance는 하은에게 귀속되고 speakers에는 넣지 않는다', () => {
+    const e = GAME_EVENTS.find(x => x.id === 'haeun-distance')!;
+    expect(e, '이벤트가 사라졌다').toBeTruthy();
+    expect(e.speakers ?? [], '떠난 하은을 화면에 다시 세우고 있다').toEqual([]);
+    expect(e.storyOf).toEqual(['haeun']);
+    expect(storyOwners(e, known)).toEqual(['haeun']);
+
+    const inHaeun = npcAlbum('haeun').flatMap(b => b.slots).some(s => s.eventId === 'haeun-distance');
+    expect(inHaeun, '하은 앨범에 편지가 없다').toBe(true);
+    const inSolo = npcAlbum(SOLO_ROOT).flatMap(b => b.slots).some(s => s.eventId === 'haeun-distance');
+    expect(inSolo, '귀속됐는데 solo에도 남아 있다').toBe(false);
+    expect(npcStoryRows([]).find(r => r.id === 'haeun')!.total, '하은 이야기 풀에도 들어가야 한다')
+      .toBeGreaterThanOrEqual(18);
+  });
+
+  it('귀속 우선순위는 reach.npc > storyOf > speakers', () => {
+    const reachWin = { id: 'x', title: '', description: '', choices: [],
+      reach: { npc: 'seoa', tier: 40 }, storyOf: ['jihun'], speakers: ['subin'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(reachWin, known)).toEqual(['seoa']);
+
+    const storyWin = { id: 'x', title: '', description: '', choices: [],
+      storyOf: ['jihun'], speakers: ['subin'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(storyWin, known)).toEqual(['jihun']);
+
+    const speakersOnly = { id: 'x', title: '', description: '', choices: [],
+      speakers: ['subin'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(speakersOnly, known)).toEqual(['subin']);
+
+    // 로스터에 없는 id는 무시된다 — 그러면 주인 없는 장면이 되어 solo로 간다.
+    const unknownOnly = { id: 'x', title: '', description: '', choices: [],
+      storyOf: ['없는사람'], speakers: ['또없는사람'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(unknownOnly, known)).toEqual([]);
   });
 });
