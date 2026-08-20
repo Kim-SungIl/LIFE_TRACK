@@ -686,6 +686,12 @@ export const SCHOOL_MIDDLE_HIGH = [
     title: '체육대회',
     description: '학교 체육대회 날이다! 반 대항 릴레이가 있다.\n"야, 너 달리기 잘해? 우리 반 대표 한 명 더 필요한데..."',
     week: 10,
+    // ANNUAL_REFIRE_IDS 등재 — 매년 오는 학교 행사인데 학년 조건이 없어 Y2에 소진되고
+    // 중2~고3 5년간 체육대회가 없었다. npcEffects가 0건이라 관계 밸런스에는 중립이다.
+    // year>=2: Y1 W10은 subin-meet-elementary가 speakers 타이브레이크로 이미 이기지만,
+    //   Y1의 운동회는 W32 elementary-sports-day("가을 운동회")가 담당한다는 의도를 코드에 남긴다.
+    //   (같은 행사의 다른 계절 — Y1만 가을, Y2+는 봄이다.)
+    condition: (s) => s.year >= 2,
     location: 'gym',
     background: 'gymnasium',
     choices: [
@@ -723,10 +729,13 @@ export const SCHOOL_MIDDLE_HIGH = [
         effects: { academic: 2, mental: -1 },
         message: '의지를 다졌다. 과연 지킬 수 있을까?',
       },
+      // year<=6: 매년 발동이 되면서 고3 여름에 처음 도달한다. 고3 여름방학은 보충·자습이라
+      // "실컷 놀 거야"가 성립하지 않으므로 Y7은 맨 끝의 대체지로 보낸다.
       {
         text: '"실컷 놀 거야!!!"',
         effects: { mental: 5, social: 2 },
         message: '해방감이 밀려온다. 이게 방학이지!',
+        condition: (s) => s.year <= 6,
       },
       // 벌이 선택지는 학년으로 가른다 — winter-start(알바 year>=4 / 심부름 year<4)와 같은 패턴.
       // 조건 없이 두면 초6이 방학에 알바를 뛰는 선택지가 열린다.
@@ -744,6 +753,15 @@ export const SCHOOL_MIDDLE_HIGH = [
         message: '설거지랑 빨래 개는 걸 맡았다. 엄마가 "방학이라 그래도 손이 하나 늘었네" 하며 용돈을 줬다.',
         condition: (s) => s.year < 4,
       },
+      // 반드시 배열 맨 끝에 추가한다 — 중간에 끼우면 저장된 resolvedChoice가 다른 선택지를
+      // 가리키고(EventScene은 필터 후에도 원본 인덱스를 넘긴다) CG도 _c{index} 규약이라 같이 어긋난다.
+      {
+        text: '"보충수업 신청했어" — 어차피 학교에 온다',
+        effects: { academic: 3, mental: -2 },
+        fatigueEffect: 3,
+        message: '방학인데 등교 시간이 똑같다. 교실에 에어컨은 나오니까, 그것만 다르다.',
+        condition: (s) => s.year === 7,
+      },
     ],
   },
   {
@@ -752,6 +770,12 @@ export const SCHOOL_MIDDLE_HIGH = [
     description: '"야, 이번에 바다 갈래? 민재도 간대.\n수빈이한테도 물어볼까?"',
     background: 'beach_summer',
     week: 22,
+    // 1회성 유지가 의도다 — 매년 같은 친구들과 바다에 가고 매년 민재가 모래성을 무너뜨리는 건
+    // 의례가 아니라 "그 여름"의 단발 기억이다. npcEffects도 지훈 +6/민재 +3/수빈 +3으로
+    // 고정주차 중 최대라, 매년화하면 이벤트가 친밀도 소프트캡(동행·선물만 80캡) 면제 소스로
+    // 반복돼 관계 곡선을 흔든다. → ANNUAL_REFIRE_IDS에 넣지 않는다.
+    // year>=4: 조건이 없어 Y1(초6)에 소진됐다. 보호자 없이 친구들끼리 바다는 중3(15세)부터.
+    condition: (s) => s.year >= 4,
     location: 'beach',
     speakers: ['jihun', 'minjae', 'subin'],
     choices: [
@@ -780,8 +804,12 @@ export const SCHOOL_MIDDLE_HIGH = [
   {
     id: 'school-festival',
     title: '학교 축제',
+    // W30 → W31. W30은 Y2~Y7 전부 2학기 중간고사 주다(getExamSchedule의 세 분기 모두 30: midterm).
+    // 1회성일 때는 눈에 안 띄었지만 매년화하면 "중간고사 주에 푸드트럭 축제"가 6회 반복된다 —
+    // junha-birthday가 방학 첫 주에 교실 장면이던 것과 같은 유형이다. W31은 고정주차 공백이고
+    // isExamPeriod도 아니라, 시험 끝난 다음 주 축제라는 가장 자연스러운 배치가 된다.
     description: '축제 준비가 한창이다. 우리 반은 푸드트럭을 하기로 했다.\n수빈이가 "야, 홍보는 내가 할게! 누가 같이 하자~" 하며 손을 든다.',
-    week: 30,
+    week: 31,
     condition: (s) => s.year >= 2,
     location: 'classroom',
     background: 'festival_classroom',
