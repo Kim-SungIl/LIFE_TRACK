@@ -37,15 +37,45 @@ export interface NpcStoryRow {
   seen: number;
   total: number;
   ratio: number;
+  /**
+   * 판을 가로질러 한 번이라도 만난 적이 있나 — 이름·얼굴을 보여줘도 되는지의 기준.
+   * 적립층이 들어온 뒤로 기록실은 완주 없이도 열리므로(1학년 2주만 하고 접어도 열린다)
+   * 로스터를 그대로 그리면 아직 만나지 않은 하은·준하·서아·시우·예린의 얼굴과 이름이,
+   * 각자의 이야기 총수까지 붙어서 노출된다. 그건 캐스팅 스포일러이면서 동시에
+   * "안 만난 사람의 분모"라 이 게임이 거부하는 달성률 표시가 된다.
+   */
+  everMet: boolean;
 }
 
-export function npcStoryRows(seenEventIds: readonly string[]): NpcStoryRow[] {
+/**
+ * npcPeak을 만남의 근거로 쓰는 이유: met인 NPC만 기록되고(archive.ts touchPeak),
+ * 즉시 적립 3경로 전부에서 갱신되므로 완주 없이도 살아 있다. 친밀도는 전 경로에서
+ * `Math.max(0, …)`로 클램프되므로 첫 met에서 `(peak ?? -1) < intimacy`가 반드시 참이다 —
+ * "친밀도 0인 met NPC가 기록에서 빠진다"는 일어나지 않는다.
+ *
+ * `seen > 0` OR 가지는 **레거시 호환이 아니다.** npcPeak과 met 가드는 archive 최초 커밋
+ * (#381)에 함께 들어왔으므로 npcPeak이 없는 기록 포맷은 존재하지 않고, shipped 경로로도
+ * "peak엔 없는데 seen > 0"을 만들 수 없다(store가 speakers 전원을 met으로 세운 직후 같은
+ * tick에 touchPeak이 돌고 한 번에 persist된다). 남긴 이유는 의미론이다 — 그 사람이 나오는
+ * 장면을 이미 읽었다면 이름을 보여도 스포일러가 아니다. 대가도 있다: 기존 이벤트에
+ * `speakers`를 나중에 추가하면 그 이벤트를 이미 적립한 기록에서 그 인물이 소급 노출된다.
+ *
+ * 인자를 생략하면 `seen > 0`만 남는다. 스포일러 축에서는 안전한 방향이지만 UI 축에서는
+ * 아니다 — 지훈까지 사라져 목록이 빌 수 있으므로 화면은 반드시 2-arg로 부른다.
+ */
+export function npcStoryRows(
+  seenEventIds: readonly string[],
+  npcPeak: Readonly<Record<string, number>> = {},
+): NpcStoryRow[] {
   const seenSet = new Set(seenEventIds);
   return INITIAL_NPCS.map(n => {
     const pool = POOL.get(n.id) ?? new Set<string>();
     let seen = 0;
     for (const id of pool) if (seenSet.has(id)) seen++;
-    return { id: n.id, name: n.name, seen, total: pool.size, ratio: pool.size ? seen / pool.size : 1 };
+    return {
+      id: n.id, name: n.name, seen, total: pool.size, ratio: pool.size ? seen / pool.size : 1,
+      everMet: seen > 0 || npcPeak[n.id] !== undefined,
+    };
   });
 }
 
@@ -64,11 +94,25 @@ export function isBarelyTouched(r: { total: number; ratio: number }): boolean {
 
 /**
  * 다음 판의 이정표로 제시할 사람들 — 이야기를 거의 못 본 순서.
- * "만난 적 없는 사람"이 아니라 이 기준을 쓰는 이유: 7년이면 누구든 다 만나고 다 절친이 된다.
- * 정작 안 본 건 그 사람의 '이야기'이고, 그건 학년 게이트 때문에 다시 못 여는 것들이다.
+ *
+ * "만난 적 없는 사람"이 아니라 **이야기를 못 본 사람**을 기준으로 삼는 이유: 못 본 건 관계가
+ * 아니라 그 사람의 이야기이고, 도달형은 학년으로 게이트돼 그 학년이 지나면 다시 안 열린다.
+ * 완주해도 친밀도만으로는 그게 회수되지 않는다.
+ *
+ * 그렇다고 **만나지 않은 사람까지 이름을 대면 안 된다.** 예전 주석은 "7년이면 누구든 다
+ * 만난다"고 단정했는데 실측으로 반증됐다 — QA 플레이스루 348판 중 5판(1.4%)이 서아·예린·시우를
+ * 한 번도 만나지 않고 엔딩에 도달한다(`*-meet`이 conditional 풀이고 조건이 `year === N && !met`
+ * 이라 그 학년 슬롯 경합에서 밀리면 그 판에서 영구히 닫힌다). 그 판에서 미접촉자는 ratio 0 ·
+ * total 최소라 **정렬 첫 줄에 확정으로 올라온다.** 그래서 기록실과 같은 everMet 게이트를 쓴다 —
+ * 안 그러면 같은 기록에서 기록실은 감추고 엔딩 화면은 이름을 쓰는 비대칭이 생긴다.
  */
-export function barelyTouchedNames(seenEventIds: readonly string[], limit = 4): string[] {
-  return npcStoryRows(seenEventIds)
+export function barelyTouchedNames(
+  seenEventIds: readonly string[],
+  npcPeak: Readonly<Record<string, number>> = {},
+  limit = 4,
+): string[] {
+  return npcStoryRows(seenEventIds, npcPeak)
+    .filter(r => r.everMet)
     .filter(isBarelyTouched)
     // 동률이면 이야기 수가 적은 쪽부터. 로스터 순서를 그대로 두면 하필 주요 인물 넷(지훈·수빈·
     // 민재·유나)이 앞에 서서, 7년을 함께한 소꿉친구를 "스치기만 한 사람"이라 부르게 된다.

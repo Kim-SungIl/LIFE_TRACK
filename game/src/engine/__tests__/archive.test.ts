@@ -65,6 +65,10 @@ describe('친밀도 티어 (npcRoster)', () => {
 describe('NPC 이야기 커버리지 (npcStoryPool)', () => {
   const rows = npcStoryRows([]);
   const poolOf = (id: string) => rows.find(r => r.id === id)!.total;
+  // 아래 이정표 테스트들은 임계·정렬을 보는 것이므로 "전원 만난 기록"을 전제로 깐다.
+  // 이 전제를 명시하지 않으면 everMet 게이트에 걸려 전원이 후보에서 빠지고, 그때 통과하는
+  // 단언은 정렬이 아니라 게이트를 재는 것이 된다.
+  const ALL_MET: Record<string, number> = Object.fromEntries(rows.map(r => [r.id, 50]));
 
   // 풀이 빈 NPC가 있으면 기록실에 "0 / 0" 줄이 생겨 아무 말도 못 한다.
   it('모든 NPC가 자기 이야기를 가진다', () => {
@@ -122,25 +126,46 @@ describe('NPC 이야기 커버리지 (npcStoryPool)', () => {
 
   describe('다음 판의 이정표 (barelyTouchedNames)', () => {
     it('아무것도 안 봤으면 전원이 후보다', () => {
-      expect(barelyTouchedNames([], 99)).toHaveLength(rows.length);
+      expect(barelyTouchedNames([], ALL_MET, 99)).toHaveLength(rows.length);
     });
 
     it('많이 본 사람은 후보에서 빠지고, 적게 본 사람만 남는다', () => {
       const full = GAME_EVENTS.filter(e => e.reach?.npc === 'seoa' || e.speakers?.includes('seoa'))
         .map(e => e.id);
-      const names = barelyTouchedNames(full, 99);
+      const names = barelyTouchedNames(full, ALL_MET, 99);
       expect(names).not.toContain('서아');
       expect(names.length).toBeGreaterThan(0);   // 나머지는 여전히 남아 있다
     });
 
     it('개수가 제한된다', () => {
-      expect(barelyTouchedNames([], 3)).toHaveLength(3);
+      expect(barelyTouchedNames([], ALL_MET, 3)).toHaveLength(3);
+    });
+
+    // 완주하면 전원을 만난다는 건 사실이 아니다 — QA 플레이스루 348판 중 5판(1.4%)이
+    // 서아·예린·시우를 못 만난 채 엔딩에 닿는다. 그 판에서 미접촉자는 ratio 0 · total 최소라
+    // **정렬 첫 줄을 확정으로 차지한다**(바로 위 테스트가 예린이 1번임을 잠근다).
+    it('만난 적 없는 사람은 이름을 대지 않는다', () => {
+      const peak = { ...ALL_MET };
+      delete peak.yerin;
+      const names = barelyTouchedNames([], peak, 99);
+      expect(names, '기록실은 감추는데 엔딩 화면이 이름을 쓰면 같은 기록이 서로 다른 말을 한다')
+        .not.toContain('예린');
+      expect(names, '만난 사람은 그대로 후보로 남아야 한다').toContain('서아');
+    });
+
+    // everMet의 OR 가지를 엔진 층에서 직접 잠근다 — 만난 기록이 없어도 그 사람이 나오는
+    // 장면을 읽었다면 이름은 스포일러가 아니다.
+    it('만난 기록이 없어도 그 사람 이야기를 봤다면 이름이 남는다', () => {
+      const seoaIds = GAME_EVENTS.filter(e => e.reach?.npc === 'seoa').slice(0, 1).map(e => e.id);
+      expect(seoaIds).toHaveLength(1);
+      const names = barelyTouchedNames(seoaIds, {}, 99);
+      expect(names).toEqual(['서아']);
     });
 
     // 전원 동률(전부 0)인 판은 디버그 스킵으로 실제 관측된다. 로스터 순서를 그대로 쓰면
     // 주요 인물 넷이 앞에 서서 소꿉친구를 "스치기만 한 사람"이라 부르게 된다.
     it('비율이 같으면 이야기 수가 적은 쪽을 먼저 가리킨다', () => {
-      const names = barelyTouchedNames([], 4);
+      const names = barelyTouchedNames([], ALL_MET, 4);
       expect(names[0], '가장 적은 이야기(예린 6종)가 앞에 와야 한다').toBe('예린');
       expect(names, '38종을 가진 지훈이 동률만으로 앞줄에 서면 안 된다').not.toContain('지훈');
     });
@@ -159,7 +184,7 @@ describe('NPC 이야기 커버리지 (npcStoryPool)', () => {
         ...reachIdsOf('yerin', 1), ...reachIdsOf('seoa', 2), ...reachIdsOf('subin', 8),
         ...reachIdsOf('jihun', 10), ...reachIdsOf('siwoo', 4),
       ];
-      const names = barelyTouchedNames(FIXTURE, 99);
+      const names = barelyTouchedNames(FIXTURE, ALL_MET, 99);
       const idx = (name: string) => names.indexOf(name);
 
       it('픽스처가 의도한 비율을 만든다 (전제 확인)', () => {
