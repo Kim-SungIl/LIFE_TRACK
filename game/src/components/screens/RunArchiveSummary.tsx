@@ -18,12 +18,16 @@ interface Props {
  *   그래서 "다른 길은 어땠을까?"라는 막연한 문구 대신, 남은 것을 사람 이름으로 가리킨다.
  *
  * 왜 "안 만난 사람"이 아니라 "거의 못 본 사람"인가:
- *   7년이면 어떤 방식으로도 10명 전원을 만나기는 한다. 못 본 건 관계가 아니라 그 사람의
- *   이야기다 — 도달형 이벤트는 학년으로 게이트돼 그 학년이 지나면 다시 안 열린다.
+ *   못 본 건 관계가 아니라 그 사람의 이야기다 — 도달형 이벤트는 학년으로 게이트돼 그 학년이
+ *   지나면 다시 안 열린다. 친밀도만 올려서는 회수되지 않는다.
+ *
+ * 단, 이름을 대는 건 **만난 적 있는 사람에게만**이다. 완주하면 전원을 만난다는 건 사실이
+ *   아니다 — 348판 중 5판(1.4%)이 서아·예린·시우를 못 만난 채 엔딩에 닿고, 그 판에서
+ *   미접촉자는 ratio 0으로 정렬 첫 줄을 차지한다. npcPeak을 넘겨 기록실과 같은 게이트를 쓴다.
  */
 export function RunArchiveSummary({ runDelta }: Props) {
   const archive = loadArchive();
-  const barely = barelyTouchedNames(archive.events);
+  const barely = barelyTouchedNames(archive.events, archive.npcPeak);
   const delta = runDelta ?? archive.lastRunDelta;
   const newEvents = delta?.newEvents ?? 0;
   const runs = delta?.runs ?? archive.runs;

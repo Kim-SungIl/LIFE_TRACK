@@ -150,6 +150,21 @@ describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', 
     expect(portraitAlts(), '보이는 줄은 만난 사람 수와 같아야 한다').toEqual(['jihun neutral']);
   });
 
+  // 엔진 필터를 잠가도 화면이 npcPeak을 넘기는지는 별개다 — 인자를 빼면 엔진 테스트는
+  // 전부 그린인 채 엔딩 화면이 다시 미접촉 이름을 쓴다.
+  it('엔딩 요약도 만나지 않은 사람 이름을 쓰지 않는다', () => {
+    const metIds = INITIAL_NPCS.map(n => n.id).filter(id => id !== 'yerin');
+    const s = state({ events: [ev('some-solo-event')] });
+    s.npcs = s.npcs.map(n => metIds.includes(n.id) ? { ...n, met: true, intimacy: 30 } : n);
+    commitRun(s, '수도권 대학');
+
+    render(<RunArchiveSummary runDelta={null} />);
+    expect(screen.getByText(/스치기만 하고 지나간 사람/), '이정표 블록 자체가 없으면 무의미').toBeTruthy();
+    const listed = screen.getByText(/·/).textContent ?? '';
+    expect(listed, '만난 적 없는 예린이 이정표에 올랐다').not.toContain('예린');
+    expect(listed, '만난 사람은 그대로 올라야 한다').toContain('도윤');
+  });
+
   it('만난 사람은 이름과 초상화가 나온다', () => {
     accrue('some-solo-event', ['seoa']);
     render(<ArchiveScreen onBack={() => {}} />);
