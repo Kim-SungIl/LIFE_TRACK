@@ -109,13 +109,29 @@ export function NpcAlbumScreen({ npcId, seenCgFiles, onBack }: {
             gap: 12, padding: 16, cursor: 'pointer',
           }}
         >
+          {/* 조작 안내는 세계관 어투로 쓸 문장이 아니다("탭하면 닫힌다"는 사무적으로 읽힌다).
+              문장을 지우고 컨트롤을 둔다 — 배경 어디를 눌러도 닫히는 동작은 그대로다. */}
+          <button
+            // stopPropagation은 장식이 아니다 — 없으면 배경의 닫기 핸들러가 버블링으로 대신
+            // 처리해서 이 버튼의 핸들러를 지워도 화면이 똑같이 닫힌다(뮤테이션으로 확인).
+            // 그러면 버튼이 자기 일을 하는지 아무도 확인할 수 없다.
+            onClick={e => { e.stopPropagation(); setOpen(null); }}
+            aria-label="닫기"
+            style={{
+              position: 'absolute', top: 12, right: 12, width: 36, height: 36,
+              borderRadius: 18, border: '1px solid rgba(255,255,255,0.25)',
+              background: 'rgba(0,0,0,0.45)', color: 'var(--text-secondary)',
+              fontSize: '1.1rem', lineHeight: 1, cursor: 'pointer',
+            }}
+          >
+            ✕
+          </button>
           <img
             src={cgUrl(openPath)}
             alt={open.title}
-            style={{ maxWidth: '100%', maxHeight: '72vh', objectFit: 'contain', borderRadius: 8 }}
+            style={{ maxWidth: '100%', maxHeight: '76vh', objectFit: 'contain', borderRadius: 8 }}
           />
           <div style={{ fontSize: '0.9rem', fontWeight: 600, textAlign: 'center' }}>{open.title}</div>
-          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>탭하면 닫힌다</div>
         </div>
       )}
     </div>

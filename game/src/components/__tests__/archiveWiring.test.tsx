@@ -277,6 +277,41 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     expect(tiles.length, '안 본 칸이 이미지를 싣고 있다').toBe(filled);
   });
 
+  // 전면 보기는 닫는 길이 두 개다 — 명시적 버튼과 배경 탭. 버튼이 없으면 조작 안내 문장을
+  // 다시 넣어야 하고, 그 문장은 세계관 어투와 섞여 사무적으로 읽힌다.
+  it('칸을 누르면 전면 보기가 열리고 닫기 버튼으로 닫힌다', () => {
+    accrueFirstWeek();
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+
+    const tile = screen.getAllByRole('img').find(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''))!;
+    expect(screen.queryByRole('button', { name: '닫기' }), '열기 전에 이미 닫기 버튼이 있다').toBeNull();
+
+    fireEvent.click(tile.closest('button')!);
+    const close = screen.getByRole('button', { name: '닫기' });
+    expect(close, '전면 보기가 안 열렸다').toBeTruthy();
+
+    fireEvent.click(close);
+    expect(screen.queryByRole('button', { name: '닫기' }), '닫기 버튼이 안 닫았다').toBeNull();
+    expect(screen.getByText('초6'), '닫은 뒤 앨범으로 돌아와야 한다').toBeTruthy();
+  });
+
+  // 배경 탭으로도 닫힌다 — 버튼을 넣었어도 이 길을 없애지 않았음을 잠근다.
+  it('전면 보기는 배경을 눌러도 닫힌다', () => {
+    accrueFirstWeek();
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+    const tile = screen.getAllByRole('img').find(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''))!;
+    const title = tile.getAttribute('alt')!;
+    fireEvent.click(tile.closest('button')!);
+
+    // 오버레이 쪽 이미지는 버튼에 감싸이지 않은 쪽이다(칸 타일은 button의 자식).
+    const overlayImg = screen.getAllByAltText(title).find(el => !el.closest('button'))!;
+    expect(overlayImg, '전면 보기 이미지를 못 찾았다').toBeTruthy();
+    fireEvent.click(overlayImg);
+    expect(screen.queryByRole('button', { name: '닫기' }), '배경 탭으로 닫히지 않는다').toBeNull();
+  });
+
   it('돌아가기로 목록으로 복귀한다', () => {
     accrueFirstWeek();
     render(<ArchiveScreen onBack={() => {}} />);
