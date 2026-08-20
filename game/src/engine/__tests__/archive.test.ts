@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createInitialState } from '../gameEngine';
+import { createInitialState, applyYearTransition } from '../gameEngine';
+import { getSchoolLevel } from '../backgrounds';
 import {
   clearArchive, commitRun, emptyArchive, loadArchive, CURRENT_ARCHIVE_VERSION,
   accrueFromState, accrueResolvedEvent, accrueTalk, accrueParentEvent,
@@ -218,12 +219,22 @@ describe('런간 기록 (archive)', () => {
     expect(d).toMatchObject({ newEvents: 3, newTalks: 2, newEndingTitle: true, runs: 1 });
   });
 
+  // 절정 키는 **실제 이벤트 id**여야 한다. 합성 키(`climax:strict`)를 쓰면 CG 리졸버에
+  // 매니페스트에 절대 없는 값이 들어가, 나중에 절정 CG가 추가돼도 앨범에 안 쌓인다.
   it('부모 미니이벤트와 절정도 기록에 남는다 (v1에서는 통째로 빠져 있었다)', () => {
     commitRun(runState({
       parentEventsFired: [{ id: 'parent-mini-a', week: 3 }],
       parentClimaxFired: ['strict'],
     }), '수도권 대학');
-    expect(loadArchive().parentEvents.sort()).toEqual(['climax:strict', 'parent-mini-a']);
+    expect(loadArchive().parentEvents.sort()).toEqual(['climax_parent_strict', 'parent-mini-a']);
+  });
+
+  it('절정 키는 즉시 적립과 백필이 같다', () => {
+    const s = runState({ parentClimaxFired: ['emotional'] });
+    accrueParentEvent(s, 'climax_parent_emotional');   // 즉시 경로(store가 climax.id를 넘긴다)
+    accrueFromState(s);                                 // 백필 경로(강점 → id 역인출)
+    expect(loadArchive().parentEvents, '두 경로가 다른 키를 만들어 중복됐다')
+      .toEqual(['climax_parent_emotional']);
   });
 
   // 적립 단위가 이벤트 id도 (id, choiceIndex)도 아닌 이유 — 같은 이벤트가 성별·선택지에 따라
@@ -286,6 +297,33 @@ describe('런간 기록 (archive)', () => {
     } finally {
       localStorage.setItem = orig;
     }
+  });
+
+  // 즉시 경로의 touchPeak — 여기가 안 잠기면 지워도 npcPeak 테스트 4개가 전부 그린이다
+  // (그것들은 commitRun 경유). 지우면 v1의 "엔딩 시점 최종 친밀도" 과소기록으로 되돌아간다.
+  it('즉시 적립도 최고 친밀도를 갱신한다', () => {
+    const s = runState({ events: [ev('a')] });
+    withIntimacy(s, { subin: 70 });
+    accrueResolvedEvent(s);
+    expect(loadArchive().npcPeak.subin, '즉시 경로가 peak을 안 올렸다').toBe(70);
+
+    // 그 뒤 소원해진 상태로 완주해도 최고치가 남아야 한다 — v1이라면 엔딩 값 30이 기록된다.
+    withIntimacy(s, { subin: 30 });
+    commitRun(s, '수도권 대학');
+    expect(loadArchive().npcPeak.subin, '엔딩 시점 값으로 덮였다(v1 회귀)').toBe(70);
+  });
+
+  // 편승 전략의 영구 손실 경로 — archive가 포화돼 새로 적립할 게 없으면 쓰기가 안 일어나
+  // peak 상승이 저장되지 않았다. touchPeak을 더티에 넣어 막는다.
+  it('새로 본 게 없고 친밀도만 올라도 최고치는 저장된다', () => {
+    const s = runState({ events: [ev('a')] });
+    withIntimacy(s, { subin: 20 });
+    accrueResolvedEvent(s);
+    expect(loadArchive().npcPeak.subin).toBe(20);
+
+    withIntimacy(s, { subin: 80 });      // 같은 이벤트뿐 = 새 콘텐츠 없음
+    accrueFromState(s);
+    expect(loadArchive().npcPeak.subin, 'peak만 오른 변경이 저장되지 않았다').toBe(80);
   });
 
   // npcPeak은 아직 어느 화면도 렌더하지 않지만 영속 데이터라 적립을 유지한다(지금 안 쌓으면
@@ -358,15 +396,21 @@ describe('런간 기록 (archive)', () => {
         expect(a.parentEvents).toEqual([]);
       });
 
+      // v2 신규 필드 **넷 전부**를 픽스처에 넣는다. 둘만 넣으면 나머지 둘의 초기화를 지워도
+      // 통과해서 신뢰 경계가 비대칭인 걸 놓친다(검수에서 실제로 그렇게 새 나갔다).
       it('v1 페이로드가 들고 온 v2 필드는 신뢰하지 않는다', () => {
         localStorage.setItem(ARCHIVE_KEY, JSON.stringify({
           version: 1, events: ['a'],
           pendingRun: { events: ['거짓말'], talks: ['거짓말'] },
           lastRunDelta: { newEvents: 99, newTalks: 9, newEndingTitle: true, runs: 9 },
+          cgFiles: ['high/본적없는그림.png'],
+          parentEvents: ['climax_parent_strict'],
         }));
         const a = loadArchive();
         expect(a.pendingRun.events, 'v1→v2 분기가 pendingRun을 비우지 않았다').toEqual([]);
         expect(a.lastRunDelta, 'v1에는 정산 개념이 없었는데 값이 살아남았다').toBeNull();
+        expect(a.cgFiles, 'v1이 쓴 적 없는 cgFiles가 통과했다 — 안 본 그림이 앨범에 들어간다').toEqual([]);
+        expect(a.parentEvents, 'v1이 쓴 적 없는 parentEvents가 통과했다').toEqual([]);
       });
 
       // 짝이 되는 양성 단언 — 위 둘만 두면 분기를 "항상 비우기"로 바꿔도 통과한다.
@@ -381,6 +425,32 @@ describe('런간 기록 (archive)', () => {
         expect(a.lastRunDelta).toEqual({ newEvents: 2, newTalks: 1, newEndingTitle: true, runs: 4 });
         expect(a.cgFiles).toEqual(['elementary/x.png']);
       });
+    });
+
+    // 손상 페이로드가 엔딩 요약에 문자열을 그대로 내보내지 않게 — 형제 단언이 기존 필드에만
+    // 있어서 v2 신규 필드 둘은 검증이 비어 있었다.
+    it('신규 필드도 타입이 어긋나면 걸러낸다', () => {
+      localStorage.setItem(ARCHIVE_KEY, JSON.stringify({
+        version: 2,
+        pendingRun: { events: ['a', 7, null], talks: 'nope' },
+        lastRunDelta: { newEvents: '9999', newTalks: null, newEndingTitle: 'yes', runs: 1.9 },
+      }));
+      const a = loadArchive();
+      expect(a.pendingRun.events, 'pendingRun에 문자열 아닌 값이 살아남았다').toEqual(['a']);
+      expect(a.pendingRun.talks).toEqual([]);
+      expect(a.lastRunDelta, 'lastRunDelta가 검증 없이 통과했다')
+        .toEqual({ newEvents: 0, newTalks: 0, newEndingTitle: false, runs: 1 });
+    });
+
+    // "기록 실패가 플레이를 막지 않는다"를 즉시 적립 경로에도 적용한다. events가 없는 손상
+    // 세이브에서 mergeState의 for-of가 던져 실제로 이어하기가 실패했다.
+    it('손상된 state를 적립하려 해도 던지지 않는다', () => {
+      const broken = { ...runState(), events: undefined } as unknown as GameState;
+      expect(() => accrueFromState(broken), '기록이 이어하기를 막았다').not.toThrow();
+      const noNpcs = { ...runState({ events: [ev('a')] }), npcs: undefined } as unknown as GameState;
+      expect(() => accrueResolvedEvent(noNpcs), '기록이 이벤트 해결을 막았다').not.toThrow();
+      expect(() => accrueTalk(noNpcs, 't1')).not.toThrow();
+      expect(() => accrueParentEvent(noNpcs, 'p1')).not.toThrow();
     });
 
     it('저장이 실패해도 엔딩 적립이 던지지 않는다', () => {
@@ -469,6 +539,22 @@ describe('적립 배선 — 실제로 엔딩까지 가면 기록이 남는가', 
     expect(loadArchive().runs, '완주 횟수가 중복 적립됐다').toBe(1);
   });
 
+  // 결과 화면 CG가 "발생 학년"으로 해석되는 것을 지키는 전제. W48 이벤트는 학년 전환 뒤에
+  // 결과 화면이 뜨므로, 전환이 학교급을 바꾸면 그 순간 CG 후보가 0개가 된다(= 그림 없음).
+  // 현재는 applyYearTransition이 Y1~Y6에서 학년을 아예 올리지 않고(phase만 year-end),
+  // 올리는 Y7→Y8은 둘 다 high라 도달 불가다. year++를 여기로 옮기는 리팩터가 오면 이 단언이
+  // 먼저 깨져서, EventResultData.year가 방어용에서 필수로 바뀌었음을 알려준다.
+  it('학년 전환은 학교급을 바꾸지 않는다 (W48 CG 해석의 전제)', () => {
+    for (let y = 1; y <= 7; y++) {
+      const s = runState();
+      s.year = y;
+      s.week = 49;
+      const before = getSchoolLevel(y);
+      applyYearTransition(s);
+      expect(getSchoolLevel(s.year), `Y${y} 전환이 학교급을 ${before}에서 바꿨다`).toBe(before);
+    }
+  });
+
   // ===== v2의 존재 이유 — 완주하지 않아도 본 것은 남는다 =====
   // 이 블록이 없으면 accrue* 호출부를 전부 지워도 위 테스트들은 그대로 그린이다(엔딩까지
   // 가면 commitRun의 백스톱이 같은 결과를 만들기 때문). 즉시 적립은 "중간"을 봐야 잠긴다.
@@ -518,6 +604,53 @@ describe('적립 배선 — 실제로 엔딩까지 가면 기록이 남는가', 
       expect(a.lastRunDelta!.newEvents, '판 중 적립분이 정산에 반영되지 않았다').toBe(a.events.length);
       expect(a.lastRunDelta!.newEvents).toBeGreaterThan(0);
       expect(a.pendingRun.events, '정산 후에도 기준선이 남아 있다').toEqual([]);
+    });
+
+    // 미니톡·부모 배선 — 이게 없으면 accrueTalk / accrueParentEvent 호출부를 통째로 지워도
+    // 전 스위트가 그린이다. 손실은 완주하지 않은 판에서만 나타나므로(엔딩까지 가면 commitRun의
+    // 백스톱이 같은 결과를 만든다) 여기서 엔딩 없이 잡아야 한다.
+    it('말걸기 미니이벤트도 발동 즉시 기록에 남는다', () => {
+      useGameStore.getState().startGame('male', PARENTS);
+      useGameStore.getState().resolveEvent(0);          // 부팅 장면 닫기
+      // 미니톡 발동 조건을 결정론적으로 만든다(친밀도 30+ / 이번 주 사전 결정 on)
+      const s = useGameStore.getState().state!;
+      useGameStore.setState({ state: {
+        ...s, npcEventPendingThisWeek: true,
+        npcs: s.npcs.map(n => n.id === 'jihun' ? { ...n, met: true, intimacy: 60 } : n),
+      } });
+      const r = useGameStore.getState().talkToNpc('jihun');
+      expect(r.kind, '미니톡이 안 떴다 — 이 테스트가 무의미해진다').toBe('event');
+
+      const a = loadArchive();
+      expect(a.talks, '미니톡을 봤는데 기록에 없다').toContain(useGameStore.getState().state!.talkEventsFired.at(-1));
+      expect(a.runs, '완주하지 않았는데 완주수가 올랐다').toBe(0);
+    });
+
+    it('부모 절정도 발동 즉시 기록에 남는다', () => {
+      useGameStore.getState().startGame('male', PARENTS);
+      useGameStore.getState().resolveEvent(0);
+      // strict 절정은 climaxYearMin을 넘기면 결정론적으로 뜬다(pressure RNG 무관)
+      const s = useGameStore.getState().state!;
+      useGameStore.setState({ state: { ...s, year: 7, week: 40, parentIntimacy: 90 } });
+      const r = useGameStore.getState().talkToHome();
+      expect(r.kind, '절정이 안 떴다 — 이 테스트가 무의미해진다').toBe('event');
+
+      const a = loadArchive();
+      expect(a.parentEvents, '부모 장면을 봤는데 기록에 없다').toHaveLength(1);
+      expect(a.parentEvents[0], '합성 키가 아니라 실제 이벤트 id여야 한다').toMatch(/^climax_parent_|^parent/);
+      expect(a.runs).toBe(0);
+    });
+
+    // newTalks 경로 — newEvents만 단언하면 accrueTalk의 pendingRun 전달을 지워도 그린이고,
+    // 엔딩 요약의 "나눈 대화" 신규 수가 항상 0이 된다.
+    it('완주 정산은 미니톡 신규 수도 판 중 적립분으로 센다', () => {
+      accrueTalk(runState(), 't-alpha');
+      accrueTalk(runState(), 't-beta');
+      expect(loadArchive().pendingRun.talks.sort()).toEqual(['t-alpha', 't-beta']);
+
+      const d = commitRun(runState({ talkEventsFired: ['t-alpha', 't-beta'] }), '수도권 대학');
+      expect(d.newTalks, '판 중에 적립된 미니톡이 정산에 반영되지 않았다').toBe(2);
+      expect(loadArchive().lastRunDelta!.newTalks).toBe(2);
     });
 
     it('새로 본 게 없으면 기록을 다시 쓰지 않는다 (더티체크)', () => {

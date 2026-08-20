@@ -27,10 +27,16 @@
 //       화면에서 새로고침하면 runDelta가 메모리에서 사라져 "처음 본 이야기"가 조용히 없어졌다.
 //
 // 완주 게이트를 남기는 축은 runs / endings 둘뿐이다. runs는 이 스키마에서 **유일한 비멱등
-// 필드**(+= 1)라 중복·재진입 위험이 전부 거기 모이고, 그걸 엔딩 전이 감지 한 곳에만 매달아
-// 두면 위험 표면이 0이 된다. 나머지 축은 전부 집합이라 몇 번 적립해도 결과가 같다.
+// 필드**(+= 1)라 중복·재진입 위험이 전부 거기 모인다. 그걸 엔딩 전이 감지 한 곳에만 매달아
+// 두면 위험이 최소화되지만 **0은 아니다**: commitRun이 archive를 먼저 쓰고 그 뒤 세이브 쓰기가
+// 실패하면(용량 초과 시 120KB 세이브가 4.6KB archive보다 먼저 터진다) 디스크에는 엔딩 직전
+// 세이브가 남아, 이어하기 후 다시 넘기면 runs가 한 번 더 오른다. v1도 같은 순서였으므로 이
+// 구조의 회귀는 아니다. 그 재생 경로에서는 pendingRun이 이미 비워져 있어 "처음 본 이야기"
+// 카운트도 붕괴한다 — 세이브/archive 쓰기를 원자적으로 묶지 않는 한 남는 대가다.
+// 나머지 축은 전부 집합이라 몇 번 적립해도 결과가 같다.
 import type { GameState } from './types';
 import { resolveEventCgRelPaths } from './eventCg';
+import { PARENT_CLIMAX_EVENTS } from './talkData/miniEvents';
 
 const ARCHIVE_KEY = 'lifetrack_archive';
 export const CURRENT_ARCHIVE_VERSION = 2;
@@ -139,11 +145,23 @@ function readDelta(v: Partial<RunDelta> | null | undefined): RunDelta | null {
  *
  * v3를 도입하면 여기에 `if (from < 3)`를 잇고, **v1 픽스처가 v3까지 관통하는** 테스트를
  * 같이 넣을 것. 분기를 지웠을 때 실패하는 단언이 없으면 이 함수는 잠긴 게 아니다.
+ *
+ * ⚠️ 그때 같이 처리할 것 — **미래 버전 강등**. 지금은 from > CURRENT인 페이로드(다른 배포를
+ * 탭 두 개로 여는 경우 등)도 마이그레이션 없이 통과한 뒤 마지막 줄에서 version만 CURRENT로
+ * 내려 찍히고, 이 빌드가 모르는 필드는 다음 저장에서 사라진다. 그 뒤 신 빌드로 돌아가면
+ * 이미 마이그레이션된 데이터에 마이그레이션이 또 돈다. 세이브 로더에는 이미 규약이 있다
+ * (store.ts: `version > CURRENT_SAVE_VERSION`이면 null = 다운그레이드 거부).
+ * v3가 없는 현재는 도달 불가라 지금 막지 않는다 — 여기서 빈 기록으로 떨어뜨리면 "기록이
+ * 조용히 사라지는" 새 위험이 생기고, 올바른 처리(읽기 전용 유지)는 v3 스키마를 봐야 정해진다.
  */
 function migrateArchive(a: RunArchive, from: number): void {
   if (from < 2) {
+    // v1 코드는 이 필드들을 쓴 적이 없다 → 들고 왔다면 신뢰할 근거가 없다. 넷을 같이 비운다
+    // (pendingRun/lastRunDelta만 비우고 cgFiles/parentEvents는 통과시키면 신뢰 경계가 비대칭이 된다).
     a.pendingRun = { events: [], talks: [] };
     a.lastRunDelta = null;
+    a.cgFiles = [];
+    a.parentEvents = [];
   }
 }
 
@@ -159,18 +177,30 @@ function addTo(list: string[], id: string | undefined | null): boolean {
 }
 
 /**
- * NPC 역대 최고 친밀도 갱신. **더티 판정에는 참여하지 않는다**(반환값이 없는 이유).
+ * NPC 역대 최고 친밀도 갱신. 실제로 최고치를 갱신했으면 true — **더티 판정에 참여한다**.
  *
- * 친밀도는 거의 매 주 오르내리므로 이걸 더티로 세면 더티체크가 무력해진다(판당 수백 회 쓰기).
- * 대신 다른 축이 새로 들어가 쓰기가 이미 일어나는 순간에 편승하고, 엔딩에서 한 번 더 확정한다.
- * 화면에 나가지 않는 원천 데이터라 몇 주 늦게 반영되는 건 대가로 받아들일 만하다.
- * (v1은 엔딩 시점 최종 친밀도만 봤다 — 친밀도는 Y2 정점 후 내려가므로 체계적 과소기록이었다.)
+ * 처음에는 편승 전략(다른 축이 쓰기를 일으킬 때만 같이 저장)을 썼는데, 검수에서 영구 손실
+ * 경로가 나왔다: archive가 포화된 2회차 이후에는 새로 볼 콘텐츠가 없어 쓰기가 아예 안
+ * 일어나므로, 친밀도를 20→80까지 올려도 기록은 20에 머물고 그 판을 버리면 복구 불가였다.
+ *
+ * 더티에 넣는 비용이 걱정보다 작다: 조건이 "친밀도가 올랐다"가 아니라 **"역대 최고를
+ * 갱신했다"**이고, 이 함수는 콘텐츠 적립 시점에만 불린다(주간 진행이나 잡담에는 안 붙는다).
+ * 1회차엔 대부분 새 이벤트와 같은 순간이라 어차피 쓰던 쓰기이고, 2회차 이후엔 1회차가 세운
+ * 최고치를 넘어야 하므로 빈도가 낮다.
+ *
+ * (v1은 엔딩 시점 최종 친밀도만 봤다 — 친밀도는 Y2 정점 후 내려가므로 체계적 과소기록이었다.
+ * 한 판 실측에서 지훈은 최고 78.5인데 엔딩 시점 61.6이었다.)
  */
-function touchPeak(a: RunArchive, npcs: GameState['npcs']): void {
+function touchPeak(a: RunArchive, npcs: GameState['npcs']): boolean {
+  let raised = false;
   for (const n of npcs) {
     if (!n.met) continue;
-    if ((a.npcPeak[n.id] ?? -1) < n.intimacy) a.npcPeak[n.id] = n.intimacy;
+    if ((a.npcPeak[n.id] ?? -1) < n.intimacy) {
+      a.npcPeak[n.id] = n.intimacy;
+      raised = true;
+    }
   }
+  return raised;
 }
 
 /**
@@ -179,12 +209,20 @@ function touchPeak(a: RunArchive, npcs: GameState['npcs']): void {
  * 적립 단위가 이벤트 id도 (id, choiceIndex)도 아닌 "해석된 파일 경로"인 이유:
  * 같은 이벤트가 성별·선택지·학교급에 따라 다른 그림이 되고(성별 분기만 87건), 반대로 폴백
  * 체인이 여러 선택지를 한 파일로 접기도 한다. 경로를 키로 쓰면 **플레이어가 실제로 본 그림
- * 한 장**과 앨범 한 칸이 정확히 일치한다. 매니페스트 필터를 이미 통과한 값이므로 존재도 보장된다.
- * 부수 효과로 sentinel(-1) 선택지가 만드는 `_c-1_` 유령 변종이 자동으로 사라진다.
+ * 한 장**과 앨범 한 칸이 정확히 일치한다.
+ * 부수 효과로 sentinel(-1) 선택지가 만드는 `_c-1_` 유령 변종이 자동으로 사라진다 —
+ * `-1`은 nullish가 아니라 `?? 0`을 통과해 그대로 리졸버로 가지만, `_c-1_` 파일이 매니페스트에
+ * 없어 후보에서 걸러진다(0으로 치환되는 게 아니다).
  *
- * year는 **발생 학년**이어야 한다. W48 이벤트는 결과 화면이 뜨기 전에 학년 전환이 끝나므로,
- * 전환 후 학년으로 해석하면 Y1→Y2(초등→중등)·Y4→Y5(중등→고등) 경계에서 플레이어가 본 적
- * 없는 학교급의 그림이 적립된다.
+ * ⚠️ 남은 구멍 하나: 표시 쪽(EventResultScreen)은 `[0]` 로드가 실패하면 onError로 `[1]`,
+ * `[2]`…로 cascade하는데 적립은 `[0]`만 넣는다. 매니페스트는 public/images의 **png** 목록이고
+ * 릴리즈는 webp만 배포하므로 "매니페스트에 있다"가 실제 요청 성공을 보장하지는 않는다.
+ * assetWebp/assetExistence 테스트가 있어 도달성은 낮지만, "적립된 CG = 본 그림"의 유일한
+ * 예외라 여기 적어 둔다.
+ *
+ * year는 **발생 학년**이다. 정규 이벤트는 recordResolvedEvent가 항목에 박아둔 값을 읽으므로
+ * 호출 시점(학년 전환 전/후)과 무관하게 같은 파일이 나온다. 지금은 전환 자체가 Y1~Y6에서
+ * 학년을 올리지 않아 어긋날 여지도 없지만, 항목의 year를 읽는 쪽이 그 사실에 의존하지 않는다.
  */
 function resolveCg(id: string, choiceIndex: number, gender: GameState['gender'], year: number): string | null {
   return resolveEventCgRelPaths(id, choiceIndex, gender, year)[0] ?? null;
@@ -198,42 +236,63 @@ function record(a: RunArchive, pool: string[], pending: string[] | null, id: str
 }
 
 /**
- * 정규 이벤트 해결 즉시 1회 — 방금 기록된 이벤트(state.events의 마지막 항목)를 적립한다.
+ * 적립 실패를 삼키는 껍데기. `commitOnEnding`이 "기록 실패가 엔딩을 막지 않는다"고 선언한
+ * 것과 같은 규약을 즉시 적립 경로에도 적용한다 — 호출부마다 try/catch를 흩뿌리는 대신
+ * 여기 한 곳에 둔다(호출부가 6곳이고, 앞으로 늘어난다).
  *
- * recordResolvedEvent 직후·학년 전환 전에 불러야 한다: 그 시점의 state.year가 발생 학년이고,
- * 마지막 항목에 resolvedChoice가 이미 박혀 있어 CG 해석에 필요한 것이 전부 손에 있다.
+ * 이게 없으면 기록이 플레이를 막는다: `events` 필드가 없는 손상 세이브에서 mergeState의
+ * for-of가 던져 **이어하기 자체가 실패했다**(검수에서 실측). 기록은 선택적 기능이므로
+ * 조용히 포기하는 쪽이 맞다.
+ */
+function safely(fn: () => void): void {
+  try { fn(); } catch { /* 기록은 선택적 기능 — 플레이를 막지 않는다 */ }
+}
+
+/**
+ * 정규 이벤트 해결 즉시 1회 — 방금 기록된 이벤트(state.events의 마지막 항목)를 적립한다.
+ * 마지막 항목에 resolvedChoice·year가 이미 박혀 있어 CG 해석에 필요한 것이 전부 손에 있다.
  */
 export function accrueResolvedEvent(state: GameState): void {
-  const e = state.events[state.events.length - 1];
-  if (!e) return;
-  const a = loadArchive();
-  let dirty = record(a, a.events, a.pendingRun.events, e.id);
-  const cg = resolveCg(e.id, e.resolvedChoice ?? 0, state.gender, e.year ?? state.year);
-  if (addTo(a.cgFiles, cg)) dirty = true;
-  touchPeak(a, state.npcs);
-  if (dirty) persist(a);
+  safely(() => {
+    const e = state.events[state.events.length - 1];
+    if (!e) return;
+    const a = loadArchive();
+    let dirty = record(a, a.events, a.pendingRun.events, e.id);
+    const cg = resolveCg(e.id, e.resolvedChoice ?? 0, state.gender, e.year ?? state.year);
+    if (addTo(a.cgFiles, cg)) dirty = true;
+    if (touchPeak(a, state.npcs)) dirty = true;
+    if (dirty) persist(a);
+  });
 }
 
 /** 말걸기 미니이벤트 발동 즉시 1회. CG는 common/talk_*.png 8장이 이 경로로만 도달한다. */
 export function accrueTalk(state: GameState, talkId: string): void {
-  const a = loadArchive();
-  let dirty = record(a, a.talks, a.pendingRun.talks, talkId);
-  if (addTo(a.cgFiles, resolveCg(talkId, 0, state.gender, state.year))) dirty = true;
-  touchPeak(a, state.npcs);
-  if (dirty) persist(a);
+  safely(() => {
+    const a = loadArchive();
+    let dirty = record(a, a.talks, a.pendingRun.talks, talkId);
+    if (addTo(a.cgFiles, resolveCg(talkId, 0, state.gender, state.year))) dirty = true;
+    if (touchPeak(a, state.npcs)) dirty = true;
+    if (dirty) persist(a);
+  });
 }
 
 /**
  * 부모 미니이벤트·절정 발동 즉시 1회.
  * v1에서는 이 축이 통째로 빠져 있었다 — talkEventsFired만 훑었기 때문에, 평생 1회짜리
  * 강점별 절정 장면이 기록에 단 하나도 남지 않았다.
+ *
+ * id는 **실제 이벤트 id**를 받는다(절정은 `climax_parent_{강점}`). 처음에는 강점에서
+ * `climax:{강점}` 합성 키를 만들었는데, 그러면 CG 리졸버에 매니페스트에 절대 없는 키가
+ * 들어가 나중에 절정 CG가 추가돼도 앨범에 안 쌓인다.
  */
 export function accrueParentEvent(state: GameState, id: string): void {
-  const a = loadArchive();
-  let dirty = addTo(a.parentEvents, id);
-  if (addTo(a.cgFiles, resolveCg(id, 0, state.gender, state.year))) dirty = true;
-  touchPeak(a, state.npcs);
-  if (dirty) persist(a);
+  safely(() => {
+    const a = loadArchive();
+    let dirty = addTo(a.parentEvents, id);
+    if (addTo(a.cgFiles, resolveCg(id, 0, state.gender, state.year))) dirty = true;
+    if (touchPeak(a, state.npcs)) dirty = true;
+    if (dirty) persist(a);
+  });
 }
 
 /**
@@ -245,17 +304,23 @@ export function accrueParentEvent(state: GameState, id: string): void {
  * 전부 집합 의미론이라 몇 번 불러도 결과가 같다(멱등). 새로 들어간 게 없으면 쓰지 않는다.
  */
 export function accrueFromState(state: GameState): void {
-  const a = loadArchive();
-  if (mergeState(a, state)) persist(a);
+  safely(() => {
+    const a = loadArchive();
+    if (mergeState(a, state)) persist(a);
+  });
 }
 
 function mergeState(a: RunArchive, state: GameState): boolean {
   let dirty = false;
   for (const e of state.events) {
     if (record(a, a.events, a.pendingRun.events, e.id)) dirty = true;
-    // 백필도 같은 리졸버·같은 발생 학년을 쓴다 — 즉시 적립과 결과가 어긋나면 안 된다.
+    // 정규 이벤트는 항목에 발생 학년이 박혀 있어 즉시 적립과 같은 파일이 나온다.
     if (addTo(a.cgFiles, resolveCg(e.id, e.resolvedChoice ?? 0, state.gender, e.year ?? 1))) dirty = true;
   }
+  // ⚠️ 미니톡·부모이벤트는 발생 학년을 저장하지 않으므로 여기서는 **로드 시점의** state.year를
+  // 쓴다(즉시 적립은 발동 시점이라 정확하다). 지금은 무해하다 — talk CG 8장이 전부 common/이라
+  // 학교급과 무관하다. 다만 high/talk_*.png 하나만 추가되면 두 경로가 다른 파일을 넣는다.
+  // 그때는 talkEventsFired를 {id, year} 구조로 올리는 게 정공법이다.
   for (const id of state.talkEventsFired ?? []) {
     if (record(a, a.talks, a.pendingRun.talks, id)) dirty = true;
     if (addTo(a.cgFiles, resolveCg(id, 0, state.gender, state.year))) dirty = true;
@@ -264,10 +329,15 @@ function mergeState(a: RunArchive, state: GameState): boolean {
     if (addTo(a.parentEvents, f.id)) dirty = true;
     if (addTo(a.cgFiles, resolveCg(f.id, 0, state.gender, state.year))) dirty = true;
   }
+  // 절정은 state에 강점만 남으므로 실제 이벤트 id로 되돌린다 — 즉시 적립과 같은 키여야 하고,
+  // 합성 키(`climax:strict`)는 매니페스트에 절대 없어 CG 경로가 죽는다.
   for (const strength of state.parentClimaxFired ?? []) {
-    if (addTo(a.parentEvents, `climax:${strength}`)) dirty = true;
+    const c = PARENT_CLIMAX_EVENTS.find(e => e.parentStrength === strength);
+    if (!c) continue;
+    if (addTo(a.parentEvents, c.id)) dirty = true;
+    if (addTo(a.cgFiles, resolveCg(c.id, 0, state.gender, state.year))) dirty = true;
   }
-  touchPeak(a, state.npcs);
+  if (touchPeak(a, state.npcs)) dirty = true;
   return dirty;
 }
 

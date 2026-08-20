@@ -422,8 +422,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     // 이벤트 기록 (선택 인덱스 + 발생주차 + 연차 + 성별 분기)
     recordResolvedEvent(newState, event, choiceIndex, occurrenceWeek, isFemale);
-    // 런간 기록 즉시 적립 — **반드시 resolveEventChain 전에.** 그 안에서 W48 학년 전환이
-    // 일어나므로, 뒤로 옮기면 CG가 다음 학교급으로 해석돼 안 본 그림이 앨범에 들어간다.
+    // 런간 기록 즉시 적립. 바로 위 recordResolvedEvent가 방금 push한 항목을 읽는다.
+    //
+    // CG의 발생 학년을 지키는 것은 이 호출 순서가 **아니다** — recordResolvedEvent가 항목에
+    // year를 박아 두므로(위 함수) 적립은 그 값을 읽고, resolveEventChain의 W48 학년 전환
+    // 뒤로 옮겨도 같은 파일이 적립된다(실측 확인). 순서가 실제로 정하는 건 touchPeak이
+    // 친밀도를 읽는 시점뿐이다. 여기 두는 이유는 "기록은 방금 일어난 일 옆에서" 정도의
+    // 가독성이고, 계약이 아니다.
     accrueResolvedEvent(newState);
 
     // weekLog 메시지 + 이벤트 닫기
@@ -548,7 +553,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       newState.parentTalkPressure = 0;
       newState.parentEventPendingThisWeek = false;
       // 절정은 평생 1회 — 이 판을 완주하지 않으면 v1에서는 어디에도 남지 않았다.
-      accrueParentEvent(newState, `climax:${climax.parentStrength}`);
+      // 실제 이벤트 id를 넘긴다(합성 키는 CG 리졸버에서 절대 매칭되지 않는다).
+      accrueParentEvent(newState, climax.id);
       set({ state: newState });
       return { kind: 'event', event: climax };
     }
