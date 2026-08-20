@@ -67,7 +67,11 @@ export function TitleScreen() {
   const hasCleared = (() => {
     try { return localStorage.getItem('lifetrack_has_cleared') === '1'; } catch { return false; }
   })();
-  const hasArchive = loadArchive().runs > 0;
+  // 기록실은 "쌓인 게 있으면" 열린다 — 완주가 조건이 아니다. 중도에 그만둔 판의 이야기도
+  // 이제 적립되므로, runs만 보면 이벤트 100개를 본 사람에게 빈 선반을 감추는 셈이 된다.
+  // 도전 모드 게이트(hasCleared)는 그대로 완주 조건을 쓴다 — 둘은 다른 질문에 답한다.
+  const archive = loadArchive();
+  const hasArchive = archive.runs > 0 || archive.events.length > 0;
 
   const toggle = (id: ParentStrength) => {
     if (selected.includes(id)) {

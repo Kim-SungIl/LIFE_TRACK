@@ -16,6 +16,11 @@ export type EventResultData = {
   effects: Record<string, string>[];
   event?: GameEvent;
   choiceIndex?: number;
+  // 이벤트가 **발생한** 학년. 선택 시점(resolveEvent 이전)의 값을 담는다.
+  // W48 이벤트는 resolveEventChain 안에서 학년 전환이 끝난 뒤에 결과 화면이 뜨므로,
+  // 여기서 state.year를 그대로 읽으면 Y1→Y2·Y4→Y5 경계에서 다음 학교급 CG를 해석한다
+  // (플레이어가 본 적 없는 그림이 뜨고, 앨범에 적립된 것과도 어긋난다).
+  year?: number;
 };
 
 /**

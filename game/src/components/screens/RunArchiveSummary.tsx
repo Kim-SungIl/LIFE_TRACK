@@ -2,8 +2,9 @@ import { loadArchive, type RunDelta } from '../../engine/archive';
 import { barelyTouchedNames } from '../../engine/npcStoryPool';
 
 interface Props {
-  // 이번 판의 적립 결과. 엔딩 화면에서 새로고침하면 null이 되므로(전이 시점에만 계산된다)
-  // 그때는 누적 기록만으로 이정표를 그린다.
+  // 이번 판의 적립 결과. store의 값은 메모리라 엔딩 화면에서 새로고침하면 null이 되므로
+  // (전이 시점에만 계산된다) archive에 영속된 lastRunDelta로 떨어진다 — 예전에는 이때
+  // "처음 본 이야기" 줄이 조용히 사라졌다.
   runDelta: RunDelta | null;
 }
 
@@ -23,8 +24,9 @@ interface Props {
 export function RunArchiveSummary({ runDelta }: Props) {
   const archive = loadArchive();
   const barely = barelyTouchedNames(archive.events);
-  const newEvents = runDelta?.newEvents ?? 0;
-  const runs = runDelta?.runs ?? archive.runs;
+  const delta = runDelta ?? archive.lastRunDelta;
+  const newEvents = delta?.newEvents ?? 0;
+  const runs = delta?.runs ?? archive.runs;
 
   // 첫 완주에 "처음 본 이야기 121개"는 의미가 없다(전부 처음이다) — 2회차부터 보여준다.
   const showNew = runs > 1 && newEvents > 0;

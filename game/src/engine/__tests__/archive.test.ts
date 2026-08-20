@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { createInitialState } from '../gameEngine';
-import { clearArchive, commitRun, emptyArchive, loadArchive, CURRENT_ARCHIVE_VERSION } from '../archive';
+import {
+  clearArchive, commitRun, emptyArchive, loadArchive, CURRENT_ARCHIVE_VERSION,
+  accrueFromState, accrueResolvedEvent, accrueTalk, accrueParentEvent,
+} from '../archive';
 import { barelyTouchedNames, npcStoryRows } from '../npcStoryPool';
 import { INTIMACY_TIER_LABEL, intimacyTier, type IntimacyTier } from '../npcRoster';
 import { useGameStore } from '../store';
@@ -196,7 +199,10 @@ describe('런간 기록 (archive)', () => {
     expect(loadArchive().version).toBe(CURRENT_ARCHIVE_VERSION);
   });
 
-  it('한 판을 적립하면 이벤트·CG·미니톡·엔딩·완주수가 남는다', () => {
+  // cg(배경 키)는 v2에서 **동결**됐다 — 담긴 값은 공용 배경 56종이고, 앨범이 쓰는 CG 파일
+  // 경로(432장)와 의미 단위가 달라 재해석이 불가능하다. 이 단언이 ['classroom','rooftop']으로
+  // 되돌아오면 동결이 풀린 것이고, 그때 앨범에는 플레이어가 본 적 없는 그림이 섞여 들어간다.
+  it('한 판을 적립하면 이벤트·미니톡·엔딩·완주수가 남고, 배경 키는 더 쌓이지 않는다', () => {
     const s = runState({
       events: [ev('a', 'classroom'), ev('b', 'rooftop'), ev('c')],
       talkEventsFired: ['t1', 't2'],
@@ -206,10 +212,37 @@ describe('런간 기록 (archive)', () => {
     const a = loadArchive();
     expect(a.runs).toBe(1);
     expect(a.events.sort()).toEqual(['a', 'b', 'c']);
-    expect(a.cg.sort()).toEqual(['classroom', 'rooftop']);
+    expect(a.cg, 'v2에서 동결한 배경 키가 다시 쌓인다').toEqual([]);
     expect(a.talks.sort()).toEqual(['t1', 't2']);
     expect(a.endings).toEqual(['수도권 대학']);
     expect(d).toMatchObject({ newEvents: 3, newTalks: 2, newEndingTitle: true, runs: 1 });
+  });
+
+  it('부모 미니이벤트와 절정도 기록에 남는다 (v1에서는 통째로 빠져 있었다)', () => {
+    commitRun(runState({
+      parentEventsFired: [{ id: 'parent-mini-a', week: 3 }],
+      parentClimaxFired: ['strict'],
+    }), '수도권 대학');
+    expect(loadArchive().parentEvents.sort()).toEqual(['climax:strict', 'parent-mini-a']);
+  });
+
+  // 적립 단위가 이벤트 id도 (id, choiceIndex)도 아닌 이유 — 같은 이벤트가 성별·선택지에 따라
+  // 다른 그림이 된다. id로 세면 여주 플레이어의 앨범이 남주 그림을 채웠다고 주장한다.
+  it('CG는 실제로 표시된 파일 경로로 적립된다 (성별 분기 보존)', () => {
+    const cgEvent = (gender: 'male' | 'female'): GameState => {
+      const s = createInitialState(gender, PARENTS, { rngSeed: 12345 });
+      s.talkEventsFired = [];
+      s.events = [{ ...ev('doyun-graduation-sign'), resolvedChoice: 0, year: 1 } as GameEvent];
+      return s;
+    };
+    accrueFromState(cgEvent('male'));
+    expect(loadArchive().cgFiles).toEqual(['elementary/doyun-graduation-sign_c0_m.png']);
+
+    accrueFromState(cgEvent('female'));
+    expect(loadArchive().cgFiles.sort(), '성별이 다른데 같은 칸으로 접혔다').toEqual([
+      'elementary/doyun-graduation-sign_c0_f.png',
+      'elementary/doyun-graduation-sign_c0_m.png',
+    ]);
   });
 
   // 이 기능의 존재 이유 — 두 번째 판에서 "무엇이 새로웠는지"가 정확해야 한다.
@@ -231,6 +264,28 @@ describe('런간 기록 (archive)', () => {
     const a = loadArchive();
     expect(a.endings).toEqual(['SKY 경영대 합격']);
     expect(a.runs).toBe(2);
+  });
+
+  // 더티체크는 즉시 적립의 비용을 0으로 수렴시키는 장치다(2회차부터 새로 보는 건 1~5종).
+  // 경로가 넷이므로 넷 다 잠근다 — accrueFromState만 잠그면 나머지 셋의 체크를 지워도 그린이다.
+  it('같은 것을 다시 봐도 기록을 다시 쓰지 않는다 (즉시 적립 경로 더티체크)', () => {
+    const s = runState({ events: [{ ...ev('doyun-graduation-sign'), resolvedChoice: 0, year: 1 } as GameEvent] });
+    accrueResolvedEvent(s);
+    accrueTalk(s, 't1');
+    accrueParentEvent(s, 'p1');
+    expect(loadArchive().events, '첫 적립 자체가 안 됐다면 아래 단언은 공허 참이다').toContain('doyun-graduation-sign');
+
+    let writes = 0;
+    const orig = localStorage.setItem.bind(localStorage);
+    localStorage.setItem = (k: string, v: string) => { if (k === ARCHIVE_KEY) writes++; orig(k, v); };
+    try {
+      accrueResolvedEvent(s);
+      accrueTalk(s, 't1');
+      accrueParentEvent(s, 'p1');
+      expect(writes, '이미 본 것을 다시 적립하면서 기록을 다시 썼다').toBe(0);
+    } finally {
+      localStorage.setItem = orig;
+    }
   });
 
   // npcPeak은 아직 어느 화면도 렌더하지 않지만 영속 데이터라 적립을 유지한다(지금 안 쌓으면
@@ -284,6 +339,48 @@ describe('런간 기록 (archive)', () => {
       expect(a.cg).toEqual([]);
       expect(a.endings).toEqual(['끝']);
       expect(a.npcPeak).toEqual({ subin: 80 });
+    });
+
+    // 버전 분기가 재스탬프보다 먼저 오는지를 잠근다. 순서가 뒤집히면 v1 페이로드가 내용
+    // 그대로 v2 상표를 달고 저장되고, 나중의 v2→v3 마이그레이션이 v1을 v2로 착각한다.
+    describe('v1 → v2 마이그레이션', () => {
+      it('v1의 배경 키는 유지되고 CG 앨범은 빈 상태로 시작한다', () => {
+        localStorage.setItem(ARCHIVE_KEY, JSON.stringify({
+          version: 1, runs: 3, events: ['a'], talks: ['t'],
+          cg: ['classroom'], endings: ['끝'], npcPeak: { subin: 50 },
+        }));
+        const a = loadArchive();
+        expect(a.version).toBe(CURRENT_ARCHIVE_VERSION);
+        expect(a.runs).toBe(3);
+        expect(a.events).toEqual(['a']);
+        expect(a.cg, 'v1 배경 키가 유실됐다').toEqual(['classroom']);
+        expect(a.cgFiles, '배경 키가 CG 앨범으로 흘러들었다 — 매핑이 없어 안 본 그림이 된다').toEqual([]);
+        expect(a.parentEvents).toEqual([]);
+      });
+
+      it('v1 페이로드가 들고 온 v2 필드는 신뢰하지 않는다', () => {
+        localStorage.setItem(ARCHIVE_KEY, JSON.stringify({
+          version: 1, events: ['a'],
+          pendingRun: { events: ['거짓말'], talks: ['거짓말'] },
+          lastRunDelta: { newEvents: 99, newTalks: 9, newEndingTitle: true, runs: 9 },
+        }));
+        const a = loadArchive();
+        expect(a.pendingRun.events, 'v1→v2 분기가 pendingRun을 비우지 않았다').toEqual([]);
+        expect(a.lastRunDelta, 'v1에는 정산 개념이 없었는데 값이 살아남았다').toBeNull();
+      });
+
+      // 짝이 되는 양성 단언 — 위 둘만 두면 분기를 "항상 비우기"로 바꿔도 통과한다.
+      it('v2 기록의 pendingRun과 정산 결과는 그대로 되살린다', () => {
+        localStorage.setItem(ARCHIVE_KEY, JSON.stringify({
+          version: 2, events: ['a', 'b'], cgFiles: ['elementary/x.png'],
+          pendingRun: { events: ['b'], talks: [] },
+          lastRunDelta: { newEvents: 2, newTalks: 1, newEndingTitle: true, runs: 4 },
+        }));
+        const a = loadArchive();
+        expect(a.pendingRun.events, 'v2 pendingRun이 지워졌다').toEqual(['b']);
+        expect(a.lastRunDelta).toEqual({ newEvents: 2, newTalks: 1, newEndingTitle: true, runs: 4 });
+        expect(a.cgFiles).toEqual(['elementary/x.png']);
+      });
     });
 
     it('저장이 실패해도 엔딩 적립이 던지지 않는다', () => {
@@ -370,5 +467,89 @@ describe('적립 배선 — 실제로 엔딩까지 가면 기록이 남는가', 
 
     useGameStore.getState().debugSkipToEnding();   // 엔딩 상태에서 또 엔딩으로 보내본다
     expect(loadArchive().runs, '완주 횟수가 중복 적립됐다').toBe(1);
+  });
+
+  // ===== v2의 존재 이유 — 완주하지 않아도 본 것은 남는다 =====
+  // 이 블록이 없으면 accrue* 호출부를 전부 지워도 위 테스트들은 그대로 그린이다(엔딩까지
+  // 가면 commitRun의 백스톱이 같은 결과를 만들기 때문). 즉시 적립은 "중간"을 봐야 잠긴다.
+  describe('즉시 적립', () => {
+    it('이벤트를 해결한 그 순간 기록에 남고, 완주수는 0이다', () => {
+      useGameStore.getState().startGame('male', PARENTS);
+      expect(useGameStore.getState().state!.phase, '부팅 장면이 없으면 이 테스트가 무의미하다').toBe('event');
+      const firstId = useGameStore.getState().state!.currentEvent!.id;
+      useGameStore.getState().resolveEvent(0);
+
+      const a = loadArchive();
+      expect(a.events, '이벤트를 봤는데 기록에 없다 — 즉시 적립이 배선되지 않았다').toContain(firstId);
+      expect(a.runs, '완주하지 않았는데 완주수가 올랐다').toBe(0);
+      expect(a.endings, '엔딩에 도달하지 않았는데 결말이 기록됐다').toEqual([]);
+      expect(a.pendingRun.events).toContain(firstId);
+    });
+
+    it('그만두고 새 게임을 시작해도 이전 판에서 본 것은 남는다', () => {
+      useGameStore.getState().startGame('male', PARENTS);
+      useGameStore.getState().resolveEvent(0);
+      const seen = loadArchive().events.length;
+      expect(seen).toBeGreaterThan(0);
+
+      useGameStore.getState().startGame('female', PARENTS);   // 세이브를 덮어쓴다
+      const a = loadArchive();
+      expect(a.events.length, '새 게임이 이전 판의 기록을 지웠다').toBeGreaterThanOrEqual(seen);
+      expect(a.runs).toBe(0);
+    });
+
+    it('새 게임은 "이번 판에서 처음"의 기준선을 리셋한다', () => {
+      useGameStore.getState().startGame('male', PARENTS);
+      useGameStore.getState().resolveEvent(0);
+      expect(loadArchive().pendingRun.events.length).toBeGreaterThan(0);
+
+      useGameStore.getState().startGame('male', PARENTS);
+      expect(loadArchive().pendingRun.events, 'beginRun이 기준선을 리셋하지 않았다').toEqual([]);
+    });
+
+    it('완주 정산은 판 중에 모인 신규 수를 쓰고 pendingRun을 비운다', () => {
+      startNearEnd();
+      playToEnding();
+
+      const a = loadArchive();
+      expect(a.runs).toBe(1);
+      // 첫 판이라 본 것이 전부 신규다. 엔딩 시점 archive 대조로 세면 즉시 적립이 이미
+      // 넣어놨으므로 0이 나온다 — 그 회귀를 여기서 잡는다.
+      expect(a.lastRunDelta!.newEvents, '판 중 적립분이 정산에 반영되지 않았다').toBe(a.events.length);
+      expect(a.lastRunDelta!.newEvents).toBeGreaterThan(0);
+      expect(a.pendingRun.events, '정산 후에도 기준선이 남아 있다').toEqual([]);
+    });
+
+    it('새로 본 게 없으면 기록을 다시 쓰지 않는다 (더티체크)', () => {
+      useGameStore.getState().startGame('male', PARENTS);
+      useGameStore.getState().resolveEvent(0);
+
+      // 같은 판을 그대로 다시 훑는다 — 새로 들어갈 것이 없어야 하고, 그러면 쓰기도 없어야 한다.
+      let writes = 0;
+      const orig = localStorage.setItem.bind(localStorage);
+      localStorage.setItem = (k: string, v: string) => { if (k === ARCHIVE_KEY) writes++; orig(k, v); };
+      try {
+        accrueFromState(useGameStore.getState().state!);
+        expect(writes, '아무것도 새로 안 들어갔는데 기록을 다시 썼다').toBe(0);
+      } finally {
+        localStorage.setItem = orig;
+      }
+    });
+
+    // 구세이브 구제 — 즉시 적립이 배포되기 전에 만들어진 판은 이 경로로만 살아난다.
+    it('이어하기는 아직 적립되지 않은 판을 백필한다', () => {
+      useGameStore.getState().startGame('male', PARENTS);
+      useGameStore.getState().resolveEvent(0);
+      const before = loadArchive().events;
+      expect(before.length).toBeGreaterThan(0);
+
+      // 기록만 날린다(세이브는 그대로) = 즉시 적립을 한 번도 안 지난 세이브와 같은 상태
+      clearArchive();
+      expect(loadArchive().events).toEqual([]);
+
+      expect(useGameStore.getState().loadSavedGame()).toBe(true);
+      expect(loadArchive().events.sort(), '이어하기가 미적립 세이브를 백필하지 않았다')
+        .toEqual([...before].sort());
+    });
   });
 });
