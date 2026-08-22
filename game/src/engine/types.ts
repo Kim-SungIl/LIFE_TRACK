@@ -208,7 +208,13 @@ export interface GameEvent {
   selectionPriority?: number;
   condition?: (state: GameState) => boolean;
   location?: EventLocation; // 이벤트 장소 (배경 이미지/폴백 색상)
-  speakers?: string[];    // 등장 NPC ID (캐릭터 표시 순서)
+  speakers?: string[];    // 등장 NPC ID (캐릭터 표시 순서) — **화면에 그려질 사람**이다
+  // 이 장면이 **누구의 이야기인가** — 기록실의 이야기 커버리지·앨범 귀속에만 쓰인다.
+  // speakers와 나눠 둔 이유: 그 사람이 화면에 없어도 그 사람 이야기인 장면이 있다.
+  // 예) 'haeun-distance'는 하은이 고등학교로 떠난 뒤 사물함에 남긴 편지다 — 하은의 이야기지만
+  //     하은은 그 자리에 없다. speakers에 넣으면 EventScene이 떠난 사람을 다시 세운다.
+  // 귀속 우선순위는 reach.npc > storyOf > speakers (npcStoryPool/npcAlbum이 공유).
+  storyOf?: string[];
   background?: string;  // 배경 이미지 키 (없으면 기본 배경 사용)
   // 성별 분기: 있으면 해당 성별에서 기본값 대신 사용
   femaleDescription?: string;

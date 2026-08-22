@@ -14,7 +14,8 @@ import { ArchiveScreen } from '../screens/ArchiveScreen';
 import { clearArchive, loadArchive, accrueResolvedEvent, commitRun } from '../../engine/archive';
 import { INITIAL_NPCS } from '../../engine/npcRoster';
 import { isBarelyTouched, npcStoryRows } from '../../engine/npcStoryPool';
-import { npcAlbum, isSlotFilled } from '../../engine/npcAlbum';
+import { npcAlbum, albumFor, isSlotFilled } from '../../engine/npcAlbum';
+import { SOLO_ROOT, soloStoryRow } from '../../engine/npcStoryPool';
 import { GAME_EVENTS } from '../../engine/events';
 import { createInitialState } from '../../engine/gameEngine';
 import { useGameStore } from '../../engine/store';
@@ -269,7 +270,8 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     render(<ArchiveScreen onBack={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
 
-    const filled = npcAlbum('jihun').flatMap(b => b.slots).filter(s => isSlotFilled(s, cg)).length;
+    // 픽스처는 남주판이므로 첫 탭이 남주판이다(dominantGender).
+    const filled = albumFor('jihun', 'male').flatMap(b => b.slots).filter(s => isSlotFilled(s, cg, 'male')).length;
     expect(filled, '전제: 채운 칸이 있어야 한다').toBeGreaterThan(0);
 
     // 초상화(alt가 "... neutral")를 뺀 나머지가 CG 타일이다.
@@ -312,11 +314,124 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     expect(screen.queryByRole('button', { name: '닫기' }), '배경 탭으로 닫히지 않는다').toBeNull();
   });
 
+  // 판본 탭 — 엔진 쪽(npcAlbum.test)이 판정을 잠그지만, 화면이 그 판정을 **부르는지**는 별개다.
+  // gender를 상수 'male'로 굳혀도 엔진 테스트는 전부 그린이다.
+  it('판본 탭이 두 개 있고, 첫 탭은 실제로 모은 판본이다', () => {
+    accrueFirstWeek();   // 픽스처는 남주판
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+
+    const tabs = screen.getAllByRole('tab');
+    expect(tabs.length, '판본 탭이 두 개가 아니다').toBe(2);
+    expect(screen.getByRole('tab', { name: /남자 주인공/ }).getAttribute('aria-selected'),
+      '남주판으로 모았는데 첫 탭이 남주판이 아니다').toBe('true');
+    expect(screen.getByRole('tab', { name: /여자 주인공/ }).getAttribute('aria-selected')).toBe('false');
+  });
+
+  // 첫 탭을 상수로 굳혀도 위 테스트는 그린이다(픽스처가 남주판이니까). 여주판 기록으로도
+  // 확인해야 화면이 dominantGender를 실제로 부른다는 게 잠긴다.
+  it('여주판으로 모은 기록이면 첫 탭이 여주판이다', () => {
+    const s = createInitialState('female', PARENTS, { rngSeed: 12345 });
+    s.events = [ev('first-week')];
+    s.talkEventsFired = [];
+    accrueResolvedEvent(s);
+    const cg = loadArchive().cgFiles;
+    expect(cg[0], '전제: 여주판 CG가 적립돼야 한다').toMatch(/_f\.png$/);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+    expect(screen.getByRole('tab', { name: /여자 주인공/ }).getAttribute('aria-selected'),
+      '여주판으로 모았는데 첫 탭이 남주판이다').toBe('true');
+  });
+
+  it('여주 탭으로 바꾸면 남주판으로 채운 칸이 빈 칸이 된다', () => {
+    const cg = accrueFirstWeek();
+    expect(cg[0], '전제: 픽스처 CG가 남주판 파일이어야 한다').toMatch(/_m\.png$/);
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+
+    const y1 = albumFor('jihun', 'male').find(b => b.key === 'y1')!;
+    expect(screen.getByText(`1 / ${y1.slots.length}`), '남주 탭의 채움 수가 안 맞는다').toBeTruthy();
+
+    fireEvent.click(screen.getByRole('tab', { name: /여자 주인공/ }));
+
+    const y1f = albumFor('jihun', 'female').find(b => b.key === 'y1')!;
+    expect(screen.getByText(`0 / ${y1f.slots.length}`),
+      '여주 탭이 0으로 시작하지 않는다 — 판본을 합쳐 세고 있다').toBeTruthy();
+    // 그림 타일도 사라져야 한다(초상화 제외). 남으면 남주 그림을 여주 탭에 싣는 것이다.
+    const tiles = screen.getAllByRole('img').filter(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''));
+    expect(tiles.length, '여주 탭에 남주판 그림이 남아 있다').toBe(0);
+
+    // 다시 남주 탭으로 돌아오면 복구된다(탭이 상태를 잃지 않는다).
+    fireEvent.click(screen.getByRole('tab', { name: /남자 주인공/ }));
+    expect(screen.getByText(`1 / ${y1.slots.length}`)).toBeTruthy();
+  });
+
+  // 지훈은 남·여 칸 수가 같아서, 화면이 탭을 무시하고 늘 남주 칸 목록을 그려도 위 테스트들이
+  // 전부 그린이다(뮤테이션으로 확인했다 — albumFor(npcId, 'male') 고정이 통과했다).
+  // 도윤 첫 만남만 남주판·여주판이 서로 다른 이벤트라, 여기서만 "어느 목록을 그렸나"가 드러난다.
+  it('여주 탭은 여주판 칸 목록을 그린다 (도윤 첫 만남)', () => {
+    const s = createInitialState('female', PARENTS, { rngSeed: 12345 });
+    s.events = [ev('doyun-meet-elementary-f')];
+    s.talkEventsFired = [];
+    accrueResolvedEvent(s);
+    const cg = loadArchive().cgFiles;
+    expect(cg, '전제: 여주 전용 CG가 적립돼야 한다').toEqual(['elementary/doyun-meet-elementary-f_c0_f.png']);
+    expect(npcStoryRows(loadArchive().events).find(r => r.id === 'doyun')!.seen,
+      '전제: 도윤 줄이 보여야 앨범 문이 열린다').toBeGreaterThan(0);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /도윤/ }));
+    expect(screen.getByRole('tab', { name: /여자 주인공/ }).getAttribute('aria-selected')).toBe('true');
+
+    const y1 = albumFor('doyun', 'female').find(b => b.key === 'y1')!;
+    expect(screen.getByText(`1 / ${y1.slots.length}`),
+      '여주판 칸 목록이 아니다 — 남주 칸을 그리고 있으면 이 그림이 어느 칸에도 없어 0이 된다').toBeTruthy();
+  });
+
   it('돌아가기로 목록으로 복귀한다', () => {
     accrueFirstWeek();
     render(<ArchiveScreen onBack={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     fireEvent.click(screen.getByRole('button', { name: '돌아가기' }));
     expect(screen.getByText('👥 함께한 사람들'), '목록으로 못 돌아왔다').toBeTruthy();
+  });
+});
+
+// 주인 없는 장면 줄. 이 줄이 없으면 수능 전야·번아웃·졸업 준비가 앨범 어디에도 뜨지 않는다.
+describe('기록실 — 혼자 지나온 것 줄', () => {
+  it('그런 장면을 본 적 있으면 줄이 생기고, 누르면 앨범이 열린다', () => {
+    accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
+    render(<ArchiveScreen onBack={() => {}} />);
+
+    const row = screen.getByRole('button', { name: /혼자 지나온 것/ });
+    expect(row, 'solo 줄이 없다').toBeTruthy();
+
+    fireEvent.click(row);
+    expect(screen.queryByText('👥 함께한 사람들'), '목록이 안 교체됐다').toBeNull();
+    expect(screen.getByText('개학과 시험, 졸업 준비 — 곁에 아무도 없던 시간')).toBeTruthy();
+    expect(npcAlbum(SOLO_ROOT).length, '전제: solo 앨범에 행이 있어야 한다').toBeGreaterThan(0);
+  });
+
+  it('아직 그런 장면을 안 봤으면 빈 방의 문을 만들지 않는다', () => {
+    accrueResolvedEvent(state({ events: [ev('first-week')] }));   // 지훈 장면 — solo가 아니다
+    expect(soloStoryRow(loadArchive().events).seen, '전제: solo 본 것이 0이어야 한다').toBe(0);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    expect(screen.queryByRole('button', { name: /혼자 지나온 것/ }), '빈 solo 줄이 떴다').toBeNull();
+    expect(screen.getByRole('button', { name: /지훈/ }), '사람 줄은 그대로 있어야 한다').toBeTruthy();
+  });
+
+  it('solo 앨범에는 초상화가 아니라 엠블럼이 뜬다', () => {
+    accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /혼자 지나온 것/ }));
+
+    const alts = screen.getAllByRole('img').map(el => el.getAttribute('alt') ?? '');
+    // 판본 탭의 주인공 초상(player_m/player_f)은 정상이다. 로스터 인물의 얼굴이 없어야 한다.
+    const roster = new Set(INITIAL_NPCS.map(n => n.id));
+    const npcFace = alts.find(a => roster.has(a.replace(/ \w+$/, '')));
+    expect(npcFace, `solo 앨범에 사람 초상화가 떴다: ${npcFace}`).toBeUndefined();
+    expect(alts).toContain('혼자 지나온 것');
   });
 });

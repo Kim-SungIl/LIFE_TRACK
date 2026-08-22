@@ -326,6 +326,9 @@ export const CRISIS_EVENTS = [
   },
   {
     id: 'haeun-distance',
+    // 하은의 이야기지만 하은은 이 자리에 없다(고등학교로 떠난 뒤 남긴 편지) — speakers가 아니라
+    // storyOf로 귀속한다. speakers에 넣으면 EventScene이 떠난 사람을 다시 세운다.
+    storyOf: ['haeun'],
     title: '하은 선배의 편지',
     description: '사물함에 접힌 종이가 끼어 있다.\n하은 선배 글씨다.\n"잘 지내지? 나 고등학교 가서 정신없어. 이제 자주는 못 볼 것 같아.\n네가 중학교 잘 다니면 그걸로 됐어."\n짧은 편지 아래에, 작게 이름이 쓰여 있었다.',
     condition: (s) => {

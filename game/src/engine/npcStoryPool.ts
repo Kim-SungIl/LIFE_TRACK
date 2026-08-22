@@ -14,22 +14,59 @@
 // GAME_EVENTS를 끌어오지만 번들 부담은 없다 — store.ts가 이미 같은 모듈을 엔트리 청크로 당긴다.
 import { GAME_EVENTS } from './events';
 import { INITIAL_NPCS } from './npcRoster';
+import type { GameEvent } from './types';
 
-/** npcId → 그 사람과 얽힌 이벤트 id 집합. 모듈 로드 시 1회 계산. */
+/**
+ * 이 장면은 누구의 이야기인가 — 기록실의 이야기 커버리지와 앨범이 **같은 규칙**을 써야 하므로
+ * 판정을 여기 한 곳에 둔다(화면이나 앨범 모듈이 복제하면 둘이 어긋난다).
+ *
+ * 우선순위:
+ *  1. `reach.npc` — 도달형은 대상 NPC 한 명에게만. 정책 선언이지 현재 동작은 아니다(도달형 96종이
+ *     전부 대상 본인을 speakers에 포함하고, 대상 외 로스터 인물을 조연으로 둔 도달형은 0종이다).
+ *  2. `storyOf` — 그 사람이 **화면에 없어도** 그 사람 이야기인 장면. speakers에 넣으면 EventScene이
+ *     떠난 사람을 다시 세우므로 나눠 뒀다(`haeun-distance`가 그 경우다).
+ *  3. `speakers` — 등장 인물 전원. 한 장면이 여러 사람의 기록에 잡힐 수 있다.
+ *
+ * 셋 다 없으면 **주인이 없는 장면**이다(개학·시험·졸업 준비·번아웃·정체성 위기 등). 그건 누락이
+ * 아니라 실제로 혼자 지나온 시간이라, SOLO_POOL로 따로 모아 앨범에 자기 자리를 준다.
+ */
+export function storyOwners(e: GameEvent, known: (id: string) => boolean): string[] {
+  if (e.reach?.npc && known(e.reach.npc)) return [e.reach.npc];
+  const named = (e.storyOf ?? []).filter(known);
+  if (named.length > 0) return named;
+  return (e.speakers ?? []).filter(known);
+}
+
+/** 주인 없는 장면들이 모이는 가상 뿌리의 id. 로스터 id와 겹치지 않는다. */
+export const SOLO_ROOT = 'solo';
+
+/** npcId → 그 사람과 얽힌 이벤트 id 집합. 모듈 로드 시 1회 계산. SOLO_ROOT도 한 칸 차지한다. */
 const POOL: Map<string, Set<string>> = (() => {
   const m = new Map<string, Set<string>>();
   for (const n of INITIAL_NPCS) m.set(n.id, new Set());
+  const isNpc = (id: string) => m.has(id);
+  m.set(SOLO_ROOT, new Set());
   for (const e of GAME_EVENTS) {
-    // 도달형은 대상 NPC 한 명에게만 귀속한다(그 사람의 이야기라는 게 명시돼 있다).
-    // 정책 선언이지 현재 동작은 아니다 — 도달형 96종이 전부 대상 본인을 speakers에 포함하고,
-    // 대상 외 로스터 인물을 조연으로 둔 도달형은 0종이라 이 분기를 지워도 결과가 같다(실측).
-    // 조연 있는 도달형이 생기는 순간부터 의미가 발현되므로 방어적으로 남긴다.
-    if (e.reach?.npc && m.has(e.reach.npc)) { m.get(e.reach.npc)!.add(e.id); continue; }
-    // 그 외에는 등장 인물 전원에게 귀속 — 한 장면이 여러 사람의 기록에 잡힐 수 있다.
-    for (const sp of e.speakers ?? []) m.get(sp)?.add(e.id);
+    const owners = storyOwners(e, isNpc);
+    if (owners.length === 0) { m.get(SOLO_ROOT)!.add(e.id); continue; }
+    for (const id of owners) m.get(id)!.add(e.id);
   }
   return m;
 })();
+
+/** 주인 없는 장면들 — 앨범의 "혼자 지나온 것" 줄이 쓴다. */
+export function soloStoryRow(seenEventIds: readonly string[]): NpcStoryRow {
+  const seenSet = new Set(seenEventIds);
+  const pool = POOL.get(SOLO_ROOT)!;
+  let seen = 0;
+  for (const id of pool) if (seenSet.has(id)) seen++;
+  return {
+    id: SOLO_ROOT, name: '혼자 지나온 것', seen, total: pool.size,
+    ratio: pool.size ? seen / pool.size : 0,
+    // 감출 사람이 없다 — 이 줄은 본 것이 하나라도 있을 때만 화면에 올린다(호출부 판단).
+    everMet: true,
+  };
+}
 
 export interface NpcStoryRow {
   id: string;
