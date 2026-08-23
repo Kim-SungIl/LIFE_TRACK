@@ -1,5 +1,6 @@
-import { GameState } from '../../../engine/types';
+import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, getActivityCost } from '../../../engine/activities';
+import { josa } from '../../../engine/korean';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 
 type Props = {
@@ -10,6 +11,8 @@ type Props = {
   onEditSlot: (slot: string) => void;
   routineTooExpensive: boolean;
   routineCost: number;
+  /** 돈이 없어 이번 주에 실행되지 않을 선택 슬롯 활동들(엔진 순서로 판정). 루틴 경고와 배타. */
+  unaffordableChoices: Activity[];
   maxComboWeeks: number;
   slot2ComboWeeks: number;
   slot3ComboWeeks: number;
@@ -20,7 +23,7 @@ type Props = {
 // 슬롯 탭 → onEditSlot(slotKey) 로 부모의 SlotEditPopup 오픈.
 export function WeekPlanner({
   state, selectedActivities, setSelectedActivities, npcChoices, onEditSlot,
-  routineTooExpensive, routineCost, maxComboWeeks,
+  routineTooExpensive, routineCost, unaffordableChoices, maxComboWeeks,
   slot2ComboWeeks, slot3ComboWeeks, maxSlots,
 }: Props) {
   const reducedMotion = usePrefersReducedMotion();
@@ -119,6 +122,23 @@ export function WeekPlanner({
           textAlign: 'center', color: 'var(--red)',
         }}>
           💰 돈이 부족해요! 방과후 활동을 변경해 주세요 (현재 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원, 필요 {routineCost}만원)
+        </div>
+      )}
+
+      {/* 선택 슬롯 돈 부족 — 예전에는 이 경고가 없어서 확정이 그냥 되고, 그 슬롯이 주간 결산에서
+          "💰 돈이 부족해서 …을 못 했다" 한 줄로만 사라졌다. 계획 화면이 먼저 말한다.
+          어느 활동인지 이름을 대는 게 핵심이다 — 합계만 보여주면 무엇을 바꿔야 할지 모른다. */}
+      {unaffordableChoices.length > 0 && (
+        <div style={{
+          background: 'rgba(217,100,88,0.15)', border: '1px solid rgba(217,100,88,0.3)',
+          borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem',
+          textAlign: 'center', color: 'var(--red)', lineHeight: 1.6,
+        }}>
+          {/* 조사는 개수가 아니라 마지막 글자의 종성으로 갈린다 — 엔진 로그와 같은 josa 헬퍼를 쓴다
+              ('예체능 레슨은' / '놀기는'). 나열 시 조사는 맨 뒤 단어에만 붙는다. */}
+          💰 {josa(unaffordableChoices.map(a => a.name).join(' · '), '은/는')} 돈이 모자라 이번 주에 못 해요.
+          <br />
+          다른 활동으로 바꾸거나 빈 슬롯으로 두세요 (현재 {Number.isInteger(state.money) ? state.money : state.money.toFixed(1)}만원)
         </div>
       )}
 

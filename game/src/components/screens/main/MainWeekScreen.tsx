@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome } from '../../../engine/gameEngine';
-import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
+import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices, unaffordableInPlan } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
 import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
@@ -113,8 +113,18 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
     return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
   })();
   const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
+  // 선택 슬롯(주말/방학)도 감당되는지 — 엔진과 같은 순차 차감으로 판정한다.
+  // 예전에는 루틴만 막았고 선택 슬롯은 경고 없이 조용히 날아갔다(실측 연 32~41주, 그중 루틴은
+  // 2.6주뿐). HUD의 빨간 "(이번 주 -N)"은 0.66rem 글자색 변화라 신호가 되지 못했다.
+  const unaffordable = unaffordableInPlan(state, selectedActivities);
+  // 루틴 경고가 이미 떠 있으면 그쪽 문구가 우선이다 — 두 경고를 동시에 띄우면 무엇을 고쳐야
+  // 하는지 흐려진다(루틴을 고치면 잔액이 남아 선택 슬롯도 함께 풀리는 경우가 많다).
+  const unaffordableChoices = routineTooExpensive
+    ? []
+    : unaffordable.filter(a => a.id !== state.routineSlot2 && a.id !== state.routineSlot3);
   // 확정 가능 여부 — 프리뷰 노출/버튼 disabled 공용 판정 (SSOT).
-  const confirmDisabled = (!state.isVacation && !state.routineSlot2) || !!routineTooExpensive;
+  const confirmDisabled = (!state.isVacation && !state.routineSlot2)
+    || !!routineTooExpensive || unaffordableChoices.length > 0;
 
   // Phase 2 — 확정 시 예상 결과 프리뷰. 순수 processWeek 재실행 diff(gameEngine).
   // 계획(루틴/주말선택/동행)·현재 상태가 바뀔 때만 재계산.
@@ -315,6 +325,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         onEditSlot={setEditingSlot}
         routineTooExpensive={!!routineTooExpensive}
         routineCost={routineCost}
+        unaffordableChoices={unaffordableChoices}
         maxComboWeeks={maxComboWeeks}
         slot2ComboWeeks={slot2ComboWeeks}
         slot3ComboWeeks={slot3ComboWeeks}
@@ -525,6 +536,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         >
           {routineTooExpensive
             ? '⬆ 돈이 부족해요 — 루틴을 변경하세요'
+            // 비활성 버튼은 이유를 스스로 말해야 한다 — 위 경고를 못 보고 버튼만 누르는 사람이 있다.
+            : unaffordableChoices.length > 0
+            ? '⬆ 돈이 부족한 활동이 있어요'
             : !state.isVacation && !state.routineSlot2
               ? '⬆ 먼저 방과후 루틴을 설정하세요'
               : currentSlots === 0
