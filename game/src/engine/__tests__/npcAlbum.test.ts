@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { npcAlbum, isSlotFilled, filledPath } from '../npcAlbum';
-import { npcStoryRows } from '../npcStoryPool';
+import { npcAlbum, albumFor, isSlotFilled, filledPath, slotPath, dominantGender } from '../npcAlbum';
+import { npcStoryRows, soloStoryRow, storyOwners, SOLO_ROOT } from '../npcStoryPool';
 import { resolveEventCgRelPaths } from '../eventCg';
 import { GAME_EVENTS } from '../events';
 import { getSchoolLevel } from '../backgrounds';
@@ -49,7 +49,7 @@ describe('인물 앨범 슬롯 카탈로그 (npcAlbum)', () => {
   it('같은 버킷 안에 같은 그림이 두 번 들어가지 않는다', () => {
     for (const r of npcStoryRows([])) {
       for (const b of npcAlbum(r.id)) {
-        const sigs = b.slots.map(s => s.paths.join('|'));
+        const sigs = b.slots.map(s => `${s.male}|${s.female}`);
         expect(new Set(sigs).size, `${r.name}/${b.label}에 중복 칸이 있다`).toBe(sigs.length);
       }
     }
@@ -136,33 +136,180 @@ describe('인물 앨범 슬롯 카탈로그 (npcAlbum)', () => {
 });
 
 describe('앨범 채움 판정', () => {
-  const slotOf = (npcId: string) => allSlots(npcId).find(s => s.paths.length === 2)!;
+  /** 남·여 그림이 서로 다른 칸(판본 쌍). 실측 172칸. */
+  const pairSlot = (npcId: string) =>
+    allSlots(npcId).find(s => s.male && s.female && s.male !== s.female)!;
+  /** 주인공이 안 그려져 남·여가 같은 파일인 칸. 실측 76칸. */
+  const sharedSlot = (npcId: string) =>
+    allSlots(npcId).find(s => s.male && s.male === s.female)!;
 
-  it('성별 변형 중 어느 쪽을 봤어도 채워진다', () => {
-    const s = slotOf('jihun');
-    expect(s, '전제: 남·여 두 경로를 가진 칸이 있어야 한다').toBeTruthy();
-    const [male, female] = s.paths;
+  // 이 게임의 앨범이 무엇을 세는지 정하는 단언이다. 판본을 합쳐 "하나라도 봤으면 채움"으로
+  // 두면 여주로 다 모은 뒤 남주로 다시 다 모아도 앨범이 그대로여서 172칸(그림 424장의 40%)이
+  // 영구히 안 보인다. 그래서 **본 판본만** 채워야 한다.
+  it('한 판본을 봐도 다른 판본 칸은 채워지지 않는다', () => {
+    const s = pairSlot('jihun');
+    expect(s, '전제: 남·여 그림이 다른 칸이 있어야 한다').toBeTruthy();
+    const male = s.male!, female = s.female!;
 
-    expect(isSlotFilled(s, [male]), '남성 경로로 본 칸이 안 채워졌다').toBe(true);
-    expect(isSlotFilled(s, [female]), '여성 경로로 본 칸이 안 채워졌다').toBe(true);
-    expect(isSlotFilled(s, []), '아무것도 안 봤는데 채워졌다').toBe(false);
-    expect(isSlotFilled(s, ['elementary/전혀-다른-그림.png'])).toBe(false);
+    expect(isSlotFilled(s, [male], 'male'), '남주판을 봤는데 남주 탭이 비었다').toBe(true);
+    expect(isSlotFilled(s, [male], 'female'), '남주판을 봤더니 여주 탭까지 채워졌다').toBe(false);
+    expect(isSlotFilled(s, [female], 'female'), '여주판을 봤는데 여주 탭이 비었다').toBe(true);
+    expect(isSlotFilled(s, [female], 'male'), '여주판을 봤더니 남주 탭까지 채워졌다').toBe(false);
+    expect(isSlotFilled(s, [male, female], 'male')).toBe(true);
+    expect(isSlotFilled(s, [male, female], 'female')).toBe(true);
+    expect(isSlotFilled(s, [], 'male'), '아무것도 안 봤는데 채워졌다').toBe(false);
+    expect(isSlotFilled(s, ['elementary/전혀-다른-그림.png'], 'male')).toBe(false);
   });
 
-  it('보여줄 그림은 실제로 본 변형이다', () => {
-    const s = slotOf('jihun');
-    const [male, female] = s.paths;
-    expect(filledPath(s, [female])).toBe(female);
-    expect(filledPath(s, [male])).toBe(male);
-    expect(filledPath(s, []), '안 본 칸은 그림이 없어야 한다 — 있으면 안 본 그림을 싣는다').toBeNull();
+  // 주인공이 그려지지 않은 그림은 파일이 하나뿐이라 판본을 가릴 수 없다. 양쪽에서 채워야 한다 —
+  // 한쪽만 채우면 남주로만 플레이한 사람의 여주 탭에 "이미 본 그림"이 빈 칸으로 남는다.
+  it('공용 그림 칸은 양쪽 판본에서 같은 파일로 채워진다', () => {
+    const s = sharedSlot('jihun');
+    expect(s, '전제: 남·여가 같은 파일인 칸이 있어야 한다').toBeTruthy();
+    expect(isSlotFilled(s, [s.male!], 'male')).toBe(true);
+    expect(isSlotFilled(s, [s.male!], 'female')).toBe(true);
+    expect(filledPath(s, [s.male!], 'female')).toBe(s.male);
   });
 
-  it('한 판에서 성별을 바꿔도 칸 수는 늘지 않는다', () => {
-    const slots = allSlots('jihun');
-    const male = slots.flatMap(s => s.paths.filter(p => /_m\.png$/.test(p)));
-    const both = slots.flatMap(s => s.paths);
-    // 파일을 세면 남·여를 다 해본 사람의 앨범만 칸이 두 배가 된다. 칸은 그보다 적어야 한다.
-    expect(slots.length).toBeLessThan(both.length);
-    expect(slots.length).toBeGreaterThan(male.length - 1);
+  it('보여줄 그림은 그 판본의 그림이다', () => {
+    const s = pairSlot('jihun');
+    expect(filledPath(s, [s.male!], 'male')).toBe(s.male);
+    expect(filledPath(s, [s.female!], 'female')).toBe(s.female);
+    // 다른 판본 그림을 대신 싣지 않는다 — 남주 탭에 여주 그림이 뜨면 판본 구분이 무의미하다.
+    expect(filledPath(s, [s.female!], 'male')).toBeNull();
+    expect(filledPath(s, [], 'male'), '안 본 칸은 그림이 없어야 한다 — 있으면 안 본 그림을 싣는다').toBeNull();
+
+    // 그 판본에 없는 칸은 화면이 애초에 안 물어보지만(albumFor가 걸러낸다), API가 관대하면
+    // 다음 소비처가 조용히 다른 판본 그림을 싣는다. 여기서 막아둔다.
+    const only = allSlots('doyun').find(s2 => s2.male && !s2.female)!;
+    expect(only, '전제: 남주 전용 칸이 있어야 한다').toBeTruthy();
+    expect(filledPath(only, [only.male!], 'female'), '없는 판본을 물었는데 다른 판본 그림을 줬다').toBeNull();
+    expect(isSlotFilled(only, [only.male!], 'female')).toBe(false);
+  });
+
+  it('칸 배치는 판본과 무관하다 (전용 칸만 예외)', () => {
+    // 지훈은 성별 전용 칸이 없다(전용 4칸은 전부 도윤 첫 만남이다).
+    const m = albumFor('jihun', 'male').flatMap(b => b.slots).length;
+    const f = albumFor('jihun', 'female').flatMap(b => b.slots).length;
+    expect(m).toBe(f);
+    expect(m).toBe(allSlots('jihun').length);
+    // 파일을 세면 두 판본 합집합이 칸 수보다 많다 — 칸이 판본별로 고정이라는 증거.
+    const files = new Set(allSlots('jihun').flatMap(s => [s.male, s.female].filter(Boolean)));
+    expect(files.size).toBeGreaterThan(m);
+  });
+
+  // 남주판·여주판이 서로 다른 이벤트인 유일한 경우. 없는 칸을 빈 칸으로 그리면
+  // "아직 못 모은 것"과 "그 판본엔 애초에 없는 것"이 구별되지 않는다.
+  it('그 판본에 없는 칸은 아예 나오지 않는다 (도윤 첫 만남)', () => {
+    const ids = (g: 'male' | 'female') =>
+      albumFor('doyun', g).flatMap(b => b.slots).map(s => s.eventId);
+    expect(ids('male')).toContain('doyun-meet-elementary');
+    expect(ids('male'), '여주 전용 이벤트가 남주 탭에 있다').not.toContain('doyun-meet-elementary-f');
+    expect(ids('female')).toContain('doyun-meet-elementary-f');
+    expect(ids('female'), '남주 전용 이벤트가 여주 탭에 있다').not.toContain('doyun-meet-elementary');
+    // 선택지 2개가 각각 칸이다(그림이 `_c0`/`_c1`로 갈린다). 한쪽 판본만 서명에 넣으면
+    // male이 둘 다 null인 여주 전용 칸들이 한 칸으로 접힌다 — 개수까지 잠근다.
+    expect(ids('male').filter(id => id === 'doyun-meet-elementary').length).toBe(2);
+    expect(ids('female').filter(id => id === 'doyun-meet-elementary-f').length).toBe(2);
+  });
+
+  it('판본을 걸러도 빈 행은 남지 않는다', () => {
+    for (const g of ['male', 'female'] as const) {
+      for (const r of npcStoryRows([])) {
+        for (const b of albumFor(r.id, g)) {
+          expect(b.slots.length, `${r.name}/${b.label}(${g})이 빈 행이다`).toBeGreaterThan(0);
+          for (const s of b.slots) expect(slotPath(s, g)).toBeTruthy();
+        }
+      }
+    }
+  });
+
+  // 기록에는 성별이 남지 않으므로 적립된 그림 파일이 유일한 근거다.
+  it('첫 탭은 실제로 더 많이 모은 판본이다', () => {
+    expect(dominantGender([]), '기록이 없으면 남주판(성별 선택 왼쪽)').toBe('male');
+    expect(dominantGender(['high/a_f.png', 'high/b_f.png', 'high/c_m.png'])).toBe('female');
+    expect(dominantGender(['high/a_f.png', 'high/b_m.png', 'high/c_m.png'])).toBe('male');
+    expect(dominantGender(['high/a_f.png', 'high/b_m.png']), '동수면 남주판').toBe('male');
+    // 공용 그림(접미사 없음)은 판단에 끼어들지 않는다 — 그건 어느 판본으로 봤는지 알 수 없다.
+    expect(dominantGender(['high/공용.png', 'high/a_f.png'])).toBe('female');
+    expect(dominantGender(['high/공용1.png', 'high/공용2.png'])).toBe('male');
+  });
+});
+
+// 주인 없는 장면(개학·시험·졸업 준비·번아웃·정체성 위기)은 누락이 아니라 실제로 혼자 지나온
+// 시간이다. 예전에는 앨범 빌더가 여기서 버려서 **어디에도 뜨지 않았다**(solo 66장 · 34칸.
+// 나머지 3장은 `haeun-distance`로, storyOf를 붙여 하은에게 갔다 — 둘을 합쳐 69장이다).
+describe('혼자 지나온 것 (SOLO_ROOT)', () => {
+  it('사람 뿌리에 안 붙는 장면은 solo 뿌리로 간다', () => {
+    const solo = npcAlbum(SOLO_ROOT);
+    expect(solo.length, 'solo 앨범이 비었다 — 주인 없는 장면이 다시 버려지고 있다').toBeGreaterThan(0);
+    const slots = solo.flatMap(b => b.slots);
+    expect(slots.length).toBeGreaterThan(20);
+
+    // 이 게임에서 가장 무거운 장면들이 여기 있다. 하나라도 빠지면 앨범에서 볼 길이 없다.
+    for (const id of ['suneung-eve', 'middle-burnout', 'high-panic', 'identity-crisis', 'graduation-prep-high']) {
+      expect(slots.some(s => s.eventId === id), `${id}가 solo 앨범에 없다`).toBe(true);
+    }
+  });
+
+  it('solo 뿌리와 사람 뿌리는 겹치지 않는다', () => {
+    const soloIds = new Set(npcAlbum(SOLO_ROOT).flatMap(b => b.slots).map(s => s.eventId));
+    for (const r of npcStoryRows([])) {
+      for (const s of npcAlbum(r.id).flatMap(b => b.slots)) {
+        expect(soloIds.has(s.eventId), `${s.eventId}가 ${r.name}과 solo 양쪽에 있다`).toBe(false);
+      }
+    }
+  });
+
+  it('solo 줄은 본 것이 있을 때만 셀 수 있다', () => {
+    expect(soloStoryRow([]).seen).toBe(0);
+    expect(soloStoryRow([]).total).toBeGreaterThan(0);
+    expect(soloStoryRow(['suneung-eve']).seen).toBe(1);
+    // 사람 이벤트를 봐도 solo 카운트는 안 오른다(뿌리가 섞이면 두 줄이 같은 걸 센다).
+    expect(soloStoryRow(['first-week']).seen).toBe(0);
+  });
+
+  it('solo 뿌리는 사람 목록에 섞이지 않는다', () => {
+    expect(npcStoryRows([]).some(r => r.id === SOLO_ROOT), 'solo가 사람 줄로 새어 들어갔다').toBe(false);
+  });
+});
+
+// speakers는 "화면에 그려질 사람"이고 storyOf는 "누구의 이야기인가"다. 나누지 않으면
+// haeun-distance(떠난 하은이 남긴 편지)를 귀속시키려다 EventScene이 떠난 사람을 다시 세운다.
+describe('storyOf 귀속 (화면에 없어도 그 사람 이야기)', () => {
+  const known = (id: string) => npcStoryRows([]).some(r => r.id === id);
+
+  it('haeun-distance는 하은에게 귀속되고 speakers에는 넣지 않는다', () => {
+    const e = GAME_EVENTS.find(x => x.id === 'haeun-distance')!;
+    expect(e, '이벤트가 사라졌다').toBeTruthy();
+    expect(e.speakers ?? [], '떠난 하은을 화면에 다시 세우고 있다').toEqual([]);
+    expect(e.storyOf).toEqual(['haeun']);
+    expect(storyOwners(e, known)).toEqual(['haeun']);
+
+    const inHaeun = npcAlbum('haeun').flatMap(b => b.slots).some(s => s.eventId === 'haeun-distance');
+    expect(inHaeun, '하은 앨범에 편지가 없다').toBe(true);
+    const inSolo = npcAlbum(SOLO_ROOT).flatMap(b => b.slots).some(s => s.eventId === 'haeun-distance');
+    expect(inSolo, '귀속됐는데 solo에도 남아 있다').toBe(false);
+    expect(npcStoryRows([]).find(r => r.id === 'haeun')!.total, '하은 이야기 풀에도 들어가야 한다')
+      .toBeGreaterThanOrEqual(18);
+  });
+
+  it('귀속 우선순위는 reach.npc > storyOf > speakers', () => {
+    const reachWin = { id: 'x', title: '', description: '', choices: [],
+      reach: { npc: 'seoa', tier: 40 }, storyOf: ['jihun'], speakers: ['subin'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(reachWin, known)).toEqual(['seoa']);
+
+    const storyWin = { id: 'x', title: '', description: '', choices: [],
+      storyOf: ['jihun'], speakers: ['subin'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(storyWin, known)).toEqual(['jihun']);
+
+    const speakersOnly = { id: 'x', title: '', description: '', choices: [],
+      speakers: ['subin'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(speakersOnly, known)).toEqual(['subin']);
+
+    // 로스터에 없는 id는 무시된다 — 그러면 주인 없는 장면이 되어 solo로 간다.
+    const unknownOnly = { id: 'x', title: '', description: '', choices: [],
+      storyOf: ['없는사람'], speakers: ['또없는사람'] } as unknown as typeof GAME_EVENTS[number];
+    expect(storyOwners(unknownOnly, known)).toEqual([]);
   });
 });
