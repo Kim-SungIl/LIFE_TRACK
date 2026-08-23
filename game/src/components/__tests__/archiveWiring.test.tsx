@@ -367,6 +367,32 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     expect(screen.getByText(`1 / ${y1.slots.length}`)).toBeTruthy();
   });
 
+  // 전면 보기는 판본 전환의 **핵심 소비처**인데 기본 탭(dominantGender) 밖에서 여는 테스트가
+  // 없었다. 그래서 `filledPath(open, seenCgFiles, 'male')`로 굳혀도 704개 전부 그린이었다
+  // (3자 검수에서 지적받아 뮤테이션으로 확인). 되돌아가면 여주 탭에서 칸을 눌러도 오버레이
+  // 가드(`open && openPath`)에 막혀 **아무 반응 없이 안 열린다** — 에러도 안 난다.
+  it('여주 탭에서 칸을 누르면 여주판 그림이 전면으로 열린다', () => {
+    const s = createInitialState('female', PARENTS, { rngSeed: 12345 });
+    s.events = [ev('first-week')];
+    s.talkEventsFired = [];
+    accrueResolvedEvent(s);
+    const cg = loadArchive().cgFiles;
+    expect(cg[0], '전제: 여주판 CG가 적립돼야 한다').toMatch(/_f\.png$/);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
+    // 첫 탭이 여주판이므로 탭 전환 없이 바로 채운 칸이 있다.
+    const tile = screen.getAllByRole('img').find(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''))!;
+    expect(tile, '여주 탭에 채운 칸이 없다').toBeTruthy();
+
+    fireEvent.click(tile.closest('button')!);
+    expect(screen.getByRole('button', { name: '닫기' }), '전면 보기가 안 열렸다').toBeTruthy();
+
+    // 오버레이 이미지는 버튼에 감싸이지 않은 쪽이다. 남주 그림이 뜨면 판본 구분이 무의미하다.
+    const overlay = screen.getAllByAltText(tile.getAttribute('alt')!).find(el => !el.closest('button'))!;
+    expect(overlay.getAttribute('src'), '전면 보기에 여주판 그림이 아닌 것이 떴다').toMatch(/_f\.png$/);
+  });
+
   // 지훈은 남·여 칸 수가 같아서, 화면이 탭을 무시하고 늘 남주 칸 목록을 그려도 위 테스트들이
   // 전부 그린이다(뮤테이션으로 확인했다 — albumFor(npcId, 'male') 고정이 통과했다).
   // 도윤 첫 만남만 남주판·여주판이 서로 다른 이벤트라, 여기서만 "어느 목록을 그렸나"가 드러난다.
@@ -420,6 +446,35 @@ describe('기록실 — 혼자 지나온 것 줄', () => {
     render(<ArchiveScreen onBack={() => {}} />);
     expect(screen.queryByRole('button', { name: /혼자 지나온 것/ }), '빈 solo 줄이 떴다').toBeNull();
     expect(screen.getByRole('button', { name: /지훈/ }), '사람 줄은 그대로 있어야 한다').toBeTruthy();
+  });
+
+  // 앨범 화면의 엠블럼은 아래 테스트가 잠그지만 **목록 줄**은 안 잠겨 있었다(검수 지적, 뮤테이션
+  // 확인). 분기를 지우면 `Portrait characterId="solo"`가 되어 자산 없는 CSS 아바타 얼굴이 뜬다.
+  // 줄의 접근명은 그대로라 다른 테스트는 전부 그린이다.
+  it('목록의 solo 줄도 초상화가 아니라 엠블럼이다', () => {
+    accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
+    render(<ArchiveScreen onBack={() => {}} />);
+
+    const row = screen.getByRole('button', { name: /혼자 지나온 것/ });
+    const img = row.querySelector('img')!;
+    expect(img, 'solo 줄에 그림이 없다').toBeTruthy();
+    expect(img.getAttribute('alt'), 'solo 줄에 사람 초상화가 들어갔다').toBe('혼자 지나온 것');
+    expect(img.getAttribute('src')).toContain('emblems/growth.png');
+  });
+
+  // solo 줄의 진행 바. 사람 줄의 ratio는 isBarelyTouched 경유로 간접 잠금이 있는데 solo만
+  // 비어 있어서, ratio를 상수 0으로 굳혀도 전부 그린이었다(검수 지적, 뮤테이션 확인).
+  it('solo 줄의 진행 바는 본 만큼 찬다', () => {
+    accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
+    const solo = soloStoryRow(loadArchive().events);
+    expect(solo.seen, '전제: 본 것이 있어야 바가 찬다').toBeGreaterThan(0);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    const row = screen.getByRole('button', { name: /혼자 지나온 것/ });
+    const widths = [...row.querySelectorAll('div')]
+      .map(d => (d as HTMLElement).style.width).filter(w => w.endsWith('%'));
+    expect(widths.length, '진행 바를 못 찾았다').toBeGreaterThan(0);
+    expect(widths.some(w => w !== '0%'), `진행 바가 비어 있다(${widths.join(',')})`).toBe(true);
   });
 
   it('solo 앨범에는 초상화가 아니라 엠블럼이 뜬다', () => {
