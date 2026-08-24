@@ -425,45 +425,6 @@ export function collapseActivityChoices(ids: string[]): string[] {
   return result;
 }
 
-/**
- * 이번 주 계획 중 **돈이 없어 실행되지 않을 활동**들 — 계획 화면이 확정 전에 말해주기 위한 판정.
- *
- * 왜 필요한가: 엔진은 돈이 모자란 활동을 조용히 건너뛰고 주간 결산에 로그 한 줄만 남긴다
- * (`applyRoutineActivities` / `applyWeekendActivities`). 계획 화면은 **루틴 슬롯만** 검사해
- * 확정을 막았으므로, 주말·방학 선택 슬롯은 경고 없이 통째로 날아갔다. 실측(sim-weekly-loop):
- * 유료 활동을 쓰려는 플레이어의 스킵이 연 48주 중 32~41주, 그중 루틴은 2.6주뿐이었다.
- *
- * **엔진과 순서가 같아야 한다.** 돈은 활동마다 순차 차감되므로 잔액 3만에 2만 활동 둘이면
- * 앞의 하나만 돌아간다 — 합계만 비교하면 어느 것이 날아가는지 못 말한다. 그래서
- * 루틴2 → 루틴3 → (collapse된) 선택 슬롯 순으로 걸으며 잔액을 갱신한다. 수입 활동
- * (알바 등 `moneyCost < 0`)은 잔액을 올리므로 뒤 슬롯의 판정을 바꾼다.
- *
- * 한계: 이벤트가 주중에 소모하는 `timeCost`는 계획 시점에 알 수 없다. timeCost는 뒤 슬롯부터
- * 지우므로 실제 지출은 이 판정보다 **적거나 같다** — 즉 "감당된다"고 잘못 말하는 방향은 없다.
- */
-export function unaffordableInPlan(
-  state: GameState,
-  selectedActivities: readonly (string | null)[],
-): Activity[] {
-  let money = state.money;
-  const out: Activity[] = [];
-  const walk = (id: string | null | undefined) => {
-    if (!id) return;
-    const a = ACTIVITIES.find(x => x.id === id);
-    if (!a) return;
-    const cost = getActivityCost(a, state.year);
-    if (cost > 0 && money < cost) { out.push(a); return; }   // 스킵 — 잔액은 그대로
-    money = Math.max(0, Math.round((money - cost) * 10) / 10); // 엔진과 같은 반올림·음수 방지
-  };
-  // 방학에는 엔진이 루틴을 가동하지 않는다(applyRoutineActivities 호출부가 !isVacation).
-  if (!state.isVacation) {
-    walk(state.routineSlot2);
-    walk(state.routineSlot3);
-  }
-  for (const id of collapseActivityChoices(selectedActivities.filter((x): x is string => !!x))) walk(id);
-  return out;
-}
-
 // 활동의 vacationLimit 도달 여부
 // pendingUse: 이번 주 계획에 이미 배치된 인스턴스 수 — UI(슬롯 편집)에서 같은 주 중복 배치가
 // 엔진 스킵으로 이어지지 않도록 합산 판정. 엔진 경로(canApplyActivity)는 적용마다 카운트가
