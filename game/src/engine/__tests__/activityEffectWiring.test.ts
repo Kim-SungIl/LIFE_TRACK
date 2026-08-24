@@ -64,10 +64,12 @@ describe('catchupBonus — 선언값이 실제로 스탯에 더해진다', () =>
   // 학교급별 발동선은 엔진이 덮어쓴다 — 초 25 / 중 35 / 고는 활동 데이터의 threshold
   // (`gameEngine.ts`의 주석에 명시된 의도). 즉 리터럴 파일이 잠근 `threshold: 50`은
   // **고등에서만 쓰이는 숫자**다. 아래 고등 케이스가 그 마지막 소비 경로를 잠근다.
+  // 값은 발동/미발동이 갈리는 **바로 인접한 두 칸**이다. 한 칸이라도 떼어 놓으면 발동선을
+  // ±1 옮기는 변형이 두 샘플 사이에 숨는다(실측: 46/48로 두었더니 고등 임계를 49로 낮춰도 통과).
   const LEVELS = [
-    { label: '초등(발동선 25)', year: 1, fires: 22, quiet: 24 },
-    { label: '중등(발동선 35)', year: 4, fires: 32, quiet: 34 },
-    { label: '고등(발동선 = 선언된 threshold)', year: 5, fires: 46, quiet: 48 },
+    { label: '초등(발동선 25)', year: 1, fires: 22, quiet: 23 },
+    { label: '중등(발동선 35)', year: 4, fires: 32, quiet: 33 },
+    { label: '고등(발동선 = 선언된 threshold)', year: 5, fires: 47, quiet: 48 },
   ] as const;
 
   const CASES = [
@@ -194,6 +196,25 @@ describe('parentEffect — 선언된 baseDelta가 실제 친밀도로 간다', (
     expect(sensitive, '감성적 부모가 가족 여행에 더 크게 반응하지 않는다').toBeGreaterThan(dull);
   });
 
+  it('엔진이 활동마다 **그 활동의** tag를 넘긴다 (다른 태그를 쓰는 활동으로 교차 검증)', () => {
+    // 위 테스트는 family-trip(familyTime)만 본다. 그래서 엔진이 `activity.parentEffect.tag`를
+    // 무시하고 `'familyTime'`을 하드코딩해도 대소가 그대로라 통과한다(실측: 782개 전부 통과).
+    // 다른 태그를 쓰는 활동이 실제로 있다 — 편의점 알바(autonomyChoice).
+    //   autonomyChoice: freedom 1.4 / strict 0.6   ← 성향에 따라 갈린다
+    //   familyTime:     freedom 0.6 / strict 0.6   ← 갈리지 않는다
+    // 그래서 태그를 familyTime으로 고정하면 아래 대소가 무너진다.
+    const job = pick('part-time');
+    expect(job.parentEffect?.tag).toBe('autonomyChoice');
+    // 알바는 Y4부터 열리고 계절 제약이 없다.
+    const week = { week: SEMESTER_WEEK, isVacation: false, money: 999, year: 4,
+      routineSlot2: null, routineSlot3: null } as const;
+    const autonomous = intimacyDelta({ ...week, parents: ['freedom', 'info'] }, slotsOf('part-time')).delta;
+    const controlling = intimacyDelta({ ...week, parents: ['strict', 'info'] }, slotsOf('part-time')).delta;
+
+    expect(autonomous, '알바가 친밀도를 전혀 안 움직인다 — 전제가 깨졌다').not.toBe(0);
+    expect(autonomous, '자율 존중 부모가 알바에 더 크게 반응하지 않는다').toBeGreaterThan(controlling);
+  });
+
   it('같은 활동이 루틴과 주말에 동시에 있어도 한 번만 적용된다', () => {
     // 활동 id별 주 1회 — `log.parentEffectAppliedIds` 가드. 가족 여행은 방학 전용이라
     // 루틴 슬롯에 못 들어가므로(방학엔 루틴이 안 돈다) 계절 제약이 없는 가족 저녁으로 잠근다.
@@ -265,12 +286,12 @@ describe('80+ 소프트캡 면제 — 유료 활동만 면제된다', () => {
     expect(free / paid, '낮은 구간에서도 비율이 1이 아니면 위 테스트가 소프트캡을 안 본다').toBeCloseTo(1, 6);
   });
 
-  it('발동 경계가 80이다 — 78에서는 같이 오르고 82부터 눌린다', () => {
-    // 위 두 테스트는 86과 40만 봐서 **임계 자체**를 잠그지 못했다(80 → 60으로 낮춰도 통과했다.
-    // 실측). 경계를 사이에 끼고 본다.
-    expect(netGain(78, 'self-study') / netGain(78, 'academy'), '78은 아직 캡 밖이어야 한다')
+  it('발동 경계가 정확히 80이다 — 79는 캡 밖, 80부터 캡 안', () => {
+    // 86과 40만 보면 임계 자체가 안 잠긴다(60으로 낮춰도 통과). 78/82로 넓게 잡아도 임계가
+    // 79~82 어디든 통과한다(실측). **인접한 두 칸**이라야 리터럴 80이 잠긴다.
+    expect(netGain(79, 'self-study') / netGain(79, 'academy'), '79는 아직 캡 밖이어야 한다')
       .toBeCloseTo(1, 6);
-    expect(netGain(82, 'self-study') / netGain(82, 'academy'), '82부터 캡 안이어야 한다')
+    expect(netGain(80, 'self-study') / netGain(80, 'academy'), '80부터 캡 안이어야 한다')
       .toBeLessThan(1);
   });
 });

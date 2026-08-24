@@ -392,13 +392,14 @@ const gateSkipped = (s: GameState, id: string): boolean =>
  * talent·health를 활동과 무관하게 항상 채우므로**(활동 0개인 주에도 4개 축이 기록된다,
  * 실측) 그 판정은 항상 참이 되어 "효과 루프를 비워도 통과"했다. 그래서 대조군과 비교한다.
  */
-function appliedEffect(withAct: GameState, control: GameState, id: string, activity: Activity): boolean {
-  if ((withAct.weekLog?.skipped ?? []).some(k => k.activityId === id)) return false;
-  const a = withAct.weekLog?.statChanges ?? {};
-  const c = control.weekLog?.statChanges ?? {};
+function appliedEffect(withAct: GameState, control: GameState, activity: Activity): boolean {
+  // **로그가 아니라 실제 스탯**을 본다. 로그(`statChanges`)만 보면 `state.stats` 대입을 생략한
+  // 변형이 통과한다(엔진은 그 둘을 별개 줄에서 갱신한다 — 실측으로 확인된 구멍).
+  // 스킵 기록은 여기서 보지 않는다. 스킵 단언은 호출부에서 따로 하며, 여기서까지 보면
+  // "스킵으로 기록됐지만 효과는 들어갔다"는 모순 상태를 아무도 배제하지 못한다.
   return Object.keys(activity.effects).some(k => {
-    const key = k as keyof typeof a;
-    return (a[key] ?? 0) > (c[key] ?? 0) + 1e-9;
+    const key = k as keyof GameState['stats'];
+    return withAct.stats[key] > control.stats[key] + 1e-9;
   });
 }
 
@@ -538,6 +539,11 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
 
           expect(moneySkipped(applied, id), `${spec.moneyCost}만인데 돈 부족으로 기록됐다`).toBe(false);
           expect(gateSkipped(applied, id), `해금 학년인데 게이트로 스킵됐다`).toBe(false);
+          // 돈만 빠지고 효과는 0인 상태를 배제한다 — 차감만 보면 그걸 못 잡는다.
+          expect(
+            appliedEffect(applied, control, pick(id)),
+            `${spec.moneyCost}만을 냈는데 효과가 들어가지 않았다`,
+          ).toBe(true);
           // 로그와 지갑 둘 다 본다 — 한쪽만 보면 "로그만 차감" 또는 "지갑만 차감"을 놓친다.
           expect(
             (control.weekLog?.moneyChange ?? 0) - (applied.weekLog?.moneyChange ?? 0),
@@ -569,9 +575,13 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
           for (const { label, patch } of FIXTURE_VARIANTS) {
             const ids = choiceSlots(id);
             /** 같은 상태에서 선택 슬롯만 바꿔 돌린다 — 대조군은 활동을 아예 안 고른 주. */
+            // 스탯을 catchup 발동선(중등 35) 위로 올린다 — 안 그러면 catchup이 대신 스탯을
+            // 올려서 "본 효과가 죽어도 적용된 것처럼" 보인다(실측: intensive-academy가 그랬다).
+            const NO_CATCHUP = { academic: 60, social: 60, talent: 60, mental: 60, health: 60 };
             const week = (money: number, choices: string[]) => processWeek(makeState(withSeason(true, {
               year: 4,
               money,
+              stats: NO_CATCHUP,
               vacationChoices: choices,
               weekendChoices: [],
               eventTimeCost: 0,
@@ -585,14 +595,14 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
               `${label} / ${short}만 — 돈 부족으로 기록되지 않았다`,
             ).toBe(true);
             expect(
-              appliedEffect(skipped, week(short, []), id, pick(id)),
+              appliedEffect(skipped, week(short, []), pick(id)),
               `${label} / ${short}만 — 감당 못 하는데 적용됐다`,
             ).toBe(false);
 
             const applied = week(spec.moneyCost, ids);
             const control = week(spec.moneyCost, []);
             expect(
-              appliedEffect(applied, control, id, pick(id)),
+              appliedEffect(applied, control, pick(id)),
               `${label} / ${spec.moneyCost}만 — 감당되는데 적용되지 않았다`,
             ).toBe(true);
             expect(
@@ -638,7 +648,7 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
               `${label} / 학기 — 계절 게이트로 기록되지 않았다`,
             ).toBe(true);
             expect(
-              appliedEffect(gated, semesterControl, id, pick(id)),
+              appliedEffect(gated, semesterControl, pick(id)),
               `${label} / 학기 — 방학 전용인데 학기에 적용됐다`,
             ).toBe(false);
             expect(
