@@ -376,8 +376,25 @@ function assertOptionalFields(id: string, a: Activity, spec: HighCostSpec): void
   }
 }
 
-const MONEY_SKIP = /💰 돈이 부족해서 .+ 못 했다/;
-const GATE_SKIP = /⚠ 지금은 .+ 할 수 없어 건너뛰었다/;
+// 엔진의 스킵 판정은 `WeekLog.skipped`에 {activityId, reason, origin}으로 남는다(PR #407).
+// 로그 문자열을 파싱하지 않는 이유: 정규식 `.+`은 **어느 활동이** 걸렸는지 안 보고, 문구나
+// 조사 처리가 바뀌면 조용히 통과한다. 구조화 기록은 활동 id까지 지목한다.
+const moneySkipped = (s: GameState, id: string): boolean =>
+  (s.weekLog?.skipped ?? []).some(k => k.activityId === id && k.reason === 'money');
+const gateSkipped = (s: GameState, id: string): boolean =>
+  (s.weekLog?.skipped ?? []).some(k => k.activityId === id && k.reason === 'gate');
+
+/**
+ * 활동이 실제로 **적용됐는지**. `${name} 완료` 메시지는 `applyActivity` 말미의 무조건 push라
+ * 효과·차감이 전부 죽어도 남는다 — 그래서 "스킵 기록이 없다"와 "실제로 값이 움직였다"를 함께 본다.
+ */
+function appliedEffect(s: GameState, id: string, activity: Activity): boolean {
+  if ((s.weekLog?.skipped ?? []).some(k => k.activityId === id)) return false;
+  const changes = s.weekLog?.statChanges ?? {};
+  // 이 활동이 올리는 축 중 하나라도 실제로 움직였는가 (자연 감소가 있으므로 부호가 아니라
+  // "기록이 존재하는가"로 본다 — 적용 자체가 안 됐으면 그 축의 키가 만들어지지 않는다).
+  return Object.keys(activity.effects).some(k => changes[k as keyof typeof changes] !== undefined);
+}
 
 const CAT_LABEL: Record<Activity['category'], string> = {
   study: '공부',
@@ -525,12 +542,12 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
               ...patch,
             })));
             expect(
-              skipped.weekLog?.messages.some(m => MONEY_SKIP.test(m)),
-              `${label} / ${spec.moneyCost - 1}만 💰`,
+              moneySkipped(skipped, id),
+              `${label} / ${spec.moneyCost - 1}만 — 돈 부족으로 기록되지 않았다`,
             ).toBe(true);
             expect(
-              skipped.weekLog?.messages.some(m => m.includes(`${spec.name} 완료`)),
-              `${label} / ${spec.moneyCost - 1}만 완료 없음`,
+              appliedEffect(skipped, id, pick(id)),
+              `${label} / ${spec.moneyCost - 1}만 — 감당 못 하는데 적용됐다`,
             ).toBe(false);
 
             const applied = processWeek(makeState(withSeason(true, {
@@ -542,13 +559,28 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
               ...patch,
             })));
             expect(
-              applied.weekLog?.messages.some(m => m.includes(`${spec.name} 완료`)),
-              `${label} / ${spec.moneyCost}만 완료`,
+              appliedEffect(applied, id, pick(id)),
+              `${label} / ${spec.moneyCost}만 — 감당되는데 적용되지 않았다`,
             ).toBe(true);
             expect(
-              applied.weekLog?.messages.some(m => MONEY_SKIP.test(m)),
-              `${label} / ${spec.moneyCost}만 💰 없음`,
+              moneySkipped(applied, id),
+              `${label} / ${spec.moneyCost}만 — 감당되는데 돈 부족으로 기록됐다`,
             ).toBe(false);
+            // 가격 리터럴이 실제로 **차감**된다 — 스킵 기록만 보면 "공짜로 실행"을 못 잡는다.
+            // moneyChange에는 용돈·생활비도 섞이므로(processWeek 9단계) 활동만 뺀 대조군과의
+            // 차이로 본다. 절대값을 적으면 용돈 곡선이 바뀔 때 이 테스트가 같이 깨진다.
+            const control = processWeek(makeState(withSeason(true, {
+              year: 4,
+              money: spec.moneyCost,
+              vacationChoices: [],
+              weekendChoices: [],
+              eventTimeCost: 0,
+              ...patch,
+            })));
+            expect(
+              (control.weekLog?.moneyChange ?? 0) - (applied.weekLog?.moneyChange ?? 0),
+              `${label} / ${spec.moneyCost}만 — 차감액이 선언 가격과 다르다`,
+            ).toBe(spec.moneyCost);
           }
         });
 
@@ -564,16 +596,16 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
               ...patch,
             })));
             expect(
-              gated.weekLog?.messages.some(m => GATE_SKIP.test(m)),
-              `${label} / 학기 ⚠`,
+              gateSkipped(gated, id),
+              `${label} / 학기 — 계절 게이트로 기록되지 않았다`,
             ).toBe(true);
             expect(
-              gated.weekLog?.messages.some(m => m.includes(`${spec.name} 완료`)),
-              `${label} / 학기 완료 없음`,
+              appliedEffect(gated, id, pick(id)),
+              `${label} / 학기 — 방학 전용인데 학기에 적용됐다`,
             ).toBe(false);
             expect(
-              gated.weekLog?.messages.some(m => MONEY_SKIP.test(m)),
-              `${label} / 학기 💰 없음`,
+              moneySkipped(gated, id),
+              `${label} / 학기 — 잔액이 충분한데 돈 부족으로 기록됐다`,
             ).toBe(false);
           }
         });
