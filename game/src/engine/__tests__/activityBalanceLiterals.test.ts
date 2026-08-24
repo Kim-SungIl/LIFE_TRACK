@@ -385,15 +385,21 @@ const gateSkipped = (s: GameState, id: string): boolean =>
   (s.weekLog?.skipped ?? []).some(k => k.activityId === id && k.reason === 'gate');
 
 /**
- * 활동이 실제로 **적용됐는지**. `${name} 완료` 메시지는 `applyActivity` 말미의 무조건 push라
- * 효과·차감이 전부 죽어도 남는다 — 그래서 "스킵 기록이 없다"와 "실제로 값이 움직였다"를 함께 본다.
+ * 활동이 실제로 **적용됐는지** — 활동을 뺀 대조군보다 그 활동의 효과 축이 더 올랐는가.
+ *
+ * `${name} 완료` 메시지는 `applyActivity` 말미의 무조건 push라 효과·차감이 전부 죽어도 남는다.
+ * 그렇다고 `statChanges`에 키가 있는지만 보면 더 나쁘다 — **자연 감소가 academic·social·
+ * talent·health를 활동과 무관하게 항상 채우므로**(활동 0개인 주에도 4개 축이 기록된다,
+ * 실측) 그 판정은 항상 참이 되어 "효과 루프를 비워도 통과"했다. 그래서 대조군과 비교한다.
  */
-function appliedEffect(s: GameState, id: string, activity: Activity): boolean {
-  if ((s.weekLog?.skipped ?? []).some(k => k.activityId === id)) return false;
-  const changes = s.weekLog?.statChanges ?? {};
-  // 이 활동이 올리는 축 중 하나라도 실제로 움직였는가 (자연 감소가 있으므로 부호가 아니라
-  // "기록이 존재하는가"로 본다 — 적용 자체가 안 됐으면 그 축의 키가 만들어지지 않는다).
-  return Object.keys(activity.effects).some(k => changes[k as keyof typeof changes] !== undefined);
+function appliedEffect(withAct: GameState, control: GameState, id: string, activity: Activity): boolean {
+  if ((withAct.weekLog?.skipped ?? []).some(k => k.activityId === id)) return false;
+  const a = withAct.weekLog?.statChanges ?? {};
+  const c = control.weekLog?.statChanges ?? {};
+  return Object.keys(activity.effects).some(k => {
+    const key = k as keyof typeof a;
+    return (a[key] ?? 0) > (c[key] ?? 0) + 1e-9;
+  });
 }
 
 const CAT_LABEL: Record<Activity['category'], string> = {
@@ -533,33 +539,31 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
           // 엔진 차감이 유일한 가격 경계 — processWeek + week/isVacation 짝.
           for (const { label, patch } of FIXTURE_VARIANTS) {
             const ids = choiceSlots(id);
-            const skipped = processWeek(makeState(withSeason(true, {
+            /** 같은 상태에서 선택 슬롯만 바꿔 돌린다 — 대조군은 활동을 아예 안 고른 주. */
+            const week = (money: number, choices: string[]) => processWeek(makeState(withSeason(true, {
               year: 4,
-              money: spec.moneyCost - 1,
-              vacationChoices: ids,
+              money,
+              vacationChoices: choices,
               weekendChoices: [],
               eventTimeCost: 0,
               ...patch,
             })));
+
+            const short = spec.moneyCost - 1;
+            const skipped = week(short, ids);
             expect(
               moneySkipped(skipped, id),
-              `${label} / ${spec.moneyCost - 1}만 — 돈 부족으로 기록되지 않았다`,
+              `${label} / ${short}만 — 돈 부족으로 기록되지 않았다`,
             ).toBe(true);
             expect(
-              appliedEffect(skipped, id, pick(id)),
-              `${label} / ${spec.moneyCost - 1}만 — 감당 못 하는데 적용됐다`,
+              appliedEffect(skipped, week(short, []), id, pick(id)),
+              `${label} / ${short}만 — 감당 못 하는데 적용됐다`,
             ).toBe(false);
 
-            const applied = processWeek(makeState(withSeason(true, {
-              year: 4,
-              money: spec.moneyCost,
-              vacationChoices: ids,
-              weekendChoices: [],
-              eventTimeCost: 0,
-              ...patch,
-            })));
+            const applied = week(spec.moneyCost, ids);
+            const control = week(spec.moneyCost, []);
             expect(
-              appliedEffect(applied, id, pick(id)),
+              appliedEffect(applied, control, id, pick(id)),
               `${label} / ${spec.moneyCost}만 — 감당되는데 적용되지 않았다`,
             ).toBe(true);
             expect(
@@ -569,14 +573,6 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
             // 가격 리터럴이 실제로 **차감**된다 — 스킵 기록만 보면 "공짜로 실행"을 못 잡는다.
             // moneyChange에는 용돈·생활비도 섞이므로(processWeek 9단계) 활동만 뺀 대조군과의
             // 차이로 본다. 절대값을 적으면 용돈 곡선이 바뀔 때 이 테스트가 같이 깨진다.
-            const control = processWeek(makeState(withSeason(true, {
-              year: 4,
-              money: spec.moneyCost,
-              vacationChoices: [],
-              weekendChoices: [],
-              eventTimeCost: 0,
-              ...patch,
-            })));
             expect(
               (control.weekLog?.moneyChange ?? 0) - (applied.weekLog?.moneyChange ?? 0),
               `${label} / ${spec.moneyCost}만 — 차감액이 선언 가격과 다르다`,
@@ -595,12 +591,20 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
               eventTimeCost: 0,
               ...patch,
             })));
+            const semesterControl = processWeek(makeState(withSeason(false, {
+              year: 4,
+              money: 999,
+              weekendChoices: [],
+              vacationChoices: [],
+              eventTimeCost: 0,
+              ...patch,
+            })));
             expect(
               gateSkipped(gated, id),
               `${label} / 학기 — 계절 게이트로 기록되지 않았다`,
             ).toBe(true);
             expect(
-              appliedEffect(gated, id, pick(id)),
+              appliedEffect(gated, semesterControl, id, pick(id)),
               `${label} / 학기 — 방학 전용인데 학기에 적용됐다`,
             ).toBe(false);
             expect(

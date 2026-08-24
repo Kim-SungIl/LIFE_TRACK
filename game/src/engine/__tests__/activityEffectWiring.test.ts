@@ -50,10 +50,6 @@ function weekStat(
   };
 }
 
-/** statChanges만 보는 옛 방식 — 대조용(아래 "로그와 스탯이 일치한다" 계약에서 씀). */
-const weekStatChange = (patch: Partial<GameState>, choices: string[], stat: StatKey): number =>
-  weekStat(patch, choices, stat).gain;
-
 /** 같은 활동을 slots만큼 인접 배치 — collapseActivityChoices가 1 인스턴스로 접는다. */
 const slotsOf = (id: string): string[] => Array.from({ length: pick(id).slots }, () => id);
 
@@ -198,6 +194,29 @@ describe('80+ 소프트캡 면제 — 유료 활동만 면제된다', () => {
   // 85 이상을 쓰는 이유: 80~84 구간은 "최저 보장"(baseValue×0.1)이 소프트캡 결과와 같은 값으로
   // 되돌려 놓아 둘이 구분되지 않는다.
   const HIGH_STAT = 86;
+  const SOFT_CAP_FACTOR = 0.1;   // gameEngine의 `value *= 0.1` — 이 숫자 자체를 잠근다
+
+  /**
+   * 활동이 순수하게 올린 양 — 활동을 뺀 대조군과의 차이.
+   *
+   * `statChanges`를 그대로 쓰면 안 된다: 자연 감소가 academic·social·talent·health 키를
+   * **활동과 무관하게 항상** 채우므로("활동 0개인 주에도 4개 축이 기록된다" 실측), 절대값은
+   * 활동 기여를 나타내지 못한다.
+   */
+  // 여기서는 실제 스탯이 아니라 **로그(statChanges)** 를 쓴다. 스탯은 0.1 단위로 반올림돼
+  // 이 구간의 작은 증분에서 정밀도를 잃는다(무료 0.0495 → 0.0으로 뭉개져 비율이 0.2로 보인다).
+  // catchup 쪽과 달리 여기는 로그/스탯이 갈라질 위험이 없다 — 소프트캡 계수는 `value` 하나에
+  // 곱해지고 그 값이 스탯과 로그에 함께 들어간다.
+  function netGain(academic: number, id: string | null): number {
+    const base = makeState({}).stats;
+    const week = {
+      week: SEMESTER_WEEK, isVacation: false, money: 999, year: 4,
+      routineSlot2: null, routineSlot3: null,
+      stats: { ...base, academic },
+    };
+    const logged = (choices: string[]) => weekStat(week, choices, 'academic').logged;
+    return logged(id ? [id] : []) - logged([]);
+  }
 
   it('전제 — 독학과 학원의 학업 기본값이 같고, 하나는 무료 하나는 유료다', () => {
     expect(pick('self-study').effects.academic).toBe(pick('academy').effects.academic);
@@ -205,31 +224,22 @@ describe('80+ 소프트캡 면제 — 유료 활동만 면제된다', () => {
     expect(getActivityCost(pick('academy'), 4)).toBeGreaterThan(0);
   });
 
-  it('학업 86에서 유료(학원)는 무료(독학)보다 확실히 더 오른다', () => {
-    const base = makeState({}).stats;
-    const week = {
-      week: SEMESTER_WEEK, isVacation: false, money: 999, year: 4,
-      routineSlot2: null, routineSlot3: null,
-      stats: { ...base, academic: HIGH_STAT },
-    } as const;
-    const free = weekStatChange(week, ['self-study'], 'academic');
-    const paid = weekStatChange(week, ['academy'], 'academic');
+  it(`학업 86에서 무료는 유료의 ${SOFT_CAP_FACTOR}배만 오른다 (계수 자체를 잠근다)`, () => {
+    const free = netGain(HIGH_STAT, 'self-study');
+    const paid = netGain(HIGH_STAT, 'academy');
 
-    // 무료는 ×0.1로 눌려 자연 감소에 묻히고, 유료는 그대로 오른다.
+    // 둘 다 실제로 올라야 비율이 의미를 갖는다(0/0 방지).
+    expect(free, '무료 활동의 순증이 0 이하 — 비율이 무의미해진다').toBeGreaterThan(0);
     expect(paid).toBeGreaterThan(free);
-    expect(paid - free, '유료 면제가 사라지면 이 격차가 붕괴한다').toBeGreaterThan(0.3);
+    // 격차가 아니라 **비율**을 본다 — 격차만 보면 계수를 0.2로 완화해도 통과한다(실측).
+    expect(free / paid).toBeCloseTo(SOFT_CAP_FACTOR, 6);
   });
 
-  it('학업이 낮은 구간에서는 둘의 격차가 그만큼 벌어지지 않는다 (소프트캡 고유 효과)', () => {
-    // 대조군 — 위 격차가 "유료가 원래 더 좋아서"가 아니라 80+ 소프트캡 때문임을 보인다.
-    const base = makeState({}).stats;
-    const week = {
-      week: SEMESTER_WEEK, isVacation: false, money: 999, year: 4,
-      routineSlot2: null, routineSlot3: null,
-      stats: { ...base, academic: 40 },
-    } as const;
-    const free = weekStatChange(week, ['self-study'], 'academic');
-    const paid = weekStatChange(week, ['academy'], 'academic');
-    expect(Math.abs(paid - free), '낮은 구간에서도 격차가 크면 위 테스트가 소프트캡을 안 본다').toBeLessThan(0.3);
+  it('학업이 낮은 구간에서는 무료와 유료가 같이 오른다 (소프트캡 고유 효과)', () => {
+    // 대조군 — 위 비율이 "유료가 원래 더 좋아서"가 아니라 80+ 소프트캡 때문임을 보인다.
+    const free = netGain(40, 'self-study');
+    const paid = netGain(40, 'academy');
+    expect(free).toBeGreaterThan(0);
+    expect(free / paid, '낮은 구간에서도 비율이 1이 아니면 위 테스트가 소프트캡을 안 본다').toBeCloseTo(1, 6);
   });
 });
