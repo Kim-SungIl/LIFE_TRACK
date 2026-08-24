@@ -1,4 +1,5 @@
-// 학년 해금 활동 6종 + 입시 설명회의 "밸런스 수치" 잠금.
+// @vitest-environment jsdom
+// 학년 해금 활동 6종 + 입시 설명회 + 고가 4종(집중과외·단기특강·캠프·가족여행)의 "밸런스 수치" 잠금.
 //
 // activityGates.test.ts는 게이트 계약 SSOT라 규약이 "리터럴 주입 금지 — 데이터에서 파생"이다.
 // 그래서 가격 경계를 a.moneyCost로 만들고, moneyCost와 requires를 정합하게 함께 바꾸면 통과한다.
@@ -8,8 +9,19 @@
 // 수치는 sim 측정으로 도출한 값이라(독서실 3만: 2만이면 무료 대비 우위가 과해짐 / 야자 social 1:
 // 80+ 소프트캡이 스탯별이라 후반까지 살아남는 유일한 축) 조용히 드리프트하면 근거가 사라진다.
 // 값을 의도적으로 바꿀 때는 아래 표를 같이 고치면 되고, 그때 rationale을 다시 읽게 된다.
-import { describe, expect, it } from 'vitest';
-import { ACTIVITIES, getActivityCost, getAvailableActivities } from '../activities';
+//
+// jsdom: 고가 방학 3종의 vacationLimit 합산을 ActivityPicker pendingVacUse 경로로 잠그기 위해.
+import { createElement } from 'react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { ActivityPicker } from '../../components/ActivityPicker';
+import {
+  ACTIVITIES,
+  getActivityCost,
+  getAvailableActivities,
+  isVacationLimitReached,
+} from '../activities';
+import { processWeek } from '../gameEngine';
 import { SHOP_ITEMS } from '../shopSystem';
 import type { Activity, GameState } from '../types';
 import { getWeeklyIncome } from '../parentModifiers';
@@ -78,6 +90,22 @@ const FIXTURE_VARIANTS: { label: string; patch: Partial<GameState> }[] = [
 function availableIn(patch: Partial<GameState>, id: string): boolean {
   return getAvailableActivities(makeState(patch)).some(a => a.id === id);
 }
+
+// processWeek는 week으로 isVacation을 덮어쓴다. 어긋나면 계절 게이트로 스킵돼 돈 문제와 구분이 안 된다.
+const SEMESTER_WEEK = 3;
+const VACATION_WEEK = 21;
+
+function withSeason(isVacation: boolean, patch: Partial<GameState> = {}): Partial<GameState> {
+  return {
+    ...patch,
+    isVacation,
+    week: isVacation ? VACATION_WEEK : SEMESTER_WEEK,
+  };
+}
+
+afterEach(() => {
+  cleanup();
+});
 
 // 밸런스에 관여하는 선택 필드 — SPEC이 값을 선언하지 않은 것은 "없음"이 계약이다.
 // (`yearlyCost`는 getActivityCost가 moneyCost보다 우선 적용하고, seasonGate·vacationLimit·
@@ -280,6 +308,358 @@ describe('학년별 차등 비용 — 실효 가격 잠금', () => {
     // 기본 부모(wealth 없음) 기준 — wealth +2만은 구제 수단이지 전제가 아니다.
     const income = getWeeklyIncome(['emotional', 'info'], HIGH_YEAR);
     expect(routine, `루틴 고정비 ${routine}만 vs 수입 ${income}만`).toBeLessThanOrEqual(income);
+  });
+});
+
+// 고가 4종 — 학년 해금 6종과 달리 unlockYear가 없거나(방학 3종) seasonGate/vacationLimit/
+// catchupBonus/parentEffect가 있는 활동이라 BalanceSpec을 그대로 못 쓴다.
+// 선택 필드는 값을 선언한 것만 잠그고, 선언하지 않은 것은 "없음"이 계약이다.
+interface HighCostSpec {
+  name: string;
+  slots: number;
+  fatigue: number;
+  moneyCost: number;
+  category: Activity['category'];
+  effects: Record<string, number>;
+  rationale: string;
+  unlockYear?: number;
+  seasonGate?: Activity['seasonGate'];
+  vacationLimit?: number;
+  catchupBonus?: Activity['catchupBonus'];
+  parentEffect?: Activity['parentEffect'];
+}
+
+const HIGHCOST: Record<string, HighCostSpec> = {
+  'private-tutoring': {
+    name: '집중 과외', slots: 1, fatigue: 9, moneyCost: 28, category: 'study',
+    effects: { academic: 2.5 },
+    unlockYear: 5,
+    rationale:
+      '고비용 학업 돈 sink(C7-A). Y5부터, 15→28로 올려 비-wealth가 매주 사지 못하게 함(C7-B). '
+      + '유료라 80+ 소프트캡 면제.',
+  },
+  'intensive-academy': {
+    name: '학원 단기특강', slots: 2, fatigue: 12, moneyCost: 5, category: 'study',
+    effects: { academic: 4 },
+    seasonGate: 'vacation-only',
+    vacationLimit: 2,
+    catchupBonus: { targetStat: 'academic', threshold: 50, bonus: 0.5 },
+    rationale: 'TODO(확인 필요) — 방학 2칸·5만·academic 4와 vacationLimit 2의 sim 도출 근거.',
+  },
+  'sports-camp': {
+    name: '스포츠 캠프', slots: 3, fatigue: 8, moneyCost: 5, category: 'exercise',
+    effects: { health: 5, talent: 2, social: 2 },
+    seasonGate: 'vacation-only',
+    vacationLimit: 1,
+    catchupBonus: { targetStat: 'health', threshold: 50, bonus: 0.5 },
+    rationale: 'TODO(확인 필요) — 3칸·5만·health 5/talent 2/social 2와 vacationLimit 1의 sim 도출 근거.',
+  },
+  'family-trip': {
+    name: '가족 여행', slots: 3, fatigue: -8, moneyCost: 8, category: 'parent',
+    effects: { mental: 6, social: 2, health: 1 },
+    seasonGate: 'vacation-only',
+    vacationLimit: 1,
+    parentEffect: { baseDelta: 1.5, tag: 'familyTime' },
+    rationale: 'TODO(확인 필요) — 8만·피로 −8·parentEffect familyTime 1.5의 sim 도출 근거.',
+  },
+};
+
+function assertOptionalFields(id: string, a: Activity, spec: HighCostSpec): void {
+  const rec = a as unknown as Record<string, unknown>;
+  const declared = spec as unknown as Record<string, unknown>;
+  for (const field of OPTIONAL_BALANCE_FIELDS) {
+    if (declared[field] !== undefined) {
+      expect(rec[field], `${id}.${field}`).toStrictEqual(declared[field]);
+    } else {
+      expect(rec[field], `${id}.${field}`).toBeUndefined();
+    }
+  }
+}
+
+const MONEY_SKIP = /💰 돈이 부족해서 .+ 못 했다/;
+const GATE_SKIP = /⚠ 지금은 .+ 할 수 없어 건너뛰었다/;
+
+const CAT_LABEL: Record<Activity['category'], string> = {
+  study: '공부',
+  exercise: '운동',
+  social: '관계',
+  talent: '자기계발',
+  rest: '휴식',
+  parent: '가족',
+  work: '알바',
+};
+
+function renderHighCostPicker(
+  act: Activity,
+  opts: {
+    pendingVacUse?: Record<string, number>;
+    vacationActivityCounts?: Record<string, number>;
+  } = {},
+): void {
+  render(createElement(ActivityPicker, {
+    activities: [act],
+    selected: [],
+    onToggle: vi.fn(),
+    maxSlots: 10,
+    currentSlots: 0,
+    availableMoney: 999,
+    pendingVacUse: opts.pendingVacUse,
+    state: makeState(withSeason(true, {
+      money: 999,
+      year: 4,
+      vacationActivityCounts: opts.vacationActivityCounts ?? {},
+    })),
+  }));
+}
+
+function highCostActivityButton(act: Activity): HTMLElement {
+  const header = screen.getAllByRole('button').find(el =>
+    (el.textContent ?? '').includes(CAT_LABEL[act.category])
+    && el.getAttribute('aria-expanded') !== null,
+  );
+  if (!header) throw new Error(`카테고리 헤더 없음: ${act.category}`);
+  if (header.getAttribute('aria-expanded') === 'false') fireEvent.click(header);
+  const btn = screen.getAllByRole('button').find(el =>
+    el.getAttribute('aria-pressed') != null && (el.textContent ?? '').includes(act.name),
+  );
+  if (!btn) throw new Error(`활동 버튼 없음: ${act.name}`);
+  return btn;
+}
+
+function choiceSlots(id: string): string[] {
+  return Array.from({ length: pick(id).slots }, () => id);
+}
+
+describe('고가 4종 — 밸런스 수치 잠금', () => {
+  for (const [id, spec] of Object.entries(HIGHCOST)) {
+    describe(`${id} (${spec.name})`, () => {
+      it(`수치가 스펙과 정확히 같다 — ${spec.rationale}`, () => {
+        const a = pick(id);
+        expect(a.name).toBe(spec.name);
+        expect(a.slots).toBe(spec.slots);
+        expect(a.fatigue).toBe(spec.fatigue);
+        expect(a.moneyCost).toBe(spec.moneyCost);
+        expect(a.category).toBe(spec.category);
+        if (spec.unlockYear !== undefined) {
+          expect(a.unlockYear).toBe(spec.unlockYear);
+          expect(typeof a.requires).toBe('function');
+        } else {
+          expect(a.unlockYear).toBeUndefined();
+          expect(a.requires).toBeUndefined();
+        }
+        expect(a.effects).toStrictEqual(spec.effects);
+      });
+
+      it('실효 가격(getActivityCost)이 moneyCost와 같다 — yearlyCost로 우회되지 않는다', () => {
+        const a = pick(id);
+        // 해금 전 학년 밴드에 yearlyCost를 몰래 넣어도 잡히게 1~7 전부.
+        for (let y = 1; y <= 7; y++) {
+          expect(getActivityCost(a, y), `${id} year ${y} 실효 가격`).toBe(spec.moneyCost);
+        }
+      });
+
+      it('선택 필드는 선언한 값이고, 선언하지 않은 것은 없다', () => {
+        assertOptionalFields(id, pick(id), spec);
+      });
+
+      const unlockYear = spec.unlockYear;
+      if (unlockYear !== undefined) {
+        it('해금 학년 경계가 스펙 그대로다 (픽스처 변형·학기/방학 전부에서)', () => {
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            for (const isVacation of [false, true]) {
+              const base = withSeason(isVacation, { money: 999, ...patch });
+              expect(
+                availableIn({ year: unlockYear - 1, ...base }, id),
+                `${label} / 방학:${isVacation} / Y${unlockYear - 1}`,
+              ).toBe(false);
+              expect(
+                availableIn({ year: unlockYear, ...base }, id),
+                `${label} / 방학:${isVacation} / Y${unlockYear}`,
+              ).toBe(true);
+            }
+          }
+        });
+
+        it(`잔액 ${spec.moneyCost - 1}만이면 빠지고 ${spec.moneyCost}만이면 나온다 (가격 리터럴)`, () => {
+          // 하드코딩이라 moneyCost와 requires를 정합하게 같이 낮춰도 여기서 걸린다
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            for (const isVacation of [false, true]) {
+              const base = withSeason(isVacation, { year: unlockYear, ...patch });
+              expect(
+                availableIn({ ...base, money: spec.moneyCost - 1 }, id),
+                `${label} / 방학:${isVacation} / ${spec.moneyCost - 1}만`,
+              ).toBe(false);
+              expect(
+                availableIn({ ...base, money: spec.moneyCost }, id),
+                `${label} / 방학:${isVacation} / ${spec.moneyCost}만`,
+              ).toBe(true);
+            }
+          }
+        });
+      } else {
+        it('vacation-only라 학기에는 없고 방학에만 나온다 (픽스처 변형 전부)', () => {
+          expect(spec.seasonGate).toBe('vacation-only');
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            expect(
+              availableIn(withSeason(false, { money: 999, year: 4, ...patch }), id),
+              `${label} / 학기`,
+            ).toBe(false);
+            expect(
+              availableIn(withSeason(true, { money: 999, year: 4, ...patch }), id),
+              `${label} / 방학`,
+            ).toBe(true);
+          }
+        });
+
+        it(`잔액 ${spec.moneyCost - 1}만이면 엔진이 스킵하고 ${spec.moneyCost}만이면 적용된다`, () => {
+          // 방학 3종은 requires가 없어 목록(getAvailableActivities)은 잔액과 무관하다.
+          // 엔진 차감이 유일한 가격 경계 — processWeek + week/isVacation 짝.
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            const ids = choiceSlots(id);
+            const skipped = processWeek(makeState(withSeason(true, {
+              year: 4,
+              money: spec.moneyCost - 1,
+              vacationChoices: ids,
+              weekendChoices: [],
+              eventTimeCost: 0,
+              ...patch,
+            })));
+            expect(
+              skipped.weekLog?.messages.some(m => MONEY_SKIP.test(m)),
+              `${label} / ${spec.moneyCost - 1}만 💰`,
+            ).toBe(true);
+            expect(
+              skipped.weekLog?.messages.some(m => m.includes(`${spec.name} 완료`)),
+              `${label} / ${spec.moneyCost - 1}만 완료 없음`,
+            ).toBe(false);
+
+            const applied = processWeek(makeState(withSeason(true, {
+              year: 4,
+              money: spec.moneyCost,
+              vacationChoices: ids,
+              weekendChoices: [],
+              eventTimeCost: 0,
+              ...patch,
+            })));
+            expect(
+              applied.weekLog?.messages.some(m => m.includes(`${spec.name} 완료`)),
+              `${label} / ${spec.moneyCost}만 완료`,
+            ).toBe(true);
+            expect(
+              applied.weekLog?.messages.some(m => MONEY_SKIP.test(m)),
+              `${label} / ${spec.moneyCost}만 💰 없음`,
+            ).toBe(false);
+          }
+        });
+
+        it('학기 주(잔액 충분)에서는 계절 게이트로 스킵된다 — 돈 부족과 구분', () => {
+          const ids = choiceSlots(id);
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            const gated = processWeek(makeState(withSeason(false, {
+              year: 4,
+              money: 999,
+              weekendChoices: ids,
+              vacationChoices: [],
+              eventTimeCost: 0,
+              ...patch,
+            })));
+            expect(
+              gated.weekLog?.messages.some(m => GATE_SKIP.test(m)),
+              `${label} / 학기 ⚠`,
+            ).toBe(true);
+            expect(
+              gated.weekLog?.messages.some(m => m.includes(`${spec.name} 완료`)),
+              `${label} / 학기 완료 없음`,
+            ).toBe(false);
+            expect(
+              gated.weekLog?.messages.some(m => MONEY_SKIP.test(m)),
+              `${label} / 학기 💰 없음`,
+            ).toBe(false);
+          }
+        });
+      }
+    });
+  }
+});
+
+describe('고가 4종 — 설계 의도 관계', () => {
+  it('집중 과외는 학원(고등)보다 비싸고 학업 효과도 높다', () => {
+    const tutor = pick('private-tutoring');
+    const academy = pick('academy');
+    expect(getActivityCost(tutor, 5)).toBeGreaterThan(getActivityCost(academy, 5));
+    expect(tutor.effects.academic!).toBeGreaterThan(academy.effects.academic!);
+  });
+
+  it('단기특강은 2칸이고 학원보다 슬롯당 학업이 높다 (방학 전용의 대가)', () => {
+    const intensive = pick('intensive-academy');
+    const academy = pick('academy');
+    expect(intensive.slots).toBe(2);
+    expect(intensive.effects.academic! / intensive.slots)
+      .toBeGreaterThan(academy.effects.academic! / academy.slots);
+  });
+
+  it('고가 4종 안에서 가족 여행만 피로가 음수다 (회복)', () => {
+    // 카탈로그 전체의 음수 피로(rest·countryside 등)와 혼동하지 않는다 — 이 4종의 부호.
+    const negative = Object.keys(HIGHCOST).filter(id => pick(id).fatigue < 0);
+    expect(negative).toEqual(['family-trip']);
+    expect(pick('family-trip').fatigue).toBeLessThan(0);
+  });
+});
+
+describe('고가 4종 — vacationLimit 합산 판정', () => {
+  it('isVacationLimitReached가 스펙 한도 리터럴에 걸린다 (pendingUse 포함)', () => {
+    for (const [id, spec] of Object.entries(HIGHCOST)) {
+      const a = pick(id);
+      if (spec.vacationLimit === undefined) {
+        expect(
+          isVacationLimitReached(a, makeState(withSeason(true, {
+            vacationActivityCounts: { [id]: 99 },
+          }))),
+          `${id} 한도 없음`,
+        ).toBe(false);
+        continue;
+      }
+      const limit = spec.vacationLimit;
+      const vac = (counts: Record<string, number>, pending?: number) =>
+        isVacationLimitReached(
+          a,
+          makeState(withSeason(true, { vacationActivityCounts: counts })),
+          pending,
+        );
+      expect(vac({ [id]: limit - 1 }), `${id} counts=${limit - 1}`).toBe(false);
+      expect(vac({ [id]: limit }), `${id} counts=${limit}`).toBe(true);
+      expect(vac({ [id]: 0 }, limit), `${id} pendingUse=${limit}`).toBe(true);
+      expect(vac({ [id]: limit - 1 }, 1), `${id} counts+pending=${limit}`).toBe(true);
+      expect(
+        isVacationLimitReached(
+          a,
+          makeState(withSeason(false, { vacationActivityCounts: { [id]: limit } })),
+        ),
+        `${id} 학기 주는 한도 미적용`,
+      ).toBe(false);
+    }
+  });
+
+  it('ActivityPicker는 pendingVacUse를 합산해 한도 도달 시 비활성이다 (한도 리터럴)', () => {
+    for (const [id, spec] of Object.entries(HIGHCOST)) {
+      if (spec.vacationLimit === undefined) continue;
+      const a = pick(id);
+      const limit = spec.vacationLimit;
+
+      cleanup();
+      renderHighCostPicker(a, { pendingVacUse: { [id]: limit - 1 } });
+      const open = highCostActivityButton(a);
+      expect(open, `${id} pending=${limit - 1}`).not.toBeDisabled();
+      expect(
+        within(open).getByText(`방학당 ${limit}회 (${limit - 1}/${limit})`),
+      ).toBeInTheDocument();
+
+      cleanup();
+      renderHighCostPicker(a, { pendingVacUse: { [id]: limit } });
+      const blocked = highCostActivityButton(a);
+      expect(blocked, `${id} pending=${limit}`).toBeDisabled();
+      expect(within(blocked).getByText('이번 방학 한도 도달')).toBeInTheDocument();
+    }
   });
 });
 
