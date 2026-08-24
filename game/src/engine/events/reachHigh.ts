@@ -1,4 +1,5 @@
 import { GameEvent } from '../types';
+import { absWeek } from '../weekMath';
 
 // ===== 고교(Y5~Y7) 친밀도 도달형 이벤트 =====
 // docs/reach-high-brief.md 설계. 중학교(reachMid)에 대응하는 고교 사다리.
@@ -352,16 +353,37 @@ export const HIGH_REACH_EVENTS = [
     id: 'junha-hs-recipe',
     // t42 유지(밸런스 검수 ③ 재측정): 44% 미발동의 원인은 tier가 아니라 farewell(50, 방학 게이트
     // 없음)의 선점 + 24주 쿨다운 — 38 하향을 264 run 쌍시드로 실측했으나 개선 0(44→50%)이라 되돌림.
-    // 놓친 run도 같은 비트의 캡스톤 junha-cook(≥38, 조건부 풀)이 커버한다.
+    // 그 "farewell 선점"은 아래 farewell에 W>=40 게이트를 걸어 해소했다(졸업 컷이 3월에 뜨던 문제).
     reach: { npc: 'junha', tier: 42, year: 7 },
     title: '레시피 노트',
-    description: '점심시간 옥상. 준하가 늘 그렇듯 직접 싼 도시락을 꺼내는데, 오늘은 작은 노트도 같이 편다. 레시피가 빼곡하다.\n"요리사 될 거다, 내. 부산 가면 가게 하나 차릴 끼다." 사투리가 꿈 얘기에서 더 진해진다. "엄마 식당, 내가 물려받을 수도 있고."',
+    // 꿈의 **재고백이 아니다** — "요리사 될 거다"는 cook이 이미 한 말이라 여기서 다시 하면
+    // 같은 고백이 두 번이 된다. 이 컷이 새로 주는 건 선언이 아니라 준비(노트·부산 가게·엄마 식당).
+    description: '점심시간 옥상. 준하가 늘 그렇듯 직접 싼 도시락을 꺼내는데, 오늘은 작은 노트도 같이 편다. 레시피가 빼곡하다.\n"이거 다 내가 적은 거다. 부산 가면 가게 하나 차릴 끼다." 사투리가 계획 얘기에서 더 진해진다. "엄마 식당, 내가 물려받을 수도 있고."',
     speakers: ['junha'],
     location: 'rooftop',
     background: 'rooftop_sunset',
-    condition: (s) => { const n = s.npcs.find(x => x.id === 'junha'); return !!n?.met && n.intimacy >= 42 && s.year === 7 && !s.isVacation; },
+    // 캡스톤 선행 조건 — junha-cook(followup t38)이 "나 요리사 될 거야" + 계기(엄마 식당)로 꿈을
+    // **처음** 말하는 컷이고, 이 컷은 그 뒤 "이만큼 준비했다"를 보여주는 심화다. tier도 38 < 42로
+    // 그 순서를 전제한다. 그런데 cook은 Y7 W8부터라 W2~W7엔 pre-met reach가 먼저 열린다 —
+    // 준하 집중 플레이 20/20에서 recipe@Y7W2 → cook@Y7W8로 실측됐고, 그러면 cook의 첫 고백이
+    // 재고백으로 읽힌다.
+    // 4주 간격: 순서만 맞추면 cook이 그 주 followup으로 뜬 뒤 체인의 reach 추가 픽이 같은 주에
+    //   이 컷을 붙일 수 있다(subin-dream 선례와 같은 함정). 심화가 심화로 읽히려면 사이가 벌어져야 한다.
+    //   비교 대상은 **기록된 주차**다. 고정주차가 없는 이벤트는 화면에 뜬 주보다 1 작게 기록되므로
+    //   (실측: cook 화면 W8 / 기록 W7) 체감 간격은 3주가 된다 — cook@W8 → recipe@W11.
+    // 안전판을 두지 않는다 — cook의 문턱(38)이 이 컷(42)보다 **낮아서** t42에 닿은 런은 이미
+    //   cook 적격이다. "cook 없이 recipe만"은 도달 불가가 아니라 무의미한 조합이다.
+    condition: (s) => {
+      const n = s.npcs.find(x => x.id === 'junha');
+      const cook = s.events.find(e => e.id === 'junha-cook');
+      const cookSettled = !!cook
+        && absWeek(s.year, s.week) - absWeek(cook.year ?? s.year, cook.week ?? 0) >= 4;
+      return !!n?.met && n.intimacy >= 42 && s.year === 7 && !s.isVacation && cookSettled;
+    },
     choices: [
-      { text: '"메뉴 1호는 주먹밥이어야겠다"', effects: { social: 1 }, npcEffects: [{ npcId: 'junha', intimacyChange: 5 }], message: '준하가 빵 터진다. "맞나? 그라믄 니가 1호 손님 해래이." 노트 첫 장에 네 이름을 적는다.', timeCost: 1 },
+      // "1호 손님" 약속은 cook c2 / farewell c0 소유다(endingNpc junha variants). 여기서 다시
+      // 맺으면 같은 약속이 두 번 생긴다 — 이 컷 몫은 노트 첫 장의 이름(그쪽 엔딩 문장과 짝).
+      { text: '"메뉴 1호는 주먹밥이어야겠다"', effects: { social: 1 }, npcEffects: [{ npcId: 'junha', intimacyChange: 5 }], message: '준하가 빵 터진다. "맞나? 주먹밥이 1번이믄, 첫 장은 니 이름이다." 노트 첫 장에 네 이름을 적는다.', timeCost: 1 },
       { text: '"노트까지 적는 거 보니 진심이네"', effects: { mental: 1 }, npcEffects: [{ npcId: 'junha', intimacyChange: 5 }], message: '"진심이지. 농담으로 칼 잡나." 준하가 노트를 소중하게 덮는다.', timeCost: 1 },
       { text: '"부산 가면 못 보겠네" 툭', effects: { mental: 1 }, npcEffects: [{ npcId: 'junha', intimacyChange: 4 }], message: '준하가 잠깐 젓가락을 멈춘다. "…그라네. 그 생각은 안 했다." 옥상에 바람이 분다.', timeCost: 1 },
     ],
@@ -374,7 +396,13 @@ export const HIGH_REACH_EVENTS = [
     speakers: ['junha'],
     location: 'school_gate',
     background: 'school_gate_high',
-    condition: (s) => { const n = s.npcs.find(x => x.id === 'junha'); return !!n?.met && n.intimacy >= 50 && s.year === 7; },
+    // W>=40 — "졸업 무렵 + 큰 짐 가방 + 부산 내려간다"가 지문인데 시점 게이트가 없어서, recipe에
+    // 선행 조건이 걸린 뒤엔 이 컷이 **Y7 W2**(3월 개학 직후)에 떴다(20/20 실측). 졸업 컷을 학년
+    // 시작에 두면 뒤에 오는 꿈·준비 컷 전부가 이미 떠난 사람 얘기가 된다.
+    // 부수 효과로 기존 주석의 "farewell 선점 → recipe 44% 미발동"도 같이 풀린다(선점할 창이 없어짐).
+    // 방학 게이트는 걸지 않는다 — 졸업식이 W46이고 W43~48이 방학 구간이라, 방학을 막으면
+    //   "졸업 무렵"이 W40~42 3주로 좁아져 쿨다운(24주)에 밀린 런에서 컷이 통째로 사라진다.
+    condition: (s) => { const n = s.npcs.find(x => x.id === 'junha'); return !!n?.met && n.intimacy >= 50 && s.year === 7 && s.week >= 40; },
     choices: [
       { text: '"부산 가도 연락하자. 1호 손님 약속 지켜야지"', effects: { social: 1 }, npcEffects: [{ npcId: 'junha', intimacyChange: 6 }], message: '"하모. 가게 차리믄 젤 먼저 연락한다." 준하가 새끼손가락을 건다. 사투리가 떨린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 6, toneTag: 'melancholy', recallText: '교문 앞 큰 가방, 여기도 내 자리 같다던 준하.', npcIds: ['junha'] } },
       { text: '"여기가 네 자리였다니 다행이다"', effects: { mental: 1 }, npcEffects: [{ npcId: 'junha', intimacyChange: 6 }], message: '"…니가 그래 만들어줬지." 준하가 처음으로 눈을 안 피하고 말한다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 6, toneTag: 'melancholy', recallText: '교문 앞 큰 가방, 여기도 내 자리 같다던 준하.', npcIds: ['junha'] } },

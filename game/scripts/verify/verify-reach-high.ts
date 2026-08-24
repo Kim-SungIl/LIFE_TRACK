@@ -3,6 +3,7 @@
 // 각 컷을 fresh 조건(weekStartIntimacy < tier <= intimacy, year===Y, !vacation)으로 만들고 픽 여부 확인.
 import { createInitialState } from '../../src/engine/gameEngine';
 import { getReachForWeek } from '../../src/engine/events/selection';
+import { GAME_EVENTS } from '../../src/engine/events';
 import { HIGH_REACH_EVENTS } from '../../src/engine/events/reachHigh';
 import { NEW_NPC_REACH_EVENTS } from '../../src/engine/events/reachNew';
 
@@ -14,14 +15,34 @@ const cuts = [...HIGH_REACH_EVENTS, ...NEW_NPC_REACH_EVENTS].map((e) => ({
   id: e.id, npc: e.reach!.npc, tier: e.reach!.tier, year: e.reach!.year,
 }));
 
+// 선행 조건이 붙은 컷은 픽스처를 그 조건에 맞춘다 — 균일 픽스처(W10 · 이벤트 없음)로는
+// 원천적으로 못 뜨는 컷이 생겼기 때문이다. **조건을 느슨하게 하려고 여기를 고치지 말 것**:
+// 조건 자체는 src/engine/__tests__/junhaRecipeOrder.test.ts가 양방향으로 잠근다.
+const FIXTURE_OVERRIDES: Record<string, { week?: number; priorEvents?: string[] }> = {
+  // 꿈 첫 고백은 junha-cook이고 이 컷은 그 4주 뒤 심화다(같은 고백 2회 방지).
+  'junha-hs-recipe': { week: 16, priorEvents: ['junha-cook'] },
+  // "졸업 무렵 짐 가방"이라 W>=40. 게이트가 없던 동안 Y7 W2에 떴다.
+  'junha-hs-farewell': { week: 40 },
+};
+// 선행 이벤트를 events에 심는다 — 발동 주차는 픽스처 주차보다 4주 이상 앞(간격 조건 충족).
+function seedPriorEvent(id: string, year: number, week: number) {
+  const def = GAME_EVENTS.find(e => e.id === id);
+  if (!def) throw new Error(`FIXTURE_OVERRIDES 전제 붕괴: ${id} 가 GAME_EVENTS에 없다`);
+  return { ...def, condition: undefined, year, week, resolvedChoice: 0 };
+}
+
 let pass = 0;
 const fails: string[] = [];
 
 for (const c of cuts) {
   const s = createInitialState('male', NEUTRAL_PARENTS, { rngSeed: 12345 });
+  const override = FIXTURE_OVERRIDES[c.id];
   s.year = c.year;
-  s.week = 10;            // 학기 중(비방학)
+  s.week = override?.week ?? 10;   // 학기 중(비방학)
   s.isVacation = false;
+  for (const id of override?.priorEvents ?? []) {
+    s.events.push(seedPriorEvent(id, c.year, s.week - 4));
+  }
   // 모든 NPC를 met=false로 깔아 간섭 제거
   for (const n of s.npcs) { n.met = false; }
   const target = s.npcs.find((n) => n.id === c.npc)!;
