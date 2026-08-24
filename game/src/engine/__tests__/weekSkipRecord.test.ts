@@ -105,28 +105,48 @@ describe('WeekLog.skipped — 돈 때문에 못 한 활동', () => {
 describe('WeekLog.skipped — eventTimeCost (계획 화면이 이걸 몰라 거짓 경고를 냈다)', () => {
   // eventTimeCost는 이벤트 선택의 timeCost가 **다음 주** 슬롯을 깎는 값이다(store.ts). 즉 계획
   // 화면에 이미 0이 아닌 상태로 도착한다 — timeCost를 가진 선택지가 300개 이상이라 흔하다.
-  const base = (tc: number) => makeState({
-    money: 4, year: 1, isVacation: false, week: 3,
-    routineSlot2: 'academy', routineSlot3: 'gym', eventTimeCost: tc,
+  //
+  // 픽스처 주의: 아래 잔액은 "슬롯이 잘리는지"에 따라 기록이 **달라지도록** 고른 값이다.
+  // 넉넉한 잔액을 쓰면 슬롯을 안 잘라도 다 감당되어 timeCost 처리를 지워도 그린이 된다
+  // (실제로 처음 이 파일이 그 함정에 빠졌다). 주간 결산 잔액으로 검증하는 것도 안 된다 —
+  // 용돈 지급이 활동 적용 뒤(processWeek 9단계)라 차이가 묻힌다.
+
+  it('timeCost=0 — 루틴이 먼저 나가고 남은 잔액으로 선택 슬롯이 걸린다', () => {
+    const s = makeState({
+      money: 3, year: 1, isVacation: false, week: 3,
+      routineSlot2: 'academy', routineSlot3: null, eventTimeCost: 0,
+    });
+    expect(run(s, ['art-lesson']).moneyIds).toEqual(['art-lesson']);
   });
 
-  it('timeCost=0 — 루틴 둘 다 돌고 선택 슬롯이 돈 때문에 걸린다', () => {
-    const r = run(base(0), ['art-lesson']);
-    expect(r.moneyIds).toEqual(['art-lesson']);
+  it('timeCost=1 — 꼬리 슬롯이 잘려 나가므로 그 활동은 기록되지 않는다', () => {
+    // 위와 같은 상태에 timeCost만 1. 슬롯을 자르지 않으면 예체능이 돈 부족으로 걸린다 —
+    // 즉 이 단언이 꼬리 슬라이스를 실제로 잠근다.
+    const s = makeState({
+      money: 3, year: 1, isVacation: false, week: 3,
+      routineSlot2: 'academy', routineSlot3: null, eventTimeCost: 1,
+    });
+    expect(run(s, ['art-lesson']).moneyIds, '잘려 나간 슬롯을 돈 부족으로 잘못 기록했다').toEqual([]);
   });
 
-  it('timeCost=1 — 꼬리 슬롯이 잘려 나가므로 돈 기록이 없다', () => {
-    const r = run(base(1), ['art-lesson']);
-    expect(r.moneyIds, '잘려 나간 슬롯을 돈 부족으로 잘못 기록했다').toEqual([]);
+  it('timeCost=1 — 루틴 저녁 슬롯(slot3)은 아예 시도되지 않는다', () => {
+    // 잔액 1만으로는 학원(2)을 못 낸다. slot3 게이트(timeCost < 1)가 사라지면 시도되어
+    // money 기록이 생긴다.
+    const s = makeState({
+      money: 1, year: 1, isVacation: false, week: 3,
+      routineSlot2: 'self-study', routineSlot3: 'academy', eventTimeCost: 1,
+    });
+    expect(cost('self-study')).toBe(0);
+    expect(run(s, []).skipped, '저녁 슬롯을 건너뛰지 않았다').toEqual([]);
   });
 
-  it('timeCost=2 — 루틴도 안 돌아 잔액이 그대로다', () => {
-    const s = base(2);
-    const r = run(s, ['art-lesson']);
-    expect(r.moneyIds).toEqual([]);
-    // 루틴비(4만)가 나가지 않았음을 잔액으로 확인 — 예측이 이걸 놓쳐 장부가 틀렸다.
-    const input = { ...s }; input.weekendChoices = ['art-lesson'];
-    expect(processWeek(input).money).toBeGreaterThanOrEqual(4);
+  it('timeCost=2 — 루틴 방과후 슬롯(slot2)도 아예 시도되지 않는다', () => {
+    // 잔액 1만 < 학원 2만. slot2 게이트(timeCost < 2)가 사라지면 money 기록이 생긴다.
+    const s = makeState({
+      money: 1, year: 1, isVacation: false, week: 3,
+      routineSlot2: 'academy', routineSlot3: null, eventTimeCost: 2,
+    });
+    expect(run(s, []).skipped, '방과후 슬롯을 건너뛰지 않았다').toEqual([]);
   });
 });
 
