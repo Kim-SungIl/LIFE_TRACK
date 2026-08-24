@@ -68,11 +68,13 @@ describe('WeekLog.skipped — 돈 때문에 못 한 활동', () => {
 
   it('origin이 루틴/선택을 구분한다 — 화면이 어느 쪽 문구를 낼지 정하는 근거', () => {
     // 수입 루틴이 섞이면 합계는 0이라 "루틴이 너무 비싸다"가 안 뜨는데, 순차로는 학원이 실패한다.
+    // 학년 4를 쓰는 이유: 중등 구간에서 학원 3만 + 알바 −3만이 정확히 상쇄된다(고등은 −4만이라
+    // 합계가 음수가 되어 이 전제가 성립하지 않는다).
     const s = makeState({
-      money: 1, year: 6, isVacation: false, week: 3,
+      money: 1, year: 4, isVacation: false, week: 3,
       routineSlot2: 'academy', routineSlot3: 'part-time',
     });
-    expect(cost('academy', 6) + cost('part-time', 6)).toBe(0);   // 합계로는 감당되는 것처럼 보인다
+    expect(cost('academy', 4) + cost('part-time', 4)).toBe(0);   // 합계로는 감당되는 것처럼 보인다
     const r = run(s, []);
     expect(r.moneyIds).toEqual(['academy']);
     expect(r.skipped[0].origin).toBe('routine');
