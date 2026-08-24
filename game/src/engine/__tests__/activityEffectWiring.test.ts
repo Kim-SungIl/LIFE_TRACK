@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIVITIES, getActivityCost } from '../activities';
+import { applyParentIntimacyDelta } from '../parentIntimacy';
 import { processWeek } from '../gameEngine';
 import { makeState } from '../../test/fixtures';
 import type { Activity, GameState, StatKey } from '../types';
@@ -138,6 +139,27 @@ describe('parentEffect — 선언된 baseDelta가 실제 친밀도로 간다', (
     expect(ids).toContain('family-trip');
   });
 
+  it('엔진 경로의 적용량이 단일 진입점 직접 호출과 같다 (규모·태그·경로를 한 번에)', () => {
+    // 비율 단언(아래)은 **적용량에 걸리는 어떤 선형 변환도 통과시킨다** — 두 활동이 같이
+    // 스케일되면 비율이 보존되기 때문이다(baseDelta ×0.5, 평균 회귀 면제 유실, 단일 진입점을
+    // 우회한 직접 가산 등이 전부 통과했다. 실측).
+    // 그래서 절대량을 잠근다: 같은 상태에서 `applyParentIntimacyDelta(선언 baseDelta, 선언 tag)`를
+    // 직접 부른 결과와 주 진행 결과가 같아야 한다. 밸런스 수치를 테스트에 적지 않으면서도
+    // 규모·태그·진입점·평균 회귀 면제가 함께 잠긴다.
+    const trip = pick('family-trip').parentEffect!;
+    const week = { week: VACATION_WEEK, isVacation: true, money: 999, year: 6 } as const;
+
+    const viaEngine = intimacyDelta(week, slotsOf('family-trip')).delta;
+
+    const ref = makeState(week);
+    const refBefore = ref.parentIntimacy ?? 50;
+    applyParentIntimacyDelta(ref, trip.baseDelta, trip.tag);
+    const viaDirect = (ref.parentIntimacy ?? 0) - refBefore;
+
+    expect(viaDirect, '직접 호출이 0이면 이 단언이 공허해진다').toBeGreaterThan(0);
+    expect(viaEngine, '엔진 경로가 단일 진입점과 다른 양을 적용한다').toBeCloseTo(viaDirect, 6);
+  });
+
   it('친밀도 증가가 baseDelta에 비례한다 — 값이 무시되면 잡힌다', () => {
     // 같은 태그(familyTime)·같은 주차로 비교해 반응 계수를 상쇄시킨다.
     // 가족 여행 1.5 : 가족 저녁 0.5 = 3 : 1.
@@ -241,5 +263,14 @@ describe('80+ 소프트캡 면제 — 유료 활동만 면제된다', () => {
     const paid = netGain(40, 'academy');
     expect(free).toBeGreaterThan(0);
     expect(free / paid, '낮은 구간에서도 비율이 1이 아니면 위 테스트가 소프트캡을 안 본다').toBeCloseTo(1, 6);
+  });
+
+  it('발동 경계가 80이다 — 78에서는 같이 오르고 82부터 눌린다', () => {
+    // 위 두 테스트는 86과 40만 봐서 **임계 자체**를 잠그지 못했다(80 → 60으로 낮춰도 통과했다.
+    // 실측). 경계를 사이에 끼고 본다.
+    expect(netGain(78, 'self-study') / netGain(78, 'academy'), '78은 아직 캡 밖이어야 한다')
+      .toBeCloseTo(1, 6);
+    expect(netGain(82, 'self-study') / netGain(82, 'academy'), '82부터 캡 안이어야 한다')
+      .toBeLessThan(1);
   });
 });

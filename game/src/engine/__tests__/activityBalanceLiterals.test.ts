@@ -519,6 +519,35 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
             }
           }
         });
+
+        it(`엔진이 확정 시 ${spec.moneyCost}만을 실제로 차감한다`, () => {
+          // 위 테스트는 **목록 노출**(requires 게이트)만 본다. 게이트를 통과한 뒤 엔진이
+          // 정말 그 값을 빼는지는 별개다 — 실측으로 확인된 구멍이었다: 이 활동만 cost 0으로
+          // 만드는 변형이 리포 전체 779개를 통과했다(게임에서 가장 비싼 활동이 공짜가 된다).
+          const week = (choices: string[]) => processWeek(makeState(withSeason(false, {
+            year: unlockYear,
+            money: spec.moneyCost,
+            weekendChoices: choices,
+            vacationChoices: [],
+            eventTimeCost: 0,
+            routineSlot2: null,
+            routineSlot3: null,
+          })));
+          const applied = week(choiceSlots(id));
+          const control = week([]);
+
+          expect(moneySkipped(applied, id), `${spec.moneyCost}만인데 돈 부족으로 기록됐다`).toBe(false);
+          expect(gateSkipped(applied, id), `해금 학년인데 게이트로 스킵됐다`).toBe(false);
+          // 로그와 지갑 둘 다 본다 — 한쪽만 보면 "로그만 차감" 또는 "지갑만 차감"을 놓친다.
+          expect(
+            (control.weekLog?.moneyChange ?? 0) - (applied.weekLog?.moneyChange ?? 0),
+            '로그상 차감액이 선언 가격과 다르다',
+          ).toBe(spec.moneyCost);
+          expect(
+            Number((control.money - applied.money).toFixed(6)),
+            '지갑에서 빠진 금액이 선언 가격과 다르다',
+          ).toBe(spec.moneyCost);
+        });
       } else {
         it('vacation-only라 학기에는 없고 방학에만 나온다 (픽스처 변형 전부)', () => {
           expect(spec.seasonGate).toBe('vacation-only');
@@ -575,7 +604,12 @@ describe('고가 4종 — 밸런스 수치 잠금', () => {
             // 차이로 본다. 절대값을 적으면 용돈 곡선이 바뀔 때 이 테스트가 같이 깨진다.
             expect(
               (control.weekLog?.moneyChange ?? 0) - (applied.weekLog?.moneyChange ?? 0),
-              `${label} / ${spec.moneyCost}만 — 차감액이 선언 가격과 다르다`,
+              `${label} / ${spec.moneyCost}만 — 로그상 차감액이 선언 가격과 다르다`,
+            ).toBe(spec.moneyCost);
+            // 로그만 보면 "지갑은 안 빠지는" 변형을 놓친다(statChanges에서 겪은 것과 같은 부류).
+            expect(
+              Number((control.money - applied.money).toFixed(6)),
+              `${label} / ${spec.moneyCost}만 — 지갑에서 빠진 금액이 선언 가격과 다르다`,
             ).toBe(spec.moneyCost);
           }
         });
