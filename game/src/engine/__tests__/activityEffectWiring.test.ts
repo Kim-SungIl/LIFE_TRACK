@@ -158,6 +158,24 @@ describe('parentEffect — 선언된 baseDelta가 실제 친밀도로 간다', (
     expect(tripDelta / dinnerDelta).toBeCloseTo(declaredRatio, 5);
   });
 
+  it('선언된 tag가 실제 반응에 쓰인다 — 태그를 바꾸면 부모 성향 반응이 역전된다', () => {
+    // `familyTime`은 emotional에 1.4 / strict에 0.6으로 반응한다(parentIntimacy의 반응 테이블).
+    // `gradeImprove` 같은 다른 태그는 **정반대**(0.6 / 1.4)라, 태그가 무시되거나 다른 값으로
+    // 바뀌면 아래 대소가 뒤집힌다 — 양방향으로 잡히는 단언이다.
+    // (baseDelta 비례 단언은 양쪽이 같이 스케일되면 태그 변경을 못 본다. 실측으로 확인한 구멍.)
+    expect(pick('family-trip').parentEffect?.tag).toBe('familyTime');
+    // 사춘기 골짜기(Y3~4 × familyTime ×0.75)를 피해 Y6에서 본다 — 양쪽에 같이 걸리므로
+    // 대소는 안 바뀌지만, 교란 요인을 픽스처에서 빼 두는 편이 읽기 쉽다.
+    const week = { week: VACATION_WEEK, isVacation: true, money: 999, year: 6 } as const;
+    const sensitive = intimacyDelta(
+      { ...week, parents: ['emotional', 'info'] }, slotsOf('family-trip'),
+    ).delta;
+    const dull = intimacyDelta(
+      { ...week, parents: ['strict', 'info'] }, slotsOf('family-trip'),
+    ).delta;
+    expect(sensitive, '감성적 부모가 가족 여행에 더 크게 반응하지 않는다').toBeGreaterThan(dull);
+  });
+
   it('같은 활동이 루틴과 주말에 동시에 있어도 한 번만 적용된다', () => {
     // 활동 id별 주 1회 — `log.parentEffectAppliedIds` 가드. 가족 여행은 방학 전용이라
     // 루틴 슬롯에 못 들어가므로(방학엔 루틴이 안 돈다) 계절 제약이 없는 가족 저녁으로 잠근다.
