@@ -159,8 +159,9 @@ describe('계획 화면 — 낡은 계획(고른 뒤 사정이 바뀐 경우)', 
     // 학원(4) + 알바(−4) = 0이라 기존 루틴 경고(합계 판정)는 뜨지 않는다. 그런데 엔진은
     // 순차로 차감하므로 잔액 1만에서는 학원이 실행되지 않는다 — 예전에는 이걸 "루틴 id"라는
     // 이유로 걸러내 경고가 아예 없었다.
-    renderScreen({ year: 6, money: 1, routineSlot2: 'academy', routineSlot3: 'part-time' });
-    expect(COST('academy', 6) + COST('part-time', 6)).toBe(0);
+    // 학년 4: 중등 학원 3만 + 알바 −3만이 정확히 상쇄된다(고등은 알바가 −4만이라 합계가 음수).
+    renderScreen({ year: 4, money: 1, routineSlot2: 'academy', routineSlot3: 'part-time' });
+    expect(COST('academy', 4) + COST('part-time', 4)).toBe(0);
 
     expect(screen.queryByText(/돈이 부족해요! 방과후/), '합계 기반 루틴 경고가 뜨면 전제가 다르다').toBeNull();
     const warn = warnText();

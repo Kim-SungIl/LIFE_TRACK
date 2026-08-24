@@ -7,6 +7,12 @@
 //
 // 배경: 고정비(학원 2/3/4 + PT 2 = 4/5/6)는 학교급마다 오르는데 용돈은 7년 내내 3만이라,
 // 학원+PT를 고정 루틴으로 깔면 무-wealth 기준 169주가 막혔다. 곡선을 4/5/5로 바꿔 해소.
+//
+// 그 뒤에도 **고등만** 6만 > 5만으로 남아 주 −1만이었고, sim 실측으로 Y5~Y7 루틴이 48주 중
+// 26~29주 실패했다(매주 반복되는 슬롯의 절반이 안 도는 상태). 처방 B-2로 고등 학원비를
+// 4만 → 3만으로 내려 고정비 5만 = 수입 5만이 됐다. 아래 단언이 그 균형을 잠근다 —
+// 수입을 올리는 B-3이 아니라 고정비를 내린 이유는 무료 루틴(학원을 안 사는 빌드)의
+// 사장액 1543만을 더 키우지 않기 위해서다. docs/weekly-loop-diagnosis-2026-08.md 참조.
 import { describe, expect, it } from 'vitest';
 import { createInitialState, processWeek } from '../gameEngine';
 import { ACTIVITIES, getActivityCost } from '../activities';
@@ -92,19 +98,21 @@ describe('주간 용돈 곡선 — 엔진 경로', () => {
     expect(getWeeklyIncome(PLAIN, MIDDLE_LAST) - routineCostAt(MIDDLE_LAST)).toBe(0);
   });
 
-  it('고등은 학기 중 -1만원/주다 (등호가 아니라 정확히 -1 — 4/5/6으로 풀려도 잡는다)', () => {
-    expect(getWeeklyIncome(PLAIN, HIGH_FIRST) - routineCostAt(HIGH_FIRST)).toBe(-1);
-    expect(getWeeklyIncome(PLAIN, HIGH_LAST) - routineCostAt(HIGH_LAST)).toBe(-1);
-    // wealth는 같은 구간에서 +1 — 부모 경제력으로 부호가 갈리는 지점이 고등학교다.
-    expect(getWeeklyIncome(RICH, HIGH_FIRST) - routineCostAt(HIGH_FIRST)).toBe(1);
+  it('고등도 학기 중 잉여 0이다 (B-2 — 정확히 0이라 인상·인하 양쪽을 잡는다)', () => {
+    // 0은 "재량 예산이 없다"는 뜻이고 적자는 아니다. 음수면 루틴이 매주 실패하고(실측 26~29주),
+    // 양수로 올리면 학원을 사는 빌드에 재량 예산이 생겨 지출형과 무료 루틴의 격차가 줄어든다.
+    expect(getWeeklyIncome(PLAIN, HIGH_FIRST) - routineCostAt(HIGH_FIRST)).toBe(0);
+    expect(getWeeklyIncome(PLAIN, HIGH_LAST) - routineCostAt(HIGH_LAST)).toBe(0);
+    // wealth는 같은 구간에서 +2 — 부모 경제력은 이제 "적자냐"가 아니라 "재량이 있냐"를 가른다.
+    expect(getWeeklyIncome(RICH, HIGH_FIRST) - routineCostAt(HIGH_FIRST)).toBe(2);
   });
 
-  // 위 -1은 **학기 중 루틴 원장**의 값이고 연간 적자가 아니다. 루틴은 방학에 아예 안 돌지만
+  // 위 0은 **학기 중 루틴 원장**의 값이다. 루틴은 방학에 아예 안 돌지만
   // (applyRoutineActivities의 `if (!state.isVacation)`) 용돈은 48주 전부 지급되므로,
   // 방학 활동이 무료인 빌드는 방학 11주에 지출 없이 적립한다 → 고등 1년은 순증이다.
-  // 고등 -1의 실제 기능은 "학기 중 유료 주말/방학까지 얹으면 선택을 강요받는다"이지
-  // "알바 없이는 버틸 수 없다"가 아니다. 이 사실을 테스트로 고정해 서술이 다시 어긋나지 않게 한다.
-  it('방학엔 루틴 과금이 없어 고등 1년은 순증이다 (학기 -1이 연간 적자가 아니다)', () => {
+  // 고등 잉여 0의 실제 기능은 "학기 중 유료 주말/방학까지 얹으면 선택을 강요받는다"이지
+  // "알바 없이는 루틴도 못 돌린다"가 아니다(그건 B-2 이전 상태였다).
+  it('방학엔 루틴 과금이 없어 고등 1년은 순증이다 (학기 잉여 0이 연간 정체가 아니다)', () => {
     const SCHOOL_WEEKS = 37;   // W1~19 + W25~42
     const VACATION_WEEKS = 11; // W20~24 + W43~48
     expect(SCHOOL_WEEKS + VACATION_WEEKS).toBe(48);
@@ -126,11 +134,11 @@ describe('주간 용돈 곡선 — 엔진 경로', () => {
     const vacationNet = withRoutine(21, true);   // 여름방학 W20~24 중 한 주
 
     expect(schoolNet).toBe(getWeeklyIncome(PLAIN, HIGH_FIRST) - routineCostAt(HIGH_FIRST));
-    expect(schoolNet).toBe(-1);
+    expect(schoolNet).toBe(0);
     // 방학 주는 루틴비가 전혀 안 빠져 용돈 전액이 남는다
     expect(vacationNet).toBe(getWeeklyIncome(PLAIN, HIGH_FIRST));
     expect(vacationNet).toBeGreaterThan(schoolNet);
-    // 연간 합산이 순증 — 학기 적자를 방학 적립이 덮는다
+    // 연간 합산이 순증 — 학기에 정체돼도 방학 적립이 남는다
     expect(SCHOOL_WEEKS * schoolNet + VACATION_WEEKS * vacationNet).toBeGreaterThan(0);
   });
 });

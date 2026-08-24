@@ -31,13 +31,18 @@ export const ACTIVITIES: Activity[] = [
     id: 'academy', name: '학원 수업', slots: 1, fatigue: 7,
     // 학원에서 친구들과 어울리는 부수효과 — 비싼 만큼 social 보너스
     effects: { academic: 1.5, social: 0.4 }, moneyCost: 3, category: 'study',
-    // 현실 고증 — 초등 종합반 2만 / 중등 입시 3만 / 고등 단과 4만
-    yearlyCost: { elementary: 2, middle: 3, high: 4 },
+    // 초등 종합반 2만 / 중등 입시 3만 / 고등 단과 3만.
+    // 고등만 현실 고증(4만)을 깎았다 — 4만이면 `gym`(2만)과 묶어 쓰는 기본 루틴이 6만이 되어
+    // 고등 수입 5만을 넘고, 주 −1만 적자로 Y5~Y7 루틴이 48주 중 26~29주 실패했다(sim 실측).
+    // 루틴은 매주 반복되는 슬롯이라 그 실패가 곧 "설정한 일과의 절반이 안 돌아감"이다.
+    // 3만이면 루틴 고정비 5만 = 수입 5만으로 잉여 0 — 재량 예산은 없지만 적자는 아니다.
+    yearlyCost: { elementary: 2, middle: 3, high: 3 },
     description: '학원에서 체계적으로 배운다.',
     vacationDescription: '학원에서 방학 단기특강을 듣는다.',
     flavor: '학원 셔틀을 타고 간다. 같은 반 친구들이랑 떡볶이 먹고 가는 길도 즐겁다.',
     tags: ['체계적', '비용 있음', '고효율', '친구'],
-    requires: (s) => s.money >= getActivityCost({ moneyCost: 3, yearlyCost: { elementary: 2, middle: 3, high: 4 } }, s.year),
+    // 비용 리터럴이 위 yearlyCost와 중복 — 둘이 어긋나면 게이트와 실제 차감이 달라진다.
+    requires: (s) => s.money >= getActivityCost({ moneyCost: 3, yearlyCost: { elementary: 2, middle: 3, high: 3 } }, s.year),
   },
   {
     id: 'study-group', name: '스터디 그룹', slots: 1, fatigue: 4,

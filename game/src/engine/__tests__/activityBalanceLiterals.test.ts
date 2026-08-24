@@ -12,6 +12,7 @@ import { describe, expect, it } from 'vitest';
 import { ACTIVITIES, getActivityCost, getAvailableActivities } from '../activities';
 import { SHOP_ITEMS } from '../shopSystem';
 import type { Activity, GameState } from '../types';
+import { getWeeklyIncome } from '../parentModifiers';
 import { makeState } from '../../test/fixtures';
 
 interface BalanceSpec {
@@ -229,6 +230,56 @@ describe('입시 설명회 — 상점 아이템 수치 잠금', () => {
       buffTarget: 'study',
       buffAmount: 0.1,
     });
+  });
+});
+
+// 학년별 차등 비용(`yearlyCost`)을 가진 활동은 위 6종과 규약이 다르다 — `moneyCost` 하나로
+// 잠글 수 없고, 실효 가격은 `getActivityCost(a, year)`가 학교급별로 고른다. 이 값들은 주간 수입
+// 곡선(초/중/고 4·5·5만, wealth +2만)과 맞물려 "루틴 고정비가 수입을 넘는가"를 결정하므로,
+// 조용히 드리프트하면 루틴이 매주 실패하는 상태가 테스트 없이 되돌아온다.
+const YEARLY_COST_SPEC: Record<string, { name: string; byYear: [number, number][]; rationale: string }> = {
+  academy: {
+    name: '학원 수업',
+    // [학년, 실효 가격] — 학교급 경계(Y1/Y2·Y4/Y5) 양쪽을 끼고 본다.
+    byYear: [[1, 2], [2, 3], [4, 3], [5, 3], [7, 3]],
+    rationale:
+      '고등 3만은 밸런스 결정이다(현실 고증은 단과 4만). 4만이면 academy+gym 기본 루틴이 6만으로 '
+      + '고등 수입 5만을 넘어 주 −1만 적자가 되고, sim 실측으로 Y5~Y7 루틴이 48주 중 26~29주 '
+      + '실패했다. 3만이면 고정비 5만 = 수입 5만으로 잉여 0 — 재량 예산은 없지만 적자는 아니다. '
+      + '되돌리려면 그 26~29주를 감수한다는 뜻이므로 이 표를 같이 고칠 것.',
+  },
+  'part-time': {
+    name: '편의점 알바',
+    // 수입 활동 — 음수다. elementary 키가 없어 moneyCost로 폴백한다(Y1은 애초에 unlockYear로 잠김).
+    byYear: [[4, -3], [5, -4], [7, -4]],
+    rationale: '유일한 상시 수입원. 고등 −4만은 학원 3만 + 헬스 2만 루틴을 자력으로 감당하는 통로다.',
+  },
+  'short-term-job': {
+    name: '방학 단기 일손 돕기',
+    byYear: [[4, -6], [5, -8], [7, -8]],
+    rationale: '방학 한정 고수입 — 알바의 2배. 방학 고액 활동(특강·캠프 5만, 가족여행 8만)의 재원.',
+  },
+};
+
+describe('학년별 차등 비용 — 실효 가격 잠금', () => {
+  for (const [id, spec] of Object.entries(YEARLY_COST_SPEC)) {
+    it(`${id}(${spec.name})의 학교급별 실효 가격 — ${spec.rationale}`, () => {
+      const a = pick(id);
+      expect(a.name).toBe(spec.name);
+      for (const [year, expected] of spec.byYear) {
+        expect(getActivityCost(a, year), `${id} year ${year}`).toBe(expected);
+      }
+    });
+  }
+
+  it('고등 루틴 고정비(학원+헬스)가 고등 주간 수입을 넘지 않는다', () => {
+    // B-2의 목적 자체 — 이 부등식이 깨지면 매주 반복되는 슬롯의 절반이 조용히 실패한다.
+    // 비용을 되돌리거나 수입을 낮추면 여기서 걸린다.
+    const HIGH_YEAR = 6;
+    const routine = getActivityCost(pick('academy'), HIGH_YEAR) + getActivityCost(pick('gym'), HIGH_YEAR);
+    // 기본 부모(wealth 없음) 기준 — wealth +2만은 구제 수단이지 전제가 아니다.
+    const income = getWeeklyIncome(['emotional', 'info'], HIGH_YEAR);
+    expect(routine, `루틴 고정비 ${routine}만 vs 수입 ${income}만`).toBeLessThanOrEqual(income);
   });
 });
 
