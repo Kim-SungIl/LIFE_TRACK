@@ -1,4 +1,4 @@
-import { GameState, Stats, StatKey, ParentStrength, WeekLog } from './types';
+import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
 import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
@@ -765,8 +765,10 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
       const r2Cost = r2 ? getActivityCost(r2, state.year) : 0;
       if (r2 && r2Cost > 0 && state.money < r2Cost) {
         log.messages.push(`💰 돈이 부족해서 ${josa(r2.name, '을/를')} 못 했다...`);
+        log.skipped.push({ activityId: r2.id, reason: 'money', origin: 'routine' });
       } else if (!r2 || !canApplyActivity(state, r2.id)) {
         log.messages.push(`⚠ 지금은 ${josa(r2?.name || '설정된 활동', '을/를')} 할 수 없어 건너뛰었다.`);
+        if (r2) log.skipped.push({ activityId: r2.id, reason: 'gate', origin: 'routine' });
       } else {
         applyActivity(state, state.routineSlot2, log, r2Bonus);
         state.routineSlot2Weeks++;
@@ -777,8 +779,10 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
       const r3Cost = r3 ? getActivityCost(r3, state.year) : 0;
       if (r3 && r3Cost > 0 && state.money < r3Cost) {
         log.messages.push(`💰 돈이 부족해서 ${josa(r3.name, '을/를')} 못 했다...`);
+        log.skipped.push({ activityId: r3.id, reason: 'money', origin: 'routine' });
       } else if (!r3 || !canApplyActivity(state, r3.id)) {
         log.messages.push(`⚠ 지금은 ${josa(r3?.name || '설정된 활동', '을/를')} 할 수 없어 건너뛰었다.`);
+        if (r3) log.skipped.push({ activityId: r3.id, reason: 'gate', origin: 'routine' });
       } else {
         applyActivity(state, state.routineSlot3, log, r3Bonus);
         state.routineSlot3Weeks++;
@@ -805,11 +809,13 @@ function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number
     const actCost = act ? getActivityCost(act, state.year) : 0;
     if (act && actCost > 0 && state.money < actCost) {
       log.messages.push(`💰 돈이 부족해서 ${josa(act.name, '을/를')} 못 했다...`);
+      log.skipped.push({ activityId: act.id, reason: 'money', origin: 'choice' });
       continue;
     }
     // 학년/학기/방학횟수 게이트 — UI를 안 거친 입력 방어 (canApplyActivity SSOT)
     if (!act || !canApplyActivity(state, choice)) {
       log.messages.push(`⚠ 지금은 ${josa(act?.name || '선택한 활동', '을/를')} 할 수 없어 건너뛰었다.`);
+      if (act) log.skipped.push({ activityId: act.id, reason: 'gate', origin: 'choice' });
       continue;
     }
     applyActivity(state, choice, log);
@@ -916,6 +922,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     fatigueChange: 0,
     moneyChange: 0,
     messages: [],
+    skipped: [],
     milestoneMessages: [],
     parentBonusesApplied: [],
   };
@@ -999,6 +1006,13 @@ export interface WeekPreview {
   // raw 수치 비공개 원칙 — 능력치는 방향(↑/↓)만. 피로는 HUD 에 이미 숫자로 노출되므로 예외.
   statHints: { key: StatKey; dir: 'up' | 'down' }[];
   burnoutRisk: boolean; // 확정 후 피로 80+ (고피로 구간 진입)
+  /**
+   * 이 계획으로 확정하면 **실행되지 않을** 활동들 — 엔진이 직접 남긴 기록이라 예측이 아니다.
+   * 계획 화면이 확정 전에 이걸 그대로 말한다. 화면이 판정을 재구현하지 않는 것이 요점:
+   * 순차 차감·수입 활동·`eventTimeCost`로 잘리는 꼬리 슬롯·`canApplyActivity` 게이트가
+   * 전부 여기 이미 반영돼 있다.
+   */
+  skipped: SkippedActivity[];
 }
 
 export function predictWeekOutcome(
@@ -1024,6 +1038,7 @@ export function predictWeekOutcome(
     fatigueDelta: fatigueAfter - fatigueBefore,
     statHints,
     burnoutRisk: fatigueAfter >= 80,
+    skipped: after.weekLog?.skipped ?? [],
   };
 }
 

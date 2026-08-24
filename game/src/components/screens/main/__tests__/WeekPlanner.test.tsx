@@ -48,6 +48,7 @@ type PlannerOverrides = {
   npcChoices?: Record<string, string>;
   routineTooExpensive?: boolean;
   routineCost?: number;
+  unaffordable?: Activity[];
   maxComboWeeks?: number;
   slot2ComboWeeks?: number;
   slot3ComboWeeks?: number;
@@ -67,6 +68,7 @@ function renderPlanner(overrides: PlannerOverrides = {}) {
       onEditSlot={onEditSlot}
       routineTooExpensive={overrides.routineTooExpensive ?? false}
       routineCost={overrides.routineCost ?? 0}
+      unaffordable={overrides.unaffordable ?? []}
       maxComboWeeks={overrides.maxComboWeeks ?? 0}
       slot2ComboWeeks={overrides.slot2ComboWeeks ?? 0}
       slot3ComboWeeks={overrides.slot3ComboWeeks ?? 0}

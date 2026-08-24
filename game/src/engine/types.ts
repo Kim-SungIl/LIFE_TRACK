@@ -99,11 +99,29 @@ export interface ParentBonusApplied {
   what: string;
 }
 
+/**
+ * 엔진이 이번 주에 **실행하지 않은** 활동 한 건. 메시지 문자열과 달리 기계가 읽는 기록이다.
+ *
+ * 계획 화면이 확정 전에 "이건 못 한다"고 말하려면 그 판정이 엔진과 정확히 같아야 하는데,
+ * 예측을 따로 구현하면 장부가 두 벌이 되어 반드시 어긋난다(eventTimeCost·vacationLimit을
+ * 놓쳐 거짓 경고를 냈던 것이 실제 사례). 그래서 판정 주체를 엔진 하나로 두고, 화면은
+ * `predictWeekOutcome`이 돌린 같은 `processWeek`의 이 기록을 읽는다.
+ */
+export interface SkippedActivity {
+  activityId: string;
+  /** money = 잔액 부족, gate = 학년·계절·방학횟수(canApplyActivity) */
+  reason: 'money' | 'gate';
+  /** routine = 학기 중 방과후 슬롯, choice = 주말/방학 선택 슬롯 */
+  origin: 'routine' | 'choice';
+}
+
 export interface WeekLog {
   statChanges: Partial<Stats>;
   fatigueChange: number;
   moneyChange: number;
   messages: string[];
+  /** 실행되지 않은 활동들 — 계획 화면의 사전 경고가 이걸 읽는다(문자열 파싱 아님) */
+  skipped: SkippedActivity[];
   milestoneMessages: string[];   // 이번 주 달성한 성장 메시지들
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
   /** 이번 주 발동한 부모 보너스 (UX 가시화용 — 인라인 스티커, WeekLog 1줄, HUD 펄스) */
