@@ -228,6 +228,17 @@ export interface MemorialHighlight {
   year: number;
   isFallback?: boolean;
   isClosing?: boolean;   // 후회카드 전용 — 화해 마감 한 줄(자책으로 끝나지 않게)
+  // 출처 슬롯 — 엔딩이 이 회상의 그림(CG/초상/엠블럼)을 해석하는 재료.
+  // 원래 recallText/year만 남기고 버렸는데, 그러면 화면이 "이 문장이 어느 장면이었는지"를
+  // 복원할 방법이 없어 엔딩이 텍스트만 남았다. slot 안에 sourceEventId·choiceIndex·year·
+  // npcIds·category·toneTag가 다 있으므로 필드를 낱개로 늘리지 않고 슬롯째로 들고 간다.
+  //
+  // **optional인 이유가 두 개다** — 슬롯 없이 만들어지는 회상이 두 종류다:
+  //   ① milestoneScene 승격(아래 3번) — isFallback 플래그가 붙지 않는다. 즉 "isFallback이
+  //      아니면 슬롯이 있다"는 추론은 틀린다. 반드시 slot 유무로 분기할 것.
+  //   ② FALLBACK_SEEDS(4번) — isFallback: true.
+  // 엔딩 진입은 useMemo 계산이고 세이브에 안 들어가므로(GameScreen.tsx) 직렬화 부담은 없다.
+  slot?: MemorySlot;
 }
 
 // ===== 후회 풀 판정 (selectRegretHighlights 소관) =====
@@ -301,7 +312,7 @@ export function selectMemorialHighlights(state: GameState, excludeTexts: Set<str
 
   // 3. 3개 미만 시 폴백 — milestoneScene 승격
   const highlights: MemorialHighlight[] = result.map(s => ({
-    recallText: s.recallText, year: s.year,
+    recallText: s.recallText, year: s.year, slot: s,
   }));
 
   if (highlights.length < 3) {
@@ -377,8 +388,11 @@ export function selectRegretHighlights(
     pool.find(s => s.recallText !== picked[0].recallText);
   if (second) picked.push(second);
 
+  // slot을 싣는 것은 회고와 같은 규약이지만, **후회 레이어는 그림을 쓰지 않는다** —
+  // 자책 층에 그림이 붙으면 전시가 된다. 렌더 쪽(EndingScreen)이 이 필드를 읽지 않는 것으로
+  // 지켜지는 원칙이라, 회고 블록을 복사해 오면 조용히 깨진다(계약 테스트로 잠가 둠).
   const highlights: MemorialHighlight[] = picked.map(s => ({
-    recallText: s.recallText, year: s.year,
+    recallText: s.recallText, year: s.year, slot: s,
   }));
 
   // 화해 마감 — 후회 본문이 1장 이상일 때만 닫는 한 줄(자책으로 끝나지 않게).

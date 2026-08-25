@@ -259,6 +259,7 @@ export function GameScreen() {
         burnoutCount={state.burnoutCount}
         bgProps={bgProps}
         runDelta={runDelta}
+        gender={state.gender}
       />
     );
   } else if (state.currentEvent && state.phase === 'event') {
