@@ -18,13 +18,21 @@ const cuts = [...HIGH_REACH_EVENTS, ...NEW_NPC_REACH_EVENTS].map((e) => ({
 // 선행 조건이 붙은 컷은 픽스처를 그 조건에 맞춘다 — 균일 픽스처(W10 · 이벤트 없음)로는
 // 원천적으로 못 뜨는 컷이 생겼기 때문이다. **조건을 느슨하게 하려고 여기를 고치지 말 것**:
 // 조건 자체는 src/engine/__tests__/junhaRecipeOrder.test.ts가 양방향으로 잠근다.
+//
+// ⚠️ **이 스크립트가 증명하는 것은 "픽 가능성"이고 "도달 가능성"이 아니다.** 오버라이드는
+// 조건을 만족하는 상태를 손으로 만들어 주는 것이라, 그 상태에 실제 플레이로 갈 수 있는지는
+// 여기서 검사되지 않는다. 특히 `junha-hs-farewell`은 W>=40 창의 도달성이 CI 어디에도 없다
+// (준하를 늦게 챙기는 런에서 pre-met 쿨다운 24주에 막혀 영구 유실된다 — reachHigh.ts 주석 참고).
+// 도달성을 잠그려면 헤드리스 완주 시뮬레이션이 필요하고, 그건 이 스크립트의 범위가 아니다.
+const RECIPE_GAP_WEEKS = 4;   // junha-hs-recipe 의 cook 선행 간격과 같은 값이어야 한다
 const FIXTURE_OVERRIDES: Record<string, { week?: number; priorEvents?: string[] }> = {
-  // 꿈 첫 고백은 junha-cook이고 이 컷은 그 4주 뒤 심화다(같은 고백 2회 방지).
-  'junha-hs-recipe': { week: 16, priorEvents: ['junha-cook'] },
+  // 꿈 첫 고백은 junha-cook이고 이 컷은 그 뒤 심화다(같은 고백 2회 방지).
+  'junha-hs-recipe': { week: 10 + RECIPE_GAP_WEEKS + 2, priorEvents: ['junha-cook'] },
   // "졸업 무렵 짐 가방"이라 W>=40. 게이트가 없던 동안 Y7 W2에 떴다.
   'junha-hs-farewell': { week: 40 },
 };
-// 선행 이벤트를 events에 심는다 — 발동 주차는 픽스처 주차보다 4주 이상 앞(간격 조건 충족).
+// 선행 이벤트를 events에 심는다 — 간격 조건을 딱 만족하는 주차에 둔다(경계값이라, 제품 조건의
+// 간격을 늘리면 이 스크립트가 같이 깨져서 눈감아주지 않는다).
 function seedPriorEvent(id: string, year: number, week: number) {
   const def = GAME_EVENTS.find(e => e.id === id);
   if (!def) throw new Error(`FIXTURE_OVERRIDES 전제 붕괴: ${id} 가 GAME_EVENTS에 없다`);
@@ -41,7 +49,7 @@ for (const c of cuts) {
   s.week = override?.week ?? 10;   // 학기 중(비방학)
   s.isVacation = false;
   for (const id of override?.priorEvents ?? []) {
-    s.events.push(seedPriorEvent(id, c.year, s.week - 4));
+    s.events.push(seedPriorEvent(id, c.year, s.week - RECIPE_GAP_WEEKS));
   }
   // 모든 NPC를 met=false로 깔아 간섭 제거
   for (const n of s.npcs) { n.met = false; }
