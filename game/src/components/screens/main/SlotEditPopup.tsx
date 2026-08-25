@@ -141,7 +141,10 @@ export function SlotEditPopup({
                           editingSlot === 'weekend2' ? 1 :
                           parseInt(editingSlot.replace('weekend', '')) - 1;
               const editingAct = selectedActivities[idx];
-              const editingSlots = editingAct ? (activities.find(x => x.id === editingAct)?.slots || 0) : 0;
+              // 이미 배치된 것을 해석하는 경로라 카탈로그(ACTIVITIES)를 본다 — `activities`(고를 수
+              // 있는 목록)에는 잔액 조건이 섞여 있어서, 감당 못 하게 된 활동이 여기서 0칸으로 잡히면
+              // 그 슬롯이 반환되지 않아 **교체 자체가 막힌다**(5칸 캠프를 1칸으로 바꿀 수 없다).
+              const editingSlots = editingAct ? (ACTIVITIES.find(x => x.id === editingAct)?.slots || 0) : 0;
               return currentSlots - editingSlots;
             })()}
             state={state}
