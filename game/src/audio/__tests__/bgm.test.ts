@@ -516,6 +516,42 @@ describe.each(listBgmTrackIds())('테마 작곡 불변식 — %s', (id) => {
     const bad = theme.notes.filter(n => n.type !== undefined && n.type !== 'sine' && n.type !== 'triangle');
     expect(bad.map(n => n.type)).toEqual([]);
   });
+
+  // 발주 1차본이 실제로 여기서 뚫렸다 — 전체 무음이 아니라서 "소리는 난다"로 보이는데,
+  // 화성 바닥만 4박(3.6초) 빠져 루프마다 음악이 얇아졌다 돌아왔다.
+  it('화성 바닥(지속음)이 루프를 덮는다 — 끊겨도 0.6박 이내', () => {
+    const bed = theme.notes.filter(n => n.beats >= 3)
+      .map(n => [n.beat, n.beat + n.beats] as const)
+      .sort((a, b) => a[0] - b[0]);
+    let covered = 0;
+    const gaps: string[] = [];
+    for (const [start, end] of bed) {
+      if (start > covered + 1e-9) gaps.push(`${covered}~${start}박`);
+      covered = Math.max(covered, end);
+    }
+    if (covered < theme.loopBeats - 1e-9) gaps.push(`${covered}~${theme.loopBeats}박`);
+
+    const tooLong = gaps.filter(g => {
+      const [s, e] = g.replace('박', '').split('~').map(Number);
+      return e - s > 0.6;
+    });
+    expect(tooLong, '화성 바닥이 0.6박 넘게 비었다').toEqual([]);
+  });
+
+  // 같은 음정이 겹치면 나중 노트가 음정 변화로 읽히지 않는다 — 선율선의 한 음이 조용히 사라진다.
+  // (HIGH 테마 1차본의 C4 패드 ↔ C4 선율이 이 형태였다.)
+  it('같은 음정이 동시에 울리지 않는다', () => {
+    const overlaps: string[] = [];
+    for (let i = 0; i < theme.notes.length; i++) {
+      for (let j = i + 1; j < theme.notes.length; j++) {
+        const a = theme.notes[i], b = theme.notes[j];
+        if (a.freq === b.freq && a.beat < b.beat + b.beats && b.beat < a.beat + a.beats) {
+          overlaps.push(`${a.freq}Hz @${a.beat} ↔ @${b.beat}`);
+        }
+      }
+    }
+    expect(overlaps).toEqual([]);
+  });
 });
 
 describe('메인 테마', () => {
