@@ -353,7 +353,9 @@ export const HIGH_REACH_EVENTS = [
     id: 'junha-hs-recipe',
     // t42 유지(밸런스 검수 ③ 재측정): 44% 미발동의 원인은 tier가 아니라 farewell(50, 방학 게이트
     // 없음)의 선점 + 24주 쿨다운 — 38 하향을 264 run 쌍시드로 실측했으나 개선 0(44→50%)이라 되돌림.
-    // 그 "farewell 선점"은 아래 farewell에 W>=40 게이트를 걸어 해소했다(졸업 컷이 3월에 뜨던 문제).
+    // ⚠️ 그 "farewell 선점"은 **해소되지 않았다.** 아래 farewell의 W>=40 게이트는 경합을 없앤 게
+    //   아니라 **이긴 쪽을 바꿨다** — 준하를 늦게 챙기는 런에서 이 컷은 살고 farewell이 죽는다
+    //   (실측: Y7 W16부터 투자 시 recipe 0/6→6/6 / farewell 6/6→0/6). 자세한 기전은 farewell 주석.
     reach: { npc: 'junha', tier: 42, year: 7 },
     title: '레시피 노트',
     // 꿈의 **재고백이 아니다** — "요리사 될 거다"는 cook이 이미 한 말이라 여기서 다시 하면
@@ -369,10 +371,16 @@ export const HIGH_REACH_EVENTS = [
     // 재고백으로 읽힌다.
     // 4주 간격: 순서만 맞추면 cook이 그 주 followup으로 뜬 뒤 체인의 reach 추가 픽이 같은 주에
     //   이 컷을 붙일 수 있다(subin-dream 선례와 같은 함정). 심화가 심화로 읽히려면 사이가 벌어져야 한다.
-    //   비교 대상은 **기록된 주차**다. 고정주차가 없는 이벤트는 화면에 뜬 주보다 1 작게 기록되므로
-    //   (실측: cook 화면 W8 / 기록 W7) 체감 간격은 3주가 된다 — cook@W8 → recipe@W11.
+    //   ⚠️ 4가 실제로 몇 주인지는 **이 컷이 어느 경로로 뽑혔는지에 달렸다.** 스탬프는 항상
+    //   엔진주 W인데(`gameEngine.ts` selectEventForWeek 가 `week: state.week`), 조건을 평가하는
+    //   좌표가 경로마다 다르다: 메인 경로는 advanceWeekCounter 이전이라 W에서 평가 → 진짜 4주가
+    //   필요하고, 체인 경로(`store.ts` resolveEventChain)는 processWeek 이후라 W+1에서 평가 →
+    //   3주도 통과한다. 실측 메인 라인이 체인 경로라 cook 스탬프 W7 → recipe 스탬프 W10(3주)로
+    //   떴다. 서사적으로 3·4는 둘 다 무해하지만, 이 값을 "정확히 4주"로 믿고 계산하지 말 것.
     // 안전판을 두지 않는다 — cook의 문턱(38)이 이 컷(42)보다 **낮아서** t42에 닿은 런은 이미
-    //   cook 적격이다. "cook 없이 recipe만"은 도달 불가가 아니라 무의미한 조합이다.
+    //   cook **적격**이다. (엄밀히는 적격 ≠ 발동이다. cook이 W39 이후에야 발동하면 이 컷은
+    //   `week>=43`을 요구받고 W43~48은 전부 방학이라 원천 불가 — 다만 실플레이 스윕에서 cook
+    //   스탬프 최댓값은 W33이었고, 그 런은 t42에 아예 못 닿았다. 인위적 픽스처에서만 재현된다.)
     condition: (s) => {
       const n = s.npcs.find(x => x.id === 'junha');
       const cook = s.events.find(e => e.id === 'junha-cook');
@@ -399,9 +407,22 @@ export const HIGH_REACH_EVENTS = [
     // W>=40 — "졸업 무렵 + 큰 짐 가방 + 부산 내려간다"가 지문인데 시점 게이트가 없어서, recipe에
     // 선행 조건이 걸린 뒤엔 이 컷이 **Y7 W2**(3월 개학 직후)에 떴다(20/20 실측). 졸업 컷을 학년
     // 시작에 두면 뒤에 오는 꿈·준비 컷 전부가 이미 떠난 사람 얘기가 된다.
-    // 부수 효과로 기존 주석의 "farewell 선점 → recipe 44% 미발동"도 같이 풀린다(선점할 창이 없어짐).
     // 방학 게이트는 걸지 않는다 — 졸업식이 W46이고 W43~48이 방학 구간이라, 방학을 막으면
     //   "졸업 무렵"이 W40~42 3주로 좁아져 쿨다운(24주)에 밀린 런에서 컷이 통째로 사라진다.
+    //
+    // ⚠️ **알려진 대가 — 준하를 늦게 챙기는 런에서 이 컷이 영구 유실된다.** 게이트를 의심하기
+    // 전에 이 문단을 읽을 것. 기전은 게이트가 아니라 reach 페이싱이다:
+    //   ① junha의 Y7 reach는 recipe·farewell 둘뿐이라 pre-met 쿨다운이 48÷2 = **24주**다.
+    //   ② 쿨다운을 면제받는 유일한 경로는 **fresh**(그 주에 t50 돌파)인데, W>=40이 그 창을 닫는다.
+    //      게이트 전에는 친밀도가 50을 넘는 주에 이 컷이 그냥 떴다(실측 farewell@Y7W17·W20 —
+    //      "졸업 무렵 짐 가방"이 꿈 고백보다 먼저 뜨던, 이 게이트가 막으려던 바로 그 그림).
+    //   ③ 그래서 남는 건 pre-met뿐이고 `recipe 스탬프 + 24 <= 현재주`가 필요하다. Y7이 48주라
+    //      **recipe 스탬프가 W24를 넘으면 산술적으로 불가능**하다(W25 → 최소 W49).
+    //   ④ 여름방학 W20~24 + recipe의 `!isVacation` 때문에, cook이 W16~20에 뜨는 런은 recipe가
+    //      예외 없이 W24~25로 밀린다. 절벽이 정확히 거기 놓인다.
+    // 게이트 값을 낮춰도 해결되지 않는다(W36이어도 36-24=12 < 24). 실질 후보는 학년말 창의
+    // reach를 pre-met 쿨다운에서 면제하거나, 이 컷을 졸업 무렵 고정주차로 옮기는 것 — 둘 다
+    // 엔진 변경이라 보류했다. 자연 플레이 30/30(동행 고정·회전·Y7집중)에서는 W40~41에 정상 발동.
     condition: (s) => { const n = s.npcs.find(x => x.id === 'junha'); return !!n?.met && n.intimacy >= 50 && s.year === 7 && s.week >= 40; },
     choices: [
       { text: '"부산 가도 연락하자. 1호 손님 약속 지켜야지"', effects: { social: 1 }, npcEffects: [{ npcId: 'junha', intimacyChange: 6 }], message: '"하모. 가게 차리믄 젤 먼저 연락한다." 준하가 새끼손가락을 건다. 사투리가 떨린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 6, toneTag: 'melancholy', recallText: '교문 앞 큰 가방, 여기도 내 자리 같다던 준하.', npcIds: ['junha'] } },
