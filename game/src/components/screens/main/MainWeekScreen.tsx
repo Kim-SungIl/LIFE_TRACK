@@ -98,9 +98,17 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const activities = getAvailableActivities(state);
   // 2칸 활동은 onToggle에서 같은 id로 인접 슬롯에 중복 저장됨. 슬롯/비용 계산 시 한 인스턴스로 collapse.
   // 엔진의 vacationChoices 처리(gameEngine.ts)와 동일한 헬퍼 사용 — SSOT.
+  //
+  // **카탈로그(ACTIVITIES)로 해석한다 — 위 `activities`가 아니다.** 둘은 다른 질문에 답한다:
+  // `activities`(getAvailableActivities)는 "지금 고를 수 있는가"라 `requires`에 잔액 조건이 섞여
+  // 있고, 여기는 "플레이어가 무엇을 계획했는가"다. 잔액으로 걸러 버리면 고른 **뒤** 돈이 줄었을 때
+  // (상점 구매·대화 미니이벤트·수입 루틴 교체 — 전부 phase를 안 바꿔 계획이 살아남는다)
+  // 이미 배치된 활동이 조용히 사라져 슬롯 용량·누적 돈 게이트·빈 주말 판정이 한꺼번에 틀어진다.
+  // 엔진도 선택 슬롯을 ACTIVITIES로 해석한다(gameEngine.ts applyWeekendActivities) — 그쪽이 기준.
+  // "일관성"을 이유로 `activities`로 되돌리지 말 것.
   const selectedInstances = collapseActivityChoices(selectedActivities)
-    .map(id => activities.find(a => a.id === id))
-    .filter((a): a is typeof activities[number] => !!a);
+    .map(id => ACTIVITIES.find(a => a.id === id))
+    .filter((a): a is typeof ACTIVITIES[number] => !!a);
   const currentSlots = selectedInstances.reduce((s, act) => s + act.slots, 0);
   const { color: fatigueColor, label: fatigueLabel } = getFatigueDisplay(state.fatigue);
 
