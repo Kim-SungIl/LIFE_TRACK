@@ -71,8 +71,8 @@ const CAT_LABEL: Record<string, string> = {
   rest: '휴식', parent: '가족', work: '알바',
 };
 
-/** 슬롯을 열어 활동을 고른다 — 실제 플레이 경로(슬롯 탭 → 편집 팝업 → 활동 버튼). */
-function pickActivity(id: string, slotLabel = '토요일') {
+/** 슬롯 편집 팝업을 열고 그 활동 버튼을 찾는다 — **누르지는 않는다**(비활성 여부 검사용). */
+function openSlotFor(id: string, slotLabel: string) {
   const act = ACTIVITIES.find(a => a.id === id)!;
   fireEvent.click(screen.getByText(slotLabel).closest('button')!);
   const header = screen.getAllByRole('button').find(
@@ -86,6 +86,12 @@ function pickActivity(id: string, slotLabel = '토요일') {
     && !(el.textContent ?? '').includes('수치')
     && (el.textContent ?? '').includes(act.name));
   if (!btn) throw new Error(`활동 버튼 없음: ${act.name}`);
+  return { act, btn };
+}
+
+/** 슬롯을 열어 활동을 고른다 — 실제 플레이 경로(슬롯 탭 → 편집 팝업 → 활동 버튼). */
+function pickActivity(id: string, slotLabel = '토요일') {
+  const { act, btn } = openSlotFor(id, slotLabel);
   expect(btn.hasAttribute('disabled'), `${act.name}이 이미 비활성이다 — 전제가 깨졌다`).toBe(false);
   fireEvent.click(btn);
   return act;
@@ -229,5 +235,113 @@ describe('계획 화면 — 낡은 계획(고른 뒤 사정이 바뀐 경우)', 
 
     expect(screen.getByText(/돈이 부족해요! 방과후/)).toBeTruthy();
     expect(warnText(), '두 경고가 동시에 떴다').toBeNull();
+  });
+});
+
+// 같은 "낡은 계획" 결함군의 두 번째 갈래 — 경고 문구가 아니라 **계획 자체를 잃어버리는** 쪽.
+//
+// 화면은 이미 고른 활동을 해석할 때 카탈로그(ACTIVITIES)를 봐야 한다. `getAvailableActivities`는
+// "지금 고를 수 있는가"라 `requires`에 잔액 조건이 섞여 있어서(academy·gym·art-lesson·
+// internet-lecture·study-room·supplementary-class·practical-lesson·private-tutoring), 그걸로
+// 해석하면 고른 **뒤** 잔액이 떨어졌을 때 이미 배치된 활동이 조용히 사라진다. 슬롯 배열에는
+// 남아 있으니 화면상 슬롯은 채워진 채다. 엔진은 ACTIVITIES로 해석하므로(gameEngine의
+// applyWeekendActivities) 계획은 실제로 살아 있고, 어긋나는 건 화면의 파생값 셋이다.
+//
+// 돈 게이트가 걸린 활동은 전부 1칸이라 유실 폭은 인스턴스당 1칸이다 — 그래서 경계를 정확히
+// 맞춘 픽스처가 필요하다(아래 각 테스트의 산식 주석).
+describe('계획 화면 — 낡은 계획이 파생값을 무너뜨리지 않는다 (계획은 카탈로그로 해석)', () => {
+  it('① 슬롯 용량: 잔액이 떨어져도 사라진 칸만큼 초과 배치되지 않는다 (방학)', () => {
+    // 방학 5칸을 1칸짜리 유료 활동 넷으로 채운다: 예체능2 + 헬스2 + 학원2 + 인강1 = 7만.
+    // 고르는 동안 누적 availableMoney는 7→5→3→1이라 마지막 인강(1만)까지 정확히 들어간다.
+    const { update } = renderScreen({
+      isVacation: true, week: VACATION_WEEK, money: 7,
+      routineSlot2: null, routineSlot3: null,
+    });
+    // 전제: 방학 슬롯이 5칸이다(부모 보너스가 붙으면 이 테스트의 경계 산식이 깨진다).
+    expect(screen.queryByText('활동 5'), '방학 슬롯이 5칸이 아니다').toBeTruthy();
+    expect(screen.queryByText('활동 6'), '방학 슬롯이 6칸 이상이다 — 경계 산식을 다시 잡아라').toBeNull();
+    expect(COST('art-lesson') + COST('gym') + COST('academy') + COST('internet-lecture')).toBe(7);
+
+    pickActivity('art-lesson', '활동 1');
+    pickActivity('gym', '활동 2');
+    pickActivity('academy', '활동 3');
+    pickActivity('internet-lecture', '활동 4');
+
+    update({ money: 0 });   // 상점 구매 등으로 잔액 소진 — 넷 다 requires를 잃는다
+
+    // 남은 건 5번 한 칸. 3칸짜리 시골/할머니댁은 들어갈 자리가 없다(4 + 3 > 5).
+    // 계획을 잃어버리면 currentSlots가 0으로 보여 5칸이 통째로 비어 있는 셈이 된다.
+    const { act, btn } = openSlotFor('countryside', '활동 5');
+    expect(act.slots, '3칸 활동이라야 경계가 성립한다').toBe(3);
+    expect(btn.hasAttribute('disabled'), '계획을 잃어 빈 칸으로 보인다 — 5칸에 7칸을 배치할 수 있다')
+      .toBe(true);
+    // 비활성 사유가 돈이 아니라 슬롯이어야 한다 — 시골/할머니댁은 무료다.
+    expect(btn.textContent, '무료 활동인데 돈 때문에 막혔다 — 다른 경로가 걸린 것이다')
+      .not.toContain('💰부족');
+  });
+
+  it('② 누적 돈 게이트: 잔액이 떨어지면 남은 슬롯의 유료 활동이 막힌다', () => {
+    // 이 게이트는 PR #407이 "고르는 순간의 방어"로 명시적으로 의존하는 것이다. 계획을 잃으면
+    // 이미 고른 활동의 비용이 availableMoney에서 빠져 게이트가 통째로 헐거워진다.
+    const { update } = renderScreen();
+    pickActivity('art-lesson');           // 2만, 잔액 5 → availableMoney 3
+
+    update({ money: 1 });                 // 예체능(2만)이 requires를 잃는다
+
+    // 올바른 값: 1 − 루틴0 − 예체능2 = −1 → 인강(1만)도 못 산다.
+    // 잃어버리면: 1 − 0 − 0 = 1 → 인강이 살 수 있는 것으로 보인다.
+    const { btn } = openSlotFor('internet-lecture', '일요일');
+    expect(btn.hasAttribute('disabled'), '이미 고른 활동의 비용이 누적에서 빠졌다 — 못 살 것을 고를 수 있다')
+      .toBe(true);
+    expect(btn.textContent, '막히긴 했는데 돈 때문이 아니다 — 슬롯 등 다른 이유면 이 계약이 무의미하다')
+      .toContain('💰부족');
+  });
+
+  it('③ 빈 주말 판정: 계획이 살아 있는데 "주말은 쉰다"고 말하지 않는다', () => {
+    // 수입 루틴을 끼워야 이 증상이 격리된다. 엔진은 루틴을 먼저 처리하므로(알바 +4만)
+    // 선택 슬롯 차례엔 잔액이 5만이라 예체능(2만)이 **실제로 실행된다** → 돈 경고가 안 뜬다.
+    // 반면 화면의 requires 판정은 state.money(1만)만 보므로 계획만 사라진다. 경고 문구가
+    // 빈 주말 문구보다 우선하기 때문에(확정 버튼 라벨 분기), 경고가 없는 이 상태라야 검사된다.
+    const { onConfirmWeek, update } = renderScreen({
+      year: 6, money: 5, routineSlot2: 'part-time', routineSlot3: null,
+    });
+    expect(COST('part-time', 6), '수입 루틴이어야 이 경로가 성립한다').toBeLessThan(0);
+    pickActivity('art-lesson');
+
+    update({ money: 1 });
+
+    expect(warnText(), '엔진이 실행하는데 못 한다고 경고한다 — 이 테스트의 전제가 깨졌다').toBeNull();
+    expect(
+      screen.queryByText('주말 활동을 선택하지 않으면 자동으로 휴식합니다.'),
+      '계획이 살아 있는데 아무것도 안 골랐다고 안내한다',
+    ).toBeNull();
+
+    // 확정 버튼이 "쉰다"로 바뀌면 플레이어는 쉬는 줄 알고 누르는데 실제로는 예체능을 한다.
+    const btn = screen.getByRole('button', { name: /이번 주 확정|주말은 쉰다/ });
+    expect(btn.textContent, '쉰다고 해놓고 계획은 그대로 넘긴다').toContain('이번 주 확정');
+    fireEvent.click(btn);
+    expect(onConfirmWeek).toHaveBeenCalledTimes(1);
+    expect(onConfirmWeek.mock.calls[0][0], '화면이 잃어버린 활동을 엔진은 받는다')
+      .toContain('art-lesson');
+  });
+
+  it('④ 감당 못 하게 된 활동을 슬롯에서 교체할 수 있다 (반쪽 수정 방지)', () => {
+    // MainWeekScreen만 고치고 SlotEditPopup을 두면 새 잠금이 생긴다: 편집 중인 슬롯의 활동을
+    // 되돌려주는 계산(currentSlots − editingSlots)도 같은 목록을 보기 때문에, 감당 못 하게 된
+    // 활동이 0칸으로 잡혀 그 칸이 반환되지 않는다 → 그 활동을 **뺄 수도 없다**.
+    // 경계: 예체능1 + 창작2 = 3칸. 편집 슬롯이 1칸을 돌려주면 2 + 시골3 = 5로 딱 들어가고,
+    // 안 돌려주면 3 + 3 = 6으로 막힌다.
+    const { update } = renderScreen({
+      isVacation: true, week: VACATION_WEEK, money: 2,
+      routineSlot2: null, routineSlot3: null,
+    });
+    pickActivity('art-lesson', '활동 1');
+    pickActivity('creative-project', '활동 2');
+
+    update({ money: 1 });   // 예체능이 requires를 잃는다
+
+    const { btn } = openSlotFor('countryside', '활동 1');
+    expect(btn.hasAttribute('disabled'), '감당 못 하게 된 활동이 슬롯에 갇혔다 — 뺄 수도 바꿀 수도 없다')
+      .toBe(false);
   });
 });
