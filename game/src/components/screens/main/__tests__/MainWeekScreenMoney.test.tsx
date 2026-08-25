@@ -275,9 +275,12 @@ describe('계획 화면 — 낡은 계획이 파생값을 무너뜨리지 않는
     expect(act.slots, '3칸 활동이라야 경계가 성립한다').toBe(3);
     expect(btn.hasAttribute('disabled'), '계획을 잃어 빈 칸으로 보인다 — 5칸에 7칸을 배치할 수 있다')
       .toBe(true);
-    // 비활성 사유가 돈이 아니라 슬롯이어야 한다 — 시골/할머니댁은 무료다.
+    // 비활성 사유가 돈도 방학 한도도 아니어야 한다 — 둘 중 하나면 결함이 살아 있어도 그린이 된다.
+    // (실제로 그렇다: 매핑을 원복해 결함을 되살리고 countryside를 한도에 걸면 이 테스트만 통과한다.)
     expect(btn.textContent, '무료 활동인데 돈 때문에 막혔다 — 다른 경로가 걸린 것이다')
       .not.toContain('💰부족');
+    expect(btn.textContent, '방학 한도 때문에 막혔다 — 슬롯 판정을 검사하는 게 아니게 된다')
+      .not.toContain('이번 방학 한도 도달');
   });
 
   it('② 누적 돈 게이트: 잔액이 떨어지면 남은 슬롯의 유료 활동이 막힌다', () => {
@@ -331,10 +334,16 @@ describe('계획 화면 — 낡은 계획이 파생값을 무너뜨리지 않는
     // 활동이 0칸으로 잡혀 그 칸이 반환되지 않는다 → 그 활동을 **뺄 수도 없다**.
     // 경계: 예체능1 + 창작2 = 3칸. 편집 슬롯이 1칸을 돌려주면 2 + 시골3 = 5로 딱 들어가고,
     // 안 돌려주면 3 + 3 = 6으로 막힌다.
+    //
+    // **이 테스트는 전체 원복(두 곳 다 되돌림)은 못 잡는다** — 그때는 currentSlots가 2로 줄어
+    // 2 + 3 = 5로 다시 통과한다. 잡는 건 오직 "MainWeekScreen만 고친 반쪽 상태"다.
+    // 전체 원복은 ①②③이 잡는다. ④만 보고 카탈로그 해석이 잠겼다고 오해하지 말 것.
     const { update } = renderScreen({
       isVacation: true, week: VACATION_WEEK, money: 2,
       routineSlot2: null, routineSlot3: null,
     });
+    // 2칸 전제 — 창작이 1칸이 되면 반쪽 상태에서도 2+3=5가 되어 경계가 무너진다.
+    expect(ACTIVITIES.find(a => a.id === 'creative-project')!.slots, '창작 2칸 전제가 깨졌다').toBe(2);
     pickActivity('art-lesson', '활동 1');
     pickActivity('creative-project', '활동 2');
 
@@ -343,5 +352,67 @@ describe('계획 화면 — 낡은 계획이 파생값을 무너뜨리지 않는
     const { btn } = openSlotFor('countryside', '활동 1');
     expect(btn.hasAttribute('disabled'), '감당 못 하게 된 활동이 슬롯에 갇혔다 — 뺄 수도 바꿀 수도 없다')
       .toBe(false);
+  });
+
+  it('⑤ 슬롯 가중치: 2칸 활동은 2칸으로 센다 (인스턴스 수가 아니다)', () => {
+    // `currentSlots`는 인스턴스 수가 아니라 `act.slots` 합이다 — `collapseActivityChoices`가
+    // 존재하는 이유 자체다. 위 ①은 1칸짜리 넷이라 두 계산이 4로 같고, ④는 3이 2로 줄어도
+    // 2+3=5라 여전히 통과한다. 그래서 가중치를 1로 바꾸는 변형이 파일 전체를 통과했다.
+    const { state } = renderScreen({
+      isVacation: true, week: VACATION_WEEK, money: 5,
+      routineSlot2: null, routineSlot3: null,
+    });
+    expect(state.isVacation).toBe(true);
+    for (const id of ['creative-project', 'vacation-library', 'deep-rest']) {
+      expect(ACTIVITIES.find(a => a.id === id)!.slots, `${NAME(id)}의 2칸 전제가 깨졌다`).toBe(2);
+    }
+
+    pickActivity('creative-project', '활동 1');    // 슬롯 0·1
+    pickActivity('vacation-library', '활동 3');    // 슬롯 2·3
+
+    // 가중치대로면 4칸을 썼으니 남은 건 1칸 — 2칸짜리 푹 쉬기는 못 들어간다(4+2 > 5).
+    // 인스턴스 수로 세면 2칸으로 보여 2+2=4로 통과해 버린다.
+    const { btn } = openSlotFor('deep-rest', '활동 5');
+    expect(btn.hasAttribute('disabled'), '2칸 활동을 1칸으로 세고 있다 — 5칸에 6칸이 들어간다')
+      .toBe(true);
+    expect(btn.textContent, '무료 활동인데 돈 때문에 막혔다').not.toContain('💰부족');
+  });
+
+  it('⑥ HUD 주간 비용: 낡은 계획의 비용도 세고, 초과를 표시한다', () => {
+    // 브리프가 증상축으로 명시한 값인데 리포 전체에 단언이 없었다 —
+    // `selectedActivityCost`를 0으로 만들어도 801개가 조용했다.
+    // 수정 전에는 계획을 잃어 0으로 **과소계상**됐다. 실제로는 엔진이 그 돈을 쓰려고 시도한다.
+    const costOf = () => screen.queryByText(/\(이번 주 -\d/);
+    const { update } = renderScreen();
+    pickActivity('art-lesson');                       // 2만, 루틴은 무료
+
+    const before = costOf();
+    expect(before, 'HUD가 이번 주 비용을 아예 안 낸다').toBeTruthy();
+    expect(before!.textContent).toContain(`-${COST('art-lesson')}`);
+    const okColor = (before as HTMLElement).style.color;
+
+    update({ money: 1 });                             // 예체능이 requires를 잃는다
+
+    const after = costOf();
+    expect(after, '계획을 잃어 이번 주 비용이 0으로 보인다').toBeTruthy();
+    expect(after!.textContent, '비용이 줄어든 것으로 표시된다')
+      .toContain(`-${COST('art-lesson')}`);
+    // 초과 여부는 색으로만 드러난다. 하드코딩 대신 두 상태가 **달라지는지**로 잠근다 —
+    // 플래그를 true로 고정하든 false로 고정하든 같아져서 양방향으로 잡힌다.
+    expect((after as HTMLElement).style.color, '2만짜리 계획에 잔액 1만인데 초과 표시가 없다')
+      .not.toBe(okColor);
+  });
+
+  it('⑦ 계획이 정말 비면 쉰다고 안내한다 (③의 양성 짝)', () => {
+    // ③은 "안 뜬다"만 본다. 부정형 단언만 두면 안내 분기를 통째로 지워도 통과한다(실제로 그랬다).
+    renderScreen();
+    expect(screen.getByText('주말 활동을 선택하지 않으면 자동으로 휴식합니다.')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /주말은 쉰다/ })).toBeTruthy();
+  });
+
+  it('⑦-방학 계획이 정말 비면 빈 슬롯을 탭하라고 안내한다', () => {
+    renderScreen({ isVacation: true, week: VACATION_WEEK, routineSlot2: null, routineSlot3: null });
+    expect(screen.getByText('위의 빈 슬롯을 탭해서 방학 활동을 선택하세요!')).toBeTruthy();
+    expect(screen.getByRole('button', { name: /이번 주는 쉰다/ })).toBeTruthy();
   });
 });
