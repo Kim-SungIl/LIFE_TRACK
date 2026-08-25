@@ -139,11 +139,165 @@ const ENDING_RECALL: BgmTrack = {
   ],
 };
 
-export type BgmId = 'main' | 'endingRecall';
+/**
+ * ===== 학교급 테마 3곡 — 초 / 중 / 고 =====
+ *
+ * **세 곡은 서로 다른 곡이 아니라 한 곡의 세 나이다.** 무관한 3곡이면 학년이 바뀔 때 다른
+ * 게임에 들어온 것처럼 들린다. 그래서 짧은 동기 **A-C-E-D-C**를 셋이 공유하고, 음역·템포·
+ * 화성으로만 온도를 바꾼다(초·중은 A4-C5-E5-D5-C5, 고는 한 옥타브 아래 A3-C4-E4-D4-C4).
+ *
+ * 온도 곡선은 새로 만든 게 아니라 backgrounds.ts의 학교급 tint를 그대로 따라간다 —
+ * "초=따뜻(앰버) → 중=중립 → 고=차가움(블루): 유년의 온기가 입시의 냉기로 식는 정서 서사".
+ * 화면이 이미 그렇게 말하고 있으므로 음악이 다른 소리를 하면 안 된다.
+ *
+ * **왜 32박인가**: 한 곡이 학교급당 약 112주 흐른다. 메인 테마(16박·15초)를 그대로 쓰면 같은
+ * 15초를 수백 바퀴 듣게 되므로, 32박을 A마디(0~15) / B마디(16~31)로 나누고 B를 A의 변형으로
+ * 뒀다. 엔딩 테마가 쓰는 것과 같은 기법이다.
+ *
+ * 밀도는 31 → 26 → 21로 줄어든다. 나이가 들수록 음이 비는 것도 온도 서사의 일부다.
+ *
+ * 메인 테마는 지우지 않는다 — 타이틀·기록실에는 학년이 없어서 걸 곡이 필요하다.
+ * 그 화면들은 오래 머물지 않으므로 16박 루프의 반복 피로도 문제가 되지 않는다.
+ */
+
+/** 초등(Y1) — 가장 높고 촘촘하다. 들뜸은 템포(66)와 C5/E5의 밝기로 만든다. */
+const ELEMENTARY_THEME: BgmTrack = {
+  bpm: 66,
+  loopBeats: 32,
+  notes: [
+    { beat: 0, freq: A3, beats: 4, gain: 0.042, type: 'triangle' },
+    { beat: 0, freq: E4, beats: 3.5, gain: 0.028, type: 'sine' },
+    { beat: 0, freq: A4, beats: 1.0, gain: 0.044, type: 'triangle' },
+    { beat: 1.5, freq: C5, beats: 1.0, gain: 0.047, type: 'triangle' },
+    { beat: 3, freq: E5, beats: 1.2, gain: 0.048, type: 'triangle' },
+
+    { beat: 4, freq: C4, beats: 4, gain: 0.038, type: 'triangle' },
+    { beat: 5, freq: D5, beats: 1.0, gain: 0.044, type: 'triangle' },
+    { beat: 6.5, freq: C5, beats: 1.2, gain: 0.044, type: 'triangle' },
+
+    { beat: 8, freq: E4, beats: 4, gain: 0.038, type: 'triangle' },
+    { beat: 8, freq: G4, beats: 3.5, gain: 0.026, type: 'sine' },
+    { beat: 9, freq: A4, beats: 1.0, gain: 0.04, type: 'triangle' },
+    { beat: 10.5, freq: C5, beats: 1.0, gain: 0.044, type: 'triangle' },
+    { beat: 12, freq: E5, beats: 1.1, gain: 0.046, type: 'triangle' },
+    // A마디를 닫고 B로 넘어가는 바닥. 이게 없으면 12~16박에 화성이 통째로 빠져
+    // 29초마다 음악이 얇아졌다 돌아온다(발주 1차본의 실제 결함이었다).
+    { beat: 12, freq: D4, beats: 4, gain: 0.034, type: 'sine' },
+    { beat: 14, freq: D5, beats: 1.0, gain: 0.04, type: 'triangle' },
+
+    { beat: 16, freq: A3, beats: 4, gain: 0.04, type: 'triangle' },
+    { beat: 16, freq: C4, beats: 3.5, gain: 0.028, type: 'sine' },
+    { beat: 17, freq: C5, beats: 1.0, gain: 0.044, type: 'triangle' },
+    { beat: 18.5, freq: E5, beats: 1.0, gain: 0.046, type: 'triangle' },
+    { beat: 20, freq: D5, beats: 1.1, gain: 0.042, type: 'triangle' },
+
+    { beat: 20, freq: G4, beats: 4, gain: 0.036, type: 'triangle' },
+    { beat: 22, freq: C5, beats: 1.2, gain: 0.04, type: 'triangle' },
+    { beat: 23.5, freq: A4, beats: 1.0, gain: 0.038, type: 'triangle' },
+
+    { beat: 24, freq: C4, beats: 4, gain: 0.038, type: 'triangle' },
+    { beat: 24, freq: E4, beats: 3.5, gain: 0.026, type: 'sine' },
+    { beat: 25, freq: A4, beats: 1.0, gain: 0.038, type: 'triangle' },
+    { beat: 26.5, freq: C5, beats: 1.0, gain: 0.042, type: 'triangle' },
+    { beat: 28, freq: D5, beats: 1.0, gain: 0.04, type: 'triangle' },
+
+    { beat: 28, freq: A3, beats: 4, gain: 0.04, type: 'triangle' },
+    { beat: 30, freq: C5, beats: 1.0, gain: 0.04, type: 'triangle' },
+    { beat: 31, freq: A4, beats: 1.0, gain: 0.034, type: 'triangle' },
+  ],
+};
+
+/**
+ * 중등(Y2~4) — 중립. 메인 테마가 있던 자리를 잇는다.
+ * 저역 A2/E3를 넣어 루틴 화면의 체류감에 맞추고, 성공도 실패도 판정하지 않는다.
+ */
+const MIDDLE_THEME: BgmTrack = {
+  bpm: 63,
+  loopBeats: 32,
+  notes: [
+    { beat: 0, freq: A2, beats: 7.5, gain: 0.052, type: 'sine' },
+    { beat: 0, freq: A3, beats: 7.5, gain: 0.028, type: 'sine' },
+    { beat: 0, freq: A4, beats: 1.4, gain: 0.04, type: 'triangle' },
+    { beat: 2, freq: C5, beats: 1.0, gain: 0.04, type: 'triangle' },
+    { beat: 3.5, freq: E5, beats: 1.3, gain: 0.042, type: 'triangle' },
+    { beat: 6, freq: D5, beats: 1.0, gain: 0.036, type: 'triangle' },
+
+    { beat: 8, freq: E3, beats: 7.5, gain: 0.048, type: 'sine' },
+    { beat: 8, freq: C4, beats: 7.5, gain: 0.027, type: 'sine' },
+    { beat: 8, freq: C5, beats: 1.4, gain: 0.038, type: 'triangle' },
+    { beat: 10, freq: A4, beats: 1.0, gain: 0.036, type: 'triangle' },
+    { beat: 11.5, freq: G4, beats: 1.4, gain: 0.034, type: 'triangle' },
+    { beat: 13.5, freq: E4, beats: 1.8, gain: 0.032, type: 'triangle' },
+
+    { beat: 16, freq: A2, beats: 7.5, gain: 0.05, type: 'sine' },
+    { beat: 16, freq: C4, beats: 7.5, gain: 0.027, type: 'sine' },
+    { beat: 17, freq: A4, beats: 1.2, gain: 0.038, type: 'triangle' },
+    { beat: 19, freq: C5, beats: 1.0, gain: 0.039, type: 'triangle' },
+    { beat: 20.5, freq: E5, beats: 1.2, gain: 0.04, type: 'triangle' },
+    { beat: 22.5, freq: D5, beats: 1.0, gain: 0.035, type: 'triangle' },
+
+    // B마디는 동기를 G4/A4로 회수한다 — 자랐지만 아직 닫히지 않은 자리.
+    { beat: 24, freq: G4, beats: 4, gain: 0.036, type: 'triangle' },
+    { beat: 24, freq: D4, beats: 3.5, gain: 0.027, type: 'sine' },
+    { beat: 25, freq: C5, beats: 1.0, gain: 0.036, type: 'triangle' },
+    { beat: 26.5, freq: A4, beats: 1.0, gain: 0.034, type: 'triangle' },
+
+    { beat: 28, freq: E3, beats: 4, gain: 0.046, type: 'sine' },
+    { beat: 28, freq: A3, beats: 3.5, gain: 0.026, type: 'sine' },
+    { beat: 29, freq: G4, beats: 1.2, gain: 0.032, type: 'triangle' },
+    { beat: 31, freq: A4, beats: 0.9, gain: 0.032, type: 'triangle' },
+  ],
+};
+
+/**
+ * 고등(Y5~7) — 동기를 한 옥타브 낮춰(A3-C4-E4-D4-C4) 무게를 만든다.
+ *
+ * **차가운 것이지 비극이 아니다.** 이 게임은 입시 결과를 판정해주는 게임이 아니라 나중에
+ * 되짚는 게임이라, 여기서 절망이나 비장함이 들어가면 화면이 하지 않는 말을 음악이 한다.
+ * E/G 계열을 열어 둔 것이 그 판단이다.
+ */
+const HIGH_THEME: BgmTrack = {
+  bpm: 58,
+  loopBeats: 32,
+  notes: [
+    { beat: 0, freq: A2, beats: 7.5, gain: 0.054, type: 'sine' },
+    { beat: 0, freq: E3, beats: 7.5, gain: 0.03, type: 'sine' },
+    { beat: 1, freq: A3, beats: 1.8, gain: 0.034, type: 'triangle' },
+    { beat: 4, freq: C4, beats: 1.6, gain: 0.034, type: 'triangle' },
+    { beat: 6.5, freq: E4, beats: 1.0, gain: 0.032, type: 'triangle' },
+
+    { beat: 8, freq: E3, beats: 7.5, gain: 0.048, type: 'sine' },
+    { beat: 8, freq: G4, beats: 3.5, gain: 0.025, type: 'sine' },
+    { beat: 9.5, freq: D4, beats: 1.6, gain: 0.032, type: 'triangle' },
+    { beat: 12.5, freq: C4, beats: 1.8, gain: 0.032, type: 'triangle' },
+
+    { beat: 16, freq: A2, beats: 7.5, gain: 0.052, type: 'sine' },
+    // 패드가 E3다(C4가 아니라) — A마디 보이싱과 맞추고, 20박 선율 C4가 자기 패드에
+    // 삼켜지지 않게 한다. 같은 음정이 겹치면 선율이 음정 변화로 읽히지 않는다.
+    { beat: 16, freq: E3, beats: 7.5, gain: 0.026, type: 'sine' },
+    { beat: 17, freq: A3, beats: 1.8, gain: 0.032, type: 'triangle' },
+    { beat: 20, freq: C4, beats: 1.5, gain: 0.032, type: 'triangle' },
+    { beat: 22.5, freq: D4, beats: 1.2, gain: 0.03, type: 'triangle' },
+
+    { beat: 24, freq: G4, beats: 4, gain: 0.034, type: 'triangle' },
+    { beat: 24, freq: D4, beats: 3.5, gain: 0.025, type: 'sine' },
+    { beat: 25.5, freq: E4, beats: 1.4, gain: 0.03, type: 'triangle' },
+
+    { beat: 28, freq: A2, beats: 4, gain: 0.052, type: 'sine' },
+    { beat: 28, freq: E3, beats: 3.5, gain: 0.028, type: 'sine' },
+    { beat: 29.5, freq: C4, beats: 1.4, gain: 0.03, type: 'triangle' },
+    { beat: 31, freq: A3, beats: 1.0, gain: 0.03, type: 'triangle' },
+  ],
+};
+
+export type BgmId = 'main' | 'endingRecall' | 'elementary' | 'middle' | 'high';
 
 const TRACKS: Record<BgmId, BgmTrack> = {
   main: MAIN_THEME,
   endingRecall: ENDING_RECALL,
+  elementary: ELEMENTARY_THEME,
+  middle: MIDDLE_THEME,
+  high: HIGH_THEME,
 };
 
 /** 지금 걸려 있는 곡. 화면이 바꾸고(setBgmTrack), 스케줄러는 이걸 읽는다. */

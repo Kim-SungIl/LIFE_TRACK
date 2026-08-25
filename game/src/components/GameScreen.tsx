@@ -6,6 +6,7 @@ import { getWeekLabel } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
 import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
+import { setBgmTrack, type BgmId } from '../audio/bgm';
 import { characterStagePrefixByLevel } from '../engine/characterAssets';
 import { getResultDialogue } from '../engine/dialogues';
 import { prefetchAssets, runWhenIdle } from '../engine/assetPrefetch';
@@ -45,6 +46,17 @@ function ScreenChunkFallback() {
     </div>
   );
 }
+
+/**
+ * 학교급 → 배경음. 곡 교체는 즉시 컷이라 소리가 뚝 끊기는데, 학교급이 바뀌는 자리(Y1→Y2,
+ * Y4→Y5)는 advanceFromYearEnd가 year 증가와 phase 전환을 한 번에 하므로 학년말 화면에서
+ * 주1 화면으로 넘어가는 순간과 겹친다 — ScreenTransition 페이드가 그 컷을 덮는다.
+ */
+const BGM_BY_SCHOOL_LEVEL: Record<ReturnType<typeof getSchoolLevel>, BgmId> = {
+  elementary: 'elementary',
+  middle: 'middle',
+  high: 'high',
+};
 
 // GameScreen 은 phase 라우터 — 각 화면(year-end / ending / event / event-result / weekly / main)으로 위임.
 // 이벤트 결과(eventResultData)·CG 로딩은 화면 전환을 가르므로 여기서 소유한다. 주간 결산은 phase==='result'.
@@ -122,6 +134,16 @@ export function GameScreen() {
       `images/backgrounds/bedroom_night.png`,
     ].map(webpSrc));
   }, [playerGender, schoolLevel, isElementarySprite]);
+
+  // 학교급이 곡을 고른다. Record라 학교급이 늘면 tsc가 여기를 먼저 막는다.
+  useEffect(() => {
+    if (schoolLevel) setBgmTrack(BGM_BY_SCHOOL_LEVEL[schoolLevel]);
+  }, [schoolLevel]);
+
+  // 타이틀로 나가면(= GameScreen 언마운트) 메인 테마로 되돌린다. 타이틀·기록실엔 학년이 없다.
+  // 위 effect의 cleanup으로 합치면 안 된다 — 초→중 전환마다 main을 한 번 거쳐 스케줄러가
+  // 두 번 재시작한다(곡이 두 번 끊긴다).
+  useEffect(() => () => setBgmTrack('main'), []);
 
   // 주간 결산 화면은 state.phase==='result'로 표현 (새로고침 후에도 유지). 로컬 boolean 제거.
   const [eventResultData, setEventResultData] = useState<EventResultData | null>(null);
