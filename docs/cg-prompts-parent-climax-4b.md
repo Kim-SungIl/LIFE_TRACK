@@ -1,15 +1,38 @@
 # Event CG Prompts — 부모 강점별 "절정 순간" (Phase 4B, 6컷)
 
-> **왜 이 6컷이 최우선인가.** `PARENT_CLIMAX_EVENTS`(`src/engine/talkData/miniEvents.ts`)는 **강점당 평생 1회**
-> 발동하고 한 판에 최대 2회 나온다. 회상 슬롯 importance는 **5**, 즉 엔딩 "돌아보면"에 잘 뽑힌다.
-> 그런데 **CG가 0장이다** — `grep -c climax src/cg-manifest.generated.ts` → `0`.
-> 엔딩 회상이 그림을 지게 된 뒤([[PR #414]]), CG 없는 회상은 카테고리 엠블럼으로 떨어진다.
-> 실측 540런에서 마지막-선택지 플레이의 엠블럼 비율이 27.9%까지 오르는데, **그 자리의 상당 부분이 이 6종**이다.
-> 6장으로 매 판 등장하는 최상위 importance 슬롯이 전부 실사진급 장면을 갖는다 — 컷당 회수가 가장 크다.
+> **왜 이 6컷인가.** `PARENT_CLIMAX_EVENTS`(`src/engine/talkData/miniEvents.ts`)는 **강점당 평생 1회**
+> 발동하고 한 판에 최대 2회 나온다. 회상 슬롯 importance는 **5**인데 **CG가 0장이다** —
+> `grep -c climax src/cg-manifest.generated.ts` → `0`.
+> 엔딩 회상이 그림을 지게 된 뒤(PR #414), CG 없는 회상은 카테고리 엠블럼으로 떨어진다.
+> 실측 90런에서 마지막-선택지 플레이의 엠블럼 비율이 27.9%이고, **그 자리 120건 중 절정이 50건(41.7%)**이다.
+>
+> **다만 "컷당 회수 최대"는 아니다(3자검수에서 반박됨).** 정직하게 적어 둔다:
+> - 발동 순간에는 **이 그림이 아예 안 보인다.** `MiniTalkModal.tsx`에 이미지 렌더가 없다 —
+>   노출면은 엔딩 회상 · 학년말 회고 · 기록실/앨범뿐이다(기존 `common/talk_*.png` 8장과 같은 구조).
+> - 90런에서 엔딩 회상에 실제로 뜬 것은 info 20 · freedom 20 · emotional 9 · wealth 1 · **strict 0 · resilience 0**.
+>   뒤 둘은 `growth` 카테고리라 카테고리 cap 경합(`memorySystem.ts`)에서 밀린다. 런당 슬롯 생존도 2회 발동 대비 0.89개.
+> - **회수 기준 1등은 `adolescence-clash`다** — `condition: (s) => s.year === 3`으로 **매 판 무조건** 발동하고
+>   슬롯 선택지가 2개(c0 betrayal/5, c2 growth/5)인데 CG 0장이다. 같은 90런에서 엠블럼 자리 **60건 = 50%**를
+>   이 한 이벤트가 차지한다. 신규 2컷(성별 분기 시 4컷)으로 60건 — 컷당 회수가 절정 6장의 1.5~4배다.
+>   **다음 배치에 반드시 끼울 것.** `career-conflict-{info,strict}-{y5,y6}`도 importance 5 · CG 0장이다.
+> - 그리고 **아트 없이 해소되는 배치 오류**가 따로 있다: `jihun-promise`(importance 8, Y2 발동인데 자산은 `high/`),
+>   `minjae-honest`(high 발동인데 자산은 `middle/`), `yuna-study`(Y1 발동인데 자산은 `middle`+`high`).
+>   파일 위치만 옮기면 되지만 **학교급이 다른 그림을 재사용하는 톤 위험이 있어 "무료"는 아니다**
+>   (생일 2종은 초등 그림을 고등에 쓰는 격이라 특히 그렇다).
+>
+> 즉 이 6컷은 **"CG가 아예 없는 매 판 등장 슬롯"이라 언젠가는 그려야 하는 것**이고, 최우선 후보군에 속한다 —
+> 하지만 배치 1순위라는 주장은 실측이 지지하지 않는다.
 
 **스펙 SSOT**: `docs/parent-4b-climax-spec-2026-06-11.md` (장면 원문·트리거·화자 귀속)
 **외형 SSOT**: `docs/character-prompt-spec.md` §mother / §father (L713~760)
-**포맷 상속**: `docs/cg-prompts-high-y5-y7.md` §공통 스타일 가이드 (Art style / Era / Negative prompt)
+**포맷 상속 — 상속 범위를 좁혀서 명시한다.** `docs/cg-prompts-high-y5-y7.md` §공통 스타일 가이드에서
+**`Art style` / `Composition` / `Resolution` 세 줄만** 가져온다.
+
+> 🚫 **`Age` / `Era` / `Uniform` 줄은 상속하지 않는다.** 그 블록 원문은
+> `Age: 17~19-year-old Korean high school students` · `Uniform: HIGH SCHOOL uniform — navy tie (male
+> protagonist), plaid skirt + red ribbon (female)`이다. **이 6컷에는 학생이 없다** — 그대로 붙이면
+> "주인공을 프레임에서 뺀다"는 이 발주의 설계와 정반대 지시가 같은 프롬프트에 동봉되고,
+> 성별 무분기 근거가 그 자리에서 무너진다. Era는 아래 §공통 스타일에서 집 배경용으로 다시 정의한다.
 
 ---
 
@@ -17,9 +40,9 @@
 
 | 근거 | 내용 |
 |---|---|
-| 학교급 | `climaxYearMin`이 2·3·4·4·4·5로 갈려 **발동 학교급이 중·고 유동**이다. `middle/`·`high/` 어느 쪽에 두어도 반쪽만 걸린다 → `common/` |
+| 학교급 | **발동 학년이 state에 저장되지 않는다.** `parentClimaxFired?: ParentStrength[]`(`types.ts`)에는 강점만 남는다. 그래서 `archive.ts`가 절정 CG를 **로드 시점의 `state.year`**로 해석하고(그 파일 주석이 이미 경고해 뒀다: *"high/talk_*.png 하나만 추가되면 두 경로가 다른 파일을 넣는다"*), 엔딩은 `slot.year`로 해석한다 — **두 경로가 서로 다른 파일을 가리킬 수 있다.** `common/`만이 그것을 무해하게 만든다. 비교 가능한 유일한 자산군(미니톡 CG 8장)도 전부 `common/`인 이유가 같다 |
 | choiceIndex | 선택지 없는 단일 컷. `applyMemorySlotFromMiniTalk`가 `choiceIndex = 0` 고정으로 기록한다(`memorySystem.ts`) |
-| 성별 | **6컷 전부 주인공이 프레임에 없다**(POV 또는 소품·부모 단독). 교복·체형 단서가 아예 없으므로 `_m`/`_f` 분기가 불필요 |
+| 성별 | **6컷 전부 주인공의 몸이 프레임에 없다**(POV 또는 소품·부모 단독). 유일한 예외가 ②의 손인데 손목에서 자른다 — 교복·체형 단서가 아예 없으므로 `_m`/`_f` 분기가 불필요 |
 
 ```
 public/images/events/common/climax_parent_emotional.png
@@ -53,17 +76,35 @@ Light: 실내 저조도 기본(밤·저녁). 따뜻한 전구색과 식은 형�
 Framing: 1인칭 시선(POV) 또는 소품 클로즈업. 대화 장면이 아니라 "말이 없던 순간"의 정물.
 ```
 
-**[전 컷 공통 금지]** — 상속 항목 ①~④에 더해:
+**[전 컷 공통 금지]**
+
+> ⚠️ **상속 목록을 뭉뚱그려 인용하지 말 것.** `cg-prompts-high-y5-y7.md`와 `cg-prompts-high-reach-y5-y7.md`에
+> 각각 다른 `①~④`가 있고(전자의 ④ = 캐릭터 마커, 후자의 ④ = 연도·날짜·D-day 금지), 그중
+> **`cg-prompts-high-y5-y7.md`의 ①은 "간판·게시판·현수막은 흐리게 처리"라고 지시한다** — 아래 1번이
+> 금지하는 바로 그 문장이다. 그래서 이 문서는 상속 대상을 다음으로 **한정**한다:
+> - **상속함**: `cg-prompts-high-y5-y7.md`의 ② (명세에 없는 가구·소품 추가 금지) · ③ (캔·컵)
+> - **상속함**: `cg-prompts-high-reach-y5-y7.md`의 ④ — **연도·날짜 표기 전면 금지.** ②(통장 **개설일**)에 필수다.
+> - **override**: 전자의 ① — "흐리게 처리"를 **쓰지 않고** 아래 1번으로 대체한다.
+> - **비상속**: 전자의 ④ (캐릭터 마커) — 이 6컷엔 학생 NPC가 없다. 부모 마커는 레퍼런스 첨부로 갈음.
+
+그 위에 이 6컷 고유의 금지 넷:
 
 1. **읽히는 글자 전면 금지.** 이 6컷은 종이 소품(통장·포스트잇·성적표·자료)이 서사의 중심이라 특히 위험하다.
    **"흐리게 처리"·"블러"로 지시하지 말 것** — 사각 가우시안 슬랩을 덧대 그림을 훼손한 전례가 있다(2026-07, 12장 리터치).
    올바른 지시는 **"원래부터 글자가 없는 표면"**: 종이는 접히거나 뒤집히거나 손·각도에 가려 **문자가 프레임에 들어오지 않는** 구도로 그린다.
    숫자·금액·날짜·이름·학교명 전부 해당. 유사 글리프(글자 같아 보이는 낙서)도 금지 — 차라리 여백으로 둔다.
-2. **주인공 금지.** 교복 상체·뒷머리·얼굴·전신 실루엣 모두 프레임 밖. 손·팔뚝·손가락만 허용.
+2. **주인공 금지.** 교복 상체·뒷머리·얼굴·전신 실루엣 모두 프레임 밖. **손목 아래의 손만** 허용(②만 해당).
+   POV 컷은 **전경에 관찰자의 무릎·허벅지·발이 들어오는 것도 금지** — 생성기가 1인칭 착석 시점에서
+   습관적으로 넣는 구도이고, 교복 바지/치마가 그려지면 성별 무분기가 그 자리에서 깨진다.
+   그림 안에 사람 몸이 있으면 그 컷은 자동으로 성별을 주장한다.
 3. **부모는 성인이고 학년과 무관하다** — `mother_middle_*` / `father_middle_*` 초상을 그대로 레퍼런스로 첨부.
    중등/고등 발동 어느 쪽이든 같은 얼굴·같은 옷차림이어야 한다(연령 변화 표현 금지).
 4. **감정 과장 금지.** 이 6종은 전부 "말을 아낀 순간"이다. 눈물·포옹·극적 표정·드라마틱한 역광 금지.
    전달 수단은 **소품의 배치와 문의 틈과 등의 각도**다.
+5. **서사 정보는 이미지가 지지 않는다.** ②의 "내 이름"·"개설일이 입학식 날"처럼 **글자로만 전달되는 정보는
+   회상 텍스트(`recallText`)가 담당**하고, 이미지는 그 순간의 정서(발견·숨김·거리·삼킴)만 담당한다.
+   그림에서 그 정보가 읽히게 만들려는 시도가 곧 텍스트 사고다. 프롬프트에 **렌더 불가한 서사 해설을
+   섞지 말 것** — 심볼·문자로 변형되거나, 금지한 요소를 되불러온다.
 
 **Negative prompt (전 컷 공통)**
 ```
@@ -90,18 +131,19 @@ no western interior, no brand logos, consistent with mother/father reference por
 ```
 Late night, a Korean student's study room, lit only by a desk lamp. Close composition on the
 CORNER OF THE DESK: a single mug of hot chocolate just set down, faint steam rising, a soft
-ring of condensation forming on the wood. Beside it, the edges of open notebooks and a pen —
-all pages BLANK, no writing whatsoever.
+ring of condensation forming on the wood. Beside it, the edge of a CLOSED notebook and a pen
+lying apart from it — no open page anywhere, no writing surface visible at all.
 Behind and to the side, the room door stands open about five centimetres. Through that narrow
 gap: warm hallway light, and nothing else — the mother has already gone, she is NOT in frame.
-The gap is the whole point: a hand withdrew, a question was not asked.
+The narrow gap and the untouched mug are the only storytelling elements.
 Mood: reconciliation / warm — care delivered without a single word. Quiet, still, generous.
 Palette: warm lamp amber on the desk against the cooler dark of the room; the hallway light a
 thin warm blade through the door gap.
-Framing: first-person view from where the student sits, desk corner in the near field, door gap
-in the middle distance, shallow depth of field.
-[MUST NOT] no person in frame at all, no protagonist, no uniform, no readable text on any page,
-no clock face with legible numbers, no phone screen.
+Framing: eye-level view across the desk corner, door gap in the middle distance, shallow depth
+of field.
+[MUST NOT] no person in frame at all, no hand, no arm, no protagonist, no uniform,
+no legs, knees, lap, thighs or feet in the foreground, no open notebook, no lettering,
+no numbers, no clock face, no phone screen, no calendar.
 ```
 
 ---
@@ -113,23 +155,32 @@ no clock face with legible numbers, no phone screen.
 **원문**: 아빠 서랍을 열다 내 이름이 적힌 무언가를 봤다. 금액이 아니라, 개설일이 입학식 날인 게 먼저 눈에 들어왔다. 아빠는 그걸 보더니 "밥은 먹었냐" 하고는 서랍을 닫았다.
 
 > ⚠️ 이 컷이 텍스트 사고 위험 1순위다. 통장은 **닫힌 채**로만 그린다 — 이름도 개설일도 금액도 프레임에 없다.
-> 서사(오래 준비된 것)는 글자가 아니라 **낡음**으로 전달한다: 색이 바랜 표지, 닳은 모서리, 눌린 자국.
+> **"bank passbook"이라고 부르지 않는다**: 그 단어가 표지 글자·로고의 시각문법을 함께 불러온다.
+> 대신 "표면이 완전히 매끈하고 아무 표시 없는 닫힌 소책자"로 **긍정형 무특징 묘사**를 준다.
+> 서사(오래 준비된 것)는 글자가 아니라 **낡음**으로 전달한다: 불균일하게 바랜 색, 닳은 모서리, 눌린 자국,
+> 그리고 오래 끼워져 있던 **글자 없는 종이 슬립** 한 장.
+>
+> **원문의 "내 이름"·"개설일이 입학식 날"은 이미지가 지지 않는다** — 회상 텍스트가 그 정보를 담당하고,
+> 이 그림은 "발견했다가 곧 닫혔다"는 정서만 담당한다. 그림에서 그게 읽히게 만들려는 시도가 곧 텍스트 사고다.
 
 ```
 Evening. A half-open wooden drawer in a Korean home study/bedroom. Inside, among neatly kept
-household odds and ends, a CLOSED bank passbook — plain, slightly faded cover, corners worn
-soft, edges pressed from years of being tucked away. It stays SHUT: no page open, no cover
-lettering, nothing legible anywhere.
-A young person's HAND (only the hand and forearm, no uniform sleeve, no body, no face) has just
-lifted it a few centimetres and gone still.
+household odds and ends, a small CLOSED booklet with a smooth, completely featureless cover —
+a plain flat surface with no design, no emblem, no marking of any kind. Its colour has faded
+unevenly, the corners are worn soft, the edges pressed from years of being tucked away.
+It stays SHUT. A thin coloured paper slip is tucked between its closed pages, one blank corner
+protruding — it has been there a long time.
+A single HAND, cropped at the wrist, has just lifted the booklet a few centimetres and gone still.
 Just entering frame from the side, the FATHER's hand reaches for the drawer edge to close it —
 his face may be out of frame or seen only in soft profile at the frame's margin, expression
 mild and undemonstrative. He is not scolding and not explaining.
 Mood: unspoken_debt / warm — a long preparation discovered by accident, and immediately closed
-again. Weight, not sentiment.
+again.
 Palette: muted warm evening interior, low contrast, dust motes in a single lamp's throw.
-[MUST NOT] no readable text, no numbers, no dates, no names, no open passbook page, no cash,
-no banknotes, no card, no protagonist body or uniform, no dramatic expression.
+[MUST NOT] no lettering, no numbers, no dates, no names, no printed cover design, no emblem,
+no open page, no cash, no banknotes, no card, no sleeve, no forearm, no watch, no ring,
+no nail polish, no skin above the wrist, no protagonist body or uniform, no legs or lap in the
+foreground, no dramatic expression.
 ```
 
 ---
@@ -144,11 +195,11 @@ no banknotes, no card, no protagonist body or uniform, no dramatic expression.
 > 더미 전체가 같은 무채색 종이인데 **단 한 장만 채색 탭이 튀어나와 있는** 구도.
 
 ```
-A Korean home dining table or desk, early evening. A THICK STACK of printed booklets and loose
-papers just set down — all surfaces BLANK, no letters, no charts with labels, no headings.
+A Korean home dining table or desk, early evening. A THICK STACK of blank stapled paper packets
+and loose blank sheets just set down — every surface is unmarked paper, uniformly empty.
 On the very top sheet, a SINGLE small coloured sticky note juts out at a slight angle — the only
-saturated colour in the frame, placed deliberately, marking one thing among many. The note
-itself carries NO writing: colour and position do the speaking.
+saturated colour in the frame, placed deliberately, marking one thing among many. The note is a
+plain blank tab: colour and position do the speaking.
 The MOTHER stands just behind, one hand still resting on the stack as if she hasn't decided
 whether to push it closer. Her expression is careful, a little self-conscious — she is offering,
 not pressing. Reference: mother_middle_neutral.
@@ -156,8 +207,9 @@ Mood: discovery / resolve — being remembered, and offered a door rather than a
 Palette: cool paper greys and warm kitchen light; the sticky note the single accent.
 Framing: three-quarter view across the table; the stack occupies the lower half, mother's upper
 body behind it. Protagonist NOT in frame.
-[MUST NOT] no readable text on any paper or note, no charts with legible labels, no university
-names, no logos, no protagonist, no uniform, no pointing finger, no stern expression.
+[MUST NOT] no lettering, no numbers, no names, no logos, no charts of any kind, no diagrams,
+no tables, no printed matter, no handwriting, no protagonist, no uniform, no legs or lap in the
+foreground, no other people, no pointing finger, no stern expression.
 ```
 
 ---
@@ -179,13 +231,13 @@ He has just said something short and is not waiting for a reply. The room is ord
 a lamp behind him puts a soft rim on his shoulder and leaves his face unseen.
 Reference: father_middle_neutral (same build, same short black hair with slight grey at the
 temples, same muted blue-grey collared knit).
-Mood: growth / warm — "you worked hard" instead of "well done". Restraint that lands harder than
-praise. The emotional weight sits entirely in the back and the half-turn.
+Mood: growth / warm — the emotional weight sits entirely in the back and the half-turn.
 Palette: warm low lamp light, deep quiet shadows, no drama.
-Framing: first-person view from a seated position; father's back fills the middle of the frame,
-his face NOT visible. Protagonist NOT in frame.
-[MUST NOT] no visible paper surface, no readable text, no grades, no numbers, no letters,
-no father's face, no smile to camera, no protagonist, no uniform, no tears, no embrace.
+Framing: eye-level from a low seated height; father's back fills the middle of the frame, his
+face NOT visible. **The foreground is empty floor and room — nothing of the viewer's body.**
+[MUST NOT] no visible paper surface, no lettering, no numbers, no grades, no father's face,
+no smile to camera, no protagonist, no uniform, **no legs, knees, lap, thighs or feet in the
+foreground**, no hands, no other people, no tears, no embrace.
 ```
 
 ---
@@ -200,10 +252,10 @@ no father's face, no smile to camera, no protagonist, no uniform, no tears, no e
 > "도와주지 않음"이 방치가 아니라 신뢰로 읽히려면, 밥상이 정성스레 차려져 있어야 한다 — 식었을 뿐이다.
 
 ```
-A dim apartment hallway outside a closed bedroom door, night. On the floor, right against the
-door, a small tray meal set down with care: a bowl of rice, two or three side dishes in proper
-little dishes, chopsticks laid straight. It has gone COLD — no steam at all, a faint sheen
-setting on the surface of the soup.
+A dim apartment hallway outside a closed bedroom door, night. On the floor, set down a hand's
+width AWAY from the door so it does not block it from opening, a small tray meal placed with
+care: a bowl of rice, two or three side dishes in proper little dishes, chopsticks laid straight.
+It has gone COLD — no steam at all, a faint sheen setting on the surface of the soup.
 The door is CLOSED. No one is in the hallway; the mother has already stepped away. Farther down
 the corridor, a warm light spills from another room, suggesting she is still nearby and not
 coming in.
@@ -225,24 +277,29 @@ written message on the tray, no readable text anywhere, no mess or spilled food.
 **슬롯**: discovery / resolve / 5 — *"말리고 싶은 걸 삼키던, 그 한마디."*
 **원문**: 온 가족이 말리는 선택 앞에서, 엄마만 아무 말이 없었다. 입을 열었다 다시 다물고는— "…그래. 네가 정했으면." 말리고 싶은 걸 삼킨 한순간이었다.
 
-> 6컷 중 유일하게 **얼굴이 주인공인 컷**이다. 잡아야 하는 건 표정이 아니라 **직전에 멈춘 동작** —
-> 입을 열었다 다시 다문 그 1초. 슬픔도 미소도 아니고, 삼킨 말이 목에 남아 있는 상태.
+> 6컷 중 유일하게 **사람 얼굴이 나오는 컷**이고, 그래서 재생성 확률이 가장 높다.
+> **부담을 얼굴에서 손으로 옮겼다** — "입을 열었다 다시 다문 그 1초"는 한 장에 담을 수 없는 시간 서술이라
+> 생성기가 벌린 입을 그릴 유인이 된다. 그래서 입은 **닫힌 상태로 확정**하고, 삼킨 말은 **공중에서 멈춘 손**이
+> 진다. 원문의 "온 가족이 말리는"은 **빈 거실과 밀린 의자**로 옮겼다 — 배경 인물을 넣으면 그 실루엣이
+> 교복 청소년으로 렌더될 수 있고, 그게 곧 주인공이 되어 성별 무분기가 깨진다.
 
 ```
-Close portrait of the MOTHER in a Korean home interior, evening. She has just closed her mouth
-again after starting to speak — lips barely parted then pressed together, jaw slightly set, one
-breath held. Her eyes are steady on someone off-frame, neither disapproving nor relieved; there
-is something she has decided not to say.
-One hand has half-risen and stopped, as if it were going to gesture and thought better of it.
+Portrait of the MOTHER in a Korean home interior, evening. Her LIPS ARE CLOSED in a thin line,
+jaw just set — she has finished not saying something. Her eyes are steady on someone off-frame,
+neither disapproving nor relieved.
+The real subject is her HAND: it has half-risen toward the person off-frame and STOPPED in
+mid-air, fingers slightly open, as if it were going to gesture and thought better of it. Keep
+that stopped hand fully inside the frame — it carries the swallowed sentence.
 Reference: mother_middle_neutral (same face, same soft shoulder-length dark brown hair, same
 warm-toned knit cardigan) — the expression is the ONLY difference from the reference.
-Behind her, softly out of focus, the ordinary warmth of a family living room, and the suggestion
-of other people having just fallen silent — no other faces legible.
-Mood: discovery / resolve — a permission given by swallowing an objection. Love as restraint.
+Behind her, softly out of focus, an EMPTY family living room: on the table, two half-finished
+cups and a chair pushed back. The room has just gone quiet and nobody is in it.
+Mood: discovery / resolve — a permission given by swallowing an objection.
 Palette: warm interior, gentle even light on the face, no hard shadow, no theatrical rim.
-Framing: chest-up, slight angle, shallow depth of field. Protagonist NOT in frame.
-[MUST NOT] no tears, no crying, no wide smile, no frown or anger, no open mouth mid-speech,
-no other identifiable faces, no protagonist, no uniform, no readable text, no hands on shoulders.
+Framing: upper body wide enough to include the stopped hand, slight angle, shallow depth of field.
+[MUST NOT] no other people anywhere, no human shapes or silhouettes behind her, no blurred
+figures, no protagonist, no uniform, no children, no tears, no crying, no wide smile, no frown
+or anger, no open mouth, no lettering, no hands on shoulders.
 ```
 
 ---
@@ -252,8 +309,11 @@ no other identifiable faces, no protagonist, no uniform, no readable text, no ha
 납품 6장에 대해 **파일별로 픽셀 직접 확인**한다(sub-agent 단독 판정 금지 — 오탐 실적 있음).
 
 - [ ] **글자 0개** — 통장(②)·포스트잇(③)·성적표(④)에 문자·숫자·유사 글리프가 없다. 사각 블러 슬랩도 없다.
-- [ ] **주인공 부재** — 교복·뒷머리·얼굴·전신이 어느 컷에도 없다. 손/팔뚝만 있는 건 ②만 해당.
-- [ ] **부모 정합** — ①은 무인, ②④는 아빠, ③⑤⑥은 엄마(⑤는 무인). 등장분이 `mother/father_middle_neutral`과 같은 얼굴·머리·옷차림이다.
+- [ ] **주인공 부재** — 교복·뒷머리·얼굴·전신이 어느 컷에도 없다. **전경에 무릎·허벅지·발도 없다.**
+      손이 보이는 건 ②뿐이고, 손목에서 잘려 소매·시계·반지가 없다.
+- [ ] **부모 정합** — **①⑤ 무인 / ②④ 아빠 / ③⑥ 엄마.** 등장분이 `mother/father_middle_neutral`과 같은 얼굴·머리·옷차림이다.
+      (⑤는 "엄마가 이미 물러난" 장면이라 **사람이 없는 것이 정답**이다 — 엄마를 찾지 말 것.)
+- [ ] **⑥에 배경 인물이 없다** — 실루엣·흐린 형체도 포함. 빈 거실 + 밀린 의자 + 반쯤 남은 컵 두 개여야 한다.
 - [ ] **화자 SSOT 위반 없음** — 엄마 = emotional/info/resilience/freedom, 아빠 = wealth/strict.
 - [ ] **④에 성적표 표면이 안 보인다**, **⑤에 김(steam)이 없다**(식은 밥상), **①에 사람이 없다**.
 - [ ] **과장 금지 준수** — 눈물·포옹·극적 역광 없음.
