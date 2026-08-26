@@ -8,6 +8,9 @@
 // 여기서 다루는 두 파일은 렌더 커버리지가 없던 곳이다:
 //   Portrait.tsx        — src={webpSrc(src)}
 //   YearEndScreen.tsx   — CG 썸네일 src={webpSrc(cg)} / 엠블럼 src={webpSrc(cat.art)}
+//   EndingScreen.tsx    — 회상 갤러리/썸네일. 두 화면이 memoryVisuals.tsx를 공유하지만
+//                         **URL을 만드는 건 각 화면**이라(resolveEventCgUrl 호출부가 따로다)
+//                         한쪽만 잠그면 다른 쪽의 래핑 누락은 dev에서 안 보이고 릴리즈만 404다.
 // (TitleScreen 은 TitleScreenAssets.test.tsx, GameScreen prefetch 는 assetExistence.test.ts 가 잡는다.)
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
@@ -20,6 +23,12 @@ vi.mock('../../engine/assetWebp', () => ({
 
 import { Portrait } from '../Portrait';
 import { YearEndScreen } from '../screens/YearEndScreen';
+import { EndingScreen } from '../screens/EndingScreen';
+import { calculateEnding } from '../../engine/ending';
+import { makeState } from '../../test/fixtures';
+
+vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
+vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -116,6 +125,45 @@ describe('YearEndScreen — CG 썸네일과 엠블럼 아트', () => {
     const { container } = renderYearEnd();
 
     // 이 화면 하나에 CG·엠블럼·초상 경로가 모두 모이므로, 개별 단언이 놓친 자리도 여기서 걸린다.
+    expect(imgSrcs(container).length).toBeGreaterThan(1);
+    expectNoUnwrappedImage(container);
+  });
+});
+
+describe('EndingScreen — 회상 갤러리와 썸네일', () => {
+  function renderEnding() {
+    // 엔딩 진입 시점의 실제 좌표(year=8) — 슬롯의 year로 해석해야 elementary 자산이 걸린다.
+    const state = makeState({ year: 8, week: 1, memorySlots: [cgSlot(), emblemSlot()] });
+    return render(
+      <EndingScreen
+        ending={calculateEnding(state)}
+        track={state.track}
+        stats={state.stats}
+        parents={state.parents}
+        burnoutCount={0}
+        bgProps={{ bg: getBackground(1, false, 'normal', 8), bgImgError: true, onImgError: () => {} }}
+        runDelta={null}
+        gender="male"
+      />,
+    );
+  }
+
+  it('회상 CG가 WEBP:: + BASE + images/events/... 로 붙는다', () => {
+    const { container } = renderEnding();
+
+    expect(imgSrcs(container))
+      .toContain(`WEBP::${BASE}images/events/elementary/doyun-graduation-sign_c0_m.png`);
+  });
+
+  it('CG 없는 회상의 엠블럼 아트도 WEBP:: 를 거친다', () => {
+    const { container } = renderEnding();
+
+    expect(imgSrcs(container)).toContain(`WEBP::${BASE}images/emblems/growth.png`);
+  });
+
+  it('렌더 트리 어디에도 webpSrc를 안 거친 이미지가 없다', () => {
+    const { container } = renderEnding();
+
     expect(imgSrcs(container).length).toBeGreaterThan(1);
     expectNoUnwrappedImage(container);
   });

@@ -41,6 +41,7 @@ function renderEnding() {
         onImgError: vi.fn(),
       }}
       runDelta={null}
+      gender={state.gender}
     />,
   );
 }

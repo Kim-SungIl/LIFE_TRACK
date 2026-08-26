@@ -72,6 +72,16 @@ describe('selectRegretHighlights', () => {
 
   it('filters pool to regret tones/categories only (growth/warm excluded)', () => {
     const regretText = '닿지 못한 실패의 밤.';
+    // 본문 항목은 출처 슬롯을 그대로 싣는다(엔딩이 그림을 해석하는 재료) — 화해 마감 줄만 슬롯이 없다.
+    const f1 = slot({
+      id: 'f1',
+      category: 'failure',
+      toneTag: 'regret',
+      recallText: regretText,
+      importance: 4,
+      year: 4,
+      phaseTag: 'mid',
+    });
     const state = fixture({
       memorySlots: [
         slot({
@@ -81,22 +91,14 @@ describe('selectRegretHighlights', () => {
           recallText: '일반 성장은 후회 풀 밖.',
           importance: 10, // 더 높아도 풀 밖이면 후보 아님
         }),
-        slot({
-          id: 'f1',
-          category: 'failure',
-          toneTag: 'regret',
-          recallText: regretText,
-          importance: 4,
-          year: 4,
-          phaseTag: 'mid',
-        }),
+        f1,
       ],
     });
 
     const result = selectRegretHighlights(state);
     // 본문 1 + closing 1
     expect(result).toHaveLength(2);
-    expect(result[0]).toEqual({ recallText: regretText, year: 4 });
+    expect(result[0]).toEqual({ recallText: regretText, year: 4, slot: f1 });
     expect(result[1]).toEqual({
       recallText: REGRET_CLOSING,
       year: 5,
@@ -158,24 +160,26 @@ describe('selectRegretHighlights', () => {
     const earlyText = '초반의 배신.';
     const midText = '중반의 실패.';
     const lateText = '후반의 빚.';
+    const earlySlot = slot({
+      id: 'b1',
+      category: 'betrayal',
+      recallText: earlyText,
+      importance: 8,
+      phaseTag: 'early',
+      year: 1,
+    });
+    const midSlot = slot({
+      id: 'f1',
+      category: 'failure',
+      recallText: midText,
+      importance: 7,
+      phaseTag: 'mid',
+      year: 3,
+    });
     const state = fixture({
       memorySlots: [
-        slot({
-          id: 'b1',
-          category: 'betrayal',
-          recallText: earlyText,
-          importance: 8,
-          phaseTag: 'early',
-          year: 1,
-        }),
-        slot({
-          id: 'f1',
-          category: 'failure',
-          recallText: midText,
-          importance: 7,
-          phaseTag: 'mid',
-          year: 3,
-        }),
+        earlySlot,
+        midSlot,
         slot({
           id: 'u1',
           category: 'unspoken_debt',
@@ -189,9 +193,10 @@ describe('selectRegretHighlights', () => {
 
     const result = selectRegretHighlights(state);
     // importance 8 → early, 그다음 다른 phaseTag 중 최고(7 mid). late(6)는 탈락.
+    // 본문 2장은 출처 슬롯을 싣고, 화해 마감 줄만 슬롯이 없다(파생 문장이라 그릴 장면이 없다).
     expect(result).toEqual([
-      { recallText: earlyText, year: 1 },
-      { recallText: midText, year: 3 },
+      { recallText: earlyText, year: 1, slot: earlySlot },
+      { recallText: midText, year: 3, slot: midSlot },
       { recallText: REGRET_CLOSING, year: 5, isClosing: true },
     ]);
     // 2장째는 1장째와 다른 phaseTag + 다른 recallText

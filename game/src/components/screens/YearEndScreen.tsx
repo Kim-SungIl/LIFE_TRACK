@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
 import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
 import { josa } from '../../engine/korean';
-import { MemorySlot, MilestoneScene, MemoryCategory, Stats, Gender, ToneTag, ExamResult, EXAM_TYPE_LABELS } from '../../engine/types';
+import { MemorySlot, MilestoneScene, Stats, Gender, ExamResult, EXAM_TYPE_LABELS } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
-import { webpSrc } from '../../engine/assetWebp';
-import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
+// 기억 시각 언어(엠블럼·톤 필터·갤러리·썸네일)는 엔딩 화면과 공유 — memoryVisuals.tsx.
+import { CgItem, PANEL, TEXT_SHADOW, TONE_GLOW, catOf } from './memoryTokens';
+import { HeroGallery, MemoryThumb } from './memoryVisuals';
 
 interface YearEndScreenProps {
   // 방금 끝난 학년 (advance 전 state.year)
@@ -41,176 +41,9 @@ const YEAR_SUBTITLES = [
   '입시가 가까워진 해를 돌아본다',          // Y6
 ];
 
-// 카테고리별 엠블럼(전용 아트 P1b) + 한글 라벨.
-// CG도 NPC 초상도 없는 기억의 최후 폴백 이미지. art = images/emblems/{key}.png (4:5, 480×600).
-// emoji는 art 로드 실패 시 폴백(안전망) + 라벨 보조. 색은 STAT_GRADES 색 언어와 통일.
-// reconciliation은 growth(초록)와 겹치지 않게 청록으로 분리. failure ☔는 VS16 없는 코드포인트(구버전 □ 회피).
-type CatInfo = { emoji: string; label: string; color: string; art: string };
-const EMB = (key: string): string => `${import.meta.env.BASE_URL}images/emblems/${key}.png`;
-const CATEGORY: Record<MemoryCategory, CatInfo> = {
-  courage:        { emoji: '🔥', label: '용기',     color: '#e0a45e', art: EMB('courage') },
-  betrayal:       { emoji: '💔', label: '상처',     color: '#d96458', art: EMB('betrayal') },
-  reconciliation: { emoji: '🤝', label: '화해',     color: '#6fa890', art: EMB('reconciliation') },
-  failure:        { emoji: '☔', label: '실패',     color: '#7c89a8', art: EMB('failure') },
-  discovery:      { emoji: '💡', label: '깨달음',   color: '#e0b354', art: EMB('discovery') },
-  growth:         { emoji: '🌱', label: '성장',     color: '#8fb573', art: EMB('growth') },
-  bypass:         { emoji: '💸', label: '우회',     color: '#a89888', art: EMB('bypass') },
-  unspoken_debt:  { emoji: '✉️', label: '말없는 빚', color: '#caa17a', art: EMB('unspoken_debt') },
-};
-const CATEGORY_FALLBACK: CatInfo = { emoji: '🕊️', label: '기억', color: '#a89888', art: EMB('memory') };
-// 레거시/마이그레이션 세이브에 미지 카테고리가 들어와도 화면 전체가 죽지 않게 폴백.
-const catOf = (c: string): CatInfo => CATEGORY[c as MemoryCategory] ?? CATEGORY_FALLBACK;
-
-// 회상 카드/마무리 블록 공통 다크 스크림 패널 (교실 배경 위 가독성)
-const PANEL: React.CSSProperties = {
-  background: 'rgba(20,17,26,0.55)',
-  backdropFilter: 'blur(3px)',
-  WebkitBackdropFilter: 'blur(3px)',
-  border: '1px solid rgba(255,255,255,0.06)',
-  borderRadius: 14,
-};
-const TEXT_SHADOW = '0 1px 4px rgba(0,0,0,0.55)';
-// 세 이미지 타입(hero CG·NPC 초상·엠블럼)을 "바랜 일기장" 한 톤으로 묶는 공통 필터 — 패치워크 방지.
-// toneTag 없는 기억의 기본값이기도 하다.
-const DIARY_FILTER = 'saturate(0.82) sepia(0.12) brightness(0.98)';
-// 기억의 정서(toneTag)를 "색온도"로 — 같은 일기장 톤 안에서 따뜻함(sepia↑·밝게)↔차가움(채도↓·어둡게)만 미세 조정.
-// hue-rotate는 sepia와 겹치면 탁해져서 안 씀(온도를 sepia·brightness·saturate 축으로만 표현).
-const TONE_FILTER: Record<ToneTag, string> = {
-  warm:         'saturate(0.88) sepia(0.24) brightness(1.02)',  // 따뜻·살아있음
-  breakthrough: 'saturate(0.95) sepia(0.14) brightness(1.07)',  // 환하게 트임
-  resolve:      'saturate(0.86) sepia(0.18) brightness(1.00)',  // 단단·약한 온기
-  regret:       'saturate(0.72) sepia(0.06) brightness(0.94)',  // 식어감
-  melancholy:   'saturate(0.66) sepia(0.04) brightness(0.91)',  // 가장 차갑게
-  burden:       'saturate(0.70) sepia(0.12) brightness(0.88)',  // 무겁게 가라앉음
-};
-const toneFilter = (tone?: ToneTag): string => (tone ? TONE_FILTER[tone] : DIARY_FILTER);
-// hero(큰 focal) 패널에만 얹는 옅은 색온도 글로우 — 이미지 필터 차이가 작아, 정서가 "공기"로도 느껴지게.
-const TONE_GLOW: Record<ToneTag, string> = {
-  warm: '#e0a86a', breakthrough: '#f0c060', resolve: '#d8a878',
-  regret: '#8295b2', melancholy: '#7488aa', burden: '#8a8296',
-};
 const MAX_CARDS = 4;  // 회고는 "전부 나열"이 아니라 "추려보기" — 초과분은 한 줄로 암시
 // 갤러리도 동일 철학 — 너무 많은 CG를 넘기는 건 "감상"이 아니라 "작업"이 된다. 초과 CG는 썸네일 카드로 강등(유실X).
 const MAX_GALLERY = 5;
-
-type CgItem = { slot: MemorySlot; cg: string };
-
-// CG가 있는 기억들의 스와이프 갤러리 — 한 해에 CG가 여러 장이면 좌우로 넘겨본다.
-// 1장이면 단일 표시(점 없음), 2장+면 스크롤-스냅 캐러셀 + 하단 점 인디케이터. 자동진행 없음(넘김은 선택).
-function HeroGallery({ items }: { items: CgItem[] }) {
-  const [idx, setIdx] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const multi = items.length > 1;
-
-  // 슬라이드 폭(88%)≠컨테이너 폭이므로 scrollLeft/clientWidth 반올림은 부정확.
-  // 뷰포트 중앙에 가장 가까운 슬라이드를 실제 위치로 찾는다(peek/gap 무관하게 정확).
-  const onScroll = () => {
-    const el = ref.current;
-    if (!el) return;
-    const center = el.scrollLeft + el.clientWidth / 2;
-    let best = 0, bestDist = Infinity;
-    Array.from(el.children).forEach((k, i) => {
-      const kid = k as HTMLElement;
-      const d = Math.abs(kid.offsetLeft + kid.offsetWidth / 2 - center);
-      if (d < bestDist) { bestDist = d; best = i; }
-    });
-    setIdx(prev => (prev === best ? prev : best));
-  };
-  const goTo = (i: number) => {
-    const el = ref.current;
-    const kid = el?.children[i] as HTMLElement | undefined;
-    if (!el || !kid) return;
-    el.scrollTo({ left: kid.offsetLeft - (el.clientWidth - kid.offsetWidth) / 2, behavior: 'smooth' });
-  };
-
-  // 첫 진입 1회 nudge — 점만으론 "넘길 수 있음"이 안 보인다(기획자 3명 일치). 살짝 밀었다 되돌려 swipe 가능을 암시.
-  useEffect(() => {
-    if (!multi) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const el = ref.current;
-    if (!el) return;
-    const t1 = setTimeout(() => el.scrollTo({ left: 36, behavior: 'smooth' }), 650);
-    const t2 = setTimeout(() => el.scrollTo({ left: 0, behavior: 'smooth' }), 1150);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [multi]);
-
-  return (
-    <div style={{ ...PANEL, overflow: 'hidden', textAlign: 'left' }}>
-      <div ref={ref} className={multi ? 'ye-gallery ye-gallery-multi' : 'ye-gallery'} onScroll={multi ? onScroll : undefined}>
-        {items.map(({ slot, cg }) => (
-          <div key={slot.id}>
-            <img src={webpSrc(cg)} alt="" decoding="async" loading="lazy" style={{ width: '100%', height: 200, maxHeight: 200, objectFit: 'cover', objectPosition: 'center 30%', display: 'block', filter: toneFilter(slot.toneTag) }}
-              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            <div style={{ padding: '12px 16px 14px' }}>
-              <div style={{ fontSize: '0.92rem', color: 'var(--text-primary)', lineHeight: 1.6, fontStyle: 'italic' }}>
-                {slot.recallText}
-              </div>
-              <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 6 }}>
-                {`W${slot.week} · ${catOf(slot.category).label}`}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {multi && (
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 6, paddingBottom: 12 }}>
-          {items.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              className="btn-reset"
-              aria-label={`${i + 1}번째 장면 보기`}
-              aria-pressed={i === idx}
-              onClick={() => goTo(i)}
-              style={{
-                width: i === idx ? 18 : 6, height: 6, borderRadius: 3, border: 'none', padding: 0, cursor: 'pointer',
-                background: i === idx ? 'var(--accent-soft)' : 'rgba(255,255,255,0.25)',
-                transition: 'width 0.2s, background 0.2s',
-              }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// 기억 썸네일 — NPC 초상(있으면) → 카테고리 엠블럼. (작은 썸네일에선 줄인 CG가 오히려 판독 어려워 제외;
-// CG는 갤러리의 큰 자리에서만 사용). 초상/엠블럼 모두 동일 색 링 + 동일 바랜 필터로 한 시스템처럼.
-function MemoryThumb({ slot, year, size }: { slot: MemorySlot; year: number; size: number }) {
-  const npc = slot.npcIds?.[0];
-  const radius = Math.round(size * 0.15);
-  const cat = catOf(slot.category);
-  if (npc) {
-    return (
-      <div style={{ flexShrink: 0, borderRadius: radius, boxShadow: `0 0 0 1.5px ${cat.color}88`, overflow: 'hidden', lineHeight: 0, filter: toneFilter(slot.toneTag) }}>
-        <Portrait characterId={npc} size={size} expression="neutral" year={year} />
-      </div>
-    );
-  }
-  // 전용 엠블럼 아트(4:5). 로드 실패 시 이모지로 폴백(안전망 유지).
-  return (
-    <div style={{
-      position: 'relative', flexShrink: 0, width: size, height: Math.round(size * 1.25), borderRadius: radius,
-      overflow: 'hidden', background: `${cat.color}22`, boxShadow: `0 0 0 1.5px ${cat.color}88`,
-      filter: toneFilter(slot.toneTag),
-    }}>
-      <img src={webpSrc(cat.art)} alt="" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-        onError={e => {
-          const img = e.currentTarget;
-          img.style.display = 'none';
-          const fb = img.nextElementSibling as HTMLElement | null;
-          if (fb) fb.style.display = 'flex';
-        }} />
-      <div style={{
-        display: 'none', position: 'absolute', inset: 0,
-        alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.46),
-      }}>
-        {cat.emoji}
-      </div>
-    </div>
-  );
-}
 
 // v1.5 학년말 회고 (Y1~Y6) — phase === 'year-end'
 //   P0: 스크림·라벨 정리·부모줄 부활·정직한 CTA

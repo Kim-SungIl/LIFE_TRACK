@@ -3,10 +3,13 @@ import { useEffect, useRef } from 'react';
 import { playSfx } from '../../audio/sfx';
 import { getBgmTrackId, setBgmTrack } from '../../audio/bgm';
 import { AudioToggle } from '../AudioToggle';
-import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, getGrade } from '../../engine/types';
+import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, Gender, MemorySlot, getGrade } from '../../engine/types';
+import { resolveEventCgUrl } from '../../engine/eventCg';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { STAT_ICONS } from './shared';
 import { RunArchiveSummary } from './RunArchiveSummary';
+import { CgItem, catOf } from './memoryTokens';
+import { HeroGallery, MemoryThumb } from './memoryVisuals';
 import type { RunDelta } from '../../engine/archive';
 
 interface EndingScreenProps {
@@ -17,7 +20,18 @@ interface EndingScreenProps {
   burnoutCount: number;
   bgProps: ScreenBgProps;
   runDelta: RunDelta | null;
+  // 회상 CG의 성별 판본(_m/_f)을 고른다. **required로 두는 게 안전장치다** —
+  // resolveEventCgUrl은 gender!=='male'을 전부 여성으로 접으므로(eventCg.ts), optional로 두면
+  // 배선을 빠뜨려도 에러 없이 남주 런에 여주 CG가 뜬다. required면 tsc -b가 호출부를 막는다
+  // (tsconfig.scripts.json이 src/**/__tests__까지 훑으므로 테스트 호출부도 함께 걸린다).
+  gender: Gender;
 }
+
+const YEAR_LABELS = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
+// 7년을 가로지르는 회상이라 주차만으론 어느 해인지 알 수 없다 — 학년 라벨을 앞에 붙인다.
+// (학년말 화면은 한 해 안이라 "W12 · 성장"으로 충분했다.)
+const recallCaption = (slot: MemorySlot): string =>
+  `${YEAR_LABELS[slot.year - 1] ?? `Y${slot.year}`} · ${catOf(slot.category).label}`;
 
 const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: string }> = {
   emotional:  { icon: '🫂', label: '정서적 지지', recall: '엄마가 현관에서 기다리던 노란 불빛.' },
@@ -29,8 +43,37 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
-export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgProps, runDelta }: EndingScreenProps) {
+export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgProps, runDelta, gender }: EndingScreenProps) {
   const trackLabel = track === 'humanities' ? '문과' : track === 'science' ? '이과' : null;
+
+  // ===== 회상의 그림 =====
+  // 학년말 회고와 같은 2단 규칙: CG 있는 회상은 큰 갤러리, 나머지는 초상/엠블럼 썸네일.
+  // 작은 칸에 CG를 줄여 넣지 않는 이유는 memoryVisuals.tsx 주석 참조(판독 불가).
+  //
+  // ⚠️ **year는 반드시 슬롯의 year를 쓴다.** 엔딩 시점의 state.year는 7이 아니라 **8**이다
+  //   (gameEngine.applyYearTransition이 Y7 마감에서 year++ 후 phase='ending'). 학교급-무관
+  //   common/ 폴백을 가진 슬롯 이벤트는 0개라, state.year를 쓰면 초·중 회상의 그림이
+  //   "엉뚱한 CG"가 되는 게 아니라 **전부 사라진다**. 같은 함정의 선례: archiveWiring.test.tsx.
+  const recalls = ending.memorialHighlights ?? [];
+  const cgAll: CgItem[] = recalls
+    .map(h => (h.slot
+      ? { slot: h.slot, cg: resolveEventCgUrl(h.slot.sourceEventId, h.slot.choiceIndex, gender, h.slot.year) }
+      : null))
+    .filter((x): x is CgItem => !!x && !!x.cg);
+  // 학년말과 같은 하이브리드 정렬: 1번=대표(최고 importance — 첫 장만 봐도 그 판의 핵심),
+  // 2번~ = 시간순(7년을 다시 걷는 흐름).
+  const anchor = cgAll.length
+    ? [...cgAll].sort((a, b) => (b.slot.importance - a.slot.importance)
+      || (a.slot.year - b.slot.year) || (a.slot.week - b.slot.week))[0]
+    : undefined;
+  const galleryItems: CgItem[] = anchor
+    ? [anchor, ...cgAll.filter(x => x.slot.id !== anchor.slot.id)
+      .sort((a, b) => (a.slot.year - b.slot.year) || (a.slot.week - b.slot.week))]
+    : [];
+  const galleryIds = new Set(galleryItems.map(x => x.slot.id));
+  // 갤러리에 안 들어간 회상 = CG 없는 슬롯 + 슬롯 자체가 없는 항목(milestone 승격·폴백 시드).
+  // 슬롯이 있으면 초상/엠블럼이라도 붙어 그림 0장인 엔딩이 나오지 않는다.
+  const restRecalls = recalls.filter(h => !(h.slot && galleryIds.has(h.slot.id)));
 
   // 엔딩 진입음 — 7년의 끝. 가장 길고 낮은 소리로, 화면이 뜨는 순간 한 번만.
   // ref 가드는 StrictMode 이중 호출로 화음이 겹쳐 울리는 것을 막는다(2.2초짜리라 특히 티가 난다).
@@ -111,19 +154,40 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
           })}
         </div>
 
-        {/* v1.2 회상 — 결정적 장면들 */}
-        {ending.memorialHighlights && ending.memorialHighlights.length > 0 && (
-          <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '14px 18px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, borderLeft: '2px solid var(--accent-soft)' }}>
+        {/* v1.2 회상 — 결정적 장면들. 이 층만 그림을 진다(아래 후회 층은 텍스트 유지). */}
+        {recalls.length > 0 && (
+          <div style={{ maxWidth: 420, margin: '0 auto 16px' }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>돌아보면</div>
-            {ending.memorialHighlights.map((h, i) => (
-              <div key={i} style={{ fontSize: '0.82rem', color: h.isFallback ? 'var(--text-muted)' : 'var(--text-secondary)', lineHeight: 1.7, marginBottom: 6, fontStyle: 'italic' }}>
-                {h.recallText}
+            {/* CG 있는 회상 — 큰 갤러리(여러 장이면 스와이프) */}
+            {galleryItems.length > 0 && (
+              <div style={{ marginBottom: restRecalls.length > 0 ? 12 : 0 }}>
+                <HeroGallery items={galleryItems} caption={recallCaption} />
               </div>
-            ))}
+            )}
+            {/* 나머지 — 슬롯이 있으면 초상/엠블럼 썸네일, 없으면(milestone 승격·폴백) 문장만 */}
+            {restRecalls.length > 0 && (
+              <div style={{ padding: '14px 18px', background: 'rgba(255,255,255,0.04)', borderRadius: 10, borderLeft: '2px solid var(--accent-soft)' }}>
+                {restRecalls.map((h, i) => (
+                  <div key={i} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+                    marginBottom: i === restRecalls.length - 1 ? 0 : 10,
+                  }}>
+                    {h.slot && <MemoryThumb slot={h.slot} year={h.slot.year} size={40} />}
+                    <div style={{ flex: 1, minWidth: 0, fontSize: '0.82rem', color: h.isFallback ? 'var(--text-muted)' : 'var(--text-secondary)', lineHeight: 1.7, fontStyle: 'italic' }}>
+                      {h.recallText}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
-        {/* 후회카드 — "미처 닿지 못한 것" (0장이면 미표시) */}
+        {/* 후회카드 — "미처 닿지 못한 것" (0장이면 미표시)
+            **의도적으로 텍스트만 남긴다.** regretHighlights도 위 회상과 같은 MemorialHighlight
+            타입이라 slot을 갖고 있어(실측 60~75%가 CG 보유) 그림을 붙일 수 있지만, 자책 층에
+            그림이 붙으면 회한이 전시가 된다. 재료가 없어서가 아니라 안 붙이는 것 — 위 회상
+            블록을 복사해 오면 조용히 깨지므로 계약 테스트로 "이 블록에 img 0개"를 잠가 뒀다. */}
         {ending.regretHighlights && ending.regretHighlights.length > 0 && (
           <div style={{ maxWidth: 420, margin: '0 auto 16px', padding: '14px 18px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, borderLeft: '2px solid rgba(160,160,180,0.35)' }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>미처 닿지 못한 것</div>
