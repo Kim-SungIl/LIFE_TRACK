@@ -4,6 +4,20 @@
 <meta charset="utf-8">
 <title>CG 검수 — Y1 생일 이벤트</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<!--
+  이 파일은 public/ 밖에 둔다. public/에 있으면 vite가 dist로 복사해 GitHub Pages에 공개된다.
+  로컬에서 여는 방법:
+    1) npm run dev 후 http://localhost:5173/cg-review.html
+       (상대경로 images/... 가 public/images 로 맞는다)
+    2) 이 HTML을 file:// 로 직접 열기 — 아래 스크립트가 base를 ../public/ 로 잡는다.
+-->
+<script>
+  if (location.protocol === 'file:') {
+    var b = document.createElement('base');
+    b.href = '../public/';
+    document.head.insertBefore(b, document.head.firstChild);
+  }
+</script>
 <style>
   :root {
     --bg: #0d0b12;

@@ -72,8 +72,35 @@ function webpGenPlugin(): Plugin {
   }
 }
 
+// CG 검수 HTML은 public/ 밖에 둔다(빌드가 dist로 복사하지 않게).
+// `vite dev`에서만 /cg-review.html 로 서브해, 선행 슬래시 없는 상대경로 images/... 가
+// public/images 로 그대로 맞는다. apply:'serve' 라 빌드·preview 산출물에는 안 실인다.
+function serveCgReviewPlugin(): Plugin {
+  const file = path.resolve(import.meta.dirname, 'tools/cg-review.html')
+  return {
+    name: 'serve-cg-review',
+    apply: 'serve',
+    configureServer(server) {
+      server.middlewares.use(async (req, res, next) => {
+        const url = req.url?.split('?')[0]
+        if (url !== '/cg-review.html') {
+          next()
+          return
+        }
+        try {
+          const html = await fs.readFile(file, 'utf8')
+          res.setHeader('Content-Type', 'text/html; charset=utf-8')
+          res.end(html)
+        } catch {
+          next()
+        }
+      })
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), webpGenPlugin()],
+  plugins: [react(), webpGenPlugin(), serveCgReviewPlugin()],
   base: process.env.NODE_ENV === 'production' ? '/LIFE_TRACK/' : '/',
   define: {
     // 릴리즈 빌드(GEN_WEBP=1)에서만 true → webpSrc가 .png→.webp 스왑

@@ -52,6 +52,16 @@ jobs:
         working-directory: ./game
         run: npm run verify:dist-fonts
 
+      # 게이트 2c — 배포 산출물 위생(개발용 html·*-review 등). **여기서만 확인 가능하다:**
+      # 실제로 공개되는 것은 dist이고, 소스 층(public/에 개발용 html이 없다)만 보면
+      # 다른 경로로 dist에 다시 들어오는 것을 못 잡는다. content-verify job은 별도 러너라
+      # dist를 볼 수 없어서 이 job에 둔다 (verify:dist-fonts 와 같은 이유).
+      # verify:ci에 넣으면 dist가 없어 통과하거나 "dist 없음"으로만 실패하고,
+      # 개발용 파일이 실서버에 공개되는 사실은 영구히 못 잡는다.
+      - name: Verify dist hygiene
+        working-directory: ./game
+        run: npm run verify:dist-hygiene
+
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
