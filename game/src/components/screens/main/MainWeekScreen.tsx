@@ -528,7 +528,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
             </div>
             {/* 스탯 힌트 — 더 조용하게: 초록 강조 제거, 전부 muted 위스퍼 톤(hide-numbers). 방향만 은은히. */}
             {p.statHints.length > 0 && (
-              <div style={{ marginTop: 3, fontSize: '0.68rem', color: 'var(--text-muted)', opacity: 0.85, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ marginTop: 3, fontSize: '0.68rem', color: 'var(--text-muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 {p.statHints.map(h => (
                   <span key={h.key} aria-label={`${STAT_LABELS[h.key]} ${h.dir === 'up' ? '오름' : '내림'}`}>
                     {STAT_LABELS[h.key]} <span aria-hidden="true">{h.dir === 'up' ? '↑' : '↓'}</span>
@@ -536,7 +536,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
                 ))}
               </div>
             )}
-            <div style={{ marginTop: 3, fontSize: '0.66rem', color: 'var(--text-muted)', opacity: 0.8 }}>
+            <div style={{ marginTop: 3, fontSize: '0.66rem', color: 'var(--text-muted)' }}>
               이벤트 결과에 따라 달라질 수 있어요
             </div>
           </div>

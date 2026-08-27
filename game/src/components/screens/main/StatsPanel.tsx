@@ -53,7 +53,7 @@ export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
                     <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: 5, transition: 'width 0.3s' }} />
                   </div>
                   <span style={{ width: 16, fontSize: '0.68rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
-                  <span style={{ minWidth: 56, fontSize: '0.6rem', color: grade.color, opacity: 0.85, marginLeft: 4 }}>{STAT_FLAVOR_LABELS[key][grade.grade]}</span>
+                  <span style={{ minWidth: 56, fontSize: '0.6rem', color: grade.color, marginLeft: 4 }}>{STAT_FLAVOR_LABELS[key][grade.grade]}</span>
                   <span style={{ width: 22, fontSize: '0.62rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(stats[key])}</span>
                 </button>
                 {isExp && (
