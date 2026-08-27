@@ -13,6 +13,11 @@
 
 import { readFileSync, existsSync, readdirSync } from 'fs';
 import { resolve, join } from 'path';
+import {
+  expectedPreloadUrls,
+  MAX_FIRST_PAINT_PRELOAD_BYTES,
+  MAX_FIRST_PAINT_PRELOAD_SUBSETS,
+} from '../../src/styles/first-paint-fonts';
 
 const DIST = resolve(import.meta.dirname, '../../dist');
 const ASSETS = join(DIST, 'assets');
@@ -98,6 +103,73 @@ if (licenseCopies.length > 0) {
 
 const totalBytes = woff2.reduce((s, f) => s + readFileSync(join(ASSETS, f)).length, 0);
 console.log(`\n  (참고) 배포 폰트 총량: ${(totalBytes / 1024 / 1024).toFixed(2)} MB / ${woff2.length}개`);
+
+console.log('\n=== 6. 첫 화면 폰트 preload (index.html ↔ dist CSS) ===');
+
+const INDEX = join(DIST, 'index.html');
+assert('dist/index.html이 있다', existsSync(INDEX));
+
+const indexHtml = existsSync(INDEX) ? readFileSync(INDEX, 'utf8') : '';
+const linkTags = [...indexHtml.matchAll(/<link\b[^>]*>/gi)].map(m => m[0]);
+
+function linkAttr(tag: string, name: string): string | undefined {
+  const quoted = tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, 'i'));
+  if (quoted) return quoted[1] ?? quoted[2];
+  if (new RegExp(`\\b${name}(?:\\s|/|>)`, 'i').test(tag)) return '';
+  return undefined;
+}
+
+const fontPreloads = linkTags.filter(tag =>
+  linkAttr(tag, 'rel') === 'preload' && linkAttr(tag, 'as') === 'font');
+
+const expectedUrls = expectedPreloadUrls(css);
+const actualUrls = fontPreloads.map(tag => linkAttr(tag, 'href') ?? '');
+const expectedSet = new Set(expectedUrls);
+const actualSet = new Set(actualUrls);
+
+assert(
+  `font preload href 집합이 계산된 집합과 같다 (${expectedUrls.length}개)`,
+  actualSet.size === expectedSet.size
+    && actualUrls.length === expectedUrls.length
+    && expectedUrls.every(u => actualSet.has(u)),
+  `expected=[${expectedUrls.join(', ')}] actual=[${actualUrls.join(', ')}]`,
+);
+
+for (const tag of fontPreloads) {
+  const href = linkAttr(tag, 'href') ?? '';
+  assert(`crossorigin이 있다 (${href.slice(-32)})`, linkAttr(tag, 'crossorigin') !== undefined,
+    '없으면 preload 익명 + CSS CORS로 폰트를 두 번 받는다');
+  assert(`as=font type=font/woff2 (${href.slice(-32)})`,
+    linkAttr(tag, 'as') === 'font' && linkAttr(tag, 'type') === 'font/woff2');
+}
+
+const cssUrlSet = new Set(cssFontUrls);
+const notInCss = actualUrls.filter(u => !cssUrlSet.has(u));
+assert('각 preload href가 dist CSS url과 문자열이 같다', notInCss.length === 0,
+  `${notInCss.slice(0, 3).join(', ')} — ./assets 나 다른 해시면 별개 리소스다`);
+
+const missingFiles = actualUrls
+  .map(u => u.slice(EXPECTED_BASE.length).replace(/^assets\//, ''))
+  .filter(name => !distSet.has(name));
+assert('각 preload href 파일이 dist에 있다', missingFiles.length === 0, missingFiles.slice(0, 3).join(', '));
+
+assert(
+  `font preload 조각 수 ≤ ${MAX_FIRST_PAINT_PRELOAD_SUBSETS}`,
+  actualUrls.length <= MAX_FIRST_PAINT_PRELOAD_SUBSETS,
+  `${actualUrls.length}개 — 92조각 전부 preload는 첫 페인트를 늦춘다`,
+);
+
+const preloadBytes = actualUrls.reduce((s, u) => {
+  const name = u.slice(EXPECTED_BASE.length).replace(/^assets\//, '');
+  return s + (distSet.has(name) ? readFileSync(join(ASSETS, name)).length : 0);
+}, 0);
+assert(
+  `font preload 총 바이트 ≤ ${(MAX_FIRST_PAINT_PRELOAD_BYTES / 1024).toFixed(0)}KB (실측 229.2KB)`,
+  preloadBytes <= MAX_FIRST_PAINT_PRELOAD_BYTES,
+  `${(preloadBytes / 1024).toFixed(1)}KB`,
+);
+
+console.log(`  (참고) 첫 화면 preload: ${actualUrls.length}조각 / ${(preloadBytes / 1024).toFixed(1)}KB`);
 
 console.log(`\n=== 결과: ${failed === 0 ? '통과' : `${failed}건 실패`} ===\n`);
 process.exit(failed === 0 ? 0 : 1);
