@@ -8,16 +8,23 @@
   --bg-card-hover: #362c3e;
   --text-primary: #f1e9dc;       /* 종이·크림 톤 off-white */
   --text-secondary: #b4a89c;     /* warm tan-gray */
-  --text-muted: #7a6f68;
+  /* 대비 규율 — 아래 전경색은 **일반 텍스트 AA(4.5:1)** 를 네 배경 전부에서 넘겨야 한다.
+     기준 배경은 가장 밝은 표면인 --bg-card-hover다(카드 위 작은 글씨가 이 게임의 주 실패 지점).
+     색상(hue)은 원본을 유지하고 명도만 올린다 — 팔레트의 warm 노스탤지어 톤이 설계 의도다.
+     contrast.test.ts가 이 부등호를 잠근다. */
+  --text-muted: #a19791;         /* was #7a6f68 — 카드 위 2.71:1이라 11px 설명글이 안 읽혔다 */
   --accent: #e08a5b;             /* soft terracotta — 핫핑크 대신 */
   --accent-soft: #f0a47a;
   --gold: #e5c07b;               /* antique gold (덜 튀는) */
   --green: #8fb573;              /* muted sage */
   --yellow: #e0b354;             /* warm amber */
-  --red: #d96458;                /* terracotta red */
-  --gray: #8a8078;
+  --red: #ea776b;                /* terracotta red — was #d96458 (카드 위 3.73:1) */
   --blue: #7da3d9;               /* dusty blue (정보용만) */
   --purple: #b08acc;
+  /* 밝은 버튼 위의 글자. 흰 글자를 테라코타에 얹으면 2.64:1이라(hover는 2.04:1) 주 버튼이
+     가장 안 읽히는 자리였다. **accent를 어둡게 하는 대신 글자를 어둡게 한다** — accent는
+     버튼 밖 강조에도 쓰여서, 색을 낮추면 버튼이 아닌 자리까지 같이 가라앉는다. */
+  --btn-ink: #2a1a10;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -79,13 +86,15 @@ body {
 
 .btn-primary {
   background: var(--accent);
-  color: white;
+  color: var(--btn-ink);
 }
 /* hover는 마우스 기기에만 — 터치에서 탭 후 hover가 눌러붙는(sticky) 잔상 방지 */
 @media (hover: hover) {
   .btn-primary:hover { background: var(--accent-soft); transform: translateY(-1px); }
 }
-.btn-primary:disabled { background: #444; cursor: not-allowed; transform: none; }
+/* disabled는 배경이 어두워지므로 글자를 되돌린다 — btn-ink를 그대로 두면 1.72:1이다.
+   밝은 배경용 글자색을 어두운 배경에 물려받는 건 이 규칙에서만 생기는 함정이다. */
+.btn-primary:disabled { background: #444; color: #fff; cursor: not-allowed; transform: none; }
 
 .btn-secondary {
   background: var(--bg-card);
@@ -482,8 +491,14 @@ body {
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
 }
 
+/* 타이틀의 주 버튼은 자체 그라디언트라 위 .btn-primary의 배경을 쓰지 않는다 —
+   글자색도 .title-screen .btn의 #fff8f0(2.13:1)을 물려받고 있었다. 여기서만 되돌린다.
+   secondary는 어두운 반투명 배경이라 .title-screen .btn의 밝은 글자가 맞다. */
 .title-screen .btn-primary {
   background: linear-gradient(180deg, #ee9961 0%, #d57443 100%);
+  color: var(--btn-ink);
+  /* 밝은 글자용으로 깔았던 어두운 그림자는 어두운 글자를 뭉갠다. */
+  text-shadow: none;
 }
 
 .title-screen .btn-secondary {

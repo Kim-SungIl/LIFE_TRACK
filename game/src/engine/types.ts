@@ -325,12 +325,16 @@ export const STAT_LABELS: Record<StatKey, string> = {
   health: '체력',
 };
 
+// 등급색은 팔레트 토큰을 **참조**한다. 예전엔 hex를 손으로 복사해 뒀는데, 그러면 팔레트를
+// 고쳐도 여기만 옛 색으로 남는다(실제로 D가 대비 미달 상태로 남아 있었다). 등급 문자와
+// 설명 라벨의 글자색으로도 쓰이므로 AA 대상이다 — contrast.test.ts가 토큰 쪽을 잠근다.
+// E가 빨강이 아니라 muted인 건 의도다: 이 게임은 낮은 값을 경고하지 않고 가라앉힌다.
 export const STAT_GRADES = [
-  { min: 80, grade: 'A', label: '최상', color: '#e5c07b' },
-  { min: 60, grade: 'B', label: '우수', color: '#8fb573' },
-  { min: 40, grade: 'C', label: '보통', color: '#e0b354' },
-  { min: 20, grade: 'D', label: '부족', color: '#d96458' },
-  { min: 0,  grade: 'E', label: '매우 부족', color: '#8a8078' },
+  { min: 80, grade: 'A', label: '최상', color: 'var(--gold)' },
+  { min: 60, grade: 'B', label: '우수', color: 'var(--green)' },
+  { min: 40, grade: 'C', label: '보통', color: 'var(--yellow)' },
+  { min: 20, grade: 'D', label: '부족', color: 'var(--red)' },
+  { min: 0,  grade: 'E', label: '매우 부족', color: 'var(--text-muted)' },
 ];
 
 export function getGrade(value: number) {

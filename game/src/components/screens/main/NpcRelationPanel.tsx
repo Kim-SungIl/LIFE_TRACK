@@ -54,7 +54,7 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
                 <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>{n.name}</div>
                 {absent ? (
                   // 부재 친구: 살아있는 게이지 대신 "떠난 자리" 한 줄만 남긴다.
-                  <div style={{ fontSize: '0.65rem', color: '#8a8078', marginTop: 4, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 4, fontStyle: 'italic' }}>
                     {absent.note}
                   </div>
                 ) : (
