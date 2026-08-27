@@ -74,7 +74,10 @@ function webpGenPlugin(): Plugin {
 
 // CG 검수 HTML은 public/ 밖에 둔다(빌드가 dist로 복사하지 않게).
 // `vite dev`에서만 /cg-review.html 로 서브해, 선행 슬래시 없는 상대경로 images/... 가
-// public/images 로 그대로 맞는다. apply:'serve' 라 빌드·preview 산출물에는 안 실인다.
+// public/images 로 그대로 맞는다. 빌드 산출물에 안 실리는 이유는 public/ 밖에 있기 때문이고,
+// preview에서 안 열리는 이유는 apply:'serve'가 아니라(preview도 serve 모드로 설정을 풀어
+// 이 플러그인을 로드한다) preview가 configurePreviewServer만 설치하기 때문이다 — 즉
+// 아래 미들웨어가 붙지 않는다. 실측: preview에서 /cg-review.html 은 404.
 function serveCgReviewPlugin(): Plugin {
   const file = path.resolve(import.meta.dirname, 'tools/cg-review.html')
   return {
