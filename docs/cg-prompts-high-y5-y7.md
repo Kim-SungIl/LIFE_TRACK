@@ -21,7 +21,31 @@ Uniform: HIGH SCHOOL uniform — navy blazer (worn slightly more personalized/wo
          (female), loafers. Taller, more mature proportions than middle school.
 Composition: cinematic scene, focused emotion, natural lens feel
 Resolution: 1440x810 (16:9) or 1080x1440 (3:4 portrait — for character close-ups)
+Safe area: keep the subject inside the horizontal 10–90% band of the frame.
 ```
+
+### 📐 갤러리 안전대역 — 핵심 피사체를 가로 10~90% 안에
+
+CG는 결과 화면에서 full-bleed로 뜨지만, **회고 갤러리(`HeroGallery`)에서는 `height: 200px` +
+`object-fit: cover`로 잘린다**(학년말 회고 · 엔딩 회상 공통). 갤러리 슬라이드는 `flex: 0 0 88%`이고
+그 컨테이너가 `maxWidth: 420`이라, 실제 렌더 박스와 잘림은 화면 폭에 따라 이렇게 갈린다
+(Playwright 실측, 2026-08-27):
+
+| 화면 폭 | 슬라이드 박스 | 좌우 잘림 | 상하 잘림 |
+|---|---|---|---|
+| 375 (iPhone SE) | 293×200 | **17.6%** (한쪽 8.8%) | 0% |
+| 420 | 333×200 | 6.3% (한쪽 3.2%) | 0% |
+| 900+ (데스크톱) | 368×200 | 0% | 3.4% |
+
+즉 **좁은 화면일수록 좌우가 잘리고, 세로는 거의 안 잘린다.** `object-position: center 30%`가
+세로를 상단 기준으로 잡지만 실제 세로 손실이 3.4% 이하라 체감되지 않는다.
+
+→ **핵심 피사체(인물의 얼굴·서사를 지는 소품)를 가로 10~90% 대역 안에 둘 것.** 프레임 좌우 끝
+10%는 모바일에서 사라진다고 보면 된다. 세로는 제약이 사실상 없다.
+
+> 이 수치는 추정이 아니라 실측이다. 반대 방향의 오판(“세로 하단 19.5%가 잘린다”)이 검수에서
+> 나온 적이 있는데, 컨테이너 폭을 `maxWidth: 420`이 아니라 `.screen` 560으로 잡은 계산 착오였다.
+> 다시 따질 일이 있으면 브라우저에서 `.ye-gallery > *`의 `getBoundingClientRect()`를 직접 재라.
 
 **Negative prompt 공통**:
 ```
