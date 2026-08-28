@@ -38,8 +38,12 @@ export const FIRST_PAINT_TEXT = [
 /**
  * 표지에 그려지지만 92조각 어디에도 없는 글리프(시스템 이모지 폰트).
  * 넓히면 실패가 전부 예외로 흡수되므로, 화면에 실제로 나오는 것만 닫힌 목록으로 둔다.
+ *
+ * 🔇는 음소거를 저장해 둔 사용자의 표지에 🔊 대신 나온다(AudioToggle). preload에는
+ * 영향이 없지만(둘 다 조각 밖), 기본 상태만 렌더하고 "화면의 비-서브셋 글리프와 같다"고
+ * 단언하면 그 단언이 거짓이 된다. 잠금 테스트가 음소거 상태도 렌더한다.
  */
-export const FIRST_PAINT_EXCEPTION_GLYPHS: readonly string[] = ['🔊', '🎵'];
+export const FIRST_PAINT_EXCEPTION_GLYPHS: readonly string[] = ['🔊', '🔇', '🎵'];
 
 /** 실측 9조각 / 229.2KB. 여유는 카피 한두 글자 수준. 92조각(2.82MB)은 통과 못 한다. */
 export const MAX_FIRST_PAINT_PRELOAD_SUBSETS = 12;

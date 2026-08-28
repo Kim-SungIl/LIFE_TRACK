@@ -11,6 +11,7 @@ import { createInitialState } from '../../engine/gameEngine';
 import { CURRENT_SAVE_VERSION } from '../../engine/stateMigration';
 import { emptyArchive } from '../../engine/archive';
 import { useGameStore } from '../../engine/store';
+import { setMuted } from '../../audio/audioEngine';
 import {
   FIRST_PAINT_TEXT,
   FIRST_PAINT_EXCEPTION_GLYPHS,
@@ -73,6 +74,7 @@ function assertScreenCoveredByFirstPaint(text: string, label: string): void {
 beforeEach(() => {
   localStorage.clear();
   useGameStore.setState({ state: null });
+  setMuted(false);   // 음소거는 모듈 캐시라 테스트 간에 새어 나간다
 });
 
 describe('타이틀 첫 페인트 폰트 preload 대상', () => {
@@ -116,8 +118,17 @@ describe('타이틀 첫 페인트 폰트 preload 대상', () => {
     seedArchive();
     render(<TitleScreen />);
     const withSave = uncoveredGraphicGlyphs(document.body.textContent ?? '');
+    cleanup();
 
-    const actual = new Set([...noSave, ...withSave]);
+    // 음소거를 저장해 둔 사용자는 🔊 대신 🔇을 본다. 기본 상태만 렌더하고 "닫힌 목록"이라고
+    // 하면 그 사용자의 화면에 대해 거짓이 된다. localStorage 시드가 아니라 setMuted를 쓰는
+    // 이유: audioEngine이 설정을 모듈 수준에 캐시해서, 이미 읽힌 뒤의 시드는 안 먹는다.
+    setMuted(true);
+    render(<TitleScreen />);
+    const muted = uncoveredGraphicGlyphs(document.body.textContent ?? '');
+    expect(document.body.textContent, '음소거 표지에 🔇이 나온다').toContain('🔇');
+
+    const actual = new Set([...noSave, ...withSave, ...muted]);
     const declared = new Set(FIRST_PAINT_EXCEPTION_GLYPHS);
 
     expect([...declared].sort(), '예외 목록이 화면의 비-서브셋 글리프와 같다')
