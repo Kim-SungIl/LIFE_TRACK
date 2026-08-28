@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, lazy, Suspense } from 'react';
 import { AudioToggle } from './AudioToggle';
 import { ParentStrength } from '../engine/types';
 import { useGameStore } from '../engine/store';
@@ -6,8 +6,15 @@ import { loadFromStorage } from '../engine/store';
 import { Portrait } from './Portrait';
 import { ConfirmDialog } from './ConfirmDialog';
 import { webpSrc } from '../engine/assetWebp';
-import { ArchiveScreen } from './screens/ArchiveScreen';
 import { loadArchive } from '../engine/archive';
+import { ScreenChunkFallback } from './ScreenChunkFallback';
+
+// 기록실은 타이틀의 **곁가지**다 — 첫 화면을 그리는 데 필요 없는데도 정적 import라
+// 첫 페인트를 막는 번들에 같이 실려 있었다. 셀룰러에서 메인 번들 다운로드가 FCP의
+// 60~84%를 차지하므로(3G 실측 4.4초/5.3초), 첫 화면 밖 화면은 청크를 따로 둔다.
+const ArchiveScreen = lazy(() =>
+  import('./screens/ArchiveScreen').then((m) => ({ default: m.ArchiveScreen })),
+);
 
 // 부모 선택 = 어린 시절 기억 장면
 const MEMORIES: { id: ParentStrength; scene: string; detail: string; icon: string }[] = [
@@ -96,7 +103,11 @@ export function TitleScreen() {
   };
 
   if (phase === 'archive') {
-    return <ArchiveScreen onBack={() => setPhase('title')} />;
+    return (
+      <Suspense fallback={<ScreenChunkFallback />}>
+        <ArchiveScreen onBack={() => setPhase('title')} />
+      </Suspense>
+    );
   }
 
   // 타이틀 화면
