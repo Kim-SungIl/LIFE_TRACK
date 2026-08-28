@@ -9,33 +9,37 @@
 //   - `import('./screens/ArchivesScreen')` 같은 오탈자는 소스 스캔이 오히려 통과시킨다.
 // 실제로 사용자가 받는 것은 dist다. 그래서 dist를 본다.
 //
-// 이 리포는 같은 층위 착오를 이미 두 번 겪었다: verify-fonts.ts가 라이선스 고지를 리포 CSS
-// 주석에서 확인했는데 그 주석은 미니파이가 지우는 것이었고(dist엔 0건), 개발용 html은
-// public/만 봐서 다른 경로로 dist에 다시 들어오는 것을 못 잡았다.
+// **파일 존재만 보면 안 된다(실측).** 정적 import로 되돌려도 rollup은 그 이름의 청크를
+// 여전히 내보낸다 — 본문은 부팅 청크로 옮겨가고 **재수출 껍데기**만 남는다:
+//     EventScene-BTgUeR7g.js (0.06 kB) = import{t as e}from"./index-*.js";export{e as EventScene};
+// 그래서 5절이 "이 청크가 자기 코드를 갖고 있는가"를 본다.
+//
+// **엔트리 청크를 import하는지로 판별하면 안 된다(실측).** 정상 청크 5개도 전부
+// `./index-*.js`를 정적 import한다(React 등 공유 코드가 엔트리에 호이스팅되므로).
+// 이걸 껍데기 서명으로 쓰면 상시 빨강이 된다. 판별 기준은 **자기 코드의 유무**다.
 //
 // CI에서 verify:ci(content-verify job)와 build:release(build job)는 별도 러너라 dist가
 // 공유되지 않는다. **이 스크립트를 verify:ci에 넣으면 dist가 없어 섹션 1에서 곧바로 실패한다**
 // — verify:dist-fonts·verify:dist-hygiene와 같이 **build job, 빌드 직후**에 둔다.
-//
-// **파일 존재만 보면 안 된다(실측).** 정적 import로 되돌려도 rollup은 ArchiveScreen-*.js를
-// 여전히 내보낸다 — 본문만 부팅 청크로 옮겨가고 껍데기가 남아서, 3절(청크 분리)은 그린이다.
-// 5절이 본문 문자열의 **위치**를 보는 이유가 이것이다.
+// (일반 build와 build:release의 청크 이름 집합은 동일함을 실측 확인했다 — 해시만 다르고
+//  webp 플러그인은 이미지 태그만 건드린다.)
 //
 // **커버리지 한계(과신 금지).** 이 검사가 보는 것은 ① 지연 화면이 자기 청크로 갈렸는가
-// ② 그 청크가 부팅 그래프(엔트리 + modulepreload)에 없는가 ③ (ArchiveScreen 한정)
-// 그 화면의 본문이 부팅이 아니라 자기 청크에 있는가 뿐이다. ③은 화면 하나만 본다 —
-// 나머지 넷은 ①②까지다. **잡지 못하는 것**: 청크 크기 회귀, 부팅 그래프 자체가 비대해지는 것,
-// 지연 화면이 실제로 열리는지(그건 컴포넌트 테스트 몫 — archiveWiring.test.tsx가 클릭 왕복과
-// Suspense 프레임을 본다).
+// ② 그 청크가 부팅 그래프(엔트리 + modulepreload)에 없는가 ③ 그 청크가 껍데기가 아닌가
+// ④ (ArchiveScreen 한정) 본문 문자열이 부팅이 아니라 자기 청크에 있는가 뿐이다.
+// **잡지 못하는 것**: 청크 크기 회귀, 부팅 그래프 자체가 비대해지는 것, 지연 화면이 실제로
+// 열리는지(그건 컴포넌트 테스트 몫 — lazyScreenWiring.test.tsx가 클릭 왕복과 fallback을 본다).
 //
 // 실행: cd game && npm run build && npx tsx scripts/verify/verify-dist-chunks.ts
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs';
-import { basename, join, resolve } from 'path';
+import { basename, join, relative, resolve } from 'path';
 
 const DIST = resolve(import.meta.dirname, '../../dist');
 const ASSETS = join(DIST, 'assets');
-const SRC_COMPONENTS = resolve(import.meta.dirname, '../../src/components');
+// **src 전체**를 훑는다. src/components로 한정했더니 App.tsx에서 GameScreen을 lazy로 빼도
+// 미등록으로 안 잡혔다(검수 실측) — 다음 성능 작업이 정확히 그 길이라 사각지대가 컸다.
+const SRC = resolve(import.meta.dirname, '../../src');
 
 /** 지연 로딩이어야 하는 화면들. 청크 파일명은 rollup이 모듈 파일명에서 딴다. */
 const LAZY_SCREENS: readonly string[] = [
@@ -46,10 +50,9 @@ const LAZY_SCREENS: readonly string[] = [
   'EndingScreen',
 ];
 
-// 파일명 검사만으로는 "청크는 갈렸는데 내용이 부팅에도 **중복**으로 들어간" 경우를 못 본다.
-// 그래서 화면 본문에만 있는 문자열이 부팅 그래프에 0회인지도 본다. 문자열 결합(content
-// coupling)이라 문구가 바뀌면 여기도 같이 고쳐야 하므로, 잘 안 바뀌는 섹션 헤더 하나만 쓴다.
-// 앵커가 사라지면 4절이 공허하게 통과하므로 2절에서 "정확히 1회 존재"를 먼저 확인한다.
+// 껍데기 검사(5절)는 화면 5개를 균일하게 덮지만 "청크에 코드가 있다"까지만 본다.
+// 아래 앵커는 **그게 정말 그 화면의 코드인지**를 보는 독립 신호다. 문자열 결합이라
+// 문구가 바뀌면 같이 고쳐야 하므로, 잘 안 바뀌는 섹션 헤더 하나만 화면 하나에 쓴다.
 const ANCHOR = { chunk: 'ArchiveScreen', text: '함께한 사람들' } as const;
 
 // 검사기 자기 방어용 프로브 — **부팅 그래프에 반드시 있는** 문자열(타이틀 h1).
@@ -69,14 +72,30 @@ function countOccurrences(haystack: string, needle: string): number {
   return n;
 }
 
-function walkTsx(dir: string): string[] {
+/** 정적 import/export 문을 걷어낸 나머지 — 이 청크가 **자기 코드**를 갖고 있는가. */
+function bodyWithoutModuleSyntax(code: string): string {
+  return code
+    .replace(/import\s*\{[^}]*\}\s*from\s*["'][^"']+["']\s*;?/g, '')
+    .replace(/import\s*\*\s*as\s+[\w$]+\s*from\s*["'][^"']+["']\s*;?/g, '')
+    .replace(/import\s+[\w$]+\s*from\s*["'][^"']+["']\s*;?/g, '')
+    .replace(/import\s*["'][^"']+["']\s*;?/g, '')
+    .replace(/export\s*\{[^}]*\}\s*;?/g, '')
+    .trim();
+}
+
+/** 재수출만 하는 껍데기인가 — 정적 import 복원의 산물. */
+function isReExportShell(code: string): boolean {
+  return bodyWithoutModuleSyntax(code).length === 0;
+}
+
+function walkSource(dir: string): string[] {
   const out: string[] = [];
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) {
       if (name === '__tests__') continue;          // 테스트의 정적 import는 번들과 무관하다
-      out.push(...walkTsx(full));
-    } else if (name.endsWith('.tsx')) {
+      out.push(...walkSource(full));
+    } else if (name.endsWith('.tsx') || name.endsWith('.ts')) {
       out.push(full);
     }
   }
@@ -85,11 +104,11 @@ function walkTsx(dir: string): string[] {
 
 /** 소스에서 `lazy(() => import('...'))` 로 선언된 화면 이름들. LAZY_SCREENS 완전성 대조용. */
 function lazyScreensInSource(): string[] {
-  const re = /lazy\(\s*\(\)\s*=>\s*\n?\s*import\(\s*'([^']+)'/g;
+  // 따옴표 양쪽 허용 — 한쪽만 받으면 쌍따옴표로 쓴 새 lazy가 조용히 누락된다.
+  const re = /lazy\(\s*\(\)\s*=>\s*\n?\s*import\(\s*["']([^"']+)["']/g;
   const found = new Set<string>();
-  for (const file of walkTsx(SRC_COMPONENTS)) {
-    const text = readFileSync(file, 'utf-8');
-    for (const m of text.matchAll(re)) found.add(basename(m[1]));
+  for (const file of walkSource(SRC)) {
+    for (const m of readFileSync(file, 'utf-8').matchAll(re)) found.add(basename(m[1]));
   }
   return [...found].sort();
 }
@@ -102,6 +121,7 @@ if (!existsSync(ASSETS)) {
 }
 
 const jsFiles = readdirSync(ASSETS).filter(f => f.endsWith('.js'));
+const codeOf = new Map(jsFiles.map(f => [f, readFileSync(join(ASSETS, f), 'utf-8')]));
 
 // index.html이 부팅에 받는 것 = 엔트리 모듈 + modulepreload. preload(폰트·이미지)나
 // stylesheet는 JS 그래프가 아니므로 제외한다.
@@ -122,14 +142,19 @@ assert(`modulepreload를 찾았다 (${preloadHrefs.length}개)`, preloadHrefs.le
 const missingBoot = bootNames.filter(n => !jsFiles.includes(n));
 assert(`부팅 그래프 파일이 전부 dist/assets에 있다${missingBoot.length ? `: 없음=${missingBoot.join(', ')}` : ''}`,
   missingBoot.length === 0,
-  '경로 파싱이 어긋났다. 내용을 못 읽으면 4절이 무조건 0회로 통과한다');
-// **목록에서 한 줄 지우면 그 화면은 무검사가 된다** — `length > 0`만 보면 조용히 통과한다
-// (실측: 'ArchiveScreen' 한 줄을 지웠더니 전 절이 그린이었다). 그래서 소스의 lazy() 선언과
-// 대조한다. 이 대조는 계약이 아니라 **목록 완전성 점검**이다 — 계약은 어디까지나 dist다.
-// 새 지연 화면을 추가하면 여기서 걸리므로 LAZY_SCREENS에 같이 등록하면 된다.
+  '경로 파싱이 어긋났다. 내용을 못 읽으면 6절이 무조건 0회로 통과한다');
+
+// **목록 대조는 양방향이어야 한다.** 한쪽만 보면 둘 다 조용히 뚫린다(실측):
+//   - LAZY_SCREENS에서 한 줄 지움 → 그 화면이 무검사가 되는데 `length > 0`은 통과
+//   - 소스에서 lazy()를 지움(=정적 import 복원) → srcLazy가 줄었는데 아무도 안 봄
 const srcLazy = lazyScreensInSource();
 assert(`소스의 lazy 화면을 찾았다 (${srcLazy.join(', ') || '없음'})`, srcLazy.length > 0,
   '정규식이 죽었다 — 0개면 아래 대조가 무조건 통과한다');
+// 스캔 **범위**가 줄어드는 것도 조용한 커버리지 축소다 — src/components로 되돌리면
+// App.tsx에서 화면을 lazy로 빼도 미등록으로 안 잡힌다(실측). 엔트리 파일을 앵커로 잡아둔다.
+assert('소스 스캔이 엔트리(App.tsx)까지 덮는다',
+  walkSource(SRC).some(f => relative(SRC, f).replaceAll('\\', '/') === 'App.tsx'),
+  'SRC를 하위 디렉터리로 좁히면 그 밖의 lazy 선언이 통째로 사각지대가 된다');
 const unregistered = srcLazy.filter(n => !LAZY_SCREENS.includes(n));
 assert(
   unregistered.length === 0
@@ -138,38 +163,65 @@ assert(
   unregistered.length === 0,
   '목록에 없으면 그 화면은 부팅 번들에 실려도 아무도 안 본다. LAZY_SCREENS에 추가해라',
 );
+const vanished = LAZY_SCREENS.filter(n => !srcLazy.includes(n));
+assert(
+  vanished.length === 0
+    ? '소스가 LAZY_SCREENS의 화면을 전부 lazy로 선언한다'
+    : `소스에서 lazy() 선언이 사라진 화면: ${vanished.join(', ')}`,
+  vanished.length === 0,
+  '정적 import로 되돌아갔다. 의도한 것이면 LAZY_SCREENS에서도 지워라(그러면 무검사가 된다)',
+);
 assert(`앵커 화면(${ANCHOR.chunk})이 LAZY_SCREENS에 있다`, LAZY_SCREENS.includes(ANCHOR.chunk),
-  '5절의 앵커 검사와 3·4절이 서로 다른 화면을 보게 된다');
+  '6절의 앵커 검사와 3~5절이 서로 다른 화면을 보게 된다');
+
+// 판정 함수들의 상수 프로브 — 합성 샘플로 양성·음성을 먼저 확인한다. 이게 없으면
+// countOccurrences를 `includes ? 1 : 0`으로 약화시켜도, 껍데기 판정을 상시 false로
+// 바꿔도 전부 조용히 통과한다(둘 다 실측된 MISS였다).
+assert('countOccurrences가 횟수를 센다',
+  countOccurrences('abab', 'ab') === 2 && countOccurrences('abab', 'zz') === 0,
+  '"1회 이상"으로 내려앉으면 중복 검출이 죽는다');
+assert('껍데기 판정이 재수출을 문다',
+  isReExportShell('import{t as e}from"./index-abc.js";export{e as EventScene};'),
+  '실제 되돌림 산물(0.06 kB 재수출)을 못 물면 5절이 공허해진다');
+assert('껍데기 판정이 정상 청크를 물지 않는다',
+  !isReExportShell('import{a}from"./x.js";const y=()=>a(1);export{y};'),
+  '오탐이면 CI가 상시 빨강이 된다');
 
 const bootText = bootNames
   .filter(n => jsFiles.includes(n))
-  .map(n => readFileSync(join(ASSETS, n), 'utf-8'))
+  .map(n => codeOf.get(n)!)
   .join('\n');
 // 카운터와 부팅 그래프 식별이 둘 다 살아 있는지 — 상수 프로브.
 assert(`부팅 그래프에서 프로브('${BOOT_PROBE}')를 찾는다`,
   countOccurrences(bootText, BOOT_PROBE) > 0,
   '타이틀 화면은 eager라 부팅 그래프에 반드시 있다. 0회면 파일을 안 읽었거나 카운터가 죽은 것 ' +
-  `(문구가 바뀌었다면 BOOT_PROBE를 고쳐라)`);
+  '(문구가 바뀌었다면 BOOT_PROBE를 고쳐라)');
 
 console.log('\n=== 3. 지연 화면은 자기 청크로 갈라진다 ===');
+const chunkOf = new Map<string, string>();
 for (const name of LAZY_SCREENS) {
   const hits = jsFiles.filter(f => f.startsWith(`${name}-`));
+  if (hits.length === 1) chunkOf.set(name, hits[0]);
   assert(
     hits.length === 1
       ? `${name} → ${hits[0]}`
       : `${name} 청크가 ${hits.length}개다 (${hits.join(', ') || '없음'})`,
     hits.length === 1,
     hits.length === 0
-      ? `정적 import가 다시 생겼거나(다른 파일에서라도) 청크가 합쳐졌다. ` +
-        `이 화면이 부팅 번들에 실려 첫 페인트를 늦춘다`
-      : '같은 이름의 청크가 여러 개다 — 아래 부팅 그래프 판정이 어느 쪽인지 모호해진다',
+      ? '청크가 통째로 합쳐졌다. 이 화면이 부팅 번들에 실려 첫 페인트를 늦춘다'
+      : '같은 이름의 청크가 여러 개다 — 아래 판정이 어느 쪽인지 모호해진다',
   );
 }
 
 console.log('\n=== 4. 지연 청크는 부팅 그래프에 없다 ===');
 // 청크로 갈렸어도 modulepreload가 걸리면 부팅에 같이 받는다 — 분할한 의미가 없어진다.
+// **양성 대조 먼저**: 술어를 `n === name`으로 바꾸면 아래 5건이 전부 공허하게 통과한다(실측).
+const inBootGraph = (name: string) => bootNames.filter(n => n.startsWith(`${name}-`));
+assert('부팅 그래프 조회 술어가 실제로 문다 (양성 대조)',
+  inBootGraph('index').length > 0,
+  '엔트리 청크는 index-로 시작하고 반드시 부팅 그래프에 있다. 0건이면 술어가 죽은 것이다');
 for (const name of LAZY_SCREENS) {
-  const inBoot = bootNames.filter(n => n.startsWith(`${name}-`));
+  const inBoot = inBootGraph(name);
   assert(
     inBoot.length === 0
       ? `${name}은 부팅에 받지 않는다`
@@ -179,41 +231,49 @@ for (const name of LAZY_SCREENS) {
   );
 }
 
-console.log('\n=== 5. 지연 화면 본문이 부팅 청크에 있지 않다 ===');
-// **3절만으로는 부족하다(실측).** 정적 import로 되돌려도 rollup은 ArchiveScreen-*.js 청크를
-// 여전히 내보낸다 — 본문만 부팅 청크로 옮겨가고 껍데기가 남는다. 그래서 파일 존재가 아니라
-// **본문이 어디 있는지**를 봐야 한다.
-const anchorChunk = jsFiles.find(f => f.startsWith(`${ANCHOR.chunk}-`));
-const anchorInBoot = countOccurrences(bootText, ANCHOR.text);
-const anchorInOwn = anchorChunk
-  ? countOccurrences(readFileSync(join(ASSETS, anchorChunk), 'utf-8'), ANCHOR.text)
-  : 0;
-const anchorTotal = jsFiles
-  .reduce((n, f) => n + countOccurrences(readFileSync(join(ASSETS, f), 'utf-8'), ANCHOR.text), 0);
+console.log('\n=== 5. 지연 청크가 껍데기가 아니다 (본문이 부팅으로 옮겨가지 않았다) ===');
+// 이 절이 5개 화면을 **균일하게** 덮는다. 3·4절만 있던 동안 ArchiveScreen 밖 네 화면은
+// 정적 import 복원에 완전 무방비였다(실측: EventScene 되돌려도 5개 절 전부 ✓, 878 통과).
+for (const name of LAZY_SCREENS) {
+  const file = chunkOf.get(name);
+  if (!file) continue;                              // 3절이 이미 실패로 보고했다
+  const rest = bodyWithoutModuleSyntax(codeOf.get(file)!);
+  assert(
+    `${name} 청크가 자기 코드를 갖는다 (${rest.length}B)`,
+    rest.length > 0,
+    `${file}이 재수출 껍데기다 — 본문이 부팅 청크로 옮겨갔다. **정적 참조가 살아났다:** ` +
+    'lazy() 선언이 남아 있어도 다른 파일에서 정적으로 import하면 이렇게 된다. ' +
+    '청크 파일이 보이더라도 부팅 전송량은 줄지 않는다',
+  );
+}
 
-// 셋을 나눠 세는 이유는 **진단 메시지를 구분하기 위해서**다. 하나로 합치면 "정적 참조가
-// 살아났다"와 "문구가 바뀌었다"가 같은 실패로 보여서, 엉뚱한 곳을 고치게 된다.
+console.log('\n=== 6. 앵커 화면의 본문이 부팅이 아니라 자기 청크에 있다 ===');
+// 5절은 "코드가 있다"까지다. 그게 **정말 그 화면의 코드인지**는 문자열로만 확인된다.
+const anchorChunk = chunkOf.get(ANCHOR.chunk);
+const anchorTotal = jsFiles.reduce((n, f) => n + countOccurrences(codeOf.get(f)!, ANCHOR.text), 0);
+const anchorPresent = anchorTotal > 0;
 assert(
   `앵커('${ANCHOR.text}')가 산출물 어딘가에 있다 (총 ${anchorTotal}회)`,
-  anchorTotal > 0,
+  anchorPresent,
   `산출물 어디에도 없다 — 제품 결함이 아니라 **검사기 노후화**다. ${ANCHOR.chunk}의 문구가 ` +
-  `바뀌었으니 ANCHOR.text를 현재 문구로 고쳐라. 이대로 두면 아래 단언이 ` +
-  `"어디에도 없으니 부팅에도 없다"로 공허하게 통과한다`,
+  '바뀌었으니 ANCHOR.text를 현재 문구로 고쳐라. 아래 두 단언은 판정을 건너뛴다',
 );
-assert(
-  '앵커가 부팅 그래프에 0회다',
-  anchorInBoot === 0,
-  `${ANCHOR.chunk}의 본문이 부팅에 실렸다(${anchorInBoot}회) — **정적 참조가 살아났다.** ` +
-  `lazy() 선언이 남아 있어도 다른 파일에서 정적으로 import하면 이렇게 된다. ` +
-  `청크 파일이 따로 보여도 부팅 전송량은 줄지 않는다`,
-);
-assert(
-  `앵커가 ${anchorChunk ?? ANCHOR.chunk} 청크에 정확히 1회 있다`,
-  anchorInOwn === 1,
-  anchorInOwn === 0
-    ? '지연 청크가 껍데기다 — 본문이 다른 청크로 옮겨갔다(정적 참조 또는 청크 병합)'
-    : `같은 문구가 ${anchorInOwn}회다 — 앵커로 쓰기엔 모호하니 더 고유한 문구로 바꿔라`,
-);
+// **앵커가 없으면 아래 둘은 평가하지 않는다.** 평가하면 "문구만 바뀐 상황"에서
+// "지연 청크가 껍데기다(번들링을 고쳐라)"라는 엉뚱한 진단이 함께 뜬다(검수 실측).
+if (anchorPresent) {
+  assert(
+    '앵커가 부팅 그래프에 0회다',
+    countOccurrences(bootText, ANCHOR.text) === 0,
+    `${ANCHOR.chunk}의 본문이 부팅에 실렸다 — 정적 참조가 살아났다`,
+  );
+  assert(
+    `앵커가 ${anchorChunk ?? ANCHOR.chunk} 청크에 있다`,
+    // `=== 1`이 아니라 `>= 1`이다 — 계약은 "자기 청크에 있다"이지 "한 번만 있다"가 아니다.
+    // aria-label을 같은 문구로 다는 무해한 a11y 개선만으로 CI가 빨강이 됐다(검수 실측).
+    anchorChunk !== undefined && countOccurrences(codeOf.get(anchorChunk)!, ANCHOR.text) >= 1,
+    '지연 청크에 그 화면의 본문 문자열이 없다 — 다른 청크로 옮겨갔다',
+  );
+}
 
 console.log(`\n=== 결과: ${failed === 0 ? '통과' : `${failed}건 실패`} ===\n`);
 process.exit(failed === 0 ? 0 : 1);

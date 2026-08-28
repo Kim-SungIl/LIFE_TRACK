@@ -9,16 +9,9 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ScreenChunkFallback } from '../ScreenChunkFallback';
-
-/** 시각적으로 숨겨졌는가 — 1px + clip 조합(sr-only 관용구). */
-function isVisuallyHidden(el: HTMLElement): boolean {
-  const s = el.style;
-  return s.position === 'absolute'
-    && parseInt(s.width, 10) <= 1
-    && parseInt(s.height, 10) <= 1
-    && /rect\(/.test(s.clip)
-    && s.overflow === 'hidden';
-}
+// 서명 판정은 호출부 배선 테스트(lazyScreenWiring)와 **공유한다** — 각자 정의하면
+// 한쪽만 느슨해져도 안 보인다.
+import { isVisuallyHidden } from './chunkFallbackHelpers';
 
 describe('ScreenChunkFallback', () => {
   it('빈 화면이 아니라 화면을 덮는 요소를 그린다', () => {

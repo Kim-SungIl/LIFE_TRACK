@@ -7,12 +7,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => `WEBP::${p}` }));
 
-// idle 예약을 붙잡아 둔다(실행하진 않는다) — 예약 **여부**만 보면 되고, 실행하면 다른
-// 테스트 중에 청크 import가 떠서 비결정적이 된다. 팩토리는 호이스팅되므로 vi.hoisted 경유.
-const { idleTasks } = vi.hoisted(() => ({ idleTasks: [] as Array<() => void> }));
+// idle 예약을 삼킨다 — 이 파일은 prefetch를 단언하지 않지만, 실행되게 두면 테스트 도중
+// 청크 import가 떠서 비결정적이 된다. prefetch 계약 자체는 archivePrefetch.test.tsx가 본다.
 vi.mock('../../engine/assetPrefetch', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../engine/assetPrefetch')>()),
-  runWhenIdle: (task: () => void) => { idleTasks.push(task); return () => {}; },
+  runWhenIdle: () => () => {},
 }));
 
 import { TitleScreen } from '../TitleScreen';
@@ -44,7 +43,6 @@ beforeEach(() => {
   clearArchive();
   localStorage.removeItem('lifetrack_save');
   useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
-  idleTasks.length = 0;
 });
 
 // 이건 엣지가 아니라 본선이다: 엔딩 화면의 유일한 버튼이 window.location.reload()이므로
@@ -84,51 +82,11 @@ describe('기록실 진입 게이트', () => {
     expect(screen.queryByRole('button', { name: '기록실' })).toBeNull();
   });
 
-  // 기록실은 lazy 청크다. 버튼 **존재**만 보던 위 두 테스트로는 그 뒤가 통째로 비어 있었다 —
-  // 정적 import로 되돌리거나(청크 분할이 사라짐), Suspense를 지우거나, import 경로에 오타를
-  // 내도 871개가 전부 통과했다(검수에서 뮤테이션으로 확인). 눌러서 열리는 데까지 본다.
-  //
-  // 커버리지 경계: 이 파일은 위쪽에서 ArchiveScreen을 정적 import하므로(테스트 픽스처용)
-  // 여기서 확인되는 것은 **배선**이지 번들 분리가 아니다. 분리는 dist를 봐야만 알 수 있어
-  // scripts/verify/verify-dist-chunks.ts가 CI build job에서 따로 본다. 둘 다 있어야 한다.
-  it('기록실 버튼을 누르면 lazy 경계가 풀려 실제로 기록실이 뜬다', async () => {
-    accrueResolvedEvent(state({ events: [ev('a')] }));
-    render(<TitleScreen />);
-    expect(screen.queryByText('👥 함께한 사람들'), '누르기 전엔 기록실이 없어야 한다').toBeNull();
-
-    fireEvent.click(screen.getByRole('button', { name: /기록실/ }));
-
-    // **이 한 줄이 Suspense 경계를 잠근다.** 도착 단언(아래 findByText)만으로는 부족하다 —
-    // 경계를 통째로 지워도 React가 루트까지 올라가 트리를 비웠다가 청크 도착 후 다시 그리므로
-    // 결국 기록실이 뜬다(뮤테이션 실측: 878개 전부 통과했다). 차이는 그 사이 프레임뿐이라,
-    // 경계가 있으면 fallback이 서고 없으면 화면이 통째로 빈다. 그 프레임을 직접 본다.
-    expect(
-      screen.queryByRole('status'),
-      'Suspense 경계가 없다 — 청크를 기다리는 동안 화면이 통째로 비었다가 돌아온다',
-    ).toBeTruthy();
-
-    // findBy*라야 Suspense 해소를 기다린다. getBy*로 쓰면 첫 프레임엔 fallback뿐이라 실패한다.
-    expect(
-      await screen.findByText('👥 함께한 사람들'),
-      '버튼은 있는데 기록실이 열리지 않는다 (import 경로 오타·Suspense 누락)',
-    ).toBeTruthy();
-  });
-
-  // 타이틀만 배경 사진이 깔린 화면이라, 청크를 눌러서 받으면 사진 → 단색 fallback → 기록실의
-  // 2단 깜빡임이 된다. 예약을 지워도 기능은 멀쩡하므로(느려질 뿐) 다른 테스트로는 안 잡힌다.
-  // 여기서 잠그는 것은 **예약 여부**까지다 — 예약된 함수가 정말 그 청크를 받는지는 보지 않는다.
-  it('기록실이 열려 있으면 청크를 idle에 미리 받는다', () => {
-    accrueResolvedEvent(state({ events: [ev('a')] }));
-    render(<TitleScreen />);
-    expect(idleTasks.length, 'idle prefetch 예약이 없다 — 진입 때 fallback이 번쩍인다').toBe(1);
-  });
-
-  // 조건을 지워 늘 prefetch하게 만들면 위 테스트는 그대로 통과한다. 첫 플레이어에게는
-  // 그 판에 영원히 안 쓸 청크라 받지 않아야 한다.
-  it('기록실이 없는 사람에겐 미리 받지 않는다', () => {
-    render(<TitleScreen />);
-    expect(idleTasks.length, '버튼도 없는데 기록실 청크를 받는다').toBe(0);
-  });
+  // 여기서 멈춘다 — 누른 뒤의 lazy 경계·fallback·prefetch는 이 파일에 두지 않는다.
+  // 이 파일은 위쪽에서 ArchiveScreen을 정적 import하고(픽스처용) 여러 테스트가 기록실을
+  // 반복해서 여는데, React.lazy는 resolve된 payload를 캐시하므로 **두 번째부터는 fallback
+  // 프레임이 존재하지 않는다.** 그래서 호출부 배선은 lazyScreenWiring.test.tsx,
+  // prefetch는 archivePrefetch.test.tsx가 각각 전용 파일에서 본다.
 });
 
 // W48 이벤트는 결과 화면이 뜨기 전에 학년 전환이 끝나 있다. 결과 화면이 state.year를 그대로
