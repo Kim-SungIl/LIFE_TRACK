@@ -459,15 +459,20 @@ describe('루프 스케줄', () => {
     // 남으면 개수가 기준선으로 돌아오지 않는다.
     const ambient = vi.getTimerCount();
     const { oscs } = installStub();
+    const cStub = vi.getTimerCount();
     unlockAudio();
+    const cUnlock = vi.getTimerCount();
     setBgmEnabled(true);
+    const cEnable = vi.getTimerCount();
     startBgm();
+    const cStart = vi.getTimerCount();
     expect(vi.getTimerCount(), '재생 중에는 다음 루프 타이머가 있다').toBeGreaterThan(ambient);
 
     stopBgm();
     // playing 플래그로 막는 것만으로는 부족하다 — 타이머 자체가 남으면 누수다.
     // (플래그만 보는 단언은 타이머를 남기는 변형을 못 잡는다: 뮤테이션 M20)
-    expect(vi.getTimerCount(), '타이머를 실제로 해제한다').toBe(ambient);
+    const trace = `[trace ambient=${ambient} stub=${cStub} unlock=${cUnlock} enable=${cEnable} start=${cStart} node=${process.version}]`;
+    expect(vi.getTimerCount(), `타이머를 실제로 해제한다 ${trace}`).toBe(ambient);
     const after = oscs.length;
     vi.advanceTimersByTime(60_000);
     expect(oscs.length, '더 이상 예약하지 않는다').toBe(after);
