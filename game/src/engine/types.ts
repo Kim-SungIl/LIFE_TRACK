@@ -214,6 +214,24 @@ export interface NpcState {
 
 export type EventLocation = 'classroom' | 'home' | 'park' | 'hallway' | 'rooftop' | 'street' | 'gym' | 'school_gate' | 'cafe' | 'music_room' | 'beach' | 'convenience_store' | 'library' | 'auditorium';
 
+// 학교급 × 로테이션 변이 — femaleDescription 옆의 두 번째 표시 축.
+// 문장(description / 선택지 text·message)만 갈린다. effects·fatigueEffect·moneyEffect·
+// memorySlotDraft는 여기에 두지 않는다 — 같은 선택이 판마다 다른 결과를 내면 밸런스 계약이 무너진다.
+export type SchoolBand = 'elementary' | 'middle' | 'high';
+
+export interface EventTextVariant {
+  description: string;
+  femaleDescription?: string;
+  choices: Array<{
+    text: string;
+    message: string;
+    femaleText?: string;
+    femaleMessage?: string;
+  }>;
+}
+
+export type SchoolVariants = Record<SchoolBand, EventTextVariant[]>;
+
 export interface GameEvent {
   id: string;
   title: string;
@@ -237,6 +255,9 @@ export interface GameEvent {
   // 성별 분기: 있으면 해당 성별에서 기본값 대신 사용
   femaleDescription?: string;
   femaleChoices?: EventChoice[];
+  // 학교급 × (year, week) 로테이션 변이. 고르기는 eventPresentation.presentEvent.
+  // 난수를 쓰지 않는다 — seededRandom은 rngSeed를 mutate해서 이후 이벤트 열이 밀린다.
+  schoolVariants?: SchoolVariants;
   resolvedChoice?: number; // 저장된 선택 인덱스 (이벤트 해결 후 기록)
   resolvedFemale?: boolean; // v1.2: femaleChoices 경로로 해결되었는지 (엔딩 해시 구분용)
   year?: number;           // 저장된 발생 연차 (ANNUAL 재발동 판정용)

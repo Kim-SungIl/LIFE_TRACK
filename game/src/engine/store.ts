@@ -5,6 +5,7 @@ import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './s
 import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
+import { assignCurrentEvent } from './eventPresentation';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 import { PARENT_MINI_EVENTS } from './talkData';
@@ -247,8 +248,7 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
   );
   const followup = followupFiredThisWeek ? null : getFollowupForWeek(state, location);
   if (followup) {
-    state.currentEvent = { ...followup, week: occurrenceWeek };
-    state.phase = 'event';
+    assignCurrentEvent(state, followup, occurrenceWeek);
   } else {
     // chain cap: 일반 누적 2개, milestone(도달형) 잔여 있으면 3개까지 (졸업 직전 누락 방지).
     const eventsThisWeek = state.events.filter(
@@ -261,8 +261,7 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
       chainPick = getMilestoneForWeek(state);
     }
     if (chainPick) {
-      state.currentEvent = { ...chainPick, week: occurrenceWeek };
-      state.phase = 'event';
+      assignCurrentEvent(state, chainPick, occurrenceWeek);
     } else if (state.week > 48) {
       // W48 학년말/졸업 주 이벤트 종료 → processWeek가 미뤄둔 학년 전환을 지금 수행.
       applyYearTransition(state);
@@ -310,8 +309,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // week:1로 기록되므로 첫 주 결산의 fixed 선택에서 중복 발동하지 않는다.
     const firstScene = GAME_EVENTS.find(e => e.id === 'first-week');
     if (firstScene) {
-      initial.currentEvent = { ...firstScene };
-      initial.phase = 'event';
+      assignCurrentEvent(initial, firstScene, firstScene.week ?? 1);
     }
     // "이번 판에서 처음 본 이야기"의 기준선 리셋 — 세이브 덮어쓰기보다 먼저.
     // 새 판의 유일한 진입점이 여기이므로 리셋 지점도 여기 한 곳이다(loadSavedGame은 건드리지 않는다).

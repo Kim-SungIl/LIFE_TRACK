@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../gameEngine';
 import { getEventForWeek } from '../events';
+import { EVENT_DENSITY } from '../events/selection';
 import type { EventSelection } from '../events/selection';
 import type { GameState, ParentStrength } from '../types';
 
@@ -28,6 +29,10 @@ function selectionKey(sel: EventSelection): { eventId: string | null; patch: Eve
 }
 
 describe('getEventForWeek', () => {
+  it('EVENT_DENSITY stays at the user-locked 0.45 / 0.25', () => {
+    expect(EVENT_DENSITY.conditional).toBe(0.45);
+    expect(EVENT_DENSITY.schoolLife).toBe(0.25);
+  });
   describe('determinism', () => {
     it('is deterministic across independent clones with the same rngSeed (deep-equal)', () => {
       // ⚠️ getEventForWeek는 conditional/학교랜덤 분기에서 seededRandom(state)로 rngSeed를 mutate.
@@ -201,6 +206,25 @@ describe('getEventForWeek', () => {
       // patch는 반환만 — state.hardCrisisYears는 그대로 []
       expect(state.hardCrisisYears).toEqual([]);
       expect(sel.patch).toEqual({ hardCrisisYears: [3] });
+    });
+  });
+
+  describe('Y1 class-president-2 vs elementary-semester2-start', () => {
+    it('class_president_2_fires_y1_week_25: Y1 25주는 2학기 선거다', () => {
+      const sel = getEventForWeek(fixture({ year: 1, week: 25, isVacation: false }));
+      expect(sel.event?.id, 'class_president_2_fires_y1_week_25').toBe('class-president-2');
+    });
+
+    it('elementary_semester2_start_survives_on_y1_w26', () => {
+      const sel = getEventForWeek(fixture({ year: 1, week: 26, isVacation: false }));
+      expect(sel.event?.id, 'elementary_semester2_start_survives_on_y1_w26').toBe('elementary-semester2-start');
+    });
+
+    it('class_president_2_y2_to_y7_week_25_unchanged', () => {
+      for (let year = 2; year <= 7; year++) {
+        const sel = getEventForWeek(fixture({ year, week: 25, isVacation: false }));
+        expect(sel.event?.id, 'class_president_2_y2_to_y7_week_25_unchanged').toBe('class-president-2');
+      }
     });
   });
 });
