@@ -2,6 +2,12 @@
 // Lists every CG file present under public/images/events/ at build time.
 // Used by GameScreen to skip non-existent CG candidates without 404 round-trips.
 export const CG_MANIFEST: ReadonlySet<string> = new Set([
+  'common/climax_parent_emotional.png',
+  'common/climax_parent_freedom.png',
+  'common/climax_parent_info.png',
+  'common/climax_parent_resilience.png',
+  'common/climax_parent_strict.png',
+  'common/climax_parent_wealth.png',
   'common/talk_haeun_90_empty_line.png',
   'common/talk_jihun_90_bench.png',
   'common/talk_junha_90_umbrella.png',
