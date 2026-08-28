@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { AudioToggle } from './AudioToggle';
 import { ParentStrength } from '../engine/types';
 import { useGameStore } from '../engine/store';
@@ -7,6 +7,7 @@ import { Portrait } from './Portrait';
 import { ConfirmDialog } from './ConfirmDialog';
 import { webpSrc } from '../engine/assetWebp';
 import { loadArchive } from '../engine/archive';
+import { runWhenIdle } from '../engine/assetPrefetch';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 
 // 기록실은 타이틀의 **곁가지**다 — 첫 화면을 그리는 데 필요 없는데도 정적 import라
@@ -79,6 +80,23 @@ export function TitleScreen() {
   // 도전 모드 게이트(hasCleared)는 그대로 완주 조건을 쓴다 — 둘은 다른 질문에 답한다.
   const archive = loadArchive();
   const hasArchive = archive.runs > 0 || archive.events.length > 0;
+
+  // 기록실 청크를 첫 페인트 **뒤** idle에 미리 받아 둔다. 지연 로딩과 모순이 아니다 —
+  // 막고 싶은 건 부팅 번들에 실려 첫 페인트를 지연시키는 것이고, 페인트가 끝난 뒤의
+  // 다운로드는 공짜다(GameScreen이 이벤트 화면 청크에 쓰는 것과 같은 패턴).
+  //
+  // 타이틀에서 특히 필요한 이유: 이 화면만 **배경 사진**이 깔린다. 청크를 눌러서 받으면
+  // 사진 → 단색 fallback → 기록실의 2단 깜빡임이 되어, 깜빡임을 없애려고 만든 fallback이
+  // 여기선 깜빡임을 만든다. 미리 받아두면 fallback 프레임 자체가 안 뜬다.
+  // 버튼이 없는 사람(첫 플레이어)에겐 받지 않는다 — 그 판엔 영원히 안 쓸 청크다.
+  const archivePrefetched = useRef(false);
+  useEffect(() => {
+    if (!hasArchive || archivePrefetched.current) return;
+    return runWhenIdle(() => {
+      archivePrefetched.current = true;
+      void import('./screens/ArchiveScreen');
+    });
+  }, [hasArchive]);
 
   const toggle = (id: ParentStrength) => {
     if (selected.includes(id)) {

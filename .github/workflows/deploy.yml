@@ -72,6 +72,15 @@ jobs:
         working-directory: ./game
         run: npm run verify:dist-hygiene
 
+      # 게이트 2d — 청크 분할. **여기서만 확인 가능하다:** 소스에 lazy()가 그대로 있어도
+      # 다른 파일의 정적 import 하나, 또는 codeSplitting 설정 변경만으로 그 화면이 부팅
+      # 번들에 도로 실린다 — 소스 스캔은 둘 다 그린이다. 증상은 "느려짐"뿐이라 눈에 안 띈다.
+      # (실측: 정적 import로 되돌려도 vitest 871개가 전부 통과했다.)
+      # content-verify job은 별도 러너라 dist를 볼 수 없어서 이 job에 둔다.
+      - name: Verify dist chunks
+        working-directory: ./game
+        run: npm run verify:dist-chunks
+
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
