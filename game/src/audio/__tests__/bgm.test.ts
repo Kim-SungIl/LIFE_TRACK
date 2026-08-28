@@ -451,28 +451,27 @@ describe('루프 스케줄', () => {
 
   it('정지하면 예약 타이머를 남기지 않는다', () => {
     vi.useFakeTimers();
-    // **절대값 0이 아니라 기준선 대비로 본다.** 이 테스트가 CI(ubuntu·Node 22)에서만
-    // `expected 1 to be +0`으로 깨졌다 — 로컬(macOS·Node 25)에서는 0이다. getTimerCount()는
-    // 이 모듈이 건 것뿐 아니라 **환경(jsdom/vitest 내부)이 건 것까지** 센다. 그 수는 플랫폼마다
-    // 다르므로 0을 기대하면 제품과 무관한 이유로 빨강이 된다.
-    // 잠그려던 것(정지 후에도 루프 타이머가 남는 변형: 뮤테이션 M20)은 그대로 잡힌다 —
-    // 남으면 개수가 기준선으로 돌아오지 않는다.
-    const ambient = vi.getTimerCount();
     const { oscs } = installStub();
-    const cStub = vi.getTimerCount();
     unlockAudio();
-    const cUnlock = vi.getTimerCount();
     setBgmEnabled(true);
-    const cEnable = vi.getTimerCount();
+    // **기준선은 준비가 끝난 지점에서 잡는다 — 절대값 0이 아니다.**
+    // 이 단언이 오래 `toBe(0)`이었고 로컬(macOS·Node 25)에서는 통과했는데, Test 게이트를
+    // CI(ubuntu·Node 22)에 넣자마자 `expected 1 to be +0`으로 깨졌다. CI에서 단계별로
+    // 세어 보니 `설정 저장(setBgmEnabled) 직후 이미 1`, startBgm 뒤 2, stopBgm 뒤 1이었다
+    // (Node 25에서는 각각 0·1·0). 즉 남는 하나는 루프 타이머가 아니라 설정 저장 경로가
+    // 만든 것이고, 그 유무는 런타임/jsdom 구현에 달렸다.
+    // getTimerCount()는 이 모듈 것만 세지 않으므로, 0을 기대하면 제품과 무관하게 빨강이 된다.
+    //
+    // 잠그려던 것은 그대로 잡힌다: 이 단언은 "startBgm이 건 것을 stopBgm이 되돌리는가"이고,
+    // stopBgm의 clearTimeout을 지우는 변형(뮤테이션 M20)은 여전히 여기서 실패한다(실측).
+    const before = vi.getTimerCount();
     startBgm();
-    const cStart = vi.getTimerCount();
-    expect(vi.getTimerCount(), '재생 중에는 다음 루프 타이머가 있다').toBeGreaterThan(ambient);
+    expect(vi.getTimerCount(), '재생 중에는 다음 루프 타이머가 있다').toBeGreaterThan(before);
 
     stopBgm();
     // playing 플래그로 막는 것만으로는 부족하다 — 타이머 자체가 남으면 누수다.
     // (플래그만 보는 단언은 타이머를 남기는 변형을 못 잡는다: 뮤테이션 M20)
-    const trace = `[trace ambient=${ambient} stub=${cStub} unlock=${cUnlock} enable=${cEnable} start=${cStart} node=${process.version}]`;
-    expect(vi.getTimerCount(), `타이머를 실제로 해제한다 ${trace}`).toBe(ambient);
+    expect(vi.getTimerCount(), '타이머를 실제로 해제한다').toBe(before);
     const after = oscs.length;
     vi.advanceTimersByTime(60_000);
     expect(oscs.length, '더 이상 예약하지 않는다').toBe(after);
