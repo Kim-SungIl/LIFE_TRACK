@@ -3,6 +3,10 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
+import {
+  FIRST_PAINT_TEXT,
+  expectedPreloadUrls,
+} from './src/styles/first-paint-fonts'
 
 // 릴리즈 빌드(GEN_WEBP=1)에서만 dist/images의 png를 webp로 트랜스코딩하고 원본 png를 지운다.
 // 소스(public/images)는 건드리지 않으므로 병렬 CG 작업과 무충돌. 일반 build/check는 no-op.
@@ -102,8 +106,52 @@ function serveCgReviewPlugin(): Plugin {
   }
 }
 
+// 첫 화면 Pretendard 조각을 index.html <head>에 preload. 해시된 파일명은 번들에서만
+// 알 수 있고, CSS url과 한 글자라도 다르면 브라우저가 별개 리소스로 받아 두 번 받는다.
+// crossorigin 누락도 같다(preload 익명 + CSS CORS). href는 dist CSS가 방출한 url 그대로.
+function firstPaintFontPreloadPlugin(): Plugin {
+  return {
+    name: 'first-paint-font-preload',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler(html, ctx) {
+        if (!ctx.bundle) {
+          throw new Error('[first-paint-font-preload] ctx.bundle이 없다 — order:"post"에서만 동작한다')
+        }
+
+        const cssParts: string[] = []
+        for (const item of Object.values(ctx.bundle)) {
+          if (item.type !== 'asset' || !item.fileName.endsWith('.css')) continue
+          const src = item.source
+          cssParts.push(typeof src === 'string' ? src : new TextDecoder().decode(src))
+        }
+        const css = cssParts.join('\n')
+        if (!css) {
+          throw new Error('[first-paint-font-preload] 번들에 CSS가 없다')
+        }
+
+        const urls = expectedPreloadUrls(css, FIRST_PAINT_TEXT)
+        if (urls.length === 0) {
+          throw new Error('[first-paint-font-preload] 선택된 폰트 조각이 0개다 — FIRST_PAINT_TEXT/unicode-range 확인')
+        }
+        // 상한은 여기서 throw하지 않는다. 빌드 크래시는 단언이 아니라서, 92조각 전부
+        // preload 뮤테이션을 verify-dist-fonts 섹션 6이 잡아야 한다.
+
+        const tags = urls
+          .map(href => `    <link rel="preload" as="font" type="font/woff2" href="${href}" crossorigin>`)
+          .join('\n')
+        if (!html.includes('</head>')) {
+          throw new Error('[first-paint-font-preload] </head>가 없다')
+        }
+        return html.replace(/\n\s*<\/head>/, `\n${tags}\n  </head>`)
+      },
+    },
+  }
+}
+
 export default defineConfig({
-  plugins: [react(), webpGenPlugin(), serveCgReviewPlugin()],
+  plugins: [react(), webpGenPlugin(), firstPaintFontPreloadPlugin(), serveCgReviewPlugin()],
   base: process.env.NODE_ENV === 'production' ? '/LIFE_TRACK/' : '/',
   define: {
     // 릴리즈 빌드(GEN_WEBP=1)에서만 true → webpSrc가 .png→.webp 스왑

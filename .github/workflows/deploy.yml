@@ -35,6 +35,15 @@ jobs:
         working-directory: ./game
         run: npm run lint
 
+      # 게이트 1b — 유닛/컴포넌트 테스트. **여기 오기 전까지 CI에서 한 번도 안 돌았다**
+      # (871개가 전부 로컬 전용이었다). 그 상태에서 "테스트로 잠갔다"는 말은 사실이 아니다.
+      # 실측: 폰트 조각 선택의 범위 비교를 `cp <= end`에서 `cp < end`로 바꾸면 첫 화면
+      # preload가 9조각 229KB에서 3조각 83KB로 줄어드는데, vitest는 잡고 CI는 전 게이트를
+      # 통과했다. 전체 스위트가 9초다 — 잠금을 새로 만들 때 여기서 도는지부터 확인할 것.
+      - name: Test
+        working-directory: ./game
+        run: npm test
+
       # 게이트 2 — 타입체크 + 번들 빌드 + 이미지 webp 트랜스코딩 (GEN_WEBP=1)
       # build:release 를 쓰는 이유: 런타임(webpSrc)은 .webp만 요청하는데 일반 build는 png를
       # 그대로 남겨 배포되어, 실서버가 생 png 1.0GB를 서비스하고 .webp는 404가 됐다.
