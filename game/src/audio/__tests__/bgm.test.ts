@@ -451,16 +451,23 @@ describe('루프 스케줄', () => {
 
   it('정지하면 예약 타이머를 남기지 않는다', () => {
     vi.useFakeTimers();
+    // **절대값 0이 아니라 기준선 대비로 본다.** 이 테스트가 CI(ubuntu·Node 22)에서만
+    // `expected 1 to be +0`으로 깨졌다 — 로컬(macOS·Node 25)에서는 0이다. getTimerCount()는
+    // 이 모듈이 건 것뿐 아니라 **환경(jsdom/vitest 내부)이 건 것까지** 센다. 그 수는 플랫폼마다
+    // 다르므로 0을 기대하면 제품과 무관한 이유로 빨강이 된다.
+    // 잠그려던 것(정지 후에도 루프 타이머가 남는 변형: 뮤테이션 M20)은 그대로 잡힌다 —
+    // 남으면 개수가 기준선으로 돌아오지 않는다.
+    const ambient = vi.getTimerCount();
     const { oscs } = installStub();
     unlockAudio();
     setBgmEnabled(true);
     startBgm();
-    expect(vi.getTimerCount(), '재생 중에는 다음 루프 타이머가 있다').toBeGreaterThan(0);
+    expect(vi.getTimerCount(), '재생 중에는 다음 루프 타이머가 있다').toBeGreaterThan(ambient);
 
     stopBgm();
     // playing 플래그로 막는 것만으로는 부족하다 — 타이머 자체가 남으면 누수다.
     // (플래그만 보는 단언은 타이머를 남기는 변형을 못 잡는다: 뮤테이션 M20)
-    expect(vi.getTimerCount(), '타이머를 실제로 해제한다').toBe(0);
+    expect(vi.getTimerCount(), '타이머를 실제로 해제한다').toBe(ambient);
     const after = oscs.length;
     vi.advanceTimersByTime(60_000);
     expect(oscs.length, '더 이상 예약하지 않는다').toBe(after);
