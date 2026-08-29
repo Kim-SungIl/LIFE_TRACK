@@ -146,7 +146,8 @@ const noPatch = (event: GameEvent | null): EventSelection => ({ event, patch: nu
 // speakersTiebreak: 동순위에서 speakers 보유 우선(일회성 관계 이벤트 보호용 레거시 휴리스틱).
 //   fixed 경로 전용 — followup/hardCrisis 경로는 기존 find(순수 배열 순서) 동작 보존을 위해 끈다.
 // 주의: annual vs annual 경합은 우선순위로 풀 수 없다(한쪽이 영구히 가려짐) —
-//   그 경우는 주차를 분리해야 한다 (선례: yuna-birthday W37→W38, minjae-birthday W7→W13).
+//   그 경우는 주차를 분리해야 한다 (선례: yuna-birthday W37→W38, minjae-birthday W7→W13,
+//   elementary-semester2-start W25→W26 — class-president-2와 Y1 경합).
 function pickByPriority(candidates: GameEvent[], speakersTiebreak = true): GameEvent | undefined {
   if (candidates.length <= 1) return candidates[0];
   return [...candidates].sort((a, b) =>

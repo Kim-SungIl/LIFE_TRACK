@@ -44,6 +44,7 @@ interface RunResult {
   weeksWithEvent: number;
   dist: Record<number, number>; // events-in-a-week → 주 수
   cat: { reach: number; followup: number; school: number; fixed: number; conditional: number };
+  byId: Record<string, number>; // 이벤트별 반복 횟수 (한 판)
   reachSeen: number;
   miniTalk: number;       // NPC 미니톡(talkEventsFired) — 사교형에서만 유의미
   parentTalk: number;     // 부모 미니이벤트(parentEventsFired)
@@ -109,11 +110,13 @@ function runOnce(seed: number, gender: 'male' | 'female', parents: [ParentStreng
   const evs = final.events;
   const byWeek = new Map<string, number>();
   const cat = { reach: 0, followup: 0, school: 0, fixed: 0, conditional: 0 };
+  const byId: Record<string, number> = {};
   const reachSeenSet = new Set<string>();
   for (const e of evs) {
     const k = `${e.year}-${e.week}`;
     byWeek.set(k, (byWeek.get(k) ?? 0) + 1);
     cat[categorize(e)]++;
+    byId[e.id] = (byId[e.id] ?? 0) + 1;
     if (reachIds.has(e.id)) reachSeenSet.add(e.id);
   }
   const dist: Record<number, number> = {};
@@ -131,6 +134,7 @@ function runOnce(seed: number, gender: 'male' | 'female', parents: [ParentStreng
     weeksWithEvent: byWeek.size,
     dist,
     cat,
+    byId,
     reachSeen: reachSeenSet.size,
     miniTalk,
     parentTalk,
@@ -175,5 +179,33 @@ for (const mode of ['solo', 'social'] as Mode[]) {
     console.log('카테고리별 평균:', catKeys.map(k => `${k} ${fmt(avg(runs.map(r => r.cat[k])))}`).join(' / '));
     const reachSeen = runs.map(r => r.reachSeen);
     console.log(`도달형 관람: 평균 ${fmt(avg(reachSeen))} / ${totalReach} (${fmt(avg(reachSeen) / totalReach * 100)}%)`);
+
+    // 이벤트별 반복 — 상위 N이 총량의 몇 %인지, 1회성 고유 이벤트가 얼마나 많은지.
+    const allIds = new Set<string>();
+    for (const r of runs) for (const id of Object.keys(r.byId)) allIds.add(id);
+    const idStats = [...allIds].map(id => {
+      const counts = runs.map(r => r.byId[id] ?? 0);
+      return { id, avg: avg(counts), max: Math.max(...counts), min: Math.min(...counts) };
+    }).sort((a, b) => b.avg - a.avg);
+    const autoAvg = avg(totals);
+    const topN = idStats.slice(0, 15);
+    const onceOnly = idStats.filter(x => x.max === 1).length;
+    console.log(`이벤트별 반복 (고유 ${idStats.length}종, 최대 1회 ${onceOnly}종)`);
+    console.log(`  상위 6개 합계 ${fmt(topN.slice(0, 6).reduce((s, x) => s + x.avg, 0))} / 자동 ${fmt(autoAvg)} (${fmt(topN.slice(0, 6).reduce((s, x) => s + x.avg, 0) / autoAvg * 100)}%)`);
+    console.log('  상위 15:');
+    for (const row of topN) {
+      console.log(`    ${row.id.padEnd(28)} 평균 ${fmt(row.avg).padStart(5)}  최대 ${String(row.max).padStart(2)}  최소 ${row.min}`);
+    }
+    const lockIds = [
+      'president-mediate', 'president-errand', 'president-speech',
+      'fatigue-warning', 'good-grade',
+      'class-president', 'class-president-2', 'elementary-semester2-start',
+    ];
+    console.log('  잠금:');
+    for (const id of lockIds) {
+      const row = idStats.find(x => x.id === id);
+      if (!row) { console.log(`    ${id.padEnd(28)}  (미발동)`); continue; }
+      console.log(`    ${id.padEnd(28)} 평균 ${fmt(row.avg).padStart(5)}  최대 ${String(row.max).padStart(2)}  최소 ${row.min}`);
+    }
   }
 }

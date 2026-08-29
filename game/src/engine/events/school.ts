@@ -518,12 +518,14 @@ export const SCHOOL_MIDDLE_HIGH = [
       },
     ],
   },
-  // ===== 초등 2학기 시작 (Y1 W25) — 여름방학 끝, 9월 초 =====
+  // ===== 초등 2학기 시작 (Y1 W26) — class-president-2(W25, 매년)와 경합하지 않게 한 주 뒤로 옮겼다.
+  // W25는 여름방학(W20-24) 직후 개학 주. 2학기 선거가 모든 학년과 같은 주에 열리고,
+  // 이 장면(초6 마지막 학기)은 그 다음 주에 온다. 복사 축은 그대로 "마지막 학기/졸업".
   {
     id: 'elementary-semester2-start',
     title: '2학기 시작',
-    description: '여름방학이 끝나고 2학기가 시작됐다.\n반 애들이 햇빛에 탄 얼굴로 돌아왔다.\n선생님이 "이제 정말 마지막 학기다" 하고 칠판을 톡톡 두드렸다.\n벌써 졸업이라니.',
-    week: 25,
+    description: '교실에 돌아온 지 며칠이 지났다.\n반 애들의 얼굴에 여름 햇볕이 아직 남아 있다.\n선생님이 "이제 정말 마지막 학기다" 하고 칠판을 톡톡 두드렸다.\n벌써 졸업이라니.',
+    week: 26,
     condition: (s) => s.year === 1,
     location: 'classroom',
     background: 'classroom_elementary_afternoon',

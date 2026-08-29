@@ -2,6 +2,7 @@ import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } f
 import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
+import { assignCurrentEvent } from './eventPresentation';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
 import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
@@ -722,8 +723,7 @@ function selectEventForWeek(state: GameState): void {
     state.hardCrisisYears = selection.patch.hardCrisisYears;
   }
   if (selection.event) {
-    state.currentEvent = { ...selection.event, week: state.week };
-    state.phase = 'event';
+    assignCurrentEvent(state, selection.event, state.week);
   }
 }
 

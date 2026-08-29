@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { playSfx } from '../audio/sfx';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
+import { presentEvent } from '../engine/eventPresentation';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
 import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
@@ -239,6 +240,15 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const [maxPageReached, setMaxPageReached] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // 표시 문장 단일 진입점 — 카탈로그 원본을 넘겨도, 이미 구운 currentEvent를 넘겨도 같다(멱등).
+  // 저장 재수화(stateMigration)도 이제 presentEvent로 구워 넣으므로 state.currentEvent와
+  // 화면이 같은 문장을 쓴다. 그래도 이 줄은 남는다 — 카탈로그 원본이 직접 들어오는
+  // 경로(테스트·디버그 패널)에서 변이를 보장하는 것이 여기다.
+  const presented = useMemo(() => {
+    const week = event.week ?? state?.week ?? 1;
+    return presentEvent(event, { year, week, gender });
+  }, [event, year, gender, state?.week]);
+
   // Inject keyframes on mount
   useEffect(() => {
     injectKeyframes();
@@ -273,9 +283,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   useEffect(() => {
     const level = getSchoolLevel(year);
     const genderSuffix = gender === 'male' ? 'm' : 'f';
-    const choiceCount = (gender === 'female' && event.femaleChoices)
-      ? event.femaleChoices.length
-      : event.choices.length;
+    const choiceCount = presented.choices.length;
     const candidates: string[] = [];
     for (let ci = 0; ci < choiceCount; ci++) {
       for (const dir of [level, 'common']) {
@@ -291,12 +299,10 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       }
     }
     prefetchAssets(candidates.map(webpSrc));
-  }, [event.id, gender, year, event.choices.length, event.femaleChoices]);
+  }, [event.id, gender, year, presented.choices.length]);
 
-  // Gender-specific description/choices
-  const isFemale = gender === 'female';
-  const eventDesc = (isFemale && event.femaleDescription) ? event.femaleDescription : event.description;
-  const eventChoices = (isFemale && event.femaleChoices) ? event.femaleChoices : event.choices;
+  const eventDesc = presented.description;
+  const eventChoices = presented.choices;
   // condition이 있는 선택지는 만족하지 않으면 숨김 — 원본 인덱스 유지
   const visibleChoices: { choice: EventChoice; originalIndex: number }[] = eventChoices
     .map((choice, originalIndex) => ({ choice, originalIndex }))
