@@ -279,11 +279,18 @@ describe('변이 계약 — 잠그지 않으면 조용히 깨지는 것들', () 
     // 학년이 1 늘 때 인덱스 이동량이 length의 배수면 축이 죽는다. 지금 길이(2)만 확인하면
     // **길이를 바꾸는 순간 조용히 재발**한다 — 실제로 두 번 겪었다(이동량 48 → 전멸,
     // 49 = 7² → length 7에서 전멸). 그래서 특정 길이가 아니라 구간 전체를 잠근다.
+    // `toEqual([])`은 양쪽이 비면 통과한다(empty-empty). 루프 범위를 좁히는 것만으로 검사가
+    // 통째로 공허해지므로, **무엇을 실제로 봤는지**를 함께 잠근다.
     const dead: number[] = [];
+    const checked: number[] = [];
     for (let L = 2; L <= 60; L++) {
+      checked.push(L);
       const seen = new Set([1, 2, 3, 4, 5, 6, 7].map(y => pickVariantIndex(y, 10, L)));
       if (seen.size === 1) dead.push(L);
     }
+    expect(checked.length, '구간 자체가 잠겨 있어야 한다 (L=2..60)').toBe(59);
+    expect(checked[0]).toBe(2);
+    expect(checked[checked.length - 1]).toBe(60);
     expect(dead, 'rotation_axis_alive_for_every_plausible_length').toEqual([]);
 
     // 주차 축도 함께 살아 있어야 한다(학년만 섞고 주차를 잃으면 반쪽이다).
