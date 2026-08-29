@@ -24,11 +24,14 @@
 // (일반 build와 build:release의 청크 이름 집합은 동일함을 실측 확인했다 — 해시만 다르고
 //  webp 플러그인은 이미지 태그만 건드린다.)
 //
-// **커버리지 한계(과신 금지).** 이 검사가 보는 것은 ① 지연 화면이 자기 청크로 갈렸는가
-// ② 그 청크가 부팅 그래프(엔트리 + modulepreload)에 없는가 ③ 그 청크가 껍데기가 아닌가
-// ④ (ArchiveScreen 한정) 본문 문자열이 부팅이 아니라 자기 청크에 있는가 뿐이다.
-// **잡지 못하는 것**: 청크 크기 회귀, 부팅 그래프 자체가 비대해지는 것, 지연 화면이 실제로
-// 열리는지(그건 컴포넌트 테스트 몫 — lazyScreenWiring.test.tsx가 클릭 왕복과 fallback을 본다).
+// **커버리지 한계(과신 금지).** 확실히 잡는 것은 지연 화면 **본체**가 부팅으로 옮겨간 경우다
+// (① 청크 분리 ② 부팅 그래프 부재 ③ 껍데기 아님 ④ ArchiveScreen 한정 본문 문자열 위치).
+// 7절의 청크 수·본문 하한은 **트립와이어이지 증명이 아니다** — 지연 화면의 *자식* 모듈이
+// 부팅으로 새는 회귀를 그림자로만 본다. 작은 자식 하나가 엔트리 청크에 녹아들면
+// 둘 다 안 움직일 수 있다. 자세한 근거는 MAX_BOOT_CHUNKS 선언부 주석에 적어 뒀다.
+// **잡지 못하는 것**: 위 사각지대, 공유 청크를 만들어 modulepreload에 올리는 식의 부분 유출,
+// 지연 화면이 실제로 열리는지(그건 컴포넌트 테스트 몫 — lazyScreenWiring.test.tsx가
+// 클릭 왕복과 fallback 프레임을 본다).
 //
 // 실행: cd game && npm run build && npx tsx scripts/verify/verify-dist-chunks.ts
 
@@ -59,6 +62,43 @@ const ANCHOR = { chunk: 'ArchiveScreen', text: '함께한 사람들' } as const;
 // 부팅 그래프를 잘못 찾았거나 파일을 못 읽었으면 이 카운트가 0이 되어 먼저 걸린다.
 const BOOT_PROBE = '7년의 시간표';
 
+// ── 7절 트립와이어 (증명이 아니다) ───────────────────────────────────────────
+// 5·6절은 **지연 화면 본체**가 옮겨갔는지만 본다. 그 화면의 **전용 자식 모듈**이 부팅
+// 경로에서 정적 import되면 청크는 살아 있고 코드도 남아 6개 절이 전부 통과한다(실측:
+// TitleScreen에 NpcAlbumScreen을 정적 import → ArchiveScreen 청크 10,264B → 4,326B,
+// 부팅 그래프 7파일 913,610B → 10파일 921,388B, 그런데 검사기는 EXIT=0).
+// 원인이 "정적 참조 부활"이라 이 파일이 잡겠다고 선언한 바로 그 회귀인데, 서브모듈
+// 단위로 일어났을 뿐이다.
+//
+// 아래 둘은 그 회귀를 **완전히 막지 못한다.** 구조 변화(청크 수)와 규모 급감(본문 크기)이라는
+// 두 그림자만 본다. 잡히는 것과 안 잡히는 것을 실측해 뒀다:
+//   ✓ 화면 **전용** 자식(NpcAlbumScreen→기록실, RunArchiveSummary→엔딩): 청크 수 7→10.
+//   ✗ 여러 지연 화면이 **공유하는** 자식(memoryVisuals→학년말·엔딩): 그 자식의 전용 청크가
+//     엔트리에 통째로 흡수되어 **청크 수는 7 그대로**, 부팅 바이트만 913,610→918,054(+0.5%).
+//     소비하는 두 화면의 본문 크기도 그대로다(엔트리에서 import할 뿐이라). 두 그림자 다 안 움직인다.
+// 바이트 예산으로도 못 잡는다 — 0.5%는 이벤트 몇 개 추가와 구분되지 않는다.
+// 정밀하게 닫으려면 rollup의 `chunk.modules`로 **모듈 단위 귀속**을 baseline과 대조해야 하고
+// (빌드 플러그인 + 커밋된 맵 파일), 그건 이 검사기의 범위를 넘는 별도 작업이다.
+// 그래도 아래 둘을 두는 이유는, 실측된 회귀 중 전용 자식 유출은 반드시 건드리기 때문이다.
+
+// 부팅에 받는 JS 청크 수. **바이트가 아니라 개수**인 이유: 부팅 청크에는 GAME_EVENTS가
+// 들어 있어 이벤트를 추가할 때마다 바이트가 늘어난다 — 바이트 예산은 콘텐츠 작업마다
+// 깨져서 무관한 PR을 빨갛게 만든다. 개수는 모듈 그래프 **구조**가 바뀔 때만 움직이고,
+// 그때는 사람이 봐야 하는 순간이 맞다.
+const MAX_BOOT_CHUNKS = 7;          // 실측 7 (엔트리 1 + modulepreload 6)
+
+// 지연 청크 본문의 하한. **줄어들 때만** 걸린다(늘어나는 건 자유).
+// 값은 실측치의 약 65%다 — 정상적인 리팩터링 여유를 두면서 위 −58% 사례는 잡는 선.
+// 화면을 정말 가볍게 만들었다면 새 실측치를 확인하고 이 수를 내려라. 그 전에
+// **부팅 경로에 그 화면의 자식을 정적 import한 곳이 없는지부터** 볼 것.
+const MIN_BODY_BYTES: Readonly<Record<string, number>> = {
+  ArchiveScreen: 6200,              // 실측 9553
+  EventScene: 7900,                 // 실측 12173
+  EventResultScreen: 2200,          // 실측 3403
+  YearEndScreen: 4500,              // 실측 6940
+  EndingScreen: 6000,               // 실측 9231
+};
+
 let failed = 0;
 function assert(label: string, ok: boolean, detail = ''): void {
   if (ok) { console.log(`  ✓ ${label}`); return; }
@@ -72,14 +112,24 @@ function countOccurrences(haystack: string, needle: string): number {
   return n;
 }
 
-/** 정적 import/export 문을 걷어낸 나머지 — 이 청크가 **자기 코드**를 갖고 있는가. */
+/** 정적 import/export 문을 걷어낸 나머지 — 이 청크가 **자기 코드**를 갖고 있는가.
+ *
+ *  현 번들러(rolldown)는 껍데기를 `export{e as X}` 형태로만 낸다 — default 전용 export로
+ *  리팩터링해도 `export{e as default}`가 나온다(실측). 그래도 `export default e;`와
+ *  `export*from"..."`을 같이 처리하는 이유는, 그러지 않으면 이 검사가 **번들러 출력 형태에
+ *  기대는 상태**가 되어 output.format을 바꾸는 순간 조용히 뚫리기 때문이다. */
 function bodyWithoutModuleSyntax(code: string): string {
   return code
     .replace(/import\s*\{[^}]*\}\s*from\s*["'][^"']+["']\s*;?/g, '')
     .replace(/import\s*\*\s*as\s+[\w$]+\s*from\s*["'][^"']+["']\s*;?/g, '')
     .replace(/import\s+[\w$]+\s*from\s*["'][^"']+["']\s*;?/g, '')
     .replace(/import\s*["'][^"']+["']\s*;?/g, '')
+    // `export{a}from"..."` / `export*from"..."` / `export*as ns from"..."` — 재수출 형태.
+    .replace(/export\s*\{[^}]*\}\s*from\s*["'][^"']+["']\s*;?/g, '')
+    .replace(/export\s*\*\s*(?:as\s+[\w$]+\s*)?from\s*["'][^"']+["']\s*;?/g, '')
     .replace(/export\s*\{[^}]*\}\s*;?/g, '')
+    // `export default e;` — 식별자 하나만. `export default function(){…}`은 안 걸린다(자기 코드다).
+    .replace(/export\s+default\s+[\w$]+\s*;?/g, '')
     .trim();
 }
 
@@ -180,11 +230,21 @@ assert(`앵커 화면(${ANCHOR.chunk})이 LAZY_SCREENS에 있다`, LAZY_SCREENS.
 assert('countOccurrences가 횟수를 센다',
   countOccurrences('abab', 'ab') === 2 && countOccurrences('abab', 'zz') === 0,
   '"1회 이상"으로 내려앉으면 중복 검출이 죽는다');
-assert('껍데기 판정이 재수출을 문다',
-  isReExportShell('import{t as e}from"./index-abc.js";export{e as EventScene};'),
-  '실제 되돌림 산물(0.06 kB 재수출)을 못 물면 5절이 공허해진다');
+// 재수출 형태는 **한 가지가 아니다.** 현 번들러가 내는 형태만 샘플로 두면, 번들러가
+// 다른 형태를 내기 시작할 때 이 판정이 조용히 뚫린다(cursor 검수 지적).
+for (const [shape, sample] of [
+  ['export{X}', 'import{t as e}from"./index-abc.js";export{e as EventScene};'],
+  ['export{X as default}', 'import{t as e}from"./index-abc.js";export{e as default};'],
+  ['export{X}from', 'export{EventScene}from"./index-abc.js";'],
+  ['export*from', 'export*from"./index-abc.js";'],
+  ['export default X', 'import{t as e}from"./index-abc.js";export default e;'],
+] as const) {
+  assert(`껍데기 판정이 재수출을 문다 — ${shape}`, isReExportShell(sample),
+    '실제 되돌림 산물(0.06 kB 재수출)을 못 물면 5절이 공허해진다');
+}
 assert('껍데기 판정이 정상 청크를 물지 않는다',
-  !isReExportShell('import{a}from"./x.js";const y=()=>a(1);export{y};'),
+  !isReExportShell('import{a}from"./x.js";const y=()=>a(1);export{y};')
+  && !isReExportShell('export default function(){return 1}'),
   '오탐이면 CI가 상시 빨강이 된다');
 
 const bootText = bootNames
@@ -272,6 +332,34 @@ if (anchorPresent) {
     // aria-label을 같은 문구로 다는 무해한 a11y 개선만으로 CI가 빨강이 됐다(검수 실측).
     anchorChunk !== undefined && countOccurrences(codeOf.get(anchorChunk)!, ANCHOR.text) >= 1,
     '지연 청크에 그 화면의 본문 문자열이 없다 — 다른 청크로 옮겨갔다',
+  );
+}
+
+console.log('\n=== 7. 규모 트립와이어 (증명이 아니라 그림자다 — 위 주석 참고) ===');
+assert(
+  `부팅에 받는 청크가 ${bootNames.length}개다 (상한 ${MAX_BOOT_CHUNKS})`,
+  bootNames.length <= MAX_BOOT_CHUNKS,
+  '부팅 그래프에 청크가 늘었다. 지연 화면의 자식 모듈을 부팅 경로에서 정적 import했을 때 ' +
+  '나오는 증상이다. 의도한 구조 변경이면 MAX_BOOT_CHUNKS를 올려라',
+);
+// 하한 목록이 화면을 전부 덮는지 — 한 줄 빠지면 그 화면만 무검사가 된다.
+const uncovered = LAZY_SCREENS.filter(n => MIN_BODY_BYTES[n] === undefined);
+assert(
+  uncovered.length === 0 ? 'MIN_BODY_BYTES가 지연 화면을 전부 덮는다' : `하한 없음: ${uncovered.join(', ')}`,
+  uncovered.length === 0,
+  '하한이 없으면 그 화면은 규모 급감을 아무도 안 본다',
+);
+for (const name of LAZY_SCREENS) {
+  const file = chunkOf.get(name);
+  const floor = MIN_BODY_BYTES[name];
+  if (!file || floor === undefined) continue;       // 위 두 절이 이미 실패로 보고했다
+  const size = bodyWithoutModuleSyntax(codeOf.get(file)!).length;
+  assert(
+    `${name} 본문 ${size}B ≥ ${floor}B`,
+    size >= floor,
+    '이 화면의 코드가 크게 줄었다. **먼저 부팅 경로에서 이 화면의 자식 모듈을 정적 import한 ' +
+    '곳이 없는지 확인해라** — 그게 가장 흔한 원인이다. 정말 화면을 가볍게 만든 것이면 ' +
+    'MIN_BODY_BYTES를 새 실측치에 맞춰 내려라',
   );
 }
 

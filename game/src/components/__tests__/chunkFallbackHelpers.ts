@@ -26,6 +26,15 @@ export function expectChunkFallback(el: HTMLElement | null, ctx: string): void {
   expect(root.style.position, `${ctx}: 화면을 덮지 않는다`).toBe('fixed');
   expect(root.style.inset, `${ctx}: 전체를 덮지 않는다`).toBe('0px');
   expect(root.style.background, `${ctx}: 배경색이 없다`).toBe('var(--bg-primary)');
+  // 덮개를 남기되 **안 보이게** 만들면 위 셋을 전부 만족하면서 결과는 `return null`과 같다
+  // (검수 실측: `opacity: 0` 한 줄로 881개가 전부 통과했다).
+  expect(
+    ['', '1'].includes(root.style.opacity),
+    `${ctx}: 덮개가 투명하다(opacity=${root.style.opacity}) — 아무것도 안 그리는 것과 같다`,
+  ).toBe(true);
+  expect(root.style.visibility, `${ctx}: 덮개가 숨겨졌다`).not.toBe('hidden');
+  expect(root.style.display, `${ctx}: 덮개가 display:none이다`).not.toBe('none');
+  expect(root.style.transform, `${ctx}: 덮개가 변형으로 사라졌다`).not.toMatch(/scale\(\s*0/);
 
   // 스피너를 두지 않기로 한 판단(번쩍임 방지)을 지킨다 — 보이는 자식이 생기면 걸린다.
   const visible = [...root.querySelectorAll<HTMLElement>('*')].filter(e => !isVisuallyHidden(e));

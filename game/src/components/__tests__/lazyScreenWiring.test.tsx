@@ -101,6 +101,14 @@ describe('게임 화면 → 기록장 오버레이 (이 파일에서 기록장�
     fireEvent.click(screen.getByRole('button', { name: /기록장/ }));
     expectChunkFallback(fallbackEl(), '기록장 오버레이');
 
+    // **이 경계가 안쪽에 있어야 하는 이유를 잠근다.** 안쪽 Suspense를 지우면 바깥 경계가
+    // 대신 받아 fallback은 여전히 뜨고 위 단언은 통과한다 — 그런데 그때는 MainWeek가
+    // 통째로 단색에 먹힌다(GameScreen 주석이 말하는 바로 그것). 881개 전부 그린이었다.
+    expect(
+      screen.queryByRole('button', { name: /기록장/ }),
+      '오버레이가 뜨는 동안 MainWeek가 통째로 fallback에 먹혔다 — 경계가 바깥으로 올라갔다',
+    ).toBeTruthy();
+
     await waitFor(() => expect(fallbackEl(), 'YearEndScreen 청크가 끝내 안 왔다').toBeNull());
   });
 });

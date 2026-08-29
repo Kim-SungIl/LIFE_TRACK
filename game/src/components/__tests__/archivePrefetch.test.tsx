@@ -15,14 +15,16 @@ import { render } from '@testing-library/react';
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => `WEBP::${p}` }));
 
 // 팩토리는 호이스팅되므로 카운터는 vi.hoisted 경유로 만든다.
+// `ever`는 beforeEach에서 **되돌리지 않는다** — 아래 순서 함정을 정확히 진단하기 위해서다.
 const { loads, idleTasks } = vi.hoisted(() => ({
-  loads: { n: 0 },
+  loads: { n: 0, ever: false },
   idleTasks: [] as Array<() => void>,
 }));
 
-// 모듈이 실제로 로드될 때만 팩토리가 돈다(vitest가 결과를 캐시하므로 첫 로드에 1회).
+// 모듈이 실제로 로드될 때만 팩토리가 돈다(vitest가 결과를 캐시하므로 파일당 첫 로드에 1회).
 vi.mock('../screens/ArchiveScreen', () => {
   loads.n++;
+  loads.ever = true;
   return { ArchiveScreen: () => null };
 });
 
@@ -76,11 +78,25 @@ describe('기록실 청크 idle prefetch', () => {
   });
 
   // **여기가 본문을 잠근다.** 잡아야 할 변조: ⓐ `void import(...)` 줄 삭제(예약만 남음)
-  // ⓑ 다른 모듈로 교체(`./screens/EndingScreen`). 둘 다 위 두 테스트로는 그린이다.
+  // ⓑ 다른 모듈로 교체(`./screens/EndingScreen`) ⓒ **태스크 밖으로 끌어올리기**
+  // (= 첫 페인트와 경쟁하며 즉시 받는다 — runWhenIdle을 쓰는 이유가 통째로 사라진다).
+  //
+  // ⚠ 이 테스트는 **이 파일에서 기록실 모듈을 처음 건드리는 테스트여야 한다.** vitest의
+  // mock 팩토리는 파일당 1회만 돌고 모듈 레지스트리는 beforeEach로 되돌아가지 않으므로,
+  // 앞선 테스트가 먼저 로드해 버리면 여기서 loads.n이 영영 안 오른다. `loads.ever`가
+  // 그 상황을 "제품 결함"이 아니라 "테스트 순서 문제"로 정확히 지목한다.
   it('예약된 태스크를 실행하면 기록실 모듈을 실제로 받는다', async () => {
     withArchive();
     render(<TitleScreen />);
-    expect(loads.n, '렌더만으로 이미 받았다면 이 테스트가 아무것도 구분하지 못한다').toBe(0);
+
+    // 매크로태스크까지 흘려보낸 뒤에 본다 — 이게 없으면 변조 ⓒ(태스크 밖으로 끌어올리기)가
+    // 아직 도착 전이라 0으로 보여 통과한다(검수 실측: 셔플 10회 중 6회 전부 그린).
+    await new Promise(r => setTimeout(r, 0));
+    expect(
+      loads.ever,
+      '이 파일의 앞선 테스트가 이미 기록실 모듈을 로드했다 — 제품이 아니라 테스트 순서 문제다',
+    ).toBe(false);
+    expect(loads.n, 'idle 예약 없이 이미 받았다 — 첫 페인트와 경쟁한다').toBe(0);
 
     idleTasks[0]!();
 

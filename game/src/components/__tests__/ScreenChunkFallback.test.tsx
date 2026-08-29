@@ -11,7 +11,7 @@ import { render, screen } from '@testing-library/react';
 import { ScreenChunkFallback } from '../ScreenChunkFallback';
 // 서명 판정은 호출부 배선 테스트(lazyScreenWiring)와 **공유한다** — 각자 정의하면
 // 한쪽만 느슨해져도 안 보인다.
-import { isVisuallyHidden } from './chunkFallbackHelpers';
+import { isVisuallyHidden, expectChunkFallback } from './chunkFallbackHelpers';
 
 describe('ScreenChunkFallback', () => {
   it('빈 화면이 아니라 화면을 덮는 요소를 그린다', () => {
@@ -19,12 +19,9 @@ describe('ScreenChunkFallback', () => {
     // `return null` 뮤테이션이 여기서 걸린다.
     expect(container.firstElementChild, '아무것도 그리지 않았다').toBeTruthy();
 
-    const root = container.firstElementChild as HTMLElement;
-    // 덮지 않으면 이전 화면이 남은 채 새 화면이 겹쳐 그려진다.
-    expect(root.style.position, '화면을 덮지 않는다').toBe('fixed');
-    expect(root.style.inset, '전체를 덮지 않는다').toBe('0px');
-    // 배경이 없으면 뒤 화면이 비쳐 "덮었다"가 무의미해진다.
-    expect(root.style.background, '배경색이 없다').toBe('var(--bg-primary)');
+    // 서명 판정은 호출부 테스트와 **같은 함수**를 쓴다. 각자 단언을 적으면 한쪽만
+    // 느슨해져도 안 보인다(실측: `opacity: 0` 변조를 호출부 테스트만 잡았다).
+    expectChunkFallback(container.firstElementChild as HTMLElement, '고립 렌더');
   });
 
   it('스크린리더용 문구를 담되 눈에는 보이지 않는다', () => {
