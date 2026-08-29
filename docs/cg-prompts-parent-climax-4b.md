@@ -11,10 +11,15 @@
 >   노출면은 엔딩 회상 · 학년말 회고 · 기록실/앨범뿐이다(기존 `common/talk_*.png` 8장과 같은 구조).
 > - 90런에서 엔딩 회상에 실제로 뜬 것은 info 20 · freedom 20 · emotional 9 · wealth 1 · **strict 0 · resilience 0**.
 >   뒤 둘은 `growth` 카테고리라 카테고리 cap 경합(`memorySystem.ts`)에서 밀린다. 런당 슬롯 생존도 2회 발동 대비 0.89개.
-> - **회수 기준 1등은 `adolescence-clash`다** — `condition: (s) => s.year === 3`으로 **매 판 무조건** 발동하고
->   슬롯 선택지가 2개(c0 betrayal/5, c2 growth/5)인데 CG 0장이다. 같은 90런에서 엠블럼 자리 **60건 = 50%**를
->   이 한 이벤트가 차지한다. 신규 2컷(성별 분기 시 4컷)으로 60건 — 컷당 회수가 절정 6장의 1.5~4배다.
->   **다음 배치에 반드시 끼울 것.** `career-conflict-{info,strict}-{y5,y6}`도 importance 5 · CG 0장이다.
+> - ~~**회수 기준 1등은 `adolescence-clash`다** — 같은 90런에서 엠블럼 자리 **60건 = 50%**를 이 한 이벤트가
+>   차지한다. 컷당 회수가 절정 6장의 1.5~4배다.~~
+>   🚫 **이 문단은 오측정이다(2026-08-28 정정).** QA 페르소나 하네스 **348런**(29 페르소나) 재측정에서
+>   CG 없는 회상 칸 252칸 중 `adolescence-clash`는 **24칸(9.5%)**이고 1등은 **`jihun-promise` 204칸(81%)**이다.
+>   `adolescence-clash`의 슬롯 두 개는 **엔딩 그림 자리에 거의 못 간다** — c0(betrayal/regret)은 후회 층으로
+>   가고(그림 없음, 86.2% 판), c2(growth/5)는 imp 8인 `yuna-smile`·`graduation-prep-high`에 밀려 cap에서
+>   빠진다. 그래도 그릴 값은 있는데 근거가 다르다(매 판 100% 발동 → **결과 화면 전체화면 노출**).
+>   상세는 `docs/cg-prompts-adolescence-4d.md`.
+>   `career-conflict-info-{y5,y6}`도 importance 5 · CG 0장이고 각 12칸(4.8%)이다.
 > - 그리고 **아트 없이 해소되는 배치 오류**가 따로 있다: `jihun-promise`(importance 8, Y2 발동인데 자산은 `high/`),
 >   `minjae-honest`(high 발동인데 자산은 `middle/`), `yuna-study`(Y1 발동인데 자산은 `middle`+`high`).
 >   파일 위치만 옮기면 되지만 **학교급이 다른 그림을 재사용하는 톤 위험이 있어 "무료"는 아니다**
