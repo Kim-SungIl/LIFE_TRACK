@@ -117,18 +117,22 @@ describe('class-president-2 Y1 유실 복구', () => {
     expect(outcomes, 'class_president_2_outcome_fires_every_year').toHaveLength(7);
 
     // 매 해 연설이 결과보다 먼저다 — 아래 우선순위 계약의 실경로 확인.
+    // **-1 공허통과 차단**: 연설이 그 해 W25에 없으면 indexOf가 -1이라 "먼저"가 자동 성립한다.
+    // 두 인덱스가 실제로 존재하는지부터 단언한다.
     for (let y = 1; y <= 7; y++) {
       const order = evs.filter(e => e.year === y && e.week === 25).map(e => e.id);
-      expect(order.indexOf('class-president-2-speech'),
-        `Y${y}: 연설이 결과보다 먼저`).toBeLessThan(
-        Math.max(order.indexOf('class-president-2-win'), order.indexOf('class-president-2-lose')));
+      const si = order.indexOf('class-president-2-speech');
+      const oi = Math.max(order.indexOf('class-president-2-win'), order.indexOf('class-president-2-lose'));
+      expect(si, `Y${y}: 연설이 그 해 W25에 실제로 있다`).toBeGreaterThanOrEqual(0);
+      expect(oi, `Y${y}: 결과가 그 해 W25에 실제로 있다`).toBeGreaterThanOrEqual(0);
+      expect(si, `Y${y}: 연설이 결과보다 먼저`).toBeLessThan(oi);
     }
 
     // 세이브 위생: 변이 테이블은 카탈로그 소유다. 기록에 복제되면 세이브가 44% 불어난다.
     const chores = evs.filter(e => (e.id as string).startsWith('president-'));
     expect(chores.length, '이 단언이 의미를 가지려면 잡무가 실제로 발동해야 한다').toBeGreaterThan(10);
     expect(evs.filter(e => e.schoolVariants), 'recorded_events_carry_no_schoolVariants').toHaveLength(0);
-    expect(evs.filter(e => e.presentedFemale !== undefined), 'presentedFemale은 기록에 남지 않는다').toHaveLength(0);
+    expect(evs.filter(e => e.presentedFemaleChoices !== undefined), 'presentedFemaleChoices는 기록에 남지 않는다').toHaveLength(0);
   }, 60_000);
 
   it('speech_outranks_outcome_by_priority: 배열 순서가 아니라 데이터로 갈린다', () => {

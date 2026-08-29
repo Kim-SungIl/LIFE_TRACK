@@ -2,8 +2,8 @@
 //
 // 축:
 //   1) 학교급(초/중/고) — getSchoolLevel(year). 배경 classroom_{school}과 같은 뼈대.
-//   2) 같은 학교급 안 로테이션 — (absWeek(year, week) + year) % variants.length
-//      (+ year가 없으면 학년 항이 48의 배수라 상쇄된다 — pickVariantIndex 주석 참조)
+//   2) 같은 학교급 안 로테이션 — (absWeek(year, week) + YEAR_MIX * year) % variants.length
+//      (학년 항을 섞지 않으면 48의 배수라 상쇄돼 축이 죽는다 — pickVariantIndex 주석 참조)
 //
 // 난수를 쓰지 않는 이유: seededRandom(state)는 rngSeed를 mutate한다(rng.ts).
 // 변이 뽑기에 쓰면 이후 모든 굴림이 한 칸씩 밀려 시드 재현·sim 수치가 같이 흔들린다.
@@ -27,14 +27,19 @@ export function schoolBandForYear(year: number): SchoolBand {
   return getSchoolLevel(year);
 }
 
+// 학년이 1 늘 때 인덱스가 움직이는 양 = 48 + YEAR_MIX.
+// **이 값이 length의 배수면 학년 축이 죽는다** — 같은 주차의 모든 학년이 같은 변이를 받는다.
+//   · YEAR_MIX 없음 → 이동량 48. 48은 2·3·4·6·8·12·16·24로 나누어떨어져서 축이 아예 없었다
+//     (band당 변이 2개인 잡무 3종은 Y5·Y6·Y7 W10이 전부 index 0이었다).
+//   · YEAR_MIX = 1 → 이동량 49 = 7². length 7·14·49에서 다시 죽거나 부분 퇴화한다.
+//   · YEAR_MIX = 13 → 이동량 61(소수). length 2~60 전 구간에서 축이 살아 있다.
+// 13을 고른 유일한 이유는 61이 소수라서다. 바꾸려면 (48 + 새 값)이 소수인지부터 확인할 것.
+// length 2에서는 61·year와 49·year가 같은 홀짝이라 **지금 나오는 문장은 하나도 바뀌지 않는다.**
+const YEAR_MIX = 13;
+
 export function pickVariantIndex(year: number, week: number, length: number): number {
   if (length <= 0) return 0;
-  // **48의 배수 함정.** absWeek는 학년당 정확히 48주씩 늘어나고 48은 2·3·4·6·8·12·16·24로
-  // 나누어떨어진다. 그래서 `absWeek % length`만 쓰면 학년 항이 상쇄돼 **축이 죽는다** —
-  // 같은 주차는 몇 학년이든 같은 변이가 나온다(변이 2개인 지금의 잡무 3종은 Y5·Y6·Y7 W10이
-  // 전부 index 0이었다). 고정주차 변이 이벤트가 생기면 7년 내내 같은 문장이 뜬다는 뜻이다.
-  // year를 한 항 더해 배수 성질을 깬다. 난수는 여전히 안 쓰고, 저장/로드 재현도 그대로다.
-  return (absWeek(year, week) + year) % length;
+  return (absWeek(year, week) + YEAR_MIX * year) % length;
 }
 
 function overlayChoices(
@@ -85,12 +90,13 @@ export function presentEvent(event: GameEvent, ctx: EventPresentationCtx): GameE
   const description = isFemale && variant.femaleDescription
     ? variant.femaleDescription
     : variant.description;
-  // 여성 문장을 실제로 집었는가 — femaleChoices를 지우고 나면 복원할 수 없는 정보라
-  // 여기서 접어 둔다. resolvedFemale(엔딩 해시 분기)이 이 값을 읽는다.
-  const usedFemale = isFemale && (
-    !!variant.femaleDescription
-    || variant.choices.some(c => !!c.femaleText || !!c.femaleMessage)
-  );
+  // 여성 문장을 **어느 선택지에서** 집었는가 — femaleChoices를 지우고 나면 복원할 수 없다.
+  // 이벤트 단위 boolean으로 두면 과대 판정이 된다: choice[1]에만 여성 문장이 있는데
+  // 플레이어가 choice[0]을 고른 경우까지 "여성 경로"로 기록된다. resolvedFemale은
+  // (이벤트, 선택지) 짝으로 엔딩을 가르므로(endingNpc) 선택지 단위로 남긴다.
+  const femaleChoiceIdx = isFemale
+    ? variant.choices.flatMap((c, i) => (c.femaleText || c.femaleMessage ? [i] : []))
+    : [];
 
   return {
     ...event,
@@ -100,7 +106,7 @@ export function presentEvent(event: GameEvent, ctx: EventPresentationCtx): GameE
     // resolveEvent/GameScreen이 원본 femaleChoices를 집어 변이가 사라진다.
     femaleDescription: undefined,
     femaleChoices: undefined,
-    presentedFemale: usedFemale || undefined,
+    presentedFemaleChoices: femaleChoiceIdx.length ? femaleChoiceIdx : undefined,
   };
 }
 

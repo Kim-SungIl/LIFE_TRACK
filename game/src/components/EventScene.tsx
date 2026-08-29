@@ -240,8 +240,10 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const [maxPageReached, setMaxPageReached] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // 표시 문장 단일 진입점 — 카탈로그 원본을 넘겨도, 이미 구운 currentEvent를 넘겨도 같다.
-  // 저장 재수화는 카탈로그 원본으로 덮어쓰므로, 여기 한 줄을 빼면 변이가 화면에 안 나온다.
+  // 표시 문장 단일 진입점 — 카탈로그 원본을 넘겨도, 이미 구운 currentEvent를 넘겨도 같다(멱등).
+  // 저장 재수화(stateMigration)도 이제 presentEvent로 구워 넣으므로 state.currentEvent와
+  // 화면이 같은 문장을 쓴다. 그래도 이 줄은 남는다 — 카탈로그 원본이 직접 들어오는
+  // 경로(테스트·디버그 패널)에서 변이를 보장하는 것이 여기다.
   const presented = useMemo(() => {
     const week = event.week ?? state?.week ?? 1;
     return presentEvent(event, { year, week, gender });

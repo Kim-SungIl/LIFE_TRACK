@@ -275,6 +275,24 @@ describe('변이 계약 — 잠그지 않으면 조용히 깨지는 것들', () 
     expect(new Set(bodies).size, '학년이 본문까지 바꾼다').toBeGreaterThan(1);
   });
 
+  it('rotation_axis_alive_for_every_plausible_length: 변이 개수를 늘려도 학년 축이 안 죽는다', () => {
+    // 학년이 1 늘 때 인덱스 이동량이 length의 배수면 축이 죽는다. 지금 길이(2)만 확인하면
+    // **길이를 바꾸는 순간 조용히 재발**한다 — 실제로 두 번 겪었다(이동량 48 → 전멸,
+    // 49 = 7² → length 7에서 전멸). 그래서 특정 길이가 아니라 구간 전체를 잠근다.
+    const dead: number[] = [];
+    for (let L = 2; L <= 60; L++) {
+      const seen = new Set([1, 2, 3, 4, 5, 6, 7].map(y => pickVariantIndex(y, 10, L)));
+      if (seen.size === 1) dead.push(L);
+    }
+    expect(dead, 'rotation_axis_alive_for_every_plausible_length').toEqual([]);
+
+    // 주차 축도 함께 살아 있어야 한다(학년만 섞고 주차를 잃으면 반쪽이다).
+    for (const L of [2, 3, 5, 7]) {
+      const byWeek = new Set([5, 6, 7, 8].map(w => pickVariantIndex(3, w, L)));
+      expect(byWeek.size, `L=${L}: 주차 축`).toBeGreaterThan(1);
+    }
+  });
+
   it('variant_clears_catalog_female_fields: 구운 이벤트에 카탈로그 성별 필드가 남지 않는다', () => {
     // 남으면 resolveEvent(store)가 원본 femaleChoices를 집어 변이가 통째로 사라진다.
     // 카탈로그 잡무엔 성별 필드가 없으므로, 있는 상황을 만들어 놓고 확인한다(양성 픽스처).
@@ -293,24 +311,31 @@ describe('변이 계약 — 잠그지 않으면 조용히 깨지는 것들', () 
     expect(baked.choices[0].message).not.toBe('여성 메시지 0');
   });
 
-  it('presentedFemale: 변이에 여성 문장이 있을 때만 선다 (resolvedFemale 판정 근거)', () => {
+  it('presentedFemaleChoices: 여성 문장을 집은 선택지만 기록된다 (resolvedFemale 판정 근거)', () => {
+    // 이벤트 단위 boolean이면 choice[1]에만 여성 문장이 있어도 choice[0]을 고른 판까지
+    // 여성 경로로 샌다. 엔딩은 (이벤트, 선택지) 짝으로 갈리므로 인덱스로 남긴다.
     const catalog = chore('president-errand');
     const idx = pickVariantIndex(6, 10, catalog.schoolVariants!.high.length);
 
-    // 여성 문장이 없는 지금의 잡무 → 세우지 않는다.
-    expect(presentEvent({ ...catalog, week: 10 }, ctx(6, 10, 'female')).presentedFemale).toBeUndefined();
+    // 여성 문장이 없는 지금의 잡무 → 비어 있다.
+    expect(presentEvent({ ...catalog, week: 10 }, ctx(6, 10, 'female')).presentedFemaleChoices)
+      .toBeUndefined();
 
-    // 변이에 여성 본문을 얹으면 → 선다.
-    const high = catalog.schoolVariants!.high.map((v, i) =>
-      (i === idx ? { ...v, femaleDescription: '여성 변이 본문' } : v));
+    // 변이의 **두 번째 선택지에만** 여성 결과문을 얹는다.
+    const high = catalog.schoolVariants!.high.map((v, i) => (i === idx
+      ? { ...v, femaleDescription: '여성 변이 본문', choices: v.choices.map((c, j) => (j === 1 ? { ...c, femaleMessage: '여성 결과 1' } : c)) }
+      : v));
     const withFemaleVariant: GameEvent = {
       ...catalog,
       schoolVariants: { ...catalog.schoolVariants!, high },
     };
     const baked = presentEvent({ ...withFemaleVariant, week: 10 }, ctx(6, 10, 'female'));
-    expect(baked.presentedFemale, 'presentedFemale').toBe(true);
+    expect(baked.presentedFemaleChoices, 'presentedFemaleChoices').toEqual([1]);
     expect(baked.description).toBe('여성 변이 본문');
-    // 남성은 여성 문장을 안 집으므로 서지 않는다.
-    expect(presentEvent({ ...withFemaleVariant, week: 10 }, ctx(6, 10, 'male')).presentedFemale).toBeUndefined();
+    expect(baked.choices[1].message).toBe('여성 결과 1');
+
+    // 남성은 여성 문장을 안 집으므로 비어 있다.
+    expect(presentEvent({ ...withFemaleVariant, week: 10 }, ctx(6, 10, 'male')).presentedFemaleChoices)
+      .toBeUndefined();
   });
 });

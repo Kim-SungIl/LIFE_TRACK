@@ -123,6 +123,12 @@ describe('migrateLoadedState 정규화', () => {
     expect(out.currentEvent?.choices[liveIdx].condition).toBe(fresh.choices[liveIdx].condition);
     expect(out.currentEvent?.condition).toBe(fresh.condition);
     expect(out.currentEvent?.week).toBe(13);
+    // 참조 동일성을 놓는 대신 **값 불변성**을 명시한다 — 안 그러면 effects 변조가 새 나간다
+    // (구 테스트는 toBe(fresh.choices) 하나로 그것까지 덤으로 막고 있었다).
+    expect(out.currentEvent?.choices.map(c => c.text)).toEqual(fresh.choices.map(c => c.text));
+    expect(out.currentEvent?.choices.map(c => c.message)).toEqual(fresh.choices.map(c => c.message));
+    expect(out.currentEvent?.choices.map(c => c.effects)).toEqual(fresh.choices.map(c => c.effects));
+    expect(out.currentEvent?.choices.map(c => c.fatigueEffect)).toEqual(fresh.choices.map(c => c.fatigueEffect));
   });
 
   it('로드 후 state.currentEvent가 화면과 같은 변이 문장을 들고 있다 (결과창 불일치 차단)', () => {

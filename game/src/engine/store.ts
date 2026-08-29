@@ -233,16 +233,19 @@ function recordResolvedEvent(state: GameState, event: GameEvent, choiceIndex: nu
   // (7년 완주 실측: 332개 항목 중 62개에 중복 적재되어 105.6KB, 세이브의 29%).
   // condition을 지우는 것과 같은 위생이다: 기록은 "무엇을 골랐나"만 남긴다.
   delete recordedEvent.schoolVariants;
-  // presentedFemale은 바로 아래 resolvedFemale로 접어 넣으므로 원본 플래그는 남기지 않는다.
-  delete recordedEvent.presentedFemale;
+  // presentedFemaleChoices는 바로 아래 resolvedFemale로 접어 넣으므로 원본은 남기지 않는다.
+  delete recordedEvent.presentedFemaleChoices;
   state.events.push({
     ...(recordedEvent as GameEvent),
     resolvedChoice: choiceIndex,
     week: occurrenceWeek,
     year: state.year,
     // 변이 이벤트는 presentEvent가 femaleChoices를 지우므로 `!!event.femaleChoices`가 항상
-    // false다. 여성 문장을 실제로 집었는지는 굽는 시점에만 알 수 있어 presentedFemale로 받는다.
-    resolvedFemale: isFemale && (!!event.femaleChoices || event.presentedFemale === true),
+    // false다. 여성 문장을 집었는지는 굽는 시점에만 알 수 있어 presentedFemaleChoices로 받고,
+    // **고른 선택지가 실제로 여성 문장이었는지**까지 본다(엔딩은 (이벤트, 선택지)로 갈린다).
+    resolvedFemale: isFemale && (
+      !!event.femaleChoices || (event.presentedFemaleChoices?.includes(choiceIndex) ?? false)
+    ),
   });
 }
 
