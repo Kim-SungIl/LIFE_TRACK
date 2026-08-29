@@ -256,3 +256,61 @@ describe('currentEvent 대입 4경로', () => {
     expect(state.currentEvent?.description).toBe(catalog.schoolVariants!.high[0].description);
   });
 });
+
+// 검수에서 **뮤테이션이 통과해 버린** 두 계약. 코드 주석은 위험을 명시했는데 단언이 없었다.
+describe('변이 계약 — 잠그지 않으면 조용히 깨지는 것들', () => {
+  it('rotation_axis_includes_year: 같은 주차라도 학년이 다르면 다른 변이를 고른다', () => {
+    // absWeek를 week로 바꾸는 변이가 전 스위트를 통과했다. 같은 band 안에서 학년만 다른
+    // 두 좌표가 서로 다른 인덱스를 내야 축이 살아 있다(고등 = Y5·Y6·Y7).
+    const catalog = chore('president-errand');
+    const n = catalog.schoolVariants!.high.length;
+    expect(n, '이 단언이 성립하려면 고등 변이가 2개 이상이어야 한다').toBeGreaterThan(1);
+
+    const week = 10;
+    const indices = [5, 6, 7].map(y => pickVariantIndex(y, week, n));
+    expect(new Set(indices).size, 'rotation_axis_includes_year').toBeGreaterThan(1);
+
+    // 표현 층에서도 실제로 갈리는지 — 인덱스만 잠그면 presentEvent가 안 써도 통과한다.
+    const bodies = [5, 6, 7].map(y => presentEvent({ ...catalog, week }, ctx(y, week)).description);
+    expect(new Set(bodies).size, '학년이 본문까지 바꾼다').toBeGreaterThan(1);
+  });
+
+  it('variant_clears_catalog_female_fields: 구운 이벤트에 카탈로그 성별 필드가 남지 않는다', () => {
+    // 남으면 resolveEvent(store)가 원본 femaleChoices를 집어 변이가 통째로 사라진다.
+    // 카탈로그 잡무엔 성별 필드가 없으므로, 있는 상황을 만들어 놓고 확인한다(양성 픽스처).
+    const catalog = chore('president-errand');
+    const withFemale: GameEvent = {
+      ...catalog,
+      femaleDescription: '여성 카탈로그 본문',
+      femaleChoices: catalog.choices.map((c, i) => ({ ...c, text: `여성 ${i}`, message: `여성 메시지 ${i}` })),
+    };
+    const baked = presentEvent({ ...withFemale, week: 10 }, ctx(6, 10, 'female'));
+
+    expect(baked.femaleChoices, 'variant_clears_catalog_female_fields').toBeUndefined();
+    expect(baked.femaleDescription).toBeUndefined();
+    // 그리고 실제로 변이 문장이 이겼는지 — 삭제만 확인하면 빈 결과도 통과한다.
+    expect(baked.description).toBe(catalog.schoolVariants!.high[pickVariantIndex(6, 10, catalog.schoolVariants!.high.length)].description);
+    expect(baked.choices[0].message).not.toBe('여성 메시지 0');
+  });
+
+  it('presentedFemale: 변이에 여성 문장이 있을 때만 선다 (resolvedFemale 판정 근거)', () => {
+    const catalog = chore('president-errand');
+    const idx = pickVariantIndex(6, 10, catalog.schoolVariants!.high.length);
+
+    // 여성 문장이 없는 지금의 잡무 → 세우지 않는다.
+    expect(presentEvent({ ...catalog, week: 10 }, ctx(6, 10, 'female')).presentedFemale).toBeUndefined();
+
+    // 변이에 여성 본문을 얹으면 → 선다.
+    const high = catalog.schoolVariants!.high.map((v, i) =>
+      (i === idx ? { ...v, femaleDescription: '여성 변이 본문' } : v));
+    const withFemaleVariant: GameEvent = {
+      ...catalog,
+      schoolVariants: { ...catalog.schoolVariants!, high },
+    };
+    const baked = presentEvent({ ...withFemaleVariant, week: 10 }, ctx(6, 10, 'female'));
+    expect(baked.presentedFemale, 'presentedFemale').toBe(true);
+    expect(baked.description).toBe('여성 변이 본문');
+    // 남성은 여성 문장을 안 집으므로 서지 않는다.
+    expect(presentEvent({ ...withFemaleVariant, week: 10 }, ctx(6, 10, 'male')).presentedFemale).toBeUndefined();
+  });
+});

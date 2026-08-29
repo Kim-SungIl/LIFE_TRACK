@@ -260,6 +260,10 @@ export interface GameEvent {
   schoolVariants?: SchoolVariants;
   resolvedChoice?: number; // 저장된 선택 인덱스 (이벤트 해결 후 기록)
   resolvedFemale?: boolean; // v1.2: femaleChoices 경로로 해결되었는지 (엔딩 해시 구분용)
+  // presentEvent가 변이 경로에서 여성 문장을 **실제로** 적용했는지. schoolVariants가 있으면
+  // presentEvent가 femaleChoices를 지우므로 `!!event.femaleChoices`만으로는 판정할 수 없다.
+  // 굽는 시점에만 세우고, 기록(recordResolvedEvent)에서는 resolvedFemale로 접어 지운다.
+  presentedFemale?: boolean;
   year?: number;           // 저장된 발생 연차 (ANNUAL 재발동 판정용)
   // 도달형(reach) 메타데이터 — 페이싱 엔진용. 있으면 이 이벤트는 도달형으로 취급.
   // npc: 대상 NPC, tier: 친밀도 임계, year: 게이트된 학년(쿨다운 = 48 ÷ 그 NPC·그 해 reach 수).

@@ -146,7 +146,12 @@ export const PRESIDENT_ELECTION = [
     background: 'classroom_{school}',
     // JIHUN_EVENTS가 PRESIDENT_ELECTION보다 배열 앞이라, 우선순위 없이는
     // Y1 W25에서 jihun-basketball이 연설을 삼킨다. DIRECT_SEQUEL은 같은 주에 이어져야 한다.
-    selectionPriority: 20,
+    //
+    // **21인 이유(win/lose는 20)**: win/lose는 선거 c0만 요구하고 연설 선행을 조건에 걸지 않아,
+    // 셋이 동시에 적격일 때 `pickByPriority`가 동점이면 GAME_EVENTS 배열 순서로만 갈렸다
+    // (speech가 win보다 앞이라 우연히 맞았을 뿐). 연설을 한 칸 올려 순서를 데이터로 못박는다.
+    // 조건에 "연설 선행"을 넣지 않는 이유: 연설이 밀리는 해에 결과 장면까지 통째로 사라진다.
+    selectionPriority: 21,
     choices: [
       { text: '"이번 학기엔 더 잘 해보겠습니다" — 1학기 경험을 살려 다짐한다', effects: { social: 3, mental: 1 }, fatigueEffect: 2,
         message: '경험에서 우러난 말이라 무게가 달랐다. 호응이 좋았다.' },

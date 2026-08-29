@@ -108,5 +108,38 @@ describe('class-president-2 Y1 유실 복구', () => {
 
     expect(evs.some(e => e.id === 'elementary-semester2-start' && e.year === 1), 'elementary_semester2_start_survives_on_y1_w26')
       .toBe(true);
+
+    // 검수 지적: 선거만 세면 Y2~Y7에서 연설/결과 체인이 끊겨도 통과한다.
+    const speeches = evs.filter(e => e.id === 'class-president-2-speech');
+    const outcomes = evs.filter(e => e.id === 'class-president-2-win' || e.id === 'class-president-2-lose');
+    expect(speeches.map(e => e.year).sort((a, b) => (a ?? 0) - (b ?? 0)),
+      'class_president_2_speech_fires_every_year').toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(outcomes, 'class_president_2_outcome_fires_every_year').toHaveLength(7);
+
+    // 매 해 연설이 결과보다 먼저다 — 아래 우선순위 계약의 실경로 확인.
+    for (let y = 1; y <= 7; y++) {
+      const order = evs.filter(e => e.year === y && e.week === 25).map(e => e.id);
+      expect(order.indexOf('class-president-2-speech'),
+        `Y${y}: 연설이 결과보다 먼저`).toBeLessThan(
+        Math.max(order.indexOf('class-president-2-win'), order.indexOf('class-president-2-lose')));
+    }
+
+    // 세이브 위생: 변이 테이블은 카탈로그 소유다. 기록에 복제되면 세이브가 44% 불어난다.
+    const chores = evs.filter(e => (e.id as string).startsWith('president-'));
+    expect(chores.length, '이 단언이 의미를 가지려면 잡무가 실제로 발동해야 한다').toBeGreaterThan(10);
+    expect(evs.filter(e => e.schoolVariants), 'recorded_events_carry_no_schoolVariants').toHaveLength(0);
+    expect(evs.filter(e => e.presentedFemale !== undefined), 'presentedFemale은 기록에 남지 않는다').toHaveLength(0);
   }, 60_000);
+
+  it('speech_outranks_outcome_by_priority: 배열 순서가 아니라 데이터로 갈린다', () => {
+    // 셋 다 20이던 시절엔 pickByPriority가 동점 → GAME_EVENTS 배열 순서로만 갈렸다.
+    // speech가 win보다 앞이라 우연히 맞았을 뿐이라, 파일 순서를 바꾸면 조용히 깨졌다.
+    const pri = (id: string) => GAME_EVENTS.find(e => e.id === id)?.selectionPriority ?? 0;
+    expect(pri('class-president-2-speech'), 'speech_outranks_outcome_by_priority')
+      .toBeGreaterThan(pri('class-president-2-win'));
+    expect(pri('class-president-2-speech')).toBeGreaterThan(pri('class-president-2-lose'));
+    // 결과 쪽도 0보다는 높아야 jihun-basketball 같은 무우선순위 followup에 안 밀린다.
+    expect(pri('class-president-2-win')).toBeGreaterThan(0);
+    expect(pri('class-president-2-lose')).toBeGreaterThan(0);
+  });
 });

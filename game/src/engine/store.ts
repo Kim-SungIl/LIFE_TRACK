@@ -229,12 +229,20 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
 function recordResolvedEvent(state: GameState, event: GameEvent, choiceIndex: number, occurrenceWeek: number, isFemale: boolean): void {
   const recordedEvent: Partial<GameEvent> = { ...event };
   delete recordedEvent.condition;
+  // 변이 테이블은 카탈로그가 갖고 있다 — 기록에 복제하면 발동 횟수만큼 세이브가 불어난다
+  // (7년 완주 실측: 332개 항목 중 62개에 중복 적재되어 105.6KB, 세이브의 29%).
+  // condition을 지우는 것과 같은 위생이다: 기록은 "무엇을 골랐나"만 남긴다.
+  delete recordedEvent.schoolVariants;
+  // presentedFemale은 바로 아래 resolvedFemale로 접어 넣으므로 원본 플래그는 남기지 않는다.
+  delete recordedEvent.presentedFemale;
   state.events.push({
     ...(recordedEvent as GameEvent),
     resolvedChoice: choiceIndex,
     week: occurrenceWeek,
     year: state.year,
-    resolvedFemale: isFemale && !!event.femaleChoices,
+    // 변이 이벤트는 presentEvent가 femaleChoices를 지우므로 `!!event.femaleChoices`가 항상
+    // false다. 여성 문장을 실제로 집었는지는 굽는 시점에만 알 수 있어 presentedFemale로 받는다.
+    resolvedFemale: isFemale && (!!event.femaleChoices || event.presentedFemale === true),
   });
 }
 
