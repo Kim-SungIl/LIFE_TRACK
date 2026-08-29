@@ -281,17 +281,24 @@ describe('변이 계약 — 잠그지 않으면 조용히 깨지는 것들', () 
     // 49 = 7² → length 7에서 전멸). 그래서 특정 길이가 아니라 구간 전체를 잠근다.
     // `toEqual([])`은 양쪽이 비면 통과한다(empty-empty). 루프 범위를 좁히는 것만으로 검사가
     // 통째로 공허해지므로, **무엇을 실제로 봤는지**를 함께 잠근다.
-    const dead: number[] = [];
+    // **전멸만 보면 부분 퇴화를 놓친다.** 이동량 49(YEAR_MIX=1)일 때 L=14는 7학년이
+    // 인덱스 2종으로 접히는데 `seen.size === 1`이 아니라서 통과한다. 그래서 "다 같지는 않다"가
+    // 아니라 **min(7, L)개를 전부 채우는지**를 본다(이동량이 length와 서로소일 때의 성질).
+    const weak: string[] = [];
     const checked: number[] = [];
     for (let L = 2; L <= 60; L++) {
       checked.push(L);
-      const seen = new Set([1, 2, 3, 4, 5, 6, 7].map(y => pickVariantIndex(y, 10, L)));
-      if (seen.size === 1) dead.push(L);
+      for (const w of [1, 10, 25, 48]) {
+        const seen = new Set([1, 2, 3, 4, 5, 6, 7].map(y => pickVariantIndex(y, w, L)));
+        if (seen.size !== Math.min(7, L)) weak.push(`L=${L} w=${w}: ${seen.size}종(기대 ${Math.min(7, L)})`);
+      }
     }
+    // `toEqual([])`은 양쪽이 비면 통과한다(empty-empty). 루프 범위를 좁히는 것만으로 검사가
+    // 통째로 공허해지므로, **무엇을 실제로 봤는지**를 함께 잠근다.
     expect(checked.length, '구간 자체가 잠겨 있어야 한다 (L=2..60)').toBe(59);
     expect(checked[0]).toBe(2);
     expect(checked[checked.length - 1]).toBe(60);
-    expect(dead, 'rotation_axis_alive_for_every_plausible_length').toEqual([]);
+    expect(weak, 'rotation_axis_alive_for_every_plausible_length').toEqual([]);
 
     // 주차 축도 함께 살아 있어야 한다(학년만 섞고 주차를 잃으면 반쪽이다).
     for (const L of [2, 3, 5, 7]) {
