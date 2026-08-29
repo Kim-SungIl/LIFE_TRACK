@@ -341,6 +341,8 @@ export const CG_MANIFEST: ReadonlySet<string> = new Set([
   'high/yuna-study_c0_m.png',
   'high/yuna-study_c1_f.png',
   'high/yuna-study_c1_m.png',
+  'middle/adolescence-clash_c0.png',
+  'middle/adolescence-clash_c2.png',
   'middle/doyun-school-split_c0.png',
   'middle/doyun-school-split_c1.png',
   'middle/doyun-school-split_c2.png',
