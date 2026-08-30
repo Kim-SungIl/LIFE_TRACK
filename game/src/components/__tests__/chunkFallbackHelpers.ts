@@ -54,3 +54,51 @@ export function expectChunkFallback(el: HTMLElement | null, ctx: string): void {
   // 반대로 스크린리더용 문구는 있어야 한다(전부 지우면 위 단언은 통과한다).
   expect(root.textContent, `${ctx}: 스크린리더용 문구가 없다`).toContain('불러오는 중');
 }
+
+/**
+ * 위 화이트리스트는 **루트만** 본다. 호출부에서 덮개를 감싸면 컴포넌트 본문은 그대로여서
+ * 전부 통과한다(5차 검수 실측: 세 호출부 전부 MISS).
+ *
+ *     <Suspense fallback={<div style={{ opacity: 0 }}><ScreenChunkFallback /></div>}>
+ *
+ * 숨김 속성을 더 열거하는 건 같은 함정의 반복이라 다른 축을 쓴다 — **래퍼는 fallback
+ * 트리의 일부라 청크가 오면 함께 사라진다.** 그래서 프레임에서 부모를 붙잡아 뒀다가
+ * 도착 뒤에 아직 문서에 붙어 있는지만 본다. 무슨 스타일로 숨기든 걸린다.
+ *
+ * 반환된 검사는 **청크 도착을 확인한 뒤에** 불러야 한다(부르지 않으면 이 축은 통째로 빠진다).
+ */
+export function watchFallbackWrapper(el: HTMLElement | null, ctx: string): () => void {
+  expect(el, `${ctx}: fallback이 없어 래퍼를 볼 수 없다`).toBeTruthy();
+  const parent = (el as HTMLElement).parentElement;
+  expect(parent, `${ctx}: fallback이 문서에 붙어 있지 않다`).toBeTruthy();
+  return () => {
+    expect(
+      parent!.isConnected,
+      `${ctx}: fallback을 감싼 노드가 청크 도착과 함께 사라졌다 — 호출부가 ` +
+      '`fallback={<div ...><ScreenChunkFallback /></div>}`처럼 래퍼를 끼웠다. ' +
+      '덮개의 style 화이트리스트는 루트만 보므로 래퍼에 건 숨김은 그대로 통과한다',
+    ).toBe(true);
+  };
+}
+
+/**
+ * 시각적으로 감춰진 조상 — 자기 자신부터 위로 훑는다.
+ *
+ * **`aria-hidden`은 일부러 안 본다.** 오버레이 배경에 붙이는 표준 모달 a11y 개선인데,
+ * 그걸 숨김으로 치면 멀쩡한 개선을 "Suspense 경계가 바깥으로 올라갔다"고 오진한다(4차 실측).
+ * 같은 이유로 `byRole`의 기본 접근성 필터도 쓸 수 없다 — 그게 aria-hidden을 함께 거른다.
+ *
+ * 문자열 매칭(`[style*="display: none"]`) 대신 계산 스타일을 보는 건 공백·표기 형식에
+ * 기대지 않기 위해서다(5차 검수 지적). 다만 vitest에 `css: true`가 없어 **클래스 기반
+ * 숨김은 여전히 안 보인다** — 이 축의 남은 갭이다.
+ */
+export function hiddenAncestor(el: HTMLElement): HTMLElement | null {
+  for (let a: HTMLElement | null = el; a; a = a.parentElement) {
+    if (a.hidden) return a;
+    const cs = getComputedStyle(a);
+    if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') {
+      return a;
+    }
+  }
+  return null;
+}

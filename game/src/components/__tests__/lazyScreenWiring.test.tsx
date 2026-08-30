@@ -22,7 +22,7 @@ vi.mock('../../engine/assetPrefetch', async (importOriginal) => ({
 
 import { TitleScreen } from '../TitleScreen';
 import { GameScreen } from '../GameScreen';
-import { expectChunkFallback } from './chunkFallbackHelpers';
+import { expectChunkFallback, watchFallbackWrapper, hiddenAncestor } from './chunkFallbackHelpers';
 import { clearArchive, accrueResolvedEvent } from '../../engine/archive';
 import { useGameStore } from '../../engine/store';
 import { createInitialState } from '../../engine/gameEngine';
@@ -62,12 +62,14 @@ describe('타이틀 → 기록실 (이 파일에서 기록실을 여는 유일�
     // 올라가 트리를 비웠다가 청크 도착 후 다시 그려서 **결국 기록실이 뜬다**(실측).
     // 차이는 그 사이 프레임뿐이라 그 프레임을 직접 본다.
     expectChunkFallback(fallbackEl(), '기록실 진입');
+    const assertNoWrapper = watchFallbackWrapper(fallbackEl(), '기록실 진입');
 
     expect(
       await screen.findByText('👥 함께한 사람들'),
       '청크가 와도 기록실이 안 뜬다 (import 경로 오타·Suspense 누락)',
     ).toBeTruthy();
     expect(fallbackEl(), '청크가 온 뒤에도 fallback이 남아 있다').toBeNull();
+    assertNoWrapper();
   });
 });
 
@@ -83,9 +85,11 @@ describe('게임 화면 → 이벤트 (이 파일에서 이벤트 화면을 여�
 
     render(<GameScreen />);
     expectChunkFallback(fallbackEl(), '이벤트 화면 진입');
+    const assertNoWrapper = watchFallbackWrapper(fallbackEl(), '이벤트 화면 진입');
 
     // 내용 문자열에 결합하지 않는다 — 청크가 풀렸다는 것만 본다.
     await waitFor(() => expect(fallbackEl(), 'EventScene 청크가 끝내 안 왔다').toBeNull());
+    assertNoWrapper();
   });
 });
 
@@ -100,6 +104,7 @@ describe('게임 화면 → 기록장 오버레이 (이 파일에서 기록장�
 
     fireEvent.click(screen.getByRole('button', { name: /기록장/ }));
     expectChunkFallback(fallbackEl(), '기록장 오버레이');
+    const assertNoWrapper = watchFallbackWrapper(fallbackEl(), '기록장 오버레이');
 
     // **이 경계가 안쪽에 있어야 하는 이유를 잠근다.** 안쪽 Suspense를 지우면 바깥 경계가
     // 대신 받아 fallback은 여전히 뜨고 위 단언은 통과한다 — 그런데 그때는 MainWeek가
@@ -116,10 +121,11 @@ describe('게임 화면 → 기록장 오버레이 (이 파일에서 기록장�
     const albumBtn = screen.queryByRole('button', { name: /기록장/, hidden: true });
     expect(albumBtn, 'MainWeek가 통째로 언마운트됐다').toBeTruthy();
     expect(
-      albumBtn!.closest('[style*="display: none"], [hidden]'),
+      hiddenAncestor(albumBtn!),
       '오버레이가 뜨는 동안 MainWeek가 통째로 fallback에 먹혔다 — 경계가 바깥으로 올라갔다',
     ).toBeNull();
 
     await waitFor(() => expect(fallbackEl(), 'YearEndScreen 청크가 끝내 안 왔다').toBeNull());
+    assertNoWrapper();
   });
 });
