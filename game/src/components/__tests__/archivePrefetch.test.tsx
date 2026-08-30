@@ -77,6 +77,28 @@ describe('기록실 청크 idle prefetch', () => {
     expect(idleTasks.length, '버튼도 없는데 기록실 청크를 받는다').toBe(0);
   });
 
+  // **계약은 "미리 받는다"가 아니라 "idle 예약으로 받는다"다.** 실시간 플러시로는
+  // 이걸 못 잠근다 — idle을 우회하는 현실적인 대안 구현들이 그냥 통과한다(검수 실측 MISS):
+  //   double-rAF(`다음 페인트 뒤`) · `setTimeout(..., 300)`(`첫 페인트 뒤 300ms`)
+  // 그래서 시간을 **앞당겨** 본다. 태스크를 부르지 않은 채 충분히 흘려도 0이어야 한다.
+  //
+  // 가짜 타이머는 **대상이 타이머를 만들기 전에** 켠다 — 렌더 뒤에 켜면 이미 만들어진
+  // 실제 타이머를 추적하지 못해 단언이 공허하게 통과한다(이 리포가 세 번 겪은 함정).
+  it('idle 태스크를 부르지 않으면 아무리 기다려도 받지 않는다', async () => {
+    vi.useFakeTimers();
+    try {
+      withArchive();
+      render(<TitleScreen />);
+      await vi.advanceTimersByTimeAsync(5000);
+      expect(
+        loads.n,
+        'idle 예약과 무관하게 받았다 — rAF·setTimeout 등으로 우회했다(계약은 idle 예약이다)',
+      ).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // **여기가 본문을 잠근다.** 잡아야 할 변조: ⓐ `void import(...)` 줄 삭제(예약만 남음)
   // ⓑ 다른 모듈로 교체(`./screens/EndingScreen`) ⓒ **태스크 밖으로 끌어올리기**
   // (= 첫 페인트와 경쟁하며 즉시 받는다 — runWhenIdle을 쓰는 이유가 통째로 사라진다).
@@ -92,9 +114,13 @@ describe('기록실 청크 idle prefetch', () => {
     // 매크로태스크까지 흘려보낸 뒤에 본다 — 이게 없으면 변조 ⓒ(태스크 밖으로 끌어올리기)가
     // 아직 도착 전이라 0으로 보여 통과한다(검수 실측: 셔플 10회 중 6회 전부 그린).
     await new Promise(r => setTimeout(r, 0));
+    // 원인이 **둘**이다: 제품이 idle 밖에서 받거나, 이 파일의 앞선 테스트가 먼저 로드했거나.
+    // 한쪽만 단정하면 오진한다 — 실제로 변조 ⓒ에서는 첫 테스트의 렌더가 eager import를
+    // 돌려 팩토리를 소진시키므로 여기서 걸리는데, 원인은 제품 쪽이다(검수 실측).
     expect(
       loads.ever,
-      '이 파일의 앞선 테스트가 이미 기록실 모듈을 로드했다 — 제품이 아니라 테스트 순서 문제다',
+      '렌더만으로 이미 기록실 모듈을 받았다. ⓐ 제품이 idle 태스크 밖에서 import하거나 ' +
+      'ⓑ 이 파일의 앞선 테스트가 먼저 로드했다 — TitleScreen의 effect부터 확인해라',
     ).toBe(false);
     expect(loads.n, 'idle 예약 없이 이미 받았다 — 첫 페인트와 경쟁한다').toBe(0);
 

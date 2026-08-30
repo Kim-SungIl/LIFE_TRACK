@@ -22,19 +22,28 @@ export function expectChunkFallback(el: HTMLElement | null, ctx: string): void {
   const root = el as HTMLElement;
 
   expect(root.getAttribute('aria-live'), `${ctx}: 라이브 리전 표시가 없다`).toBe('polite');
+
+  // 덮개를 **안 보이게** 만들면 값 단언 셋을 전부 만족하면서 결과는 `return null`과 같다.
+  // 숨기는 방법은 무한하다(실측 MISS: `opacity:0` · `zIndex:-1` · className으로 숨기기.
+  // vitest에 `css: true`가 없어 클래스 스타일은 getComputedStyle로도 안 보인다).
+  // 그래서 속성을 하나씩 막지 않고 **인라인 style 속성 집합 자체를 닫는다** — 목록 밖
+  // 속성이 붙으면 그게 무엇이든 걸린다. 이 컴포넌트는 인라인 style만 쓰기로 되어 있으므로
+  // className도 금지한다(클래스가 붙는 순간 이 검사 전체가 무의미해진다).
+  expect(
+    Array.from(root.style),
+    `${ctx}: 덮개의 인라인 style이 예상과 다르다 — 속성이 추가됐다면 그걸로 덮개를 ` +
+    '안 보이게 만들 수 있다(opacity·zIndex·filter·clipPath…). 정당한 추가라면 이 목록을 늘려라',
+  ).toEqual(['position', 'inset', 'background']);
+  expect(
+    root.className,
+    `${ctx}: 덮개에 클래스가 붙었다 — 클래스 스타일은 이 테스트가 볼 수 없어 ` +
+    '(vitest css 미처리) 숨김 여부를 판정할 수 없게 된다',
+  ).toBe('');
+
   // 덮지 않으면 이전 화면이 남은 채 새 화면이 겹쳐 그려진다.
   expect(root.style.position, `${ctx}: 화면을 덮지 않는다`).toBe('fixed');
   expect(root.style.inset, `${ctx}: 전체를 덮지 않는다`).toBe('0px');
   expect(root.style.background, `${ctx}: 배경색이 없다`).toBe('var(--bg-primary)');
-  // 덮개를 남기되 **안 보이게** 만들면 위 셋을 전부 만족하면서 결과는 `return null`과 같다
-  // (검수 실측: `opacity: 0` 한 줄로 881개가 전부 통과했다).
-  expect(
-    ['', '1'].includes(root.style.opacity),
-    `${ctx}: 덮개가 투명하다(opacity=${root.style.opacity}) — 아무것도 안 그리는 것과 같다`,
-  ).toBe(true);
-  expect(root.style.visibility, `${ctx}: 덮개가 숨겨졌다`).not.toBe('hidden');
-  expect(root.style.display, `${ctx}: 덮개가 display:none이다`).not.toBe('none');
-  expect(root.style.transform, `${ctx}: 덮개가 변형으로 사라졌다`).not.toMatch(/scale\(\s*0/);
 
   // 스피너를 두지 않기로 한 판단(번쩍임 방지)을 지킨다 — 보이는 자식이 생기면 걸린다.
   const visible = [...root.querySelectorAll<HTMLElement>('*')].filter(e => !isVisuallyHidden(e));

@@ -232,12 +232,17 @@ assert('countOccurrences가 횟수를 센다',
   '"1회 이상"으로 내려앉으면 중복 검출이 죽는다');
 // 재수출 형태는 **한 가지가 아니다.** 현 번들러가 내는 형태만 샘플로 두면, 번들러가
 // 다른 형태를 내기 시작할 때 이 판정이 조용히 뚫린다(cursor 검수 지적).
+// import 쪽 형태도 같이 둔다 — export만 덮었더니 `import*as X` / `import X` / `import"…"`
+// strip 줄을 지워도 프로브 전체가 통과했다(sub-agent 실측). 아래 8종이 strip 8줄과 1:1이다.
 for (const [shape, sample] of [
   ['export{X}', 'import{t as e}from"./index-abc.js";export{e as EventScene};'],
   ['export{X as default}', 'import{t as e}from"./index-abc.js";export{e as default};'],
   ['export{X}from', 'export{EventScene}from"./index-abc.js";'],
   ['export*from', 'export*from"./index-abc.js";'],
   ['export default X', 'import{t as e}from"./index-abc.js";export default e;'],
+  ['import*as X', 'import*as e from"./index-abc.js";export{e as EventScene};'],
+  ['import X (default)', 'import e from"./index-abc.js";export{e as EventScene};'],
+  ['import "…" (부작용)', 'import"./index-abc.js";export*from"./other-abc.js";'],
 ] as const) {
   assert(`껍데기 판정이 재수출을 문다 — ${shape}`, isReExportShell(sample),
     '실제 되돌림 산물(0.06 kB 재수출)을 못 물면 5절이 공허해진다');
@@ -336,11 +341,21 @@ if (anchorPresent) {
 }
 
 console.log('\n=== 7. 규모 트립와이어 (증명이 아니라 그림자다 — 위 주석 참고) ===');
+// 청크 **수**는 전송량이 아니라 rolldown의 분할 모양을 잰다. import 엣지 하나로 5~9까지
+// 움직이는 것을 실측했다(지연 화면이 부팅 전용 컴포넌트를 재사용하면 엔트리가 쪼개져
+// 9개가 되는데 부팅 바이트는 +252B, +0.03%뿐 — 유출이 0인데 빨강이다).
+// 그래서 **바이트를 항상 같이 찍는다** — 이 수가 안 늘었으면 유출이 아니라 재편이다.
+const bootBytes = bootNames
+  .filter(n => jsFiles.includes(n))
+  .reduce((n, f) => n + statSync(join(ASSETS, f)).size, 0);
+console.log(`  · 부팅 그래프: ${bootNames.length}개 파일 / ${bootBytes.toLocaleString()}B`);
 assert(
   `부팅에 받는 청크가 ${bootNames.length}개다 (상한 ${MAX_BOOT_CHUNKS})`,
   bootNames.length <= MAX_BOOT_CHUNKS,
-  '부팅 그래프에 청크가 늘었다. 지연 화면의 자식 모듈을 부팅 경로에서 정적 import했을 때 ' +
-  '나오는 증상이다. 의도한 구조 변경이면 MAX_BOOT_CHUNKS를 올려라',
+  '부팅 그래프의 청크 수가 늘었다. **원인이 둘이니 위에 찍힌 바이트부터 볼 것:** ' +
+  `① 바이트가 함께 늘었으면 유출이다(지연 화면의 자식을 부팅 경로에서 정적 import). ` +
+  '② 바이트가 그대로면 분할 재편이다 — 지연 화면이 부팅 전용 모듈을 재사용했거나 ' +
+  '번들러를 올린 직후다. ②라면 MAX_BOOT_CHUNKS를 새 실측치로 올려라',
 );
 // 하한 목록이 화면을 전부 덮는지 — 한 줄 빠지면 그 화면만 무검사가 된다.
 const uncovered = LAZY_SCREENS.filter(n => MIN_BODY_BYTES[n] === undefined);

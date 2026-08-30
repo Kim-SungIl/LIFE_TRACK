@@ -104,10 +104,21 @@ describe('게임 화면 → 기록장 오버레이 (이 파일에서 기록장�
     // **이 경계가 안쪽에 있어야 하는 이유를 잠근다.** 안쪽 Suspense를 지우면 바깥 경계가
     // 대신 받아 fallback은 여전히 뜨고 위 단언은 통과한다 — 그런데 그때는 MainWeek가
     // 통째로 단색에 먹힌다(GameScreen 주석이 말하는 바로 그것). 881개 전부 그린이었다.
+    //
+    // 두 단계로 나눠 묻는다. 기본 byRole 하나로 합치면 접근성 트리 필터(aria-hidden·
+    // display:none을 한꺼번에 거른다)를 타서, 오버레이에 배경 `aria-hidden`을 붙이는
+    // **표준 모달 a11y 개선**만으로 "경계가 바깥으로 올라갔다"고 오진한다(검수 실측).
+    //
+    // 그렇다고 `hidden: true`만 쓰면 반대로 양성 대조가 죽는다 — **React는 suspend 시
+    // 이전 내용을 언마운트하지 않고 감춘다.** 안쪽 경계를 지워도 버튼은 DOM에 그대로 남고
+    // 조상만 `display:none`이 된다(실측: BTN=true, HIDDEN_ANCESTOR=true).
+    // 그래서 "DOM에 있나" + "감춰진 조상이 없나"를 따로 본다.
+    const albumBtn = screen.queryByRole('button', { name: /기록장/, hidden: true });
+    expect(albumBtn, 'MainWeek가 통째로 언마운트됐다').toBeTruthy();
     expect(
-      screen.queryByRole('button', { name: /기록장/ }),
+      albumBtn!.closest('[style*="display: none"], [hidden]'),
       '오버레이가 뜨는 동안 MainWeek가 통째로 fallback에 먹혔다 — 경계가 바깥으로 올라갔다',
-    ).toBeTruthy();
+    ).toBeNull();
 
     await waitFor(() => expect(fallbackEl(), 'YearEndScreen 청크가 끝내 안 왔다').toBeNull());
   });
