@@ -54,4 +54,67 @@ describe('processWeek', () => {
       }
     `);
   });
+
+  it('records that week\'s final mental into the current year slot (low / not-low)', () => {
+    const low = processWeek(fixture({
+      year: 3,
+      week: 10,
+      stats: { academic: 40, social: 40, talent: 20, mental: 12, health: 40 },
+      weekendChoices: ['rest'],
+    }));
+    expect(low.stats.mental).toBeLessThan(40);
+    expect(low.lowMentalWeeksByYear).toEqual([0, 0, 1, 0, 0, 0, 0]);
+    expect(low.lowMentalWeeksByYear.reduce((a, b) => a + b, 0)).toBe(1);
+
+    const ok = processWeek(fixture({
+      year: 3,
+      week: 10,
+      stats: { academic: 40, social: 40, talent: 20, mental: 80, health: 40 },
+      weekendChoices: ['rest'],
+    }));
+    expect(ok.stats.mental).toBeGreaterThanOrEqual(40);
+    expect(ok.lowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('veryLow (mental<25) increments only the current year; 25 does not', () => {
+    const under = processWeek(fixture({
+      year: 1,
+      week: 2,
+      stats: { academic: 40, social: 40, talent: 20, mental: 8, health: 40 },
+      weekendChoices: ['rest'],
+    }));
+    expect(under.stats.mental).toBeLessThan(25);
+    expect(under.veryLowMentalWeeksByYear[0]).toBe(1);
+    expect(under.veryLowMentalWeeksByYear.slice(1).every(n => n === 0)).toBe(true);
+
+    const at25 = processWeek(fixture({
+      year: 1,
+      week: 2,
+      stats: { academic: 40, social: 40, talent: 20, mental: 25, health: 40 },
+      weekendChoices: ['rest'],
+      mentalState: 'normal',
+      fatigue: 0,
+    }));
+    // 시험·방치가 없어도 자연 회복이 +될 수 있다. 최종이 25 이상이면 바닥 주가 아니어야 한다.
+    if (at25.stats.mental >= 25) {
+      expect(at25.veryLowMentalWeeksByYear[0]).toBe(0);
+    }
+  });
+
+  it('burnout increments burnoutCountByYear on the year it happens, not a neighbor', () => {
+    const before = fixture({
+      year: 5,
+      week: 8,
+      mentalState: 'tired',
+      fatigue: 80,
+      burnoutCooldown: 0,
+      consecutiveTiredWeeks: 0,
+      stats: { academic: 40, social: 40, talent: 20, mental: 15, health: 40 },
+      weekendChoices: ['self-study'],
+    });
+    const after = processWeek(before);
+    expect(after.burnoutCount).toBe(before.burnoutCount + 1);
+    expect(after.burnoutCountByYear).toEqual([0, 0, 0, 0, 1, 0, 0]);
+    expect(after.burnoutCountByYear.reduce((a, b) => a + b, 0)).toBe(1);
+  });
 });

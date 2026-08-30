@@ -175,4 +175,25 @@ describe('migrateLoadedState 정규화', () => {
     s.weekLog = null;
     expect(migrateLoadedState(s).phase).toBe('weekday');
   });
+
+  it('행복 궤적 배열이 없으면 길이 7 영으로 백필하고, 있으면 보존한다', () => {
+    const missing = roundtrip(baseState()) as GameState;
+    delete (missing as Partial<GameState>).lowMentalWeeksByYear;
+    delete (missing as Partial<GameState>).veryLowMentalWeeksByYear;
+    delete (missing as Partial<GameState>).burnoutCountByYear;
+    const filled = migrateLoadedState(missing);
+    expect(filled.lowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(filled.veryLowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(filled.burnoutCountByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+
+    const kept = roundtrip(baseState());
+    kept.lowMentalWeeksByYear = [1, 2, 3, 4, 5, 6, 7];
+    kept.veryLowMentalWeeksByYear = [0, 1, 0, 1, 0, 1, 0];
+    kept.burnoutCountByYear = [2, 0, 0, 0, 0, 0, 1];
+    const out = migrateLoadedState(kept);
+    expect(out.lowMentalWeeksByYear).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(out.veryLowMentalWeeksByYear).toEqual([0, 1, 0, 1, 0, 1, 0]);
+    expect(out.burnoutCountByYear).toEqual([2, 0, 0, 0, 0, 0, 1]);
+    expect(out.lowMentalWeeksByYear).toHaveLength(7);
+  });
 });

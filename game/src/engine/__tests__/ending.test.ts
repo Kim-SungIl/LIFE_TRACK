@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { calculateEnding, calculateHappinessGrade } from '../ending';
+import { calculateEnding, calculateHappinessGrade, HAPPINESS_LABELS } from '../ending';
+import type { HappinessTrajectory } from '../ending';
 import { createInitialState } from '../gameEngine';
 import type { GameState, ParentStrength, Stats } from '../types';
 
@@ -66,6 +67,91 @@ describe('calculateHappinessGrade', () => {
   });
 });
 
+// 궤적 창 — 테스트는 제품 상수/함수를 재사용하지 않는다(공유 오라클 금지). 리터럴로 잠근다.
+const YEAR_WEEKS = 48;
+const LIFE_WEEKS = 336;
+
+function traj(partial: Partial<HappinessTrajectory> & { weeks: number }): HappinessTrajectory {
+  return {
+    lowMentalWeeks: 0,
+    veryLowMentalWeeks: 0,
+    burnoutCount: 0,
+    ...partial,
+  };
+}
+
+describe('calculateHappinessGrade — trajectory caps (bidirectional)', () => {
+  it('snapshot S stays S when trajectory is omitted or empty', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH)).toBe('S');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: 0 }))).toBe('S');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS }))).toBe('S');
+  });
+
+  it('D: lowMental ratio 40% — year 19/48 is not D, 20/48 is D', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, lowMentalWeeks: 19 }))).toBe('C');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, lowMentalWeeks: 20 }))).toBe('D');
+  });
+
+  it('D: lowMental ratio 40% — life 134/336 is not D, 135/336 is D', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, lowMentalWeeks: 134 }))).toBe('C');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, lowMentalWeeks: 135 }))).toBe('D');
+  });
+
+  it('D: veryLow ratio 8% — year 3/48 is not D, 4/48 is D', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, veryLowMentalWeeks: 3 }))).toBe('C');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, veryLowMentalWeeks: 4 }))).toBe('D');
+  });
+
+  it('D: burnoutCount 5 is not D, 6 is D (career 재수 선과 동일)', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, burnoutCount: 5 }))).toBe('C');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, burnoutCount: 6 }))).toBe('D');
+  });
+
+  it('C: lowMental 20% — year 9/48 is not C, 10/48 is C', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, lowMentalWeeks: 9 }))).toBe('B');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, lowMentalWeeks: 10 }))).toBe('C');
+  });
+
+  it('C: veryLow 3% — year 1/48 is not C, 2/48 is C', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, veryLowMentalWeeks: 1 }))).toBe('B');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, veryLowMentalWeeks: 2 }))).toBe('C');
+  });
+
+  it('C: burnoutCount 2 is not C, 3 is C', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, burnoutCount: 2 }))).toBe('A');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, burnoutCount: 3 }))).toBe('C');
+  });
+
+  it('B: lowMental 8% — year 3/48 is not B, 4/48 is B', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, lowMentalWeeks: 3 }))).toBe('A');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, lowMentalWeeks: 4 }))).toBe('B');
+  });
+
+  it('B: one burnout in a year caps that year at B; one burnout over 7 years does not', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, burnoutCount: 1 }))).toBe('B');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: YEAR_WEEKS, burnoutCount: 0 }))).toBe('S');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, burnoutCount: 1 }))).toBe('A');
+  });
+
+  it('A: any low-mental week over 7 years blocks S but is not B below 8%', () => {
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, lowMentalWeeks: 1 }))).toBe('A');
+    expect(calculateHappinessGrade(S_MENTAL, S_SOCIAL, S_HEALTH, traj({ weeks: LIFE_WEEKS, lowMentalWeeks: 0 }))).toBe('S');
+  });
+
+  it('trajectory only downgrades — snapshot D stays D even with a clean window', () => {
+    expect(calculateHappinessGrade(24, 0, 100, traj({ weeks: YEAR_WEEKS }))).toBe('D');
+  });
+
+  // 양성 바닥 — 라벨이 실제로 존재하고 C 제목이 고립이 아님을 잠근다.
+  it('C/D labels exist and C is not "외로운"', () => {
+    expect(HAPPINESS_LABELS.C.title).toBe('😐 그늘진 한 해');
+    expect(HAPPINESS_LABELS.C.desc).toBe('마음이 자주 비어 있던 한 해.');
+    expect(HAPPINESS_LABELS.D.title).toBe('😔 힘들었던 한 해');
+    expect(HAPPINESS_LABELS.D.desc).toBe('돌아보면 버티는 것만으로 벅찼다.');
+    expect(Object.keys(HAPPINESS_LABELS)).toEqual(['S', 'A', 'B', 'C', 'D']);
+  });
+});
+
 describe('calculateEnding', () => {
   it('locks achievement grades at bestAxis boundaries 29/30·49/50·69/70·84/85', () => {
     expect(calculateEnding(achievementFixture(ACH_S)).achievement).toBe('S');
@@ -128,5 +214,60 @@ describe('calculateEnding', () => {
         "total": 130,
       }
     `);
+  });
+
+  it('uses 7-year trajectory, not the snapshot alone (consumption lock)', () => {
+    // 실측 갈아넣기 최종 스냅샷(73/88/10)은 궤적 없이 A. 7년 궤적(저멘탈 151·바닥 34·번아웃 11)은 D.
+    const grindSnap = endingState({ academic: 80, talent: 40, mental: 73, social: 88, health: 10 });
+    expect(calculateEnding(grindSnap).happiness).toBe('A');
+
+    const grindLife = endingState(
+      { academic: 80, talent: 40, mental: 73, social: 88, health: 10 },
+      {
+        lowMentalWeeksByYear: [22, 22, 22, 21, 22, 21, 21],
+        veryLowMentalWeeksByYear: [5, 5, 5, 5, 5, 5, 4],
+        burnoutCountByYear: [2, 2, 2, 1, 2, 1, 1],
+      },
+    );
+    expect(grindLife.lowMentalWeeksByYear.reduce((a, b) => a + b, 0)).toBe(151);
+    expect(grindLife.veryLowMentalWeeksByYear.reduce((a, b) => a + b, 0)).toBe(34);
+    expect(grindLife.burnoutCountByYear.reduce((a, b) => a + b, 0)).toBe(11);
+    expect(calculateEnding(grindLife).happiness).toBe('D');
+
+    // 균형 스냅샷(89/89/78) + 깨끗한 궤적 = S. 같은 스냅샷 + 갈아넣기 궤적 = D.
+    const balanced = endingState({ academic: 70, talent: 40, mental: 89, social: 89, health: 78 });
+    expect(calculateEnding(balanced).happiness).toBe('S');
+    const balancedButGrindPast = endingState(
+      { academic: 70, talent: 40, mental: 89, social: 89, health: 78 },
+      {
+        lowMentalWeeksByYear: [22, 22, 22, 21, 22, 21, 21],
+        veryLowMentalWeeksByYear: [5, 5, 5, 5, 5, 5, 4],
+        burnoutCountByYear: [2, 2, 2, 1, 2, 1, 1],
+      },
+    );
+    expect(calculateEnding(balancedButGrindPast).happiness).toBe('D');
+  });
+
+  it('lifetime window ignores a single hard year (year-end is the other call site)', () => {
+    // Y3만 갈아넣기(22/48 저멘탈). 7년 합 22/336 ≈ 6.5% → A (S 차단, B 미만).
+    const oneHardYear = endingState(
+      { academic: 70, talent: 40, mental: 89, social: 89, health: 78 },
+      {
+        lowMentalWeeksByYear: [0, 0, 22, 0, 0, 0, 0],
+        veryLowMentalWeeksByYear: [0, 0, 0, 0, 0, 0, 0],
+        burnoutCountByYear: [0, 0, 1, 0, 0, 0, 0],
+      },
+    );
+    expect(calculateEnding(oneHardYear).happiness).toBe('A');
+  });
+
+  it('happiness S still implies achievement ≥ B (C1-B contract)', () => {
+    // S는 여전히 health≥20·mental≥80·social≥60을 요구 → lifeScore≥53.33 → achievement 최소 B.
+    // 궤적은 강등만 하므로 이 함의는 유지. 주석을 코드와 어긋나게 두지 않기 위한 잠금.
+    const s = endingState({ academic: 20, talent: 20, mental: 80, social: 60, health: 20 });
+    const result = calculateEnding(s);
+    expect(result.happiness).toBe('S');
+    expect(result.achievement).toBe('B');
+    expect(['C', 'D']).not.toContain(result.achievement);
   });
 });

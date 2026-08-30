@@ -1,4 +1,4 @@
-import { calculateHappinessGrade, HAPPINESS_LABELS } from '../../engine/ending';
+import { calculateHappinessGrade, HAPPINESS_LABELS, happinessTrajectoryForYear } from '../../engine/ending';
 import { josa } from '../../engine/korean';
 import { MemorySlot, MilestoneScene, Stats, Gender, ExamResult, EXAM_TYPE_LABELS } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
@@ -14,6 +14,10 @@ interface YearEndScreenProps {
   memorySlots: MemorySlot[];
   milestoneScenes: MilestoneScene[];
   stats: Stats;
+  // 그 해의 궤적 — 누적 burnoutCount·totalTiredWeeks는 학년말에 못 쓴다.
+  lowMentalWeeksByYear?: number[];
+  veryLowMentalWeeksByYear?: number[];
+  burnoutCountByYear?: number[];
   bgProps: ScreenBgProps;
   onAdvance: () => void;
   // ===== 기록장(읽기 전용 과거 열람) 모드 — 같은 카드를 지난 학년 회상용으로 재활용 =====
@@ -48,7 +52,7 @@ const MAX_GALLERY = 5;
 // v1.5 학년말 회고 (Y1~Y6) — phase === 'year-end'
 //   P0: 스크림·라벨 정리·부모줄 부활·정직한 CTA
 //   P1: CG 있는 기억 = 스와이프 갤러리(여러 장 넘겨보기), 나머지 = 초상/엠블럼 썸네일 카드.
-export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, bgProps, onAdvance, readonly, examResults, reachedYears, onSelectYear, onClose }: YearEndScreenProps) {
+export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, lowMentalWeeksByYear, veryLowMentalWeeksByYear, burnoutCountByYear, bgProps, onAdvance, readonly, examResults, reachedYears, onSelectYear, onClose }: YearEndScreenProps) {
   // 기록장을 열었지만 아직 마친 학년이 없다(1학년) — 회상할 과거가 없으니 연도별 렌더 대신 "약속" 빈 상태만.
   // reachedYears가 빈 배열인 건 이 경우뿐(진행 모드는 undefined, 2학년+는 length≥1).
   if (readonly && reachedYears && reachedYears.length === 0) {
@@ -86,7 +90,12 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
   const nextGradeName = YEAR_NAMES[year];
   const slotsThisYear = memorySlots.filter(m => m.year === year);
   const milestone = milestoneScenes.find(m => m.year === year);
-  const happinessGrade = calculateHappinessGrade(stats.mental, stats.social, stats.health);
+  const happinessGrade = calculateHappinessGrade(
+    stats.mental,
+    stats.social,
+    stats.health,
+    happinessTrajectoryForYear({ lowMentalWeeksByYear, veryLowMentalWeeksByYear, burnoutCountByYear }, year),
+  );
   const happinessInfo = HAPPINESS_LABELS[happinessGrade];
 
   // 부모 친밀도 줄(\n append, Phase 2.1)을 본문과 분리해 "뒤늦게 떠오른 한 줄"로
