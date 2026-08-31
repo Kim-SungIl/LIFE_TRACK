@@ -78,11 +78,16 @@ console.log('\n=== 4. 구세이브 호환: 누락 필드 백필 (크래시 없�
   // 신규 필드들을 통째로 제거 → 구세이브 시뮬
   for (const k of ['totalTiredWeeks', 'consecutiveTiredWeeks', 'burnoutCooldown', 'examResults',
     'activeBuffs', 'memorySlots', 'milestoneScenes', 'parentIntimacy', 'parentEventsFired',
-    'parentClimaxFired', 'parentPositiveTags', 'talkEventsFired']) {
+    'parentClimaxFired', 'parentPositiveTags', 'talkEventsFired',
+    'lowMentalWeeksByYear', 'veryLowMentalWeeksByYear', 'burnoutCountByYear']) {
     delete raw[k];
   }
   const loaded = migrateLoadedState(raw as unknown as GameState);
   assert('totalTiredWeeks 백필 = 0', loaded.totalTiredWeeks === 0);
+  assert('lowMentalWeeksByYear 백필 길이 7', Array.isArray(loaded.lowMentalWeeksByYear) && loaded.lowMentalWeeksByYear.length === 7);
+  assert('lowMentalWeeksByYear 백필 전부 0', loaded.lowMentalWeeksByYear.every(n => n === 0));
+  assert('veryLowMentalWeeksByYear 백필 전부 0', loaded.veryLowMentalWeeksByYear.every(n => n === 0));
+  assert('burnoutCountByYear 백필 전부 0', loaded.burnoutCountByYear.every(n => n === 0));
   assert('consecutiveTiredWeeks 백필 = 0', loaded.consecutiveTiredWeeks === 0);
   assert('examResults 백필 = []', Array.isArray(loaded.examResults) && loaded.examResults.length === 0);
   assert('memorySlots 백필 = []', Array.isArray(loaded.memorySlots));

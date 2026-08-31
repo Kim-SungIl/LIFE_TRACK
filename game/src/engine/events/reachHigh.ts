@@ -309,7 +309,7 @@ export const HIGH_REACH_EVENTS = [
     description: '점심시간 비어 있는 음악실. 야자 대신 유나가 피아노 앞에 있다. 시험곡도 아닌, 그냥 좋아하는 곡을 친다.\n"여기 있을 때가 제일 나 같아." 건반에서 손을 떼며 멋쩍게 웃는다. "근데 이런 말 하면 한가하다 그러겠지?"',
     speakers: ['yuna'],
     location: 'music_room',
-    background: 'music_room_middle',
+    background: 'music_room',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 38 && s.year === 5 && !s.isVacation; },
     choices: [
       { text: '"전혀. 제일 너다운 게 제일 좋은 건데"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }], message: '유나가 잠깐 손을 멈춘다. "…그렇게 말해주는 사람 처음이야." 다시 건반에 손을 올린다.', timeCost: 1 },
@@ -324,7 +324,7 @@ export const HIGH_REACH_EVENTS = [
     description: '교내 콩쿠르 전날, 빈 음악실. 유나 손이 굳어 자꾸 같은 마디에서 틀린다. 평소 밝던 애가 새파랗게 질려 있다.\n"무대 서면… 틀리는 게 다 보이잖아. 작년에 한 번 틀리고 나서, 손이 그걸 기억해버렸어."',
     speakers: ['yuna'],
     location: 'music_room',
-    background: 'music_room_middle',
+    background: 'music_room',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yuna'); return !!n?.met && n.intimacy >= 42 && s.year === 6 && !s.isVacation; },
     choices: [
       { text: '"틀려도 돼. 내가 제일 앞에서 들을게"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }], message: '유나가 너를 본다. "…앞에서?" 굳었던 손가락이 조금 풀린다. "한 명 있다고 생각하면, 칠 수 있을 것 같기도."', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 6, toneTag: 'warm', recallText: '콩쿠르 전날, 한 명만 있으면 칠 수 있겠다던.', npcIds: ['yuna'] } },

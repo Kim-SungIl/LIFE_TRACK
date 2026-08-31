@@ -8,14 +8,44 @@ import {
 } from './endingNpc';
 
 // ===== 행복 등급 =====
-// mental + social 조합으로 한 해/일생의 행복도를 5단계로 분류.
-// calculateEnding(엔딩 누적)과 학년말 카드 둘 다 동일 산식 — 일관된 시그널.
+// 스냅샷(호출 시점 mental/social/health)이 천장. 궤적(저멘탈 주·번아웃)은 강등만 한다.
+// 지친 주(tired)는 넣지 않는다 — 진로 축 주석대로 관계형도 ~63% tired라 과교정된다.
+// calculateEnding(7년 합)과 학년말 카드(그 해)가 같은 산식·다른 창을 쓴다.
 export type HappinessGrade = 'S' | 'A' | 'B' | 'C' | 'D';
 
-// QA C1-B: health 하한 게이트. health<20(achievement 약점선과 동일)이면 S 불가 → 최고 A.
-// 건강을 끝까지 갈아넣은 한 해는 "빛났던 해"가 될 수 없다 — happiness 전원 S 수렴을 깨는 첫 분기.
-// health 기본값 100: 인자 미전달 호출(레거시) 호환.
-export function calculateHappinessGrade(mental: number, social: number, health = 100): HappinessGrade {
+export const HAPPINESS_YEAR_SLOTS = 7;
+export const HAPPINESS_WEEKS_PER_YEAR = 48;
+export const HAPPINESS_LIFE_WEEKS = HAPPINESS_WEEKS_PER_YEAR * HAPPINESS_YEAR_SLOTS; // 336
+
+export type HappinessTrajectory = {
+  weeks: number;
+  lowMentalWeeks: number;
+  veryLowMentalWeeks: number;
+  burnoutCount: number;
+};
+
+export function emptyYearCounts(): number[] {
+  return [0, 0, 0, 0, 0, 0, 0];
+}
+
+export function padYearCounts(arr: number[] | undefined): number[] {
+  const out = emptyYearCounts();
+  if (!arr) return out;
+  for (let i = 0; i < HAPPINESS_YEAR_SLOTS; i++) {
+    const v = arr[i];
+    out[i] = typeof v === 'number' && Number.isFinite(v) ? Math.max(0, v) : 0;
+  }
+  return out;
+}
+
+const GRADE_RANK: Record<HappinessGrade, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
+
+function worseGrade(a: HappinessGrade, b: HappinessGrade): HappinessGrade {
+  return GRADE_RANK[a] >= GRADE_RANK[b] ? a : b;
+}
+
+function snapshotHappinessGrade(mental: number, social: number, health: number): HappinessGrade {
+  // QA C1-B: health 하한 게이트. health<20이면 S 불가 → 최고 A.
   if (mental >= 80 && social >= 60 && health >= 20) return 'S';
   if (mental >= 60 && social >= 40) return 'A';
   if (mental >= 40) return 'B';
@@ -23,11 +53,80 @@ export function calculateHappinessGrade(mental: number, social: number, health =
   return 'D';
 }
 
+function trajectoryCap(t: HappinessTrajectory): HappinessGrade {
+  const n = Math.max(1, t.weeks);
+  const lowR = t.lowMentalWeeks / n;
+  const veryLowR = t.veryLowMentalWeeks / n;
+  // D: 저멘탈이 그 창의 40%+ / 바닥(mental<25) 8%+ / 번아웃 6+ (진로 축 재수 선과 동일 밀도)
+  if (lowR >= 0.40 || veryLowR >= 0.08 || t.burnoutCount >= 6) return 'D';
+  // C: 마음이 자주 비어 — 저멘탈 20%+ / 바닥 3%+ / 번아웃 3+
+  if (lowR >= 0.20 || veryLowR >= 0.03 || t.burnoutCount >= 3) return 'C';
+  // B: 한 해의 흔들림. 7년 창(weeks>48)에서 번아웃 1회는 여기 안 넣음(그 해 카드가 담당).
+  if (lowR >= 0.08 || veryLowR >= 0.02 || (n <= 48 && t.burnoutCount >= 1)) return 'B';
+  // A: S만 막음 — 저멘탈·번아웃이 하나라도 있으면 "빛났던"은 아니다.
+  if (t.burnoutCount >= 1 || lowR > 0 || veryLowR > 0) return 'A';
+  return 'S';
+}
+
+// health 기본값 100: 인자 미전달 호출(레거시) 호환. trajectory 생략 = 스냅샷만(구세이브·레거시).
+export function calculateHappinessGrade(
+  mental: number,
+  social: number,
+  health = 100,
+  trajectory?: HappinessTrajectory | null,
+): HappinessGrade {
+  const snapshot = snapshotHappinessGrade(mental, social, health);
+  if (!trajectory || trajectory.weeks <= 0) return snapshot;
+  return worseGrade(snapshot, trajectoryCap(trajectory));
+}
+
+export function happinessTrajectoryForYear(
+  state: {
+    lowMentalWeeksByYear?: number[];
+    veryLowMentalWeeksByYear?: number[];
+    burnoutCountByYear?: number[];
+  },
+  year: number,
+): HappinessTrajectory {
+  const i = year - 1;
+  return {
+    weeks: HAPPINESS_WEEKS_PER_YEAR,
+    lowMentalWeeks: state.lowMentalWeeksByYear?.[i] ?? 0,
+    veryLowMentalWeeks: state.veryLowMentalWeeksByYear?.[i] ?? 0,
+    burnoutCount: state.burnoutCountByYear?.[i] ?? 0,
+  };
+}
+
+export function happinessTrajectoryLifetime(
+  state: {
+    lowMentalWeeksByYear?: number[];
+    veryLowMentalWeeksByYear?: number[];
+    burnoutCountByYear?: number[];
+    burnoutCount?: number;
+  },
+): HappinessTrajectory {
+  const sum = (arr: number[] | undefined) => (arr ?? []).reduce((a, b) => a + b, 0);
+  const byYear = sum(state.burnoutCountByYear);
+  // **구세이브 폴백.** T21 이전 세이브엔 학년별 배열이 없어 0으로 백필된다. 그런데 진로 축은
+  // 예나 지금이나 누적 state.burnoutCount를 읽으므로, 폴백이 없으면 같은 판이
+  // "진로=재수 결심 + 행복=A"로 갈린다 — 이 기능이 없애려던 바로 그 모순이 구세이브에서만 살아남는다.
+  // 저멘탈 주는 과거를 복원할 수 없지만 번아웃 횟수는 살아 있으니 그것만이라도 쓴다.
+  // 배열이 이미 쌓인 판(byYear>0)에서는 배열이 정답이므로 건드리지 않는다.
+  const burnoutCount = byYear > 0 ? byYear : Math.max(0, state.burnoutCount ?? 0);
+  return {
+    weeks: HAPPINESS_LIFE_WEEKS,
+    lowMentalWeeks: sum(state.lowMentalWeeksByYear),
+    veryLowMentalWeeks: sum(state.veryLowMentalWeeksByYear),
+    burnoutCount,
+  };
+}
+
 export const HAPPINESS_LABELS: Record<HappinessGrade, { title: string; desc: string }> = {
   S: { title: '🌟 빛났던 한 해', desc: '마음도 단단했고, 곁에 사람도 많았다.' },
   A: { title: '😊 따뜻한 한 해', desc: '걱정도 있었지만, 같이 웃을 사람이 있었다.' },
   B: { title: '🙂 평범한 한 해', desc: '특별한 일은 없었지만 무탈했다.' },
-  C: { title: '😐 외로운 한 해', desc: '마음이 자주 비어 있던 한 해.' },
+  // C 제목: 산식은 저멘탈(빈 마음)이지 고립이 아님. "외로운"은 소셜 88 갈아넣기에 거짓이 된다.
+  C: { title: '😐 그늘진 한 해', desc: '마음이 자주 비어 있던 한 해.' },
   D: { title: '😔 힘들었던 한 해', desc: '돌아보면 버티는 것만으로 벅찼다.' },
 };
 
@@ -267,8 +366,8 @@ export function calculateEnding(state: GameState) {
   }
   if (hasCollapse && achievement === 'A') achievement = 'B';
 
-  // 행복 지수
-  const happiness = calculateHappinessGrade(mental, social, health);
+  // 행복 지수 — 7년 전체 궤적. 학년말은 happinessTrajectoryForYear(그 해).
+  const happiness = calculateHappinessGrade(mental, social, health, happinessTrajectoryLifetime(state));
 
   // 진로 판정
   const career = determineCareer(state);
@@ -284,14 +383,22 @@ export function calculateEnding(state: GameState) {
     title = `완벽한 청춘 — ${career.path}`;
     description = '성적도, 관계도, 모든 것이 빛나는 학창시절이었다. ' + career.detail;
   } else if (achievement === 'S' && happiness === 'D' && suneungGrade && suneungGrade <= 2) {
-    title = `고독한 승리자 — ${career.path}`;
-    description = '성적은 최고였지만, 돌아보면 곁에 아무도 없었다. ' + career.detail;
+    // **D의 의미가 T21로 넓어졌다.** 예전 D는 mental<25(사실상 고립)뿐이었지만, 이제는
+    // 저멘탈 주·바닥 주·번아웃 궤적으로도 열린다 — social 88인 판도 D가 된다.
+    // 그래서 "곁에 아무도 없었다"가 거짓이 될 수 있다. C 라벨을 「외로운」→「그늘진」으로
+    // 고친 것과 같은 이유다. 실제로 고립된 판에만 원래 문구를 남기고, 나머지는 대가를 말한다.
+    const wasAlone = social < 40;
+    title = `${wasAlone ? '고독한' : '대가를 치른'} 승리자 — ${career.path}`;
+    description = (wasAlone
+      ? '성적은 최고였지만, 돌아보면 곁에 아무도 없었다. '
+      : '성적은 최고였다. 다만 그 몇 해가 통째로 어두웠다. ') + career.detail;
   } else if (state.burnoutCount >= 3 && suneungGrade && suneungGrade <= 4) {
     title = `불꽃은 꺼지지 않는다 — ${career.path}`;
     description = '몇 번이고 쓰러졌지만, 그래도 일어났다. ' + career.detail;
   } else if (happiness === 'S' && achievement !== 'S' && academic < 60) {
     // QA C1-B 연동: 기존 (happiness S && achievement C)는 C1-B 후 도달 불가
     // (happiness S 가 health≥20 을 요구 → lifeScore≥53 → achievement 최소 B).
+    // T21: 궤적은 강등만 하므로 이 함의는 유지 (S가 더 어려워졌을 뿐).
     // 의도("성적은 평범했지만 행복")대로 academic 기준으로 re-base — 관계·멘탈·건강은 좋고
     // 성적만 평범(academic<60)한 빌드가 받는 엔딩. 최상위(achievement S)는 제외.
     title = `행복한 평범함 — ${career.path}`;

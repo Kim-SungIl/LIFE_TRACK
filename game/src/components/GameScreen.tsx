@@ -214,6 +214,9 @@ export function GameScreen() {
           memorySlots={state.memorySlots ?? []}
           milestoneScenes={state.milestoneScenes ?? []}
           stats={state.stats}
+          lowMentalWeeksByYear={state.lowMentalWeeksByYear}
+          veryLowMentalWeeksByYear={state.veryLowMentalWeeksByYear}
+          burnoutCountByYear={state.burnoutCountByYear}
           bgProps={bgProps}
           onAdvance={() => {}}
           readonly
@@ -264,6 +267,9 @@ export function GameScreen() {
         memorySlots={state.memorySlots}
         milestoneScenes={state.milestoneScenes}
         stats={state.stats}
+        lowMentalWeeksByYear={state.lowMentalWeeksByYear}
+        veryLowMentalWeeksByYear={state.veryLowMentalWeeksByYear}
+        burnoutCountByYear={state.burnoutCountByYear}
         bgProps={bgProps}
         onAdvance={advanceFromYearEnd}
       />

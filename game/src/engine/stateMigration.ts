@@ -5,6 +5,7 @@
 //     store 로드와 processWeek 양쪽에서 매번 실행 — 반드시 멱등·저비용. 단순 필드 추가는 전부 이쪽.
 // gameEngine.ts 에서 추출 (P2-6). 새 필드 추가 시 migrateLoadedState 한 곳만 수정.
 import { GameState } from './types';
+import { padYearCounts } from './ending';
 import { hashInitialState, deriveTalkSeed } from './rng';
 import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
@@ -67,6 +68,10 @@ export function migrateLoadedState(state: GameState): GameState {
     weekPurchases: state.weekPurchases || {},
     consecutiveTiredWeeks: state.consecutiveTiredWeeks ?? 0,
     totalTiredWeeks: state.totalTiredWeeks ?? 0,
+    // T21: 구세이브는 과거 주를 재구성하지 않는다 — 0 백필 = 스냅샷과 동일(등급이 갑자기 안 떨어짐).
+    lowMentalWeeksByYear: padYearCounts(state.lowMentalWeeksByYear),
+    veryLowMentalWeeksByYear: padYearCounts(state.veryLowMentalWeeksByYear),
+    burnoutCountByYear: padYearCounts(state.burnoutCountByYear),
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
     idleWeeks: state.idleWeeks ?? 0,

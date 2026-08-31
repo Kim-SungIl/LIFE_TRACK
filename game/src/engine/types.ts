@@ -51,6 +51,11 @@ export interface GameState {
   idleWeeks: number;                // v6: 연속 비생산적 주 카운트
   consecutiveTiredWeeks: number;    // v6.4: 연속 피로 주수 (만성 피로 패널티)
   totalTiredWeeks: number;          // QA C5: 누적 tired/burnout 주수 (만성 탈진 엔딩 라우팅)
+  // T21: 행복 등급용 학년별 궤적. 누적값(burnoutCount·totalTiredWeeks)은 학년말에 못 쓴다.
+  // index = year-1 (Y1→0 … Y7→6). 길이 7. 저멘탈=mental<40, 바닥=mental<25.
+  lowMentalWeeksByYear: number[];
+  veryLowMentalWeeksByYear: number[];
+  burnoutCountByYear: number[];
   burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
   // v1.2 기억 슬롯 시스템
