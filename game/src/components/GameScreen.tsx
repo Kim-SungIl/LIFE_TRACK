@@ -15,6 +15,7 @@ import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData 
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
+import { ScreenChunkFallback } from './ScreenChunkFallback';
 
 // 비-부팅 화면만 lazy — MainWeekScreen / WeeklyResultScreen / TitleScreen 은 첫 페인트·고빈도라 eager 유지.
 const EventScene = lazy(() =>
@@ -29,23 +30,6 @@ const EndingScreen = lazy(() =>
 const EventResultScreen = lazy(() =>
   import('./screens/EventResultScreen').then((m) => ({ default: m.EventResultScreen })),
 );
-
-/** Suspense fallback — 기존 톤 배경만 유지한 조용한 빈 화면 (깜빡임·스피너 없음).
- *  시각적으론 빈 배경이지만, 청크 로딩을 스크린리더에 1회 알린다(로드 후 재-suspend 없어 무음). */
-function ScreenChunkFallback() {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      style={{ position: 'fixed', inset: 0, background: 'var(--bg-primary)' }}
-    >
-      <span style={{
-        position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
-        overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0,
-      }}>불러오는 중…</span>
-    </div>
-  );
-}
 
 /**
  * 학교급 → 배경음. 곡 교체는 즉시 컷이라 소리가 뚝 끊기는데, 학교급이 바뀌는 자리(Y1→Y2,

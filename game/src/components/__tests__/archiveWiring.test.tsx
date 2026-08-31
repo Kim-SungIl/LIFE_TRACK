@@ -7,6 +7,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => `WEBP::${p}` }));
 
+// idle 예약을 삼킨다 — 이 파일은 prefetch를 단언하지 않지만, 실행되게 두면 테스트 도중
+// 청크 import가 떠서 비결정적이 된다. prefetch 계약 자체는 archivePrefetch.test.tsx가 본다.
+vi.mock('../../engine/assetPrefetch', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../engine/assetPrefetch')>()),
+  runWhenIdle: () => () => {},
+}));
+
 import { TitleScreen } from '../TitleScreen';
 import { RunArchiveSummary } from '../screens/RunArchiveSummary';
 import { EventResultScreen } from '../screens/EventResultScreen';
@@ -74,6 +81,12 @@ describe('기록실 진입 게이트', () => {
     render(<TitleScreen />);
     expect(screen.queryByRole('button', { name: '기록실' })).toBeNull();
   });
+
+  // 여기서 멈춘다 — 누른 뒤의 lazy 경계·fallback·prefetch는 이 파일에 두지 않는다.
+  // 이 파일은 위쪽에서 ArchiveScreen을 정적 import하고(픽스처용) 여러 테스트가 기록실을
+  // 반복해서 여는데, React.lazy는 resolve된 payload를 캐시하므로 **두 번째부터는 fallback
+  // 프레임이 존재하지 않는다.** 그래서 호출부 배선은 lazyScreenWiring.test.tsx,
+  // prefetch는 archivePrefetch.test.tsx가 각각 전용 파일에서 본다.
 });
 
 // W48 이벤트는 결과 화면이 뜨기 전에 학년 전환이 끝나 있다. 결과 화면이 state.year를 그대로

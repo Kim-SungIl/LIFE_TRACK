@@ -18,7 +18,8 @@
     "verify:content": "npm run verify:ci",
     "verify:ci": "tsx scripts/verify/verify-fonts.ts && tsx scripts/verify/verify-events-split.ts && tsx scripts/verify/verify-event-fixes.ts && tsx scripts/verify/verify-event-cg-coverage.ts && tsx scripts/verify/verify-crisis-events.ts && tsx scripts/verify/verify-fixed-event-priority.ts && tsx scripts/verify/verify-followup-chain.ts && tsx scripts/verify/verify-phase22-events.ts && tsx scripts/verify/verify-tier50-mini-events.ts && tsx scripts/verify/verify-tier70-mini-events.ts && tsx scripts/verify/verify-ending-branches.ts && tsx scripts/verify/verify-m2-state.ts && tsx scripts/verify/verify-m3-memory.ts && tsx scripts/verify/verify-m4-money.ts && tsx scripts/verify/verify-m6-recovery.ts && tsx scripts/verify/verify-save-load.ts && tsx scripts/verify/verify-patch-batch1-2.ts && tsx scripts/verify/verify-patch-batch3.ts && tsx scripts/verify/verify-patch-batch4.ts && tsx scripts/verify/verify-patch-batch5.ts && tsx scripts/verify/verify-parent-phase2a.ts && tsx scripts/verify/verify-parent-phase2b.ts && tsx scripts/verify/verify-parent-career.ts && tsx scripts/verify/verify-parent-adolescence.ts && tsx scripts/verify/verify-parent-climax.ts && tsx scripts/verify/verify-parent-ending.ts && tsx scripts/verify/verify-parent-smalltalk-school.ts && tsx scripts/verify/verify-reach-high.ts && tsx scripts/verify/verify-reach-pacing.ts && tsx scripts/verify/verify-signal-2.ts && tsx scripts/verify/verify-tier90-mini-events.ts && tsx scripts/verify/verify-year-end-event.ts",
     "verify:dist-fonts": "tsx scripts/verify/verify-dist-fonts.ts",
-    "verify:dist-hygiene": "tsx scripts/verify/verify-dist-hygiene.ts"
+    "verify:dist-hygiene": "tsx scripts/verify/verify-dist-hygiene.ts",
+    "verify:dist-chunks": "tsx scripts/verify/verify-dist-chunks.ts"
   },
   "dependencies": {
     "react": "^19.2.4",
