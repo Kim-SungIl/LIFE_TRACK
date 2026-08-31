@@ -21,7 +21,8 @@ import { ArchiveScreen } from '../screens/ArchiveScreen';
 import { clearArchive, loadArchive, accrueResolvedEvent, commitRun } from '../../engine/archive';
 import { INITIAL_NPCS } from '../../engine/npcRoster';
 import { isBarelyTouched, npcStoryRows } from '../../engine/npcStoryPool';
-import { npcAlbum, albumFor, isSlotFilled } from '../../engine/npcAlbum';
+import { npcAlbum, albumFor, isSlotFilled, slotPath } from '../../engine/npcAlbum';
+import { NpcAlbumScreen } from '../screens/NpcAlbumScreen';
 import { SOLO_ROOT, soloStoryRow } from '../../engine/npcStoryPool';
 import { GAME_EVENTS } from '../../engine/events';
 import { createInitialState } from '../../engine/gameEngine';
@@ -501,5 +502,82 @@ describe('기록실 — 혼자 지나온 것 줄', () => {
     const npcFace = alts.find(a => roster.has(a.replace(/ \w+$/, '')));
     expect(npcFace, `solo 앨범에 사람 초상화가 떴다: ${npcFace}`).toBeUndefined();
     expect(alts).toContain('혼자 지나온 것');
+  });
+});
+
+// 줄과 앨범은 **다른 축**을 센다(줄=겪은 이야기, 앨범=이 판본에서 모은 그림 칸). 이름표 없이
+// 나란히 두면 "3개라더니 들어가니 0개"로 읽힌다 — 실제 신고가 그것이었다. 수를 억지로 맞추는
+// 대신 앨범이 줄의 수를 **그대로 받아** 이름표를 붙이는 것이 계약이다.
+describe('기록실 줄 ↔ 앨범 숫자', () => {
+  // 도윤은 두 축이 갈리는 인물이다(이야기 7종 ↔ 남주판 11칸). 갈리지 않는 인물로 재면
+  // 앨범이 이야기 자리에 그림 수를 넣어도 통과하므로 판별력이 없다.
+  const doyunAxes = () => {
+    const a = loadArchive();
+    const stories = npcStoryRows(a.events, a.npcPeak).find(r => r.id === 'doyun')!;
+    const slots = albumFor('doyun', 'male').reduce((n, b) => n + b.slots.length, 0);
+    return { stories, slots };
+  };
+
+  it('앨범의 이야기 수는 줄이 보여준 수와 같다', () => {
+    accrueResolvedEvent(state({ events: [ev('doyun-comic-share'), ev('doyun-secret-spot')] }));
+    const { stories, slots } = doyunAxes();
+    expect(slots, '전제: 두 축이 갈리는 인물이어야 이 테스트가 판별한다').not.toBe(stories.total);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    const row = screen.getByRole('button', { name: /도윤/ });
+    const shown = (row.textContent ?? '').match(/(\d+)\s*\/\s*(\d+)/);
+    expect(shown, `줄에서 수를 못 읽었다: ${row.textContent}`).toBeTruthy();
+    expect(Number(shown![2]), '줄이 이야기 총수가 아닌 것을 쓴다').toBe(stories.total);
+
+    fireEvent.click(row);
+    expect(
+      screen.getByText(`이야기 ${shown![1]} / ${shown![2]}`),
+      `앨범이 줄과 다른 수를 말한다 (줄: ${shown![0]}) — 앨범이 story를 다시 계산하면 갈라진다`,
+    ).toBeTruthy();
+  });
+
+  it('그림 합계는 이 판본의 학교급 칸을 다 더한 것이다', () => {
+    accrueResolvedEvent(state({ events: [ev('doyun-comic-share')] }));
+    const { slots } = doyunAxes();
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /도윤/ }));
+
+    const label = screen.getByText('이 판본에서 모은 그림');
+    expect(
+      label.parentElement?.textContent,
+      '그림 합계가 학교급 칸의 합과 다르다 — 머릿속으로 더하게 만드는 그 상태다',
+    ).toContain(`/ ${slots}`);
+  });
+
+  // 신고의 핵심 장면: 이야기는 봤는데 그림이 0장이라 빈 칸 벽만 보이던 자리.
+  // 주인 없는 장면 43종 중 24종엔 CG가 아예 없다(개학·시험·번아웃·반장 선거…).
+  it('이야기는 봤는데 그림이 0장이면 그 이유를 말해준다', () => {
+    accrueResolvedEvent(state({ events: [ev('sports-day')] }));   // solo · CG 없음
+    expect(soloStoryRow(loadArchive().events).seen, '전제: solo 이야기를 봤어야 한다').toBeGreaterThan(0);
+
+    render(<ArchiveScreen onBack={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /혼자 지나온 것/ }));
+    expect(
+      screen.getByText('본 장면들은 그림 없이 지나갔다.'),
+      '그림 0장인데 설명이 없다 — 빈 칸 벽만 보여 고장으로 읽힌다',
+    ).toBeTruthy();
+  });
+
+  // 양성 짝. 이 대조가 없으면 문장을 **무조건** 띄우게 만들어도 위 테스트는 통과한다.
+  it('그림을 한 칸이라도 모았으면 그 문장은 뜨지 않는다', () => {
+    const slot = albumFor('doyun', 'male')[0].slots[0];
+    const path = slotPath(slot, 'male')!;
+    expect(path, '전제: 칸의 그림 경로를 얻어야 채운 상태를 만들 수 있다').toBeTruthy();
+
+    render(
+      <NpcAlbumScreen npcId="doyun" story={{ seen: 1, total: 7 }} seenCgFiles={[path]} onBack={() => {}} />,
+    );
+    const label = screen.getByText('이 판본에서 모은 그림');
+    expect(label.parentElement?.textContent, '전제: 한 칸은 채워져 있어야 한다').not.toContain('0 /');
+    expect(
+      screen.queryByText('본 장면들은 그림 없이 지나갔다.'),
+      '그림을 모았는데도 "그림 없이 지나갔다"가 뜬다',
+    ).toBeNull();
   });
 });

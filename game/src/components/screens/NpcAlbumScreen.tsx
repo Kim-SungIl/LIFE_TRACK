@@ -35,8 +35,13 @@ const SOLO_EMBLEM = webpSrc(`${import.meta.env.BASE_URL}images/emblems/growth.pn
  * 칸을 좌우로 두 개씩 놓는 안은 버렸다: 지훈이 92칸이 되어 스크롤이 두 배가 되고, 한 판본만
  * 해본 사람에게는 한 칸씩 건너 영구히 빈 칸이 되어 "고장난 앨범"으로 읽힌다.
  */
-export function NpcAlbumScreen({ npcId, seenCgFiles, onBack }: {
+export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
   npcId: string;
+  /**
+   * 기록실 줄이 **방금 보여준 그 수**를 그대로 받는다(다시 계산하지 않는다).
+   * 두 화면이 각자 세면 조용히 어긋나고, 실제로 그게 "줄엔 3인데 앨범엔 0장" 신고의 정체였다.
+   */
+  story: { seen: number; total: number };
   seenCgFiles: readonly string[];
   onBack: () => void;
 }) {
@@ -47,6 +52,14 @@ export function NpcAlbumScreen({ npcId, seenCgFiles, onBack }: {
   const npc = INITIAL_NPCS.find(n => n.id === npcId);
   const buckets = albumFor(npcId, gender);
   const openPath = open ? filledPath(open, seenCgFiles, gender) : null;
+
+  // 이 화면의 두 수는 **다른 축**이다. 이야기는 겪은 장면 수라 판본과 무관하고, 그림은
+  // 이 탭에서 모은 칸 수다. 한 이벤트가 학교급·그림서명마다 칸이 되고 CG 없는 이벤트는
+  // 칸이 아예 없으므로 둘은 어느 방향으로도 갈린다(하은 이야기 18 / 그림 13, 예린 6 / 14).
+  // 그래서 수를 맞추는 대신 **이름표를 붙여** 각자 무엇인지 밝힌다.
+  const shotTotal = buckets.reduce((n, b) => n + b.slots.length, 0);
+  const shotFilled = buckets.reduce(
+    (n, b) => n + b.slots.filter(s => isSlotFilled(s, seenCgFiles, gender)).length, 0);
 
   return (
     <div className="screen fade-in" style={{ padding: '20px 16px', maxWidth: 420, margin: '0 auto' }}>
@@ -68,6 +81,11 @@ export function NpcAlbumScreen({ npcId, seenCgFiles, onBack }: {
           </div>
           <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             {solo ? '개학과 시험, 졸업 준비 — 곁에 아무도 없던 시간' : npc?.description}
+          </div>
+          {/* 판본과 무관한 수라 얼굴 옆(정체성 자리)에 둔다. 아래 그림 수는 탭 밑에 둬서
+              "이건 탭에 따라 달라진다"가 위치로 읽히게 한다. */}
+          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 3 }}>
+            이야기 {story.seen} / {story.total}
           </div>
         </div>
       </div>
@@ -100,6 +118,29 @@ export function NpcAlbumScreen({ npcId, seenCgFiles, onBack }: {
           );
         })}
       </div>
+
+      {/* 학교급별 칸을 머릿속으로 더하지 않아도 되게 합계를 낸다(초6 1/8 + 중학교 0/3 = 1/11).
+          탭 바로 아래에 두는 것이 요점이다 — 판본을 바꾸면 이 수가 따라 바뀐다. */}
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        fontSize: '0.76rem', marginBottom: 12,
+      }}>
+        <span style={{ color: 'var(--text-muted)' }}>이 판본에서 모은 그림</span>
+        <span style={{ color: shotTotal > 0 && shotFilled === shotTotal ? 'var(--gold)' : 'var(--text-secondary)' }}>
+          {shotFilled} / {shotTotal}
+        </span>
+      </div>
+
+      {/* 이야기는 봤는데 그림이 0장이면 빈 칸 벽만 보여 고장으로 읽힌다. 실제로 그림 없는
+          장면이 많아서다 — 주인 없는 장면 43종 중 24종(개학·시험·번아웃·반장 선거…)엔 CG가 없다. */}
+      {story.seen > 0 && shotFilled === 0 && (
+        <div style={{
+          fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic',
+          lineHeight: 1.6, marginBottom: 14,
+        }}>
+          본 장면들은 그림 없이 지나갔다.
+        </div>
+      )}
 
       {buckets.length === 0 ? (
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>남은 장면이 없다.</div>
