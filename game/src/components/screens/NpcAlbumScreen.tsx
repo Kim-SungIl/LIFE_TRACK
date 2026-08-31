@@ -61,6 +61,15 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
   const shotFilled = buckets.reduce(
     (n, b) => n + b.slots.filter(s => isSlotFilled(s, seenCgFiles, gender)).length, 0);
 
+  // 반대 판본의 채움 수. 이게 없으면 "그림이 없다"와 "이 판본을 안 해봤다"를 구별하지 못한다
+  // (3자 검수 전원 지적). 칸 수는 11개 뿌리 전부 male/female이 같고 277칸 중 195칸이
+  // 판본별로 다른 파일이라, **탭을 바꾸면 분모는 그대로인데 분자만 통째로 0이 된다** —
+  // 흔한 상태다. 탭을 누르지 않아도 걸린다: dominantGender는 기록 전체로 첫 탭을 고르므로
+  // 남주로 도윤 그림을 모은 뒤 여주 판을 많이 하면 도윤 앨범이 빈 여주 탭으로 열린다(실측).
+  const otherGender: Gender = gender === 'male' ? 'female' : 'male';
+  const otherFilled = albumFor(npcId, otherGender).reduce(
+    (n, b) => n + b.slots.filter(s => isSlotFilled(s, seenCgFiles, otherGender)).length, 0);
+
   return (
     <div className="screen fade-in" style={{ padding: '20px 16px', maxWidth: 420, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
@@ -131,14 +140,19 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
         </span>
       </div>
 
-      {/* 이야기는 봤는데 그림이 0장이면 빈 칸 벽만 보여 고장으로 읽힌다. 실제로 그림 없는
-          장면이 많아서다 — 주인 없는 장면 43종 중 24종(개학·시험·번아웃·반장 선거…)엔 CG가 없다. */}
+      {/* 이야기는 봤는데 그림이 0장이면 빈 칸 벽만 보여 고장으로 읽힌다. 그런데 0장인 이유가
+          둘이라 한 문장으로 쓰면 거짓말이 된다:
+            · 그 장면들에 애초에 CG가 없다 — 주인 없는 장면 43종 중 24종(개학·시험·번아웃…)
+            · 그림은 있는데 **이 판본에서 안 모았다** — 반대 탭에 있다
+          `story.seen > 0` 가드는 장식이 아니다. everMet은 만나기만 해도 참이라 이야기를
+          하나도 못 본 사람(서아 0/9)의 줄이 실제로 보이고, 가드가 없으면 그 앨범에
+          "본 장면들은 그림 없이 지나갔다"가 뜬다 — 본 장면이 하나도 없는데. */}
       {story.seen > 0 && shotFilled === 0 && (
         <div style={{
           fontSize: '0.76rem', color: 'var(--text-muted)', fontStyle: 'italic',
           lineHeight: 1.6, marginBottom: 14,
         }}>
-          본 장면들은 그림 없이 지나갔다.
+          {otherFilled > 0 ? '이 판본에서는 아직 모은 그림이 없다.' : '본 장면들은 그림 없이 지나갔다.'}
         </div>
       )}
 

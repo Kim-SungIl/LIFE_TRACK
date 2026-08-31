@@ -518,6 +518,16 @@ describe('기록실 줄 ↔ 앨범 숫자', () => {
     return { stories, slots };
   };
 
+  /** "이 판본에서 모은 그림 N / M"에서 N을 읽는다. 부분문자열 비교는 못 쓴다 — '10 / 11'도 '0 /'를 포함한다. */
+  const shotCounts = () => {
+    const text = screen.getByText('이 판본에서 모은 그림').parentElement?.textContent ?? '';
+    const m = text.match(/(\d+)\s*\/\s*(\d+)/);
+    expect(m, `그림 합계를 못 읽었다: ${text}`).toBeTruthy();
+    return { filled: Number(m![1]), total: Number(m![2]) };
+  };
+  const selectedTab = () =>
+    screen.getAllByRole('tab').find(t => t.getAttribute('aria-selected') === 'true')?.textContent;
+
   it('앨범의 이야기 수는 줄이 보여준 수와 같다', () => {
     accrueResolvedEvent(state({ events: [ev('doyun-comic-share'), ev('doyun-secret-spot')] }));
     const { stories, slots } = doyunAxes();
@@ -528,6 +538,13 @@ describe('기록실 줄 ↔ 앨범 숫자', () => {
     const shown = (row.textContent ?? '').match(/(\d+)\s*\/\s*(\d+)/);
     expect(shown, `줄에서 수를 못 읽었다: ${row.textContent}`).toBeTruthy();
     expect(Number(shown![2]), '줄이 이야기 총수가 아닌 것을 쓴다').toBe(stories.total);
+
+    // 다른 줄과 수가 겹치면 "다른 사람의 story를 넘긴다"는 변조를 이 테스트가 못 가른다(검수 지적).
+    const others = screen.getAllByRole('button')
+      .filter(b => b !== row && /\d+\s*\/\s*\d+/.test(b.textContent ?? ''))
+      .map(b => (b.textContent ?? '').match(/(\d+)\s*\/\s*(\d+)/)![0]);
+    expect(others, `전제: 도윤 줄(${shown![0]})과 같은 수를 가진 줄이 있으면 판별력이 없다`)
+      .not.toContain(shown![0]);
 
     fireEvent.click(row);
     expect(
@@ -543,11 +560,12 @@ describe('기록실 줄 ↔ 앨범 숫자', () => {
     render(<ArchiveScreen onBack={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /도윤/ }));
 
-    const label = screen.getByText('이 판본에서 모은 그림');
+    // 기대값을 남주 칸 수로 잡았으니 실제로 남주 탭이 열렸는지 못박는다(검수 지적).
+    expect(selectedTab(), '전제: 남주 탭이 열려 있어야 이 기대값이 맞다').toContain('남자 주인공');
     expect(
-      label.parentElement?.textContent,
+      shotCounts().total,
       '그림 합계가 학교급 칸의 합과 다르다 — 머릿속으로 더하게 만드는 그 상태다',
-    ).toContain(`/ ${slots}`);
+    ).toBe(slots);
   });
 
   // 신고의 핵심 장면: 이야기는 봤는데 그림이 0장이라 빈 칸 벽만 보이던 자리.
@@ -566,18 +584,73 @@ describe('기록실 줄 ↔ 앨범 숫자', () => {
 
   // 양성 짝. 이 대조가 없으면 문장을 **무조건** 띄우게 만들어도 위 테스트는 통과한다.
   it('그림을 한 칸이라도 모았으면 그 문장은 뜨지 않는다', () => {
-    const slot = albumFor('doyun', 'male')[0].slots[0];
-    const path = slotPath(slot, 'male')!;
+    const path = slotPath(albumFor('doyun', 'male')[0].slots[0], 'male')!;
     expect(path, '전제: 칸의 그림 경로를 얻어야 채운 상태를 만들 수 있다').toBeTruthy();
 
     render(
       <NpcAlbumScreen npcId="doyun" story={{ seen: 1, total: 7 }} seenCgFiles={[path]} onBack={() => {}} />,
     );
-    const label = screen.getByText('이 판본에서 모은 그림');
-    expect(label.parentElement?.textContent, '전제: 한 칸은 채워져 있어야 한다').not.toContain('0 /');
+    expect(shotCounts().filled, '전제: 한 칸은 채워져 있어야 한다').toBeGreaterThan(0);
     expect(
       screen.queryByText('본 장면들은 그림 없이 지나갔다.'),
       '그림을 모았는데도 "그림 없이 지나갔다"가 뜬다',
     ).toBeNull();
+  });
+
+  // 이야기를 하나도 못 본 사람. everMet은 만나기만 해도 참이라(npcPeak) 이 줄이 실제로 보인다.
+  // `story.seen > 0` 가드가 없으면 본 장면이 하나도 없는데 "본 장면들은 그림 없이 지나갔다"고 말한다.
+  it('이야기를 하나도 못 본 사람의 앨범엔 그 문장이 없다', () => {
+    render(
+      <NpcAlbumScreen npcId="seoa" story={{ seen: 0, total: 9 }} seenCgFiles={[]} onBack={() => {}} />,
+    );
+    expect(shotCounts().filled, '전제: 모은 그림이 0이어야 이 분기에 닿는다').toBe(0);
+    expect(
+      screen.queryByText(/그림 없이 지나갔다|모은 그림이 없다/),
+      '본 장면이 하나도 없는데 "본 장면들은 …"이라고 말한다',
+    ).toBeNull();
+  });
+
+  // 판본이 갈리는 칸으로만 만들 수 있는 상태다 — 277칸 중 195칸이 male/female 다른 파일이고,
+  // 칸 **수**는 11개 뿌리 전부 같아서 분모로는 판별이 영원히 불가능하다(검수 실측).
+  const maleOnlyShot = () => {
+    const slot = albumFor('doyun', 'male').flatMap(b => b.slots)
+      .find(s => slotPath(s, 'male') && slotPath(s, 'female') && slotPath(s, 'male') !== slotPath(s, 'female'));
+    expect(slot, '전제: 판본별로 파일이 갈리는 칸이 있어야 이 테스트가 성립한다').toBeTruthy();
+    return slotPath(slot!, 'male')!;
+  };
+
+  it('판본을 바꾸면 모은 그림 수가 따라 바뀐다', () => {
+    render(
+      <NpcAlbumScreen npcId="doyun" story={{ seen: 1, total: 7 }} seenCgFiles={[maleOnlyShot()]} onBack={() => {}} />,
+    );
+    expect(selectedTab(), '전제: 남주 탭으로 열려야 한다').toContain('남자 주인공');
+    const male = shotCounts();
+    expect(male.filled, '전제: 남주판에 한 칸은 채워져 있어야 한다').toBeGreaterThan(0);
+
+    fireEvent.click(screen.getByRole('tab', { name: /여자 주인공/ }));
+    const female = shotCounts();
+    expect(female.total, '판본을 바꿔도 분모는 같다 — 분모로는 판별할 수 없다').toBe(male.total);
+    expect(
+      female.filled,
+      '탭을 바꿨는데 채움 수가 그대로다 — 요약이 선택한 판본을 안 보고 한쪽으로 굳어 있다',
+    ).toBe(0);
+  });
+
+  // 신고 1번을 고치면서 생긴 반대쪽 거짓말. 3자 검수 전원이 독립적으로 짚었다.
+  it('반대 판본에 그림이 있으면 "그림 없이 지나갔다"가 아니라 판본 얘기를 한다', () => {
+    render(
+      <NpcAlbumScreen npcId="doyun" story={{ seen: 1, total: 7 }} seenCgFiles={[maleOnlyShot()]} onBack={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /여자 주인공/ }));
+    expect(shotCounts().filled, '전제: 이 판본은 0장이어야 문장이 나온다').toBe(0);
+
+    expect(
+      screen.queryByText('본 장면들은 그림 없이 지나갔다.'),
+      '남주판에 그림이 있는데 "그림이 없다"고 말한다 — 거짓 진술이다',
+    ).toBeNull();
+    expect(
+      screen.getByText('이 판본에서는 아직 모은 그림이 없다.'),
+      '0장인 이유를 설명하지 않는다 — 빈 칸 벽만 남는다',
+    ).toBeTruthy();
   });
 });
