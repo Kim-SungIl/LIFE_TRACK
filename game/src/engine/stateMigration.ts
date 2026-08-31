@@ -5,10 +5,12 @@
 //     store 로드와 processWeek 양쪽에서 매번 실행 — 반드시 멱등·저비용. 단순 필드 추가는 전부 이쪽.
 // gameEngine.ts 에서 추출 (P2-6). 새 필드 추가 시 migrateLoadedState 한 곳만 수정.
 import { GameState } from './types';
+import { padYearCounts } from './ending';
 import { hashInitialState, deriveTalkSeed } from './rng';
 import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
+import { presentEvent } from './eventPresentation';
 
 // ===== 1) 단계형 마이그레이션 =====
 // 과거엔 store가 version !== SAVE_VERSION이면 세이브를 통째로 버렸다(격상 = 전 세이브 증발).
@@ -66,6 +68,10 @@ export function migrateLoadedState(state: GameState): GameState {
     weekPurchases: state.weekPurchases || {},
     consecutiveTiredWeeks: state.consecutiveTiredWeeks ?? 0,
     totalTiredWeeks: state.totalTiredWeeks ?? 0,
+    // T21: 구세이브는 과거 주를 재구성하지 않는다 — 0 백필 = 스냅샷과 동일(등급이 갑자기 안 떨어짐).
+    lowMentalWeeksByYear: padYearCounts(state.lowMentalWeeksByYear),
+    veryLowMentalWeeksByYear: padYearCounts(state.veryLowMentalWeeksByYear),
+    burnoutCountByYear: padYearCounts(state.burnoutCountByYear),
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
     idleWeeks: state.idleWeeks ?? 0,
@@ -117,7 +123,12 @@ export function migrateLoadedState(state: GameState): GameState {
     if (fresh) {
       // 발생주(cur.week)는 보존 — result.week 는 week++(gameEngine) 이후 값이라 덮어쓰면
       // 기억(memory)의 발생주가 +1 어긋난다(W48 이벤트 → 49).
-      result.currentEvent = { ...fresh, week: cur.week ?? result.week };
+      //
+      // **presentEvent로 다시 구워야 한다.** 카탈로그 원본을 그대로 넣으면 EventScene은
+      // 자기 쪽에서 다시 구워 변이를 보여주는데 state.currentEvent에는 원본이 남는다 →
+      // resolveEvent(store)와 GameScreen 결과 문구가 방금 읽은 장면과 다른 문장을 집는다.
+      // 굽는 좌표는 EventScene과 같아야 한다: 발생주(cur.week) + 현재 학년.
+      result.currentEvent = presentEvent({ ...fresh, week: cur.week ?? result.week }, result);
     } else {
       // 카탈로그에서 사라진 ID(구세이브 리네임/삭제) → currentEvent 제거 + phase 복구로 soft-lock 차단.
       // weekLog 가 있으면 주간 결산(result)으로, 없으면 일상(weekday)으로 떨어뜨려 진행 가능 상태 보장.

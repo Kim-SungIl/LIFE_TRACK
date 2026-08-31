@@ -1,7 +1,9 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
+import { emptyYearCounts } from './ending';
 import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
+import { assignCurrentEvent } from './eventPresentation';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
 import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
@@ -75,6 +77,9 @@ export function createInitialState(
     idleWeeks: 0,
     consecutiveTiredWeeks: 0,
     totalTiredWeeks: 0,
+    lowMentalWeeksByYear: emptyYearCounts(),
+    veryLowMentalWeeksByYear: emptyYearCounts(),
+    burnoutCountByYear: emptyYearCounts(),
     burnoutCooldown: 0,
     eventTimeCost: 0,
     // v1.2 기억 슬롯 시스템
@@ -466,6 +471,31 @@ function checkMilestones(state: GameState, log: WeekLog): void {
   }
 }
 
+function yearSlot(year: number): number | null {
+  if (year < 1 || year > 7) return null;
+  return year - 1;
+}
+
+function recordBurnoutForYear(state: GameState): void {
+  const i = yearSlot(state.year);
+  if (i == null) return;
+  const arr = state.burnoutCountByYear ?? emptyYearCounts();
+  arr[i] = (arr[i] ?? 0) + 1;
+  state.burnoutCountByYear = arr;
+}
+
+// 그 주의 최종 mental(시험·방치 패널티 이후)을 학년 슬롯에 적립. 이벤트 resolve는 다음 순간이라 여기 안 넣음.
+function recordHappinessWeek(state: GameState): void {
+  const i = yearSlot(state.year);
+  if (i == null) return;
+  const low = state.lowMentalWeeksByYear ?? emptyYearCounts();
+  const very = state.veryLowMentalWeeksByYear ?? emptyYearCounts();
+  if (state.stats.mental < 40) low[i] = (low[i] ?? 0) + 1;
+  if (state.stats.mental < 25) very[i] = (very[i] ?? 0) + 1;
+  state.lowMentalWeeksByYear = low;
+  state.veryLowMentalWeeksByYear = very;
+}
+
 // ===== 멘탈 상태 전환 =====
 // v5.1: tired/burnout 조건 완화 + tired 효과 추가
 function checkMentalStateTransition(state: GameState, log: WeekLog): void {
@@ -487,6 +517,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     } else {
       state.mentalState = 'burnout';
       state.burnoutCount++;
+      recordBurnoutForYear(state);
       state.routineSlot2Weeks = 0;
       state.routineSlot3Weeks = 0;
       log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
@@ -518,6 +549,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     && (state.burnoutCooldown || 0) === 0) {
     state.mentalState = 'burnout';
     state.burnoutCount++;
+    recordBurnoutForYear(state);
     state.routineSlot2Weeks = 0;
     state.routineSlot3Weeks = 0;
     log.messages.push('🔥 한계였다 — 쉬지 않고 달린 몸이 결국 멈춰 섰다.');
@@ -722,8 +754,7 @@ function selectEventForWeek(state: GameState): void {
     state.hardCrisisYears = selection.patch.hardCrisisYears;
   }
   if (selection.event) {
-    state.currentEvent = { ...selection.event, week: state.week };
-    state.phase = 'event';
+    assignCurrentEvent(state, selection.event, state.week);
   }
 }
 
@@ -977,6 +1008,9 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 10. 시험 체크 — 스케줄은 getExamSchedule SSOT 사용
   applyExamForWeek(newState, log);
+
+  // 행복 궤적 — 시험·방치까지 반영된 그 주의 최종 mental. week++ 전에 적립.
+  recordHappinessWeek(newState);
 
   // 11. 이벤트 체크 — getEventForWeek는 순수 함수, patch는 selectEventForWeek 내부에서 명시 적용
   selectEventForWeek(newState);

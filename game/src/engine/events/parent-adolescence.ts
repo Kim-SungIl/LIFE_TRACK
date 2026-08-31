@@ -6,7 +6,7 @@ import { GameEvent } from '../types';
 //  · 방문 쾅 이벤트(Y3 W26): 마이너스 선택지로 골짜기를 깊게 팔 수도, 솔직함으로 완만하게 둘 수도.
 //  · 화해 비트(Y5 W26): 골짜기를 겪고(clash 발동) 회복했을 때(친밀도≥60)만 해금 — "그땐 미안했어".
 // 화자: 일상 가정 voice인 '엄마'(강점 SSOT가 아닌 보편 비트 — 두 부모 중 늘 존재하는 엄마의 평상 목소리).
-// 고정 주차 풀 이벤트(W26은 전 학년 미점유). 스탯 퍼주기 금지: 작은 멘탈 + 친밀도 굴곡 + 회상만.
+// 고정 주차 풀 이벤트. W26은 Y1=elementary-semester2-start, Y3=clash, Y5=reconcile. 그 외 학년은 미점유.
 
 export const ADOLESCENCE_EVENTS: GameEvent[] = [
   {

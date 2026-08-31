@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { runSaveMigrations, migrateLoadedState, CURRENT_SAVE_VERSION } from '../stateMigration';
 import { createInitialState } from '../gameEngine';
 import { GAME_EVENTS } from '../events';
+import { assignCurrentEvent, presentEvent } from '../eventPresentation';
 import { absWeek } from '../weekMath';
 import { GameState } from '../types';
 
@@ -103,14 +104,59 @@ describe('migrateLoadedState 정규화', () => {
   });
 
   it('직렬화로 죽은 currentEvent를 카탈로그 원본으로 재수화하되 발생주는 보존한다', () => {
-    const fresh = GAME_EVENTS[0];
+    // **함수 필드가 실제로 있는 픽스처를 쓴다.** GAME_EVENTS[0](first-week)은 choice.condition이
+    // 하나도 없어서, 예전처럼 `choices`를 통째로 toBe로 비교하면 "함수가 살아났다"를 한 번도
+    // 실증하지 못한 채(undefined === undefined) 통과한다 — 게다가 그 단언은 재수화가 변이를
+    // 굽지 못하도록 참조 동일성을 요구해 결함을 잠그고 있었다.
+    const fresh = GAME_EVENTS.find(e => e.choices.some(c => typeof c.condition === 'function'))!;
+    const liveIdx = fresh.choices.findIndex(c => typeof c.condition === 'function');
+    expect(liveIdx, '픽스처 자체가 함수 필드를 갖고 있어야 이 테스트가 의미를 가진다').toBeGreaterThanOrEqual(0);
+
     const dead = JSON.parse(JSON.stringify(fresh)) as typeof fresh; // 함수 필드 소실
+    expect(dead.choices[liveIdx].condition, '직렬화가 함수를 실제로 지웠다').toBeUndefined();
+
     const s = roundtrip(baseState());
     s.currentEvent = { ...dead, week: 13 };
     const out = migrateLoadedState(s);
-    // choices가 카탈로그 참조 그대로면 condition 등 함수 필드가 살아 있다
-    expect(out.currentEvent?.choices).toBe(fresh.choices);
+
+    // 계약의 본질: 참조 동일성이 아니라 **함수 필드가 되살아났는가**다.
+    expect(out.currentEvent?.choices[liveIdx].condition).toBe(fresh.choices[liveIdx].condition);
+    expect(out.currentEvent?.condition).toBe(fresh.condition);
     expect(out.currentEvent?.week).toBe(13);
+    // 참조 동일성을 놓는 대신 **값 불변성**을 명시한다 — 안 그러면 effects 변조가 새 나간다
+    // (구 테스트는 toBe(fresh.choices) 하나로 그것까지 덤으로 막고 있었다).
+    expect(out.currentEvent?.choices.map(c => c.text)).toEqual(fresh.choices.map(c => c.text));
+    expect(out.currentEvent?.choices.map(c => c.message)).toEqual(fresh.choices.map(c => c.message));
+    expect(out.currentEvent?.choices.map(c => c.effects)).toEqual(fresh.choices.map(c => c.effects));
+    expect(out.currentEvent?.choices.map(c => c.fatigueEffect)).toEqual(fresh.choices.map(c => c.fatigueEffect));
+  });
+
+  it('로드 후 state.currentEvent가 화면과 같은 변이 문장을 들고 있다 (결과창 불일치 차단)', () => {
+    // 화면(EventScene)은 자기 쪽에서 다시 굽기 때문에 재수화가 원본을 넣어도 변이가 보인다.
+    // 그러나 resolveEvent/GameScreen은 **state.currentEvent**를 읽는다 — 여기가 원본이면
+    // "방금 읽은 장면"과 "결과창 문구"가 갈린다. 그 소비 지점을 잠근다.
+    const chore = GAME_EVENTS.find(e => e.schoolVariants)!;
+    expect(chore, '변이를 가진 이벤트가 카탈로그에 있어야 이 테스트가 의미를 가진다').toBeTruthy();
+
+    const st = { ...baseState(), year: 6, week: 10 } as GameState; // 고등 band
+    assignCurrentEvent(st, chore, 10);
+    const bakedDesc = st.currentEvent!.description;
+    const bakedMsg = st.currentEvent!.choices[0].message;
+    // 픽스처 유효성: 변이가 실제로 카탈로그와 달라야 비교가 성립한다(양성 바닥).
+    expect(bakedDesc, '고등 변이는 카탈로그 본문과 달라야 한다').not.toBe(chore.description);
+    expect(bakedMsg, '고등 변이는 카탈로그 결과 문구와 달라야 한다').not.toBe(chore.choices[0].message);
+
+    const out = migrateLoadedState(roundtrip(st));
+    expect(out.currentEvent?.description, '로드 후 저장값이 변이 본문이다').toBe(bakedDesc);
+    expect(out.currentEvent?.choices[0].message, '로드 후 저장값이 변이 결과 문구다').toBe(bakedMsg);
+
+    // 화면이 그리는 것과도 정확히 같아야 한다(EventScene과 동일한 좌표로 재굽기 = 멱등).
+    const shown = presentEvent(out.currentEvent!, {
+      year: out.year, week: out.currentEvent!.week ?? out.week, gender: out.gender,
+    });
+    expect(shown.description, '저장값 == 화면').toBe(out.currentEvent!.description);
+    expect(shown.choices[0].message, '저장값 == 화면').toBe(out.currentEvent!.choices[0].message);
+    expect(out.currentEvent?.week, '발생주 보존은 그대로다').toBe(10);
   });
 
   it('카탈로그에서 사라진 currentEvent는 제거하고 phase를 진행 가능 상태로 복구한다 (soft-lock 차단)', () => {
@@ -128,5 +174,26 @@ describe('migrateLoadedState 정규화', () => {
     s.phase = 'result';
     s.weekLog = null;
     expect(migrateLoadedState(s).phase).toBe('weekday');
+  });
+
+  it('행복 궤적 배열이 없으면 길이 7 영으로 백필하고, 있으면 보존한다', () => {
+    const missing = roundtrip(baseState()) as GameState;
+    delete (missing as Partial<GameState>).lowMentalWeeksByYear;
+    delete (missing as Partial<GameState>).veryLowMentalWeeksByYear;
+    delete (missing as Partial<GameState>).burnoutCountByYear;
+    const filled = migrateLoadedState(missing);
+    expect(filled.lowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(filled.veryLowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(filled.burnoutCountByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+
+    const kept = roundtrip(baseState());
+    kept.lowMentalWeeksByYear = [1, 2, 3, 4, 5, 6, 7];
+    kept.veryLowMentalWeeksByYear = [0, 1, 0, 1, 0, 1, 0];
+    kept.burnoutCountByYear = [2, 0, 0, 0, 0, 0, 1];
+    const out = migrateLoadedState(kept);
+    expect(out.lowMentalWeeksByYear).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(out.veryLowMentalWeeksByYear).toEqual([0, 1, 0, 1, 0, 1, 0]);
+    expect(out.burnoutCountByYear).toEqual([2, 0, 0, 0, 0, 0, 1]);
+    expect(out.lowMentalWeeksByYear).toHaveLength(7);
   });
 });

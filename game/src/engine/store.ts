@@ -5,6 +5,7 @@ import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './s
 import { cloneGameState } from './stateClone';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
+import { assignCurrentEvent } from './eventPresentation';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
 import { PARENT_MINI_EVENTS } from './talkData';
@@ -228,12 +229,23 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
 function recordResolvedEvent(state: GameState, event: GameEvent, choiceIndex: number, occurrenceWeek: number, isFemale: boolean): void {
   const recordedEvent: Partial<GameEvent> = { ...event };
   delete recordedEvent.condition;
+  // 변이 테이블은 카탈로그가 갖고 있다 — 기록에 복제하면 발동 횟수만큼 세이브가 불어난다
+  // (7년 완주 실측: 332개 항목 중 62개에 중복 적재되어 105.6KB, 세이브의 29%).
+  // condition을 지우는 것과 같은 위생이다: 기록은 "무엇을 골랐나"만 남긴다.
+  delete recordedEvent.schoolVariants;
+  // presentedFemaleChoices는 바로 아래 resolvedFemale로 접어 넣으므로 원본은 남기지 않는다.
+  delete recordedEvent.presentedFemaleChoices;
   state.events.push({
     ...(recordedEvent as GameEvent),
     resolvedChoice: choiceIndex,
     week: occurrenceWeek,
     year: state.year,
-    resolvedFemale: isFemale && !!event.femaleChoices,
+    // 변이 이벤트는 presentEvent가 femaleChoices를 지우므로 `!!event.femaleChoices`가 항상
+    // false다. 여성 문장을 집었는지는 굽는 시점에만 알 수 있어 presentedFemaleChoices로 받고,
+    // **고른 선택지가 실제로 여성 문장이었는지**까지 본다(엔딩은 (이벤트, 선택지)로 갈린다).
+    resolvedFemale: isFemale && (
+      !!event.femaleChoices || (event.presentedFemaleChoices?.includes(choiceIndex) ?? false)
+    ),
   });
 }
 
@@ -247,8 +259,7 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
   );
   const followup = followupFiredThisWeek ? null : getFollowupForWeek(state, location);
   if (followup) {
-    state.currentEvent = { ...followup, week: occurrenceWeek };
-    state.phase = 'event';
+    assignCurrentEvent(state, followup, occurrenceWeek);
   } else {
     // chain cap: 일반 누적 2개, milestone(도달형) 잔여 있으면 3개까지 (졸업 직전 누락 방지).
     const eventsThisWeek = state.events.filter(
@@ -261,8 +272,7 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
       chainPick = getMilestoneForWeek(state);
     }
     if (chainPick) {
-      state.currentEvent = { ...chainPick, week: occurrenceWeek };
-      state.phase = 'event';
+      assignCurrentEvent(state, chainPick, occurrenceWeek);
     } else if (state.week > 48) {
       // W48 학년말/졸업 주 이벤트 종료 → processWeek가 미뤄둔 학년 전환을 지금 수행.
       applyYearTransition(state);
@@ -310,8 +320,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // week:1로 기록되므로 첫 주 결산의 fixed 선택에서 중복 발동하지 않는다.
     const firstScene = GAME_EVENTS.find(e => e.id === 'first-week');
     if (firstScene) {
-      initial.currentEvent = { ...firstScene };
-      initial.phase = 'event';
+      assignCurrentEvent(initial, firstScene, firstScene.week ?? 1);
     }
     // "이번 판에서 처음 본 이야기"의 기준선 리셋 — 세이브 덮어쓰기보다 먼저.
     // 새 판의 유일한 진입점이 여기이므로 리셋 지점도 여기 한 곳이다(loadSavedGame은 건드리지 않는다).

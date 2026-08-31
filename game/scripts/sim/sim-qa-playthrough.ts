@@ -8,7 +8,7 @@
  */
 import { createInitialState, processWeek, hashInitialState, getWeekInfo } from '../../src/engine/gameEngine';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../../src/engine/activities';
-import { calculateEnding, calculateHappinessGrade } from '../../src/engine/ending';
+import { calculateEnding } from '../../src/engine/ending';
 import { resolveEventLikeStore, talkToNpcLikeStore } from '../lib/y1-sim-resolve';
 import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import { getAvailableNpcEvents } from '../../src/engine/talkSystem';
@@ -258,7 +258,7 @@ function runPersona(p: Persona, seed: number): Result {
       detail: ending.careerDetail,
       title: ending.title,
     },
-    happinessGrade: calculateHappinessGrade(s.stats.mental, s.stats.social, s.stats.health),
+    happinessGrade: ending.happiness,
     burnoutCount: s.burnoutCount ?? 0,
     finalMentalState: (s as { mentalState?: string }).mentalState ?? '?',
     totalWeeksPlayed: s.totalWeeksPlayed ?? 0,
@@ -318,7 +318,7 @@ function runPersona(p: Persona, seed: number): Result {
   };
 }
 
-// ===== 12 플레이 페르소나 =====
+// ===== 플레이 페르소나 (29종) — 시드 12개와 곱해 348판. 개수를 바꾸면 이 주석도 고칠 것 =====
 const PERSONAS: Persona[] = [
   { name: 'academic-max', label: '공부 몰빵(학업 최대화)', gender: 'male', parents: ['strict', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true },
   { name: 'social-max', label: '친구 몰빵(관계 최대화)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['club', 'club'], vacation: ['club', 'rest', 'rest'], policy: 'social', talk: true },

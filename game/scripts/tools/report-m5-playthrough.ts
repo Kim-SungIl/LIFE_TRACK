@@ -9,7 +9,7 @@
 // 실행: cd game && npx tsx scripts/report-m5-playthrough.ts
 
 import { createInitialState, processWeek, scaleIntimacyChange } from '../../src/engine/gameEngine';
-import { calculateEnding, calculateHappinessGrade, HAPPINESS_LABELS } from '../../src/engine/ending';
+import { calculateEnding, calculateHappinessGrade, happinessTrajectoryLifetime, HAPPINESS_LABELS } from '../../src/engine/ending';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
 import { getFollowupForWeek } from '../../src/engine/events';
 import type { GameState, ParentStrength, MemoryCategory } from '../../src/engine/types';
@@ -212,6 +212,11 @@ interface Report {
   finalStats: { academic: number; social: number; talent: number; mental: number; health: number };
   finalMoney: number;
   burnoutCount: number;
+  // T21: 행복 등급은 스냅샷이 아니라 7년 궤적을 본다. 스냅샷만 넘기면 이 리포트가
+  // 엔딩 화면과 다른 등급을 찍는다(검수 지적).
+  lowMentalWeeksByYear: number[];
+  veryLowMentalWeeksByYear: number[];
+  burnoutCountByYear: number[];
 
   memorySlotCount: number;
   memoryByCategory: Record<MemoryCategory, number>;
@@ -312,6 +317,9 @@ function analyze(p: Pattern, s: GameState, trajectory: Trajectory[]): Report {
     },
     finalMoney: s.money,
     burnoutCount: s.burnoutCount,
+    lowMentalWeeksByYear: [...(s.lowMentalWeeksByYear ?? [])],
+    veryLowMentalWeeksByYear: [...(s.veryLowMentalWeeksByYear ?? [])],
+    burnoutCountByYear: [...(s.burnoutCountByYear ?? [])],
 
     memorySlotCount: s.memorySlots.length,
     memoryByCategory: memByCat,
@@ -425,10 +433,13 @@ async function main() {
   for (const [g, n] of Object.entries(gradeDistribution)) console.log(`  ${g}: ${n}`);
   console.log(`[수능 원점수 평균/최대/최소]: avg=${avg(reports.filter(r => r.suneungScore).map(r => r.suneungScore!))} max=${Math.max(...reports.map(r => r.suneungScore ?? 0))} min=${Math.min(...reports.filter(r => r.suneungScore).map(r => r.suneungScore!))}`);
 
-  // 행복 등급 분포 (mental + social 기반)
-  console.log('\n[행복 등급 분포 — 학년말 카드 시뮬]');
+  // 행복 등급 분포 — 스냅샷이 아니라 7년 궤적까지 반영(엔딩 화면과 같은 산식).
+  console.log('\n[행복 등급 분포 — 7년 궤적 반영]');
   for (const r of reports) {
-    const grade = calculateHappinessGrade(r.finalStats.mental, r.finalStats.social);
+    const grade = calculateHappinessGrade(
+      r.finalStats.mental, r.finalStats.social, r.finalStats.health,
+      happinessTrajectoryLifetime(r),
+    );
     const info = HAPPINESS_LABELS[grade];
     console.log(`  ${r.pattern.padEnd(20)} mental=${r.finalStats.mental} social=${r.finalStats.social} → ${grade} ${info.title}`);
   }

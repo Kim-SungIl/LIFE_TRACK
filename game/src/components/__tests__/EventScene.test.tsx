@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { EventScene } from '../EventScene';
+import { GAME_EVENTS } from '../../engine/events';
 import { makeState, makeEvent, makeChoice } from '../../test/fixtures';
 
 function renderScene(overrides?: Partial<Parameters<typeof EventScene>[0]>) {
@@ -179,5 +180,39 @@ describe('EventScene 화자 라벨', () => {
     renderScene({ event, npcs: [{ id: 'jihun', name: '지훈', met: true }] });
     expect(screen.getAllByText('지훈').length).toBeGreaterThan(0);
     expect(screen.queryByText('???')).not.toBeInTheDocument();
+  });
+});
+
+describe('EventScene 학교급 변이 소비', () => {
+  // 카탈로그 원본(미구움)을 넘긴다 — 대입 경로가 구워 줘도, 여기 분기를 빼면 화면은 원래 description만 본다.
+  const errand = GAME_EVENTS.find(e => e.id === 'president-errand');
+  if (!errand?.schoolVariants) throw new Error('president-errand schoolVariants 전제 붕괴');
+
+  // 아래 두 테스트의 문장은 **리터럴 정답 앵커**다 — pickVariantIndex를 테스트에서 다시 계산하면
+  // 제품과 같은 함수를 공유해(공유 오라클) 그 함수가 틀려도 양쪽이 함께 틀린 채 통과한다.
+  // 좌표: Y1 W6 → elementary[1]("우유 상자"), Y6 W6 → high[0]("야자"), Y1 W5 → elementary[0]("현장학습").
+  // 로테이션 공식을 바꾸면 이 값을 손으로 다시 뽑아 넣을 것(공식을 여기 옮겨 적지 말 것).
+  it('eventScene_renders_school_band_body: 초등과 고등이 다른 본문을 그린다', () => {
+    const { unmount } = renderScene({
+      event: { ...errand, week: 6 },
+      year: 1,
+      gender: 'male',
+    });
+    expect(screen.getByText(/우유 상자/, { exact: false }), 'eventScene_renders_school_band_body').toBeInTheDocument();
+    expect(screen.queryByText(/야자 시작 전/)).not.toBeInTheDocument();
+    unmount();
+
+    renderScene({ event: { ...errand, week: 6 }, year: 6, gender: 'male' });
+    expect(screen.getByText(/야자 시작 전/, { exact: false }), 'eventScene_renders_school_band_body').toBeInTheDocument();
+    expect(screen.queryByText(/우유 상자/)).not.toBeInTheDocument();
+  });
+
+  it('eventScene_same_state_rerender_stable: 리마운트해도 같은 본문이다', () => {
+    const props = { event: { ...errand, week: 5 }, year: 1 as const, gender: 'male' as const };
+    const { unmount } = renderScene(props);
+    expect(screen.getByText(/현장학습/, { exact: false })).toBeInTheDocument();
+    unmount();
+    renderScene(props);
+    expect(screen.getByText(/현장학습/, { exact: false })).toBeInTheDocument();
   });
 });

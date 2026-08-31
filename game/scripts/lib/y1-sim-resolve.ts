@@ -16,6 +16,7 @@ import { absWeek } from '../../src/engine/weekMath';
 import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import { getAvailableNpcEvents, getNpcSmalltalk } from '../../src/engine/talkSystem';
 import { cloneGameState } from '../../src/engine/stateClone';
+import { assignCurrentEvent } from '../../src/engine/eventPresentation';
 import type { GameState } from '../../src/engine/types';
 
 export function resolveEventLikeStore(state: GameState, choiceIndex: number): GameState {
@@ -102,14 +103,21 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     newState.activeBuffs.push({ ...choice.addBuff });
   }
 
+  // store.recordResolvedEvent와 같은 위생·판정을 쓴다. 여기가 드리프트하면 QA 시뮬 결과가
+  // 제품과 달라지는데, 이 파일은 스스로 "store.resolveEvent와 동일"이라고 주장한다.
   const recordedEvent: Partial<GameEvent> = { ...newState.currentEvent! };
   delete recordedEvent.condition;
+  delete recordedEvent.schoolVariants;
+  delete recordedEvent.presentedFemaleChoices;
   newState.events.push({
     ...(recordedEvent as GameEvent),
     resolvedChoice: choiceIndex,
     week: occurrenceWeek,
     year: newState.year,
-    resolvedFemale: isFemale && !!s.currentEvent!.femaleChoices,
+    resolvedFemale: isFemale && (
+      !!s.currentEvent!.femaleChoices
+      || (s.currentEvent!.presentedFemaleChoices?.includes(choiceIndex) ?? false)
+    ),
   });
 
   if (newState.weekLog) {
@@ -124,9 +132,9 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   );
   const followup = followupFiredThisWeek ? null : getFollowupForWeek(newState, resolvedLocation);
   if (followup) {
-    // 체인 이벤트도 occurrenceWeek 유지 — store.resolveEventChain이 {...ev, week: occurrenceWeek}로 세팅.
-    newState.currentEvent = { ...followup, week: occurrenceWeek };
-    newState.phase = 'event';
+    // 체인 이벤트도 occurrenceWeek 유지 — store.resolveEventChain과 같이 assignCurrentEvent를
+    // 통과시킨다(직접 대입하면 학교급 변이가 안 구워져 시뮬이 카탈로그 문장만 본다).
+    assignCurrentEvent(newState, followup, occurrenceWeek);
   } else {
     // followup 없으면 conditional chain 시도 — store.resolveEvent와 동일 로직
     // cap=2 (일반) / cap=3 (milestone 잔여 시) — 학년 한정 도달형 누락 방지
@@ -140,8 +148,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
       chainPick = getMilestoneForWeek(newState);
     }
     if (chainPick) {
-      newState.currentEvent = { ...chainPick, week: occurrenceWeek };
-      newState.phase = 'event';
+      assignCurrentEvent(newState, chainPick, occurrenceWeek); // phase='event'도 여기서 선다
     } else {
       newState.phase = 'weekday';
     }

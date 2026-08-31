@@ -11,10 +11,15 @@
 >   노출면은 엔딩 회상 · 학년말 회고 · 기록실/앨범뿐이다(기존 `common/talk_*.png` 8장과 같은 구조).
 > - 90런에서 엔딩 회상에 실제로 뜬 것은 info 20 · freedom 20 · emotional 9 · wealth 1 · **strict 0 · resilience 0**.
 >   뒤 둘은 `growth` 카테고리라 카테고리 cap 경합(`memorySystem.ts`)에서 밀린다. 런당 슬롯 생존도 2회 발동 대비 0.89개.
-> - **회수 기준 1등은 `adolescence-clash`다** — `condition: (s) => s.year === 3`으로 **매 판 무조건** 발동하고
->   슬롯 선택지가 2개(c0 betrayal/5, c2 growth/5)인데 CG 0장이다. 같은 90런에서 엠블럼 자리 **60건 = 50%**를
->   이 한 이벤트가 차지한다. 신규 2컷(성별 분기 시 4컷)으로 60건 — 컷당 회수가 절정 6장의 1.5~4배다.
->   **다음 배치에 반드시 끼울 것.** `career-conflict-{info,strict}-{y5,y6}`도 importance 5 · CG 0장이다.
+> - ~~**회수 기준 1등은 `adolescence-clash`다** — 같은 90런에서 엠블럼 자리 **60건 = 50%**를 이 한 이벤트가
+>   차지한다. 컷당 회수가 절정 6장의 1.5~4배다.~~
+>   🚫 **이 문단은 오측정이다(2026-08-28 정정).** QA 페르소나 하네스 **348런**(29 페르소나) 재측정에서
+>   CG 없는 회상 칸 252칸 중 `adolescence-clash`는 **24칸(9.5%)**이고 1등은 **`jihun-promise` 204칸(81%)**이다.
+>   `adolescence-clash`의 슬롯 두 개는 **엔딩 그림 자리에 거의 못 간다** — c0(betrayal/regret)은 후회 층으로
+>   가고(그림 없음, 86.2% 판), c2(growth/5)는 imp 8인 `yuna-smile`·`graduation-prep-high`에 밀려 cap에서
+>   빠진다. 그래도 그릴 값은 있는데 근거가 다르다(매 판 100% 발동 → **결과 화면 전체화면 노출**).
+>   상세는 `docs/cg-prompts-adolescence-4d.md`.
+>   `career-conflict-info-{y5,y6}`도 importance 5 · CG 0장이고 각 12칸(4.8%)이다.
 > - 그리고 **아트 없이 해소되는 배치 오류**가 따로 있다: `jihun-promise`(importance 8, Y2 발동인데 자산은 `high/`),
 >   `minjae-honest`(high 발동인데 자산은 `middle/`), `yuna-study`(Y1 발동인데 자산은 `middle`+`high`).
 >   파일 위치만 옮기면 되지만 **학교급이 다른 그림을 재사용하는 톤 위험이 있어 "무료"는 아니다**
@@ -74,7 +79,12 @@ Setting: 집 안 — 공부방 / 서재·안방 서랍 / 거실 식탁 / 방문 
 Cast: 엄마 또는 아빠 1인, 또는 무인(소품만). 주인공·형제·타 NPC 없음.
 Light: 실내 저조도 기본(밤·저녁). 따뜻한 전구색과 식은 형광색의 대비가 정서를 나른다.
 Framing: 1인칭 시선(POV) 또는 소품 클로즈업. 대화 장면이 아니라 "말이 없던 순간"의 정물.
+Safe area: keep the subject inside the horizontal 10–90% band of the frame.
 ```
+
+> 📐 **핵심 피사체는 가로 10~90% 대역 안에.** 회고 갤러리는 `height:200px` + `object-fit:cover`라
+> 좁은 화면에서 **좌우가 한쪽 8.8%씩 잘린다**(375px 기준 실측). 세로 손실은 3.4% 이하로 무시해도 된다.
+> 근거·측정표는 `cg-prompts-high-y5-y7.md` §갤러리 안전대역.
 
 **[전 컷 공통 금지]**
 
@@ -320,3 +330,41 @@ or anger, no open mouth, no lettering, no hands on shoulders.
 - [ ] `node scripts/generate-cg-manifest.mjs` 재실행 후 `grep -c climax game/src/cg-manifest.generated.ts` → **6**.
 - [ ] 인게임 확인은 **`debugSkipToEnding`으로 하지 말 것**(그 훅은 `memorySlots`를 채우지 않아 회상 그림이 0장이다).
       헤드리스 완주 state를 `localStorage['lifetrack_save']`에 주입하고 `이어하기`로 진입한다.
+
+---
+
+## 📦 납품 기록 (2026-08-27)
+
+**⚠️ 이 문서가 생성자에게 전달되지 않은 채 6장이 뽑혔다.** 워킹트리가 다른 브랜치(`chore/dist-hygiene`)에
+있었고 본 문서는 `main`에만 있어서, 생성자는 구버전 `parent-4b-climax-spec-2026-06-11.md`(장면 6문장)만
+읽었다. **다음 발주 때는 문서 머지뿐 아니라 "워킹트리를 그 브랜치로 맞췄는지"까지 확인할 것.**
+
+그런데도 위험 1순위 세 곳(② 통장 표지 · ③ 포스트잇 · ④ 성적표)이 전부 백지로 나왔고,
+**6장 전부 글자 0개 · 교복/학생 0명 · 전경 신체 0**이었다. 3자검수(글자·성별 렌즈 / 장면·톤 렌즈 /
+배선 렌즈) 결과:
+
+| 컷 | 판정 | 비고 |
+|---|---|---|
+| ① emotional | 수용 | 6장 중 가장 3D 렌더에 가깝지만 `talk_subin_70_night_light`(무인 야간 실내)와 같은 계열이라 라이브러리 범위 안 |
+| ② wealth | **리터치 완료** | 좌하단에 회청색 **소매**가 들어와 `no sleeve` 위반 → 바닥 그림자로 리페인트(전체 0.88% 영역) |
+| ③ info | 수용 | 엄마가 뒷모습이라 "권유" 태도 부재 + 노란 탭 복수. 경미 |
+| ④ strict | 수용 | 정합 최고. 관자놀이 흰머리까지 레퍼런스 일치 |
+| ⑤ resilience | 수용 | 원문 정합 최고(김 없음·문 닫힘·무인·거리). 문 아래 청색 광원은 선택적 리터치 |
+| ⑥ freedom | **재생성 대기** | 원해상도에선 입술이 닫힌 수평선(명세 부합)이나, **갤러리 축척에서 그 긴장이 사라져 온화한 초상으로 읽힌다.** 명세가 "삼킴"의 담체로 지정한 **공중에서 멈춘 손이 프레임 밖** |
+
+**구조적으로 알아둘 것 3가지** (검수에서 실행으로 확인):
+- **② wealth는 엔딩 갤러리에 잘 안 뜬다.** 슬롯 카테고리가 `unspoken_debt`인데 이게 후회 풀
+  카테고리라, 레이어 순서 역전(후회 먼저)에 의해 "미처 닿지 못한 것"으로 빨려간다 —
+  그리고 **후회층은 의도적으로 이미지를 안 쓴다.**
+- **인물 앨범 격자에는 안 뜬다.** `npcAlbum.ts`가 `GAME_EVENTS` + 학교급 디렉터리만 훑어
+  `common/`과 미니톡 계열을 제외한다(실측 `climaxAlbumSlots: 0`). 노출면은
+  **엔딩 회상 · 학년말 회고 · 기록실 cgFiles 적립**뿐이다.
+- **`check-cg-orphans.ts`는 `elementary/`만 훑어 `common/`은 보호막 밖이다.** 대신
+  `assetExistence.test.ts`(매니페스트 양방향)가 잡는다 — 실제로 이번에 매니페스트 미갱신을 이 테스트가 잡았다.
+
+**릴리즈 영향 없음**: PNG 8.3MB → webp 254KB(3.1%), 배포 증가 0.24MB. 형식·알파·비트뎁스·색공간 모두 기존과 동일.
+
+**⚠️ 브랜치를 옮기면 매니페스트가 되돌아간다.** PNG는 untracked라 살아남지만
+`cg-manifest.generated.ts`는 tracked라 체크아웃에서 원복된다 — 그러면 resolver가 6장을 전부
+걸러내 **아무 데도 안 뜨고** `assetExistence`가 빨개진다. 브랜치 이동 후에는
+`node scripts/generate-cg-manifest.mjs`를 다시 돌릴 것.

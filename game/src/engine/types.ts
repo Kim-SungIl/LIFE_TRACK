@@ -51,6 +51,11 @@ export interface GameState {
   idleWeeks: number;                // v6: 연속 비생산적 주 카운트
   consecutiveTiredWeeks: number;    // v6.4: 연속 피로 주수 (만성 피로 패널티)
   totalTiredWeeks: number;          // QA C5: 누적 tired/burnout 주수 (만성 탈진 엔딩 라우팅)
+  // T21: 행복 등급용 학년별 궤적. 누적값(burnoutCount·totalTiredWeeks)은 학년말에 못 쓴다.
+  // index = year-1 (Y1→0 … Y7→6). 길이 7. 저멘탈=mental<40, 바닥=mental<25.
+  lowMentalWeeksByYear: number[];
+  veryLowMentalWeeksByYear: number[];
+  burnoutCountByYear: number[];
   burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
   // v1.2 기억 슬롯 시스템
@@ -214,6 +219,24 @@ export interface NpcState {
 
 export type EventLocation = 'classroom' | 'home' | 'park' | 'hallway' | 'rooftop' | 'street' | 'gym' | 'school_gate' | 'cafe' | 'music_room' | 'beach' | 'convenience_store' | 'library' | 'auditorium';
 
+// 학교급 × 로테이션 변이 — femaleDescription 옆의 두 번째 표시 축.
+// 문장(description / 선택지 text·message)만 갈린다. effects·fatigueEffect·moneyEffect·
+// memorySlotDraft는 여기에 두지 않는다 — 같은 선택이 판마다 다른 결과를 내면 밸런스 계약이 무너진다.
+export type SchoolBand = 'elementary' | 'middle' | 'high';
+
+export interface EventTextVariant {
+  description: string;
+  femaleDescription?: string;
+  choices: Array<{
+    text: string;
+    message: string;
+    femaleText?: string;
+    femaleMessage?: string;
+  }>;
+}
+
+export type SchoolVariants = Record<SchoolBand, EventTextVariant[]>;
+
 export interface GameEvent {
   id: string;
   title: string;
@@ -237,8 +260,17 @@ export interface GameEvent {
   // 성별 분기: 있으면 해당 성별에서 기본값 대신 사용
   femaleDescription?: string;
   femaleChoices?: EventChoice[];
+  // 학교급 × (year, week) 로테이션 변이. 고르기는 eventPresentation.presentEvent.
+  // 난수를 쓰지 않는다 — seededRandom은 rngSeed를 mutate해서 이후 이벤트 열이 밀린다.
+  schoolVariants?: SchoolVariants;
   resolvedChoice?: number; // 저장된 선택 인덱스 (이벤트 해결 후 기록)
   resolvedFemale?: boolean; // v1.2: femaleChoices 경로로 해결되었는지 (엔딩 해시 구분용)
+  // presentEvent가 변이 경로에서 여성 문장을 적용한 **선택지 인덱스**. schoolVariants가 있으면
+  // presentEvent가 femaleChoices를 지우므로 `!!event.femaleChoices`만으로는 판정할 수 없다.
+  // 선택지 단위인 이유: 변이의 여성 필드는 선택지마다 있을 수도 없을 수도 있어서,
+  // 이벤트 단위 boolean으로 두면 여성 문장이 없는 선택지를 고른 경우까지 여성 경로로 샌다.
+  // 굽는 시점에만 세우고, 기록(recordResolvedEvent)에서는 resolvedFemale로 접어 지운다.
+  presentedFemaleChoices?: number[];
   year?: number;           // 저장된 발생 연차 (ANNUAL 재발동 판정용)
   // 도달형(reach) 메타데이터 — 페이싱 엔진용. 있으면 이 이벤트는 도달형으로 취급.
   // npc: 대상 NPC, tier: 친밀도 임계, year: 게이트된 학년(쿨다운 = 48 ÷ 그 NPC·그 해 reach 수).
