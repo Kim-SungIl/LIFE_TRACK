@@ -67,6 +67,7 @@ const BOOT_PROBE = '7년의 시간표';
 // 경로에서 정적 import되면 청크는 살아 있고 코드도 남아 6개 절이 전부 통과한다(실측:
 // TitleScreen에 NpcAlbumScreen을 정적 import → ArchiveScreen 청크 10,264B → 4,326B,
 // 부팅 그래프 7파일 913,610B → 10파일 921,388B, 그런데 검사기는 EXIT=0).
+// (이 실험의 수치는 #422 이전 base에서 잰 것이다 — 절대값은 낡았고 비교는 유효하다.)
 // 원인이 "정적 참조 부활"이라 이 파일이 잡겠다고 선언한 바로 그 회귀인데, 서브모듈
 // 단위로 일어났을 뿐이다.
 //
@@ -85,7 +86,19 @@ const BOOT_PROBE = '7년의 시간표';
 // 들어 있어 이벤트를 추가할 때마다 바이트가 늘어난다 — 바이트 예산은 콘텐츠 작업마다
 // 깨져서 무관한 PR을 빨갛게 만든다. 개수는 모듈 그래프 **구조**가 바뀔 때만 움직이고,
 // 그때는 사람이 봐야 하는 순간이 맞다.
-const MAX_BOOT_CHUNKS = 7;          // 실측 7 (엔트리 1 + modulepreload 6)
+//
+// ⚠ **이 수는 main과 병합한 트리에서 재라.** CI(pull_request)는 브랜치 head가 아니라
+// main과의 **병합 결과**를 빌드하고, 실패한 런을 재실행해도 당시 병합 SHA를 그대로 쓴다.
+// 그래서 브랜치만 빌드해 잰 값은 조용히 낡는다 — 실제로 이 상수를 7로 두고 5라운드를
+// 검증하는 동안 main이 앞서 갔고(#422가 events/를 키움), CI만 빨간 채였는데 로컬은
+// 계속 초록이었다. "테스트 파일만 바꿨는데 번들이 바뀐다"는 불가능한 결론까지 갔다.
+//
+// 실측(main e72a4d3 기준, macOS·CI 바이트 동일):
+//   · main 단독            7개 / 936,723B
+//   · main + 이 PR         8개 / 926,126B   ← 청크 +1, 전송량 **−10,597B(−1.13%)**
+// 개수가 느는 건 지연 분할이 공유 모듈의 청크 경계를 재편하기 때문이고(부팅 목록이
+// BgWrapper·eventCg에서 Portrait·examSystem·types로 갈린다), 실제로 받는 양은 줄었다.
+const MAX_BOOT_CHUNKS = 8;          // 실측 8 (엔트리 1 + modulepreload 7)
 
 // 지연 청크 본문의 하한. **줄어들 때만** 걸린다(늘어나는 건 자유).
 // 값은 실측치의 약 65%다 — 정상적인 리팩터링 여유를 두면서 위 −58% 사례는 잡는 선.
@@ -93,9 +106,9 @@ const MAX_BOOT_CHUNKS = 7;          // 실측 7 (엔트리 1 + modulepreload 6)
 // **부팅 경로에 그 화면의 자식을 정적 import한 곳이 없는지부터** 볼 것.
 const MIN_BODY_BYTES: Readonly<Record<string, number>> = {
   ArchiveScreen: 6200,              // 실측 9553
-  EventScene: 7900,                 // 실측 12173
+  EventScene: 7900,                 // 실측 12095
   EventResultScreen: 2200,          // 실측 3403
-  YearEndScreen: 4500,              // 실측 6940
+  YearEndScreen: 4500,              // 실측 7096
   EndingScreen: 6000,               // 실측 9231
 };
 
@@ -352,10 +365,13 @@ console.log(`  · 부팅 그래프: ${bootNames.length}개 파일 / ${bootBytes.
 assert(
   `부팅에 받는 청크가 ${bootNames.length}개다 (상한 ${MAX_BOOT_CHUNKS})`,
   bootNames.length <= MAX_BOOT_CHUNKS,
-  '부팅 그래프의 청크 수가 늘었다. **원인이 둘이니 위에 찍힌 바이트부터 볼 것:** ' +
+  '부팅 그래프의 청크 수가 늘었다. **원인이 셋이니 위에 찍힌 바이트부터 볼 것:** ' +
   `① 바이트가 함께 늘었으면 유출이다(지연 화면의 자식을 부팅 경로에서 정적 import). ` +
   '② 바이트가 그대로면 분할 재편이다 — 지연 화면이 부팅 전용 모듈을 재사용했거나 ' +
-  '번들러를 올린 직후다. ②라면 MAX_BOOT_CHUNKS를 새 실측치로 올려라',
+  '번들러를 올린 직후다. ' +
+  '③ **바이트가 줄었으면 기준선이 움직인 것이다** — 이 상수는 main과 병합한 트리에서 ' +
+  '재야 하는데(CI는 병합 결과를 빌드한다) 그 뒤 main이 앞서 갔다. `git merge origin/main` ' +
+  '후 다시 재라. ②·③이면 MAX_BOOT_CHUNKS를 새 실측치로 올려라',
 );
 // 하한 목록이 화면을 전부 덮는지 — 한 줄 빠지면 그 화면만 무검사가 된다.
 const uncovered = LAZY_SCREENS.filter(n => MIN_BODY_BYTES[n] === undefined);
