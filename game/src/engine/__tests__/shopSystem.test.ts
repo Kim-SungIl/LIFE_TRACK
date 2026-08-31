@@ -147,10 +147,21 @@ describe('canBuyItem', () => {
   });
 
   it('returns the first failing guard when multiple conditions are violated', () => {
-    // 소스 순서: money → requireYear → …  → 돈 부족이 year 미달보다 먼저
+    // 소스 순서: owned → requireYear → money → …
+    // T22에서 requireYear를 money 앞으로 옮겼다. 둘 다 못 넘을 때 더 쓸모 있는 정보가
+    // 학년이기 때문이다 — 돈은 모으면 되지만 학년은 못 앞당긴다. 고가 구매(aspiration)는
+    // 잠긴 채로 몇 해 동안 목록에 남으므로 이 문구가 그동안 계속 노출된다.
     const state = fixture({ money: 0, year: 1 });
     expect(
       canBuyItem(item({ id: 'prio', price: 5, requireYear: 5 }), state, {}),
+    ).toEqual({ ok: false, reason: '고1부터 구매 가능' });
+  });
+
+  it('학년은 넘었는데 돈만 모자라면 잔액 사유가 나온다 (순서 뒤집기 대조)', () => {
+    // 위 테스트만 두면 "항상 학년 사유"로 바꿔도 통과한다. 양쪽을 다 고정한다.
+    const state = fixture({ money: 0, year: 5 });
+    expect(
+      canBuyItem(item({ id: 'prio2', price: 5, requireYear: 5 }), state, {}),
     ).toEqual({ ok: false, reason: '돈이 부족해요' });
   });
 });

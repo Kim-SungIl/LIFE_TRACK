@@ -1,5 +1,6 @@
-import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
+import { GameState, StatKey, ActiveBuff, STAT_LABELS, MemorySlotDraft } from './types';
 import { cloneGameState } from './stateClone';
+import { applyMemorySlotFromMiniTalk } from './memorySystem';
 import { absWeek, isNpcInteractable } from './relationshipSignals';
 import { applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
@@ -19,8 +20,8 @@ const BIRTHDAY_WEEK_BY_NPC: Record<string, number> = (() => {
 })();
 
 // ===== 아이템 타입 =====
-export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity';
-export type ItemEffectType = 'instant' | 'buff' | 'npc_intimacy';
+export type ItemCategory = 'consumable' | 'growth' | 'gift' | 'fashion' | 'opportunity' | 'aspiration';
+export type ItemEffectType = 'instant' | 'buff' | 'npc_intimacy' | 'permanent';
 
 export interface ShopItem {
   id: string;
@@ -38,6 +39,7 @@ export interface ShopItem {
   requireStat?: { stat: StatKey; min: number }; // 스탯 조건
   requireBirthday?: boolean; // 만난 친구의 생일 주차에만 구매 가능
   seasonal?: boolean;       // 기간 한정
+  oncePerRun?: boolean;     // T22: 한 판에 한 번만 (state.ownedItems로 판정)
   purchaseMessage?: string; // 구매 시 커스텀 메시지 (없으면 기본 "구매 완료" 문구)
 }
 
@@ -53,6 +55,9 @@ export interface ItemEffect {
   buffAmount?: number;      // 효율 증가 (0.15 = +15%)
   // npc_intimacy
   npcBonus?: number;
+  // T22 permanent: buffId/buffTarget/buffAmount를 그대로 쓰되 기간이 없다.
+  // memory: 구매가 남기는 회상 슬롯. 이벤트 슬롯과 같은 정책(중요도·카테고리당 2칸)을 공유한다.
+  memory?: MemorySlotDraft;
 }
 
 // ===== 상점 아이템 목록 =====
@@ -184,6 +189,76 @@ export const SHOP_ITEMS: ShopItem[] = [
     effects: [{ type: 'buff', buffId: 'camp', buffDuration: 4, buffTarget: 'all', buffAmount: 0.15 }],
     seasonal: true,
   },
+
+  // ===== 오래 모아서 (T22 — 처방 C: 돈 배출구) =====
+  // 왜 이 칸이 필요한가: 상점 17종을 전부 한 번씩 사도 66.5만인데 무료 루틴 빌드는 7년에
+  // 1537만이 남는다(혼합 801만). 기존 구매는 전부 0.5~8만짜리 주간 반복이라 "모을 이유"가
+  // 하나도 없었다 — 저축은 이자도 목표도 없어 항상 손해였다. 배출구가 없는 게 아니라
+  // 모아서 살 게 없는 것이다(집중 과외 28만/주가 있지만 unlockYear 5라 Y1~Y4는 무이자 적금).
+  //
+  // 가격은 빌드별 도달 개수로 설계했다: 무료 1537만 → 4개 / 혼합 801만 → 2~3개 /
+  // 유료 97만 → 0개. **유료가 0개인 건 의도다** — 그들은 이미 매주 돈을 힘으로 바꿔 쓰고 있고,
+  // 진단 문서가 그 99만(B-2로 비로소 생긴 재량)을 다시 0으로 돌리지 말라고 못박아 뒀다.
+  //
+  // 효과가 작은 것도 의도다(+8~10%, 부모 강점 보너스와 같은 급). 크게 주면 "무료 루틴으로
+  // 모았다가 몰아 사기"가 지배 전략이 된다. 여기서 사는 것은 힘이 아니라 회상 한 칸이다.
+  {
+    id: 'desk-setup', name: '내 방 책상·PC',
+    description: '식탁에서 공부하던 시절이 끝난다. 내 자리가 생긴다.',
+    price: 150, category: 'aspiration', emoji: '💻',
+    effects: [
+      { type: 'permanent', buffId: 'perm-desk', buffTarget: 'study', buffAmount: 0.08 },
+      { type: 'permanent', memory: {
+        category: 'growth', importance: 6, toneTag: 'warm',
+        recallText: '내 방에 처음 내 책상이 생기던 날, 밤늦게까지 앉아 있었다.',
+      } },
+    ],
+    oncePerRun: true,
+    purchaseMessage: '드디어 내 책상이 생겼다. 앞으로 공부가 조금 더 손에 붙는다.',
+  },
+  {
+    id: 'own-instrument', name: '내 악기',
+    description: '빌려 쓰던 것 말고, 내 것.',
+    price: 200, category: 'aspiration', emoji: '🎹', requireYear: 2,
+    effects: [
+      { type: 'permanent', buffId: 'perm-instrument', buffTarget: 'talent', buffAmount: 0.10 },
+      { type: 'permanent', memory: {
+        category: 'discovery', importance: 6, toneTag: 'breakthrough',
+        recallText: '오래 모아 산 악기를 처음 열어보던 저녁, 손이 떨렸다.',
+      } },
+    ],
+    oncePerRun: true,
+    purchaseMessage: '내 악기가 생겼다. 연습이 전과 같지 않다.',
+  },
+  {
+    id: 'language-trip', name: '여름 어학연수',
+    description: '한 달을 통째로 다른 나라에서 보낸다. 방학에만 갈 수 있다.',
+    price: 350, category: 'aspiration', emoji: '✈️', requireYear: 3,
+    effects: [
+      { type: 'permanent', buffId: 'perm-abroad', buffTarget: 'all', buffAmount: 0.05 },
+      { type: 'instant', stat: 'social', value: 4 },
+      { type: 'permanent', memory: {
+        category: 'discovery', importance: 7, toneTag: 'breakthrough',
+        recallText: '말이 하나도 안 통하던 첫 주, 그래도 웃으며 손짓하던 여름.',
+      } },
+    ],
+    oncePerRun: true, seasonal: true,
+    purchaseMessage: '한 달을 통째로 낯선 곳에서 보냈다. 돌아온 뒤로 세상이 조금 넓어졌다.',
+  },
+  {
+    id: 'admission-consulting', name: '입시 컨설팅',
+    description: '전문가와 내 성적표를 놓고 3년치 계획을 짠다.',
+    price: 300, category: 'aspiration', emoji: '🎓', requireYear: 5,
+    effects: [
+      { type: 'permanent', buffId: 'perm-consulting', buffTarget: 'study', buffAmount: 0.10 },
+      { type: 'permanent', memory: {
+        category: 'growth', importance: 6, toneTag: 'resolve',
+        recallText: '처음으로 내 성적표를 놓고 어른과 마주 앉아 3년을 계산했다.',
+      } },
+    ],
+    oncePerRun: true,
+    purchaseMessage: '막연하던 것이 표가 되어 나왔다. 어디를 파야 하는지 알겠다.',
+  },
 ];
 
 // ===== 상점 카테고리 정보 =====
@@ -193,6 +268,7 @@ export const SHOP_CATEGORIES: Record<ItemCategory, { name: string; emoji: string
   gift:       { name: '선물샵', emoji: '🎁', desc: '친구에게 줄 선물' },
   fashion:    { name: '패션', emoji: '👗', desc: '옷, 액세서리' },
   opportunity:{ name: '특별', emoji: '🌟', desc: '대회, 캠프, 기회' },
+  aspiration: { name: '오래 모아서', emoji: '🏦', desc: '몇 해를 모아야 닿는 것' },
 };
 
 // 주간 한도 카운트 키 — limitGroup이 있으면 그룹 단위로 합산, 없으면 아이템 단위.
@@ -202,11 +278,18 @@ export function limitKey(item: ShopItem): string {
 
 // ===== 구매 가능 여부 체크 =====
 export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Record<string, number>): { ok: boolean; reason?: string } {
-  if (state.money < item.price) return { ok: false, reason: '돈이 부족해요' };
+  // 소유 판정은 잔액보다 먼저다 — 이미 산 물건에 "돈이 부족해요"가 뜨면 계속 모으게 만든다.
+  if (item.oncePerRun && (state.ownedItems || []).includes(item.id)) {
+    return { ok: false, reason: '이미 가지고 있어요' };
+  }
+  // 학년 게이트가 잔액보다 먼저다. 둘 다 못 넘을 때 더 쓸모 있는 정보는 학년 쪽이다 —
+  // 돈은 모으면 되지만 학년은 못 앞당긴다. T22 고가 구매는 목록에 잠긴 채 계속 보이므로
+  // (Shop.tsx의 aspiration 예외) 이 문구가 몇 해 동안 플레이어에게 노출된다.
   if (item.requireYear && state.year < item.requireYear) {
     const yearNames = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
     return { ok: false, reason: `${yearNames[item.requireYear - 1]}부터 구매 가능` };
   }
+  if (state.money < item.price) return { ok: false, reason: '돈이 부족해요' };
   if (item.requireStat) {
     const val = state.stats[item.requireStat.stat];
     if (val < item.requireStat.min) return { ok: false, reason: `${STAT_LABELS[item.requireStat.stat]} ${item.requireStat.min} 이상 필요` };
@@ -271,6 +354,26 @@ export function applyItemEffects(
         }
         break;
 
+      case 'permanent':
+        // 효율 보너스와 회상 슬롯이 같은 effect 타입을 공유한다 — 한 아이템이 둘 다 갖는다.
+        if (effect.buffId && effect.buffAmount) {
+          if (!newState.permanentBonuses) newState.permanentBonuses = [];
+          // 같은 id 재부여 방지. oncePerRun이 먼저 막지만 장부를 두 벌 두지 않는다.
+          if (!newState.permanentBonuses.some(b => b.id === effect.buffId)) {
+            newState.permanentBonuses.push({
+              id: effect.buffId,
+              name: item.name,
+              target: effect.buffTarget || 'all',
+              amount: effect.buffAmount,
+            });
+          }
+        }
+        if (effect.memory) {
+          // 이벤트 슬롯과 같은 함수를 쓴다 — 중요도 하한·카테고리당 2칸 정책이 한 곳에만 있게.
+          applyMemorySlotFromMiniTalk(newState, `shop_${item.id}`, effect.memory);
+        }
+        break;
+
       case 'npc_intimacy':
         if (targetNpcId && effect.npcBonus) {
           const npc = newState.npcs.find(n => n.id === targetNpcId);
@@ -287,6 +390,11 @@ export function applyItemEffects(
         }
         break;
     }
+  }
+
+  if (item.oncePerRun) {
+    if (!newState.ownedItems) newState.ownedItems = [];
+    if (!newState.ownedItems.includes(item.id)) newState.ownedItems.push(item.id);
   }
 
   if (messages.length === 0) {

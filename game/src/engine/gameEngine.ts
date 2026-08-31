@@ -73,6 +73,8 @@ export function createInitialState(
     examResults: [],
     currentExamResult: null,
     activeBuffs: [],
+    permanentBonuses: [],
+    ownedItems: [],
     weekPurchases: {},
     idleWeeks: 0,
     consecutiveTiredWeeks: 0,
@@ -185,6 +187,14 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
     for (const buff of state.activeBuffs) {
       if (buff.target === 'all' || buff.target === activity.category) {
         buffBonus += buff.amount;
+      }
+    }
+  }
+  // T22: 영구 보너스(고가 1회성 구매)도 같은 자리에서 합산 — 계산 지점을 둘로 나누지 않는다.
+  if (state.permanentBonuses) {
+    for (const bonus of state.permanentBonuses) {
+      if (bonus.target === 'all' || bonus.target === activity.category) {
+        buffBonus += bonus.amount;
       }
     }
   }

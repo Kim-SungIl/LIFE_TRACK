@@ -47,6 +47,11 @@ export interface GameState {
   examResults: ExamResult[];       // 역대 시험 결과
   currentExamResult: ExamResult | null;  // 이번 시험 결과 (표시용)
   activeBuffs: ActiveBuff[];       // 활성 버프
+  // T22: 영구 보너스 — 고가 1회성 구매의 효과. activeBuffs와 분리한 이유는 직렬화다.
+  // remainingWeeks: Infinity 로 두면 JSON에서 null 이 되어 로드 시 버프가 통째로 사라진다
+  // (#424가 고친 것과 같은 종류의 구세이브 버그). 틱다운을 아예 안 타는 자리에 둔다.
+  permanentBonuses: PermanentBonus[];
+  ownedItems: string[];            // T22: 평생 1회 구매(oncePerRun) 소유 목록
   weekPurchases: Record<string, number>; // 이번 주 구매 횟수
   idleWeeks: number;                // v6: 연속 비생산적 주 카운트
   consecutiveTiredWeeks: number;    // v6.4: 연속 피로 주수 (만성 피로 패널티)
@@ -87,6 +92,14 @@ export interface GameState {
   // parentPositiveTags = 긍정 부모 태그 누적 횟수(절정 트리거 자격). applyParentIntimacyDelta 단일 진입점에서 적립.
   parentClimaxFired?: ParentStrength[];
   parentPositiveTags?: Partial<Record<string, number>>;
+}
+
+// T22: 영구 보너스 (shopSystem에서 부여, applyActivity에서 activeBuffs와 같은 자리에서 합산)
+export interface PermanentBonus {
+  id: string;
+  name: string;
+  target: string;       // 활동 카테고리 or 'all' — ActiveBuff.target과 같은 어휘
+  amount: number;       // 효율 증가 비율 (0.08 = +8%)
 }
 
 // 활성 버프 (shopSystem에서도 사용)

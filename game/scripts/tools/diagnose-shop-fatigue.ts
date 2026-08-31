@@ -40,8 +40,11 @@ function itemImmediateValue(item: ShopItem): number {
       val += (eff.buffAmount || 0) * (eff.buffDuration || 0) * mul;
     } else if (eff.type === 'npc_intimacy') {
       val += (eff.npcBonus || 0) * 0.3;
-    } else if (eff.type === 'event_unlock') {
-      val += 10; // 일회성 해금은 고정 점수
+    } else if (eff.type === 'permanent') {
+      // T22 영구 버프: 기간이 없다. 남은 판(최대 336주)을 다 받는다고 보면 buff 항과
+      // 비교가 안 되므로, 체감 가치가 수렴하는 지점을 48주(1년)로 잡아 근사한다.
+      const mul = eff.buffTarget === 'all' ? 5 : 3;
+      val += (eff.buffAmount || 0) * 48 * mul;
     }
   }
   return item.price > 0 ? val / item.price : val;
@@ -183,7 +186,7 @@ console.log('='.repeat(80));
 // ============ 질문 1: SHOP_ITEMS 구조 ============
 console.log('\n### Q1. SHOP_ITEMS 구조 분석\n');
 const byCategory: Record<ItemCategory, ShopItem[]> = {
-  consumable: [], growth: [], gift: [], fashion: [], opportunity: [],
+  consumable: [], growth: [], gift: [], fashion: [], opportunity: [], aspiration: [],
 };
 for (const it of SHOP_ITEMS) byCategory[it.category].push(it);
 
@@ -200,7 +203,7 @@ for (const cat of Object.keys(byCategory) as ItemCategory[]) {
 
 // 효과 타입별 분포
 const byEffect: Record<ItemEffectType, number> = {
-  instant: 0, buff: 0, npc_intimacy: 0,
+  instant: 0, buff: 0, npc_intimacy: 0, permanent: 0,
 };
 for (const it of SHOP_ITEMS) {
   for (const e of it.effects) byEffect[e.type]++;

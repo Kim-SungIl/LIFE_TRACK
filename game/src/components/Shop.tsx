@@ -26,6 +26,11 @@ function describeEffects(item: ShopItem): string[] {
     if (e.type === 'npc_intimacy' && e.npcBonus) {
       descs.push(`친밀도 +${e.npcBonus}`);
     }
+    // T22: 기간 버프와 다르게 "N주간"이 없다. 이 문구가 가격을 정당화하는 유일한 신호라
+    // 빠지면 150~350만짜리가 아무 설명 없는 칸이 된다.
+    if (e.type === 'permanent' && e.buffAmount) {
+      descs.push(`계속 ${e.buffTarget === 'all' ? '전체' : e.buffTarget} +${Math.round(e.buffAmount * 100)}%`);
+    }
   }
   return descs;
 }
@@ -36,7 +41,12 @@ export function Shop({ state, onBuy, onClose }: Props) {
   const [npcSelectItem, setNpcSelectItem] = useState<ShopItem | null>(null);
 
   const categories = Object.keys(SHOP_CATEGORIES) as ItemCategory[];
-  const items = SHOP_ITEMS.filter(i => i.category === selectedCat && (!i.requireYear || state.year >= i.requireYear));
+  // T22: 'aspiration'은 학년 미달이어도 숨기지 않는다 — 저축 목표는 보여야 목표다.
+  // (canBuyItem이 "중1부터 구매 가능" 같은 사유를 버튼에 그대로 내준다.)
+  // 나머지 카테고리는 종전대로 학년 미달이면 목록에서 뺀다.
+  const items = SHOP_ITEMS.filter(i =>
+    i.category === selectedCat &&
+    (i.category === 'aspiration' || !i.requireYear || state.year >= i.requireYear));
 
   // 선물 대상 = 지금 만날 수 있는 친구만. 전출·졸업으로 부재 중인 친구는 제외(엔진 게이트와 동일 SSOT).
   const metNpcs = state.npcs.filter(n => isNpcInteractable(n, state));

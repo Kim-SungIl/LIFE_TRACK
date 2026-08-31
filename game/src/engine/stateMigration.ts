@@ -65,6 +65,10 @@ export function migrateLoadedState(state: GameState): GameState {
     vacationChoices: migratedVacationChoices,
     examResults: state.examResults || [],
     activeBuffs: state.activeBuffs || [],
+    // T22: 구세이브에는 없는 필드. 없으면 빈 배열 — 영구 보너스가 조용히 사라지는 대신
+    // "아직 아무것도 안 샀다"로 읽힌다(구매 기록 자체가 세이브에 없으므로 이게 맞다).
+    permanentBonuses: state.permanentBonuses || [],
+    ownedItems: state.ownedItems || [],
     weekPurchases: state.weekPurchases || {},
     consecutiveTiredWeeks: state.consecutiveTiredWeeks ?? 0,
     totalTiredWeeks: state.totalTiredWeeks ?? 0,

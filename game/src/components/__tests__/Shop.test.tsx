@@ -284,3 +284,54 @@ describe('Shop gift 부재 NPC 게이트', () => {
     expect(onBuy.mock.calls[0]).toHaveLength(1);
   });
 });
+
+
+// ===== T22: 저축 목표는 보여야 목표다 =====
+describe('Shop 오래 모아서(aspiration) 탭', () => {
+  const openAspiration = (overrides?: Partial<GameState>) => {
+    const r = renderShop(overrides);
+    fireEvent.click(screen.getByRole('button', { name: catLabel('aspiration') }));
+    return r;
+  };
+
+  it('학년 미달인 고가 구매도 목록에 남고, 버튼이 사유를 말한다', () => {
+    // Shop은 원래 requireYear 미달 아이템을 목록에서 뺀다. aspiration만 예외다 —
+    // 안 보이는 목표는 목표가 아니고, 이 기능의 전부가 "모을 이유를 만드는 것"이다.
+    openAspiration({ year: 1, money: 99999 });
+    expect(screen.getByText('입시 컨설팅')).toBeInTheDocument();   // requireYear 5
+    expect(screen.getByText('고1부터 구매 가능')).toBeInTheDocument();
+  });
+
+  it('음성 대조: aspiration이 아닌 카테고리는 학년 미달이면 여전히 숨는다', () => {
+    // 필터를 통째로 걷어내는 구현으로 바뀌면 여기서 잡힌다.
+    const gated = SHOP_ITEMS.find(i => i.category !== 'aspiration' && i.requireYear);
+    expect(gated, 'requireYear가 걸린 비-aspiration 아이템이 있어야 이 대조가 성립한다').toBeTruthy();
+    renderShop({ year: 1, money: 99999 });
+    fireEvent.click(screen.getByRole('button', { name: catLabel(gated!.category) }));
+    expect(screen.queryByText(gated!.name)).not.toBeInTheDocument();
+  });
+
+  it('영구 효과가 태그로 보인다 — 가격을 정당화하는 유일한 신호다', () => {
+    // describeEffects가 'permanent'를 안 다루면 150~350만짜리가 설명 없는 칸이 된다.
+    openAspiration({ year: 7, money: 99999 });
+    expect(screen.getByText('계속 study +8%')).toBeInTheDocument();
+    expect(screen.getByText('계속 talent +10%')).toBeInTheDocument();
+    expect(screen.getByText('계속 전체 +5%')).toBeInTheDocument();
+  });
+
+  it('이미 산 물건은 "이미 가지고 있어요"로 막힌다', () => {
+    openAspiration({ year: 7, money: 99999, ownedItems: ['desk-setup'] });
+    expect(screen.getByText('이미 가지고 있어요')).toBeInTheDocument();
+  });
+
+  it('돈이 모자라면 살 수 없다 — 잔액이 충분하면 살 수 있다 (양방향)', () => {
+    const { unmount } = openAspiration({ year: 1, money: 149 });
+    expect(screen.getByText('돈이 부족해요')).toBeInTheDocument();
+    unmount();
+    cleanup();
+
+    openAspiration({ year: 1, money: 150 });
+    expect(screen.queryByText('돈이 부족해요')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: '구매' }).length).toBeGreaterThan(0);
+  });
+});
