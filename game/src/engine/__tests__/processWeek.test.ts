@@ -55,50 +55,40 @@ describe('processWeek', () => {
     `);
   });
 
-  it('records that week\'s final mental into the current year slot (low / not-low)', () => {
-    const low = processWeek(fixture({
-      year: 3,
+  // 궤적 적립의 임계는 **경계에서** 잠근다. 예전엔 mental 12(저멘탈)와 80(정상)으로 재서
+  // 경계에서 멀었고, 그래서 `< 40`을 `<= 40`·`< 39`·`< 80` 어느 쪽으로 바꿔도 전 스위트가
+  // 통과했다(검수 실측 LEAKED). 아래 입력값은 processWeek 후 mental이 정확히 39/40/24/25에
+  // 착지하도록 손으로 뽑은 값이다 — 착지값 자체를 toBe로 단언하므로, 엔진이 바뀌어 경계에서
+  // 벗어나면 조용히 통과하는 대신 이 테스트가 먼저 깨진다.
+  function weekEndingAtMental(mentalIn: number, year = 3) {
+    return processWeek(fixture({
+      year,
       week: 10,
-      stats: { academic: 40, social: 40, talent: 20, mental: 12, health: 40 },
+      stats: { academic: 40, social: 40, talent: 20, mental: mentalIn, health: 40 },
       weekendChoices: ['rest'],
     }));
-    expect(low.stats.mental).toBeLessThan(40);
-    expect(low.lowMentalWeeksByYear).toEqual([0, 0, 1, 0, 0, 0, 0]);
-    expect(low.lowMentalWeeksByYear.reduce((a, b) => a + b, 0)).toBe(1);
+  }
 
-    const ok = processWeek(fixture({
-      year: 3,
-      week: 10,
-      stats: { academic: 40, social: 40, talent: 20, mental: 80, health: 40 },
-      weekendChoices: ['rest'],
-    }));
-    expect(ok.stats.mental).toBeGreaterThanOrEqual(40);
-    expect(ok.lowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  it('low(mental<40) 경계: 39는 저멘탈 주, 40은 아니다', () => {
+    const at39 = weekEndingAtMental(37);
+    expect(at39.stats.mental, '픽스처가 경계 39에 착지해야 이 테스트가 의미를 가진다').toBe(39);
+    expect(at39.lowMentalWeeksByYear).toEqual([0, 0, 1, 0, 0, 0, 0]);
+
+    const at40 = weekEndingAtMental(38);
+    expect(at40.stats.mental, '픽스처가 경계 40에 착지해야 한다').toBe(40);
+    expect(at40.lowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
   });
 
-  it('veryLow (mental<25) increments only the current year; 25 does not', () => {
-    const under = processWeek(fixture({
-      year: 1,
-      week: 2,
-      stats: { academic: 40, social: 40, talent: 20, mental: 8, health: 40 },
-      weekendChoices: ['rest'],
-    }));
-    expect(under.stats.mental).toBeLessThan(25);
-    expect(under.veryLowMentalWeeksByYear[0]).toBe(1);
-    expect(under.veryLowMentalWeeksByYear.slice(1).every(n => n === 0)).toBe(true);
+  it('veryLow(mental<25) 경계: 24는 바닥 주, 25는 아니다 (저멘탈로는 둘 다 셈)', () => {
+    const at24 = weekEndingAtMental(22, 1);
+    expect(at24.stats.mental, '픽스처가 경계 24에 착지해야 한다').toBe(24);
+    expect(at24.veryLowMentalWeeksByYear).toEqual([1, 0, 0, 0, 0, 0, 0]);
+    expect(at24.lowMentalWeeksByYear[0], '24는 저멘탈이기도 하다').toBe(1);
 
-    const at25 = processWeek(fixture({
-      year: 1,
-      week: 2,
-      stats: { academic: 40, social: 40, talent: 20, mental: 25, health: 40 },
-      weekendChoices: ['rest'],
-      mentalState: 'normal',
-      fatigue: 0,
-    }));
-    // 시험·방치가 없어도 자연 회복이 +될 수 있다. 최종이 25 이상이면 바닥 주가 아니어야 한다.
-    if (at25.stats.mental >= 25) {
-      expect(at25.veryLowMentalWeeksByYear[0]).toBe(0);
-    }
+    const at25 = weekEndingAtMental(23, 1);
+    expect(at25.stats.mental, '픽스처가 경계 25에 착지해야 한다').toBe(25);
+    expect(at25.veryLowMentalWeeksByYear).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(at25.lowMentalWeeksByYear[0], '25는 바닥은 아니지만 여전히 저멘탈이다').toBe(1);
   });
 
   it('burnout increments burnoutCountByYear on the year it happens, not a neighbor', () => {
@@ -116,5 +106,35 @@ describe('processWeek', () => {
     expect(after.burnoutCount).toBe(before.burnoutCount + 1);
     expect(after.burnoutCountByYear).toEqual([0, 0, 0, 0, 1, 0, 0]);
     expect(after.burnoutCountByYear.reduce((a, b) => a + b, 0)).toBe(1);
+  });
+
+  // 번아웃 진입 경로는 **둘**이다. 위 테스트는 일반 진입만 덮어서, 만성 탈진 경로의
+  // 학년 적립을 통째로 지워도 전 스위트가 통과했다(검수 실측 LEAKED). 여기서 그 경로를 잠근다.
+  it('만성 탈진(연속 tired 24주) 강제 번아웃도 학년 슬롯에 적립한다', () => {
+    const chronic = (consecutiveTiredWeeks: number) => fixture({
+      year: 6,
+      week: 20,
+      mentalState: 'tired',
+      fatigue: 60,
+      burnoutCooldown: 0,
+      consecutiveTiredWeeks,
+      // 멘탈 26 → 그 주 최종 29. 일반 게이트(mental<20, 또는 <25 && 피로>70)에 안 걸리는 값이라
+      // 여기서 번아웃이 나면 그건 만성 경로뿐이다.
+      stats: { academic: 40, social: 40, talent: 20, mental: 26, health: 40 },
+      weekendChoices: ['self-study'],
+    });
+
+    // 음성 대조 — 23주면 안 터진다. 이게 없으면 "일반 경로가 터진 것"과 구분이 안 된다.
+    const notYet = processWeek(chronic(23));
+    expect(notYet.mentalState, '23주는 아직 강제 번아웃이 아니다').not.toBe('burnout');
+    expect(notYet.burnoutCountByYear.reduce((a, b) => a + b, 0)).toBe(0);
+
+    const before = chronic(24);
+    const after = processWeek(before);
+    expect(after.mentalState, '24주에서 만성 탈진이 강제 번아웃으로 전환한다').toBe('burnout');
+    expect(after.burnoutCount, '누적 카운터도 오른다').toBe(before.burnoutCount + 1);
+    expect(after.burnoutCountByYear, '그 해 슬롯(Y6)에만 적립된다').toEqual([0, 0, 0, 0, 0, 1, 0]);
+    // 두 카운터가 갈리면 진로 축(burnoutCount)과 행복 축(배열)이 어긋난다 — 그게 이 기능의 결함이었다.
+    expect(after.burnoutCountByYear.reduce((a, b) => a + b, 0)).toBe(after.burnoutCount);
   });
 });

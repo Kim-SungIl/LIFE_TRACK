@@ -293,6 +293,30 @@ console.log('\n=== 엔딩 타이틀 수식 ===');
   if (e2.title.startsWith('불꽃은 꺼지지 않는다')) { console.log(`  ✓ 불꽃은 꺼지지 않는다 수식 적용`); passed++; }
   else { console.log(`  ✗ 불꽃은 꺼지지 않는다 미적용 (title="${e2.title}")`); failed++; }
 
+  // 승리자 계열 (T21): achievement S + happiness D + suneung≤2.
+  // happiness D는 T21 전까지 도달 불가라 이 분기가 통째로 죽어 있었다. 궤적으로 열린 뒤에도
+  // 검증이 없으면 조용히 깨지므로 여기서 잠근다. 고립(social<40)일 때만 「고독한」이다.
+  const grindTraj = {
+    lowMentalWeeksByYear: [22, 22, 22, 21, 22, 21, 21],
+    veryLowMentalWeeksByYear: [5, 5, 5, 5, 5, 5, 4],
+    burnoutCountByYear: [2, 2, 2, 1, 2, 1, 1],
+  };
+  const notAlone = Object.assign(withScenario({
+    label: '', stats: { academic: 95, mental: 85, social: 88, talent: 90, health: 85 },
+    mockGrade: 1, track: 'humanities', expectCareer: '',
+  }), grindTraj);
+  const e4 = calculateEnding(notAlone);
+  if (e4.happiness === 'D' && e4.title.startsWith('대가를 치른 승리자')) { console.log(`  ✓ 대가를 치른 승리자 수식 적용`); passed++; }
+  else { console.log(`  ✗ 대가를 치른 승리자 미적용 (title="${e4.title}", happiness=${e4.happiness}, achievement=${e4.achievement})`); failed++; }
+
+  const alone = Object.assign(withScenario({
+    label: '', stats: { academic: 95, mental: 85, social: 30, talent: 90, health: 85 },
+    mockGrade: 1, track: 'humanities', expectCareer: '',
+  }), grindTraj);
+  const e5 = calculateEnding(alone);
+  if (e5.title.startsWith('고독한 승리자')) { console.log(`  ✓ 고독한 승리자 수식 적용 (social<40)`); passed++; }
+  else { console.log(`  ✗ 고독한 승리자 미적용 (title="${e5.title}", happiness=${e5.happiness})`); failed++; }
+
   // 행복한 평범함 (QA C1-B re-base): happiness S(mental≥80 && social≥60 && health≥20)
   // + academic<60 + achievement≠S. 관계·멘탈·건강은 좋고 성적만 평범한 빌드.
   const happy = withScenario({

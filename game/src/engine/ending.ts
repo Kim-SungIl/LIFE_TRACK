@@ -102,14 +102,22 @@ export function happinessTrajectoryLifetime(
     lowMentalWeeksByYear?: number[];
     veryLowMentalWeeksByYear?: number[];
     burnoutCountByYear?: number[];
+    burnoutCount?: number;
   },
 ): HappinessTrajectory {
   const sum = (arr: number[] | undefined) => (arr ?? []).reduce((a, b) => a + b, 0);
+  const byYear = sum(state.burnoutCountByYear);
+  // **구세이브 폴백.** T21 이전 세이브엔 학년별 배열이 없어 0으로 백필된다. 그런데 진로 축은
+  // 예나 지금이나 누적 state.burnoutCount를 읽으므로, 폴백이 없으면 같은 판이
+  // "진로=재수 결심 + 행복=A"로 갈린다 — 이 기능이 없애려던 바로 그 모순이 구세이브에서만 살아남는다.
+  // 저멘탈 주는 과거를 복원할 수 없지만 번아웃 횟수는 살아 있으니 그것만이라도 쓴다.
+  // 배열이 이미 쌓인 판(byYear>0)에서는 배열이 정답이므로 건드리지 않는다.
+  const burnoutCount = byYear > 0 ? byYear : Math.max(0, state.burnoutCount ?? 0);
   return {
     weeks: HAPPINESS_LIFE_WEEKS,
     lowMentalWeeks: sum(state.lowMentalWeeksByYear),
     veryLowMentalWeeks: sum(state.veryLowMentalWeeksByYear),
-    burnoutCount: sum(state.burnoutCountByYear),
+    burnoutCount,
   };
 }
 
@@ -375,8 +383,15 @@ export function calculateEnding(state: GameState) {
     title = `완벽한 청춘 — ${career.path}`;
     description = '성적도, 관계도, 모든 것이 빛나는 학창시절이었다. ' + career.detail;
   } else if (achievement === 'S' && happiness === 'D' && suneungGrade && suneungGrade <= 2) {
-    title = `고독한 승리자 — ${career.path}`;
-    description = '성적은 최고였지만, 돌아보면 곁에 아무도 없었다. ' + career.detail;
+    // **D의 의미가 T21로 넓어졌다.** 예전 D는 mental<25(사실상 고립)뿐이었지만, 이제는
+    // 저멘탈 주·바닥 주·번아웃 궤적으로도 열린다 — social 88인 판도 D가 된다.
+    // 그래서 "곁에 아무도 없었다"가 거짓이 될 수 있다. C 라벨을 「외로운」→「그늘진」으로
+    // 고친 것과 같은 이유다. 실제로 고립된 판에만 원래 문구를 남기고, 나머지는 대가를 말한다.
+    const wasAlone = social < 40;
+    title = `${wasAlone ? '고독한' : '대가를 치른'} 승리자 — ${career.path}`;
+    description = (wasAlone
+      ? '성적은 최고였지만, 돌아보면 곁에 아무도 없었다. '
+      : '성적은 최고였다. 다만 그 몇 해가 통째로 어두웠다. ') + career.detail;
   } else if (state.burnoutCount >= 3 && suneungGrade && suneungGrade <= 4) {
     title = `불꽃은 꺼지지 않는다 — ${career.path}`;
     description = '몇 번이고 쓰러졌지만, 그래도 일어났다. ' + career.detail;
