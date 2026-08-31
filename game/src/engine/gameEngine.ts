@@ -30,7 +30,17 @@ export function createInitialState(
   const stats: Stats = {
     academic: 30,
     social: 25,
-    talent: 15,
+    // v9: 15 → 25 (인기와 같은 값). 등급 경계가 E<20 · D20 · C40 · B60 · A80인데 15는
+    // **시작부터 E(무관심)**였다 — 5개 중 유일하게 E에서 출발하는 축이었고, 감쇠도 학업의
+    // 2배(-0.2)인 데다 주당 축 상한(+2) 때문에 슬롯을 더 부어도 못 따라잡아(18주: 3칸 47.4
+    // vs 1칸 45.8) 불리가 복리로 쌓였다. 실측: 예체능 레슨 18주를 완주해도 47.6(C)이 한계고
+    // C 진입에만 14주였다. 25면 C 8주 · B 27주.
+    //
+    // **30이 아니라 25인 이유는 성취 축이다.** 성취는 bestAxis = max(학업, 특기, 생활)이라
+    // 어느 축을 올려도 같이 오른다. QA 348판 실측: 30이면 성취 B가 120 → 22로 붕괴하고
+    // A에 66%가 몰린다. 25는 B를 102로 지키면서(원본 120) 특기 엔딩은 30과 똑같이 연다
+    // (예체능 진학 23 + 예술/체육 특기자 11 = 34판, 이전엔 둘 다 0판이었다).
+    talent: 25,
     mental: 50,
     health: 40,
   };
@@ -359,9 +369,12 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
     log.statChanges.mental = (log.statChanges.mental || 0) + isolationDrain;
   }
 
-  // 특기: -0.2/주 (v7: -0.3→-0.2로 완화 — talent 85 달성 가능하게)
-  state.stats.talent = Math.max(5, state.stats.talent - 0.2);
-  log.statChanges.talent = (log.statChanges.talent || 0) - 0.2;
+  // 특기: -0.1/주 (v9: -0.2→-0.1). 학업과 같은 값으로 맞춘다.
+  // 이유: 특기는 시작값이 5개 스탯 중 최저인데 감쇠만 학업의 2배였다. 게다가 주당 축 상한(+2)
+  // 때문에 슬롯을 더 부어도 따라잡을 수 없어(3칸 47.4 vs 1칸 45.8) 불리가 복리로 쌓였다.
+  const TALENT_DECAY = -0.1;
+  state.stats.talent = Math.max(5, state.stats.talent + TALENT_DECAY);
+  log.statChanges.talent = (log.statChanges.talent || 0) + TALENT_DECAY;
 
   // 체력: -0.8/주 (학기 중 학교가 50% 상쇄, soft floor 10)
   let healthDecay = isVacation ? -0.8 : -0.4;
