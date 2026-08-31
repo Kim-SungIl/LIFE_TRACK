@@ -235,6 +235,9 @@ imp 6~8)와 minjae 후반 체인, school-festival/yuna-study(중·고 공통)였
 3. **졸업 NPC 체인(subin-farewell/yuna-smile/jihun-promise/junha-cook/minjae-dream)** — Y7 핵심 서사인데
    memorySlotDraft가 없어 회고 갤러리에 안 뜨고 ANNUAL도 아님 → P1/P2 어디에도 못 들어감. 의도라면 P3로,
    회고에 띄울 의도였다면 드래프트 추가가 선행돼야 함(데이터 결정 필요).
+   > 🚫 **해소됨(2026-08-31).** 다섯 이벤트 전부 지금은 `memorySlotDraft`를 선택지마다 갖는다(각 2건).
+   > 아래 종결 섹션이 `subin-farewell c0(imp 8)` · `yuna-smile c0(imp 8)`을 슬롯 점유자로 인용하는 근거가
+   > 이것이다. 이 항목을 미결로 읽지 말 것.
 4. **mini-talk gender** — `talk_jihun_basket/badminton`, `talk_doyun_soccer/classroom`은 id가 성별로 분리돼 각각
    한 장이면 되나, 이들은 imp<3(또는 드래프트 없음)이라 P1 아님. P1 mini-talk 8종은 전부 성별무관 묘사라 common 1장 가능.
 5. **`school-festival`/`yuna-study`/`midterm-1`/`final-exam-2`의 common vs 학교급별** — 코드상 year만으로 갈리고
@@ -257,15 +260,19 @@ imp 6~8)와 minjae 후반 체인, school-festival/yuna-study(중·고 공통)였
 엔딩 갤러리 CG 장수 분포        5장 336런(96.6%) / 3장 12런(last 정책 단독)
 회상 칸 1740 / CG 없는 칸 24    1.4% — 전부 career-conflict-info-y5 c2 · -y6 c2
 매니페스트 444장 중 엔딩 도달    28종 (6.3%)
-배치별 실측 회수                #425 middle/jihun-promise_c0  204/348 (58.6%)
+배치별 실측 회수(런 기준)        #425 middle/jihun-promise_c0  204/348 (58.6%)
                                #423 middle/adolescence-clash   24/348  (6.9%)
-                               career-conflict c2 후보          12/348  (3.4%)
+                               career-conflict c2 후보          12/348  (3.4%)  ← 1런에 2칸이라 칸으로는 24칸
                                high/jihun-promise c1 후보        0/348  (0%)
 ```
 
-**한계효용이 0으로 수렴했다.** 회상 축을 근거로 한 신규 발주는 여기서 멈춘다.
+**엔딩 갤러리 기준으로 한계효용이 0으로 수렴했다.** 그 축을 근거로 한 신규 발주는 여기서 멈춘다.
+(학년말 회고는 관측창이 달라 이 수치로 덮이지 않는다 — 아래 "이 종결이 덮지 않는 것" 참조.)
 
-## 재검토 금지 — 기각된 세 갈래와 그 이유
+## 기각된 세 갈래 — ①③은 재검토 금지, ②는 근거 불충분
+
+①과 ③은 양성 근거로 기각한다(재검토 금지). ②는 **근거가 없어서** 착수하지 않는 것이라 성격이 다르다 —
+발주하려면 실플레이 원형 측정이 선행돼야 한다. 셋을 같은 강도로 봉하지 말 것.
 
 ### ① career-conflict importance 인상 → **졸업 회상을 지운다**
 
@@ -273,18 +280,26 @@ imp 6~8)와 minjae 후반 체인, school-festival/yuna-study(중·고 공통)였
 슬롯 교체는 `newSlot.importance > weakest`(초과일 때만 — `memorySystem.ts:144-160`)이라 imp 5는 못 들어간다.
 
 ```
-strict 120런 최종 growth 슬롯 = 120/120 전부  Y7 yuna-smile(i8) + Y7W46 graduation-prep-high(i8)
+strict 120런 최종 growth 슬롯 = 120/120 전부  Y7 yuna-smile(i8) + Y7 graduation-prep-high(i8)
 최종 reconciliation 점유(상한 2) = 348/348 만석, 최약 importance {5: 12런, 6: 132런, 8: 204런}
+  조합 상위 3종만 (전체 7종 348런):
   156런  jihun-promise c0(i8) + subin-farewell c0(i8)
   120런  doyun-graduation-sign c0(i6) + minjae-jealousy c2(i6)   ← "관계 방치" 계열도 imp 6 보유
    12런  career-conflict-info-y5 c2(i5) + -y6 c2(i5)             ← last 정책 단독
+   나머지 60런 = jihun-promise c0 + (yerin-not-a-trade 22 / seoa-ending-page 14 / siwoo-where-you-stood 12) · haeun-hs-leaving 조합 12
 ```
 
-career 슬롯은 **삽입은 되고 Y7에 축출**된다("원천 차단"이 아니다). 그래서 imp를 8로 올리면 Y5의 career가
-최약이 되어 **`graduation-prep-high`(졸업 준비, imp 8)의 삽입 자체가 차단된다.** 제로섬이고 교환비가 나쁘다.
+career 슬롯은 **삽입은 되고 Y7에 축출된다고 보는 것이 자연스럽다** — 단 이건 **추론**이다("원천 차단"이 아니다는
+점까지가 측정으로 뒷받침되는 부분이고, 계측이 종료 시점 덤프뿐이라 Y5 시점의 중간 상태는 관측하지 못했다).
+어느 쪽이든 결론은 같다: imp를 8로 올리면 Y5의 career가 최약이 되어 **`graduation-prep-high`(졸업 준비, W45,
+imp 8)의 삽입 자체가 차단된다.** 제로섬이고 교환비가 나쁘다.
 
-부수: c0 4변형은 `toneTag: 'burden'`으로 **후회 풀 판정에 걸려**(`memorySystem.ts:248-251`) 슬롯이 살아남아도
-그림 없는 층으로 간다. c0에 CG를 그리는 것은 이중으로 무의미하다.
+부수: c0 4변형은 `toneTag: 'burden'`으로 **후회 풀에 편입된다**(`memorySystem.ts:248-251`). 편입은 후회 층
+진입의 **필요조건일 뿐이다** — `selectRegretHighlights`는 점수 상위 최대 2장만 뽑고, 회고에서 빠지는 것은 그
+뽑힌 2장뿐이다. 동종 실측이 있다: 같은 imp 5로 후회 풀에 편입되는 `adolescence-clash` c0(단 이쪽은
+`betrayal`/`regret`이라 카테고리·톤 양쪽으로 걸린다 — career c0은 `growth`/`burden`으로 톤만 걸린다)은
+후회 층 **86.2%** · 회상 층 **3.4%** 였다(`cg-prompts-adolescence-4d.md:34`). 즉 c0은 **대개** 그림 없는 층으로 가고, CG를 그려도
+기대값이 낮다 — "이중으로 무의미"가 아니라 "기대값이 낮다"가 맞는 표현이다.
 
 ### ② career-conflict c2 2컷 발주 → **실플레이 원형이 측정되지 않았다**
 
@@ -313,9 +328,19 @@ Y5 이후 최초 도달(high 경로 유일 통로)  0/348
 
 ## 이 종결이 덮지 않는 것
 
-회상 축만 닫았다. **결과화면(EventResultScreen)과 인물 앨범은 별개 축**이다 — 218개 이벤트 중 CG가 붙은 것은
-일부이고, 이 문서의 수치를 "CG 전체의 가치"로 읽으면 안 된다. 다만 그 축을 열려면 회상 결손이 아닌
-**별도의 기준**이 먼저 있어야 한다(현재 없음).
+**엔딩 회상 축만 닫았다.** 이 문서의 수치를 "CG 전체의 가치"로 읽으면 안 된다. 남은 축이 셋이다.
+
+**① 학년말 회고(YearEndScreen)** — 이 문서가 서두(위 L3·L16-17)에서 스스로 **1차 소비처**로 선언한 축이고,
+**관측창이 엔딩과 다르다.** 회고는 `memorySlots.filter(m => m.year === year)`로 **그 해에** 슬롯을 보므로
+(`YearEndScreen.tsx:91`), Y7 축출과 무관하게 Y5·Y6 회고는 그 해의 career 슬롯을 대상으로 삼는다.
+따라서 위 만석률(엔딩 갤러리)은 이 축을 **구조적으로 볼 수 없다.**
+단 오해 금지 — 회고는 CG 없는 슬롯을 **걸러낸다**(`.filter(x => !!x.cg)`, `YearEndScreen.tsx:107-109`).
+빈 칸이 뜨는 게 아니라 아예 안 보인다(초상/엠블럼으로 대체하는 엔딩과 다르다). 그러니 이 축의 결손은
+"빈 칸"이 아니라 "회고 갤러리가 그만큼 얇아진다"는 형태다. 발주 판단을 하려면 **그 축의 측정이 먼저** 필요하다.
+
+**② 결과화면(EventResultScreen)** · **③ 인물 앨범** — 218개 이벤트 중 CG가 붙은 것은 일부다.
+
+세 축 중 어느 것을 열려면 회상 결손이 아닌 **별도의 기준**이 먼저 있어야 한다(현재 없음).
 
 ## 측정 방법과 한계
 
