@@ -20,6 +20,9 @@
 >   빠진다. 그래도 그릴 값은 있는데 근거가 다르다(매 판 100% 발동 → **결과 화면 전체화면 노출**).
 >   상세는 `docs/cg-prompts-adolescence-4d.md`.
 >   `career-conflict-info-{y5,y6}`도 importance 5 · CG 0장이고 각 12칸(4.8%)이다.
+>   🚫 **이 인접 결손은 기각됐다(2026-08-31, #426).** 그 24칸은 전부 `last-choice` 정책이 만들고,
+>   실플레이 원형이 측정되지 않았다(reconciliation은 348/348 만석이며 "관계 방치" 계열도 imp 6 점유).
+>   판정 근거는 `docs/cg-shotlist-2026-06.md` 종결 섹션 참조.
 > - 그리고 **아트 없이 해소되는 배치 오류**가 따로 있다: `jihun-promise`(importance 8, Y2 발동인데 자산은 `high/`),
 >   `minjae-honest`(high 발동인데 자산은 `middle/`), `yuna-study`(Y1 발동인데 자산은 `middle`+`high`).
 >   파일 위치만 옮기면 되지만 **학교급이 다른 그림을 재사용하는 톤 위험이 있어 "무료"는 아니다**
