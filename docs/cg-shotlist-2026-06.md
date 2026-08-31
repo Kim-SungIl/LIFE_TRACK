@@ -242,3 +242,93 @@ imp 6~8)와 minjae 후반 체인, school-festival/yuna-study(중·고 공통)였
    섞이는 톤 미스가 난다(in-game 확인 권장).
 6. **mini-talk 80단계 실발동 학년** — intimacy 80 도달은 결정론적으로 정해지지 않음. haeun(yearMin 6)·junha(고2 전학)는
    high 확정이나 나머지는 "주로 high"로만 추정했다. 정확한 발동 학년 분포는 시뮬레이션 필요.
+
+---
+
+# 종결 — 엔딩 회상 축의 CG 발주 라인을 닫는다 (2026-08-31)
+
+> 이 문서의 전제("중·고 CG가 0개라 사실상 전 구간이 갭")는 해소됐다. 매니페스트 444장,
+> **엔딩 회상 갤러리는 96.6%의 판에서 5칸 만석**이다. 아래는 그 판정의 실측 근거이며,
+> 같은 판단을 다시 하지 않기 위한 종결 기록이다.
+
+## 실측 (348런 = 29 페르소나 × 12시드, main `f90206f` 기준)
+
+```
+엔딩 갤러리 CG 장수 분포        5장 336런(96.6%) / 3장 12런(last 정책 단독)
+회상 칸 1740 / CG 없는 칸 24    1.4% — 전부 career-conflict-info-y5 c2 · -y6 c2
+매니페스트 444장 중 엔딩 도달    28종 (6.3%)
+배치별 실측 회수                #425 middle/jihun-promise_c0  204/348 (58.6%)
+                               #423 middle/adolescence-clash   24/348  (6.9%)
+                               career-conflict c2 후보          12/348  (3.4%)
+                               high/jihun-promise c1 후보        0/348  (0%)
+```
+
+**한계효용이 0으로 수렴했다.** 회상 축을 근거로 한 신규 발주는 여기서 멈춘다.
+
+## 재검토 금지 — 기각된 세 갈래와 그 이유
+
+### ① career-conflict importance 인상 → **졸업 회상을 지운다**
+
+`career-conflict-*` 12변형은 전부 importance 5 · npcIds 없음이고, 발동은 Y5W15 · Y6W6(late)다.
+슬롯 교체는 `newSlot.importance > weakest`(초과일 때만 — `memorySystem.ts:144-160`)이라 imp 5는 못 들어간다.
+
+```
+strict 120런 최종 growth 슬롯 = 120/120 전부  Y7 yuna-smile(i8) + Y7W46 graduation-prep-high(i8)
+최종 reconciliation 점유(상한 2) = 348/348 만석, 최약 importance {5: 12런, 6: 132런, 8: 204런}
+  156런  jihun-promise c0(i8) + subin-farewell c0(i8)
+  120런  doyun-graduation-sign c0(i6) + minjae-jealousy c2(i6)   ← "관계 방치" 계열도 imp 6 보유
+   12런  career-conflict-info-y5 c2(i5) + -y6 c2(i5)             ← last 정책 단독
+```
+
+career 슬롯은 **삽입은 되고 Y7에 축출**된다("원천 차단"이 아니다). 그래서 imp를 8로 올리면 Y5의 career가
+최약이 되어 **`graduation-prep-high`(졸업 준비, imp 8)의 삽입 자체가 차단된다.** 제로섬이고 교환비가 나쁘다.
+
+부수: c0 4변형은 `toneTag: 'burden'`으로 **후회 풀 판정에 걸려**(`memorySystem.ts:248-251`) 슬롯이 살아남아도
+그림 없는 층으로 간다. c0에 CG를 그리는 것은 이중으로 무의미하다.
+
+### ② career-conflict c2 2컷 발주 → **실플레이 원형이 측정되지 않았다**
+
+CG 없는 24칸은 전부 `last-choice`(항상 마지막 선택) 페르소나가 만든다. "info 부모 + 관계 방치 플레이어"를
+그 대역으로 읽고 발주를 권했다가 위 표로 부정됐다 — 관계 방치 계열(academic-max · paid-routine 계열 120런)은
+`doyun-graduation-sign` · `minjae-jealousy` **imp 6**을 갖고 있어 imp 5가 못 들어간다.
+**QA 정책의 루트를 플레이어 원형으로 치환하지 말 것.**
+
+### ③ `high/jihun-promise_c1_{m,f}` 리테이크 → **노출 0/348**
+
+텍스트-그림 불일치 자체는 실재한다(발주문 "eyes reddening, brimming … edge of tears" —
+`cg-prompts-high-y5-y7.md:601-609` vs 현재 "픽 웃으며 괜히 먼 데를 본다" — `jihun.ts:189`).
+그런데 그 그림이 뜨는 판이 없다.
+
+```
+jihun-promise 슬롯 보유 204/348 — 전부 Y2(middle), 전부 c0
+jihun peak>=70 최초 도달 학년   Y1 12런 · Y2 192런 · Y3 이후 0런 · 미도달 144런
+Y5 이후 최초 도달(high 경로 유일 통로)  0/348
+```
+
+기전은 `FOLLOWUP_EVENT_IDS` 1회성 소진 — 최초 적격창(Y2 W40)에서 끝난다. 살아 있는 판본(`middle/c1`)의
+같은 불일치는 #425가 이미 리테이크로 고쳤다(`cg-prompts-jihun-promise-middle.md:123-137`).
+
+**자산 삭제도 권하지 않는다.** 0/348은 불가능의 증명이 아니다. 그리고 매니페스트에서 `high/c1`을 빼면
+`middle/`로 폴백하지 않는다 — **캐스케이드는 학교급을 넘지 않고 `common/`으로만 간다**(실측 후보 0개 → 그림 소멸).
+
+## 이 종결이 덮지 않는 것
+
+회상 축만 닫았다. **결과화면(EventResultScreen)과 인물 앨범은 별개 축**이다 — 218개 이벤트 중 CG가 붙은 것은
+일부이고, 이 문서의 수치를 "CG 전체의 가치"로 읽으면 안 된다. 다만 그 축을 열려면 회상 결손이 아닌
+**별도의 기준**이 먼저 있어야 한다(현재 없음).
+
+## 측정 방법과 한계
+
+제품 함수(`selectRegretHighlights` → `isClosing` 제외 → `selectMemorialHighlights` → `resolveEventCgRelPaths`)를
+직접 호출해 재현했다. CG 해석에는 **`state.year`가 아니라 `slot.year`** 를 써야 한다(`EndingScreen.tsx:52-60`).
+
+**다시 재려면 하네스 계측을 되살려야 한다.** 위 수치는 `sim-qa-playthrough.ts`의 런 출력에 종료 시점
+`memorySlots`(=`slotDump`)와 `npcs`(=`npcDump`)를 임시로 덧붙여 뽑았고, 그 계측은 커밋하지 않았다.
+`npcYearPeaks`는 하네스에 원래 있다. 즉 리포만으로는 재현되지 않는다 — 두 필드를 다시 붙이는 것이 선행 작업이다.
+
+한계: 348런은 QA 페르소나 행렬이고 `pickChoice`가 정책별 결정론이라(`sim-qa-playthrough.ts:44-65`)
+**선택지 분포는 실플레이보다 좁다.** 고정주차·친밀도 게이트 결과(발동 여부, 학교급 갈림)에는 영향이 없지만,
+"어느 선택지가 뜨는가"류 결론에는 하방 편향이 있다.
+
+3자 검수: codex(4번 권고 — 노출 경로 미검증으로 기각) · cursor(1번 — `middle` 폴백 주장은 사실 오류) ·
+sub-agent(1번 — 위 기전 오류를 잡아냄). 최종 판정 1번.

@@ -118,6 +118,7 @@ const INTENDED_PARTIAL = new Map<string, string[]>([
   ['minjae-honest@middle', ['c1_f', 'c1_m']],               // c1 "집에 안 가?"(가볍게)
   ['minjae-dream@high', ['c1_f', 'c1_m']],                  // c1 "일단 가서 생각해도"(현실적 유보)
   ['junha-cook@high', ['c1_f', 'c1_m']],                    // c1 "대학은 어떻게 할 거야?"(현실적 질문)
+  ['adolescence-clash@middle', ['c1_f', 'c1_m']],           // c1 "말없이 방에 들어간다"(삼킴) — memorySlotDraft 없음(회상 불가)
 ]);
 
 // 실제 미커버 조합이 예상과 정확히 같은가(회귀/스왑/신규 갭 감지).
