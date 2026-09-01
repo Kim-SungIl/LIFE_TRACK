@@ -200,25 +200,33 @@ describe('학년 해금 6종 — 설계 의도 관계', () => {
     expect(room.fatigue).toBeLessThan(solo.fatigue);
   });
 
-  it('예체능 레슨은 창작 활동의 유료 상위다 — 특기는 높고 피로는 낮다', () => {
-    // 독서실/독학과 같은 규약을 특기 축에도 건다. T24 전에는 이것만 어겨서
-    // 특기 2.0 > 1.5인데 피로도 6 > 3이었고, 18주 누적에서 무료가 이겼다.
+  it('예체능 레슨은 창작 활동의 유료 상위다 — 특기는 높고, 피로 격차는 1칸 이내다', () => {
+    // 독서실/독학 규약("효율↑ 피로↓를 돈으로 산다")을 특기 축에도 건다. 단 여기서는 피로가
+    // **더 낮지는 않다** — 독서실은 f4 < 독학 f5로 진짜 낮지만, 전문 레슨은 무료 창작(f3)보다
+    // 고된 게 결에 맞아서 f4로 뒀다. 잠그는 것은 "격차가 1칸을 넘지 않는다"이다.
+    // T24 전에는 f6 = 창작의 2배였고, 그 격차가 번아웃 게이트를 넘겨 18주 누적에서 무료가 이겼다.
     const lesson = pick('art-lesson');
     const free = pick('creative');
     expect(lesson.moneyCost).toBeGreaterThan(free.moneyCost);
     expect(lesson.effects.talent!).toBeGreaterThan(free.effects.talent!);
     // 피로 리터럴을 양쪽 다 잠근다. 무료 쪽만 잠그면 유료를 6으로 되돌려도 통과하고,
     // 유료 쪽만 잠그면 무료를 1로 내려 같은 함정을 다시 만들 수 있다.
-    // 5는 독학·코딩 독학이 쓰는 칸이다. 무료 창작(3)보다는 위라 "전문 레슨은 더 고되다"는 결이 남는다.
-    expect(lesson.fatigue).toBe(5);
+    expect(lesson.fatigue).toBe(4);
     expect(free.fatigue).toBe(3);
+    // 관계로도 잠근다 — 리터럴만 두면 둘을 나란히 올려 격차를 되살릴 수 있다.
+    expect(lesson.fatigue).toBeGreaterThan(free.fatigue);          // 전문 레슨이 더 고된 결은 유지
+    expect(lesson.fatigue - free.fatigue).toBeLessThanOrEqual(1);  // 격차는 1칸까지
     // 실제 계약은 아래 18주 누적 테스트다 — 수치 부등호만으로는 함정 여부를 알 수 없다.
   });
 
   it('유료 특기 활동이 무료보다 18주 누적에서 앞선다 — 돈 낼 이유가 실제로 있는가', () => {
     // T24의 진짜 계약. 수치 부등호(특기 2.0 > 1.5)만 보면 유료가 이기는 것처럼 보이지만,
-    // 주당 축 상한(+2)·구간 감쇠·피로 누적·멘탈 하락이 얽혀 **누적에서는 뒤집힐 수 있었다**.
+    // 주당 축 상한(+2)·구간 감쇠·번아웃 게이트가 얽혀 **누적에서는 뒤집힐 수 있었다**.
     // T24 전 실측: 2칸 배치에서 유료 52.6 vs 무료 54.9로 무료가 이겼다.
+    //
+    // 기제는 번아웃 게이트(`mental < 20 || (mental < 25 && fatigue > 70)`)다. 피로 6이면
+    // 2칸 배치가 12주차에 burnout에 걸려 성장 배율 0.35를 4주간 먹었고, 무료 창작 2칸은
+    // 지침 0주였다. 돈 내는 쪽만 번아웃을 밟는 구조였다는 뜻이다.
     //
     // 부모를 wealth로 두는 건 돈을 변수에서 빼기 위해서다. 일반 가정이면 유료가 스킵돼
     // "돈이 없어 진 것"과 "돌았는데 진 것"이 구별되지 않는다 — 그래서 스킵 0을 먼저 단언한다.
@@ -238,13 +246,13 @@ describe('학년 해금 6종 — 설계 의도 관계', () => {
     // 1칸 배치 — 루틴은 학원+헬스, 주말 1칸만 특기 (실플레이 신고의 배치)
     const paid1 = play('academy', 'art-lesson');
     const free1 = play('academy', 'creative');
-    expect(paid1.skipped, '유료 1칸이 돈 부족으로 밀린 주').toBe(0);
+    expect(paid1.skipped, '유료 1칸이 실행되지 못하고 밀린 주 (돈·게이트 무관하게 전부)').toBe(0);
     expect(paid1.talent, '1칸: 유료가 무료보다 높아야 한다').toBeGreaterThan(free1.talent);
 
     // 2칸 배치 — T24 전에 역전이 일어나던 곳
     const paid2 = play('art-lesson', 'art-lesson');
     const free2 = play('creative', 'creative');
-    expect(paid2.skipped, '유료 2칸이 돈 부족으로 밀린 주').toBe(0);
+    expect(paid2.skipped, '유료 2칸이 실행되지 못하고 밀린 주 (돈·게이트 무관하게 전부)').toBe(0);
     expect(paid2.talent, '2칸: 유료가 무료보다 높아야 한다').toBeGreaterThan(free2.talent);
 
     // 슬롯을 더 부으면 유료의 우위가 커져야 한다. 격차가 줄어들면 "돈 낼 이유"가 슬롯 수에
