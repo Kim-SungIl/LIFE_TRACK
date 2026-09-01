@@ -88,10 +88,16 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
 
   // 만나지 않은 사람의 앨범은 열 수 없다 — 줄이 없으니 문도 없지만, 문을 여는 쪽에서도
   // 한 번 더 막는다(줄과 앨범이 서로 다른 판정을 쓰게 되면 감춤이 한쪽만 걸린다).
-  if (openNpc && rowsToShow.some(r => r.id === openNpc)) {
+  //
+  // 앨범에 넘기는 `story`는 **방금 그린 그 줄 자체**다. 앨범이 다시 계산하면 두 화면이
+  // 조용히 어긋난다 — 줄은 이야기를, 앨범은 그림 칸을 세는데 둘이 같은 얼굴로 보였던 것이
+  // "3개라더니 0개" 신고의 정체였다.
+  const openRow = openNpc ? rowsToShow.find(r => r.id === openNpc) : undefined;
+  if (openRow) {
     return (
       <NpcAlbumScreen
-        npcId={openNpc}
+        npcId={openRow.id}
+        story={openRow}
         seenCgFiles={archive.cgFiles}
         onBack={() => setOpenNpc(null)}
       />
