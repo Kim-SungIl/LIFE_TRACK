@@ -260,7 +260,7 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 
   // Phase 1: catch-up 보너스 — 방학에만 트리거, 낮은 스탯에 한정
   // 학교급별 발동선 차등: 초 25 / 중 35 / 고 50 (활동 데이터의 threshold는 high 기준 base로 둠)
-  // 의도: Y1 시작 스탯 분포(30/25/15...)에서 모든 활동이 catchup 발동되어 "안전망"이 일반 부스트로
+  // 의도: Y1 시작 스탯 분포(30/25/25...)에서 모든 활동이 catchup 발동되어 "안전망"이 일반 부스트로
   // 변질되던 문제 해소. 진짜 뒤처진 학생만 보호하도록 발동선을 학교급에 맞춤.
   // v8.x: 초 30→25 / 중 40→35 추가 너프 — sim에서 Y1 5.30회/방학(임계 3 초과)으로 발동 빈도 과다.
   if (state.isVacation && activity.catchupBonus) {
@@ -369,9 +369,14 @@ function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean):
     log.statChanges.mental = (log.statChanges.mental || 0) + isolationDrain;
   }
 
-  // 특기: -0.1/주 (v9: -0.2→-0.1). 학업과 같은 값으로 맞춘다.
-  // 이유: 특기는 시작값이 5개 스탯 중 최저인데 감쇠만 학업의 2배였다. 게다가 주당 축 상한(+2)
-  // 때문에 슬롯을 더 부어도 따라잡을 수 없어(3칸 47.4 vs 1칸 45.8) 불리가 복리로 쌓였다.
+  // 특기: -0.1/주 (v9: -0.2→-0.1). **초등 학기 중 학업 감쇠와 같은 값**으로 맞춘 것이다.
+  // 이유: T23 전까지 특기는 시작값이 5개 중 최저(15)인데 감쇠만 학업의 2배였다. 게다가 주당 축
+  // 상한(+2) 때문에 슬롯을 더 부어도 따라잡을 수 없어(3칸 47.4 vs 1칸 45.8) 불리가 복리로 쌓였다.
+  //
+  // ⚠️ "학업과 같다"는 초등 학기 중(Y1 -0.1)에만 참이다. 학업 감쇠는 학년·계절별로 갈라져
+  // Y2~4 -0.15 / Y5~7 -0.3, 방학은 -0.3/-0.4/-0.7까지 간다(위 academicDecay 참조). 반면
+  // 특기는 평탄한 -0.1이라 **고등에서는 특기가 5축 중 가장 덜 깎이는 스탯**이 된다.
+  // 이건 알고 둔 것이다 — QA 348판으로 성취·진로 분포를 확인한 뒤 채택했다.
   const TALENT_DECAY = -0.1;
   state.stats.talent = Math.max(5, state.stats.talent + TALENT_DECAY);
   log.statChanges.talent = (log.statChanges.talent || 0) + TALENT_DECAY;
@@ -459,7 +464,7 @@ function applySchoolClass(state: GameState, log: WeekLog): void {
 // ===== 마일스톤 체크 =====
 function checkMilestones(state: GameState, log: WeekLog): void {
   const milestoneChecks: { id: string; stat: StatKey; threshold: number; message: string }[] = [
-    // 초기값: academic 30, social 25, talent 15, mental 50, health 40
+    // 초기값: academic 30, social 25, talent 25, mental 50, health 40
     // 마일스톤은 초기값보다 충분히 높은 곳에서 시작
     { id: 'academic-40', stat: 'academic', threshold: 40, message: '"수업 내용이 들리기 시작했다"' },
     { id: 'academic-55', stat: 'academic', threshold: 55, message: '"중간권 진입 — 선생님이 이름을 기억하기 시작한다"' },

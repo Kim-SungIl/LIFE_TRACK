@@ -1,6 +1,6 @@
 // 시작 스탯과 자연 감소의 "밸런스 수치" 잠금.
 //
-// 왜 필요한가: T23에서 특기 시작값을 15 → 30, 감쇠를 -0.2 → -0.1로 바꿨는데 **973개 테스트가
+// 왜 필요한가: T23에서 특기 시작값을 15 → 25, 감쇠를 -0.2 → -0.1로 바꿨는데 **973개 테스트가
 // 전부 그대로 통과했다.** 게임의 출발선과 매주 깎이는 양이라는, 체감을 가장 크게 좌우하는
 // 두 수치가 아무 데도 안 잠겨 있었다는 뜻이다. activityBalanceLiterals.test.ts와 같은 규약으로
 // 기대값을 여기 하드코딩해 잠근다 — 의도적으로 바꿀 때 이 표를 같이 고치면서 근거를 다시 읽게 된다.
@@ -24,10 +24,32 @@ describe('시작 스탯 (부모 보정 전 기준선)', () => {
     const BASELINE: Record<StatKey, number> = {
       academic: 30, social: 25, talent: 25, mental: 50, health: 40,
     };
-    const s = createInitialState('male', ['emotional', 'emotional'], { rngSeed: 1 });
-    // 부모 보정 폭을 감안해 ±10 안에 있는지 + 등급 칸이 맞는지 둘 다 본다.
+    // 출발 등급 칸(STAT_GRADES: E<20 · D20 · C40 · B60 · A80). 값이 그대로여도 경계가 움직이면
+    // 첫인상이 통째로 달라지므로 같이 잠근다.
+    const BASELINE_GRADE: Record<StatKey, string> = {
+      academic: 'D', social: 'D', talent: 'D', mental: 'C', health: 'C',
+    };
+    // 부모 초기 보정(parentModifiers.initStatBonus)은 resilience·strict·emotional 셋만 준다.
+    // 셋 다 없는 조합이면 리터럴이 그대로 나오므로 **허용치 없이 toBe로** 잠글 수 있다.
+    // (이전 판본은 ±10 허용이었는데, 하필 T23의 변경폭이 정확히 10이라 25→15 되돌림이
+    //  통과했다. 실측으로 확인된 false lock이었다.)
+    const s = createInitialState('male', ['info', 'wealth'], { rngSeed: 1 });
     for (const k of Object.keys(BASELINE) as StatKey[]) {
-      expect(Math.abs(s.stats[k] - BASELINE[k]), `${k} 기준선 이탈`).toBeLessThanOrEqual(10);
+      expect(s.stats[k], `${k} 기준선`).toBe(BASELINE[k]);
+      expect(getGrade(s.stats[k]).grade, `${k} 출발 등급`).toBe(BASELINE_GRADE[k]);
+    }
+  });
+
+  it('부모 초기 보정은 학업·멘탈·체력에만 붙는다 (인기·특기는 불변)', () => {
+    // 위 테스트가 특정 부모 조합에 기대므로, 그 전제 자체를 잠근다.
+    // 이게 깨지면 위 테스트는 "우연히 통과"로 바뀐다.
+    const combos: [ParentStrength, ParentStrength][] = [
+      ['emotional', 'emotional'], ['strict', 'resilience'], ['wealth', 'freedom'], ['info', 'wealth'],
+    ];
+    for (const p of combos) {
+      const s = createInitialState('male', p, { rngSeed: 1 });
+      expect(s.stats.social, `${p.join('+')} 인기`).toBe(25);
+      expect(s.stats.talent, `${p.join('+')} 특기`).toBe(25);
     }
   });
 
@@ -73,16 +95,19 @@ describe('자연 감소 (학기 중, 초6)', () => {
     };
   }
 
-  it('특기 감쇠 상수가 -0.1이다 (학업 감쇠와 같은 값)', () => {
+  it('특기 감쇠 상수가 -0.1이다 (초등 학기 학업 감쇠와 같은 값)', () => {
     // T23 전에는 특기 -0.2 = 학업의 2배였다. 시작값이 최저인 축에 감쇠만 2배라
     // 불리가 복리로 쌓였고, 주당 축 상한(+2) 때문에 슬롯을 더 부어도 못 따라잡았다.
+    // ⚠️ "학업과 같다"는 이 관측 조건(Y1 학기 중)에서만 참이다 — 학업 감쇠는 Y2~4 -0.15 /
+    // Y5~7 -0.3, 방학은 더 크다. 특기는 평탄한 -0.1이라 고등에서는 특기가 덜 깎인다.
     const d = idleWeekDelta();
     expect(d.talent).toBeCloseTo(-0.1, 5);
   });
 
   it('**학업만 저절로 오른다** — 이 비대칭이 체감의 뿌리다', () => {
     // 감쇠 상수는 학업도 -0.1로 같지만, applySchoolClass가 평일마다 학업에만 +0.3을 준다.
-    // 그래서 아무 활동도 안 넣은 주에 학업은 순 +0.2로 오르고 나머지는 전부 깎인다.
+    // 그래서 아무 활동도 안 넣은 주에 학업만 오르고 나머지는 전부 깎인다. 명목은 +0.2(0.3-0.1)지만
+    // 체감 감소·피로 배율이 곱해져 스탯 50 기준 **실측 +0.1**이다.
     // 이 테스트는 그 비대칭을 "고쳐야 할 버그"가 아니라 **알려진 설계**로 못박아 둔다 —
     // 특기가 안 오른다는 신고를 다시 받을 때 여기부터 읽으라는 뜻이다.
     const d = idleWeekDelta();
@@ -102,8 +127,8 @@ describe('자연 감소 (학기 중, 초6)', () => {
     expect(d.talent).toBeLessThan(0);   // 감쇠 자체를 없애는 것도 아니다
   });
 
-  it('감쇠만 두면 18주 뒤 특기가 한 등급만 내려간다', () => {
-    // -0.2였을 때는 시작 15에서 18주면 11.4(E)까지 떨어졌다.
+  it('감쇠만 두면 18주가 지나도 출발 등급을 유지한다', () => {
+    // 25 → 23.2. 등급은 D 그대로다. -0.2였을 때는 시작 15에서 18주면 11.4(E)까지 떨어졌다.
     let s = fixture({ year: 1, week: 1, routineSlot2: 'self-study', routineSlot3: 'self-study', weekendChoices: ['self-study'] });
     const start = s.stats.talent;
     for (let i = 0; i < 18; i++) {
@@ -116,10 +141,10 @@ describe('자연 감소 (학기 중, 초6)', () => {
 });
 
 describe('특기 성장 — 실플레이 신고의 재현', () => {
-  it('특기 활동 8주면 C(평범)에 닿는다 — 신고의 직접 재현', () => {
-    // 신고: "초6 18주 동안 계속 예체능 레슨을 했는데 D".
-    // T23 전에는 C 진입에 14주가 걸렸고 18주를 완주해도 47.6(C)이 한계였다. 이제 8주면 C다.
-    // "18주째에 아직 D"가 다시 벌어지면 여기서 걸린다.
+  it('세 칸 전부 특기면 8주에 C(평범)에 닿는다', () => {
+    // 특기에 슬롯을 다 몰아준 상한선. T23 전에는 C 진입에 14주가 걸렸고 18주를 완주해도
+    // 47.6(C)이 한계였다. 이제 8주면 C다.
+    // ⚠️ 이건 신고 조건이 **아니다** — 신고자는 주말 1칸만 특기였다(아래 테스트).
     let s = fixture({ year: 1, week: 1 });
     let weeksToC: number | null = null;
     for (let i = 1; i <= 18; i++) {
@@ -131,6 +156,30 @@ describe('특기 성장 — 실플레이 신고의 재현', () => {
     expect(weeksToC!).toBeLessThanOrEqual(10);
     expect(s.stats.talent, '18주 후').toBeGreaterThanOrEqual(50);
     expect(['C', 'B', 'A']).toContain(getGrade(s.stats.talent).grade);
+  });
+
+  it('신고 조건 그대로 — 주말 1칸만 특기여도 18주면 D를 벗어난다', () => {
+    // 신고 원문: "초6 18주 동안 계속 예체능 레슨을 했는데도 D".
+    // 재현해 보니 **배치**가 핵심이었다: 루틴 2칸은 학원·헬스에 쓰고 주말 1칸만 예체능 레슨.
+    // 위 테스트(3칸 전부 특기)와는 다른 조건이고, 이쪽이 신고자가 실제로 한 플레이다.
+    //
+    // 부모를 wealth로 두는 것도 재현의 일부다. 일반 가정(4만/주)이면 학원+헬스 루틴만으로
+    // 돈이 말라 예체능이 **18주 내내 스킵된다**(실측 18/18칸). 신고자는 부유한 가정이라
+    // 예체능이 정상 실행됐는데도 D였다 — 돈이 아니라 슬롯이 원인이었다는 뜻이다.
+    //
+    // 실측(T23 적용 후): 25 → 41.90, C 도달 16주차, 스킵 0칸.
+    // T23 이전 수치(시작 15 · 감쇠 -0.2)로는 같은 배치가 32.4(D)였다 — 신고 그대로다.
+    let s = createInitialState('male', ['wealth', 'wealth'], { rngSeed: 42 });
+    let artSkipped = 0;
+    for (let i = 0; i < 18; i++) {
+      s.routineSlot2 = 'academy'; s.routineSlot3 = 'gym'; s.weekendChoices = ['art-lesson'];
+      s = processWeek(s);
+      artSkipped += (s.weekLog?.skipped ?? []).filter(k => k.activityId === 'art-lesson').length;
+    }
+    // 스킵 0을 먼저 확인하지 않으면 "돈이 없어 안 돈 것"과 "돌았는데 안 오른 것"을 구별할 수 없다.
+    expect(artSkipped, '예체능 레슨이 돈 부족으로 밀린 주').toBe(0);
+    expect(s.stats.talent, '18주 후 특기').toBeGreaterThanOrEqual(40);
+    expect(getGrade(s.stats.talent).grade, '18주 후 등급').not.toBe('D');
   });
 
   it('음성 대조: 특기 활동을 안 하면 오르지 않는다', () => {
