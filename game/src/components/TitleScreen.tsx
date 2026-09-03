@@ -346,8 +346,10 @@ export function TitleScreen() {
             textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)',
             marginBottom: 10, lineHeight: 1.5, fontStyle: 'italic',
           }}>
-            "{MEMORIES.find(m => m.id === selected[0])?.scene}"<br />
-            그리고 "{MEMORIES.find(m => m.id === selected[1])?.scene}"<br />
+            {/* scene을 인용부호로 감싸지 않는다 — 6개 중 5개가 이미 자기 인용부호를 갖고 있어
+                ""엄마가 알아봤는데…""로 이중 표시됐다. 카드(위 {m.scene})와 같은 규약으로 맞춘다. */}
+            {MEMORIES.find(m => m.id === selected[0])?.scene}<br />
+            그리고 {MEMORIES.find(m => m.id === selected[1])?.scene}<br />
             <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>
               그런 집이었다.
             </span>

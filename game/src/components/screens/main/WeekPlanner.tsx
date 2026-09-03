@@ -1,5 +1,6 @@
 import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, getActivityCost } from '../../../engine/activities';
+import { ROUTINE_BONUS_PLATEAU_WEEKS } from '../../../engine/gameEngine';
 import { josa } from '../../../engine/korean';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 
@@ -74,7 +75,9 @@ export function WeekPlanner({
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activityName}</span>
                 {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(125,163,217,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
-                {isRoutine && slotComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{labelFor(slotComboWeeks)}{slotComboWeeks}주 연속</span>}
+                {/* 8주에서 보너스가 평탄해진다(gameEngine.getRoutineBonus 최고 임계 8). 실제 주차를
+                    그대로 뿌리면 "88주 연속"이 계속 쌓이는 보상으로 읽히므로 상한부터는 "8주+"로 접는다. */}
+                {isRoutine && slotComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{labelFor(slotComboWeeks)}{slotComboWeeks >= ROUTINE_BONUS_PLATEAU_WEEKS ? `${ROUTINE_BONUS_PLATEAU_WEEKS}주+` : `${slotComboWeeks}주`} 연속</span>}
               </div>
               {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
@@ -109,7 +112,7 @@ export function WeekPlanner({
         📅 이번 주 일과
         {!state.isVacation && maxComboWeeks >= 3 && (
           <span style={{ color: 'var(--yellow)', marginLeft: 8, fontSize: '0.68rem' }}>
-            {routineComboLabel}루틴 보너스 활성
+            {routineComboLabel}루틴 보너스 {maxComboWeeks >= ROUTINE_BONUS_PLATEAU_WEEKS ? '최대' : '활성'}
           </span>
         )}
       </div>

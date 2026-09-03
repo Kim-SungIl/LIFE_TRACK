@@ -166,9 +166,14 @@ function getFatigueModifier(fatigue: number): number {
   return 0.2;   // v6: 90+ 극한 피로시 효율 대폭 하락
 }
 
-// ===== 루틴 보너스 (v6.2: 12주 캡 — 영원히 쌓이는 문제 해결) =====
-function getRoutineBonus(weeks: number): number {
-  const capped = Math.min(weeks, 12); // 12주 이후 추가 보너스 없음
+// ===== 루틴 보너스 =====
+// **실제 평탄화 지점은 8주다** — 최고 임계가 `capped >= 8`이라 아래 min(,12)은 현재 값을 바꾸지 않는다
+// (0~400주 전수 확인). "v6.2 12주 캡이 영원히 쌓이는 문제를 해결한다"고 적혀 있었으나 그 일을 하는 건
+// 8주 티어다. min은 8보다 위에 티어를 추가할 때를 위한 안전망으로만 남긴다.
+// UI(WeekPlanner)가 이 상한을 `ROUTINE_BONUS_PLATEAU_WEEKS`로 참조하니 임계를 바꾸면 같이 볼 것.
+export const ROUTINE_BONUS_PLATEAU_WEEKS = 8;
+export function getRoutineBonus(weeks: number): number {
+  const capped = Math.min(weeks, 12);
   if (capped >= 8) return 0.3;   // v6.1: 0.5 → 0.3 (+30%)
   if (capped >= 6) return 0.2;
   if (capped >= 3) return 0.1;

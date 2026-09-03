@@ -251,8 +251,20 @@ describe('WeekPlanner 경고·콤보·주말 미선택', () => {
       slot2ComboWeeks: 8,
       maxComboWeeks: 8,
     });
-    expect(screen.getByText(/🔥\s*8주 연속/)).toBeInTheDocument();
+    expect(screen.getByText(/🔥\s*8주\+ 연속/)).toBeInTheDocument();
+    expect(screen.getByText(/루틴 보너스 최대/)).toBeInTheDocument();
     u3();
+
+    // 상한 이후로는 실제 주차를 뿌리지 않는다 — "88주 연속"이 계속 쌓이는 보상으로 읽혔다.
+    const { unmount: u4 } = renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id }),
+      slot2ComboWeeks: 88,
+      maxComboWeeks: 88,
+    });
+    expect(screen.getByText(/🔥\s*8주\+ 연속/)).toBeInTheDocument();
+    expect(screen.queryByText(/88주/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/루틴 보너스 활성/)).not.toBeInTheDocument();
+    u4();
 
     renderPlanner({
       state: makeState({ isVacation: true, week: 21 }),
