@@ -56,6 +56,13 @@ export interface GameState {
   lowMentalWeeksByYear: number[];
   veryLowMentalWeeksByYear: number[];
   burnoutCountByYear: number[];
+  // T25: 돈 궤적. 최종 잔액 하나로는 "늘 쪼들렸다"와 "딱 맞게 썼다"가 구분되지 않는다(T21과 같은 함정).
+  // index = year-1 (Y1→0 … Y7→6). 길이 7. spent=실차감액(만원),
+  // tightWeeks=그 해에 "돈만 없어서" 못 고르는 활동이 있던 주 수(주당 최대 1).
+  // **옵셔널인 이유**: 구세이브에 0 배열을 백필하면 "한 푼도 안 썼다"는 거짓 회고가 된다.
+  // undefined = 기록 없음 → 화면이 줄을 아예 그리지 않는다.
+  moneySpentByYear?: number[];
+  moneyTightWeeksByYear?: number[];
   burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
   // v1.2 기억 슬롯 시스템

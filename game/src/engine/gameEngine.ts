@@ -1,6 +1,7 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
 import { emptyYearCounts } from './ending';
-import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
+import { emptyMoneyYears, recordMoneySpent, recordTightWeek } from './moneyTrajectory';
+import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity, getAvailableActivities } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { assignCurrentEvent } from './eventPresentation';
@@ -90,6 +91,8 @@ export function createInitialState(
     lowMentalWeeksByYear: emptyYearCounts(),
     veryLowMentalWeeksByYear: emptyYearCounts(),
     burnoutCountByYear: emptyYearCounts(),
+    moneySpentByYear: emptyMoneyYears(),
+    moneyTightWeeksByYear: emptyMoneyYears(),
     burnoutCooldown: 0,
     eventTimeCost: 0,
     // v1.2 기억 슬롯 시스템
@@ -332,9 +335,12 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 
   // 용돈 적용 (음수 방지) — 학년별 차등 비용 적용
   const cost = getActivityCost(activity, state.year);
+  const moneyBeforeActivity = state.money;
   state.money = Math.round((state.money - cost) * 10) / 10;
   if (state.money < 0) state.money = 0;
   log.moneyChange -= cost;
+  // T25 돈 궤적 — 명목 비용이 아니라 0 클램프 이후의 실차감액을 적립한다.
+  recordMoneySpent(state, Math.round((moneyBeforeActivity - state.money) * 10) / 10);
 
   // 부모 친밀도 — stat 감쇠(diminishing/fatigue 등)와 무관하게 raw baseDelta를 단일 진입점에 전달.
   // §2.1 구간 감쇠는 applyParentIntimacyDelta 내부에서만 적용(이중 적용 방지).
@@ -521,6 +527,17 @@ function recordBurnoutForYear(state: GameState): void {
   const arr = state.burnoutCountByYear ?? emptyYearCounts();
   arr[i] = (arr[i] ?? 0) + 1;
   state.burnoutCountByYear = arr;
+}
+
+// 돈만 없으면 열렸을 활동 수 — 같은 상태에 잔액만 무한으로 준 대조군과의 차집합.
+// 학년·계절·방학횟수 게이트는 양쪽 모두에 걸리므로 순수하게 "돈이 잠근 몫"만 남는다.
+function countActivitiesLockedByMoney(state: GameState): number {
+  const now = new Set(getAvailableActivities(state).map(a => a.id));
+  let locked = 0;
+  for (const a of getAvailableActivities({ ...state, money: Number.MAX_SAFE_INTEGER })) {
+    if (!now.has(a.id)) locked++;
+  }
+  return locked;
 }
 
 // 그 주의 최종 mental(시험·방치 패널티 이후)을 학년 슬롯에 적립. 이벤트 resolve는 다음 순간이라 여기 안 넣음.
@@ -983,6 +1000,12 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정
   prepareWeekContext(newState);
+
+  // T25 돈 궤적 — "이번 주에 돈만 없어서 못 고르는 활동이 있었는가". 활동 적용 **전**,
+  // 즉 계획 화면이 보던 잔액으로 재야 한다(뒤에서 재면 이번 주 지출이 반영돼 과대 계상).
+  // 엔진 스킵(log.skipped)을 안 쓰는 이유는 moneyTrajectory.ts 주석 참조 — 그건 confirmDisabled가
+  // 미리 막아 제품에선 거의 발생하지 않는다.
+  recordTightWeek(newState, countActivitiesLockedByMoney(newState));
   // 부모 친밀도 자연 변화는 더 이상 강점 자동 드리프트가 아니다(결정론 제거).
   // actedWithParentThisWeek 플래그는 talkToHome(processWeek 이전) + 부모 활동(아래)에서 누적되고,
   // 평균 회귀(50 수렴)와 플래그 리셋은 활동 적용 뒤 "5b"에서 처리한다.

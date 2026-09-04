@@ -201,6 +201,8 @@ export function GameScreen() {
           lowMentalWeeksByYear={state.lowMentalWeeksByYear}
           veryLowMentalWeeksByYear={state.veryLowMentalWeeksByYear}
           burnoutCountByYear={state.burnoutCountByYear}
+          moneySpentByYear={state.moneySpentByYear}
+          moneyTightWeeksByYear={state.moneyTightWeeksByYear}
           bgProps={bgProps}
           onAdvance={() => {}}
           readonly
@@ -254,6 +256,8 @@ export function GameScreen() {
         lowMentalWeeksByYear={state.lowMentalWeeksByYear}
         veryLowMentalWeeksByYear={state.veryLowMentalWeeksByYear}
         burnoutCountByYear={state.burnoutCountByYear}
+        moneySpentByYear={state.moneySpentByYear}
+        moneyTightWeeksByYear={state.moneyTightWeeksByYear}
         bgProps={bgProps}
         onAdvance={advanceFromYearEnd}
       />
@@ -269,6 +273,9 @@ export function GameScreen() {
         stats={state.stats}
         parents={state.parents}
         burnoutCount={state.burnoutCount}
+        money={state.money}
+        moneySpentByYear={state.moneySpentByYear}
+        moneyTightWeeksByYear={state.moneyTightWeeksByYear}
         bgProps={bgProps}
         runDelta={runDelta}
         gender={state.gender}
