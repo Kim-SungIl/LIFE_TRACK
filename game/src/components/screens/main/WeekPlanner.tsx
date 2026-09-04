@@ -1,5 +1,7 @@
 import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, getActivityCost } from '../../../engine/activities';
+import { ROUTINE_BONUS_PLATEAU_WEEKS, routineTierIndex } from '../../../engine/gameEngine';
+import { getParentMods } from '../../../engine/parentModifiers';
 import { josa } from '../../../engine/korean';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 
@@ -27,7 +29,15 @@ export function WeekPlanner({
   slot2ComboWeeks, slot3ComboWeeks, maxSlots,
 }: Props) {
   const reducedMotion = usePrefersReducedMotion();
-  const labelFor = (w: number) => w >= 8 ? '🔥 ' : w >= 6 ? '⭐ ' : w >= 3 ? '✨ ' : '';
+  // 접두는 엔진 티어 인덱스에 그대로 매핑한다 — 임계 숫자는 gameEngine에만 두고 여기엔 표현만 남긴다.
+  // (예전엔 3/6/8을 여기서도 하드코딩해 엔진 임계를 옮겨도 배지가 따라오지 않았다.)
+  const TIER_PREFIX = ['✨ ', '⭐ ', '🔥 '];
+  // strict 부모는 루틴 도달이 1주 빠르다 — 엔진이 `getRoutineBonus(weeks + boost)`로 계산하므로
+  // 판정에는 같은 보정을 얹는다. 표시하는 주차는 보정 없는 실제 주차 그대로다.
+  const routineBoost = getParentMods(state.parents).routineWeeksBoost;
+  const tierOf = (w: number) => routineTierIndex(w + routineBoost);
+  const labelFor = (w: number) => TIER_PREFIX[tierOf(w)] ?? '';
+  const isMaxed = (w: number) => w + routineBoost >= ROUTINE_BONUS_PLATEAU_WEEKS;
   const routineComboLabel = labelFor(maxComboWeeks);
 
   // 슬롯 렌더 헬퍼 — routine 슬롯의 경우 그 슬롯의 카운터를 명시적으로 전달
@@ -53,11 +63,11 @@ export function WeekPlanner({
                       isEmpty ? 'rgba(224,138,91,0.08)' :
                       isRoutine ? 'rgba(125,163,217,0.12)' : 'rgba(224,138,91,0.12)',
           border: isEmpty && !isFixed ? '1px dashed rgba(224,138,91,0.4)' :
-                  isRoutine && slotComboWeeks >= 3 ? '1px solid rgba(224,179,84,0.4)' :
+                  isRoutine && tierOf(slotComboWeeks) >= 0 ? '1px solid rgba(224,179,84,0.4)' :
                   isRoutine ? '1px solid rgba(125,163,217,0.2)' :
                   !isEmpty && !isFixed ? '1px solid rgba(224,138,91,0.2)' :
                   '1px solid rgba(255,255,255,0.04)',
-          boxShadow: isRoutine && slotComboWeeks >= 6 ? '0 0 8px rgba(224,179,84,0.2)' :
+          boxShadow: isRoutine && tierOf(slotComboWeeks) >= 1 ? '0 0 8px rgba(224,179,84,0.2)' :
                      isEmpty && !isFixed ? '0 0 6px rgba(224,138,91,0.15)' : 'none',
           transition: 'all 0.15s',
           opacity: isFixed ? 0.6 : 1,
@@ -74,7 +84,10 @@ export function WeekPlanner({
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activityName}</span>
                 {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(125,163,217,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
-                {isRoutine && slotComboWeeks >= 3 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{labelFor(slotComboWeeks)}{slotComboWeeks}주 연속</span>}
+                {/* 연속 주차는 플레이어 자신의 기록이라 실제 값을 그대로 보여준다. 대신 상한에 닿으면
+                    "· 최대"를 붙여 더 쌓아도 보너스는 안 는다는 걸 같이 말한다 — 예전엔 "88주 연속"만
+                    떠서 계속 자라는 보상으로 읽혔고, 그렇다고 "8주+"로 접으면 기록이 사라진다. */}
+                {isRoutine && tierOf(slotComboWeeks) >= 0 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{labelFor(slotComboWeeks)}{slotComboWeeks}주 연속{isMaxed(slotComboWeeks) ? ' · 최대' : ''}</span>}
               </div>
               {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
@@ -107,9 +120,9 @@ export function WeekPlanner({
     }}>
       <div style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: 10 }}>
         📅 이번 주 일과
-        {!state.isVacation && maxComboWeeks >= 3 && (
+        {!state.isVacation && tierOf(maxComboWeeks) >= 0 && (
           <span style={{ color: 'var(--yellow)', marginLeft: 8, fontSize: '0.68rem' }}>
-            {routineComboLabel}루틴 보너스 활성
+            {routineComboLabel}루틴 보너스 {isMaxed(maxComboWeeks) ? '최대' : '활성'}
           </span>
         )}
       </div>

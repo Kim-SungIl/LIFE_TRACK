@@ -166,13 +166,34 @@ function getFatigueModifier(fatigue: number): number {
   return 0.2;   // v6: 90+ 극한 피로시 효율 대폭 하락
 }
 
-// ===== 루틴 보너스 (v6.2: 12주 캡 — 영원히 쌓이는 문제 해결) =====
-function getRoutineBonus(weeks: number): number {
-  const capped = Math.min(weeks, 12); // 12주 이후 추가 보너스 없음
-  if (capped >= 8) return 0.3;   // v6.1: 0.5 → 0.3 (+30%)
-  if (capped >= 6) return 0.2;
-  if (capped >= 3) return 0.1;
-  return 0;
+// ===== 루틴 보너스 =====
+// 티어 표의 SSOT는 아래 두 배열이다. UI(WeekPlanner)가 접두(✨⭐🔥)와 "최대" 판정에
+// `routineTierIndex`를 쓰므로 임계를 여기서 옮기면 표기가 따라온다 — 예전엔 엔진과 UI가 3/6/8을
+// 각자 하드코딩해서 한쪽만 바뀌어도 조용히 어긋났다(임계를 옮기는 뮤테이션 3건이 전체 테스트를
+// 통과했다).
+//
+// 예전엔 본문에 `Math.min(weeks, 12)`가 있었고 주석도 "v6.2 12주 캡"이라 적혀 있었지만, 최고 임계가
+// 8이라 그 min은 값을 전혀 바꾸지 않았다(0~400주 전수 확인). 게다가 12를 넘는 티어를 나중에
+// 추가하면 조용히 죽이는 덫이라 지웠다.
+//
+// 주의: 여기 숫자는 **부모 보정 전 기준값**이다. strict 부모는 `routineWeeksBoost = 1`이라 실효
+// 도달이 1주 앞당겨진다(3→2, 6→5, 8→7). 엔진은 `getRoutineBonus(weeks + boost)`로 부르고 UI도
+// 같은 보정을 얹어 판정해야 한다 — 다만 **표시하는 주차는 보정 없는 실제 주차다.**
+export const ROUTINE_TIER_WEEKS = [3, 6, 8] as const;
+export const ROUTINE_TIER_BONUS = [0.1, 0.2, 0.3] as const;   // v6.1: 최고 0.5 → 0.3 (+30%)
+export const ROUTINE_BONUS_PLATEAU_WEEKS = ROUTINE_TIER_WEEKS[ROUTINE_TIER_WEEKS.length - 1];
+
+/** 실효 주차가 속한 티어 인덱스. 어느 티어에도 못 미치면 -1. UI 접두도 이 인덱스로 고른다. */
+export function routineTierIndex(weeks: number): number {
+  for (let i = ROUTINE_TIER_WEEKS.length - 1; i >= 0; i--) {
+    if (weeks >= ROUTINE_TIER_WEEKS[i]) return i;
+  }
+  return -1;
+}
+
+export function getRoutineBonus(weeks: number): number {
+  const i = routineTierIndex(weeks);
+  return i < 0 ? 0 : ROUTINE_TIER_BONUS[i];
 }
 
 // ===== 활동 적용 =====
