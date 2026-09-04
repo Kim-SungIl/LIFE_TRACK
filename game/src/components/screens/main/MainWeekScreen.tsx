@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
-import { getWeekLabel, getMonthLabel, predictWeekOutcome } from '../../../engine/gameEngine';
+import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
 import { getExamSchedule } from '../../../engine/examSystem';
@@ -160,9 +160,12 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   const weeklyOverBudget = weeklyActivityCost > state.money;
 
   // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전).
-  // routineComboLabel 은 WeekPlanner 가 maxComboWeeks 로 내부 계산하므로 여기선 카운터만.
-  const slot2ComboWeeks = !state.isVacation && state.routineSlot2Weeks >= 3 ? state.routineSlot2Weeks : 0;
-  const slot3ComboWeeks = !state.isVacation && state.routineSlot3Weeks >= 3 ? state.routineSlot3Weeks : 0;
+  // 접두·"최대" 판정은 WeekPlanner 가 하고, 여기선 첫 티어에 못 닿은 슬롯을 0으로 눌러 배지를 숨긴다.
+  // strict 부모는 도달이 1주 빨라(routineWeeksBoost) 문턱도 같이 내려간다 — 안 그러면 보너스가
+  // 이미 붙은 주에 배지만 안 뜬다.
+  const routineComboFloor = Math.max(1, ROUTINE_TIER_WEEKS[0] - getParentMods(state.parents).routineWeeksBoost);
+  const slot2ComboWeeks = !state.isVacation && state.routineSlot2Weeks >= routineComboFloor ? state.routineSlot2Weeks : 0;
+  const slot3ComboWeeks = !state.isVacation && state.routineSlot3Weeks >= routineComboFloor ? state.routineSlot3Weeks : 0;
   const maxComboWeeks = Math.max(slot2ComboWeeks, slot3ComboWeeks);
 
   const upcomingEvents = getUpcomingEvents(state);

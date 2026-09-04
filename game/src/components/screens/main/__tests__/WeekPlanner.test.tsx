@@ -251,20 +251,30 @@ describe('WeekPlanner 경고·콤보·주말 미선택', () => {
       slot2ComboWeeks: 8,
       maxComboWeeks: 8,
     });
-    expect(screen.getByText(/🔥\s*8주\+ 연속/)).toBeInTheDocument();
+    expect(screen.getByText(/🔥\s*8주 연속 · 최대/)).toBeInTheDocument();
     expect(screen.getByText(/루틴 보너스 최대/)).toBeInTheDocument();
     u3();
 
-    // 상한 이후로는 실제 주차를 뿌리지 않는다 — "88주 연속"이 계속 쌓이는 보상으로 읽혔다.
+    // 상한을 넘겨도 실제 주차는 그대로 보여준다 — 88주는 플레이어 자신의 기록이다.
+    // 대신 "· 최대"가 붙어 더 쌓아도 보너스는 안 는다는 걸 같이 말한다.
     const { unmount: u4 } = renderPlanner({
       state: makeState({ isVacation: false, routineSlot2: act.id }),
       slot2ComboWeeks: 88,
       maxComboWeeks: 88,
     });
-    expect(screen.getByText(/🔥\s*8주\+ 연속/)).toBeInTheDocument();
-    expect(screen.queryByText(/88주/)).not.toBeInTheDocument();
+    expect(screen.getByText(/🔥\s*88주 연속 · 최대/)).toBeInTheDocument();
     expect(screen.queryByText(/루틴 보너스 활성/)).not.toBeInTheDocument();
     u4();
+
+    // 상한 아래에서는 "· 최대"가 붙지 않는다 — 아직 자랄 여지가 있다는 뜻이다.
+    const { unmount: u5 } = renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id }),
+      slot2ComboWeeks: 7,
+      maxComboWeeks: 7,
+    });
+    expect(screen.getByText(/⭐\s*7주 연속$/)).toBeInTheDocument();
+    expect(screen.getByText(/루틴 보너스 활성/)).toBeInTheDocument();
+    u5();
 
     renderPlanner({
       state: makeState({ isVacation: true, week: 21 }),
@@ -272,6 +282,68 @@ describe('WeekPlanner 경고·콤보·주말 미선택', () => {
       maxSlots: 4,
     });
     expect(screen.queryByText(/루틴 보너스 활성/)).not.toBeInTheDocument();
+  });
+
+  it('두 루틴 슬롯의 주차가 다르면 배지도 각자 말한다 (헤더는 최고 슬롯 요약)', () => {
+    // 슬롯별 카운터는 한쪽만 바꿔도 다른 쪽이 보존되는 게 의도라, 두 값이 다른 건 평상 상태다.
+    // 배지가 슬롯 카운터가 아니라 max 를 읽으면 3주짜리 슬롯에 "8주"가 찍힌다.
+    const act = oneSlotFree();
+    const { unmount } = renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id, routineSlot3: act.id }),
+      slot2ComboWeeks: 8,
+      slot3ComboWeeks: 3,
+      maxComboWeeks: 8,
+    });
+    expect(screen.getByText(/🔥\s*8주 연속 · 최대/)).toBeInTheDocument();
+    expect(screen.getByText(/✨\s*3주 연속$/)).toBeInTheDocument();
+    // 3주 슬롯에 "최대"가 번지지 않는다.
+    expect(screen.queryByText(/3주 연속 · 최대/)).not.toBeInTheDocument();
+    expect(screen.getByText(/루틴 보너스 최대/)).toBeInTheDocument();
+    unmount();
+
+    // 아직 첫 티어에 못 닿은 슬롯에는 배지 자체가 없다. 표시 여부까지 max 를 읽으면
+    // 방금 바꾼 슬롯에 "0주 연속"이 찍힌다 — 위 8주/3주 조합만으론 그 뮤테이션이 살아남는다.
+    renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id, routineSlot3: act.id }),
+      slot2ComboWeeks: 8,
+      slot3ComboWeeks: 0,
+      maxComboWeeks: 8,
+    });
+    expect(screen.getByText(/🔥\s*8주 연속 · 최대/)).toBeInTheDocument();
+    expect(screen.queryByText(/0주 연속/)).not.toBeInTheDocument();
+    expect(screen.getAllByText(/주 연속/)).toHaveLength(1);
+  });
+
+  it('strict 부모는 도달이 1주 빨라 배지 판정도 1주 앞당겨진다', () => {
+    // 엔진이 `getRoutineBonus(weeks + routineWeeksBoost)`로 계산한다(applyRoutineActivities).
+    // strict 판에서 실제 상한은 생주차 7이라, UI가 8로 판정하면 한 주 동안 거짓말을 한다.
+    const act = oneSlotFree();
+    const { unmount } = renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id, parents: ['strict', 'info'] }),
+      slot2ComboWeeks: 7,
+      maxComboWeeks: 7,
+    });
+    expect(screen.getByText(/🔥\s*7주 연속 · 최대/)).toBeInTheDocument();
+    expect(screen.getByText(/루틴 보너스 최대/)).toBeInTheDocument();
+    unmount();
+
+    // 같은 7주라도 보정이 없는 부모는 아직 상한이 아니다 — 두 판이 실제로 갈린다.
+    const { unmount: u2 } = renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id, parents: ['emotional', 'info'] }),
+      slot2ComboWeeks: 7,
+      maxComboWeeks: 7,
+    });
+    expect(screen.getByText(/⭐\s*7주 연속$/)).toBeInTheDocument();
+    expect(screen.getByText(/루틴 보너스 활성/)).toBeInTheDocument();
+    u2();
+
+    // 첫 티어도 같이 내려간다 — strict는 2주에 이미 보너스가 붙는다.
+    renderPlanner({
+      state: makeState({ isVacation: false, routineSlot2: act.id, parents: ['strict', 'info'] }),
+      slot2ComboWeeks: 2,
+      maxComboWeeks: 2,
+    });
+    expect(screen.getByText(/✨\s*2주 연속$/)).toBeInTheDocument();
   });
 
   it('주말 미선택 안내는 selectedActivities가 비고 routineSlot2가 있을 때만 뜬다', () => {

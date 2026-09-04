@@ -42,10 +42,12 @@ function pickCards(): { scenes: string[] } {
   return { scenes };
 }
 
-/** "그런 집이었다."를 품은 요약 블록 */
+/** "그런 집이었다."를 품은 요약 블록.
+ *  `.parentElement`까지 올라가면 sticky 컨테이너(시작 버튼·도전 모드 토글 포함)를 잡는다.
+ *  범위가 넓으면 요약 밖 문구의 인용부호에 오탐이 나므로 요약 div 자체에서 멈춘다. */
 function summaryBlock(): HTMLElement {
   const tail = screen.getByText(/그런 집이었다/);
-  const block = tail.closest('div')?.parentElement;
+  const block = tail.closest('div');
   if (!block) throw new Error('요약 블록을 찾지 못했습니다');
   return block as HTMLElement;
 }
@@ -57,8 +59,9 @@ describe('타이틀 부모 요약 — scene 인용부호', () => {
     pickCards();
     const text = summaryBlock().textContent ?? '';
     expect(text).toMatch(/그런 집이었다/);
-    // 감싸면 `""…""`가 되어 연속 인용부호가 생긴다. 이게 유일하고 확실한 신호다.
-    expect(text).not.toMatch(/""/);
+    // 감싸면 `""…""`가 되어 인용부호가 겹친다. 사이에 공백을 넣어 감싸는 변형(`" "…" "`)도
+    // 같은 결함이므로 공백을 허용한 채로 본다.
+    expect(text).not.toMatch(/"\s*"/);
   });
 
   it('요약에 뜬 대사가 카드와 같은 형태다 (한 값이 두 자리에서 다르게 보이지 않는다)', () => {
@@ -69,6 +72,9 @@ describe('타이틀 부모 요약 — scene 인용부호', () => {
     for (const s of scenes) {
       // 카드에서 읽은 인용부호 구간이 요약에도 **그대로** 있어야 한다.
       expect(text).toContain(s);
+      // toContain 만으론 부족하다 — 감싼 `"{s}"`도 s 를 포함하므로 그대로 통과한다.
+      // 덧씌운 인용부호가 없다는 것까지 봐야 "두 자리에서 같게 보인다"가 성립한다.
+      expect(text).not.toContain(`"${s}"`);
     }
   });
 
