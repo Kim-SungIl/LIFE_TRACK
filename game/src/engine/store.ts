@@ -16,6 +16,7 @@ import {
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
+import { recordMoneySpent } from './moneyTrajectory';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
 function applyVisibleTalkEffects(
@@ -33,8 +34,10 @@ function applyVisibleTalkEffects(
     state.fatigue = Math.max(0, Math.min(100, state.fatigue + effects.fatigue));
   }
   if (effects.money) {
+    const beforeMoney = state.money;
     state.money = Math.round((state.money + effects.money) * 10) / 10;
     if (state.money < 0) state.money = 0;
+    recordMoneySpent(state, Math.round((beforeMoney - state.money) * 10) / 10);
   }
 }
 
@@ -174,6 +177,8 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
     if (state.money < 0) state.money = 0;
     const applied = round1(state.money - before);
     if (applied !== 0) outcome.money = applied;
+    // T25 돈 궤적 — 선택지로 나간 돈도 지출이다(applied<0일 때만).
+    if (applied < 0) recordMoneySpent(state, -applied);
   }
   // NPC 친밀도 효과 + 만남 처리 (구간별 감쇠)
   if (choice.npcEffects) {

@@ -72,6 +72,11 @@ export function migrateLoadedState(state: GameState): GameState {
     lowMentalWeeksByYear: padYearCounts(state.lowMentalWeeksByYear),
     veryLowMentalWeeksByYear: padYearCounts(state.veryLowMentalWeeksByYear),
     burnoutCountByYear: padYearCounts(state.burnoutCountByYear),
+    // T25: 돈 궤적은 **백필하지 않는다**. 0 배열을 채우면 "한 푼도 안 썼다"가 되어
+    // 구세이브가 곧장 '지갑을 안 연 한 해'로 오독된다(T21 0 백필은 스냅샷과 같아 안전했지만
+    // 여기선 0이 곧 결론이라 다르다). undefined로 두면 화면이 줄 자체를 생략한다.
+    moneySpentByYear: state.moneySpentByYear,
+    moneyTightWeeksByYear: state.moneyTightWeeksByYear,
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
     idleWeeks: state.idleWeeks ?? 0,

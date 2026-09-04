@@ -1,4 +1,5 @@
 import { EndingData } from '../../engine/ending';
+import { moneyTrajectoryLifetime, moneyLifeLine } from '../../engine/moneyTrajectory';
 import { useEffect, useRef } from 'react';
 import { playSfx } from '../../audio/sfx';
 import { getBgmTrackId, setBgmTrack } from '../../audio/bgm';
@@ -18,6 +19,11 @@ interface EndingScreenProps {
   stats: Stats;
   parents: readonly ParentStrength[];
   burnoutCount: number;
+  // 7년 돈 궤적 + 최종 잔액. **money를 required로 두는 이유는 gender와 같다** —
+  // optional이면 배선을 빠뜨려도 0으로 읽혀 "0만원이 남았다"는 거짓 회고가 조용히 나간다.
+  money: number;
+  moneySpentByYear?: number[];
+  moneyTightWeeksByYear?: number[];
   bgProps: ScreenBgProps;
   runDelta: RunDelta | null;
   // 회상 CG의 성별 판본(_m/_f)을 고른다. **required로 두는 게 안전장치다** —
@@ -43,7 +49,11 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
-export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgProps, runDelta, gender }: EndingScreenProps) {
+export function EndingScreen({ ending, track, stats, parents, burnoutCount, money, moneySpentByYear, moneyTightWeeksByYear, bgProps, runDelta, gender }: EndingScreenProps) {
+  // 7년 돈 회고 — 구세이브(배열 없음)면 null이라 줄을 아예 그리지 않는다.
+  // 판정은 궤적(지출·미달성)으로 하고, 잔액은 문장에 얹는 값으로만 쓴다.
+  const moneyTraj = moneyTrajectoryLifetime({ moneySpentByYear, moneyTightWeeksByYear });
+  const moneyInfo = moneyTraj ? moneyLifeLine(moneyTraj, money) : null;
   const trackLabel = track === 'humanities' ? '문과' : track === 'science' ? '이과' : null;
 
   // ===== 회상의 그림 =====
@@ -263,6 +273,18 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, bgPr
             );
           })}
         </div>
+
+        {/* 7년의 돈 — 주 단위로는 늘 보이던 축이 회고에서만 사라지지 않도록. 원장이 아니라 한 줄 총평. */}
+        {moneyInfo && (
+          <div style={{ marginBottom: 16, textAlign: 'center' }}>
+            <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+              {moneyInfo.title}
+            </div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.6, marginTop: 4 }}>
+              {moneyInfo.desc}
+            </div>
+          </div>
+        )}
 
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 16, textAlign: 'center' }}>
           총합 {Math.round(Object.values(stats).reduce((a, b) => a + b, 0))}점 · 번아웃 {burnoutCount}회
