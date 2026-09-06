@@ -39,6 +39,18 @@ body {
   color: var(--text-primary);
   min-height: 100dvh;
   overflow-x: hidden;
+
+  /* 한글 줄바꿈 — 브라우저 기본값은 한중일 텍스트를 **음절 단위로** 자른다. 지금까지 이 설정이
+     아예 없어서 엔딩 부모 회고가 "얼마나 컸는 / 지 알았다", "가장 다정 / 한 문장이었다"처럼
+     어절 한가운데서 끊겼다. 짧은 줄 하나짜리 UI에선 잘 안 보이지만, 가운데 정렬된 회고 문단처럼
+     여러 줄이 흐르는 자리에서 바로 드러난다.
+
+     keep-all = 어절(공백) 단위로만 끊는다. 다만 이것만 두면 컨테이너보다 긴 한 어절이
+     가로로 삐져나가므로(연락처·URL·긴 합성어), overflow-wrap으로 "정 안 되면 그때만" 끊게
+     받쳐 준다. 순서가 중요하다 — overflow-wrap 없이 keep-all만 켜면 body의 overflow-x:hidden이
+     넘친 글자를 잘라 먹는다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 #root {
