@@ -141,6 +141,7 @@ describe('EndingScreen — 회상 갤러리와 썸네일', () => {
         stats={state.stats}
         parents={state.parents}
         burnoutCount={0}
+        money={0}
         bgProps={{ bg: getBackground(1, false, 'normal', 8), bgImgError: true, onImgError: () => {} }}
         runDelta={null}
         gender="male"

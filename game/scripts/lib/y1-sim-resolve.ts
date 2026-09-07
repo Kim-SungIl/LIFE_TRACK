@@ -17,6 +17,7 @@ import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import { getAvailableNpcEvents, getNpcSmalltalk } from '../../src/engine/talkSystem';
 import { cloneGameState } from '../../src/engine/stateClone';
 import { assignCurrentEvent } from '../../src/engine/eventPresentation';
+import { recordMoneySpent } from '../../src/engine/moneyTrajectory';
 import type { GameState } from '../../src/engine/types';
 
 export function resolveEventLikeStore(state: GameState, choiceIndex: number): GameState {
@@ -49,8 +50,11 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   }
 
   if (choice.moneyEffect) {
+    const beforeMoney = newState.money;
     newState.money = Math.round((newState.money + choice.moneyEffect) * 10) / 10;
     if (newState.money < 0) newState.money = 0;
+    // 제품(store.resolveEvent)과 동일하게 T25 돈 궤적에 적립 — 안 맞추면 sim이 지출을 과소 계상한다.
+    recordMoneySpent(newState, Math.round((beforeMoney - newState.money) * 10) / 10);
   }
 
   if (choice.npcEffects) {
@@ -186,8 +190,11 @@ export function talkToNpcLikeStore(state: GameState, npcId: string): GameState {
         newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
       }
       if (ev.effects.money) {
+        const beforeTalkMoney = newState.money;
         newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
         if (newState.money < 0) newState.money = 0;
+        // 제품(store.applyVisibleTalkEffects)과 동일하게 적립 — 안 맞추면 sim이 지출을 과소 계상한다.
+        recordMoneySpent(newState, Math.round((beforeTalkMoney - newState.money) * 10) / 10);
       }
       if (ev.effects.intimacy && ev.npcId) {
         const target = newState.npcs.find(n => n.id === ev.npcId);

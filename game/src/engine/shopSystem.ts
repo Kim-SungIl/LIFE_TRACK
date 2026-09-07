@@ -4,6 +4,7 @@ import { absWeek, isNpcInteractable } from './relationshipSignals';
 import { applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { GAME_EVENTS } from './events/data';
+import { recordMoneySpent } from './moneyTrajectory';
 
 // ===== 생일 주차 맵 (npcId → week) =====
 // '*-birthday' 이벤트에서 파생 — 이벤트 주차가 바뀌면 자동 추종(드리프트 방지).
@@ -240,8 +241,11 @@ export function applyItemEffects(
   const newState = cloneGameState(state);
   const messages: string[] = [];
 
+  const moneyBeforePurchase = newState.money;
   newState.money = Math.round((newState.money - item.price) * 10) / 10;
   if (newState.money < 0) newState.money = 0;
+  // T25 돈 궤적 — 아래 effects의 'money' 가산(환급형 아이템)은 지출이 아니라 수입이라 여기서만 적립한다.
+  recordMoneySpent(newState, Math.round((moneyBeforePurchase - newState.money) * 10) / 10);
 
   for (const effect of item.effects) {
     switch (effect.type) {
@@ -249,7 +253,11 @@ export function applyItemEffects(
         if (effect.stat === 'fatigue') {
           newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + (effect.value || 0)));
         } else if (effect.stat === 'money') {
-          newState.money = Math.round((newState.money + (effect.value || 0)) * 10) / 10;
+          // 다른 모든 돈 경로와 같은 0 하한. 음수 value 아이템이 생기면 잔액이 음수가 되고,
+          // 그러면 활동·이벤트의 `money >= cost` 게이트가 전부 잠긴다.
+          const beforeEffect = newState.money;
+          newState.money = Math.max(0, Math.round((newState.money + (effect.value || 0)) * 10) / 10);
+          recordMoneySpent(newState, Math.round((beforeEffect - newState.money) * 10) / 10);
         } else if (effect.stat) {
           const key = effect.stat as StatKey;
           newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (effect.value || 0)));

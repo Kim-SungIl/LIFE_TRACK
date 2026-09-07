@@ -50,7 +50,7 @@ export function GameScreen() {
   const {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
-    resolveParentTalkChoice, setPhase, runDelta,
+    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
@@ -66,6 +66,7 @@ export function GameScreen() {
     talkToHome: s.talkToHome,
     resolveParentTalkChoice: s.resolveParentTalkChoice,
     setPhase: s.setPhase,
+    markMoneyBlockedWeek: s.markMoneyBlockedWeek,
   })));
 
   // 뒤로가기/새로고침 방지
@@ -201,6 +202,8 @@ export function GameScreen() {
           lowMentalWeeksByYear={state.lowMentalWeeksByYear}
           veryLowMentalWeeksByYear={state.veryLowMentalWeeksByYear}
           burnoutCountByYear={state.burnoutCountByYear}
+          moneySpentByYear={state.moneySpentByYear}
+          moneyBlockedWeeksByYear={state.moneyBlockedWeeksByYear}
           bgProps={bgProps}
           onAdvance={() => {}}
           readonly
@@ -254,6 +257,8 @@ export function GameScreen() {
         lowMentalWeeksByYear={state.lowMentalWeeksByYear}
         veryLowMentalWeeksByYear={state.veryLowMentalWeeksByYear}
         burnoutCountByYear={state.burnoutCountByYear}
+        moneySpentByYear={state.moneySpentByYear}
+        moneyBlockedWeeksByYear={state.moneyBlockedWeeksByYear}
         bgProps={bgProps}
         onAdvance={advanceFromYearEnd}
       />
@@ -269,6 +274,9 @@ export function GameScreen() {
         stats={state.stats}
         parents={state.parents}
         burnoutCount={state.burnoutCount}
+        money={state.money}
+        moneySpentByYear={state.moneySpentByYear}
+        moneyBlockedWeeksByYear={state.moneyBlockedWeeksByYear}
         bgProps={bgProps}
         runDelta={runDelta}
         gender={state.gender}
@@ -365,6 +373,7 @@ export function GameScreen() {
           bgProps={bgProps}
           saveFailed={isStorageSaveFailed()}
           onOpenAlbum={() => setAlbumYear(state.year - 1)}
+          onMoneyBlocked={markMoneyBlockedWeek}
           onSetRoutine={setRoutine}
           onTalkNpc={talkToNpc}
           onTalkHome={talkToHome}

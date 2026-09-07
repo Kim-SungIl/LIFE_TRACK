@@ -83,6 +83,7 @@ function renderEnding(slots: MemorySlot[], gender: Gender = 'male') {
       stats={state.stats}
       parents={state.parents}
       burnoutCount={0}
+      money={0}
       bgProps={{ bg: getBackground(state.week, false, 'normal', state.year), bgImgError: true, onImgError: vi.fn() }}
       runDelta={null}
       gender={gender}

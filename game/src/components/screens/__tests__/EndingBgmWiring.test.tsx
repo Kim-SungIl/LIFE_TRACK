@@ -34,6 +34,7 @@ function renderEnding() {
       stats={state.stats}
       parents={state.parents}
       burnoutCount={0}
+      money={0}
       // 배경은 실제 SSOT에서 뽑는다(수제 mock 금지). bgImgError=true라 이미지는 안 뜬다.
       bgProps={{
         bg: getBackground(state.week, false, 'normal', state.year),

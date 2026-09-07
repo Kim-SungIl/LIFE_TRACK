@@ -16,6 +16,7 @@ import {
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
+import { recordMoneySpent, recordMoneyBlockedWeek } from './moneyTrajectory';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
 function applyVisibleTalkEffects(
@@ -33,8 +34,10 @@ function applyVisibleTalkEffects(
     state.fatigue = Math.max(0, Math.min(100, state.fatigue + effects.fatigue));
   }
   if (effects.money) {
+    const beforeMoney = state.money;
     state.money = Math.round((state.money + effects.money) * 10) / 10;
     if (state.money < 0) state.money = 0;
+    recordMoneySpent(state, Math.round((beforeMoney - state.money) * 10) / 10);
   }
 }
 
@@ -131,6 +134,9 @@ interface GameStore {
   debugSkipToEnding: () => void;
   debugSetStat: (key: 'academic' | 'social' | 'talent' | 'mental' | 'health', value: number) => void;
   debugForceParentEvent: () => void;
+  // T25 — 계획 화면의 확정 버튼이 **돈 때문에** 잠긴 주를 알린다.
+  // 판정 주체가 UI인 이유: 그 주는 확정되지 않으므로 processWeek에 도달하지 않는다.
+  markMoneyBlockedWeek: () => void;
 }
 
 // ===== resolveEvent 단계 헬퍼 (순수 추출 — state 직접 mutate, 동작 보존) =====
@@ -174,6 +180,8 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
     if (state.money < 0) state.money = 0;
     const applied = round1(state.money - before);
     if (applied !== 0) outcome.money = applied;
+    // T25 돈 궤적 — 선택지로 나간 돈도 지출이다(applied<0일 때만).
+    if (applied < 0) recordMoneySpent(state, -applied);
   }
   // NPC 친밀도 효과 + 만남 처리 (구간별 감쇠)
   if (choice.npcEffects) {
@@ -630,6 +638,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   // ===== 디버그 메서드 (DebugPanel에서 호출, import.meta.env.DEV 가드는 컴포넌트 쪽에서) =====
+  // 같은 주에 매 렌더 호출되므로 절대주차 스탬프로 1회만 적립한다.
+  // 계획을 고쳐 잠금이 풀렸다가 다시 잠겨도 그 주는 1회다(겪은 것은 "그 주에 막혔다" 하나다).
+  markMoneyBlockedWeek: () => {
+    const s = get().state;
+    if (!s) return;
+    const stamp = absWeek(s.year, s.week);
+    if (s.moneyBlockedStamp === stamp) return;
+    // 배열을 새로 만들지 않는 recordMoneyBlockedWeek 규약 때문에 구세이브에선 조용히 no-op이다.
+    const next = { ...s, moneyBlockedStamp: stamp };
+    recordMoneyBlockedWeek(next);
+    set({ state: next });
+  },
+
   debugAdvanceToYearEnd: () => {
     const s = get().state;
     if (!s || s.phase === 'ending') return;

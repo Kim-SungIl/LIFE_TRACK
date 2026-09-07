@@ -1,5 +1,6 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
 import { emptyYearCounts } from './ending';
+import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
 import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
@@ -90,6 +91,8 @@ export function createInitialState(
     lowMentalWeeksByYear: emptyYearCounts(),
     veryLowMentalWeeksByYear: emptyYearCounts(),
     burnoutCountByYear: emptyYearCounts(),
+    moneySpentByYear: emptyMoneyYears(),
+    moneyBlockedWeeksByYear: emptyMoneyYears(),
     burnoutCooldown: 0,
     eventTimeCost: 0,
     // v1.2 기억 슬롯 시스템
@@ -332,9 +335,12 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
 
   // 용돈 적용 (음수 방지) — 학년별 차등 비용 적용
   const cost = getActivityCost(activity, state.year);
+  const moneyBeforeActivity = state.money;
   state.money = Math.round((state.money - cost) * 10) / 10;
   if (state.money < 0) state.money = 0;
   log.moneyChange -= cost;
+  // T25 돈 궤적 — 명목 비용이 아니라 0 클램프 이후의 실차감액을 적립한다.
+  recordMoneySpent(state, Math.round((moneyBeforeActivity - state.money) * 10) / 10);
 
   // 부모 친밀도 — stat 감쇠(diminishing/fatigue 등)와 무관하게 raw baseDelta를 단일 진입점에 전달.
   // §2.1 구간 감쇠는 applyParentIntimacyDelta 내부에서만 적용(이중 적용 방지).
@@ -983,6 +989,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정
   prepareWeekContext(newState);
+
   // 부모 친밀도 자연 변화는 더 이상 강점 자동 드리프트가 아니다(결정론 제거).
   // actedWithParentThisWeek 플래그는 talkToHome(processWeek 이전) + 부모 활동(아래)에서 누적되고,
   // 평균 회귀(50 수렴)와 플래그 리셋은 활동 적용 뒤 "5b"에서 처리한다.
