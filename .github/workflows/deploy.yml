@@ -81,6 +81,15 @@ jobs:
         working-directory: ./game
         run: npm run verify:dist-chunks
 
+      # 게이트 2e — 한글 줄바꿈. **여기서만 확인 가능하다:** 소스 CSS에 선언이 있어도 번들에서
+      # 빠지거나(플러그인 순서·미사용 판정) 뒤 규칙이 덮으면 실서버에서만 깨진다. 증상이
+      # "글이 좀 이상하게 끊김"이라 눈에 안 띄고, 실제로 이 선언이 없던 동안 엔딩 회고가
+      # 320px에서 줄바꿈 11곳 중 9곳이 어절 한가운데였다.
+      # content-verify job은 별도 러너라 dist를 볼 수 없어서 이 job에 둔다.
+      - name: Verify dist typography
+        working-directory: ./game
+        run: npm run verify:dist-typography
+
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
