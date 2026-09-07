@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateEnding, calculateHappinessGrade, HAPPINESS_LABELS } from '../ending';
+import { ACHIEVEMENT_NOTE, achievementGradeOf, calculateEnding, calculateHappinessGrade, HAPPINESS_LABELS } from '../ending';
 import type { HappinessTrajectory } from '../ending';
 import { createInitialState } from '../gameEngine';
 import type { ExamResult, GameState, ParentStrength, Stats } from '../types';
@@ -176,6 +176,91 @@ describe('calculateEnding', () => {
 
     expect(calculateEnding(achievementFixture(ACH_C)).achievement).toBe('C');
     expect(calculateEnding(achievementFixture(ACH_C - 1)).achievement).toBe('D');
+  });
+
+  // 위 D 케이스가 성립하는 유일한 이유는 floor가 lifeScore를 29 아래로 눌러준다는 것이다
+  // (floor를 30으로 올리면 bestAxis = max(29, 30) = 30 이 되어 D가 조용히 C로 바뀐다).
+  // 픽스처 주석엔 "강등을 피하려고"만 적혀 있어 이 의존이 안 보였다 — 전제를 단언으로 박는다.
+  it('locks the achievementFixture floor that the D boundary depends on', () => {
+    const f = achievementFixture(ACH_C - 1);
+    expect(f.stats.mental).toBe(20);
+    expect((f.stats.mental + f.stats.health + f.stats.social) / 3).toBe(20);
+    expect(ACH_C - 1).toBeGreaterThan((f.stats.mental + f.stats.health + f.stats.social) / 3);
+  });
+
+  // **특기 축이 계약에 한 번도 안 들어와 있었다.** achievementFixture는 academic만 올리고
+  // 나머지를 floor로 고정하므로 talent가 bestAxis가 되는 케이스가 0개였고, `Math.max`에서
+  // talentScore를 통째로 지워도 전체 스위트가 그대로 통과했다(뮤테이션 실측).
+  it('locks talent as a bestAxis source, not just academic', () => {
+    const top = endingState({ academic: 20, talent: ACH_A, mental: 20, health: 20, social: 20 });
+    expect(calculateEnding(top).achievement, '특기 70이 bestAxis').toBe('A');
+    const below = endingState({ academic: 20, talent: ACH_A - 1, mental: 20, health: 20, social: 20 });
+    expect(calculateEnding(below).achievement).toBe('B');
+  });
+
+  // 생활 축과 그 /3 제수. 예전엔 이 둘을 흔드는 뮤턴트를 「happiness S ⇒ achievement ≥ B」
+  // 하나만 잡았다 — 성취를 의도적으로 잠근 단언이 아니라 부수 효과였으므로 직접 잠근다.
+  it('locks lifeScore as a bestAxis source and its /3 divisor', () => {
+    // mental+health+social = 150 → /3 = 50(B). 제수가 5라면 30이 되어 C로 떨어진다.
+    const top = endingState({ academic: 20, talent: 20, mental: 50, health: 50, social: 50 });
+    expect(calculateEnding(top).achievement).toBe('B');
+    const below = endingState({ academic: 20, talent: 20, mental: 49, health: 50, social: 50 });
+    expect(calculateEnding(below).achievement, '149/3 = 49.67').toBe('C');
+  });
+
+  // **등급은 bestAxis의 단조 함수다 — 부서진 축은 등급을 깎지 않고 문장이 된다.**
+  // 예전엔 붕괴가 S를 B로 깎아서, 학업 90.9짜리가 학업 79짜리 A판보다 낮은 등급을 받았다
+  // (QA 348판에서 B 102판 **전부**가 이 경로였다). 양성/음성 짝으로 잠근다.
+  it('keeps the grade monotone in bestAxis — a broken axis is a note, not a demotion', () => {
+    const intact = calculateEnding(endingState({ academic: 92, talent: 30, mental: 30, health: 30, social: 30 }));
+    expect(intact.achievement, 'bestAxis 92').toBe('S');
+    expect(intact.achievementNote, '부서진 축이 없으면 문장도 없다').toBeNull();
+
+    const collapsed = calculateEnding(endingState({ academic: 92, talent: 5, mental: 30, health: 30, social: 30 }));
+    expect(collapsed.achievement, '같은 bestAxis — 강등되지 않는다').toBe('S');
+    expect(collapsed.achievementNote).toBe(ACHIEVEMENT_NOTE.collapse);
+
+    const weak = calculateEnding(endingState({ academic: 92, talent: 15, mental: 30, health: 30, social: 30 }));
+    expect(weak.achievement).toBe('S');
+    expect(weak.achievementNote, '약점(<20)은 붕괴보다 약한 신호 — 다른 문장').toBe(ACHIEVEMENT_NOTE.weakness);
+  });
+
+  // 등급에서 강등을 뺐으므로 **최상위 타이틀 게이트(flawlessTop)가 유일하게 부서진 축을 막는 자리**다.
+  // 거기서 !hasCollapse를 지우면 한 축이 무너진 판이 「완벽한 청춘」을 받는다.
+  it('withholds the top title from a run with a broken axis', () => {
+    const blank = { score: 0, grade: 'C' as const, delta: 0 };
+    const suneung: ExamResult = {
+      subjects: { korean: blank, english: blank, math: blank, socialScience: blank, artsPhysical: blank },
+      average: 0, rank: null, prevRank: null, comment: '', parentReaction: '', teacherReaction: '',
+      examType: 'suneung', schoolLevel: 'high', year: 7, semester: 2, mockGrade: 1,
+    };
+    const over: Partial<GameState> = { examResults: [suneung] };
+
+    const flawless = calculateEnding(endingState(
+      { academic: 95, talent: 90, mental: 95, health: 95, social: 95 }, over));
+    expect(flawless.achievement).toBe('S');
+    expect(flawless.achievementNote).toBeNull();
+    expect(flawless.title, '무결점 S + 행복 S + 수능 1등급').toContain('완벽한 청춘');
+
+    // 같은 bestAxis·같은 행복·같은 수능인데 특기만 붕괴 — 등급은 S로 남지만 타이틀은 못 받는다.
+    const broken = calculateEnding(endingState(
+      { academic: 95, talent: 5, mental: 95, health: 95, social: 95 }, over));
+    expect(broken.achievement, '등급은 단조라 그대로 S').toBe('S');
+    expect(broken.achievementNote).toBe(ACHIEVEMENT_NOTE.collapse);
+    expect(broken.title, '한 축이 부서진 판에 「완벽한 청춘」은 거짓말이다').not.toContain('완벽한 청춘');
+  });
+
+  // 등급 함수 자체의 경계 — 순수 함수라 호출부와 별개로 잠근다(값 집합도 타입으로 좁혀 뒀다).
+  it('locks achievementGradeOf boundaries', () => {
+    expect(achievementGradeOf(ACH_S)).toBe('S');
+    expect(achievementGradeOf(ACH_S - 0.01)).toBe('A');
+    expect(achievementGradeOf(ACH_A)).toBe('A');
+    expect(achievementGradeOf(ACH_A - 0.01)).toBe('B');
+    expect(achievementGradeOf(ACH_B)).toBe('B');
+    expect(achievementGradeOf(ACH_B - 0.01)).toBe('C');
+    expect(achievementGradeOf(ACH_C)).toBe('C');
+    expect(achievementGradeOf(ACH_C - 0.01)).toBe('D');
+    expect(achievementGradeOf(0)).toBe('D');
   });
 
   it('is deterministic for the same state (deep equality)', () => {
