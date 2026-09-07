@@ -190,8 +190,11 @@ export function talkToNpcLikeStore(state: GameState, npcId: string): GameState {
         newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + ev.effects.fatigue));
       }
       if (ev.effects.money) {
+        const beforeTalkMoney = newState.money;
         newState.money = Math.round((newState.money + ev.effects.money) * 10) / 10;
         if (newState.money < 0) newState.money = 0;
+        // 제품(store.applyVisibleTalkEffects)과 동일하게 적립 — 안 맞추면 sim이 지출을 과소 계상한다.
+        recordMoneySpent(newState, Math.round((beforeTalkMoney - newState.money) * 10) / 10);
       }
       if (ev.effects.intimacy && ev.npcId) {
         const target = newState.npcs.find(n => n.id === ev.npcId);

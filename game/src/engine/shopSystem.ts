@@ -253,7 +253,11 @@ export function applyItemEffects(
         if (effect.stat === 'fatigue') {
           newState.fatigue = Math.max(0, Math.min(100, newState.fatigue + (effect.value || 0)));
         } else if (effect.stat === 'money') {
-          newState.money = Math.round((newState.money + (effect.value || 0)) * 10) / 10;
+          // 다른 모든 돈 경로와 같은 0 하한. 음수 value 아이템이 생기면 잔액이 음수가 되고,
+          // 그러면 활동·이벤트의 `money >= cost` 게이트가 전부 잠긴다.
+          const beforeEffect = newState.money;
+          newState.money = Math.max(0, Math.round((newState.money + (effect.value || 0)) * 10) / 10);
+          recordMoneySpent(newState, Math.round((beforeEffect - newState.money) * 10) / 10);
         } else if (effect.stat) {
           const key = effect.stat as StatKey;
           newState.stats[key] = Math.max(0, Math.min(100, newState.stats[key] + (effect.value || 0)));

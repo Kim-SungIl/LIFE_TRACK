@@ -23,7 +23,7 @@ interface EndingScreenProps {
   // optional이면 배선을 빠뜨려도 0으로 읽혀 "0만원이 남았다"는 거짓 회고가 조용히 나간다.
   money: number;
   moneySpentByYear?: number[];
-  moneyTightWeeksByYear?: number[];
+  moneyBlockedWeeksByYear?: number[];
   bgProps: ScreenBgProps;
   runDelta: RunDelta | null;
   // 회상 CG의 성별 판본(_m/_f)을 고른다. **required로 두는 게 안전장치다** —
@@ -49,10 +49,10 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
-export function EndingScreen({ ending, track, stats, parents, burnoutCount, money, moneySpentByYear, moneyTightWeeksByYear, bgProps, runDelta, gender }: EndingScreenProps) {
+export function EndingScreen({ ending, track, stats, parents, burnoutCount, money, moneySpentByYear, moneyBlockedWeeksByYear, bgProps, runDelta, gender }: EndingScreenProps) {
   // 7년 돈 회고 — 구세이브(배열 없음)면 null이라 줄을 아예 그리지 않는다.
   // 판정은 궤적(지출·미달성)으로 하고, 잔액은 문장에 얹는 값으로만 쓴다.
-  const moneyTraj = moneyTrajectoryLifetime({ moneySpentByYear, moneyTightWeeksByYear });
+  const moneyTraj = moneyTrajectoryLifetime({ moneySpentByYear, moneyBlockedWeeksByYear });
   const moneyInfo = moneyTraj ? moneyLifeLine(moneyTraj, money) : null;
   const trackLabel = track === 'humanities' ? '문과' : track === 'science' ? '이과' : null;
 

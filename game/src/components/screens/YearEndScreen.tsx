@@ -21,7 +21,7 @@ interface YearEndScreenProps {
   burnoutCountByYear?: number[];
   // 그 해의 돈 궤적 — 지출·미달성만 쓰고 잔액은 안 쓴다(잔액은 라이브 스칼라라 회상에 시점 오염).
   moneySpentByYear?: number[];
-  moneyTightWeeksByYear?: number[];
+  moneyBlockedWeeksByYear?: number[];
   bgProps: ScreenBgProps;
   onAdvance: () => void;
   // ===== 기록장(읽기 전용 과거 열람) 모드 — 같은 카드를 지난 학년 회상용으로 재활용 =====
@@ -56,7 +56,7 @@ const MAX_GALLERY = 5;
 // v1.5 학년말 회고 (Y1~Y6) — phase === 'year-end'
 //   P0: 스크림·라벨 정리·부모줄 부활·정직한 CTA
 //   P1: CG 있는 기억 = 스와이프 갤러리(여러 장 넘겨보기), 나머지 = 초상/엠블럼 썸네일 카드.
-export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, lowMentalWeeksByYear, veryLowMentalWeeksByYear, burnoutCountByYear, moneySpentByYear, moneyTightWeeksByYear, bgProps, onAdvance, readonly, examResults, reachedYears, onSelectYear, onClose }: YearEndScreenProps) {
+export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stats, lowMentalWeeksByYear, veryLowMentalWeeksByYear, burnoutCountByYear, moneySpentByYear, moneyBlockedWeeksByYear, bgProps, onAdvance, readonly, examResults, reachedYears, onSelectYear, onClose }: YearEndScreenProps) {
   // 기록장을 열었지만 아직 마친 학년이 없다(1학년) — 회상할 과거가 없으니 연도별 렌더 대신 "약속" 빈 상태만.
   // reachedYears가 빈 배열인 건 이 경우뿐(진행 모드는 undefined, 2학년+는 length≥1).
   if (readonly && reachedYears && reachedYears.length === 0) {
@@ -104,7 +104,7 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
 
   // 올해의 돈 — 구세이브(배열 없음)면 null이고, 그때는 줄을 아예 그리지 않는다.
   // 잔액이 아니라 그 해의 지출·미달성으로만 판정하므로 기록장(readonly) 회상에서도 그대로 맞다.
-  const moneyTraj = moneyTrajectoryForYear({ moneySpentByYear, moneyTightWeeksByYear }, year);
+  const moneyTraj = moneyTrajectoryForYear({ moneySpentByYear, moneyBlockedWeeksByYear }, year);
   const moneyInfo = moneyTraj ? moneyYearLine(moneyTraj) : null;
 
   // 부모 친밀도 줄(\n append, Phase 2.1)을 본문과 분리해 "뒤늦게 떠오른 한 줄"로

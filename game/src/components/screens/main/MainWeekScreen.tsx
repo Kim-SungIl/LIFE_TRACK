@@ -40,11 +40,14 @@ type Props = {
   onConfirmWeek: (activities: string[], npcChoices: Record<string, string>) => void;
   // 기록장 열기 — 2학년 이상에서만 전달(완료 학년 존재). undefined면 HUD에서 버튼 숨김.
   onOpenAlbum?: () => void;
+  // T25 — 확정 버튼이 **돈 때문에** 잠긴 주를 스토어에 알린다(학년말·엔딩 회고용).
+  // 이 화면이 판정 주체인 이유: 막힌 주는 확정되지 않아 processWeek에 도달하지 않는다.
+  onMoneyBlocked?: () => void;
   // localStorage 저장 실패 여부 — true면 진행 손실 경고 배너 (store.isStorageSaveFailed)
   saveFailed?: boolean;
 };
 
-export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, saveFailed }: Props) {
+export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed }: Props) {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
@@ -150,6 +153,13 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   // 확정 가능 여부 — 프리뷰 노출/버튼 disabled 공용 판정 (SSOT).
   const confirmDisabled = (!state.isVacation && !state.routineSlot2)
     || !!routineTooExpensive || unaffordable.length > 0;
+
+  // T25 — 확정이 **돈 때문에** 잠긴 주를 적립한다. 루틴 미설정으로 잠긴 것은 돈이 아니므로 뺀다.
+  // 스토어가 절대주차 스탬프로 1회만 세므로 매 렌더 호출해도 안전하다.
+  const moneyBlocked = !!routineTooExpensive || unaffordable.length > 0;
+  useEffect(() => {
+    if (moneyBlocked) onMoneyBlocked?.();
+  }, [moneyBlocked, state.year, state.week, onMoneyBlocked]);
 
   // 이번 주 누적 활동 비용 — 루틴 + 사용자가 고른 활동들 (HUD 잔액 옆 실시간 표시용)
   const selectedActivityCost = selectedInstances.reduce(

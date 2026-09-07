@@ -1,84 +1,38 @@
 // 돈 궤적(T25)의 계약 — "학년말·엔딩에 돈 한 줄"이 실제로 **살아 있는 데이터**로 그려지는지.
 //
-// 순수 함수만 잠그면 의미가 없다(#381). 그래서 세 층을 각각 건드린다:
-//   ① 적립 배선 — processWeek / applyItemEffects / store.resolveEvent 세 경로가 각각 슬롯을 올리는가
-//   ② 문턱 — strapped·hoarded 경계를 **양방향**으로 (넘으면 바뀌고, 한 칸 아래면 안 바뀐다)
-//   ③ 구세이브 폴백 — 배열이 없으면 null(=줄 생략)이고, 마이그레이션이 0으로 백필하지 **않는다**
+// 순수 함수만 잠그면 의미가 없다(#381). 그래서 네 층을 각각 건드린다:
+//   ① 지출 적립 — 활동/상점/이벤트 선택지/미니톡 네 경로가 각각 슬롯을 올리는가
+//   ② 막힌 주 적립 — store.markMoneyBlockedWeek가 학년 슬롯을 올리고 주당 1회로 접히는가
+//   ③ 문턱 — 학년·7년 각각 **양방향**으로 (넘으면 바뀌고, 한 칸 아래면 안 바뀐다)
+//   ④ 구세이브·손상 세이브 — 기록기가 배열을 만들지 않아 결정론적으로 침묵하는가
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ACTIVITIES, getActivityCost, getAvailableActivities } from '../activities';
+import { ACTIVITIES, getActivityCost } from '../activities';
 import { processWeek } from '../gameEngine';
 import { applyItemEffects, SHOP_ITEMS } from '../shopSystem';
 import { migrateLoadedState } from '../stateMigration';
 import { useGameStore } from '../store';
 import { assignCurrentEvent } from '../eventPresentation';
 import { makeState, makeEvent, makeChoice } from '../../test/fixtures';
+import { NPC_MINI_EVENTS } from '../talkData';
 import {
-  moneyPattern, moneyTrajectoryForYear, moneyTrajectoryLifetime, moneyYearLine, moneyLifeLine,
-  recordMoneySpent, emptyMoneyYears,
+  moneyPatternForYear, moneyPatternLifetime, moneyTrajectoryForYear, moneyTrajectoryLifetime,
+  moneyYearLine, moneyLifeLine, recordMoneySpent, recordMoneyBlockedWeek,
+  emptyMoneyYears, hasMoneyTracking, type MoneyTrajectory,
 } from '../moneyTrajectory';
 import type { GameState } from '../types';
 
 const cost = (id: string, year = 1) =>
   getActivityCost(ACTIVITIES.find(a => a.id === id)!, year);
 
-/** 제품과 같은 SSOT로 "돈만 잠근 몫"을 센다 — 잔액만 무한으로 준 대조군과의 차집합. */
-function lockedByMoney(s: GameState): number {
-  const now = new Set(getAvailableActivities(s).map(a => a.id));
-  return getAvailableActivities({ ...s, money: 99999 }).filter(a => !now.has(a.id)).length;
-}
+beforeEach(() => {
+  localStorage.clear();
+  useGameStore.getState().resetGame();
+});
 
 // ============================================================
-// ① 적립 배선 — 경로별로 하나씩
+// ① 지출 적립 — 경로별로 하나씩. 착지값을 toBe로 못박는다.
 // ============================================================
-describe('적립 배선 — 세 경로가 각각 학년 슬롯을 올린다', () => {
-  it('돈만 없어서 못 고르는 활동이 있던 주가 그 해 tightWeeks에 쌓인다', () => {
-    // 착지값을 먼저 못박는다 — 유료 활동이 사라지면 이 케이스가 "돈에 막힘"이 아니게 된다.
-    expect(cost('art-lesson')).toBe(2);
-    const poor = makeState({ money: 0, year: 1, week: 3, isVacation: false, routineSlot2: 'self-study', routineSlot3: null });
-    // 제품과 같은 SSOT로 "돈만 잠근 몫"이 실제로 있는지 먼저 확인한다.
-    const now = new Set(getAvailableActivities(poor).map(a => a.id));
-    const rich = getAvailableActivities({ ...poor, money: 99999 }).filter(a => !now.has(a.id));
-    expect(rich.length).toBeGreaterThan(0);
-
-    const after = processWeek(poor);
-    expect(after.moneyTightWeeksByYear![0]).toBe(1);
-    expect(after.moneyTightWeeksByYear!.slice(1)).toEqual([0, 0, 0, 0, 0, 0]);
-  });
-
-  it('여러 활동이 잠겨도 주당 1이다 — 활동 수가 아니라 주 수를 센다', () => {
-    const poor = makeState({ money: 0, year: 1, week: 3, isVacation: false, routineSlot2: 'self-study', routineSlot3: null });
-    const now = new Set(getAvailableActivities(poor).map(a => a.id));
-    const locked = getAvailableActivities({ ...poor, money: 99999 }).filter(a => !now.has(a.id));
-    expect(locked.length).toBeGreaterThan(1);       // 잠긴 활동은 둘 이상인데
-    expect(processWeek(poor).moneyTightWeeksByYear![0]).toBe(1);   // 적립은 1주다
-  });
-
-  it('넉넉한 주에는 tightWeeks가 오르지 않는다 (양성 짝)', () => {
-    const rich = makeState({
-      money: 9999, year: 1, week: 3, isVacation: false,
-      routineSlot2: 'self-study', routineSlot3: null,
-    });
-    expect(processWeek(rich).moneyTightWeeksByYear![0]).toBe(0);
-  });
-
-  it('활동 적용 전(계획 시점) 잔액으로 잰다 — 뒤에서 재면 이번 주 지출이 섞여 과대 계상된다', () => {
-    // Y5 최고가는 과외 28만. 계획 시점 잔액이 딱 28이면 아무것도 안 잠기지만,
-    // 이번 주 지출(학원3+헬스2+예체능2)과 용돈(+5)을 거치면 26이 되어 잠긴다.
-    expect(cost('private-tutoring', 5)).toBe(28);
-    const s = makeState({
-      money: 28, year: 5, week: 3, isVacation: false,
-      routineSlot2: 'academy', routineSlot3: 'gym', weekendChoices: ['art-lesson'],
-    });
-    const lockedBefore = lockedByMoney(s);
-    const after = processWeek(s);
-    const lockedAfter = lockedByMoney(after);
-
-    // 두 시점이 실제로 다른 답을 내는 픽스처인지 먼저 확인 — 같으면 이 테스트는 아무것도 안 잠근다.
-    expect(lockedBefore).toBe(0);
-    expect(lockedAfter).toBeGreaterThan(0);
-    expect(after.moneyTightWeeksByYear![4]).toBe(0);   // 적립은 '계획 시점' 답을 따른다
-  });
-
+describe('지출 적립 — 네 경로가 각각 학년 슬롯을 올린다', () => {
   it('활동으로 나간 돈이 그 해 spent에 쌓인다 — 명목이 아니라 실차감액', () => {
     expect(cost('academy')).toBe(2);
     const s = makeState({
@@ -87,13 +41,13 @@ describe('적립 배선 — 세 경로가 각각 학년 슬롯을 올린다', ()
     });
     const after = processWeek(s);
     expect(after.moneySpentByYear![0]).toBe(2);
+    expect(after.moneySpentByYear!.slice(1)).toEqual([0, 0, 0, 0, 0, 0]);
   });
 
-  it('잔액보다 비싼 차감은 클램프된 만큼만 지출로 잡힌다', () => {
+  it('잔액이 부족하면 클램프된 만큼만 지출로 잡힌다', () => {
     const s = makeState({ money: 1.5, year: 2 });
-    recordMoneySpent(s, 0);           // 0은 무시된다
+    recordMoneySpent(s, 0);                       // 0은 무시
     expect(s.moneySpentByYear![1]).toBe(0);
-    // 실제 엔진이 넘기는 값은 (before - after)라 잔액을 넘지 못한다.
     recordMoneySpent(s, 1.5);
     expect(s.moneySpentByYear![1]).toBe(1.5);
   });
@@ -107,124 +61,256 @@ describe('적립 배선 — 세 경로가 각각 학년 슬롯을 올린다', ()
   });
 
   it('이벤트 선택지로 나간 돈이 지출로 잡히고, 받은 돈은 지출이 아니다', () => {
-    const spend = makeEvent({
-      id: 't25-spend',
-      choices: [makeChoice({ text: '산다', moneyEffect: -5 })],
-    });
-    const gain = makeEvent({
-      id: 't25-gain',
-      choices: [makeChoice({ text: '받는다', moneyEffect: 5 })],
-    });
-
-    const run = (event: GameState['currentEvent']) => {
+    const run = (moneyEffect: number) => {
       useGameStore.getState().resetGame();
       useGameStore.getState().startGame('male', ['emotional', 'info']);
       const st = { ...useGameStore.getState().state!, year: 4, week: 10, money: 100 };
-      assignCurrentEvent(st, event!, 10);
+      const ev = makeEvent({ id: `t25-${moneyEffect}`, choices: [makeChoice({ text: '고른다', moneyEffect })] });
+      assignCurrentEvent(st, ev, 10);
       useGameStore.setState({ state: st });
       useGameStore.getState().resolveEvent(0);
       return useGameStore.getState().state!;
     };
+    expect(run(-5).moneySpentByYear![3]).toBe(5);
+    expect(run(5).moneySpentByYear![3]).toBe(0);
+  });
 
-    expect(run(spend).moneySpentByYear![3]).toBe(5);
-    expect(run(gain).moneySpentByYear![3]).toBe(0);
+  // 제품에는 있는데 테스트가 안 타던 경로(3자 검수 지적). 실제 데이터에 money 음수가 있다.
+  it('NPC 미니이벤트로 나간 돈이 지출로 잡힌다', () => {
+    const paid = NPC_MINI_EVENTS.filter(e => (e.effects?.money ?? 0) < 0);
+    expect(paid.length, '돈을 쓰는 NPC 미니이벤트가 데이터에 있어야 이 케이스가 성립한다').toBeGreaterThan(0);
+    const npcId = paid[0].npcId!;
+
+    useGameStore.getState().startGame('male', ['emotional', 'info']);
+    const base = useGameStore.getState().state!;
+    // 대상 NPC만 발동 자격을 갖게 만든다 — 다른 NPC 이벤트가 먼저 소진되는 것을 줄인다.
+    const npcs = base.npcs.map(n => (n.id === npcId
+      ? { ...n, met: true, intimacy: 60 }
+      : { ...n, intimacy: 0 }));
+    useGameStore.setState({
+      state: { ...base, year: 2, week: 5, phase: 'weekday', currentEvent: null, npcs },
+    });
+
+    // 미니이벤트는 1회 발동으로 소진되므로, 돈 쓰는 것이 나올 때까지 같은 NPC에게 계속 말을 건다.
+    let delta = 0;
+    for (let i = 0; i < 30 && delta === 0; i++) {
+      useGameStore.setState({
+        state: {
+          ...useGameStore.getState().state!,
+          money: 100, npcEventPendingThisWeek: true, talkEventPressure: 1,
+        },
+      });
+      useGameStore.getState().talkToNpc(npcId);
+      delta = useGameStore.getState().state!.moneySpentByYear![1];
+    }
+    expect(delta, 'NPC 미니이벤트 지출이 한 번도 적립되지 않았다').toBeGreaterThan(0);
   });
 });
 
 // ============================================================
-// ② 문턱 — 양방향. 한쪽만 두면 분기를 지워도 통과한다.
+// ② 막힌 주 적립 — 판정 주체는 UI, 적립·중복방지는 store
 // ============================================================
-describe('패턴 문턱 — 넘으면 바뀌고 한 칸 아래면 안 바뀐다', () => {
-  const t = (spent: number, tightWeeks: number, years = 1) => ({ spent, tightWeeks, years });
+describe('막힌 주 적립 — store.markMoneyBlockedWeek', () => {
+  const boot = (patch: Partial<GameState> = {}) => {
+    useGameStore.getState().startGame('male', ['emotional', 'info']);
+    useGameStore.setState({
+      state: { ...useGameStore.getState().state!, phase: 'weekday', currentEvent: null, ...patch },
+    });
+  };
 
-  it('연 12주 막히면 strapped, 11주면 tight', () => {
-    expect(moneyPattern(t(200, 12))).toBe('strapped');
-    expect(moneyPattern(t(200, 11))).toBe('tight');
+  it('그 해 슬롯에 1주가 쌓인다', () => {
+    boot({ year: 3, week: 7 });
+    expect(useGameStore.getState().state!.moneyBlockedWeeksByYear![2]).toBe(0);
+    useGameStore.getState().markMoneyBlockedWeek();
+    expect(useGameStore.getState().state!.moneyBlockedWeeksByYear![2]).toBe(1);
+    expect(useGameStore.getState().state!.moneyBlockedWeeksByYear!.slice(0, 2)).toEqual([0, 0]);
   });
 
-  it('연 3주 막히면 tight, 2주면 지출로 갈린다', () => {
-    expect(moneyPattern(t(0, 3))).toBe('tight');
-    expect(moneyPattern(t(0, 2))).toBe('hoarded');
-    expect(moneyPattern(t(200, 2))).toBe('balanced');
+  // UI가 매 렌더 알려오므로 이 접힘이 없으면 한 주가 수십 번 쌓인다.
+  it('같은 주에 여러 번 호출해도 1주다', () => {
+    boot({ year: 1, week: 4 });
+    for (let i = 0; i < 12; i++) useGameStore.getState().markMoneyBlockedWeek();
+    expect(useGameStore.getState().state!.moneyBlockedWeeksByYear![0]).toBe(1);
+  });
+
+  it('다른 주는 따로 쌓인다 (스탬프가 주차별이다)', () => {
+    boot({ year: 1, week: 4 });
+    useGameStore.getState().markMoneyBlockedWeek();
+    useGameStore.setState({ state: { ...useGameStore.getState().state!, week: 5 } });
+    useGameStore.getState().markMoneyBlockedWeek();
+    expect(useGameStore.getState().state!.moneyBlockedWeeksByYear![0]).toBe(2);
+  });
+
+  it('학년이 넘어가면 새 슬롯에 쌓인다', () => {
+    boot({ year: 1, week: 48 });
+    useGameStore.getState().markMoneyBlockedWeek();
+    useGameStore.setState({ state: { ...useGameStore.getState().state!, year: 2, week: 1 } });
+    useGameStore.getState().markMoneyBlockedWeek();
+    const arr = useGameStore.getState().state!.moneyBlockedWeeksByYear!;
+    expect(arr[0]).toBe(1);
+    expect(arr[1]).toBe(1);
+  });
+});
+
+// ============================================================
+// ③ 문턱 — 학년·7년 각각 양방향
+// ============================================================
+describe('문턱 — 넘으면 바뀌고 한 칸 아래면 안 바뀐다', () => {
+  const y = (spent: number, blockedWeeks: number): MoneyTrajectory =>
+    ({ spent, blockedWeeks, strappedYears: blockedWeeks >= 12 ? 1 : 0, years: 1 });
+  const life = (spent: number, blockedWeeks: number, strappedYears: number): MoneyTrajectory =>
+    ({ spent, blockedWeeks, strappedYears, years: 7 });
+
+  it('한 해 12주 막히면 strapped, 11주면 tight', () => {
+    expect(moneyPatternForYear(y(200, 12))).toBe('strapped');
+    expect(moneyPatternForYear(y(200, 11))).toBe('tight');
+  });
+
+  it('한 해 3주 막히면 tight, 2주면 지출로 갈린다', () => {
+    expect(moneyPatternForYear(y(0, 3))).toBe('tight');
+    expect(moneyPatternForYear(y(0, 2))).toBe('hoarded');
+    expect(moneyPatternForYear(y(200, 2))).toBe('balanced');
   });
 
   it('막힌 적 없을 때 연 지출 40만이면 balanced, 39.9만이면 hoarded', () => {
-    expect(moneyPattern(t(40, 0))).toBe('balanced');
-    expect(moneyPattern(t(39.9, 0))).toBe('hoarded');
+    expect(moneyPatternForYear(y(40, 0))).toBe('balanced');
+    expect(moneyPatternForYear(y(39.9, 0))).toBe('hoarded');
   });
 
-  it('7년 합도 같은 문턱을 연 환산으로 쓴다', () => {
-    expect(moneyPattern(t(1400, 84, 7))).toBe('strapped');   // 연 12주
-    expect(moneyPattern(t(1400, 83, 7))).toBe('tight');
-    expect(moneyPattern(t(280, 0, 7))).toBe('balanced');     // 연 40만
-    expect(moneyPattern(t(279.9, 0, 7))).toBe('hoarded');
+  it('7년 판정은 나쁜 해가 3해면 strapped, 2해면 tight', () => {
+    expect(moneyPatternLifetime(life(1400, 100, 3))).toBe('strapped');
+    expect(moneyPatternLifetime(life(1400, 100, 2))).toBe('tight');
   });
 
-  // 실측 페르소나(5종 × 3시드 × 7년)가 각자 다른 칸에 떨어지는지 — 문턱이 현실과 맞물리는 잠금.
+  // 평균만 쓰면 후반 궤적이 지워진다 — T21이 스냅샷에서 궤적으로 옮긴 것과 같은 함정.
+  it('평균이 낮아도 나쁜 해가 3해면 strapped다 (wash-out 방지)', () => {
+    // 12주 × 3해 = 36주 → 연평균 5.1주로 tight 문턱조차 못 넘지만, 그 3해는 통째로 나빴다.
+    expect(36 / 7).toBeLessThan(12);
+    expect(moneyPatternLifetime(life(1400, 36, 3))).toBe('strapped');
+  });
+
+  it('나쁜 해가 하나뿐이면 7년은 tight에 머문다', () => {
+    expect(moneyPatternLifetime(life(2200, 30, 1))).toBe('tight');
+  });
+
+  it('7년 내내 막힌 적 없으면 지출로 갈린다', () => {
+    expect(moneyPatternLifetime(life(280, 0, 0))).toBe('balanced');    // 연 40만
+    expect(moneyPatternLifetime(life(279.9, 0, 0))).toBe('hoarded');
+  });
+
+  // 실측(4페르소나 × 4시드 × 7년, 연평균 막힌 주)이 각자 다른 칸에 떨어지는지.
   it('실측 페르소나가 네 칸에 흩어진다', () => {
-    expect(moneyPattern(t(15, 0))).toBe('hoarded');       // 무료 루틴: 연 15만, 막힘 0
-    expect(moneyPattern(t(221, 0))).toBe('balanced');     // 유료 루틴: 연 221만, 막힘 0
-    expect(moneyPattern(t(233, 48))).toBe('strapped');    // 지출형 고등: 48주 통째로 막힘
-    expect(moneyPattern(t(323, 4.7))).toBe('tight');      // 지출형+부유한부모 7년 평균
+    expect(moneyPatternForYear(y(15, 0))).toBe('hoarded');      // 무료 루틴: 연 15만, 0주
+    expect(moneyPatternForYear(y(221, 0))).toBe('balanced');    // 유료 루틴: 연 221만, 0주
+    expect(moneyPatternForYear(y(233, 35))).toBe('strapped');   // 지출형: 연 34.8주
+    expect(moneyPatternForYear(y(323, 5))).toBe('tight');       // 지출형+부유: 연 4.6주
   });
 
   it('네 패턴이 서로 다른 문장을 낸다 — 라벨이 접히면 회고가 무의미해진다', () => {
-    const years = [t(200, 20), t(200, 5), t(0, 0), t(200, 0)].map(x => moneyYearLine(x).title);
+    const years = [y(200, 20), y(200, 5), y(0, 0), y(200, 0)].map(t => moneyYearLine(t).title);
     expect(new Set(years).size).toBe(4);
-    const lifes = [t(1400, 147, 7), t(1400, 33, 7), t(0, 0, 7), t(1400, 0, 7)]
-      .map(x => moneyLifeLine(x, 0).title);
+    const lifes = [life(1400, 245, 7), life(1400, 30, 1), life(0, 0, 0), life(1400, 0, 0)]
+      .map(t => moneyLifeLine(t, 0).title);
     expect(new Set(lifes).size).toBe(4);
   });
 
   it('쓰지 않은 7년만 잔액을 이름으로 부른다', () => {
-    expect(moneyLifeLine(t(0, 0, 7), 1569).desc).toContain('1,569만원');
-    expect(moneyLifeLine(t(1400, 147, 7), 0).desc).not.toContain('만원');
+    expect(moneyLifeLine(life(0, 0, 0), 1569).desc).toContain('1,569만원');
+    expect(moneyLifeLine(life(1400, 245, 7), 0).desc).not.toContain('만원');
   });
 });
 
 // ============================================================
-// ③ 구세이브 폴백 — 양방향 잠금(#424)
+// ④ 구세이브·손상 세이브 — 기록기가 배열을 만들지 않는다
 // ============================================================
 describe('구세이브 폴백 — 없으면 침묵, 있으면 말한다', () => {
+  const legacy = (): GameState => {
+    const s = makeState({ year: 5, money: 100 });
+    delete (s as Partial<GameState>).moneySpentByYear;
+    delete (s as Partial<GameState>).moneyBlockedWeeksByYear;
+    return s;
+  };
+
   it('배열이 없으면 궤적은 null이다 (화면이 줄을 생략하는 근거)', () => {
     expect(moneyTrajectoryForYear({}, 3)).toBeNull();
     expect(moneyTrajectoryLifetime({})).toBeNull();
-    // 한쪽만 있어도 판정 불가 — 두 축이 함께 있어야 쪼들림과 안 씀이 갈린다.
     expect(moneyTrajectoryForYear({ moneySpentByYear: emptyMoneyYears() }, 3)).toBeNull();
-    expect(moneyTrajectoryForYear({ moneyTightWeeksByYear: emptyMoneyYears() }, 3)).toBeNull();
+    expect(moneyTrajectoryForYear({ moneyBlockedWeeksByYear: emptyMoneyYears() }, 3)).toBeNull();
+  });
+
+  // 여기가 핵심이다. 기록기가 배열을 만들면 구세이브가 첫 지출에서 0으로 채운 7년을 얻고,
+  // 마이그레이션 이전 학년이 "아는 0"으로 읽혀 "지갑을 안 연 7년"이라고 거짓말한다.
+  it('기록기는 배열을 새로 만들지 않는다 — 지출도, 막힌 주도', () => {
+    const s = legacy();
+    expect(hasMoneyTracking(s)).toBe(false);
+    recordMoneySpent(s, 50);
+    recordMoneyBlockedWeek(s);
+    expect(s.moneySpentByYear).toBeUndefined();
+    expect(s.moneyBlockedWeeksByYear).toBeUndefined();
+    expect(moneyTrajectoryLifetime(s)).toBeNull();
+  });
+
+  it('구세이브로 한 주를 굴려도 여전히 침묵한다 (배선 경로)', () => {
+    // 주간 용돈(5만)이 비용을 덮지 않도록 과외(28만)를 쓴다 — Y5부터 열린다.
+    expect(cost('private-tutoring', 5)).toBe(28);
+    const s = legacy();
+    s.week = 3; s.isVacation = false; s.routineSlot2 = 'private-tutoring'; s.routineSlot3 = null;
+    const after = processWeek(s);
+    expect(after.money).toBeLessThan(100);            // 돈은 실제로 나갔고
+    expect(after.moneySpentByYear).toBeUndefined();   // 기록은 생기지 않았다
+    expect(moneyTrajectoryLifetime(after)).toBeNull();
+  });
+
+  it('구세이브에서 markMoneyBlockedWeek를 불러도 배열이 생기지 않는다', () => {
+    useGameStore.getState().startGame('male', ['emotional', 'info']);
+    const s = legacy();
+    useGameStore.setState({ state: { ...s, phase: 'weekday', currentEvent: null } });
+    useGameStore.getState().markMoneyBlockedWeek();
+    expect(useGameStore.getState().state!.moneyBlockedWeeksByYear).toBeUndefined();
+  });
+
+  it('길이가 7이 아닌 손상 배열도 침묵한다 (조용한 hoarded 오독 방지)', () => {
+    const broken = { moneySpentByYear: [0, 0, 0], moneyBlockedWeeksByYear: [0, 0, 0] };
+    expect(hasMoneyTracking(broken)).toBe(false);
+    expect(moneyTrajectoryForYear(broken, 2)).toBeNull();
+    expect(moneyTrajectoryLifetime(broken)).toBeNull();
   });
 
   it('배열이 있으면 그 해 값을 그대로 읽는다 (양성 짝)', () => {
-    const st = { moneySpentByYear: [0, 0, 120, 0, 0, 0, 0], moneyTightWeeksByYear: [0, 0, 4, 0, 0, 0, 0] };
-    expect(moneyTrajectoryForYear(st, 3)).toEqual({ spent: 120, tightWeeks: 4, years: 1 });
-    expect(moneyTrajectoryForYear(st, 1)).toEqual({ spent: 0, tightWeeks: 0, years: 1 });
-    expect(moneyTrajectoryLifetime(st)).toEqual({ spent: 120, tightWeeks: 4, years: 7 });
+    const st = {
+      moneySpentByYear: [0, 0, 120, 0, 0, 0, 0],
+      moneyBlockedWeeksByYear: [0, 0, 4, 0, 0, 0, 0],
+    };
+    expect(moneyTrajectoryForYear(st, 3)).toEqual({ spent: 120, blockedWeeks: 4, strappedYears: 0, years: 1 });
+    expect(moneyTrajectoryForYear(st, 1)).toEqual({ spent: 0, blockedWeeks: 0, strappedYears: 0, years: 1 });
+    expect(moneyTrajectoryLifetime(st)).toEqual({ spent: 120, blockedWeeks: 4, strappedYears: 0, years: 7 });
+  });
+
+  it('7년 합이 나쁜 해를 센다', () => {
+    const st = {
+      moneySpentByYear: emptyMoneyYears(),
+      moneyBlockedWeeksByYear: [0, 12, 0, 20, 0, 11, 48],
+    };
+    expect(moneyTrajectoryLifetime(st)!.strappedYears).toBe(3);   // 12·20·48 (11은 미달)
   });
 
   it('범위 밖 학년은 null (엔딩 시점 state.year=8 함정)', () => {
-    const st = { moneySpentByYear: emptyMoneyYears(), moneyTightWeeksByYear: emptyMoneyYears() };
+    const st = { moneySpentByYear: emptyMoneyYears(), moneyBlockedWeeksByYear: emptyMoneyYears() };
     expect(moneyTrajectoryForYear(st, 8)).toBeNull();
     expect(moneyTrajectoryForYear(st, 0)).toBeNull();
   });
 
-  it('마이그레이션은 0으로 백필하지 않는다 — 0 배열은 "한 푼도 안 썼다"는 거짓말이 된다', () => {
-    const legacy = makeState({ year: 5 });
-    delete (legacy as Partial<GameState>).moneySpentByYear;
-    delete (legacy as Partial<GameState>).moneyTightWeeksByYear;
-    const migrated = migrateLoadedState(legacy);
+  it('마이그레이션은 0으로 백필하지 않는다', () => {
+    const migrated = migrateLoadedState(legacy());
     expect(migrated.moneySpentByYear).toBeUndefined();
-    expect(migrated.moneyTightWeeksByYear).toBeUndefined();
-    expect(moneyTrajectoryLifetime(migrated)).toBeNull();
+    expect(migrated.moneyBlockedWeeksByYear).toBeUndefined();
   });
 
   it('새 판은 배열을 갖고 시작한다 (양성 짝)', () => {
     const fresh = makeState();
     expect(fresh.moneySpentByYear).toEqual(emptyMoneyYears());
-    expect(fresh.moneyTightWeeksByYear).toEqual(emptyMoneyYears());
+    expect(fresh.moneyBlockedWeeksByYear).toEqual(emptyMoneyYears());
+    expect(hasMoneyTracking(fresh)).toBe(true);
     expect(moneyTrajectoryLifetime(fresh)).not.toBeNull();
   });
-});
-
-beforeEach(() => {
-  useGameStore.getState().resetGame();
 });

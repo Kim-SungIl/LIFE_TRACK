@@ -76,7 +76,8 @@ export function migrateLoadedState(state: GameState): GameState {
     // 구세이브가 곧장 '지갑을 안 연 한 해'로 오독된다(T21 0 백필은 스냅샷과 같아 안전했지만
     // 여기선 0이 곧 결론이라 다르다). undefined로 두면 화면이 줄 자체를 생략한다.
     moneySpentByYear: state.moneySpentByYear,
-    moneyTightWeeksByYear: state.moneyTightWeeksByYear,
+    moneyBlockedWeeksByYear: state.moneyBlockedWeeksByYear,
+    moneyBlockedStamp: state.moneyBlockedStamp,
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
     idleWeeks: state.idleWeeks ?? 0,
