@@ -16,15 +16,15 @@ import { NPC_MINI_EVENTS } from '../../src/engine/talkData';
 import type { GameState, ParentStrength, EventChoice } from '../../src/engine/types';
 import * as fs from 'fs';
 
-type ChoicePolicy = 'first' | 'academic' | 'social' | 'talent' | 'mental' | 'health' | 'balanced' | 'last';
+type ChoicePolicy = 'first' | 'academic' | 'social' | 'talent' | 'mental' | 'health' | 'balanced' | 'last' | 'axis-min';
 
 interface Persona {
   name: string;
   label: string;          // 사람이 읽는 설명
   gender: 'male' | 'female';
   parents: [ParentStrength, ParentStrength];
-  routineSlot2: string;
-  routineSlot3: string;
+  routineSlot2: string;   // '' = 슬롯 비움 (엔진이 falsy를 "루틴 없음"으로 읽는다, gameEngine.ts:833)
+  routineSlot3: string;   // 학기 중 슬롯2는 제품에서 필수다(MainWeekScreen.tsx) — 최소투입은 슬롯3만 비운다
   weekend: string[];
   vacation: string[];
   policy: ChoicePolicy;
@@ -54,6 +54,14 @@ function pickChoice(choices: EventChoice[], policy: ChoicePolicy): number {
       return sum - Math.max(0, fat) * 0.5 + npcInt * 0.5;
     }
     if (policy === 'social') return (e.social ?? 0) + npcInt; // 관계몰빵은 친밀도까지
+    // 성취 등급에 적대적인 정책 — bestAxis = max(학업, 특기, 생활)을 낮추는 쪽을 고른다.
+    // **'효과합 최소'로는 안 된다**: 그 정책은 멘탈·사회성에 큰 음수가 붙은 *학업 양수* 선택지를
+    // 집어서 오히려 학업을 78~85까지 올린다(실측). 축 기준으로 재야 학업이 40대로 내려간다.
+    if (policy === 'axis-min') {
+      const axes = (e.academic ?? 0) + (e.talent ?? 0)
+        + ((e.mental ?? 0) + (e.health ?? 0) + (e.social ?? 0)) / 3;
+      return -axes;   // 아래 루프가 최대값을 고르므로 부호를 뒤집어 최소를 고르게 한다
+    }
     return e[policy] ?? 0;
   };
   let best = 0, bestScore = -Infinity;
@@ -326,6 +334,13 @@ const PERSONAS: Persona[] = [
   { name: 'balanced', label: '균형형(올라운드)', gender: 'female', parents: ['emotional', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'light-exercise', weekend: ['self-study', 'club'], vacation: ['self-study', 'creative', 'rest'], policy: 'balanced', talk: true, tutoringY6: true },
   { name: 'mental-care', label: '멘탈 우선(쉼/회복형)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'light-exercise', routineSlot3: 'club', weekend: ['rest', 'club'], vacation: ['rest', 'rest', 'club'], policy: 'mental', talk: true },
   { name: 'health-max', label: '체력/운동형', gender: 'male', parents: ['resilience', 'strict'], routineSlot2: 'light-exercise', routineSlot3: 'light-exercise', weekend: ['light-exercise', 'club'], vacation: ['light-exercise', 'rest', 'rest'], policy: 'health', talk: true },
+  // **진짜 최소투입 페르소나.** 이 배열의 다른 29종은 이름이 '방치형'이어도 루틴 2칸과 주말·방학을
+  // 전부 채운다 — 그래서 348판 최저 bestAxis가 84.9였고 성취 C·D가 0판이었다. 그건 엔진이 C를
+  // 못 내는 게 아니라 **하네스가 그 구간에 닿지 않은 것**이다(이 페르소나로 C가 잡힌다).
+  // 제품 합법성: 학기 중 루틴 슬롯2는 비울 수 없고(MainWeekScreen) 루틴 슬롯엔 rest 계열을 못 넣는다
+  // (SlotEditPopup) — 그래서 슬롯2는 가장 이득이 적은 비휴식(sns, 피로 2 / social +1 mental −1)으로
+  // 채우고 슬롯3·주말·방학만 비운다. 말걸기도 안 한다.
+  { name: 'min-input', label: '최소투입(루틴1칸·주말비움·축최소 선택)', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'sns-activity', routineSlot3: '', weekend: [], vacation: [], policy: 'axis-min' },
   { name: 'neglect-first', label: '방치형(항상 첫 선택)', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'light-exercise', weekend: ['self-study', 'club'], vacation: ['rest', 'rest', 'rest'], policy: 'first', talk: true },
   { name: 'grind-burnout', label: '갈아넣기(번아웃 유도)', gender: 'female', parents: ['strict', 'strict'], routineSlot2: 'self-study', routineSlot3: 'coding', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'self-study'], policy: 'academic', talk: true, tutoringY6: true },
   { name: 'last-choice', label: '청개구리(항상 마지막 선택)', gender: 'male', parents: ['emotional', 'info'], routineSlot2: 'club', routineSlot3: 'creative', weekend: ['club', 'creative'], vacation: ['rest', 'creative', 'club'], policy: 'last', talk: true },

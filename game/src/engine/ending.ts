@@ -337,6 +337,28 @@ function getTopNpcStories(state: GameState, excludeTexts: Set<string> = new Set(
   return stories;
 }
 
+// ===== 성취 등급 =====
+// **부서진 축(붕괴<10 / 약점<20)은 등급을 깎지 않는다.** 예전엔 S→B · S→A · A→B로 깎았는데,
+// 그러면 등급이 성취의 순위가 아니게 된다. QA 348판 실측: B 102판이 **전부** 이 강등에서 나왔고,
+// 그 판들의 bestAxis(89.7~92.2)·학업 평균(90.9)이 A판(84.9~95.9 · 79.0)보다 **높았다.**
+// 플레이어는 B를 "낮은 성취"로 읽는데 실제 의미는 "어딘가 무너졌다"였다 — 순위 자리에 벌점이
+// 앉아 있었던 것이다. 그래서 등급은 bestAxis만 보는 단조 함수로 두고, 부서진 축은 문장으로 말한다.
+export type AchievementGrade = 'S' | 'A' | 'B' | 'C' | 'D';
+
+export function achievementGradeOf(bestAxis: number): AchievementGrade {
+  if (bestAxis >= 85) return 'S';
+  if (bestAxis >= 70) return 'A';
+  if (bestAxis >= 50) return 'B';
+  if (bestAxis >= 30) return 'C';
+  return 'D';
+}
+
+// 판정이 아니라 관찰로 쓴다 — 이 게임은 라벨로 사람을 규정하지 않는다(HAPPINESS_LABELS 주석과 같은 규칙).
+export const ACHIEVEMENT_NOTE = {
+  collapse: '한 축이 부서진 채로 도착했다.',
+  weakness: '한 축은 거의 비워둔 채였다.',
+} as const;
+
 // ===== 엔딩 산정 =====
 export function calculateEnding(state: GameState) {
   const { academic, social, talent, mental, health } = state.stats;
@@ -348,23 +370,21 @@ export function calculateEnding(state: GameState) {
   const lifeScore = (mental + health + social) / 3;
 
   const bestAxis = Math.max(academicScore, talentScore, lifeScore);
-  let achievement = 'C';
-  if (bestAxis >= 85) achievement = 'S';
-  else if (bestAxis >= 70) achievement = 'A';
-  else if (bestAxis >= 50) achievement = 'B';
-  else if (bestAxis >= 30) achievement = 'C';
-  else achievement = 'D';
+  const achievement = achievementGradeOf(bestAxis);
 
   const allStats = [academic, social, talent, mental, health];
   const hasCollapse = allStats.some(v => v < 10);
   const hasWeakness = allStats.some(v => v < 20);
-  // 붕괴(<10)는 약점(<20)보다 강한 강등 — 순서 고정: S일 때 붕괴 우선 판정(→B),
-  // 그 다음 약점(→A). 이전엔 약점 강등(S→A)이 먼저라 붕괴 강등(S→B)이 가려져 S+붕괴가 A에 머물렀다.
-  if (achievement === 'S') {
-    if (hasCollapse) achievement = 'B';
-    else if (hasWeakness) achievement = 'A';
-  }
-  if (hasCollapse && achievement === 'A') achievement = 'B';
+  // 붕괴(<10)가 약점(<20)보다 강한 신호 — 둘 다면 붕괴 문장을 쓴다.
+  const achievementNote: string | null = hasCollapse
+    ? ACHIEVEMENT_NOTE.collapse
+    : hasWeakness ? ACHIEVEMENT_NOTE.weakness : null;
+  // 최상위 타이틀 게이트. 예전엔 강등이 등급을 깎아서 이 조건이 `achievement === 'S'`로 표현됐다.
+  // 등급에서 강등을 빼면서 게이트를 여기로 옮겼을 뿐, **조건은 그때와 완전히 동일하다** —
+  // 예전 코드에서 최종 'S'가 되는 유일한 경로가 (bestAxis>=85 && 무붕괴 && 무약점)이었다.
+  // `!hasCollapse`는 쓰지 않는다: 붕괴(<10)는 약점(<20)을 함의하므로 `!hasWeakness`에 이미
+  // 포함된다. 둘 다 쓰면 지워도 동작이 같은 중복 조건이 되어 계약이 헐거워 보인다(뮤테이션으로 확인).
+  const flawlessTop = achievement === 'S' && !hasWeakness;
 
   // 행복 지수 — 7년 전체 궤적. 학년말은 happinessTrajectoryForYear(그 해).
   const happiness = calculateHappinessGrade(mental, social, health, happinessTrajectoryLifetime(state));
@@ -379,10 +399,10 @@ export function calculateEnding(state: GameState) {
   let description = career.detail;
 
   // 특수 조합 — 진로 덮어쓰기
-  if (achievement === 'S' && happiness === 'S' && suneungGrade && suneungGrade <= 2) {
+  if (flawlessTop && happiness === 'S' && suneungGrade && suneungGrade <= 2) {
     title = `완벽한 청춘 — ${career.path}`;
     description = '성적도, 관계도, 모든 것이 빛나는 학창시절이었다. ' + career.detail;
-  } else if (achievement === 'S' && happiness === 'D' && suneungGrade && suneungGrade <= 2) {
+  } else if (flawlessTop && happiness === 'D' && suneungGrade && suneungGrade <= 2) {
     // **D의 의미가 T21로 넓어졌다.** 예전 D는 mental<25(사실상 고립)뿐이었지만, 이제는
     // 저멘탈 주·바닥 주·번아웃 궤적으로도 열린다 — social 88인 판도 D가 된다.
     // 그래서 "곁에 아무도 없었다"가 거짓이 될 수 있다. C 라벨을 「외로운」→「그늘진」으로
@@ -395,7 +415,7 @@ export function calculateEnding(state: GameState) {
   } else if (state.burnoutCount >= 3 && suneungGrade && suneungGrade <= 4) {
     title = `불꽃은 꺼지지 않는다 — ${career.path}`;
     description = '몇 번이고 쓰러졌지만, 그래도 일어났다. ' + career.detail;
-  } else if (happiness === 'S' && achievement !== 'S' && academic < 60) {
+  } else if (happiness === 'S' && !flawlessTop && academic < 60) {
     // QA C1-B 연동: 기존 (happiness S && achievement C)는 C1-B 후 도달 불가
     // (happiness S 가 health≥20 을 요구 → lifeScore≥53 → achievement 최소 B).
     // T21: 궤적은 강등만 하므로 이 함의는 유지 (S가 더 어려워졌을 뿐).
@@ -425,6 +445,7 @@ export function calculateEnding(state: GameState) {
     title,
     description,
     achievement,
+    achievementNote,
     happiness,
     total,
     career: career.path,

@@ -147,6 +147,14 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
           </div>
         </div>
 
+        {/* 부서진 축은 등급을 깎지 않고 여기서 말한다(ending.ts ACHIEVEMENT_NOTE 주석 참조).
+            등급 칸 안에 넣으면 두 등급의 높이가 어긋나므로 아래 한 줄로 뺀다. */}
+        {ending.achievementNote && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: -8, marginBottom: 14 }}>
+            {ending.achievementNote}
+          </div>
+        )}
+
         <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 16px' }}>
           {(Object.keys(stats) as StatKey[]).map(key => {
             const grade = getGrade(stats[key]);
