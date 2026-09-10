@@ -7,8 +7,10 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 // 앨범 격자는 축소본(cgThumbSrc), 라이트박스는 원본(webpSrc)을 쓴다 — 목에 **둘 다** 있어야 한다.
 // 하나만 두면 앨범 화면이 undefined를 호출해 이 파일의 드릴다운 16건이 통째로 터진다(실제로 겪었다).
+// 그래서 아래 assetPrefetch와 같은 importOriginal 전개를 쓴다 — export가 늘어도 이 목은 안 깨진다.
 // 두 경로가 갈리는지 자체는 npcAlbumThumbWiring.test.tsx가 본다.
-vi.mock('../../engine/assetWebp', () => ({
+vi.mock('../../engine/assetWebp', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../engine/assetWebp')>()),
   webpSrc: (p: string) => `WEBP::${p}`,
   cgThumbSrc: (p: string) => `THUMB::${p}`,
 }));

@@ -80,7 +80,7 @@ describe('webpSrc (__WEBP_ENABLED__ 양방향)', () => {
 });
 
 // cgThumbSrc — 앨범 격자(44px)용 축소본 스왑. webpSrc와 **다른 접미사**를 내야 한다:
-// 둘이 같아지면 격자가 원본을 받아 이 PR이 없앤 7.4MB가 조용히 돌아온다.
+// 둘이 같아지면 격자가 원본을 받아 이 PR이 없앤 6.19MB가 조용히 돌아온다.
 describe('cgThumbSrc (__WEBP_ENABLED__ 양방향)', () => {
   it('테스트 환경(모듈 export): 입력을 그대로 반환한다', () => {
     expect(exportedCgThumbSrc('a.png')).toBe('a.png');
