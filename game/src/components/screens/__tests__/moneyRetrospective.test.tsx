@@ -78,6 +78,8 @@ function renderEnding(opts: {
       bgProps={{ bg: getBackground(48, false, 'normal', 7), bgImgError: true, onImgError: vi.fn() }}
       runDelta={null}
       gender={state.gender}
+      onRestartSameHome={null}
+      onExitToTitle={() => {}}
     />,
   );
 }

@@ -17,6 +17,7 @@ import {
 } from './archive';
 import { calculateEnding } from './ending';
 import { recordMoneySpent, recordMoneyBlockedWeek } from './moneyTrajectory';
+import { saveLastSetup } from './lastSetup';
 
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
 function applyVisibleTalkEffects(
@@ -113,6 +114,12 @@ interface GameStore {
   startGame: (gender: 'male' | 'female', parents: [ParentStrength, ParentStrength], options?: { useReducedRecovery?: boolean }) => void;
   loadSavedGame: () => boolean;
   resetGame: () => void;
+  /**
+   * 세이브를 **남긴 채** 타이틀로 나간다. resetGame과의 차이가 요점이다 —
+   * 엔딩을 본 판은 지우지 않으므로 타이틀에서 "엔딩 다시 보기"로 되돌아올 수 있다.
+   * (App이 state===null이면 TitleScreen을 그린다.)
+   */
+  exitToTitle: () => void;
   setRoutine: (slot2: string | null, slot3: string | null) => void;
   setWeekendChoices: (choices: string[]) => void;
   setVacationChoices: (choices: string[]) => void;
@@ -333,6 +340,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // "이번 판에서 처음 본 이야기"의 기준선 리셋 — 세이브 덮어쓰기보다 먼저.
     // 새 판의 유일한 진입점이 여기이므로 리셋 지점도 여기 한 곳이다(loadSavedGame은 건드리지 않는다).
     beginRun();
+    // 직전 판 설정 기록 — "같은 집에서 다시"의 입력. 새 판의 진입점이 여기 한 곳이므로
+    // 입구(타이틀·기록실·엔딩)를 몇 개 만들어도 기록 지점은 늘지 않는다.
+    saveLastSetup({ gender, parents, useReducedRecovery: !!options?.useReducedRecovery });
     set({ state: initial, runDelta: null });
     saveToStorage(initial);
     // tutorial_done만 지운다 — 새 판마다 튜토리얼을 다시 띄우기 위해서다.
@@ -359,6 +369,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     deleteSave();
     // 기록(lifetrack_archive)은 지우지 않는다 — 새 게임은 한 판을 리셋하는 것이지
     // 지금까지의 학창시절들을 없애는 게 아니다.
+    set({ state: null, runDelta: null, npcActivityMap: {} });
+  },
+
+  exitToTitle: () => {
+    // **deleteSave를 부르지 않는다** — 이게 resetGame과의 유일한 차이이고 전부다.
+    // 엔딩에서 나가는 길이 세이브를 지우면 그 판의 엔딩은 두 번 다시 못 본다.
+    // 자동 저장 구독은 state가 truthy일 때만 쓰므로 null로 두는 것이 세이브를 건드리지 않는다.
     set({ state: null, runDelta: null, npcActivityMap: {} });
   },
 

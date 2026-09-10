@@ -10,6 +10,7 @@ import { setBgmTrack, type BgmId } from '../audio/bgm';
 import { characterStagePrefixByLevel } from '../engine/characterAssets';
 import { getResultDialogue } from '../engine/dialogues';
 import { prefetchAssets, runWhenIdle } from '../engine/assetPrefetch';
+import { loadLastSetup } from '../engine/lastSetup';
 import { webpSrc } from '../engine/assetWebp';
 import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
@@ -51,6 +52,7 @@ export function GameScreen() {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
     resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
+    startGame, exitToTitle,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
@@ -67,6 +69,10 @@ export function GameScreen() {
     resolveParentTalkChoice: s.resolveParentTalkChoice,
     setPhase: s.setPhase,
     markMoneyBlockedWeek: s.markMoneyBlockedWeek,
+    // 엔딩 화면의 다회차 입구용. startGame은 새 판의 유일한 진입점이고,
+    // exitToTitle은 **세이브를 남긴 채** 타이틀로 나간다(resetGame과의 차이).
+    startGame: s.startGame,
+    exitToTitle: s.exitToTitle,
   })));
 
   // 뒤로가기/새로고침 방지
@@ -280,6 +286,16 @@ export function GameScreen() {
         bgProps={bgProps}
         runDelta={runDelta}
         gender={state.gender}
+        // 직전 판 설정이 곧 "이 판"의 설정이다(startGame이 시작할 때 기록했다).
+        // 없으면 null → 버튼을 그리지 않는다. 확인 다이얼로그를 두지 않는 이유:
+        // 여기서 덮어쓰는 것은 진행이 아니라 **이미 끝난 판**이고, 이야기·CG 커버리지는
+        // 기록실에 남는다. 감정이 가장 높은 자리에 마찰을 넣지 않는다(5그룹 논의).
+        onRestartSameHome={(() => {
+          const setup = loadLastSetup();
+          if (!setup) return null;
+          return () => startGame(setup.gender, setup.parents, { useReducedRecovery: setup.useReducedRecovery });
+        })()}
+        onExitToTitle={exitToTitle}
       />
     );
   } else if (state.currentEvent && state.phase === 'event') {

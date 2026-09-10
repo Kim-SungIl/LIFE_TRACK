@@ -43,6 +43,8 @@ function renderEnding() {
       }}
       runDelta={null}
       gender={state.gender}
+      onRestartSameHome={null}
+      onExitToTitle={() => {}}
     />,
   );
 }

@@ -31,7 +31,12 @@ function coverageColor(ratio: number): string {
  * 포화 상태의 지훈이 52칸이라 목록 위에 얹으면 화면이 무너지고, 접으면 스크롤 위치를 잃는다.
  * 앨범 안에서는 학년별로 "몇 개 중 몇 개"를 드러낸다(그게 그 화면의 목적이다).
  */
-export function ArchiveScreen({ onBack }: { onBack: () => void }) {
+/**
+ * onStartNewRun을 **required로 두는 이유**: 여기가 "지금까지의 학창시절"을 보는 화면이고,
+ * 새 판을 출발시키기 가장 자연스러운 자리인데 지금까지 출구가 onBack 하나였다.
+ * optional이면 배선을 빠뜨려도 tsc가 통과해 버튼만 없는 상태로 조용히 나간다.
+ */
+export function ArchiveScreen({ onBack, onStartNewRun }: { onBack: () => void; onStartNewRun: () => void }) {
   const [openNpc, setOpenNpc] = useState<string | null>(null);
   const archive = loadArchive();
   const rows = npcStoryRows(archive.events, archive.npcPeak);
@@ -165,6 +170,11 @@ export function ArchiveScreen({ onBack }: { onBack: () => void }) {
         </div>
       </section>
 
+      {/* 기록실에서 새 판을 출발시키는 흐름 — 여기까지 온 사람은 "못 본 이야기"를 방금 봤다. */}
+      <button className="btn btn-primary" onClick={onStartNewRun}>
+        새 학창시절 시작하기
+        <span className="btn__sub">아직 못 본 이야기를 만나러</span>
+      </button>
       <button className="btn btn-secondary" onClick={onBack}>돌아가기</button>
     </div>
   );
