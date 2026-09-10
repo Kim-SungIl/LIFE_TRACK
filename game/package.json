@@ -11,7 +11,7 @@
     "build:release": "GEN_WEBP=1 npm run build",
     "lint": "eslint . --max-warnings 0",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "rm -f node_modules/.tmp/vitest-report.json && vitest run --reporter=default --reporter=json --outputFile.json=node_modules/.tmp/vitest-report.json",
     "check": "tsc -b && vite build",
     "verify:events": "tsx scripts/verify/verify-events-split.ts",
     "verify:save-load": "tsx scripts/verify/verify-save-load.ts",
@@ -23,7 +23,8 @@
     "verify:dist-hygiene": "tsx scripts/verify/verify-dist-hygiene.ts",
     "verify:dist-chunks": "tsx scripts/verify/verify-dist-chunks.ts",
     "verify:dist-typography": "tsx scripts/verify/verify-dist-typography.ts",
-    "verify:dist-cg-thumbs": "tsx scripts/verify/verify-dist-cg-thumbs.ts"
+    "verify:dist-cg-thumbs": "tsx scripts/verify/verify-dist-cg-thumbs.ts",
+    "verify:test-floor": "tsx scripts/verify/verify-test-floor.ts"
   },
   "dependencies": {
     "react": "^19.2.4",
@@ -36,6 +37,7 @@
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^24.12.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -44,6 +46,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
+    "js-yaml": "^4.3.2",
     "jsdom": "^29.1.1",
     "playwright": "^1.59.1",
     "sharp": "^0.35.3",
