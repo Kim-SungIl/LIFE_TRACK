@@ -3,7 +3,7 @@ import { albumFor, isSlotFilled, filledPath, dominantGender, type AlbumSlot } fr
 import { INITIAL_NPCS } from '../../engine/npcRoster';
 import { SOLO_ROOT } from '../../engine/npcStoryPool';
 import type { Gender } from '../../engine/types';
-import { webpSrc } from '../../engine/assetWebp';
+import { cgThumbSrc, webpSrc } from '../../engine/assetWebp';
 import { Portrait } from '../Portrait';
 
 const CELL = 44;
@@ -12,8 +12,67 @@ const TABS: { gender: Gender; label: string; portrait: string }[] = [
   { gender: 'female', label: '여자 주인공', portrait: 'player_f' },
 ];
 const cgUrl = (rel: string) => webpSrc(`${import.meta.env.BASE_URL}images/events/${rel}`);
+// 격자 셀은 44px인데 원본은 1440x810이다 — 축소본을 쓴다(지훈 여주판 54칸 6.19MB → 462KB, dist 실측).
+// 라이트박스는 76vh라 원본이 필요하므로 cgUrl 그대로 둔다. 두 경로를 섞지 말 것.
+const cgThumbUrl = (rel: string) => cgThumbSrc(`${import.meta.env.BASE_URL}images/events/${rel}`);
 // 사람이 없는 뿌리의 얼굴 자리 — 초상 대신 엠블럼을 쓴다(YearEndScreen이 쓰는 자산과 같은 것).
 const SOLO_EMBLEM = webpSrc(`${import.meta.env.BASE_URL}images/emblems/growth.png`);
+
+/**
+ * 라이트박스 그림 — 축소본을 깔고 원본이 오면 덮는다(blur-up).
+ *
+ * 이 PR 전에는 격자가 원본을 이미 받아둬서 칸을 누르면 캐시 적중으로 즉시 떴다. 격자를
+ * 축소본으로 바꾼 뒤로는 칸을 누른 시점에 원본 115KB를 **새로** 받으므로, 자리표시가 없으면
+ * 그동안 검은 오버레이에 빈 칸이 남는다(4G 기준 0.1~0.8초). 축소본 7.6KB는 격자가 이미
+ * 받아뒀으니 캐시에서 즉시 뜬다. 같은 처리를 EventResultScreen이 cgLoaded opacity 전환으로
+ * 이미 하고 있다 — 여기만 예외였다.
+ *
+ * 상자 크기를 종횡비로 잡는 이유: 원본이 로드되기 전에는 자연 크기를 모르므로 <img> 하나로는
+ * 자리를 못 잡는다(0x0). 종횡비는 축소본에서 읽는다 — 같은 소스에서 나왔으므로 동일하다.
+ * `min(100%, 76vh * ar)`은 기존 `maxWidth:100% + maxHeight:76vh`와 같은 기하를 낸다
+ * (원본이 76vh보다 작던 데스크톱 16:9만 1.2% 확대된다).
+ *
+ * key={path}로 갈아끼워 상태를 리셋한다 — 다음 칸을 열 때 이전 그림의 로드 상태가 남으면
+ * 새 원본이 오기 전에 opacity 1이 되어 빈 칸이 그대로 보인다.
+ */
+function LightboxImage({ path, title }: { path: string; title: string }) {
+  const [full, setFull] = useState(false);
+  const [ar, setAr] = useState(16 / 9);
+  return (
+    <div
+      style={{
+        position: 'relative', flexShrink: 0,
+        width: `min(100%, calc(76vh * ${ar}))`,
+        aspectRatio: `${ar}`,
+        borderRadius: 8, overflow: 'hidden',
+      }}
+    >
+      <img
+        src={cgThumbUrl(path)}
+        alt=""
+        aria-hidden="true"
+        onLoad={e => {
+          const el = e.currentTarget;
+          if (el.naturalWidth > 0 && el.naturalHeight > 0) setAr(el.naturalWidth / el.naturalHeight);
+        }}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          // cover + scale: 흐림이 가장자리를 반투명하게 먹으므로 살짝 키워 테두리 띠를 가린다.
+          objectFit: 'cover', filter: 'blur(12px)', transform: 'scale(1.08)',
+        }}
+      />
+      <img
+        src={cgUrl(path)}
+        alt={title}
+        onLoad={() => setFull(true)}
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'contain',
+          opacity: full ? 1 : 0, transition: 'opacity 0.25s ease',
+        }}
+      />
+    </div>
+  );
+}
 
 /**
  * 인물 앨범 — 기록실에서 사람 줄을 누르면 목록을 대신해 열린다.
@@ -26,9 +85,9 @@ const SOLO_EMBLEM = webpSrc(`${import.meta.env.BASE_URL}images/emblems/growth.pn
  * 기록실 목록 쪽의 감춤 규약(#404)은 그대로다 — 앨범은 만난 사람의 줄 뒤에만 있으므로,
  * 만나지 않은 사람의 슬롯 지도는 여전히 열 수 없다.
  *
- * 그림은 **채운 칸만** 싣는다(빈 칸은 비용 0). 릴리즈 webp가 장당 105KB이므로 축소 썸네일이
- * 생기기 전까지는 이게 유일하게 감당되는 형태다 — 빈 칸까지 그림을 깔면 안 본 그림을
- * 받아오게 되므로 애초에 불가능하다.
+ * 그림은 **채운 칸만** 싣는다(빈 칸은 비용 0) — 빈 칸까지 그림을 깔면 안 본 그림을 받아오게
+ * 되므로 애초에 불가능하다. 격자는 이제 축소본(`.thumb.webp`, 너비 256)을 쓴다:
+ * 원본 webp가 장당 115KB라 지훈 여주판 54칸이 6.19MB였고, 축소본으로 462KB가 됐다(dist 실측).
  *
  * 판본(남주/여주)은 탭으로 가른다. 같은 칸 배치를 판본별로 따로 세는 것이고, 아직 해보지 않은
  * 판본은 전부 빈 칸으로 열린다 — 빈 칸을 드러내는 것이 이 화면의 규약이므로(#405) 일관된다.
@@ -196,7 +255,7 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
                     }}
                   >
                     <img
-                      src={cgUrl(path)}
+                      src={cgThumbUrl(path)}
                       alt={s.title}
                       loading="lazy"
                       decoding="async"
@@ -238,11 +297,7 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
           >
             ✕
           </button>
-          <img
-            src={cgUrl(openPath)}
-            alt={open.title}
-            style={{ maxWidth: '100%', maxHeight: '76vh', objectFit: 'contain', borderRadius: 8 }}
-          />
+          <LightboxImage key={openPath} path={openPath} title={open.title} />
           <div style={{ fontSize: '0.9rem', fontWeight: 600, textAlign: 'center' }}>{open.title}</div>
         </div>
       )}

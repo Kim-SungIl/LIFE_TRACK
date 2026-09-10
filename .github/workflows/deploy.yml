@@ -90,6 +90,13 @@ jobs:
         working-directory: ./game
         run: npm run verify:dist-typography
 
+      # 게이트 2f — 앨범 격자용 CG 축소본(.thumb.webp). **여기서만 확인 가능하다:**
+      # 축소본은 GEN_WEBP=1 빌드에서만 생기므로 소스에는 존재하지 않는다. 앨범 격자의 <img>에는
+      # onError 폴백이 없어서, 축소본이 빠지면 빌드는 성공한 채로 그 칸이 깨진 이미지가 된다.
+      - name: Verify dist CG thumbnails
+        working-directory: ./game
+        run: npm run verify:dist-cg-thumbs
+
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
