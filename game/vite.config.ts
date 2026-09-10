@@ -17,6 +17,13 @@ import {
 // ~1.1GB가 되어 GitHub Pages 사이트 한도(1GB)에 걸린다. 지우면 실측 1039.9MB → 61.4MB(5.9%).
 // 전제: 모든 이미지 소비 지점이 webpSrc를 경유한다 (<img src>·prefetch·onError 폴백 체인 전부).
 //   새 이미지 참조를 추가할 때 webpSrc를 빠뜨리면 릴리즈에서 404가 되므로 반드시 경유시킬 것.
+// 앨범 격자(NpcAlbumScreen, 44px 정사각 셀)는 1440x810 원본을 그대로 받고 있었다.
+// 셀 하나가 140KB짜리 이미지를 받는 구조라 지훈 여주판 54칸이 **7.4MB**다(실측).
+// 16:9 원본으로 44x44를 objectFit:cover 하려면 높이가 바인딩이라 필요한 너비는
+// DPR3에서 235px. 256으로 잡으면 DPR3까지 여유가 있고 실측 평균 10.4KB — 54칸 0.55MB다.
+// 라이트박스(maxHeight:76vh)는 원본이 필요하므로 축소본이 원본을 **대체하지 않고 추가**된다.
+const CG_THUMB_WIDTH = 256
+
 function webpGenPlugin(): Plugin {
   const enabled = process.env.GEN_WEBP === '1'
   return {
@@ -32,9 +39,12 @@ function webpGenPlugin(): Plugin {
       if (!enabled) return
       const { default: sharp } = await import('sharp')
       const imagesDir = path.join(options.dir ?? 'dist', 'images')
+      const eventsDir = path.join(imagesDir, 'events')
       let count = 0
       let pngBytes = 0
       let webpBytes = 0
+      let thumbCount = 0
+      let thumbBytes = 0
       const failures: string[] = []
       const walk = async (dir: string): Promise<void> => {
         const entries = await fs.readdir(dir, { withFileTypes: true })
@@ -48,6 +58,14 @@ function webpGenPlugin(): Plugin {
           const dest = full.replace(/\.png$/i, '.webp')
           try {
             await sharp(full).webp({ quality: 82, effort: 5 }).toFile(dest)
+            // CG(images/events)만 축소본을 하나 더 낸다 — 앨범 격자 전용이다.
+            // **png를 지우기 전에** 만들어야 한다. 배경·캐릭터는 격자에 안 뜨므로 제외.
+            if (full.startsWith(eventsDir + path.sep)) {
+              const thumb = full.replace(/\.png$/i, '.thumb.webp')
+              await sharp(full).resize({ width: CG_THUMB_WIDTH }).webp({ quality: 82, effort: 5 }).toFile(thumb)
+              thumbBytes += (await fs.stat(thumb)).size
+              thumbCount++
+            }
             // 변환 성공한 png만 삭제 — 실패분은 남겨두고 아래에서 빌드를 중단시킨다.
             pngBytes += (await fs.stat(full)).size
             webpBytes += (await fs.stat(dest)).size
@@ -69,9 +87,14 @@ function webpGenPlugin(): Plugin {
       if (count === 0) {
         this.error(`[webp-gen] 생성된 webp 0개 — ${imagesDir} 확인 필요. 릴리즈 빌드 중단.`)
       }
+      if (thumbCount === 0) {
+        this.error(`[webp-gen] CG 축소본 0개 — ${eventsDir} 확인 필요. 앨범 격자가 깨지므로 릴리즈 빌드 중단.`)
+      }
       const mb = (b: number) => (b / 1048576).toFixed(1)
       console.log(`[webp-gen] ${count}개 webp 생성 + 원본 png 삭제 완료 — `
         + `${mb(pngBytes)}MB → ${mb(webpBytes)}MB (${(webpBytes / pngBytes * 100).toFixed(1)}%)`)
+      console.log(`[webp-gen] CG 축소본(${CG_THUMB_WIDTH}w) ${thumbCount}개 — ${mb(thumbBytes)}MB `
+        + `(평균 ${(thumbBytes / thumbCount / 1024).toFixed(1)}KB)`)
     },
   }
 }

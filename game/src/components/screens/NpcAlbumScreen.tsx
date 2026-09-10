@@ -3,7 +3,7 @@ import { albumFor, isSlotFilled, filledPath, dominantGender, type AlbumSlot } fr
 import { INITIAL_NPCS } from '../../engine/npcRoster';
 import { SOLO_ROOT } from '../../engine/npcStoryPool';
 import type { Gender } from '../../engine/types';
-import { webpSrc } from '../../engine/assetWebp';
+import { cgThumbSrc, webpSrc } from '../../engine/assetWebp';
 import { Portrait } from '../Portrait';
 
 const CELL = 44;
@@ -12,6 +12,9 @@ const TABS: { gender: Gender; label: string; portrait: string }[] = [
   { gender: 'female', label: '여자 주인공', portrait: 'player_f' },
 ];
 const cgUrl = (rel: string) => webpSrc(`${import.meta.env.BASE_URL}images/events/${rel}`);
+// 격자 셀은 44px인데 원본은 1440x810이다 — 축소본을 쓴다(지훈 여주판 54칸 6.19MB → 462KB, dist 실측).
+// 라이트박스는 76vh라 원본이 필요하므로 cgUrl 그대로 둔다. 두 경로를 섞지 말 것.
+const cgThumbUrl = (rel: string) => cgThumbSrc(`${import.meta.env.BASE_URL}images/events/${rel}`);
 // 사람이 없는 뿌리의 얼굴 자리 — 초상 대신 엠블럼을 쓴다(YearEndScreen이 쓰는 자산과 같은 것).
 const SOLO_EMBLEM = webpSrc(`${import.meta.env.BASE_URL}images/emblems/growth.png`);
 
@@ -26,9 +29,9 @@ const SOLO_EMBLEM = webpSrc(`${import.meta.env.BASE_URL}images/emblems/growth.pn
  * 기록실 목록 쪽의 감춤 규약(#404)은 그대로다 — 앨범은 만난 사람의 줄 뒤에만 있으므로,
  * 만나지 않은 사람의 슬롯 지도는 여전히 열 수 없다.
  *
- * 그림은 **채운 칸만** 싣는다(빈 칸은 비용 0). 릴리즈 webp가 장당 105KB이므로 축소 썸네일이
- * 생기기 전까지는 이게 유일하게 감당되는 형태다 — 빈 칸까지 그림을 깔면 안 본 그림을
- * 받아오게 되므로 애초에 불가능하다.
+ * 그림은 **채운 칸만** 싣는다(빈 칸은 비용 0) — 빈 칸까지 그림을 깔면 안 본 그림을 받아오게
+ * 되므로 애초에 불가능하다. 격자는 이제 축소본(`.thumb.webp`, 너비 256)을 쓴다:
+ * 원본 webp가 장당 140KB라 지훈 여주판 54칸이 6.19MB였고, 축소본으로 462KB가 됐다(dist 실측).
  *
  * 판본(남주/여주)은 탭으로 가른다. 같은 칸 배치를 판본별로 따로 세는 것이고, 아직 해보지 않은
  * 판본은 전부 빈 칸으로 열린다 — 빈 칸을 드러내는 것이 이 화면의 규약이므로(#405) 일관된다.
@@ -196,7 +199,7 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
                     }}
                   >
                     <img
-                      src={cgUrl(path)}
+                      src={cgThumbUrl(path)}
                       alt={s.title}
                       loading="lazy"
                       decoding="async"

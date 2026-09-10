@@ -21,7 +21,8 @@
     "verify:dist-fonts": "tsx scripts/verify/verify-dist-fonts.ts",
     "verify:dist-hygiene": "tsx scripts/verify/verify-dist-hygiene.ts",
     "verify:dist-chunks": "tsx scripts/verify/verify-dist-chunks.ts",
-    "verify:dist-typography": "tsx scripts/verify/verify-dist-typography.ts"
+    "verify:dist-typography": "tsx scripts/verify/verify-dist-typography.ts",
+    "verify:dist-cg-thumbs": "tsx scripts/verify/verify-dist-cg-thumbs.ts"
   },
   "dependencies": {
     "react": "^19.2.4",

@@ -12,3 +12,18 @@ export function webpSrc(path: string): string {
   if (typeof __WEBP_ENABLED__ === 'undefined' || !__WEBP_ENABLED__) return path;
   return path.replace(/\.png($|[?#])/i, '.webp$1');
 }
+
+/**
+ * CG 축소본(vite webp-gen이 images/events/**에만 내는 `.thumb.webp`, 너비 256) 경로.
+ *
+ * **격자 전용이다.** 라이트박스·결과 화면·회상 갤러리는 원본을 써야 한다 —
+ * 앨범 격자(44px 셀)만 1440x810을 받아 지훈 여주판 54칸이 6.19MB였다(dist 실측).
+ *
+ * webpSrc와 같은 이유로 릴리즈에서만 스왑한다. dev·일반 build는 축소본이 아예 없으므로
+ * png를 그대로 돌려준다 — 여기서 무조건 스왑하면 개발 중 앨범이 통째로 깨진다.
+ */
+export function cgThumbSrc(path: string): string {
+  if (typeof __WEBP_ENABLED__ === 'undefined' || !__WEBP_ENABLED__) return path;
+  return path.replace(/\.png($|[?#])/i, '.thumb.webp$1');
+}
+
