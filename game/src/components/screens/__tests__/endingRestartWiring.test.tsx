@@ -25,7 +25,7 @@ import { calculateEnding } from '../../../engine/ending';
 import { getBackground } from '../../../engine/backgrounds';
 import { createInitialState } from '../../../engine/gameEngine';
 import { useGameStore, loadFromStorage } from '../../../engine/store';
-import { saveLastSetup } from '../../../engine/lastSetup';
+import { saveLastSetup, loadLastSetup } from '../../../engine/lastSetup';
 import { CURRENT_SAVE_VERSION } from '../../../engine/stateMigration';
 import { clearArchive } from '../../../engine/archive';
 import type { GameState, ParentStrength } from '../../../engine/types';
@@ -81,6 +81,17 @@ describe('EndingScreen — 버튼 존재 계약', () => {
     expect(screen.getByText('타이틀로')).toBeTruthy();
   });
 
+  it('도전 모드가 아니면 그 말을 붙이지 않는다', () => {
+    renderEnding(() => {});
+    expect(screen.getByText(/같은 부모, 다른 7년/)).toBeTruthy();
+  });
+
+  // 바로 위 버튼이 이 엔딩의 세이브를 덮어쓴다 — 조건 없는 보증문이면 그 문장이 거짓이 된다.
+  it('"다시 볼 수 있다"는 말에 조건이 붙어 있다', () => {
+    renderEnding(() => {});
+    expect(screen.getByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeTruthy();
+  });
+
   it('두 버튼이 각자의 콜백을 부른다', () => {
     const restart = vi.fn();
     const exit = vi.fn();
@@ -101,9 +112,11 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
     useGameStore.setState({ state, runDelta: null, npcActivityMap: {} });
   }
 
-  it('"같은 집에서 다시"가 직전 설정으로 새 판을 시작한다', async () => {
+  // **근거가 state라는 것이 이 테스트의 요점이다.** 저장된 "직전 판 설정"을 일부러 다르게
+  // 심어 두고, 새 판이 그것이 아니라 **방금 끝낸 판**을 따라가는지 본다.
+  it('"같은 집에서 다시"가 방금 끝낸 판의 설정으로 시작한다 (저장값이 아니라)', async () => {
     saveLastSetup({ gender: 'female', parents: ['wealth', 'info'], useReducedRecovery: true });
-    seedSaveAndState();
+    seedSaveAndState();   // 이 판은 male / strict·emotional / 도전 모드 아님
     render(<GameScreen />);
     fireEvent.click(await waitFor(() => screen.getByText('같은 집에서 다시')));
 
@@ -111,9 +124,23 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
     expect(s.phase, '엔딩에 머물러 있으면 아무것도 시작되지 않은 것이다').not.toBe('ending');
     expect(s.year).toBe(1);
     expect(s.week).toBe(1);
-    expect(s.gender).toBe('female');
-    expect(s.parents).toEqual(['wealth', 'info']);
-    expect(s.useReducedRecovery).toBe(true);
+    expect(s.gender).toBe('male');
+    expect(s.parents).toEqual(PARENTS);
+    expect(s.useReducedRecovery).toBeFalsy();
+  });
+
+  it('도전 모드로 끝낸 판은 도전 모드로 다시 시작하고, 그 사실을 화면에 밝힌다', async () => {
+    const state = endedState();
+    state.useReducedRecovery = true;
+    localStorage.setItem('lifetrack_save', JSON.stringify({
+      version: CURRENT_SAVE_VERSION, state, savedAt: new Date().toISOString(),
+    }));
+    useGameStore.setState({ state, runDelta: null, npcActivityMap: {} });
+    render(<GameScreen />);
+    await waitFor(() => screen.getByText('같은 집에서 다시'));
+    expect(screen.getByText(/도전 모드/), '이월되는데 말하지 않으면 자리마다 다른 말을 한다').toBeTruthy();
+    fireEvent.click(screen.getByText('같은 집에서 다시'));
+    expect(useGameStore.getState().state!.useReducedRecovery).toBe(true);
   });
 
   it('"타이틀로"는 세이브를 남긴 채 나간다 (엔딩 다시 보기의 근거)', async () => {
@@ -128,8 +155,24 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
     expect(save!.state.phase).toBe('ending');
   });
 
-  it('직전 설정이 없는 판이면 재시작 버튼이 아예 안 걸린다', async () => {
-    seedSaveAndState();   // saveLastSetup 없음 = 이 키가 배포되기 전의 세이브
+  // 구세이브(`lifetrack_last_setup`이 배포되기 전에 저장한 사람)는 이어하기로 완주할 수 있다.
+  // 그때 저장된 설정은 없지만 state에는 다 있다 — 기능이 존재하는 바로 그 순간에
+  // 입구를 잃지 않아야 한다.
+  it('구세이브로 엔딩에 와도 이 판의 설정으로 다시 시작할 수 있다', async () => {
+    seedSaveAndState();   // saveLastSetup 호출 없음
+    expect(loadLastSetup(), '전제: 저장된 직전 설정이 없다').toBeNull();
+    render(<GameScreen />);
+    fireEvent.click(await waitFor(() => screen.getByText('같은 집에서 다시')));
+    const s = useGameStore.getState().state!;
+    expect(s.year).toBe(1);
+    expect(s.parents).toEqual(PARENTS);
+  });
+
+  // 음성 짝 — 부모가 망가진 병리적 세이브에서는 누를 것을 그리지 않는다.
+  it('부모가 망가진 세이브면 재시작 버튼이 없다 (나가는 길은 남는다)', async () => {
+    const state = endedState();
+    (state as unknown as { parents: unknown }).parents = ['strict'];
+    useGameStore.setState({ state, runDelta: null, npcActivityMap: {} });
     render(<GameScreen />);
     await waitFor(() => screen.getByText('타이틀로'));
     expect(screen.queryByText('같은 집에서 다시')).toBeNull();

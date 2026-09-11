@@ -170,12 +170,16 @@ export function ArchiveScreen({ onBack, onStartNewRun }: { onBack: () => void; o
         </div>
       </section>
 
-      {/* 기록실에서 새 판을 출발시키는 흐름 — 여기까지 온 사람은 "못 본 이야기"를 방금 봤다. */}
-      <button className="btn btn-primary" onClick={onStartNewRun}>
-        새 학창시절 시작하기
-        <span className="btn__sub">아직 못 본 이야기를 만나러</span>
-      </button>
-      <button className="btn btn-secondary" onClick={onBack}>돌아가기</button>
+      {/* 기록실에서 새 판을 출발시키는 흐름 — 여기까지 온 사람은 "못 본 이야기"를 방금 봤다.
+          이 화면은 이번 PR 전까지 하단 버튼이 `돌아가기` 하나여서 간격 규칙이 없었다
+          (`.btn`에는 margin이 없다). 두 개가 되는 순간 0px로 맞붙어 실측으로 드러났다. */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <button className="btn btn-primary" onClick={onStartNewRun}>
+          새 학창시절 시작하기
+          <span className="btn__sub">아직 못 본 이야기를 만나러</span>
+        </button>
+        <button className="btn btn-secondary" onClick={onBack}>돌아가기</button>
+      </div>
     </div>
   );
 }

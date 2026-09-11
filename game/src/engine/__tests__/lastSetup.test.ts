@@ -55,6 +55,8 @@ describe('lastSetup — 손상값은 전부 null (부분 복구 금지)', () => 
     ['기억이 3개', { gender: 'male', parents: ['strict', 'emotional', 'wealth'], useReducedRecovery: false }],
     ['기억이 배열이 아님', { gender: 'male', parents: 'strict', useReducedRecovery: false }],
     ['모르는 강점', { gender: 'male', parents: ['strict', 'nonexistent'], useReducedRecovery: false }],
+    // 선택 UI의 toggle이 만들 수 없는 조합 — 통과시키면 "같은 집"이 강점 1개짜리 집이 된다.
+    ['같은 강점 2개', { gender: 'male', parents: ['strict', 'strict'], useReducedRecovery: false }],
   ];
   for (const [label, value] of cases) {
     it(label, () => {

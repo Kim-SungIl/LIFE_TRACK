@@ -23,8 +23,16 @@ export interface LastSetup {
   useReducedRecovery: boolean;
 }
 
-const GENDERS: readonly string[] = ['male', 'female'];
-const STRENGTHS: readonly string[] = ['wealth', 'info', 'resilience', 'emotional', 'freedom', 'strict'];
+const GENDERS = ['male', 'female'] as const satisfies readonly Gender[];
+const STRENGTHS = ['wealth', 'info', 'resilience', 'emotional', 'freedom', 'strict'] as const satisfies readonly ParentStrength[];
+
+// **강점을 하나 추가하면 여기서 tsc가 막는다.** 이 배열은 ParentStrength 유니언의 손 사본이라,
+// 검증용이라는 이유로 누락되면 그 강점을 고른 사람에게서만 입구가 조용히 사라진다
+// (읽기가 null을 내고 화면이 평소 흐름으로 접히므로 에러도 안 난다).
+// never가 아니면 "유니언에는 있는데 이 배열엔 없는 값"이 있다는 뜻이다.
+type MissingStrength = Exclude<ParentStrength, (typeof STRENGTHS)[number]>;
+const _allStrengthsListed: MissingStrength extends never ? true : never = true;
+void _allStrengthsListed;
 
 /**
  * 새 판이 시작될 때 기록한다. 호출 지점은 store.startGame 한 곳 —
@@ -53,12 +61,17 @@ export function loadLastSetup(): LastSetup | null {
     const parsed: unknown = JSON.parse(raw);
     if (!parsed || typeof parsed !== 'object') return null;
     const o = parsed as Record<string, unknown>;
-    if (typeof o.gender !== 'string' || !GENDERS.includes(o.gender)) return null;
+    if (typeof o.gender !== 'string' || !(GENDERS as readonly string[]).includes(o.gender)) return null;
     const p = o.parents;
     // 길이 2를 요구한다 — createInitialState의 시그니처가 튜플이고, 1개나 3개를 받아
     // 슬라이스하면 플레이어가 고른 적 없는 조합이 만들어진다.
     if (!Array.isArray(p) || p.length !== 2) return null;
-    if (!p.every(v => typeof v === 'string' && STRENGTHS.includes(v))) return null;
+    if (!p.every((v): v is ParentStrength => typeof v === 'string'
+      && (STRENGTHS as readonly string[]).includes(v))) return null;
+    // 같은 강점 2개는 선택 UI가 만들 수 없는 조합이다(toggle이 중복을 막는다).
+    // 조작된 스토리지에서만 나오고, 통과시키면 "같은 집"이라 적힌 화면이
+    // 플레이어가 고른 적 없는 집을 시작한다.
+    if (p[0] === p[1]) return null;
     return {
       gender: o.gender as Gender,
       parents: [p[0], p[1]] as [ParentStrength, ParentStrength],

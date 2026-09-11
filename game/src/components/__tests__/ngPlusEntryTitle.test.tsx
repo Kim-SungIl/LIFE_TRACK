@@ -65,6 +65,12 @@ describe('입구 — 직전 설정이 있는 사람', () => {
     saveLastSetup({ gender: 'male', parents: PARENTS, useReducedRecovery: false });
   });
 
+  // 접힌 입구를 알리는 **유일한** 사전 신호다. 사라지면 두 갈래가 있다는 걸 아무도 모른다.
+  it('"새 게임" 버튼이 두 갈래가 있다는 것을 미리 알린다', () => {
+    render(<TitleScreen />);
+    expect(screen.getByText('같은 집에서 다시 / 처음부터')).toBeTruthy();
+  });
+
   it('"새 게임"을 누르면 두 갈래가 나온다', () => {
     render(<TitleScreen />);
     fireEvent.click(screen.getByText('새 게임'));
@@ -134,6 +140,28 @@ describe('덮어쓰기 확인 — 두 입구가 같은 다이얼로그를 쓴다
     expect(screen.getByText('같은 집에서 다시'), '취소는 두 갈래 화면에 머문다').toBeTruthy();
   });
 
+  // 두 갈래가 같은 다이얼로그를 쓰는데, 테스트가 전부 "같은 집에서 다시"만 눌러서
+  // `handleStart → requestStart('select')` 경로는 어느 테스트도 지나지 않았다.
+  // 그 경로가 확인을 건너뛰도록 바뀌어도 전부 초록이었다(검수 지적).
+  it('"처음부터 고르기"로 고른 경우에도 먼저 묻는다', () => {
+    saveLastSetup({ gender: 'male', parents: PARENTS, useReducedRecovery: false });
+    seedSave({ year: 3, week: 12 });
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('새 게임'));
+    fireEvent.click(screen.getByText('처음부터 고르기'));
+    fireEvent.click(screen.getByLabelText('남자 주인공으로 시작'));
+    fireEvent.click(screen.getByText('기억을 더듬어본다'));
+    const cards = Array.from(document.querySelectorAll<HTMLButtonElement>('button[aria-pressed]'))
+      .filter(c => c.getAttribute('aria-label') === null);
+    fireEvent.click(cards[0]);
+    fireEvent.click(cards[1]);
+    fireEvent.click(screen.getByText('그래, 그런 집이었지'));
+    expect(started(), '묻기 전에 시작하면 진행 중인 판이 사라진다').toBeNull();
+    expect(screen.getByText(/진행 중인 저장이 있어요/)).toBeTruthy();
+    fireEvent.click(screen.getByText('새로 시작'));
+    expect(started()).not.toBeNull();
+  });
+
   it('끝난 판이면 문구가 다르다 ("진행 중"이라고 말하지 않는다)', () => {
     saveLastSetup({ gender: 'male', parents: PARENTS, useReducedRecovery: false });
     seedSave({ phase: 'ending', year: 8, week: 1 });
@@ -179,6 +207,10 @@ describe('기록실에서 새 판을 출발시킨다', () => {
     render(<TitleScreen />);
     fireEvent.click(screen.getByRole('button', { name: /기록실/ }));
     const startBtn = await waitFor(() => screen.getByText('새 학창시절 시작하기'));
+    // 이 화면은 하단 버튼이 하나였어서 간격 규칙이 없었다(`.btn`에 margin이 없다).
+    // 두 개가 되는 순간 0px로 맞붙은 것이 실측으로 드러났다.
+    const column = startBtn.closest('button')!.parentElement!;
+    expect(column.style.gap, '두 버튼이 맞붙으면 경계가 사라진다').toBe('10px');
     fireEvent.click(startBtn);
     expect(screen.getByText('같은 집에서 다시')).toBeTruthy();
   });

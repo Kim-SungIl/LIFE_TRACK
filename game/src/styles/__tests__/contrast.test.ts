@@ -125,8 +125,11 @@ describe('버튼 — 글자가 밝은 배경 위에 얹힌다', () => {
     // ConfirmDialog가 danger일 때 background: var(--red)를 인라인으로 얹는다.
     ['위험 버튼', decl('.btn-primary', 'color'), token('red')],
     // 타이틀 주 버튼은 자체 그라디언트 — 양 끝을 다 본다.
-    ['타이틀 주 버튼 (밝은 끝)', decl('.title-screen .btn-primary', 'color'), '#ee9961'],
-    ['타이틀 주 버튼 (어두운 끝)', decl('.title-screen .btn-primary', 'color'), '#d57443'],
+    // 스코프가 루트(.title-screen)에서 버튼 열 컨테이너(.title-screen__actions)로 옮겨졌다 —
+    // 같은 타이틀 흐름인데 단계마다 루트가 달라(.title-screen / .screen) 여백·최소높이가
+    // 통째로 빠지던 것을 고치면서다. 대비 계산 대상은 그대로 같은 버튼이다.
+    ['타이틀 주 버튼 (밝은 끝)', decl('.title-screen__actions .btn-primary', 'color'), '#ee9961'],
+    ['타이틀 주 버튼 (어두운 끝)', decl('.title-screen__actions .btn-primary', 'color'), '#d57443'],
     // 비활성은 배경이 어두워진다 — 밝은 배경용 잉크를 물려받으면 1.72:1이 된다.
     ['비활성 버튼', decl('.btn-primary:disabled', 'color'), decl('.btn-primary:disabled', 'background')],
   ];

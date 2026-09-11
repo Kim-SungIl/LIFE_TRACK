@@ -8,6 +8,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { webpSrc } from '../engine/assetWebp';
 import { loadArchive } from '../engine/archive';
 import { loadLastSetup } from '../engine/lastSetup';
+import { setBgmTrack } from '../audio/bgm';
 import { runWhenIdle } from '../engine/assetPrefetch';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 
@@ -99,6 +100,13 @@ export function TitleScreen() {
   // 사진 → 단색 fallback → 기록실의 2단 깜빡임이 되어, 깜빡임을 없애려고 만든 fallback이
   // 여기선 깜빡임을 만든다. 미리 받아두면 fallback 프레임 자체가 안 뜬다.
   // 버튼이 없는 사람(첫 플레이어)에겐 받지 않는다 — 그 판엔 영원히 안 쓸 청크다.
+  // **타이틀이 자기 곡을 소유한다.** 예전엔 GameScreen의 언마운트 cleanup(setBgmTrack('main'))
+  // 하나에 의존했는데, 엔딩을 거쳐 나오면 그 cleanup(부모)이 EndingScreen의 복원(자식)보다
+  // **먼저** 돌아서 최종 곡이 학교급 곡으로 덮였다(React는 삭제 시 cleanup을 부모→자식 순으로
+  // 돈다). 마운트 effect는 같은 커밋의 모든 cleanup 뒤에 돌므로 여기서 거는 쪽이 항상 이긴다.
+  // 실측(상태 있는 mock): 수정 전 타이틀 최종 곡 'high' → 수정 후 'main'.
+  useEffect(() => { setBgmTrack('main'); }, []);
+
   const archivePrefetched = useRef(false);
   useEffect(() => {
     if (!hasArchive || archivePrefetched.current) return;
@@ -160,8 +168,11 @@ export function TitleScreen() {
     />
   );
 
-  if (phase === 'new-run' && lastSetup) {
-    const picked = lastSetup.parents.map(id => MEMORIES.find(m => m.id === id)).filter(Boolean);
+  // **`&& lastSetup` 가드를 두지 않는다.** 가드가 빠지면(또는 다른 탭이 키를 지우면)
+  // 어느 분기에도 안 걸려 성별이 null인 기억 선택 화면에 착지하고, 그 화면의 시작 버튼은
+  // 영원히 무반응이다 — 폴백이 안전한 쪽이 아니었다. 대신 "같은 집" 갈래만 조건부로 그린다.
+  if (phase === 'new-run') {
+    const picked = (lastSetup?.parents ?? []).map(id => MEMORIES.find(m => m.id === id)).filter(Boolean);
     return (
       <div className="screen fade-in">
         <div style={{ textAlign: 'center', marginBottom: 20, marginTop: 12 }}>
@@ -172,22 +183,26 @@ export function TitleScreen() {
         </div>
 
         <div className="title-screen__actions">
-          <button className="btn btn-primary" onClick={() => requestStart('lastSetup')}>
-            같은 집에서 다시
-            <span className="btn__sub">
-              {picked.map(m => m!.icon).join(' ')} 지난 판과 같은 부모
-              {lastSetup.useReducedRecovery ? ' · 도전 모드' : ''}
-            </span>
-          </button>
+          {lastSetup && (
+            <>
+              <button className="btn btn-primary" onClick={() => requestStart('lastSetup')}>
+                같은 집에서 다시
+                <span className="btn__sub">
+                  {picked.map(m => m!.icon).join(' ')} 지난 판과 같은 부모
+                  {lastSetup.useReducedRecovery ? ' · 도전 모드' : ''}
+                </span>
+              </button>
 
-          {/* 무엇이 "같은"지 안 보이면 아무도 누르지 않는다 — 고른 기억을 그때의 문장 그대로 보여준다.
-              (선택 화면의 요약 블록과 같은 문장이라 표를 새로 만들지 않는다.) */}
-          <div style={{
-            fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.6,
-            background: 'var(--bg-card)', borderRadius: 12, padding: '10px 14px', marginBottom: 4,
-          }}>
-            {picked.map(m => <div key={m!.id}>{m!.scene}</div>)}
-          </div>
+              {/* 무엇이 "같은"지 안 보이면 아무도 누르지 않는다 — 고른 기억을 그때의 문장 그대로 보여준다.
+                  (선택 화면의 요약 블록과 같은 문장이라 표를 새로 만들지 않는다.) */}
+              <div style={{
+                fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.6,
+                background: 'var(--bg-card)', borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+              }}>
+                {picked.map(m => <div key={m!.id}>{m!.scene}</div>)}
+              </div>
+            </>
+          )}
 
           <button className="btn btn-secondary" onClick={() => setPhase('gender')}>
             처음부터 고르기
