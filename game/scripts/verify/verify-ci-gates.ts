@@ -14,7 +14,7 @@
 //   · `on:`에서 `pull_request` 제거 / `paths-ignore` 추가 — 워크플로가 아예 안 돈다
 //   · 게이트 job에 `strategy.matrix` 0조합 — job이 스킵된다
 //   · **게이트 없는 두 번째 워크플로 파일**로 Pages에 배포
-//   · `"test": "true"` 또는 `vite.config.ts`의 `include` 좁히기 — 1074개가 안 돈다(verify:test-floor 담당)
+//   · `"test": "true"` 또는 `vite.config.ts`의 `include` 좁히기 — 스위트 절반이 안 돈다(verify:test-floor 담당)
 //
 // 요구 목록을 하드코딩하지 않는 이유: 목록을 박아두면 "새 게이트를 만들고 CI에 안 붙이는"
 // **반대 방향**을 못 잡는다. `verify:dist-*` 스크립트 집합과 디스크의 `verify-*.ts` 파일 집합을
