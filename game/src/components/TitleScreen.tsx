@@ -7,6 +7,8 @@ import { Portrait } from './Portrait';
 import { ConfirmDialog } from './ConfirmDialog';
 import { webpSrc } from '../engine/assetWebp';
 import { loadArchive } from '../engine/archive';
+import { loadLastSetup } from '../engine/lastSetup';
+import { setBgmTrack } from '../audio/bgm';
 import { runWhenIdle } from '../engine/assetPrefetch';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 
@@ -57,7 +59,10 @@ const MEMORIES: { id: ParentStrength; scene: string; detail: string; icon: strin
   },
 ];
 
-type Phase = 'title' | 'intro' | 'gender' | 'select' | 'archive';
+// 'new-run' = 새 판의 두 갈래(같은 집 / 처음부터). **첫 화면 버튼을 늘리지 않기 위해**
+// "새 게임" 아래로 접은 단계다 — 처음 온 사람은 이 화면을 아예 보지 않는다(직전 설정이 없으면
+// 곧장 'gender'로 간다).
+type Phase = 'title' | 'intro' | 'gender' | 'select' | 'archive' | 'new-run';
 type Gender = 'male' | 'female';
 
 export function TitleScreen() {
@@ -65,11 +70,17 @@ export function TitleScreen() {
   const [gender, setGender] = useState<Gender | null>(null);
   const [selected, setSelected] = useState<ParentStrength[]>([]);
   const [useReducedRecovery, setUseReducedRecovery] = useState(false); // M6: 도전 모드
-  // 기존 저장 덮어쓰기 확인 — window.confirm 대체(Phase 3)
-  const [showOverwriteConfirm, setShowOverwriteConfirm] = useState(false);
+  // 기존 저장 덮어쓰기 확인 — window.confirm 대체(Phase 3).
+  // 어느 갈래를 확인 중인지도 함께 들고 있다(두 입구가 같은 다이얼로그를 쓴다).
+  const [pendingStart, setPendingStart] = useState<'select' | 'lastSetup' | null>(null);
   const startGame = useGameStore(s => s.startGame);
   const loadSavedGame = useGameStore(s => s.loadSavedGame);
   const savedData = loadFromStorage();
+  // 끝난 판은 "이어하기"가 아니다 — 세이브에 phase='ending'이 그대로 저장돼 있고
+  // (엔딩 진입 때 year++가 되어) 서브라벨이 "8년차 1주차"로 나오던 자리다.
+  const savedFinished = savedData?.state.phase === 'ending';
+  // 직전 판의 시작 설정. 없으면(첫 플레이 / 저장 불가 / 손상) 입구가 평소 흐름으로 접힌다.
+  const lastSetup = loadLastSetup();
   const assetBase = import.meta.env.BASE_URL;
   // 도전 모드는 한 번 엔딩을 본 사람에게만 노출 (신규 유저가 멋모르고 켜는 것 방지)
   const hasCleared = (() => {
@@ -89,6 +100,13 @@ export function TitleScreen() {
   // 사진 → 단색 fallback → 기록실의 2단 깜빡임이 되어, 깜빡임을 없애려고 만든 fallback이
   // 여기선 깜빡임을 만든다. 미리 받아두면 fallback 프레임 자체가 안 뜬다.
   // 버튼이 없는 사람(첫 플레이어)에겐 받지 않는다 — 그 판엔 영원히 안 쓸 청크다.
+  // **타이틀이 자기 곡을 소유한다.** 예전엔 GameScreen의 언마운트 cleanup(setBgmTrack('main'))
+  // 하나에 의존했는데, 엔딩을 거쳐 나오면 그 cleanup(부모)이 EndingScreen의 복원(자식)보다
+  // **먼저** 돌아서 최종 곡이 학교급 곡으로 덮였다(React는 삭제 시 cleanup을 부모→자식 순으로
+  // 돈다). 마운트 effect는 같은 커밋의 모든 cleanup 뒤에 돌므로 여기서 거는 쪽이 항상 이긴다.
+  // 실측(상태 있는 mock): 수정 전 타이틀 최종 곡 'high' → 수정 후 'main'.
+  useEffect(() => { setBgmTrack('main'); }, []);
+
   const archivePrefetched = useRef(false);
   useEffect(() => {
     if (!hasArchive || archivePrefetched.current) return;
@@ -106,24 +124,105 @@ export function TitleScreen() {
     }
   };
 
-  const doStart = () => {
+  // 새 판은 두 갈래로 들어오지만 **진입점은 store.startGame 하나다**.
+  // 두 번째 시작 경로를 만들면 beginRun() 리셋이 한쪽에서 빠진다 — 인자만 다르게 넘긴다.
+  const startFromSelect = () => {
     if (selected.length === 2 && gender) {
       startGame(gender, selected as [ParentStrength, ParentStrength], { useReducedRecovery });
     }
   };
+  const startFromLastSetup = () => {
+    if (!lastSetup) return;
+    startGame(lastSetup.gender, lastSetup.parents, { useReducedRecovery: lastSetup.useReducedRecovery });
+  };
+
+  // 기존 저장이 있으면 무경고로 덮어쓰지 않게 확인 — 데이터 손실 방지(인게임 다이얼로그, Phase 3).
+  const requestStart = (kind: 'select' | 'lastSetup') => {
+    if (savedData) { setPendingStart(kind); return; }
+    if (kind === 'lastSetup') startFromLastSetup(); else startFromSelect();
+  };
+  const runPendingStart = () => {
+    if (pendingStart === 'lastSetup') startFromLastSetup(); else startFromSelect();
+  };
 
   const handleStart = () => {
-    if (selected.length === 2 && gender) {
-      // 기존 저장이 있으면 새 게임이 무경고로 덮어쓰지 않게 확인 — 데이터 손실 방지(인게임 다이얼로그, Phase 3).
-      if (savedData) { setShowOverwriteConfirm(true); return; }
-      doStart();
-    }
+    if (selected.length === 2 && gender) requestStart('select');
   };
+
+  // "새 게임"이 가는 곳. 직전 설정이 없으면 두 갈래를 보여줄 이유가 없다.
+  const goNewRun = () => setPhase(lastSetup ? 'new-run' : 'gender');
+
+  // 두 입구(select · new-run)가 같은 다이얼로그를 쓴다. 끝난 판이면 문구가 달라진다 —
+  // "진행 중인 저장"이라고 말하면 거짓이고, 실제로 잃는 것은 그 판의 엔딩을 다시 볼 기회다.
+  const overwriteDialog = pendingStart && (
+    <ConfirmDialog
+      title="새 게임을 시작할까요?"
+      message={savedFinished
+        ? '지난 판의 엔딩이 저장돼 있어요.\n새로 시작하면 그 엔딩은 다시 볼 수 없어요.\n(기록실의 이야기는 그대로 남습니다.)'
+        : '진행 중인 저장이 있어요.\n새 게임을 시작하면 기존 저장은 삭제됩니다.'}
+      confirmLabel="새로 시작"
+      cancelLabel="취소"
+      danger
+      onConfirm={runPendingStart}
+      onCancel={() => setPendingStart(null)}
+    />
+  );
+
+  // **`&& lastSetup` 가드를 두지 않는다.** 가드가 빠지면(또는 다른 탭이 키를 지우면)
+  // 어느 분기에도 안 걸려 성별이 null인 기억 선택 화면에 착지하고, 그 화면의 시작 버튼은
+  // 영원히 무반응이다 — 폴백이 안전한 쪽이 아니었다. 대신 "같은 집" 갈래만 조건부로 그린다.
+  if (phase === 'new-run') {
+    const picked = (lastSetup?.parents ?? []).map(id => MEMORIES.find(m => m.id === id)).filter(Boolean);
+    return (
+      <div className="screen fade-in">
+        <div style={{ textAlign: 'center', marginBottom: 20, marginTop: 12 }}>
+          <div style={{ fontSize: '1.05rem', fontWeight: 600 }}>다시 시작하기</div>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: 6 }}>
+            어느 집에서 시작할까요?
+          </div>
+        </div>
+
+        <div className="title-screen__actions">
+          {lastSetup && (
+            <>
+              <button className="btn btn-primary" onClick={() => requestStart('lastSetup')}>
+                같은 집에서 다시
+                <span className="btn__sub">
+                  {picked.map(m => m!.icon).join(' ')} 지난 판과 같은 부모
+                  {lastSetup.useReducedRecovery ? ' · 도전 모드' : ''}
+                </span>
+              </button>
+
+              {/* 무엇이 "같은"지 안 보이면 아무도 누르지 않는다 — 고른 기억을 그때의 문장 그대로 보여준다.
+                  (선택 화면의 요약 블록과 같은 문장이라 표를 새로 만들지 않는다.) */}
+              <div style={{
+                fontSize: '0.72rem', color: 'var(--text-secondary)', lineHeight: 1.6,
+                background: 'var(--bg-card)', borderRadius: 12, padding: '10px 14px', marginBottom: 10,
+              }}>
+                {picked.map(m => <div key={m!.id}>{m!.scene}</div>)}
+              </div>
+            </>
+          )}
+
+          <button className="btn btn-secondary" onClick={() => setPhase('gender')}>
+            처음부터 고르기
+            <span className="btn__sub">성별과 기억을 새로 고릅니다</span>
+          </button>
+
+          <button className="btn btn-secondary" onClick={() => setPhase('title')}>
+            돌아가기
+          </button>
+        </div>
+
+        {overwriteDialog}
+      </div>
+    );
+  }
 
   if (phase === 'archive') {
     return (
       <Suspense fallback={<ScreenChunkFallback />}>
-        <ArchiveScreen onBack={() => setPhase('title')} />
+        <ArchiveScreen onBack={() => setPhase('title')} onStartNewRun={goNewRun} />
       </Suspense>
     );
   }
@@ -184,20 +283,32 @@ export function TitleScreen() {
         <div className="title-screen__actions">
         {savedData && (
           <>
-            <button className="btn btn-primary" onClick={() => loadSavedGame()}>
-              이어하기
-              <span className="btn__sub">{savedData.state.year}년차 {savedData.state.week}주차</span>
+            {/* 끝난 판은 이어갈 것이 없다. 기능은 남기고 이름만 바로잡는다 —
+                엔딩은 이 게임의 최대 강점이라 다시 볼 값이 있고(5그룹 논의), 세이브를 지우는
+                쪽은 되돌릴 수 없다. year 표기를 빼는 이유: 엔딩 시점 state.year는 8이다. */}
+            <button
+              className={`btn ${savedFinished ? 'btn-secondary' : 'btn-primary'}`}
+              onClick={() => loadSavedGame()}
+            >
+              {savedFinished ? '엔딩 다시 보기' : '이어하기'}
+              <span className="btn__sub">
+                {savedFinished
+                  ? '지난 판의 마지막 화면'
+                  : `${savedData.state.year}년차 ${savedData.state.week}주차`}
+              </span>
             </button>
             <div className="title-screen__save-meta">
               {new Date(savedData.savedAt).toLocaleString('ko-KR')} 저장됨
             </div>
           </>
         )}
+          {/* 끝난 판만 있는 사람에게 1급 동작은 "다시 하기"다 — 그때 이어하기는 회상이 된다. */}
           <button
-            className={`btn ${savedData ? 'btn-secondary' : 'btn-primary'}`}
-            onClick={() => setPhase('gender')}
+            className={`btn ${savedData && !savedFinished ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={goNewRun}
           >
             새 게임
+            {lastSetup && <span className="btn__sub">같은 집에서 다시 / 처음부터</span>}
           </button>
           {/* 기록실은 쌓인 게 있는 사람에게만 — 첫 플레이어에게 빈 목록을 권하지 않는다.
               완주가 조건이 아니다(중도에 그만둔 판의 이야기도 적립되므로). 도전 모드 노출은
@@ -390,17 +501,7 @@ export function TitleScreen() {
         </button>
       </div>
 
-      {showOverwriteConfirm && (
-        <ConfirmDialog
-          title="새 게임을 시작할까요?"
-          message={'진행 중인 저장이 있어요.\n새 게임을 시작하면 기존 저장은 삭제됩니다.'}
-          confirmLabel="새로 시작"
-          cancelLabel="취소"
-          danger
-          onConfirm={doStart}
-          onCancel={() => setShowOverwriteConfirm(false)}
-        />
-      )}
+      {overwriteDialog}
     </div>
   );
 }

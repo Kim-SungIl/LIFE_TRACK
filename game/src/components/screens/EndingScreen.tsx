@@ -31,6 +31,17 @@ interface EndingScreenProps {
   // 배선을 빠뜨려도 에러 없이 남주 런에 여주 CG가 뜬다. required면 tsc -b가 호출부를 막는다
   // (tsconfig.scripts.json이 src/**/__tests__까지 훑으므로 테스트 호출부도 함께 걸린다).
   gender: Gender;
+  // 다회차 입구. **감정이 가장 높은 자리**라 여기에 두고, 두 콜백 모두 required다 —
+  // 이 화면의 버튼은 오랫동안 `window.location.reload()` 한 줄이어서 아무것도 시작하지
+  // 않았고, optional로 두면 그 상태로 되돌아가도 tsc가 통과한다.
+  //
+  // onRestartSameHome이 **null이 될 수 있는 이유**: 직전 판 설정이 없을 수 있다(저장 불가·손상).
+  // 그때는 버튼을 그리지 않는다 — 눌러도 아무 일 없는 버튼보다 없는 편이 낫다.
+  onRestartSameHome: (() => void) | null;
+  onExitToTitle: () => void;
+  // 도전 모드(자연 회복 감소)도 함께 물려받는다는 사실을 밝힌다. 타이틀 입구는 이미 밝히는데
+  // 여기만 침묵하면 같은 동작이 자리마다 다른 것을 말하는 셈이다.
+  restartsChallengeMode?: boolean;
 }
 
 const YEAR_LABELS = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
@@ -49,7 +60,7 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
-export function EndingScreen({ ending, track, stats, parents, burnoutCount, money, moneySpentByYear, moneyBlockedWeeksByYear, bgProps, runDelta, gender }: EndingScreenProps) {
+export function EndingScreen({ ending, track, stats, parents, burnoutCount, money, moneySpentByYear, moneyBlockedWeeksByYear, bgProps, runDelta, gender, onRestartSameHome, onExitToTitle, restartsChallengeMode }: EndingScreenProps) {
   // 7년 돈 회고 — 구세이브(배열 없음)면 null이라 줄을 아예 그리지 않는다.
   // 판정은 궤적(지출·미달성)으로 하고, 잔액은 문장에 얹는 값으로만 쓴다.
   const moneyTraj = moneyTrajectoryLifetime({ moneySpentByYear, moneyBlockedWeeksByYear });
@@ -301,8 +312,22 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
         {/* 다회차 유도 — 막연한 "다른 길은 어땠을까?" 대신 실제로 남아 있는 것을 이름으로 가리킨다 */}
         <RunArchiveSummary runDelta={runDelta} />
 
-        <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={() => window.location.reload()}>
-          다시 시작하기
+        {/* 예전엔 이 자리가 `window.location.reload()`였다 — 라벨은 "다시 시작하기"인데
+            아무것도 시작하지 않고 타이틀로 되돌아갔고, 세이브는 phase='ending'으로 남아
+            거기서 "이어하기"를 누르면 이 화면으로 다시 들어왔다. */}
+        {onRestartSameHome && (
+          <button className="btn btn-primary" style={{ maxWidth: 280 }} onClick={onRestartSameHome}>
+            같은 집에서 다시
+            <span className="btn__sub">
+              같은 부모{restartsChallengeMode ? ' · 도전 모드' : ''}, 다른 7년
+            </span>
+          </button>
+        )}
+        {/* "다시 볼 수 있어요"에 조건을 붙이는 이유: 위 버튼을 누르면 이 엔딩의 세이브를
+            덮어쓴다. 조건 없는 보증문이면 바로 위 버튼이 그 문장을 거짓으로 만든다. */}
+        <button className="btn btn-secondary" style={{ maxWidth: 280 }} onClick={onExitToTitle}>
+          타이틀로
+          <span className="btn__sub">나가면 이 엔딩을 다시 볼 수 있어요</span>
         </button>
       </div>
     </BgWrapper>

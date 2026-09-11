@@ -163,7 +163,7 @@ describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', 
 
   it('첫 판 도중이면 지훈만 남고 미접촉 인물의 이름·초상화·분모가 전부 없다', () => {
     accrue('some-solo-event', []);
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
 
     expect(screen.getByText('지훈')).toBeTruthy();
     for (const name of NEVER_MET_IN_Y1) {
@@ -191,7 +191,7 @@ describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', 
 
   it('만난 사람은 이름과 초상화가 나온다', () => {
     accrue('some-solo-event', ['seoa']);
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
 
     expect(screen.getByText('서아')).toBeTruthy();
     expect(screen.getByAltText('seoa neutral')).toBeTruthy();
@@ -200,21 +200,21 @@ describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', 
   // npcPeak이 비어 있는 아주 오래된 기록에서 이름이 통째로 사라지지 않게 하는 OR 가지.
   it('npcPeak에 없어도 그 사람 이야기를 봤다면 남는다 (레거시 기록)', () => {
     accrue('seoa-onehalf-earphone', []);   // 서아 도달형 — 만나지 않은 채 이벤트만 적립된 상태
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
 
     expect(screen.getByText('서아'), '본 이야기가 있으면 만난 것으로 본다').toBeTruthy();
   });
 
   it('감춘 사람이 있을 때만 힌트가 뜨고, 수는 말하지 않는다', () => {
     accrue('some-solo-event', []);
-    const { unmount } = render(<ArchiveScreen onBack={() => {}} />);
+    const { unmount } = render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     const hint = screen.getByText('아직 이름을 모르는 얼굴들이 있다.');
     expect(hint.textContent, '남은 인원 수가 새면 감춘 의미가 없다').not.toMatch(/\d/);
     unmount();
 
     clearArchive();
     accrue('some-solo-event', INITIAL_NPCS.map(n => n.id));
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     expect(screen.queryByText('아직 이름을 모르는 얼굴들이 있다.'), '전원 만났으면 문구도 없다').toBeNull();
   });
 
@@ -222,12 +222,12 @@ describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', 
   // 지훈뿐인데 7년을 함께할 소꿉친구를 스치기만 한 사람이라 부르게 된다.
   it('이정표 문구는 완주 전에는 뜨지 않고 완주 후에 뜬다', () => {
     accrue('some-solo-event', []);
-    const { unmount } = render(<ArchiveScreen onBack={() => {}} />);
+    const { unmount } = render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     expect(screen.queryByText(/거의 스치기만 한 이름/)).toBeNull();
     unmount();
 
     commitRun(state({ events: [ev('some-solo-event')] }), '수도권 대학');
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     expect(screen.getByText(/거의 스치기만 한 이름/)).toBeTruthy();
   });
   // 이정표 문구가 "감춘 사람의 0%"를 근거로 뜨면, 안 보이는 사람이 있다는 사실이 문구로 새고
@@ -247,7 +247,7 @@ describe('기록실 — 만나지 않은 사람은 이름도 얼굴도 없다', 
       '전제 붕괴: 지훈이 여전히 "스치기만 한" 쪽이라 이 테스트가 아무것도 구분하지 못한다',
     ).toBe(false);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     expect(
       screen.queryByText(/거의 스치기만 한 이름/),
       '보이는 사람은 충분히 봤는데 문구가 떴다 — 감춘 사람의 0%를 세고 있다',
@@ -268,7 +268,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
 
   it('사람 줄을 누르면 앨범이 열리고 목록은 사라진다', () => {
     accrueFirstWeek();
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     expect(screen.getByText('👥 함께한 사람들')).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
@@ -279,7 +279,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
 
   it('학년 행마다 몇 개 중 몇 개인지 보여준다', () => {
     accrueFirstWeek();
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
 
     const y1 = npcAlbum('jihun').find(b => b.key === 'y1')!;
@@ -289,7 +289,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
   // 빈 칸에 그림을 싣는 순간 **안 본 그림을 받아오는** 것이 된다(장당 105KB).
   it('안 본 칸은 이미지를 싣지 않는다', () => {
     const cg = accrueFirstWeek();
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
 
     // 픽스처는 남주판이므로 첫 탭이 남주판이다(dominantGender).
@@ -305,7 +305,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
   // 다시 넣어야 하고, 그 문장은 세계관 어투와 섞여 사무적으로 읽힌다.
   it('칸을 누르면 전면 보기가 열리고 닫기 버튼으로 닫힌다', () => {
     accrueFirstWeek();
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
 
     const tile = screen.getAllByRole('img').find(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''))!;
@@ -323,7 +323,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
   // 배경 탭으로도 닫힌다 — 버튼을 넣었어도 이 길을 없애지 않았음을 잠근다.
   it('전면 보기는 배경을 눌러도 닫힌다', () => {
     accrueFirstWeek();
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     const tile = screen.getAllByRole('img').find(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''))!;
     const title = tile.getAttribute('alt')!;
@@ -340,7 +340,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
   // gender를 상수 'male'로 굳혀도 엔진 테스트는 전부 그린이다.
   it('판본 탭이 두 개 있고, 첫 탭은 실제로 모은 판본이다', () => {
     accrueFirstWeek();   // 픽스처는 남주판
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
 
     const tabs = screen.getAllByRole('tab');
@@ -360,7 +360,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     const cg = loadArchive().cgFiles;
     expect(cg[0], '전제: 여주판 CG가 적립돼야 한다').toMatch(/_f\.png$/);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     expect(screen.getByRole('tab', { name: /여자 주인공/ }).getAttribute('aria-selected'),
       '여주판으로 모았는데 첫 탭이 남주판이다').toBe('true');
@@ -369,7 +369,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
   it('여주 탭으로 바꾸면 남주판으로 채운 칸이 빈 칸이 된다', () => {
     const cg = accrueFirstWeek();
     expect(cg[0], '전제: 픽스처 CG가 남주판 파일이어야 한다').toMatch(/_m\.png$/);
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
 
     const y1 = albumFor('jihun', 'male').find(b => b.key === 'y1')!;
@@ -401,7 +401,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     const cg = loadArchive().cgFiles;
     expect(cg[0], '전제: 여주판 CG가 적립돼야 한다').toMatch(/_f\.png$/);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     // 첫 탭이 여주판이므로 탭 전환 없이 바로 채운 칸이 있다.
     const tile = screen.getAllByRole('img').find(el => !/ neutral$/.test(el.getAttribute('alt') ?? ''))!;
@@ -428,7 +428,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
     expect(npcStoryRows(loadArchive().events).find(r => r.id === 'doyun')!.seen,
       '전제: 도윤 줄이 보여야 앨범 문이 열린다').toBeGreaterThan(0);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /도윤/ }));
     expect(screen.getByRole('tab', { name: /여자 주인공/ }).getAttribute('aria-selected')).toBe('true');
 
@@ -439,7 +439,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
 
   it('돌아가기로 목록으로 복귀한다', () => {
     accrueFirstWeek();
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     fireEvent.click(screen.getByRole('button', { name: '돌아가기' }));
     expect(screen.getByText('👥 함께한 사람들'), '목록으로 못 돌아왔다').toBeTruthy();
@@ -450,7 +450,7 @@ describe('기록실 → 인물 앨범 드릴다운', () => {
 describe('기록실 — 혼자 지나온 것 줄', () => {
   it('그런 장면을 본 적 있으면 줄이 생기고, 누르면 앨범이 열린다', () => {
     accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
 
     const row = screen.getByRole('button', { name: /혼자 지나온 것/ });
     expect(row, 'solo 줄이 없다').toBeTruthy();
@@ -465,7 +465,7 @@ describe('기록실 — 혼자 지나온 것 줄', () => {
     accrueResolvedEvent(state({ events: [ev('first-week')] }));   // 지훈 장면 — solo가 아니다
     expect(soloStoryRow(loadArchive().events).seen, '전제: solo 본 것이 0이어야 한다').toBe(0);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     expect(screen.queryByRole('button', { name: /혼자 지나온 것/ }), '빈 solo 줄이 떴다').toBeNull();
     expect(screen.getByRole('button', { name: /지훈/ }), '사람 줄은 그대로 있어야 한다').toBeTruthy();
   });
@@ -475,7 +475,7 @@ describe('기록실 — 혼자 지나온 것 줄', () => {
   // 줄의 접근명은 그대로라 다른 테스트는 전부 그린이다.
   it('목록의 solo 줄도 초상화가 아니라 엠블럼이다', () => {
     accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
 
     const row = screen.getByRole('button', { name: /혼자 지나온 것/ });
     const img = row.querySelector('img')!;
@@ -491,7 +491,7 @@ describe('기록실 — 혼자 지나온 것 줄', () => {
     const solo = soloStoryRow(loadArchive().events);
     expect(solo.seen, '전제: 본 것이 있어야 바가 찬다').toBeGreaterThan(0);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     const row = screen.getByRole('button', { name: /혼자 지나온 것/ });
     const widths = [...row.querySelectorAll('div')]
       .map(d => (d as HTMLElement).style.width).filter(w => w.endsWith('%'));
@@ -501,7 +501,7 @@ describe('기록실 — 혼자 지나온 것 줄', () => {
 
   it('solo 앨범에는 초상화가 아니라 엠블럼이 뜬다', () => {
     accrueResolvedEvent(state({ events: [ev('suneung-eve')] }));
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /혼자 지나온 것/ }));
 
     const alts = screen.getAllByRole('img').map(el => el.getAttribute('alt') ?? '');
@@ -541,7 +541,7 @@ describe('기록실 줄 ↔ 앨범 숫자', () => {
     const { stories, slots } = doyunAxes();
     expect(slots, '전제: 두 축이 갈리는 인물이어야 이 테스트가 판별한다').not.toBe(stories.total);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     const row = screen.getByRole('button', { name: /도윤/ });
     const shown = (row.textContent ?? '').match(/(\d+)\s*\/\s*(\d+)/);
     expect(shown, `줄에서 수를 못 읽었다: ${row.textContent}`).toBeTruthy();
@@ -565,7 +565,7 @@ describe('기록실 줄 ↔ 앨범 숫자', () => {
     accrueResolvedEvent(state({ events: [ev('doyun-comic-share')] }));
     const { slots } = doyunAxes();
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /도윤/ }));
 
     // 기대값을 남주 칸 수로 잡았으니 실제로 남주 탭이 열렸는지 못박는다(검수 지적).
@@ -582,7 +582,7 @@ describe('기록실 줄 ↔ 앨범 숫자', () => {
     accrueResolvedEvent(state({ events: [ev('sports-day')] }));   // solo · CG 없음
     expect(soloStoryRow(loadArchive().events).seen, '전제: solo 이야기를 봤어야 한다').toBeGreaterThan(0);
 
-    render(<ArchiveScreen onBack={() => {}} />);
+    render(<ArchiveScreen onBack={() => {}} onStartNewRun={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /혼자 지나온 것/ }));
     expect(
       screen.getByText('본 장면들은 그림 없이 지나갔다.'),

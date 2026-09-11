@@ -4,7 +4,7 @@ import { useGameStore, isStorageSaveFailed } from '../engine/store';
 import { josa } from '../engine/korean';
 import { getWeekLabel } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
-import { StatKey, STAT_LABELS } from '../engine/types';
+import { StatKey, STAT_LABELS, type ParentStrength } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
 import { setBgmTrack, type BgmId } from '../audio/bgm';
 import { characterStagePrefixByLevel } from '../engine/characterAssets';
@@ -51,6 +51,7 @@ export function GameScreen() {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
     resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
+    startGame, exitToTitle,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
@@ -67,6 +68,10 @@ export function GameScreen() {
     resolveParentTalkChoice: s.resolveParentTalkChoice,
     setPhase: s.setPhase,
     markMoneyBlockedWeek: s.markMoneyBlockedWeek,
+    // 엔딩 화면의 다회차 입구용. startGame은 새 판의 유일한 진입점이고,
+    // exitToTitle은 **세이브를 남긴 채** 타이틀로 나간다(resetGame과의 차이).
+    startGame: s.startGame,
+    exitToTitle: s.exitToTitle,
   })));
 
   // 뒤로가기/새로고침 방지
@@ -121,9 +126,14 @@ export function GameScreen() {
   }, [playerGender, schoolLevel, isElementarySprite]);
 
   // 학교급이 곡을 고른다. Record라 학교급이 늘면 tsc가 여기를 먼저 막는다.
+  // **엔딩 중에는 손을 뗀다** — 그 화면은 EndingScreen이 회상 테마를 소유한다. 안 비키면
+  // 세션 내 두 번째 엔딩 진입(청크가 이미 캐시돼 자식·부모가 같은 커밋에 마운트)에서
+  // 자식 effect(endingRecall) 뒤에 부모 effect가 돌아 학교급 곡이 회상 테마를 덮는다.
+  // 실측(상태 있는 mock): 수정 전 2회째 엔딩 최종 곡 'high' → 수정 후 'endingRecall'.
   useEffect(() => {
+    if (state?.phase === 'ending') return;
     if (schoolLevel) setBgmTrack(BGM_BY_SCHOOL_LEVEL[schoolLevel]);
-  }, [schoolLevel]);
+  }, [schoolLevel, state?.phase]);
 
   // 타이틀로 나가면(= GameScreen 언마운트) 메인 테마로 되돌린다. 타이틀·기록실엔 학년이 없다.
   // 위 effect의 cleanup으로 합치면 안 된다 — 초→중 전환마다 main을 한 번 거쳐 스케줄러가
@@ -280,6 +290,19 @@ export function GameScreen() {
         bgProps={bgProps}
         runDelta={runDelta}
         gender={state.gender}
+        // **근거는 state다 — 저장된 "직전 판 설정"이 아니다.** state가 곧 지금 끝낸 판이라
+        // 항상 정확하고, `lifetrack_last_setup`이 배포되기 전에 저장한 사람도(이어하기로 완주하면
+        // 그 키가 없다) 기능이 존재하는 바로 그 순간에 입구를 잃지 않는다.
+        // 확인 다이얼로그를 두지 않는 이유: 여기서 덮어쓰는 것은 진행이 아니라 **이미 끝난 판**이고,
+        // 이야기·CG 커버리지는 기록실에 남는다. 감정이 가장 높은 자리에 마찰을 넣지 않는다(5그룹 논의).
+        onRestartSameHome={(() => {
+          const picked: readonly ParentStrength[] = state.parents ?? [];
+          if (picked.length !== 2) return null;   // 부모가 망가진 병리적 세이브
+          const again: [ParentStrength, ParentStrength] = [picked[0], picked[1]];
+          return () => startGame(state.gender, again, { useReducedRecovery: !!state.useReducedRecovery });
+        })()}
+        restartsChallengeMode={!!state.useReducedRecovery}
+        onExitToTitle={exitToTitle}
       />
     );
   } else if (state.currentEvent && state.phase === 'event') {

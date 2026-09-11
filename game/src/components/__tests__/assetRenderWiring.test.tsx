@@ -145,6 +145,8 @@ describe('EndingScreen — 회상 갤러리와 썸네일', () => {
         bgProps={{ bg: getBackground(1, false, 'normal', 8), bgImgError: true, onImgError: () => {} }}
         runDelta={null}
         gender="male"
+        onRestartSameHome={null}
+        onExitToTitle={() => {}}
       />,
     );
   }

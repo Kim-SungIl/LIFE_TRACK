@@ -38,6 +38,8 @@ function renderEnding(stats: Stats) {
       moneyBlockedWeeksByYear={st.moneyBlockedWeeksByYear}
       bgProps={{ bg: getBackground(48, false, 'normal', 7), bgImgError: true, onImgError: vi.fn() }}
       runDelta={null} gender={st.gender}
+      onRestartSameHome={null}
+      onExitToTitle={() => {}}
     />,
   );
   return ending;
