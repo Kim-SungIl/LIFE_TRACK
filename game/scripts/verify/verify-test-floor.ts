@@ -2,8 +2,8 @@
 //
 // 왜 필요한가: 이 리포의 잠금 절반은 vitest이고, deploy.yml은 `npm test` 스텝이 있는지만 본다.
 // 그런데 스텝을 그대로 둔 채 스위트를 죽이는 **한 줄 편집**이 여럿 있다(3자 검수 실측):
-//   · `"test": "true"` — 1059개가 통째로 안 돈다. 모든 게이트가 rc=0
-//   · `vite.config.ts`의 `include`를 한 줄 좁히기 — 93파일 1059개가 50파일 613개로 준다.
+//   · `"test": "true"` — 1074개가 통째로 안 돈다. 모든 게이트가 rc=0
+//   · `vite.config.ts`의 `include`를 한 줄 좁히기 — 93파일 1074개가 50파일 628개로 준다.
 //     `verify:ci-gates`도 `ciGateWiring.test`도 전부 초록이었다
 //   · `vitest run src/engine` / `--passWithNoTests` 같은 범위 축소
 // 스텝의 존재도, 스크립트 본문의 문자열도 이걸 못 잡는다. **실제로 실행된 파일 목록**을 봐야 한다.
