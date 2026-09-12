@@ -41,6 +41,42 @@ function endedState(): GameState {
   return s;
 }
 
+/**
+ * 저장이 죽은 환경(사파리 프라이빗 · 용량 초과)을 만든다. 반환값을 부르면 되돌린다.
+ *
+ * **전역 자체를 갈아끼운다.** 인스턴스의 setItem만 덮는 방식은 환경을 탄다. 실측:
+ * 로컬(Node 25 shim)의 localStorage는 평범한 Object라 메서드 대입이 먹지만, CI(jsdom)의
+ * 것은 진짜 Storage **프록시**라 `localStorage.setItem = fn`이 속성 정의가 아니라
+ * **저장소 키 쓰기**로 처리된다 — 던지지 않고 조용히 통과했다.
+ * 아래 전제 단언이 없었으면 "저장이 멀쩡한 화면"을 보고 초록이 났을 것이다.
+ *
+ * 읽기는 살려 둔다 — 세이브 로드와 튜토리얼 플래그가 돌아야 화면이 정상 렌더된다.
+ */
+function breakStorage(): () => void {
+  const orig = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const mem = new Map<string, string>();
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k !== null) mem.set(k, localStorage.getItem(k) ?? '');
+  }
+  const fake: Storage = {
+    get length() { return mem.size; },
+    key: (i: number) => [...mem.keys()][i] ?? null,
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: () => { throw new Error('QuotaExceededError'); },
+    removeItem: (k: string) => { mem.delete(k); },
+    clear: () => { mem.clear(); },
+  };
+  Object.defineProperty(globalThis, 'localStorage', { value: fake, configurable: true, writable: true });
+  return () => {
+    // own 서술자가 있으면 그대로 되돌리고(로컬·jsdom 둘 다 여기), 없던 환경이라면
+    // 우리가 씌운 그림자를 걷어 프로토타입의 접근자를 되살린다.
+    // 복원이 새면 이 파일의 뒤 테스트가 전부 "저장 죽은" 화면을 보게 된다.
+    if (orig) Object.defineProperty(globalThis, 'localStorage', orig);
+    else delete (globalThis as unknown as Record<string, unknown>).localStorage;
+  };
+}
+
 beforeEach(() => {
   clearArchive();
   localStorage.clear();
@@ -188,10 +224,7 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
   // 그래서 실제로 스토리지를 죽여 놓고 화면 문구를 본다.
   it('스토리지가 죽으면 엔딩 문구가 경고로 바뀐다 (배선까지)', async () => {
     seedSaveAndState();
-    // 인스턴스에 직접 꽂는다 — 이 환경의 localStorage는 Storage.prototype을 타지 않아
-    // spyOn(Storage.prototype)이 조용히 통과한다(실측: 플래그가 안 섰다). archive.test.ts와 같은 방식.
-    const orig = localStorage.setItem.bind(localStorage);
-    localStorage.setItem = () => { throw new Error('QuotaExceeded'); };
+    const restore = breakStorage();
     try {
       // 저장 시도를 한 번 일으켜 플래그를 세운다(자동 저장은 state 변경 구독에서 돈다).
       useGameStore.setState({ state: { ...useGameStore.getState().state! } });
@@ -201,7 +234,7 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
       expect(screen.getByText(/나가면 이 엔딩은 사라져요/)).toBeTruthy();
       expect(screen.queryByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeNull();
     } finally {
-      localStorage.setItem = orig;
+      restore();
     }
   });
 
