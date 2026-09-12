@@ -115,6 +115,67 @@ describe('입구 — 직전 설정이 있는 사람', () => {
   });
 });
 
+// 이 기능이 배포되기 전에 시작한 판에는 lifetrack_last_setup 키가 없다. 그런데도 엔딩 화면은
+// state에서 설정을 뽑아 "같은 집에서 다시"를 띄운다 — **타이틀만 키를 봐서, 같은 사람이 엔딩에서
+// 본 갈래가 타이틀로 나가면 사라졌다.** 두 화면이 서로 다른 말을 하는데 양쪽 테스트는 초록이었다
+// (각자 자기 근거만 확인했다). 여기가 그 나머지 절반이다.
+describe('입구 — 키가 없는 구세이브 (state에서 파생)', () => {
+  it('키가 없어도 세이브가 있으면 두 갈래가 나온다', () => {
+    seedSave();
+    expect(localStorage.getItem('lifetrack_last_setup'), '키가 있으면 이 테스트는 폴백을 안 지난다').toBeNull();
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('새 게임'));
+    expect(screen.getByText('같은 집에서 다시')).toBeTruthy();
+  });
+
+  it('사전 신호도 함께 뜬다 (버튼만 있고 안내가 없으면 아무도 안 들어간다)', () => {
+    seedSave();
+    render(<TitleScreen />);
+    expect(screen.getByText('같은 집에서 다시 / 처음부터')).toBeTruthy();
+  });
+
+  it('세이브의 부모·성별 그대로 시작한다', () => {
+    seedSave();
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('새 게임'));
+    fireEvent.click(screen.getByText('같은 집에서 다시'));
+    fireEvent.click(screen.getByText('새로 시작'));   // 세이브가 있으니 확인을 거친다
+    const s = started();
+    expect(s).not.toBeNull();
+    expect(s!.gender).toBe('male');
+    expect(s!.parents).toEqual(PARENTS);
+    expect(s!.year).toBe(1);
+  });
+
+  // 구세이브가 도전 모드로 진행 중이었다면 그것도 함께 물려받아야 한다 —
+  // 안 물려받으면 화면은 "지난 판과 같은 부모"라면서 다른 난이도로 시작한다.
+  it('세이브의 도전 모드도 물려받는다', () => {
+    seedSave({ useReducedRecovery: true });
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('새 게임'));
+    expect(screen.getByText(/도전 모드/)).toBeTruthy();
+    fireEvent.click(screen.getByText('같은 집에서 다시'));
+    fireEvent.click(screen.getByText('새로 시작'));
+    expect(started()!.useReducedRecovery).toBe(true);
+  });
+
+  // 손상된 키를 부분 복구하는 것과는 다르다 — 통째로 버리고 **다른 온전한 출처**를 쓴다.
+  it('손상된 키는 버리고 세이브에서 뽑는다', () => {
+    localStorage.setItem('lifetrack_last_setup', JSON.stringify({ gender: 'male', parents: ['strict'] }));
+    seedSave();
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('새 게임'));
+    expect(screen.getByText('같은 집에서 다시')).toBeTruthy();
+  });
+
+  // 폴백이 아무 때나 열리면 안 된다: 세이브가 없으면 근거도 없다.
+  it('세이브도 키도 없으면 여전히 접힌다', () => {
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('새 게임'));
+    expect(screen.queryByText('같은 집에서 다시')).toBeNull();
+  });
+});
+
 describe('덮어쓰기 확인 — 두 입구가 같은 다이얼로그를 쓴다', () => {
   it('진행 중 세이브가 있으면 "같은 집에서 다시"도 먼저 묻는다', () => {
     saveLastSetup({ gender: 'male', parents: PARENTS, useReducedRecovery: false });
