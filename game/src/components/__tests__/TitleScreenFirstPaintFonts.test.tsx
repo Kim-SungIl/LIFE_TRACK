@@ -106,6 +106,11 @@ describe('타이틀 첫 페인트 폰트 preload 대상', () => {
     expect(text).toContain('지금까지의 학창시절');
     expect(text).toContain('저장됨');
     expect(text).toContain('주차');
+    // 직전 판 설정이 있는 사람의 표지에는 이 서브라벨이 뜬다(세이브 state에서 파생).
+    // **이 단언이 커버리지를 붙잡는다**: 없으면 서브라벨이 화면에서 사라져도 아래 검사가
+    // 그냥 통과하고, FIRST_PAINT_TEXT의 해당 줄이 무엇도 잠그지 않는 죽은 글자가 된다
+    // (#440이 정확히 그 상태였다 — 픽스처에 설정이 없어 게이트가 이 줄을 못 봤다).
+    expect(text).toContain('같은 집에서 다시 / 처음부터');
     assertScreenCoveredByFirstPaint(text, '세이브·기록실');
   });
 

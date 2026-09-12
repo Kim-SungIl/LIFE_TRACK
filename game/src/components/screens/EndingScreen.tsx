@@ -42,6 +42,10 @@ interface EndingScreenProps {
   // 도전 모드(자연 회복 감소)도 함께 물려받는다는 사실을 밝힌다. 타이틀 입구는 이미 밝히는데
   // 여기만 침묵하면 같은 동작이 자리마다 다른 것을 말하는 셈이다.
   restartsChallengeMode?: boolean;
+  // localStorage 저장 실패 여부(store.isStorageSaveFailed). true면 "나가면 다시 볼 수 있어요"가
+  // **거짓이다** — 세이브가 없거나 낡아서 타이틀의 "엔딩 다시 보기"가 이 엔딩을 못 가져온다.
+  // 나가는 길을 막지는 않는다(막으면 갇힌다). 약속을 경고로 바꿀 뿐이다.
+  saveFailed?: boolean;
 }
 
 const YEAR_LABELS = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
@@ -60,7 +64,7 @@ const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: s
 };
 
 // 7년의 여정을 마친 후 — phase === 'ending'
-export function EndingScreen({ ending, track, stats, parents, burnoutCount, money, moneySpentByYear, moneyBlockedWeeksByYear, bgProps, runDelta, gender, onRestartSameHome, onExitToTitle, restartsChallengeMode }: EndingScreenProps) {
+export function EndingScreen({ ending, track, stats, parents, burnoutCount, money, moneySpentByYear, moneyBlockedWeeksByYear, bgProps, runDelta, gender, onRestartSameHome, onExitToTitle, restartsChallengeMode, saveFailed }: EndingScreenProps) {
   // 7년 돈 회고 — 구세이브(배열 없음)면 null이라 줄을 아예 그리지 않는다.
   // 판정은 궤적(지출·미달성)으로 하고, 잔액은 문장에 얹는 값으로만 쓴다.
   const moneyTraj = moneyTrajectoryLifetime({ moneySpentByYear, moneyBlockedWeeksByYear });
@@ -327,7 +331,14 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
             덮어쓴다. 조건 없는 보증문이면 바로 위 버튼이 그 문장을 거짓으로 만든다. */}
         <button className="btn btn-secondary" style={{ maxWidth: 280 }} onClick={onExitToTitle}>
           타이틀로
-          <span className="btn__sub">나가면 이 엔딩을 다시 볼 수 있어요</span>
+          {/* opacity를 1로 되돌린다: .btn__sub의 기본 0.82가 걸리면 --red가 카드 배경에서
+              4.07:1로 떨어져 AA(4.5) 아래다. 불투명하면 5.36:1. #417 원칙대로 hue는 그대로 두고
+              명도만 건드린다 — 경고가 본문보다 흐린 것도 말이 안 된다. */}
+          <span className="btn__sub" style={saveFailed ? { color: 'var(--red)', opacity: 1 } : undefined}>
+            {saveFailed
+              ? '\u26a0\ufe0f 저장이 안 되는 환경이라 나가면 이 엔딩은 사라져요'
+              : '나가면 이 엔딩을 다시 볼 수 있어요'}
+          </span>
         </button>
       </div>
     </BgWrapper>

@@ -4,8 +4,9 @@ import { useGameStore, isStorageSaveFailed } from '../engine/store';
 import { josa } from '../engine/korean';
 import { getWeekLabel } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
-import { StatKey, STAT_LABELS, type ParentStrength } from '../engine/types';
+import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
+import { deriveSetup } from '../engine/lastSetup';
 import { setBgmTrack, type BgmId } from '../audio/bgm';
 import { characterStagePrefixByLevel } from '../engine/characterAssets';
 import { getResultDialogue } from '../engine/dialogues';
@@ -295,14 +296,17 @@ export function GameScreen() {
         // 그 키가 없다) 기능이 존재하는 바로 그 순간에 입구를 잃지 않는다.
         // 확인 다이얼로그를 두지 않는 이유: 여기서 덮어쓰는 것은 진행이 아니라 **이미 끝난 판**이고,
         // 이야기·CG 커버리지는 기록실에 남는다. 감정이 가장 높은 자리에 마찰을 넣지 않는다(5그룹 논의).
+        // 검증은 deriveSetup에 있다 — 타이틀의 "같은 집에서 다시"와 **같은 함수**를 써야
+        // 한쪽 입구에만 규칙이 생기지 않는다(구세이브가 엔딩에선 되고 타이틀에선 안 되던 자리).
         onRestartSameHome={(() => {
-          const picked: readonly ParentStrength[] = state.parents ?? [];
-          if (picked.length !== 2) return null;   // 부모가 망가진 병리적 세이브
-          const again: [ParentStrength, ParentStrength] = [picked[0], picked[1]];
-          return () => startGame(state.gender, again, { useReducedRecovery: !!state.useReducedRecovery });
+          const setup = deriveSetup(state);   // null = 부모가 망가진 병리적 세이브
+          if (!setup) return null;
+          return () => startGame(setup.gender, setup.parents, { useReducedRecovery: setup.useReducedRecovery });
         })()}
         restartsChallengeMode={!!state.useReducedRecovery}
         onExitToTitle={exitToTitle}
+        // 저장이 죽은 환경에서는 "나가면 다시 볼 수 있어요"가 거짓이다(주간 화면의 경고 배너와 같은 근거).
+        saveFailed={isStorageSaveFailed()}
       />
     );
   } else if (state.currentEvent && state.phase === 'event') {
