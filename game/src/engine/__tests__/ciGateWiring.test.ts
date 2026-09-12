@@ -56,8 +56,10 @@ describe('CI 게이트 배선', () => {
 
   it('전제: 실제 워크플로가 파싱된다 (job 3개 · build 스텝 다수 · 트리거 2종)', () => {
     const { jobs } = auditRepo();
-    expect(jobs.map(j => j.name)).toEqual(['build', 'content-verify', 'deploy']);
-    expect(jobs[0].runs.length).toBeGreaterThan(5);
+    // **부분집합으로 본다** — 정확 배열로 두면 무해한 job을 하나 추가하는 정당한 편집이 깨진다
+    // (게이트 스크립트는 부분집합인데 테스트만 정확 일치라 서로 모순이었다, 3차 검수 실측).
+    for (const need of ['build', 'content-verify', 'deploy']) expect(jobs.map(j => j.name)).toContain(need);
+    expect(jobs.find(j => j.name === 'build')!.runs.length).toBeGreaterThan(5);
     expect(auditRepo().problems).toEqual([]);
   });
 
@@ -78,6 +80,10 @@ describe('CI 게이트 배선', () => {
     ['build job 레벨 strategy', '  build:', '  build:\n    strategy:\n      matrix:\n        node: []', ['job 무력화']],
     ['content-verify job 레벨 if', '  content-verify:', '  content-verify:\n    if: false', ['job 무력화']],
     ['deploy job if: always()', "    if: github.event_name == 'push'", '    if: always()', ['배포 의존 무효화']],
+    ['deploy job if: Always() (대소문자)', "    if: github.event_name == 'push'", '    if: Always()', ['배포 의존 무효화']],
+    ['deploy job if: failure()', "    if: github.event_name == 'push'", '    if: failure()', ['배포 의존 무효화']],
+    ['deploy job if: cancelled()', "    if: github.event_name == 'push'", '    if: cancelled()', ['배포 의존 무효화']],
+    ['deploy.needs에서 build 제거', 'needs: [build, content-verify]', 'needs: [content-verify]', ['배포 의존 누락']],
     ['deploy.needs에서 content-verify 제거', 'needs: [build, content-verify]', 'needs: [build]', ['배포 의존 누락']],
   ])('%s는 잡힌다', (_label, from, to, kinds) => {
     expect(WF).toContain(from);
@@ -90,14 +96,23 @@ describe('CI 게이트 배선', () => {
       .toEqual(['트리거 소실']);
     expect(auditTriggers(parseTriggers(WF.replace('  push:\n', "  push:\n    paths-ignore: ['**']\n"))).map(p => p.kind))
       .toEqual(['트리거 무력화']);
+    // 이름만 남기고 브랜치를 바꾸면 유효한 YAML인 채로 main 검증이 사라진다.
+    expect(auditTriggers(parseTriggers(WF.replace('  push:\n    branches: [main]', '  push:\n    branches: [never]'))).map(p => p.kind))
+      .toEqual(['트리거 무력화']);
   });
 
   it('게이트 없는 두 번째 배포 워크플로를 잡는다', () => {
     const main = { name: 'deploy.yml', src: WF };
     expect(auditOtherWorkflows([main])).toEqual([]);
-    expect(auditOtherWorkflows([main, { name: 'zz.yml', src: '- uses: actions/deploy-pages@v4' }]).map(p => p.kind))
+    const other = (uses: string) => ({ name: 'zz.yml', src: `jobs:\n  s:\n    steps:\n      - uses: ${uses}\n` });
+    expect(auditOtherWorkflows([main, other('actions/deploy-pages@v4')]).map(p => p.kind)).toEqual(['우회 배포 경로']);
+    // YAML 이스케이프로 은폐해도, job 레벨 uses로 숨겨도 잡는다. 원문 문자열 검색이면 둘 다 샌다.
+    expect(auditOtherWorkflows([main, other('"actions/deploy\\u002dpages@v4"')]).map(p => p.kind)).toEqual(['우회 배포 경로']);
+    expect(auditOtherWorkflows([main, { name: 'zz.yml', src: 'jobs:\n  s:\n    uses: actions/deploy-pages@v4\n' }]).map(p => p.kind))
       .toEqual(['우회 배포 경로']);
-    expect(auditOtherWorkflows([main, { name: 'zz.yml', src: '- run: echo hi' }])).toEqual([]);
+    // 반대로 주석의 문자열과 업로드 전용 액션은 오탐이면 안 된다.
+    expect(auditOtherWorkflows([main, { name: 'zz.yml', src: '# actions/deploy-pages@v4\njobs:\n  s:\n    steps:\n      - run: echo hi\n' }])).toEqual([]);
+    expect(auditOtherWorkflows([main, other('actions/upload-pages-artifact@v3')])).toEqual([]);
   });
 
   it('스크립트 본문이 하는 일이 바뀌면 잡는다', () => {
@@ -105,12 +120,21 @@ describe('CI 게이트 배선', () => {
       lint: 'eslint . --max-warnings 0',
       test: 'rm -f node_modules/.tmp/vitest-report.json && vitest run --reporter=json --outputFile.json=node_modules/.tmp/vitest-report.json',
       'build:release': 'GEN_WEBP=1 tsc -b && vite build',
-      'verify:ci': 'tsx scripts/verify/verify-a.ts && tsx scripts/verify/verify-b.ts',
+      'verify:ci': 'tsx scripts/verify/run-chain.ts',
     };
     expect(auditScripts(ok)).toEqual([]);
     expect(auditScripts({ ...ok, lint: 'eslint .' }).map(p => p.kind)).toEqual(['스크립트 내용 결손']);
     expect(auditScripts({ ...ok, 'build:release': 'GEN_WEBP=1 vite build' }).map(p => p.kind)).toEqual(['스크립트 내용 결손']);
-    expect(auditScripts({ ...ok, 'verify:ci': 'tsx scripts/verify/verify-a.ts ; tsx scripts/verify/verify-b.ts' }).map(p => p.kind))
-      .toEqual(['체인 무력화']);
+    // 토큰이 "들어 있나"가 아니라 **그 명령이 실행되나**를 봐야 한다 — echo가 통과했었다.
+    expect(auditScripts({ ...ok, lint: 'echo eslint . --max-warnings 0' }).map(p => p.kind)).toEqual(['스크립트 내용 결손']);
+    expect(auditScripts({ ...ok, lint: 'eslint . --max-warnings 0 || true' }).map(p => p.kind)).toEqual(['스크립트 무력화']);
+    // 게이트 스크립트는 정확한 형태만. 체인은 문자열이 아니라 실행기여야 한다.
+    expect(auditScripts({ ...ok, 'verify:dist-x': 'echo tsx scripts/verify/verify-dist-x.ts' }).map(p => p.kind))
+      .toEqual(['게이트 형태 위반']);
+    expect(auditScripts({ ...ok, 'verify:ci': 'tsx scripts/verify/verify-a.ts && tsx scripts/verify/verify-b.ts' }).map(p => p.kind))
+      .toEqual(['게이트 형태 위반']);
+    // 등호형 플래그와 별칭 한 겹은 정당하다.
+    expect(auditScripts({ ...ok, lint: 'eslint . --max-warnings=0' })).toEqual([]);
+    expect(auditScripts({ ...ok, 'verify:content': 'npm run verify:ci' })).toEqual([]);
   });
 });

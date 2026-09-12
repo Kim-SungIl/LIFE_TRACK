@@ -32,7 +32,7 @@ export const REPORT = resolve(ROOT, 'node_modules/.tmp/vitest-report.json');
 /** corpus 퇴화 방지용 바닥. 1차 잠금은 집합 동등성이고 이건 "양쪽 다 0" 만 막는다. */
 const FLOOR_TEST_FILES = 50;
 
-export interface Report { numTotalTests?: number; numFailedTests?: number; testResults?: { name?: string }[] }
+export interface Report { numTotalTests?: number; numPassedTests?: number; numFailedTests?: number; numPendingTests?: number; numTodoTests?: number; testResults?: { name?: string }[] }
 export interface Problem { kind: string; detail: string }
 
 /** 디스크의 테스트 파일 — vite.config.ts의 include와 같은 모양이어야 한다. */
@@ -62,11 +62,26 @@ export function auditFloor(report: Report | null, diskFiles: readonly string[]):
   for (const f of ran) {
     if (!disk.includes(f)) problems.push({ kind: '유령 실행', detail: `리포트에 ${f}가 있는데 디스크에 없다 — 리포트가 이번 실행의 것이 아니다` });
   }
-  if ((report.numTotalTests ?? 0) <= 0) {
+  const total = report.numTotalTests ?? 0;
+  const passed = report.numPassedTests ?? 0;
+  const failed = report.numFailedTests ?? 0;
+  const pending = report.numPendingTests ?? 0;
+  const todo = report.numTodoTests ?? 0;
+
+  if (total <= 0) {
     problems.push({ kind: '테스트 0건', detail: `실행된 테스트가 0건이다 — 파일은 잡혔는데 안이 비었다` });
   }
-  if ((report.numFailedTests ?? 0) > 0) {
-    problems.push({ kind: '실패 잔존', detail: `실패 ${report.numFailedTests}건인데 npm test가 통과로 넘어왔다` });
+  if (failed > 0) {
+    problems.push({ kind: '실패 잔존', detail: `실패 ${failed}건인데 npm test가 통과로 넘어왔다` });
+  }
+  // **`numTotalTests`는 실행 수가 아니라 발견 수다.** `vitest run -t '<아무것도 안 맞는 패턴>'` 한 줄이면
+  // 전부 pending으로 스킵되는데 총수·파일 집합·rc가 전부 그대로라 이 게이트가 통과했다(3차 검수 실측).
+  // 파일별 status도 `passed`로 나오므로 파일 상태를 봐도 안 잡힌다 — **세어서** 맞춰야 한다.
+  if (pending > 0 || todo > 0) {
+    problems.push({ kind: '스킵 잔존', detail: `pending ${pending}건 · todo ${todo}건이 스킵됐다 — \`-t\` 필터나 \`.skip\`으로 실행이 잘렸다` });
+  }
+  if (passed + failed !== total) {
+    problems.push({ kind: '실행 수 불일치', detail: `발견 ${total}건인데 실제로 돈 것은 ${passed + failed}건이다(통과 ${passed} + 실패 ${failed})` });
   }
   return problems;
 }
@@ -86,16 +101,21 @@ export const SELF_CHECK_COUNT: number = (() => {
     }
   };
   const files = Array.from({ length: 60 }, (_, i) => resolve(ROOT, `src/x/__tests__/f${i}.test.ts`));
-  const ok: Report = { numTotalTests: 600, numFailedTests: 0, testResults: files.map(name => ({ name })) };
+  const ok: Report = { numTotalTests: 600, numPassedTests: 600, numFailedTests: 0, numPendingTests: 0, numTodoTests: 0, testResults: files.map(name => ({ name })) };
   const kinds = (r: Report | null, disk: readonly string[] = files) => auditFloor(r, disk).map(p => p.kind);
 
   check('정합', kinds(ok), []);
   check('리포트 없음(test가 vitest를 안 돌렸다)', kinds(null), ['리포트 없음']);
   check('include 좁힘 — 실행 파일이 준다', kinds({ ...ok, testResults: files.slice(0, 40).map(name => ({ name })) }), Array(20).fill('미실행 테스트'));
   check('리포트가 stale — 디스크에 없는 파일', kinds({ ...ok, testResults: [...files.map(name => ({ name })), { name: resolve(ROOT, 'src/x/__tests__/gone.test.ts') }] }), ['유령 실행']);
-  check('파일은 다 잡혔는데 테스트 0건', kinds({ ...ok, numTotalTests: 0 }), ['테스트 0건']);
-  check('실패가 남았는데 통과로 넘어옴', kinds({ ...ok, numFailedTests: 3 }), ['실패 잔존']);
-  check('corpus 퇴화(양쪽 0)', kinds({ numTotalTests: 0, numFailedTests: 0, testResults: [] }, []), ['커버리지 하한 미달', '테스트 0건']);
+  check('파일은 다 잡혔는데 테스트 0건', kinds({ ...ok, numTotalTests: 0, numPassedTests: 0 }), ['테스트 0건']);
+  check('실패가 남았는데 통과로 넘어옴', kinds({ ...ok, numPassedTests: 597, numFailedTests: 3 }), ['실패 잔존']);
+  check('corpus 퇴화(양쪽 0)', kinds({ numTotalTests: 0, numPassedTests: 0, numFailedTests: 0, testResults: [] }, []), ['커버리지 하한 미달', '테스트 0건']);
+  // -t 필터로 전부 스킵 — 총수·파일 집합·rc가 전부 그대로다. 이 게이트의 존재 이유를 정면으로 무너뜨린다.
+  check('전부 스킵(-t 필터)', kinds({ ...ok, numPassedTests: 0, numPendingTests: 600 }), ['스킵 잔존', '실행 수 불일치']);
+  check('일부만 .skip', kinds({ ...ok, numPassedTests: 590, numPendingTests: 10 }), ['스킵 잔존', '실행 수 불일치']);
+  check('todo만 있어도 잡는다', kinds({ ...ok, numPassedTests: 599, numTodoTests: 1 }), ['스킵 잔존', '실행 수 불일치']);
+  check('통과+실패 = 총수면 정당', kinds({ ...ok, numPassedTests: 598, numFailedTests: 0, numTotalTests: 598 }), []);
   return ran;
 })();
 
