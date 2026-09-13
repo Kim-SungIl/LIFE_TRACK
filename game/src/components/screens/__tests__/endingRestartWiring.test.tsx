@@ -139,8 +139,29 @@ describe('EndingScreen — 버튼 존재 계약', () => {
   it('저장이 죽었으면 "다시 볼 수 있다"고 말하지 않는다', () => {
     renderEnding(() => {}, () => {}, true);
     expect(screen.queryByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeNull();
-    expect(screen.getByText(/나가면 이 엔딩은 사라져요/)).toBeTruthy();
+    expect(screen.getByText(/나가면 이 엔딩이 사라질 수 있어요/)).toBeTruthy();
     expect(screen.getByText('타이틀로'), '경고가 나가는 길을 없애면 안 된다').toBeTruthy();
+  });
+
+  // **문구만 잠그면 시각 처리는 통째로 비어 있다.** 뮤테이션 실측: `opacity: 1`을 지워도,
+  // style을 통째로 지워도 1133개 + verify:ci가 전부 초록이었다. 그런데 빠지면 .btn__sub의
+  // 기본 opacity 0.82가 걸려 --red가 카드 배경 4.07:1 / hover 3.63:1로 AA(4.5) 아래다.
+  // contrast.test.ts의 탐지기는 **인라인 소수 opacity만** 보는 정규식이라 "클래스 상속 투명도
+  // + 인라인 색" 조합은 원리상 못 잡는다 — 그래서 여기서 값으로 단언한다.
+  it('경고는 흐려지지 않는다 (AA를 지키는 건 opacity 1이다)', () => {
+    const { getByText } = renderEnding(() => {}, () => {}, true);
+    const span = getByText(/사라질 수 있어요/).closest('span');
+    expect(span, '경고 문구가 btn__sub span 안에 있어야 한다').toBeTruthy();
+    expect(span!.style.opacity, '.btn__sub 기본 0.82가 걸리면 AA 미달이다').toBe('1');
+    expect(span!.style.color, 'hue는 유지한다 — 경고색은 --red다').toContain('--red');
+  });
+
+  // 음성 짝 — 평상시 문구까지 빨개지면 경고가 경고가 아니게 된다.
+  it('평상시 문구에는 경고 스타일을 입히지 않는다', () => {
+    const { getByText } = renderEnding(() => {}, () => {}, false);
+    const span = getByText(/다시 볼 수 있어요/).closest('span');
+    expect(span!.style.color).toBe('');
+    expect(span!.style.opacity).toBe('');
   });
 
   it('두 버튼이 각자의 콜백을 부른다', () => {
@@ -231,7 +252,7 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
       expect(isStorageSaveFailed(), '전제: 저장이 실패한 상태여야 한다').toBe(true);
       render(<GameScreen />);
       await waitFor(() => screen.getByText('타이틀로'));
-      expect(screen.getByText(/나가면 이 엔딩은 사라져요/)).toBeTruthy();
+      expect(screen.getByText(/나가면 이 엔딩이 사라질 수 있어요/)).toBeTruthy();
       expect(screen.queryByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeNull();
     } finally {
       restore();
@@ -245,7 +266,30 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
     render(<GameScreen />);
     await waitFor(() => screen.getByText('타이틀로'));
     expect(screen.getByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeTruthy();
-    expect(screen.queryByText(/나가면 이 엔딩은 사라져요/)).toBeNull();
+    expect(screen.queryByText(/나가면 이 엔딩이 사라질 수 있어요/)).toBeNull();
+  });
+
+  // **라벨과 동작이 같은 값을 본다.** 예전엔 시작은 deriveSetup을, 라벨은 !!state.useReducedRecovery를
+  // 따로 봐서, 손상값에서 버튼은 "· 도전 모드"라 적혀 있는데 일반 모드가 시작됐다.
+  // 지금은 deriveSetup이 그 값을 거부하므로 **버튼 자체가 없다** — 라벨이 거짓말할 자리가 사라진다.
+  it('도전 모드 값이 손상됐으면 라벨이 거짓말하는 대신 버튼이 없다', async () => {
+    const state = endedState();
+    (state as unknown as { useReducedRecovery: unknown }).useReducedRecovery = 1;
+    useGameStore.setState({ state, runDelta: null, npcActivityMap: {} });
+    render(<GameScreen />);
+    await waitFor(() => screen.getByText('타이틀로'));
+    expect(screen.queryByText('같은 집에서 다시'), '누르면 일반 모드로 시작하면서 "도전 모드"라 적힌 버튼').toBeNull();
+    expect(screen.queryByText(/도전 모드/)).toBeNull();
+  });
+
+  // 레거시 부모 값도 엔딩에서 그대로 통해야 한다(타이틀과 같은 함수를 쓰는지 확인).
+  it('레거시 gene 세이브도 resilience로 펴서 다시 시작한다', async () => {
+    const state = endedState();
+    (state as unknown as { parents: unknown }).parents = ['gene', 'info'];
+    useGameStore.setState({ state, runDelta: null, npcActivityMap: {} });
+    render(<GameScreen />);
+    fireEvent.click(await waitFor(() => screen.getByText('같은 집에서 다시')));
+    expect(useGameStore.getState().state!.parents).toEqual(['resilience', 'info']);
   });
 
   // 음성 짝 — 부모가 망가진 병리적 세이브에서는 누를 것을 그리지 않는다.

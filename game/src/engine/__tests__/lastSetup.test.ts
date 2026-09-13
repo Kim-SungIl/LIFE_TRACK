@@ -53,7 +53,10 @@ describe('lastSetup — 손상값은 전부 null (부분 복구 금지)', () => 
     ['gender 누락', { parents: PARENTS, useReducedRecovery: false }],
     ['기억이 1개', { gender: 'male', parents: ['strict'], useReducedRecovery: false }],
     ['기억이 3개', { gender: 'male', parents: ['strict', 'emotional', 'wealth'], useReducedRecovery: false }],
-    ['기억이 배열이 아님', { gender: 'male', parents: 'strict', useReducedRecovery: false }],
+    // 길이 2짜리 문자열을 쓴다 — 'strict'(길이 6)면 length 검사만으로도 걸려서
+    // Array.isArray 가드를 지워도 통과했다(실측 SURVIVED). 그 가드가 유일한 방어다:
+    // deriveSetup에는 try/catch가 없어서 뚫리면 .every is not a function이 렌더 중에 던져진다.
+    ['기억이 배열이 아님', { gender: 'male', parents: 'ab', useReducedRecovery: false }],
     ['모르는 강점', { gender: 'male', parents: ['strict', 'nonexistent'], useReducedRecovery: false }],
     // 선택 UI의 toggle이 만들 수 없는 조합 — 통과시키면 "같은 집"이 강점 1개짜리 집이 된다.
     ['같은 강점 2개', { gender: 'male', parents: ['strict', 'strict'], useReducedRecovery: false }],
@@ -143,6 +146,30 @@ describe('deriveSetup — 키가 없는 구세이브의 근거', () => {
       .toEqual({ gender: 'male', parents: PARENTS, useReducedRecovery: false });
   });
 
+  // **레거시 별칭.** 게임 로드 경로(migrateLoadedState)는 'gene'을 'resilience'로 펴 주는데
+  // 세이브 파생 경로가 안 펴면, 같은 세이브를 두고 타이틀(정규화 전)과 엔딩(정규화 후)이
+  // 다른 답을 낸다 — 이 PR이 없애려는 결함의 형태 그대로다(3자 검수 3/3 수렴).
+  it('레거시 gene을 resilience로 펴서 읽는다', () => {
+    expect(deriveSetup({ gender: 'male', parents: ['gene', 'info'] }))
+      .toEqual({ gender: 'male', parents: ['resilience', 'info'], useReducedRecovery: false });
+  });
+
+  // 별칭을 편 **뒤에** 중복을 봐야 한다 — 펴기 전에 보면 서로 다른 문자열이라 통과한다.
+  it('gene + resilience는 편 뒤 같은 강점 2개라 거부한다', () => {
+    expect(deriveSetup({ gender: 'male', parents: ['gene', 'resilience'] })).toBeNull();
+  });
+
+  // 어느 쪽으로 접어도 틀린다 — 1을 false로 읽으면 도전 모드가 조용히 꺼지고,
+  // 'false'를 truthy로 읽으면 반대로 켜진다. 판정 불가면 입구를 접는다.
+  const badFlag: [string, unknown][] = [
+    ['숫자 1', 1], ['문자열 true', 'true'], ['문자열 false', 'false'], ['null', null],
+  ];
+  for (const [label, v] of badFlag) {
+    it(`도전 모드가 boolean이 아니면 거부: ${label}`, () => {
+      expect(deriveSetup({ gender: 'male', parents: PARENTS, useReducedRecovery: v })).toBeNull();
+    });
+  }
+
   it('null/undefined는 null', () => {
     expect(deriveSetup(null)).toBeNull();
     expect(deriveSetup(undefined)).toBeNull();
@@ -154,7 +181,7 @@ describe('deriveSetup — 키가 없는 구세이브의 근거', () => {
     ['gender가 이상함', { gender: 'other', parents: PARENTS }],
     ['기억이 1개', { gender: 'male', parents: ['strict'] }],
     ['기억이 3개', { gender: 'male', parents: ['strict', 'emotional', 'wealth'] }],
-    ['기억이 배열이 아님', { gender: 'male', parents: 'strict' }],
+    ['기억이 배열이 아님', { gender: 'male', parents: 'ab' }],
     ['기억 누락', { gender: 'male' }],
     ['모르는 강점', { gender: 'male', parents: ['strict', 'nonexistent'] }],
     ['같은 강점 2개', { gender: 'male', parents: ['strict', 'strict'] }],

@@ -42,9 +42,15 @@ interface EndingScreenProps {
   // 도전 모드(자연 회복 감소)도 함께 물려받는다는 사실을 밝힌다. 타이틀 입구는 이미 밝히는데
   // 여기만 침묵하면 같은 동작이 자리마다 다른 것을 말하는 셈이다.
   restartsChallengeMode?: boolean;
-  // localStorage 저장 실패 여부(store.isStorageSaveFailed). true면 "나가면 다시 볼 수 있어요"가
-  // **거짓이다** — 세이브가 없거나 낡아서 타이틀의 "엔딩 다시 보기"가 이 엔딩을 못 가져온다.
+  // localStorage 저장 실패 여부(store.isStorageSaveFailed). true면 "나가면 다시 볼 수 있어요"를
+  // **보증할 수 없다** — 세이브가 없거나 낡아서 타이틀의 "엔딩 다시 보기"가 이 엔딩을 못 가져올 수 있다.
   // 나가는 길을 막지는 않는다(막으면 갇힌다). 약속을 경고로 바꿀 뿐이다.
+  //
+  // **"사라진다"가 아니라 "사라질 수 있다"인 이유**: 이 플래그는 마지막 저장 *시도*의 실패이지
+  // 이 엔딩의 부재가 아니다. 이미 저장된 엔딩을 다시 열었을 뿐이라면 디스크의 값은 멀쩡하고
+  // exitToTitle도 그걸 안 지운다 — 그 경우엔 "사라진다"가 거짓이 된다(3자 검수 2/3 수렴).
+  // 반대로 "디스크에 엔딩 세이브가 있나"로 판정하려 해도, 저장이 깨진 채 새 판을 돌면 예전 판의
+  // 엔딩 세이브가 남아 그 판정도 틀린다. 확실히 아는 것(저장이 안 되고 있다)만 말한다.
   saveFailed?: boolean;
 }
 
@@ -336,7 +342,7 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
               명도만 건드린다 — 경고가 본문보다 흐린 것도 말이 안 된다. */}
           <span className="btn__sub" style={saveFailed ? { color: 'var(--red)', opacity: 1 } : undefined}>
             {saveFailed
-              ? '\u26a0\ufe0f 저장이 안 되는 환경이라 나가면 이 엔딩은 사라져요'
+              ? '\u26a0\ufe0f 저장이 안 되는 환경이라 나가면 이 엔딩이 사라질 수 있어요'
               : '나가면 이 엔딩을 다시 볼 수 있어요'}
           </span>
         </button>

@@ -13,6 +13,7 @@
 // 아니라 밸런스 파괴다(5그룹 논의 만장일치). npcPeak은 아카이브에 이미 있지만 게임플레이가
 // 읽지 않는 원천 데이터이고, 그 성질을 여기서도 유지한다.
 import type { Gender, ParentStrength } from './types';
+import { normalizeParentStrength } from './stateMigration';
 
 const LAST_SETUP_KEY = 'lifetrack_last_setup';
 
@@ -59,15 +60,20 @@ function validated(gender: unknown, parents: unknown, useReducedRecovery: boolea
   // 길이 2를 요구한다 — createInitialState의 시그니처가 튜플이고, 1개나 3개를 받아
   // 슬라이스하면 플레이어가 고른 적 없는 조합이 만들어진다.
   if (!Array.isArray(parents) || parents.length !== 2) return null;
-  if (!parents.every((v): v is ParentStrength => typeof v === 'string'
+  // **레거시 별칭을 먼저 편다.** 게임을 로드하는 경로는 migrateLoadedState가 이미 펴 주므로,
+  // 여기서 안 펴면 같은 세이브를 두고 타이틀(정규화 전)과 엔딩(정규화 후)이 다른 답을 낸다.
+  // 표는 stateMigration의 LEGACY_PARENT_ALIASES가 SSOT다 — 여기에 사본을 두지 않는다.
+  const normalized = parents.map(v => (typeof v === 'string' ? normalizeParentStrength(v) : v));
+  if (!normalized.every((v): v is ParentStrength => typeof v === 'string'
     && (STRENGTHS as readonly string[]).includes(v))) return null;
   // 같은 강점 2개는 선택 UI가 만들 수 없는 조합이다(toggle이 중복을 막는다).
   // 조작된 스토리지에서만 나오고, 통과시키면 "같은 집"이라 적힌 화면이
-  // 플레이어가 고른 적 없는 집을 시작한다.
-  if (parents[0] === parents[1]) return null;
+  // 플레이어가 고른 적 없는 집을 시작한다. 별칭을 편 **뒤에** 본다 — ['gene','resilience']는
+  // 펴고 나면 같은 강점 2개다.
+  if (normalized[0] === normalized[1]) return null;
   return {
     gender: gender as Gender,
-    parents: [parents[0], parents[1]] as [ParentStrength, ParentStrength],
+    parents: [normalized[0], normalized[1]] as [ParentStrength, ParentStrength],
     useReducedRecovery,
   };
 }
@@ -119,6 +125,11 @@ export function deriveSetup(state: SetupSource | null | undefined): LastSetup | 
   // GameState에서 선택 필드(`useReducedRecovery?: boolean`)이고, 도전 모드 도입 전에 시작한
   // 세이브에는 아예 없다 — 그건 손상이 아니라 "꺼짐"이다. 스토리지 키 쪽은 항상 써 넣으므로
   // 없으면 손상인 것과 정반대다. 규칙이 다른 이유가 여기 있으니 한쪽에 맞추지 말 것.
+  //
+  // **다만 "있는데 boolean이 아닌" 값은 거부한다.** 어느 쪽으로 접어도 틀린다 — `1`을 false로
+  // 읽으면 도전 모드가 조용히 꺼지고, `'false'`를 truthy로 읽으면 반대로 켜진다. 판정할 수
+  // 없는 값이므로 입구를 접는다(평소 흐름으로 되돌아갈 뿐이다).
+  if (state.useReducedRecovery !== undefined && typeof state.useReducedRecovery !== 'boolean') return null;
   return validated(state.gender, state.parents, state.useReducedRecovery === true);
 }
 

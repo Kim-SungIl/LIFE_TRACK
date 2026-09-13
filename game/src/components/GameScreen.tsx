@@ -278,6 +278,8 @@ export function GameScreen() {
     // ===== 엔딩 =====
     screenKey = 'ending';
     screenPace = 'slow';        // 한 판 1회
+    // **한 번만 판정해서 버튼과 라벨이 같이 쓴다.** null = 부모가 망가진 병리적 세이브(버튼 없음).
+    const restartSetup = deriveSetup(state);
     phaseContent = (
       <EndingScreen
         ending={endingData}
@@ -298,12 +300,14 @@ export function GameScreen() {
         // 이야기·CG 커버리지는 기록실에 남는다. 감정이 가장 높은 자리에 마찰을 넣지 않는다(5그룹 논의).
         // 검증은 deriveSetup에 있다 — 타이틀의 "같은 집에서 다시"와 **같은 함수**를 써야
         // 한쪽 입구에만 규칙이 생기지 않는다(구세이브가 엔딩에선 되고 타이틀에선 안 되던 자리).
-        onRestartSameHome={(() => {
-          const setup = deriveSetup(state);   // null = 부모가 망가진 병리적 세이브
-          if (!setup) return null;
-          return () => startGame(setup.gender, setup.parents, { useReducedRecovery: setup.useReducedRecovery });
-        })()}
-        restartsChallengeMode={!!state.useReducedRecovery}
+        //
+        // **라벨과 동작이 같은 값을 본다.** 예전엔 시작은 setup을, 라벨은 !!state.useReducedRecovery를
+        // 따로 봤다 — 손상값 1에서 버튼은 "· 도전 모드"라 적혀 있는데 일반 모드가 시작됐다.
+        // 근거가 둘로 갈리면 라벨이 거짓말한다. 이 PR이 없애려던 병을 diff가 새로 만든 자리였다(3자 검수).
+        onRestartSameHome={restartSetup
+          ? () => startGame(restartSetup.gender, restartSetup.parents, { useReducedRecovery: restartSetup.useReducedRecovery })
+          : null}
+        restartsChallengeMode={!!restartSetup?.useReducedRecovery}
         onExitToTitle={exitToTitle}
         // 저장이 죽은 환경에서는 "나가면 다시 볼 수 있어요"가 거짓이다(주간 화면의 경고 배너와 같은 근거).
         saveFailed={isStorageSaveFailed()}

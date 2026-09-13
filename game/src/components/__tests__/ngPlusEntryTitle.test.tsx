@@ -51,6 +51,15 @@ describe('입구 접힘 — 직전 설정이 없는 사람', () => {
     expect(screen.queryByText('같은 집에서 다시')).toBeNull();
   });
 
+  // **음성 짝.** 서브라벨의 `lastSetup &&` 가드를 지워도 스위트가 전부 초록이었다(실측).
+  // 가드가 빠지면 첫 플레이어의 표지에 "같은 집에서 다시 / 처음부터"가 뜨는데, 눌러 보면
+  // goNewRun이 곧장 'gender'로 보낸다 — 라벨이 없는 갈래를 약속한다.
+  // 폰트 게이트의 toContain은 **사라지는 회귀만** 잡고 과노출은 못 잡는다.
+  it('사전 신호도 뜨지 않는다 (없는 갈래를 약속하지 않는다)', () => {
+    render(<TitleScreen />);
+    expect(screen.queryByText('같은 집에서 다시 / 처음부터')).toBeNull();
+  });
+
   it('손상된 설정도 없는 것으로 취급한다 (부분 복구로 화면을 열지 않는다)', () => {
     localStorage.setItem('lifetrack_last_setup', JSON.stringify({ gender: 'male', parents: ['strict'] }));
     render(<TitleScreen />);
@@ -134,8 +143,11 @@ describe('입구 — 키가 없는 구세이브 (state에서 파생)', () => {
     expect(screen.getByText('같은 집에서 다시 / 처음부터')).toBeTruthy();
   });
 
-  it('세이브의 부모·성별 그대로 시작한다', () => {
-    seedSave();
+  // **픽스처를 Y3으로 심는 이유**: createInitialState 그대로(Y1 1주차)를 심으면 "새 판이
+  // 시작됐다"와 "세이브를 그냥 로드했다"가 구별되지 않는다. 실측 — 이 픽스처가 Y1일 때
+  // startFromLastSetup을 loadSavedGame()으로 바꿔도 이 블록 6개가 전부 통과했다(장식이었다).
+  it('세이브의 부모·성별로 **새 판**이 시작된다 (세이브 로드가 아니다)', () => {
+    seedSave({ year: 3, week: 12 });
     render(<TitleScreen />);
     fireEvent.click(screen.getByText('새 게임'));
     fireEvent.click(screen.getByText('같은 집에서 다시'));
@@ -144,19 +156,21 @@ describe('입구 — 키가 없는 구세이브 (state에서 파생)', () => {
     expect(s).not.toBeNull();
     expect(s!.gender).toBe('male');
     expect(s!.parents).toEqual(PARENTS);
-    expect(s!.year).toBe(1);
+    expect(s!.year, '세이브의 Y3이 그대로면 로드된 것이다').toBe(1);
+    expect(s!.week).toBe(1);
   });
 
   // 구세이브가 도전 모드로 진행 중이었다면 그것도 함께 물려받아야 한다 —
   // 안 물려받으면 화면은 "지난 판과 같은 부모"라면서 다른 난이도로 시작한다.
   it('세이브의 도전 모드도 물려받는다', () => {
-    seedSave({ useReducedRecovery: true });
+    seedSave({ useReducedRecovery: true, year: 3, week: 12 });
     render(<TitleScreen />);
     fireEvent.click(screen.getByText('새 게임'));
     expect(screen.getByText(/도전 모드/)).toBeTruthy();
     fireEvent.click(screen.getByText('같은 집에서 다시'));
     fireEvent.click(screen.getByText('새로 시작'));
     expect(started()!.useReducedRecovery).toBe(true);
+    expect(started()!.year, '로드가 아니라 새 판이어야 한다').toBe(1);
   });
 
   // 손상된 키를 부분 복구하는 것과는 다르다 — 통째로 버리고 **다른 온전한 출처**를 쓴다.
