@@ -44,6 +44,15 @@ jobs:
         working-directory: ./game
         run: npm test
 
+      # 게이트 1c — **그 테스트가 실제로 전부 돌았는가.** 위 스텝은 `npm test`가 있는지만 본다.
+      # 실측(2026-09-11): vite.config.ts의 `include`를 한 줄 좁히면 93파일 1074개가 50파일 628개로 주는데
+      # 전 게이트가 초록이었다. `"test": "true"`도 마찬가지다. 스텝의 존재도 스크립트 본문의
+      # 문자열도 이걸 못 잡는다 — 실행된 파일 목록을 디스크와 대조해야 한다.
+      # 이 스텝이 사라지는 것은 content-verify job의 verify:ci-gates가 잡는다.
+      - name: Verify test coverage floor
+        working-directory: ./game
+        run: npm run verify:test-floor
+
       # 게이트 2 — 타입체크 + 번들 빌드 + 이미지 webp 트랜스코딩 (GEN_WEBP=1)
       # build:release 를 쓰는 이유: 런타임(webpSrc)은 .webp만 요청하는데 일반 build는 png를
       # 그대로 남겨 배포되어, 실서버가 생 png 1.0GB를 서비스하고 .webp는 404가 됐다.
@@ -103,7 +112,14 @@ jobs:
         with:
           path: ./game/dist
 
-  # 게이트 3 — 콘텐츠 회귀 검증 (부모 아크·reach·기억·생일 CG 필수세트·배경 학교급 정합 등 33종)
+  # 게이트 3 — 콘텐츠 회귀 검증 (부모 아크·reach·기억·생일 CG 필수세트·배경 학교급 정합 등).
+  # 종수는 여기 적지 않는다 — verify:ci-gates가 디스크의 verify-*.ts 집합과 체인을 대조해 잠근다.
+  # **이 파일 자체도 34종 중 하나(verify:ci-gates)가 검사한다.** 리포의 잠금은 전부 package.json
+  # 스크립트인데 그걸 부르는 건 이 YAML 한 파일이라, 여기서 스텝을 지우면 아무도 모르는 상태였다.
+  # 요구 목록은 package.json의 verify:dist-* 집합에서 파생되므로, 새 게이트를 만들고 여기에
+  # 안 붙이는 반대 방향도 같이 잡힌다. 위 build job의 `npm test`에서도 같은 판정이 도는데
+  # (src/engine/__tests__/ciGateWiring.test.ts), 이유는 아래 verify:ci 스텝 자체가 지워지는
+  # 경우다 — 한 자리에만 두면 그 자리를 지우는 편집이 통과한다.
   # build와 독립 병렬로 돌되, deploy가 둘 다에 의존한다 (2026-07-13 게이트 승격).
   # 이전엔 PR 체크 전용이었으나 main 직접 push 시 검증 없이 배포되는 구멍이 있어 배포 게이트로 전환.
   content-verify:
