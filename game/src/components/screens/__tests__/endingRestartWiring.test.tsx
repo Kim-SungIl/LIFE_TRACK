@@ -24,7 +24,7 @@ import { GameScreen } from '../../GameScreen';
 import { calculateEnding } from '../../../engine/ending';
 import { getBackground } from '../../../engine/backgrounds';
 import { createInitialState } from '../../../engine/gameEngine';
-import { useGameStore, loadFromStorage } from '../../../engine/store';
+import { useGameStore, loadFromStorage, isStorageSaveFailed } from '../../../engine/store';
 import { saveLastSetup, loadLastSetup } from '../../../engine/lastSetup';
 import { CURRENT_SAVE_VERSION } from '../../../engine/stateMigration';
 import { clearArchive } from '../../../engine/archive';
@@ -41,15 +41,55 @@ function endedState(): GameState {
   return s;
 }
 
+/**
+ * 저장이 죽은 환경(사파리 프라이빗 · 용량 초과)을 만든다. 반환값을 부르면 되돌린다.
+ *
+ * **전역 자체를 갈아끼운다.** 인스턴스의 setItem만 덮는 방식은 환경을 탄다. 실측:
+ * 로컬(Node 25 shim)의 localStorage는 평범한 Object라 메서드 대입이 먹지만, CI(jsdom)의
+ * 것은 진짜 Storage **프록시**라 `localStorage.setItem = fn`이 속성 정의가 아니라
+ * **저장소 키 쓰기**로 처리된다 — 던지지 않고 조용히 통과했다.
+ * 아래 전제 단언이 없었으면 "저장이 멀쩡한 화면"을 보고 초록이 났을 것이다.
+ *
+ * 읽기는 살려 둔다 — 세이브 로드와 튜토리얼 플래그가 돌아야 화면이 정상 렌더된다.
+ */
+function breakStorage(): () => void {
+  const orig = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+  const mem = new Map<string, string>();
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k !== null) mem.set(k, localStorage.getItem(k) ?? '');
+  }
+  const fake: Storage = {
+    get length() { return mem.size; },
+    key: (i: number) => [...mem.keys()][i] ?? null,
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: () => { throw new Error('QuotaExceededError'); },
+    removeItem: (k: string) => { mem.delete(k); },
+    clear: () => { mem.clear(); },
+  };
+  Object.defineProperty(globalThis, 'localStorage', { value: fake, configurable: true, writable: true });
+  return () => {
+    // own 서술자가 있으면 그대로 되돌리고(로컬·jsdom 둘 다 여기), 없던 환경이라면
+    // 우리가 씌운 그림자를 걷어 프로토타입의 접근자를 되살린다.
+    // 복원이 새면 이 파일의 뒤 테스트가 전부 "저장 죽은" 화면을 보게 된다.
+    if (orig) Object.defineProperty(globalThis, 'localStorage', orig);
+    else delete (globalThis as unknown as Record<string, unknown>).localStorage;
+  };
+}
+
 beforeEach(() => {
   clearArchive();
   localStorage.clear();
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  // isStorageSaveFailed()는 모듈 전역이고 **성공 저장으로만** 내려간다. 저장 실패 케이스가
+  // 뒤 테스트의 문구를 조용히 바꾸지 않게, 매번 성공 저장을 한 번 일으켜 되돌린다.
+  useGameStore.setState({ state: endedState(), runDelta: null, npcActivityMap: {} });
   useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
+  localStorage.removeItem('lifetrack_save');
 });
 
 describe('EndingScreen — 버튼 존재 계약', () => {
-  function renderEnding(onRestartSameHome: (() => void) | null, onExitToTitle = () => {}) {
+  function renderEnding(onRestartSameHome: (() => void) | null, onExitToTitle = () => {}, saveFailed = false) {
     const state = endedState();
     return render(
       <EndingScreen
@@ -64,6 +104,7 @@ describe('EndingScreen — 버튼 존재 계약', () => {
         gender={state.gender}
         onRestartSameHome={onRestartSameHome}
         onExitToTitle={onExitToTitle}
+        saveFailed={saveFailed}
       />,
     );
   }
@@ -90,6 +131,37 @@ describe('EndingScreen — 버튼 존재 계약', () => {
   it('"다시 볼 수 있다"는 말에 조건이 붙어 있다', () => {
     renderEnding(() => {});
     expect(screen.getByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeTruthy();
+  });
+
+  // 저장이 죽은 환경(사파리 프라이빗·용량 초과)에서는 세이브가 없거나 낡아서 타이틀의
+  // "엔딩 다시 보기"가 이 엔딩을 못 가져온다. **나가는 길을 막지 않는다** — 막으면 갇힌다.
+  // 대신 약속을 경고로 바꾼다. 이 락이 없으면 화면이 못 지킬 말을 계속 한다.
+  it('저장이 죽었으면 "다시 볼 수 있다"고 말하지 않는다', () => {
+    renderEnding(() => {}, () => {}, true);
+    expect(screen.queryByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeNull();
+    expect(screen.getByText(/나가면 이 엔딩이 사라질 수 있어요/)).toBeTruthy();
+    expect(screen.getByText('타이틀로'), '경고가 나가는 길을 없애면 안 된다').toBeTruthy();
+  });
+
+  // **문구만 잠그면 시각 처리는 통째로 비어 있다.** 뮤테이션 실측: `opacity: 1`을 지워도,
+  // style을 통째로 지워도 1133개 + verify:ci가 전부 초록이었다. 그런데 빠지면 .btn__sub의
+  // 기본 opacity 0.82가 걸려 --red가 카드 배경 4.07:1 / hover 3.63:1로 AA(4.5) 아래다.
+  // contrast.test.ts의 탐지기는 **인라인 소수 opacity만** 보는 정규식이라 "클래스 상속 투명도
+  // + 인라인 색" 조합은 원리상 못 잡는다 — 그래서 여기서 값으로 단언한다.
+  it('경고는 흐려지지 않는다 (AA를 지키는 건 opacity 1이다)', () => {
+    const { getByText } = renderEnding(() => {}, () => {}, true);
+    const span = getByText(/사라질 수 있어요/).closest('span');
+    expect(span, '경고 문구가 btn__sub span 안에 있어야 한다').toBeTruthy();
+    expect(span!.style.opacity, '.btn__sub 기본 0.82가 걸리면 AA 미달이다').toBe('1');
+    expect(span!.style.color, 'hue는 유지한다 — 경고색은 --red다').toContain('--red');
+  });
+
+  // 음성 짝 — 평상시 문구까지 빨개지면 경고가 경고가 아니게 된다.
+  it('평상시 문구에는 경고 스타일을 입히지 않는다', () => {
+    const { getByText } = renderEnding(() => {}, () => {}, false);
+    const span = getByText(/다시 볼 수 있어요/).closest('span');
+    expect(span!.style.color).toBe('');
+    expect(span!.style.opacity).toBe('');
   });
 
   it('두 버튼이 각자의 콜백을 부른다', () => {
@@ -166,6 +238,58 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
     const s = useGameStore.getState().state!;
     expect(s.year).toBe(1);
     expect(s.parents).toEqual(PARENTS);
+  });
+
+  // **prop 계약만으로는 부족하다**: GameScreen이 saveFailed를 안 넘겨도 위 테스트는 초록이다
+  // (prop을 만드는 층의 누락은 prop을 받는 테스트가 원리상 못 잡는다 — #431).
+  // 그래서 실제로 스토리지를 죽여 놓고 화면 문구를 본다.
+  it('스토리지가 죽으면 엔딩 문구가 경고로 바뀐다 (배선까지)', async () => {
+    seedSaveAndState();
+    const restore = breakStorage();
+    try {
+      // 저장 시도를 한 번 일으켜 플래그를 세운다(자동 저장은 state 변경 구독에서 돈다).
+      useGameStore.setState({ state: { ...useGameStore.getState().state! } });
+      expect(isStorageSaveFailed(), '전제: 저장이 실패한 상태여야 한다').toBe(true);
+      render(<GameScreen />);
+      await waitFor(() => screen.getByText('타이틀로'));
+      expect(screen.getByText(/나가면 이 엔딩이 사라질 수 있어요/)).toBeTruthy();
+      expect(screen.queryByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
+  // 양성 짝 — 저장이 멀쩡하면 원래 약속을 그대로 한다(경고가 상시 켜져 있으면 무의미하다).
+  it('저장이 멀쩡하면 원래 약속을 그대로 한다', async () => {
+    seedSaveAndState();
+    expect(isStorageSaveFailed(), '전제: 저장이 성공한 상태여야 한다').toBe(false);
+    render(<GameScreen />);
+    await waitFor(() => screen.getByText('타이틀로'));
+    expect(screen.getByText(/나가면 이 엔딩을 다시 볼 수 있어요/)).toBeTruthy();
+    expect(screen.queryByText(/나가면 이 엔딩이 사라질 수 있어요/)).toBeNull();
+  });
+
+  // **라벨과 동작이 같은 값을 본다.** 예전엔 시작은 deriveSetup을, 라벨은 !!state.useReducedRecovery를
+  // 따로 봐서, 손상값에서 버튼은 "· 도전 모드"라 적혀 있는데 일반 모드가 시작됐다.
+  // 지금은 deriveSetup이 그 값을 거부하므로 **버튼 자체가 없다** — 라벨이 거짓말할 자리가 사라진다.
+  it('도전 모드 값이 손상됐으면 라벨이 거짓말하는 대신 버튼이 없다', async () => {
+    const state = endedState();
+    (state as unknown as { useReducedRecovery: unknown }).useReducedRecovery = 1;
+    useGameStore.setState({ state, runDelta: null, npcActivityMap: {} });
+    render(<GameScreen />);
+    await waitFor(() => screen.getByText('타이틀로'));
+    expect(screen.queryByText('같은 집에서 다시'), '누르면 일반 모드로 시작하면서 "도전 모드"라 적힌 버튼').toBeNull();
+    expect(screen.queryByText(/도전 모드/)).toBeNull();
+  });
+
+  // 레거시 부모 값도 엔딩에서 그대로 통해야 한다(타이틀과 같은 함수를 쓰는지 확인).
+  it('레거시 gene 세이브도 resilience로 펴서 다시 시작한다', async () => {
+    const state = endedState();
+    (state as unknown as { parents: unknown }).parents = ['gene', 'info'];
+    useGameStore.setState({ state, runDelta: null, npcActivityMap: {} });
+    render(<GameScreen />);
+    fireEvent.click(await waitFor(() => screen.getByText('같은 집에서 다시')));
+    expect(useGameStore.getState().state!.parents).toEqual(['resilience', 'info']);
   });
 
   // 음성 짝 — 부모가 망가진 병리적 세이브에서는 누를 것을 그리지 않는다.

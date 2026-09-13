@@ -7,7 +7,7 @@ import { Portrait } from './Portrait';
 import { ConfirmDialog } from './ConfirmDialog';
 import { webpSrc } from '../engine/assetWebp';
 import { loadArchive } from '../engine/archive';
-import { loadLastSetup } from '../engine/lastSetup';
+import { loadLastSetup, deriveSetup } from '../engine/lastSetup';
 import { setBgmTrack } from '../audio/bgm';
 import { runWhenIdle } from '../engine/assetPrefetch';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
@@ -80,7 +80,12 @@ export function TitleScreen() {
   // (엔딩 진입 때 year++가 되어) 서브라벨이 "8년차 1주차"로 나오던 자리다.
   const savedFinished = savedData?.state.phase === 'ending';
   // 직전 판의 시작 설정. 없으면(첫 플레이 / 저장 불가 / 손상) 입구가 평소 흐름으로 접힌다.
-  const lastSetup = loadLastSetup();
+  // **키가 없으면 세이브 state에서 뽑는다.** 이 기능 배포 전에 시작한 판에는 키가 없는데,
+  // 엔딩 화면은 이미 state를 근거로 "같은 집에서 다시"를 띄운다 — 폴백이 없으면 같은 사람이
+  // 엔딩에서 본 갈래가 타이틀에서만 사라진다(두 화면이 서로 다른 말을 한다).
+  // 진행 중 세이브에서 뽑는 것도 맞다: 그 판이 곧 "직전에 시작한 판"이고, 덮어쓰기는
+  // 아래 확인 다이얼로그가 이미 막는다.
+  const lastSetup = loadLastSetup() ?? deriveSetup(savedData?.state ?? null);
   const assetBase = import.meta.env.BASE_URL;
   // 도전 모드는 한 번 엔딩을 본 사람에게만 노출 (신규 유저가 멋모르고 켜는 것 방지)
   const hasCleared = (() => {

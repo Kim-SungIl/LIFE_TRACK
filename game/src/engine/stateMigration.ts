@@ -4,7 +4,7 @@
 //  2) 버전 무관 정규화(migrateLoadedState): 누락 필드 백필 + 리네임 + 직렬화 손실 함수 복원.
 //     store 로드와 processWeek 양쪽에서 매번 실행 — 반드시 멱등·저비용. 단순 필드 추가는 전부 이쪽.
 // gameEngine.ts 에서 추출 (P2-6). 새 필드 추가 시 migrateLoadedState 한 곳만 수정.
-import { GameState } from './types';
+import { GameState, ParentStrength } from './types';
 import { padYearCounts } from './ending';
 import { hashInitialState, deriveTalkSeed } from './rng';
 import { GAME_EVENTS } from './events';
@@ -43,11 +43,29 @@ export function runSaveMigrations(
   return s;
 }
 
+/**
+ * 부모 강점의 **레거시 별칭**. 리네임이 생기면 여기에만 적는다.
+ *
+ * **왜 상수로 빼는가**: 이 표를 쓰는 곳이 둘이다 — 게임을 로드하는 경로(migrateLoadedState)와,
+ * 세이브에서 시작 설정만 뽑는 경로(lastSetup.deriveSetup). 리네임을 한쪽에만 적으면 두 화면이
+ * 같은 세이브를 두고 **다른 말을 한다**: 타이틀은 정규화 전 state를, 엔딩은 정규화 후 state를
+ * 보기 때문이다(#441 검수에서 'gene' 하나로 실제 재현됨 — 콜드 타이틀에서만 갈래가 사라진다).
+ * 지금 항목이 하나뿐인 건 우연이고, 다음 리네임이 들어오면 같은 균열이 조용히 다시 열린다.
+ */
+export const LEGACY_PARENT_ALIASES: Readonly<Record<string, ParentStrength>> = {
+  gene: 'resilience',
+};
+
+/** 레거시 별칭을 현행 값으로. 모르는 값은 그대로 돌려준다(검증은 호출부의 몫). */
+export function normalizeParentStrength(p: string): string {
+  return LEGACY_PARENT_ALIASES[p] ?? p;
+}
+
 // ===== 2) 버전 무관 정규화·재수화 =====
 export function migrateLoadedState(state: GameState): GameState {
-  // 'gene' → 'resilience' 리네임 마이그레이션 (구세이브 호환)
+  // 'gene' → 'resilience' 리네임 마이그레이션 (구세이브 호환). 표는 LEGACY_PARENT_ALIASES가 SSOT.
   const migratedParents = state.parents
-    ? (state.parents.map((p: string) => (p === 'gene' ? 'resilience' : p)) as GameState['parents'])
+    ? (state.parents.map((p: string) => normalizeParentStrength(p)) as GameState['parents'])
     : state.parents;
   // 'do-nothing' 활동 제거(deep-rest와 중복·열등) — 진행 중인 방학 vacationChoices에서 안전 필터링
   const migratedVacationChoices = (state.vacationChoices || []).filter(id => id !== 'do-nothing');
