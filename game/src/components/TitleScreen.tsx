@@ -363,17 +363,30 @@ export function TitleScreen() {
   if (phase === 'gender') {
     return (
       <div className="screen fade-in" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-        <div>
+        {/* width:100% — 없으면 이 래퍼가 내용(424px)에 맞춰 늘어나 부모의 중앙정렬이
+            화면 밖으로 밀어낸다. 카드를 유동으로 바꿔도 여기가 고정이면 소용없다. */}
+        <div style={{ width: '100%' }}>
           <div style={{ fontSize: '1.1rem', marginBottom: 32, color: 'var(--text-secondary)' }}>
             주인공을 선택해주세요
           </div>
 
-          <div style={{ display: 'flex', gap: 24, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 'clamp(10px, 4vw, 24px)', justifyContent: 'center', width: '100%' }}>
             <button
               type="button" className="btn-reset" aria-label="남자 주인공으로 시작"
               onClick={() => { setGender('male'); setPhase('intro'); }}
               style={{
-                width: 200, padding: '28px 20px 22px', borderRadius: 20,
+                // **고정 폭 200 × 2 + gap 24 = 424px**였다. .screen의 좌우 패딩 20을 빼면
+                // 320px 기기의 가용 폭은 280px이라 좌우 각 52px이 잘렸고, 왼쪽은 scrollX 하한이
+                // 0이라 **스크롤로도 복구 불가**였다(게임의 첫 필수 선택 화면).
+                // 롱핸드로 쓴다 — 단축(flex/padding)은 jsdom CSSOM이 clamp를 만나면 통째로
+                // 버려서 잠금 테스트가 원리상 값을 못 본다(실측: style.flex === '').
+                flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, maxWidth: 200,
+                // 좌우 패딩은 고정 12다. 초상이 alignItems:center로 중앙정렬이라 넓은 화면에선
+                // 패딩값이 렌더에 안 보이고(200폭 카드에 140 초상), 좁은 화면에서만 초상이
+                // 들어갈 자리를 좌우한다 — clamp를 쓸 이유가 없고, 쓰면 jsdom CSSOM이
+                // 선언을 통째로 버려서 잠금 테스트가 값을 못 본다.
+                paddingTop: 28, paddingBottom: 22, paddingLeft: 12, paddingRight: 12,
+                borderRadius: 20,
                 background: 'var(--bg-card)',
                 border: '2px solid transparent',
                 cursor: 'pointer', transition: 'all 0.2s',
@@ -389,7 +402,18 @@ export function TitleScreen() {
               type="button" className="btn-reset" aria-label="여자 주인공으로 시작"
               onClick={() => { setGender('female'); setPhase('intro'); }}
               style={{
-                width: 200, padding: '28px 20px 22px', borderRadius: 20,
+                // **고정 폭 200 × 2 + gap 24 = 424px**였다. .screen의 좌우 패딩 20을 빼면
+                // 320px 기기의 가용 폭은 280px이라 좌우 각 52px이 잘렸고, 왼쪽은 scrollX 하한이
+                // 0이라 **스크롤로도 복구 불가**였다(게임의 첫 필수 선택 화면).
+                // 롱핸드로 쓴다 — 단축(flex/padding)은 jsdom CSSOM이 clamp를 만나면 통째로
+                // 버려서 잠금 테스트가 원리상 값을 못 본다(실측: style.flex === '').
+                flexGrow: 1, flexShrink: 1, flexBasis: 0, minWidth: 0, maxWidth: 200,
+                // 좌우 패딩은 고정 12다. 초상이 alignItems:center로 중앙정렬이라 넓은 화면에선
+                // 패딩값이 렌더에 안 보이고(200폭 카드에 140 초상), 좁은 화면에서만 초상이
+                // 들어갈 자리를 좌우한다 — clamp를 쓸 이유가 없고, 쓰면 jsdom CSSOM이
+                // 선언을 통째로 버려서 잠금 테스트가 값을 못 본다.
+                paddingTop: 28, paddingBottom: 22, paddingLeft: 12, paddingRight: 12,
+                borderRadius: 20,
                 background: 'var(--bg-card)',
                 border: '2px solid transparent',
                 cursor: 'pointer', transition: 'all 0.2s',

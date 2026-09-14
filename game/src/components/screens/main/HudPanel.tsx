@@ -59,9 +59,11 @@ export const HudPanel = memo(function HudPanel({
   const reducedMotion = usePrefersReducedMotion();
   const mods = getParentMods(parents);
   return (
-    <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+    <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)', marginBottom: 10 }}>
       <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} />
-      <div style={{ flex: 1 }}>
+      {/* minWidth:0 — flex 자식의 기본 min-width:auto는 콘텐츠보다 작아지지 않아
+          축소 압력이 전부 우측 블록으로 갔다(320px에서 34px까지 찌그러짐). */}
+      <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '1rem', fontWeight: 700 }}>{mood} {weekInfo}</div>
         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{month} {isVacation ? '· 방학' : ''}</div>
         {/* Y7 수능 카운트다운 — 교실 칠판 "D-xxx"(high3-start)의 상시 UI 짝. 정보라서 또렷하게(red). */}
@@ -145,7 +147,14 @@ export const HudPanel = memo(function HudPanel({
           )}
         </div>
       </div>
-      <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6 }}>
+      {/* **flexShrink:0 + nowrap**. 없으면 320px에서 이 블록이 min-content(34px)까지 눌려
+          한글이 음절 단위로 끊긴다 — 피로 2줄·💰 2줄·입금 4줄이 되고 HUD 높이가 76→145px로
+          두 배가 됐다(1569만원 같은 큰 금액에선 우측이 HUD 밖 321px까지 나갔다).
+          **남는 것**: 320px에서 가운데 제목이 2줄이 되어 HUD가 95px이다. 이 3단 레이아웃에서
+          "☀️ 중2 1학기 12주차"(약 165px)를 97px에 한 줄로 넣을 방법은 없다 — 어절 단위로
+          끊기므로(word-break:keep-all, game.css:52) 글자가 찢어지지는 않는다.
+          우측 폰트를 줄이면 5px을 벌지만 가장 작은 화면의 글자가 10.2px가 되어 되돌렸다. */}
+      <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6, flexShrink: 0, whiteSpace: 'nowrap' }}>
         <div style={{ color: fatigueColor }}>피로 {Math.round(fatigue)} · {fatigueLabel}</div>
         <div>
           💰 {Number.isInteger(money) ? money : money.toFixed(1)}만원

@@ -51,7 +51,13 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
           decoding="async"
           style={{
             width: size,
-            height: size * 1.25,
+            // **컨테이너보다 커지지 않는다.** 예전엔 width가 픽셀 고정이라 카드를 유동으로
+            // 바꿔도 초상만 그대로 넘쳤다(320px 성별 선택에서 15.7% 잘림).
+            // aspectRatio + height:auto라 줄어들 때도 1:1.25 비율을 지킨다 —
+            // height를 고정한 채 width만 줄이면 objectFit:cover가 좌우를 잘라낸다.
+            maxWidth: '100%',
+            height: 'auto',
+            aspectRatio: '1 / 1.25',
             objectFit: 'cover',
             borderRadius: size * 0.15,
           }}
