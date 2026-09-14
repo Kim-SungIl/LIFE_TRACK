@@ -382,16 +382,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
     localStorage.removeItem('lifetrack_tutorial_done');
   },
 
+  /**
+   * **던지지 않는다 — 못 열면 false다.**
+   *
+   * loadFromStorage는 "JSON이 파싱되고 state 키가 있나"만 본다. 안쪽 구조는 안 보므로
+   * 형태가 망가진 세이브가 그대로 통과해 하류에서 터졌다. 실측한 크래시 지점:
+   *   · `parents`가 배열이 아니면 migrateLoadedState의 `.map`      (문자열·숫자·객체·true)
+   *   · `npcs` / `vacationChoices`도 같은 형태로 `.map` / `.filter`
+   *   · `parents`가 falsy면 map 가드는 통과하고, rngSeed 없는 구세이브에서 rng.ts의 `.join`
+   *
+   * **왜 정규화가 아니라 거부인가**: Array.isArray로 펴서 살리면 손상된 세이브를 조용히
+   * "고쳐서" 플레이어가 고른 적 없는 상태로 7년을 진행시킨다. 못 여는 것보다 나쁘다.
+   *
+   * 이 예외는 **onClick 안에서 동기로** 나므로 React 에러 바운더리가 못 잡는다
+   * (바운더리는 렌더 중 예외만 본다). 그래서 화면에는 아무 일도 안 일어난 것처럼 보였다 —
+   * 버튼이 그냥 안 눌리는 것 같았고, 에러도 배너도 0이었다. 호출부가 false를 받아 안내한다.
+   */
   loadSavedGame: () => {
     const save = loadFromStorage();
     if (!save) return false;
-    // 단계형(버전 격상) → 정규화(백필·재수화) 순서 — step은 격상 전 구조를 전제로 쓴다.
-    const loaded = migrateLoadedState(runSaveMigrations(save.state, save.version));
-    // 즉시 적립이 배포되기 전에 만들어진 세이브는 이 판의 이벤트가 archive를 한 번도 지나지
-    // 않았다 — 여기서만 구제된다. 멱등이고, 이미 다 적립된 세이브면 쓰기 없이 끝난다.
-    accrueFromState(loaded);
-    set({ state: loaded, runDelta: null });
-    return true;
+    try {
+      // 단계형(버전 격상) → 정규화(백필·재수화) 순서 — step은 격상 전 구조를 전제로 쓴다.
+      const loaded = migrateLoadedState(runSaveMigrations(save.state, save.version));
+      // 즉시 적립이 배포되기 전에 만들어진 세이브는 이 판의 이벤트가 archive를 한 번도 지나지
+      // 않았다 — 여기서만 구제된다. 멱등이고, 이미 다 적립된 세이브면 쓰기 없이 끝난다.
+      accrueFromState(loaded);
+      set({ state: loaded, runDelta: null });
+      return true;
+    } catch (e) {
+      // 진단은 남긴다(ErrorBoundary와 같은 형식). 상태는 건드리지 않는다 —
+      // 반쯤 적용된 state로 두면 화면이 더 이상한 곳에 착지한다.
+      console.error('[loadSavedGame] 손상된 세이브', e);
+      return false;
+    }
   },
 
   resetGame: () => {
