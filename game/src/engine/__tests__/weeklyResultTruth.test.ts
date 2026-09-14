@@ -160,9 +160,11 @@ describe('결산 제목은 방금 끝난 주를 말한다', () => {
   // 서로 다른 두 주가 구분되지 않았다. 이벤트 유무와 무관한 매주 버그였다.
   it('처리한 주가 로그에 박힌다 (state.week은 이미 다음 주다)', () => {
     let s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
+    // 활동은 인자가 아니라 state의 루틴 슬롯에서 온다(processWeek의 2번째 인자는 NPC 맵이다).
+    s = { ...s, routineSlot2: 'self-study', routineSlot3: 'light-exercise' };
     for (let i = 0; i < 4; i++) {
       const resolved = s.week;
-      s = processWeek(s, ['study-self'], {});
+      s = processWeek(s);
       expect(s.weekLog!.week, '로그가 처리한 주를 가리켜야 한다').toBe(resolved);
       expect(s.week, '전제: state.week은 이미 다음 주다 — 아니면 이 버그가 존재할 수 없다').toBe(resolved + 1);
       expect(getWeekLabelAt(s.weekLog!.year!, s.weekLog!.week!))
@@ -174,8 +176,8 @@ describe('결산 제목은 방금 끝난 주를 말한다', () => {
   // 학년 경계에서 `state.week - 1`로 빼는 근사가 깨지는 지점 — 좌표를 직접 박아야 하는 이유.
   it('학년 마지막 주도 그 학년의 주로 남는다', () => {
     let s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 3 });
-    s = { ...s, week: 48, year: 2 };
-    s = processWeek(s, ['study-self'], {});
+    s = { ...s, week: 48, year: 2, routineSlot2: 'self-study', routineSlot3: 'light-exercise' };
+    s = processWeek(s);
     expect(s.weekLog!.week).toBe(48);
     expect(s.weekLog!.year, '해가 넘어가도 로그는 끝난 해를 가리킨다').toBe(2);
     expect(getWeekLabelAt(s.weekLog!.year!, s.weekLog!.week!)).toContain('중1');

@@ -24,8 +24,9 @@ import type { GameState } from '../../../engine/types';
 /** N주차를 실제로 처리해 결산 직전 상태를 만든다(로그·스탬프 전부 진짜 경로로). */
 function stateAfterResolving(week: number, year = 1): GameState {
   let s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
-  s = { ...s, year, week };
-  s = processWeek(s, ['study-self'], {});
+  // 활동은 인자가 아니라 state의 루틴 슬롯에서 온다(processWeek의 2번째 인자는 NPC 맵이다).
+  s = { ...s, year, week, routineSlot2: 'self-study', routineSlot3: 'light-exercise' };
+  s = processWeek(s);
   // 이벤트가 걸렸으면 결산 화면이 아니라 이벤트 화면이 뜬다 — 결산만 보고 싶으므로 비운다.
   return { ...s, currentEvent: null, phase: 'result' as GameState['phase'] };
 }
