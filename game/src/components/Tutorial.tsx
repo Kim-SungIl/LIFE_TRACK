@@ -232,7 +232,9 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
                   onClick={() => { setWaitDone(false); if (isLast) { onComplete(); } else { setStep(step + 1); } }}
                   style={{
                     background: 'var(--accent)', border: 'none',
-                    borderRadius: 8, padding: '8px 24px', color: 'white',
+                    // accent 위 흰 글자는 2.64:1로 AA(4.5) 아래다. --btn-ink는 6.35:1.
+                    // CSS의 .btn-primary는 #417에서 이미 이 토큰으로 갔는데 인라인이라 못 받았다.
+                    borderRadius: 8, padding: '8px 24px', color: 'var(--btn-ink)',
                     cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, height: 38,
                   }}
                 >

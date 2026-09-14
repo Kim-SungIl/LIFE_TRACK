@@ -518,10 +518,14 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 <div style={{
                   padding: '3px 10px',
                   borderRadius: 6,
+                  // **글자색이 배경을 따라간다.** NPC 색 5종은 전부 밝아서 흰 글자면 2.23~3.38:1로
+                  // AA(4.5) 아래다(가장 나은 yuna도 3.38). --btn-ink를 얹으면 4.96~7.52:1이 된다.
+                  // 미만난 NPC의 #666은 반대로 어두워서 흰 글자가 5.74:1이고 ink는 2.92:1이라,
+                  // 배경 삼항과 **같은 조건**으로 짝지어야 한다.
                   background: npc?.met === false ? '#666' : NPC_COLORS[npcId],
                   fontSize: '0.72rem',
                   fontWeight: 700,
-                  color: '#fff',
+                  color: npc?.met === false ? '#fff' : 'var(--btn-ink)',
                   marginTop: -4,
                   opacity: isSpeaking ? 1 : 0.5,
                   transition: 'opacity 0.3s',
@@ -765,7 +769,8 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
               onClick={() => setChoiceIntroDismissed(true)}
               style={{
                 width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 10,
-                padding: '13px 28px', color: '#fff', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
+                // accent 위 흰 글자 2.64:1 → --btn-ink 6.35:1 (신규 플레이어가 반드시 누르는 CTA다).
+                padding: '13px 28px', color: 'var(--btn-ink)', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
               }}
             >
               골라볼게요!
