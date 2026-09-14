@@ -75,6 +75,11 @@ export function TitleScreen() {
   const [pendingStart, setPendingStart] = useState<'select' | 'lastSetup' | null>(null);
   const startGame = useGameStore(s => s.startGame);
   const loadSavedGame = useGameStore(s => s.loadSavedGame);
+  const resetGame = useGameStore(s => s.resetGame);
+  // 세이브를 못 연 상태. 예전엔 onClick 안에서 예외가 나 **화면에 아무 일도 안 일어났다** —
+  // 에러 바운더리는 렌더 중 예외만 잡으므로 여기까지 못 온다(ErrorBoundary.tsx의
+  // "저장 삭제하고 처음부터 시작" 탈출구가 정확히 이 상황용인데 도달을 못 했다).
+  const [loadFailed, setLoadFailed] = useState(false);
   const savedData = loadFromStorage();
   // 끝난 판은 "이어하기"가 아니다 — 세이브에 phase='ending'이 그대로 저장돼 있고
   // (엔딩 진입 때 year++가 되어) 서브라벨이 "8년차 1주차"로 나오던 자리다.
@@ -170,6 +175,20 @@ export function TitleScreen() {
       danger
       onConfirm={runPendingStart}
       onCancel={() => setPendingStart(null)}
+    />
+  );
+
+  // 세이브가 손상돼 못 열 때. 지우는 것 말고는 길이 없으므로 그 사실을 말하고 확인을 받는다.
+  // (새 게임도 어차피 이 세이브를 덮어쓴다 — 여기서 지우는 건 같은 일을 먼저 하는 것이다.)
+  const corruptDialog = loadFailed && (
+    <ConfirmDialog
+      title="이 저장을 열 수 없어요"
+      message={'저장된 데이터가 손상돼 이어서 할 수 없어요.\n지우고 새로 시작하는 것 말고는 방법이 없어요.\n(기록실의 이야기는 그대로 남습니다.)'}
+      confirmLabel="지우고 새로 시작"
+      cancelLabel="닫기"
+      danger
+      onConfirm={() => { resetGame(); setLoadFailed(false); setPhase('title'); }}
+      onCancel={() => setLoadFailed(false)}
     />
   );
 
@@ -293,7 +312,7 @@ export function TitleScreen() {
                 쪽은 되돌릴 수 없다. year 표기를 빼는 이유: 엔딩 시점 state.year는 8이다. */}
             <button
               className={`btn ${savedFinished ? 'btn-secondary' : 'btn-primary'}`}
-              onClick={() => loadSavedGame()}
+              onClick={() => { if (!loadSavedGame()) setLoadFailed(true); }}
             >
               {savedFinished ? '엔딩 다시 보기' : '이어하기'}
               <span className="btn__sub">
@@ -325,6 +344,10 @@ export function TitleScreen() {
             </button>
           )}
         </div>
+
+        {/* 이어하기가 세이브를 못 열었을 때. **타이틀 블록 안에 있어야 한다** —
+            이 화면은 아래 최종 return과 별개로 여기서 끝나므로, 밖에 두면 안 그려진다. */}
+        {corruptDialog}
       </div>
     );
   }
