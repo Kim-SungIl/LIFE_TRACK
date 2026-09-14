@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, lazy, Suspense, type ReactNode } 
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, isStorageSaveFailed } from '../engine/store';
 import { josa } from '../engine/korean';
-import { getWeekLabel } from '../engine/gameEngine';
+import { getWeekLabel, getWeekLabelAt } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
 import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
@@ -385,7 +385,14 @@ export function GameScreen() {
         mentalState={state.mentalState}
         track={state.track}
         bgProps={bgProps}
-        weekInfo={getWeekLabel(state)}
+        // **로그가 박아 둔 좌표를 쓴다.** state.week은 이미 다음 주라 결산이 "2주차"라고
+        // 적히고 바로 다음 계획 화면과 같은 라벨을 달았다. 구세이브(week 미스탬프)는 예전
+        // 동작으로 폴백한다 — 진행 중인 결산 한 화면뿐이고 다음 주부터 정확해진다.
+        // **둘 다 있어야 쓴다(부분 복구 금지).** 한쪽만 박힌 로그는 손상된 값이고,
+        // 학년만 빠지면 라벨이 "undefined 1학기 4주차"가 된다. 모자라면 예전 동작으로 떨어진다.
+        weekInfo={state.weekLog.week != null && state.weekLog.year != null
+          ? getWeekLabelAt(state.weekLog.year, state.weekLog.week)
+          : getWeekLabel(state)}
         resultDialogue={resultDialogue}
         fatigueColor={fatigueColor}
         upcomingEvents={getUpcomingEvents(state)}
