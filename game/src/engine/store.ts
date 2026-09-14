@@ -237,7 +237,36 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
     applyParentIntimacyDelta(state, choice.parentEffect.baseDelta, choice.parentEffect.tag);
     state.actedWithParentThisWeek = true;
   }
+  foldOutcomeIntoWeekLog(state, outcome);
   return outcome;
+}
+
+/**
+ * 이벤트로 실제 적용된 값을 **그 주의 로그에 접는다.**
+ *
+ * 없으면 결산 화면이 한 행에서 두 계층을 섞어 말한다 — 현재값은 state.stats(이벤트 포함)에서
+ * 오고 변화량은 weekLog(이벤트 제외)에서 왔다. 실측: 이벤트로 체력 +2를 받은 주에 화면이
+ * "체력 42, 이번 주 **-0.4**"라고 적었다. 42는 이벤트 포함값인데 -0.4는 일과만이라, 주 시작값이
+ * 42.8이었다고 주장하는 셈이었다(실제 40.8). 인기도 +0.2가 **-1.8**로 부호가 뒤집혔고,
+ * "잃은 것" 칩(WeeklyResultScreen:68)이 방금 **얻은** 축을 손실로 라벨링했다.
+ *
+ * **outcome을 쓰는 이유**: choice.effects 원본이 아니라 구간 감쇠·클램프를 거친 뒤의
+ * 실제 적용값이다. 원본을 더하면 고스탯 구간에서 로그가 또 다른 거짓말을 한다.
+ *
+ * 독백(dialogues.ts RESULT_POOLS)도 같은 statChanges를 읽는다 — "weekLog의 실제 사건/스탯
+ * 변화에 맞춰 골라 준다"는 그 층의 선언과 이제야 맞는다.
+ *
+ * weekLog가 null일 수 있다(첫 주 진입 전 부팅 이벤트). 그 경우 접을 곳이 없으니 건너뛴다.
+ */
+function foldOutcomeIntoWeekLog(state: GameState, outcome: AppliedEventOutcome): void {
+  const log = state.weekLog;
+  if (!log) return;
+  for (const [key, val] of Object.entries(outcome.stats)) {
+    const k = key as StatKey;
+    log.statChanges[k] = round1((log.statChanges[k] ?? 0) + (val as number));
+  }
+  if (outcome.fatigue) log.fatigueChange = round1((log.fatigueChange ?? 0) + outcome.fatigue);
+  if (outcome.money) log.moneyChange = round1((log.moneyChange ?? 0) + outcome.money);
 }
 
 // 이벤트 기록 — condition(함수)은 JSON 직렬화 손실 방지 위해 제거, 발생주차는 occurrenceWeek로 통일.

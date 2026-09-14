@@ -126,10 +126,15 @@ export function getWeekInfo(week: number) {
   return { semester: 2 as const, isVacation: true, label: `겨울방학 ${week - 42}주차` };
 }
 
+const YEAR_NAMES = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
+
+/** 좌표를 직접 받는 라벨. 결산 화면처럼 **현재 좌표가 아닌 주**를 말해야 하는 자리가 쓴다. */
+export function getWeekLabelAt(year: number, week: number): string {
+  return `${YEAR_NAMES[year - 1]} ${getWeekInfo(week).label}`;
+}
+
 export function getWeekLabel(state: GameState): string {
-  const yearNames = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
-  const info = getWeekInfo(state.week);
-  return `${yearNames[state.year - 1]} ${info.label}`;
+  return getWeekLabelAt(state.year, state.week);
 }
 
 export function getMonthLabel(week: number): string {
@@ -1049,6 +1054,9 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   }
   newState.fatigue = Math.max(0, Math.min(100, Math.round(newState.fatigue * 10) / 10));
 
+  // 이 로그가 어느 주의 것인지 박는다 — week++ 전이라 여기가 유일하게 정확한 지점이다.
+  log.year = newState.year;
+  log.week = newState.week;
   newState.weekLog = log;
   newState.totalWeeksPlayed++;
 

@@ -143,6 +143,18 @@ export interface WeekLog {
   parentBonusesApplied?: ParentBonusApplied[];
   /** 이번 주 parentEffect를 이미 적용한 활동 id — 같은 활동의 슬롯 중복(루틴+주말) 친밀도 2배 방지 */
   parentEffectAppliedIds?: string[];
+  /**
+   * 이 로그가 **어느 주의 기록인가**. 결산 화면 제목이 쓴다.
+   *
+   * **왜 state.week을 못 쓰나**: processWeek이 로그를 확정한 뒤 advanceWeekCounter가 week++를
+   * 돌리므로, 결산이 뜰 때 state.week은 이미 **다음 주**다. 그래서 1주차를 처리한 결산이
+   * "2주차"라고 적혔고, 바로 다음 계획 화면과 같은 라벨을 달았다(서로 다른 두 주가 구분 불가).
+   * state.week - 1로 빼면 학년 경계(W48 → 다음 해 W1)에서 어긋나므로 발생 좌표를 직접 박는다.
+   *
+   * 구세이브에는 없다(undefined). 그 판의 진행 중인 결산 한 화면만 예전 라벨로 남는다.
+   */
+  year?: number;
+  week?: number;
 }
 
 // 시험 시스템
