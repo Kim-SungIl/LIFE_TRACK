@@ -85,7 +85,8 @@ export function Shop({ state, onBuy, onClose }: Props) {
                 padding: '6px 12px', borderRadius: 8, cursor: 'pointer', whiteSpace: 'nowrap',
                 fontSize: '0.78rem', fontWeight: isActive ? 700 : 400,
                 background: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
-                color: isActive ? 'white' : 'var(--text-secondary)',
+                // 활성 칩은 accent 배경 — 흰 글자면 2.64:1이라 --btn-ink(6.35:1)를 쓴다.
+                color: isActive ? 'var(--btn-ink)' : 'var(--text-secondary)',
                 transition: 'all 0.15s',
               }}>
                 {info.emoji} {info.name}
@@ -161,7 +162,8 @@ export function Shop({ state, onBuy, onClose }: Props) {
                     style={{
                       padding: '8px 16px', borderRadius: 8, border: 'none', marginLeft: 10,
                       background: check.ok ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
-                      color: check.ok ? 'white' : 'var(--text-muted)',
+                      // 구매 가능 버튼은 accent 배경 — 위와 같은 이유로 --btn-ink.
+                      color: check.ok ? 'var(--btn-ink)' : 'var(--text-muted)',
                       cursor: check.ok ? 'pointer' : 'not-allowed',
                       fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap',
                     }}

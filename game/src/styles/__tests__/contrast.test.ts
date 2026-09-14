@@ -233,3 +233,191 @@ describe('죽은 토큰', () => {
     expect(unused).toEqual([]);
   });
 });
+
+/**
+ * **밝은 배경 위의 글자.** 위쪽 탐지기가 원리상 못 보던 축이다.
+ *
+ * 기존 `lowContrastLiterals`는 (1) `color: '#hex'` 리터럴만 매칭하고 (2) 배경을
+ * `--bg-card-hover` **하나로 고정**한다. 그래서 `background: var(--accent)` 위의
+ * `color: 'white'`는 두 조건 모두에 안 걸린다. 실제로 그 상태로 4곳이 **2.64:1**로 살아
+ * 있었고(튜토리얼 '다음' · 첫 선택 CTA · 상점 구매/카테고리 — 전부 신규 플레이어 필수 동선)
+ * 게이트는 19/19 초록이었다. 검사하는 층과 배포되는 층이 갈리는, 이 리포의 반복 형태다.
+ *
+ * `game.css:23`에는 이미 "흰 글자를 테라코타에 얹으면 2.64:1"이라 적혀 있었다 —
+ * 수정(`--btn-ink`)이 CSS 파일에는 들어갔는데 **인라인 스타일 호출부가 못 받았다.**
+ */
+describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/color 쌍', () => {
+  /** 색 표현 하나를 #hex로. 풀 수 없으면 null(투명·그라디언트·계산값·테이블 조회). */
+  function resolveColor(raw: string): string | null {
+    const v = raw.trim().replace(/^['"]|['"]$/g, '');
+    if (/^#[0-9a-fA-F]{3,6}$/.test(v)) return v;
+    if (v === 'white') return '#ffffff';
+    if (v === 'black') return '#000000';
+    const t = /^var\(--([\w-]+)\)$/.exec(v);
+    if (t) { try { return token(t[1]); } catch { return null; } }
+    return null;   // rgba/그라디언트/transparent/식별자 — 판정 불가
+  }
+
+  /**
+   * prop의 값을 괄호·따옴표 깊이를 세며 **최상위 쉼표까지** 읽는다.
+   * 정규식 `[^,}]+`로 자르면 `rgba(255,255,255,0.06)` 안의 쉼표에서 잘려 값이 반토막 난다 —
+   * 그러면 삼항 가지 수가 어긋나 아래 zip이 무너지고, 실제로 함께 나타나지 않는 조합을
+   * 결함으로 신고한다(실측: 그 상태로 오탐 3건이 났다).
+   */
+  function readValue(block: string, prop: string): string | null {
+    const m = new RegExp(`(?:^|[{,\\s])${prop}:\\s*`).exec(block);
+    if (!m) return null;
+    let depth = 0, q: string | null = null, out = '';
+    for (let i = m.index + m[0].length; i < block.length; i++) {
+      const c = block[i];
+      if (q) { out += c; if (c === q && block[i - 1] !== '\\') q = null; continue; }
+      if (c === "'" || c === '"' || c === '`') { q = c; out += c; continue; }
+      if ('([{'.includes(c)) depth++;
+      if (')]}'.includes(c)) { if (depth === 0) break; depth--; }
+      if (c === ',' && depth === 0) break;
+      out += c;
+    }
+    return out.trim() || null;
+  }
+
+  /** 최상위 삼항을 가지로 편다. `?.`(옵셔널 체이닝)과 `??`는 삼항이 아니다. */
+  function branches(value: string): string[] {
+    let depth = 0, q: string | null = null;
+    for (let i = 0; i < value.length; i++) {
+      const c = value[i];
+      if (q) { if (c === q && value[i - 1] !== '\\') q = null; continue; }
+      if (c === "'" || c === '"' || c === '`') { q = c; continue; }
+      if ('([{'.includes(c)) { depth++; continue; }
+      if (')]}'.includes(c)) { depth--; continue; }
+      if (c !== '?' || depth !== 0) continue;
+      if (value[i + 1] === '.' || value[i + 1] === '?') continue;
+      let d2 = 0, q2: string | null = null, nest = 0;
+      for (let j = i + 1; j < value.length; j++) {
+        const d = value[j];
+        if (q2) { if (d === q2 && value[j - 1] !== '\\') q2 = null; continue; }
+        if (d === "'" || d === '"' || d === '`') { q2 = d; continue; }
+        if ('([{'.includes(d)) { d2++; continue; }
+        if (')]}'.includes(d)) { d2--; continue; }
+        if (d2 !== 0) continue;
+        if (d === '?' && d !== value[j + 1] && value[j + 1] !== '.') { nest++; continue; }
+        if (d === ':') {
+          if (value[j + 1] === ':' || value[j - 1] === ':') continue;
+          if (nest > 0) { nest--; continue; }
+          return [...branches(value.slice(i + 1, j)), ...branches(value.slice(j + 1))];
+        }
+      }
+      break;
+    }
+    return [value.trim()];
+  }
+
+  function declOf(block: string, props: string[]): string | null {
+    for (const p of props) {
+      const v = readValue(block, p);
+      if (v) return v;
+    }
+    return null;
+  }
+
+  /**
+   * 스타일 객체를 훑어 AA 미달 쌍을 낸다.
+   *
+   * **삼항은 가지 수가 같으면 같은 인덱스끼리 짝짓는다** — `isActive ? accent : rgba` 배경과
+   * `isActive ? ink : secondary` 글자를 교차로 곱하면 실제로 함께 나타나지 않는 조합을
+   * 결함으로 신고한다. 과검출은 게이트를 죽이는 가장 빠른 길이다.
+   */
+  function lowContrastOnLightBg(text: string): string[] {
+    const out: string[] = [];
+    for (const m of text.matchAll(/\{[^{}]*\}/g)) {
+      const block = m[0];
+      const bgRaw = declOf(block, ['background', 'backgroundColor']);
+      const fgRaw = declOf(block, ['color']);
+      if (!bgRaw || !fgRaw) continue;
+      const bgs = branches(bgRaw), fgs = branches(fgRaw);
+      const pairs: [string, string][] =
+        bgs.length === fgs.length && bgs.length > 1
+          ? bgs.map((b, i) => [b, fgs[i]] as [string, string])
+          : bgs.flatMap(b => fgs.map(f => [b, f] as [string, string]));
+      for (const [b, f] of pairs) {
+        const bg = resolveColor(b), fg = resolveColor(f);
+        if (!bg || !fg) continue;                     // 판정 불가는 건너뛴다
+        const r = ratio(fg, bg);
+        if (r < AA) out.push(`${fg} on ${bg} = ${r.toFixed(2)}:1`);
+      }
+    }
+    return out;
+  }
+
+  // 탐지기가 살아 있다는 증거부터. 정규식을 죽이면 아래 전수 검사가 조용히 공회전한다.
+  it('탐지기가 실제로 잡아낸다 (양성 대조)', () => {
+    // 고쳐지기 전 실제 모양 4종
+    expect(lowContrastOnLightBg(`{ background: 'var(--accent)', color: 'white' }`)).toHaveLength(1);
+    expect(lowContrastOnLightBg(`{ background: 'var(--accent)', border: 'none', color: '#fff' }`)).toHaveLength(1);
+    expect(lowContrastOnLightBg(`{ background: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.06)', color: isActive ? 'white' : 'var(--text-secondary)' }`)).toHaveLength(1);
+    // 고친 뒤에는 안 걸린다
+    expect(lowContrastOnLightBg(`{ background: 'var(--accent)', color: 'var(--btn-ink)' }`)).toEqual([]);
+    // 어두운 배경 위의 흰 글자는 정상이다 — 여기서 걸리면 대화 오버레이 전부가 오탐이 된다
+    expect(lowContrastOnLightBg(`{ background: 'var(--bg-card)', color: '#fff' }`)).toEqual([]);
+    // 삼항 가지는 같은 인덱스끼리 — 교차로 곱하면 없는 조합을 신고한다
+    expect(lowContrastOnLightBg(`{ background: ok ? 'var(--accent)' : 'var(--bg-card)', color: ok ? 'var(--btn-ink)' : '#fff' }`)).toEqual([]);
+    // 판정 불가(그라디언트·rgba)는 조용히 건너뛴다
+    expect(lowContrastOnLightBg(`{ background: 'linear-gradient(135deg, #fff, #000)', color: '#fff' }`)).toEqual([]);
+  });
+
+  // corpus가 0이면 탐지기를 지워도 초록이다. 실제로 볼 쌍이 있다는 것부터 세운다.
+  it('검사 대상 쌍이 실제로 존재한다 (공회전 방지)', () => {
+    let pairs = 0;
+    for (const f of sourceFiles()) {
+      const text = readFileSync(f, 'utf8');
+      for (const m of text.matchAll(/\{[^{}]*\}/g)) {
+        const b = /(?:^|[{,\s])(?:background|backgroundColor):\s*([^,}\n]+)/.exec(m[0]);
+        const c = /(?:^|[{,\s])color:\s*([^,}\n]+)/.exec(m[0]);
+        if (b && c) pairs++;
+      }
+    }
+    expect(pairs, '배경·글자를 함께 선언한 스타일 객체가 하나도 없다면 탐지기가 헛도는 것이다')
+      .toBeGreaterThan(10);
+  });
+
+  it('밝은 배경 위에 AA 미달 글자가 없다', () => {
+    const bad = sourceFiles().flatMap(f =>
+      lowContrastOnLightBg(readFileSync(f, 'utf8')).map(hit => `${f.replace(SRC, 'src')} — ${hit}`));
+    expect(bad).toEqual([]);
+  });
+});
+
+/**
+ * NPC 이름 칩의 배경은 **테이블 조회**(`NPC_COLORS[npcId]`)라 위 탐지기가 값을 못 푼다.
+ * 그래서 표 자체를 직접 잠근다 — 5색 전부 흰 글자로 2.23~3.38:1이었다(가장 나은 yuna가 3.38).
+ */
+describe('NPC 이름 칩 — 표의 모든 색이 글자와 대비를 지킨다', () => {
+  function npcColors(): [string, string][] {
+    const src = readFileSync(join(SRC, 'components/EventScene.tsx'), 'utf8');
+    const block = /const NPC_COLORS: Record<string, string> = \{([^}]*)\}/.exec(src);
+    if (!block) throw new Error('EventScene.tsx에서 NPC_COLORS를 못 찾았다');
+    return [...block[1].matchAll(/(\w+):\s*'(#[0-9a-fA-F]{3,6})'/g)].map(m => [m[1], m[2]]);
+  }
+
+  it('표를 실제로 읽는다 (빈 매칭으로 통과 방지)', () => {
+    expect(npcColors().length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('만난 NPC의 칩 글자(--btn-ink)가 모든 색에서 AA를 넘는다', () => {
+    const ink = token('btn-ink');
+    const bad = npcColors()
+      .map(([id, c]) => [id, c, ratio(ink, c)] as const)
+      .filter(([, , r]) => r < AA)
+      .map(([id, c, r]) => `${id} ${c} = ${r.toFixed(2)}:1`);
+    expect(bad, 'NPC 색을 밝게 바꾸면 여기서 걸린다').toEqual([]);
+  });
+
+  // 미만난 NPC는 어두운 회색(#666)이라 **반대로** 흰 글자여야 한다.
+  // 두 분기가 같은 조건으로 짝지어져 있는지를 값으로 확인한다.
+  it('미만난 NPC의 칩은 흰 글자가 AA를 넘는다', () => {
+    const src = readFileSync(join(SRC, 'components/EventScene.tsx'), 'utf8');
+    const m = /background: npc\?\.met === false \? '(#[0-9a-fA-F]{3,6})'/.exec(src);
+    expect(m, '미만난 NPC 배경 분기가 사라졌다').toBeTruthy();
+    expect(ratio('#ffffff', m![1])).toBeGreaterThanOrEqual(AA);
+    expect(src).toContain("color: npc?.met === false ? '#fff' : 'var(--btn-ink)'");
+  });
+});
