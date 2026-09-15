@@ -45,9 +45,11 @@ type Props = {
   onMoneyBlocked?: () => void;
   // localStorage 저장 실패 여부 — true면 진행 손실 경고 배너 (store.isStorageSaveFailed)
   saveFailed?: boolean;
+  // 시스템 메뉴 열기 — HUD의 보이는 진입점. 뒤로가기 제스처와 같은 것을 연다(#445).
+  onOpenMenu?: () => void;
 };
 
-export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed }: Props) {
+export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu }: Props) {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
@@ -288,6 +290,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         suneungWeeksLeft={suneungWeeksLeft}
         onOpenHome={handleOpenHome}
         onOpenAlbum={onOpenAlbum}
+        onOpenMenu={onOpenMenu}
       />
 
       {/* 저장 실패 경고 — 진행 손실을 사용자가 모른 채 지나가지 않게 (storage full/사파리 프라이빗 등) */}
