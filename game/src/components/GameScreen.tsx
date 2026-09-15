@@ -17,6 +17,7 @@ import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
+import { SystemMenu } from './SystemMenu';
 
 // 비-부팅 화면만 lazy — MainWeekScreen / WeeklyResultScreen / TitleScreen 은 첫 페인트·고빈도라 eager 유지.
 const EventScene = lazy(() =>
@@ -75,22 +76,39 @@ export function GameScreen() {
     exitToTitle: s.exitToTitle,
   })));
 
-  // 뒤로가기/새로고침 방지
+  // 시스템 메뉴 — 뒤로가기 제스처와 HUD 버튼이 같은 것을 연다.
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // 뒤로가기 → **메뉴를 연다**. (#445)
+  //
+  // 예전엔 popstate마다 무조건 다시 push하기만 했다. 뒤로가기는 전 구간에서 먹히는데
+  // exitToTitle은 엔딩 화면에만 연결돼 있어서 **플레이 중 나갈 방법이 0개**였다.
+  // 모바일에서 뒤로가기는 1급 제스처라 아무 반응이 없으면 "먹통 앱"으로 읽힌다.
+  //
+  // 지금도 push는 한다 — 뒤로가기를 소비해 실제로 페이지를 떠나지 않게 하되,
+  // 그 제스처에 **응답**한다. 다시 push하므로 다음 뒤로가기도 같은 자리로 온다.
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-    };
-    // 브라우저 뒤로가기 방지: history에 더미 항목 추가
     window.history.pushState(null, '', window.location.href);
     const handlePopState = () => {
       window.history.pushState(null, '', window.location.href);
+      setMenuOpen(true);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // 새로고침 경고는 **저장이 실제로 실패했을 때만** 낸다.
+  //
+  // 예전엔 무조건 preventDefault라 매번 확인창이 떴는데, 이 게임은 state가 바뀔 때마다
+  // 동기로 저장하므로 평소엔 새로고침으로 잃을 게 없다 — 브라우저가 대신 띄우는
+  // "변경사항이 저장되지 않을 수 있습니다"가 **거짓말**이었다.
+  // 저장이 죽은 환경(사파리 프라이빗·용량 초과)에서는 그 문장이 참이 되므로 그때만 건다.
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isStorageSaveFailed()) e.preventDefault();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
-    window.addEventListener('popstate', handlePopState);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      window.removeEventListener('popstate', handlePopState);
-    };
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, []);
 
   // 엔딩 도달 시 클리어 플래그 저장 (다음 플레이부터 도전 모드 해금)
@@ -410,6 +428,7 @@ export function GameScreen() {
           state={state}
           bgProps={bgProps}
           saveFailed={isStorageSaveFailed()}
+          onOpenMenu={() => setMenuOpen(true)}
           onOpenAlbum={() => setAlbumYear(state.year - 1)}
           onMoneyBlocked={markMoneyBlockedWeek}
           onSetRoutine={setRoutine}
@@ -436,6 +455,14 @@ export function GameScreen() {
       <ScreenTransition transitionKey={screenKey} pace={screenPace}>
         {phaseContent}
       </ScreenTransition>
+      {/* **ScreenTransition 밖에 둔다.** 안에 넣으면 화면 전환 페이드에 같이 휩쓸려
+          메뉴가 깜빡이고, screenKey가 바뀔 때(주 진행 등) 통째로 리마운트된다. */}
+      {menuOpen && (
+        <SystemMenu
+          onExit={() => { setMenuOpen(false); exitToTitle(); }}
+          onClose={() => setMenuOpen(false)}
+        />
+      )}
     </Suspense>
   );
 }

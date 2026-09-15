@@ -30,6 +30,9 @@ type Props = {
   onOpenHome: () => void;
   // 기록장(지난 학년 회상) 진입 — 1학년(완료 학년 없음)엔 "약속" 빈 상태를 띄운다. undefined면 버튼 숨김.
   onOpenAlbum?: () => void;
+  // 시스템 메뉴 — 플레이 중 나가는 길의 **보이는** 진입점(#445).
+  // 뒤로가기 제스처도 같은 메뉴를 열지만, 데스크톱엔 그 제스처가 없다.
+  onOpenMenu?: () => void;
 };
 
 // 부모 칩 hover/탭 popover 라벨·설명 — HUD 전용(메인 화면 한정 카피).
@@ -52,8 +55,7 @@ const PARENT_TIP_DESC: Record<string, string> = {
 export const HudPanel = memo(function HudPanel({
   parents, gender, mentalStat, mentalState, year, fatigue, money, isVacation,
   parentBonusesApplied, mood, weekInfo, month, fatigueColor, fatigueLabel,
-  weeklyActivityCost, weeklyOverBudget, suneungWeeksLeft, onOpenHome, onOpenAlbum,
-}: Props) {
+  weeklyActivityCost, weeklyOverBudget, suneungWeeksLeft, onOpenHome, onOpenAlbum, onOpenMenu }: Props) {
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글. HUD 전용 로컬 state.
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
   const reducedMotion = usePrefersReducedMotion();
@@ -115,6 +117,18 @@ export const HudPanel = memo(function HudPanel({
                 cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
               }}
             >💬 가정</button>
+            {/* 메뉴 — 나가는 길. 같은 고스트 톤이지만 라벨을 붙인다:
+                아이콘만 두면 무엇을 여는지 알 수 없고, 이건 되돌릴 수 있는 동작이 아니다. */}
+            {onOpenMenu && (
+              <button
+                type="button" className="btn-reset" aria-label="메뉴 열기"
+                onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenMenu(); }}
+                style={{
+                  marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
+                  cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
+                }}
+              >🚪 메뉴</button>
+            )}
             {/* 기록장 — 지난 학년을 다시 넘겨본다(읽기 전용). 조용한 고스트 톤. */}
             {onOpenAlbum && (
               <button
