@@ -435,7 +435,9 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
     for (let mask = 0; mask < (1 << keys.length); mask++) {
       const env = new Map(keys.map((k, i) => [k, Boolean(mask & (1 << i))]));
       const pair: [string, string] = [evalNode(bg, env), evalNode(fg, env)];
-      const sig = `${pair[0]} ${pair[1]}`;
+      // 구분자 문자를 쓰지 않는다 — 색 문자열엔 `rgba(0, 0, 0, .5)`처럼 공백이 들어간다.
+      // 공백으로 이으면 ["a b","c"]와 ["a","b c"]가 같은 서명이 되어 한 쌍이 조용히 사라진다.
+      const sig = JSON.stringify(pair);
       if (!seen.has(sig)) { seen.add(sig); out.push(pair); }
     }
     return out;
