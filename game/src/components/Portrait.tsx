@@ -21,9 +21,12 @@ interface Props {
 }
 
 export function Portrait({ characterId, expression, size = 80, label, mental, mentalState, year, framed }: Props) {
-  const expr = expression || (mental !== undefined && mentalState
+  // `?? 'neutral'`이 필요하다 — mentalToExpression의 반환 타입이 `AvatarExpression | undefined`라
+  // (CharacterAvatar Props의 expression이 optional) 이대로 두면 `string | undefined`가 된다.
+  // 예전엔 템플릿 문자열에 바로 꽂아서 타입이 안 걸렸다.
+  const expr: string = expression || (mental !== undefined && mentalState
     ? mentalToExpression(mental, mentalState)
-    : 'neutral');
+    : 'neutral') || 'neutral';
 
   // **없는 파일을 먼저 두드리지 않는다.** mentalToExpression은 happy/sad/tired/burnout을
   // 돌려주는데 실물은 (부모 happy 2장을 빼면) 전부 neutral뿐이라, 예전엔 멘탈이 바뀔 때마다
