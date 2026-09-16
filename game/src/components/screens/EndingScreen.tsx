@@ -7,6 +7,7 @@ import { AudioToggle } from '../AudioToggle';
 import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, Gender, MemorySlot, getGrade } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
+import { BG_IMAGE_OPACITY_UNTREATED } from './surface';
 import { STAT_ICONS } from './shared';
 import { RunArchiveSummary } from './RunArchiveSummary';
 import { CgItem, catOf } from './memoryTokens';
@@ -128,7 +129,7 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
   }, []);
 
   return (
-    <BgWrapper {...bgProps}>
+    <BgWrapper {...bgProps} bgOpacity={BG_IMAGE_OPACITY_UNTREATED}>
       <div className="ending-screen fade-in" style={{ minHeight: 'auto', padding: 0, position: 'relative' }}>
         {/* 이 화면에만 오디오 진입점이 없었다(타이틀·HUD에는 있다). 배경음이 흐르는데
             끌 방법이 화면에 없으면 게임을 나가야 끌 수 있다. */}

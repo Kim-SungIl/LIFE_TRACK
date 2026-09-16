@@ -61,11 +61,24 @@ export const HudPanel = memo(function HudPanel({
   const reducedMotion = usePrefersReducedMotion();
   const mods = getParentMods(parents);
   return (
-    // **2단 구성이다.** 컨트롤 행(부모 칩·가정·메뉴·기록장·오디오)은 약 188px가 필요한데,
-    // 3단 한 줄 레이아웃에서 가운데 칼럼은 320px 화면에서 97px까지 눌린다 — 91px이 넘쳐
-    // 📖 기록장과 오디오 토글이 **우측 상태 블록 위에 겹쳐 그려졌다**(390px에서도 14px 침범).
-    // 컨트롤을 전폭 둘째 줄로 내리면 280px를 다 쓴다. flexWrap은 글자 크기를 키운 환경의 보험.
-    <div data-tutorial="hud" style={{ marginBottom: 10 }}>
+    // **유리 바닥 + 2단 구성.** 둘을 합친 자리다.
+    //
+    // 유리 바닥(#455): 배경 사진을 0.25 → 0.55로 올리면 HUD만 맨몸으로 사진 위에 남는다.
+    // 나머지 카드와 같은 rgba(42,34,48,0.85)+blur(6px)를 준다. 파스텔 배경인 초상도 이 바닥
+    // 위에 올라가면서 사진과 직접 부딪히지 않는다.
+    //
+    // 2단 구성: 컨트롤 행(부모 칩·가정·메뉴·기록장·오디오)은 약 188px가 필요한데, 3단 한 줄
+    // 레이아웃에서 가운데 칼럼은 320px 화면에서 97px까지 눌린다 — 91px이 넘쳐 📖 기록장과
+    // 오디오 토글이 **우측 상태 블록 위에 겹쳐 그려졌다**(390px에서도 14px 침범).
+    //
+    // #455 주석이 "래퍼를 새로 감싸지 않는다"고 적었던 이유는 #444 잠금이 children 인덱스로
+    // 축소 거동을 봤기 때문인데, 그 잠금은 이번에 1행(`hud.children[0]`) 기준으로 옮겼다.
+    // **바닥은 바깥 래퍼가 받는다** — 안쪽 1행에 주면 컨트롤 행만 사진 위에 맨몸으로 남는다.
+    <div data-tutorial="hud" style={{
+      marginBottom: 10,
+      background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+      borderRadius: 12, padding: '8px 10px',
+    }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)' }}>
       <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} />
       {/* minWidth:0 — flex 자식의 기본 min-width:auto는 콘텐츠보다 작아지지 않아
