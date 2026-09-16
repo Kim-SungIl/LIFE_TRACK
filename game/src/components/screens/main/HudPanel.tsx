@@ -61,18 +61,25 @@ export const HudPanel = memo(function HudPanel({
   const reducedMotion = usePrefersReducedMotion();
   const mods = getParentMods(parents);
   return (
-    // 유리 바닥 — 배경 사진을 0.25에서 올리면(BG_IMAGE_OPACITY) HUD만 맨몸으로 사진 위에
-    // 남는다. 이 화면에서 카드 밖에 있던 건 HUD와 자동저장 표시 둘뿐이라, 나머지 카드와
-    // 같은 rgba(42,34,48,0.85)+blur(6px)를 준다. 파스텔 배경인 초상(neutral은 누끼가 아니라
-    // 불투명 파스텔이 규약이다)도 이 바닥 위에 올라가면서 사진과 직접 부딪히지 않는다.
+    // **유리 바닥 + 2단 구성.** 둘을 합친 자리다.
     //
-    // **래퍼를 새로 감싸지 않는다** — #444 잠금이 이 요소의 children 인덱스(0=초상,
-    // 1=가운데, last=우측)로 축소 거동을 본다. 배경은 이 div가 직접 받는다.
+    // 유리 바닥(#455): 배경 사진을 0.25 → 0.55로 올리면 HUD만 맨몸으로 사진 위에 남는다.
+    // 나머지 카드와 같은 rgba(42,34,48,0.85)+blur(6px)를 준다. 파스텔 배경인 초상도 이 바닥
+    // 위에 올라가면서 사진과 직접 부딪히지 않는다.
+    //
+    // 2단 구성: 컨트롤 행(부모 칩·가정·메뉴·기록장·오디오)은 약 188px가 필요한데, 3단 한 줄
+    // 레이아웃에서 가운데 칼럼은 320px 화면에서 97px까지 눌린다 — 91px이 넘쳐 📖 기록장과
+    // 오디오 토글이 **우측 상태 블록 위에 겹쳐 그려졌다**(390px에서도 14px 침범).
+    //
+    // #455 주석이 "래퍼를 새로 감싸지 않는다"고 적었던 이유는 #444 잠금이 children 인덱스로
+    // 축소 거동을 봤기 때문인데, 그 잠금은 이번에 1행(`hud.children[0]`) 기준으로 옮겼다.
+    // **바닥은 바깥 래퍼가 받는다** — 안쪽 1행에 주면 컨트롤 행만 사진 위에 맨몸으로 남는다.
     <div data-tutorial="hud" style={{
-      display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)', marginBottom: 10,
+      marginBottom: 10,
       background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
       borderRadius: 12, padding: '8px 10px',
     }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)' }}>
       <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} />
       {/* minWidth:0 — flex 자식의 기본 min-width:auto는 콘텐츠보다 작아지지 않아
           축소 압력이 전부 우측 블록으로 갔다(320px에서 34px까지 찌그러짐). */}
@@ -90,87 +97,6 @@ export const HudPanel = memo(function HudPanel({
             {mentalState === 'burnout' ? '🔥 번아웃' : '😩 피로 상태'}
           </div>
         )}
-        {/* 부모 칩 — 22×22 발동 시 펄스. 칩의 역할은 '부모 강점 설명 노출'(정보). (Phase 4)
-            데스크톱은 hover, 터치/키보드는 탭·포커스로 툴팁을 토글한다(layout shift 방지 absolute popover).
-            Home 진입은 칩이 아니라 아래 "💬 가정" 버튼이 전담 — 터치에서 정보 보려다 Home으로 튕기던 문제 해소. */}
-        <div style={{ marginTop: 4, position: 'relative' }}>
-          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            {parents.map(p => {
-              const justFired = parentBonusesApplied?.some(b => b.parent === p);
-              const isActive = activeParentTip === p;
-              return (
-                <button
-                  key={p}
-                  type="button" className="btn-reset"
-                  aria-label={`${PARENT_TIP_SHORT[p]} 강점 설명`}
-                  aria-expanded={isActive}
-                  aria-controls={isActive ? 'parent-tip-popover' : undefined}
-                  // 순수 탭/활성화 토글 — hover/focus 자동표시를 두면 클릭이 방금 세팅된 상태를
-                  // 뒤집어 툴팁이 안 열리고(데스크톱·키보드), 터치 emulated-hover에서도 깨진다.
-                  onClick={() => setActiveParentTip(prev => (prev === p ? null : p))}
-                  style={{
-                    width: 22, height: 22, borderRadius: '50%',
-                    background: isActive ? 'rgba(224,138,91,0.28)' : 'rgba(224,138,91,0.12)',
-                    border: '1px solid rgba(224,138,91,0.4)',
-                    display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
-                    cursor: 'pointer', userSelect: 'none',
-                    animation: justFired && !reducedMotion ? 'parentChipPulse 0.6s ease' : 'none',
-                  }}
-                >{PARENT_ICONS[p]}</button>
-              );
-            })}
-            {/* 클릭 가능 affordance — "💬 가정" 라벨로 진입점 명시 */}
-            <button
-              type="button" className="btn-reset" data-tutorial="home"
-              onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenHome(); }}
-              style={{
-                marginLeft: 4, fontSize: '0.65rem', color: 'var(--accent-soft)',
-                cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
-              }}
-            >💬 가정</button>
-            {/* 메뉴 — 나가는 길. 같은 고스트 톤이지만 라벨을 붙인다:
-                아이콘만 두면 무엇을 여는지 알 수 없고, 이건 되돌릴 수 있는 동작이 아니다. */}
-            {onOpenMenu && (
-              <button
-                type="button" className="btn-reset" aria-label="메뉴 열기"
-                onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenMenu(); }}
-                style={{
-                  marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
-                  cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
-                }}
-              >🚪 메뉴</button>
-            )}
-            {/* 기록장 — 지난 학년을 다시 넘겨본다(읽기 전용). 조용한 고스트 톤. */}
-            {onOpenAlbum && (
-              <button
-                type="button" className="btn-reset"
-                onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenAlbum(); }}
-                style={{
-                  marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
-                  cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
-                }}
-              >📖 기록장</button>
-            )}
-            <AudioToggle style={{ marginLeft: 4 }} />
-          </div>
-          {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (
-            <div id="parent-tip-popover" role="tooltip" style={{
-              position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 20,
-              padding: '5px 8px', borderRadius: 6,
-              background: 'rgba(20,16,28,0.92)', backdropFilter: 'blur(4px)',
-              border: '1px solid rgba(224,138,91,0.35)',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
-              fontSize: '0.66rem', lineHeight: 1.4, color: 'var(--text-secondary)',
-              width: 'max-content', maxWidth: 240,
-              wordBreak: 'keep-all', overflowWrap: 'break-word',
-              pointerEvents: 'none',
-            }}>
-              <strong style={{ color: 'var(--accent-soft)' }}>{PARENT_ICONS[activeParentTip]} {PARENT_TIP_SHORT[activeParentTip]}</strong>
-              {' — '}
-              {PARENT_TIP_DESC[activeParentTip]}
-            </div>
-          )}
-        </div>
       </div>
       {/* **flexShrink:0 + nowrap**. 없으면 320px에서 이 블록이 min-content(34px)까지 눌려
           한글이 음절 단위로 끊긴다 — 피로 2줄·💰 2줄·입금 4줄이 되고 HUD 높이가 76→145px로
@@ -193,6 +119,88 @@ export const HudPanel = memo(function HudPanel({
           )}
         </div>
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{getWeeklyIncome(parents, year) - mods.livingCost}만원 입금</div>
+      </div>
+    </div>
+      {/* 부모 칩 — 22×22 발동 시 펄스. 칩의 역할은 '부모 강점 설명 노출'(정보). (Phase 4)
+          데스크톱은 hover, 터치/키보드는 탭·포커스로 툴팁을 토글한다(layout shift 방지 absolute popover).
+          Home 진입은 칩이 아니라 아래 "💬 가정" 버튼이 전담 — 터치에서 정보 보려다 Home으로 튕기던 문제 해소. */}
+      <div style={{ marginTop: 6, position: 'relative' }}>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+          {parents.map(p => {
+            const justFired = parentBonusesApplied?.some(b => b.parent === p);
+            const isActive = activeParentTip === p;
+            return (
+              <button
+                key={p}
+                type="button" className="btn-reset"
+                aria-label={`${PARENT_TIP_SHORT[p]} 강점 설명`}
+                aria-expanded={isActive}
+                aria-controls={isActive ? 'parent-tip-popover' : undefined}
+                // 순수 탭/활성화 토글 — hover/focus 자동표시를 두면 클릭이 방금 세팅된 상태를
+                // 뒤집어 툴팁이 안 열리고(데스크톱·키보드), 터치 emulated-hover에서도 깨진다.
+                onClick={() => setActiveParentTip(prev => (prev === p ? null : p))}
+                style={{
+                  width: 22, height: 22, borderRadius: '50%',
+                  background: isActive ? 'rgba(224,138,91,0.28)' : 'rgba(224,138,91,0.12)',
+                  border: '1px solid rgba(224,138,91,0.4)',
+                  display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
+                  cursor: 'pointer', userSelect: 'none',
+                  animation: justFired && !reducedMotion ? 'parentChipPulse 0.6s ease' : 'none',
+                }}
+              >{PARENT_ICONS[p]}</button>
+            );
+          })}
+          {/* 클릭 가능 affordance — "💬 가정" 라벨로 진입점 명시 */}
+          <button
+            type="button" className="btn-reset" data-tutorial="home"
+            onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenHome(); }}
+            style={{
+              marginLeft: 4, fontSize: '0.65rem', color: 'var(--accent-soft)',
+              cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
+            }}
+          >💬 가정</button>
+          {/* 메뉴 — 나가는 길. 같은 고스트 톤이지만 라벨을 붙인다:
+              아이콘만 두면 무엇을 여는지 알 수 없고, 이건 되돌릴 수 있는 동작이 아니다. */}
+          {onOpenMenu && (
+            <button
+              type="button" className="btn-reset" aria-label="메뉴 열기"
+              onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenMenu(); }}
+              style={{
+                marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
+                cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
+              }}
+            >🚪 메뉴</button>
+          )}
+          {/* 기록장 — 지난 학년을 다시 넘겨본다(읽기 전용). 조용한 고스트 톤. */}
+          {onOpenAlbum && (
+            <button
+              type="button" className="btn-reset"
+              onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenAlbum(); }}
+              style={{
+                marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
+                cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
+              }}
+            >📖 기록장</button>
+          )}
+          <AudioToggle style={{ marginLeft: 4 }} />
+        </div>
+        {activeParentTip && parents.includes(activeParentTip as ParentStrength) && (
+          <div id="parent-tip-popover" role="tooltip" style={{
+            position: 'absolute', top: 'calc(100% + 4px)', left: 0, zIndex: 20,
+            padding: '5px 8px', borderRadius: 6,
+            background: 'rgba(20,16,28,0.92)', backdropFilter: 'blur(4px)',
+            border: '1px solid rgba(224,138,91,0.35)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.35)',
+            fontSize: '0.66rem', lineHeight: 1.4, color: 'var(--text-secondary)',
+            width: 'max-content', maxWidth: 240,
+            wordBreak: 'keep-all', overflowWrap: 'break-word',
+            pointerEvents: 'none',
+          }}>
+            <strong style={{ color: 'var(--accent-soft)' }}>{PARENT_ICONS[activeParentTip]} {PARENT_TIP_SHORT[activeParentTip]}</strong>
+            {' — '}
+            {PARENT_TIP_DESC[activeParentTip]}
+          </div>
+        )}
       </div>
     </div>
   );

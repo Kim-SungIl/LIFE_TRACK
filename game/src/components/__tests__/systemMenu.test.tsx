@@ -18,6 +18,7 @@ vi.mock('../../engine/assetPrefetch', async (importOriginal) => ({
 
 import { GameScreen } from '../GameScreen';
 import { SystemMenu } from '../SystemMenu';
+import { Dialog } from '../Dialog';
 import { useGameStore, loadFromStorage } from '../../engine/store';
 import { createInitialState } from '../../engine/gameEngine';
 import { CURRENT_SAVE_VERSION } from '../../engine/stateMigration';
@@ -169,6 +170,101 @@ describe('새로고침 경고는 저장이 실패했을 때만', () => {
       // 저장 시도를 한 번 일으켜 플래그를 세운다(자동 저장은 state 변경 구독에서 돈다).
       act(() => { useGameStore.setState({ state: { ...useGameStore.getState().state! } }); });
       expect(fireBeforeUnload(), '저장이 진짜 안 되는 환경에서는 경고가 참이다').toBe(true);
+    } finally {
+      if (orig) Object.defineProperty(globalThis, 'localStorage', orig);
+      else delete (globalThis as unknown as Record<string, unknown>).localStorage;
+    }
+  });
+});
+
+// **다른 모달 위에 떠도 최상위로 동작하는가.**
+//
+// 처음에는 포커스 트랩과 Escape를 SystemMenu가 직접 구현했다. 그러면 이 메뉴가 `Dialog`의
+// `dialogStack` 밖에 서고, 상점 같은 기존 Dialog가 열린 채 뒤로가기를 누르면 그 쪽의
+// **캡처 단계** 핸들러(Dialog.tsx:116)가 먼저 받아 `stopPropagation`으로 전파를 끊는다.
+// 3자 검수가 브라우저로 재현한 증상: Tab이 보이지 않는 상점으로 새고, Escape가 메뉴가 아니라
+// **상점을 닫았다**(메뉴를 닫으려면 두 번 눌러야 했다). aria-modal 둘이 동시에 뜬 채
+// 둘 다 inert가 아니기도 했다.
+//
+// 메뉴를 단독 렌더하는 테스트는 이 상황을 **원리상 못 본다** — 그래서 아래는 항상 둘을 함께 띄운다.
+describe('다른 다이얼로그 위에서도 최상위다', () => {
+  function renderStacked() {
+    const onMenuClose = vi.fn();
+    const onShopClose = vi.fn();
+    const r = render(
+      <>
+        <Dialog onClose={onShopClose} ariaLabel="상점">
+          <button type="button">🏪 편의점</button>
+          <button type="button">📚 서점/장비</button>
+        </Dialog>
+        <SystemMenu onExit={vi.fn()} onClose={onMenuClose} />
+      </>,
+    );
+    return { ...r, onMenuClose, onShopClose };
+  }
+
+  it('Escape가 아래 다이얼로그가 아니라 메뉴를 닫는다', () => {
+    const { onMenuClose, onShopClose } = renderStacked();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onMenuClose, '메뉴가 최상위인데 안 닫히면 스택 밖에 서 있는 것이다').toHaveBeenCalled();
+    expect(onShopClose, '아래 상점이 닫히면 사용자가 누른 적 없는 것을 닫은 셈이다').not.toHaveBeenCalled();
+  });
+
+  it('Tab이 아래 다이얼로그로 새지 않는다', () => {
+    const { container } = renderStacked();
+    const menu = screen.getByRole('dialog', { name: '메뉴' });
+    const items = [...menu.querySelectorAll<HTMLElement>('button')];
+    expect(items.length, '가둘 요소가 없으면 이 계약은 의미가 없다').toBeGreaterThan(1);
+
+    items[items.length - 1].focus();
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(menu.contains(document.activeElement),
+      '포커스가 보이지 않는 상점으로 넘어가면 키보드 사용자는 길을 잃는다').toBe(true);
+
+    // 아래 다이얼로그는 inert 처리돼야 한다 — aria-modal 둘이 다 살아 있으면 거짓말이다.
+    const shop = screen.getByRole('dialog', { name: '상점', hidden: true });
+    expect(shop.inert, '아래 다이얼로그가 inert가 아니면 보조기술에 둘 다 열린 것으로 보인다').toBe(true);
+    expect(container).toBeTruthy();
+  });
+});
+
+// 저장이 죽었을 때 라벨이 **참인가**. `exitToTitle`은 메모리 state를 버리므로
+// 마지막 성공 저장 이후의 진행이 사라진다. 상태 전환이라 beforeunload도 안 뜬다 —
+// 여기서 말하지 않으면 아무 데서도 안 말한다.
+describe('저장이 죽었으면 라벨이 그렇게 말한다', () => {
+  it('저장 실패 중에는 "저장돼 있어요"라고 하지 않는다', () => {
+    render(<SystemMenu onExit={vi.fn()} onClose={vi.fn()} saveFailed />);
+    expect(screen.queryByText(/진행은 저장돼 있어요/),
+      '저장이 안 되는데 저장됐다고 하면 사용자가 진행을 잃는다').toBeNull();
+    expect(screen.getByText(/최근 진행이 사라져요/)).toBeTruthy();
+  });
+
+  // 음성 짝 — 상시 경고는 경고가 아니다.
+  it('저장이 멀쩡하면 평소 문구 그대로다', () => {
+    render(<SystemMenu onExit={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByText(/진행은 저장돼 있어요/)).toBeTruthy();
+    expect(screen.queryByText(/최근 진행이 사라져요/)).toBeNull();
+  });
+
+  it('GameScreen이 저장 실패 상태를 메뉴에 넘긴다 (배선)', () => {
+    seedAndMount(inPlay());
+    const orig = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
+    const mem = new Map<string, string>();
+    const fake: Storage = {
+      get length() { return mem.size; },
+      key: (i: number) => [...mem.keys()][i] ?? null,
+      getItem: (k: string) => mem.get(k) ?? null,
+      setItem: () => { throw new Error('QuotaExceededError'); },
+      removeItem: (k: string) => { mem.delete(k); },
+      clear: () => { mem.clear(); },
+    };
+    Object.defineProperty(globalThis, 'localStorage', { value: fake, configurable: true, writable: true });
+    try {
+      act(() => { useGameStore.setState({ state: { ...useGameStore.getState().state! } }); });
+      pressBack();
+      // prop을 만드는 층이 빠지면 SystemMenu 단독 테스트는 원리상 못 잡는다(#431 전례).
+      expect(screen.getByText(/최근 진행이 사라져요/),
+        'GameScreen이 saveFailed를 안 넘기면 메뉴는 영원히 거짓말한다').toBeTruthy();
     } finally {
       if (orig) Object.defineProperty(globalThis, 'localStorage', orig);
       else delete (globalThis as unknown as Record<string, unknown>).localStorage;
