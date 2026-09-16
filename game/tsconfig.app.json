@@ -25,5 +25,8 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"],
-  "exclude": ["src/**/__tests__/**"]
+  // 테스트는 tsconfig.test.json이 node 타입과 함께 검사한다 — 여기서 빼는 이유는
+  // **앱 소스에 node 전역을 열지 않기 위해서다**(테스트는 fs·process를 쓴다).
+  // 제외를 지우면 테스트가 여기서도 검사되면서 node 빌트인 import가 전부 TS2307이 된다.
+  "exclude": ["src/**/__tests__/**", "src/test"]
 }

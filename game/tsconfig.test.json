@@ -1,0 +1,44 @@
+{
+  // 테스트 타입 검사 — 이전엔 tsconfig.app.json이 `src/**/__tests__/**`를 제외해서
+  // **테스트 코드의 타입 오류를 아무도 안 봤다.** 실사고: 0인자 함수에 `resultState(5, 4)`를
+  // 넘긴 호출이 tsc를 그대로 통과했다. vitest는 esbuild로 타입을 벗겨 실행하므로
+  // 런타임에도 안 걸린다 — 잠금 테스트가 이 리포의 주 게이트인데 그 층만 무검사였다.
+  //
+  // **app과 분리하는 이유는 node 타입이다.** 이 리포의 계약 테스트는 디스크를 읽어
+  // 산출물·매니페스트·CSS를 검사하므로 `fs`·`process`·`import.meta.dirname`이 필요하다.
+  // 그렇다고 tsconfig.app.json에 `"node"`를 넣으면 **브라우저에서 도는 앱 소스에도**
+  // node 전역이 열려 `process.env`를 쓰고도 tsc가 통과한다. scripts를 따로 검사하는
+  // tsconfig.scripts.json과 같은 구조로 테스트만 떼어 낸다.
+  //
+  // src는 테스트가 import하므로 함께 들어온다. 검사가 tsconfig.app.json과 겹치지만
+  // 설정이 달라 무해하고, **앱 소스의 node 전역 금지는 app 쪽 검사가 그대로 유지한다**
+  // (여기서 통과해도 app에서 걸려 tsc -b가 실패한다).
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "target": "ES2023",
+    "useDefineForClassFields": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    // jest-dom 매처(toBeVisible/toBeDisabled 등)는 src/test/setup.ts의
+    // `@testing-library/jest-dom/vitest` import가 전역 확장으로 등록한다.
+    "types": ["node", "vite/client"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": false,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true
+  },
+  "include": ["src/**/__tests__/**/*", "src/test"]
+}
