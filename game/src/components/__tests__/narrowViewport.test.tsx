@@ -101,34 +101,101 @@ describe('#444 HUD — 우측 블록이 찌그러지지 않는다', () => {
     );
   }
 
+  /** 1행 = 초상 | 가운데(제목) | 우측(상태). 2행 = 전폭 컨트롤 행. */
+  const rows = (container: HTMLElement) => {
+    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
+    return { hud, row1: hud.children[0] as HTMLElement, controls: hud.children[1] as HTMLElement };
+  };
+
   it('우측 블록은 줄어들지도 줄바꿈하지도 않는다', () => {
     const { container } = renderHud();
-    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
-    const right = hud.children[hud.children.length - 1] as HTMLElement;
+    const { row1 } = rows(container);
+    const right = row1.children[row1.children.length - 1] as HTMLElement;
     expect(right.style.flexShrink, '0이 아니면 min-content(34px)까지 눌린다').toBe('0');
     expect(right.style.whiteSpace, 'nowrap이 없으면 한글이 음절 단위로 끊긴다').toBe('nowrap');
   });
 
   it('가운데 블록이 축소를 받는다 (min-width:auto가 아니라)', () => {
     const { container } = renderHud();
-    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
-    const mid = hud.children[1] as HTMLElement;
+    const mid = rows(container).row1.children[1] as HTMLElement;
     expect(mid.style.minWidth, '0이 아니면 축소 압력이 전부 우측으로 간다').toBe('0px');
     expect(mid.style.flexGrow).toBe('1');
   });
 
   it('HUD gap이 좁은 화면에서 줄어든다', () => {
     const { container } = renderHud();
-    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
-    expect(hud.style.gap).toContain('clamp(');
+    expect(rows(container).row1.style.gap).toContain('clamp(');
   });
 
   // 우측 글자 크기는 **줄이지 않기로 한 결정**이다 — 320px에서 5px을 벌지만
   // 가장 작은 화면의 글자가 10.2px가 된다. 되돌린 이유를 잠가 둔다.
   it('우측 글자 크기는 고정이다 (가독성 우선)', () => {
     const { container } = renderHud();
-    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
-    const right = hud.children[hud.children.length - 1] as HTMLElement;
+    const { row1 } = rows(container);
+    const right = row1.children[row1.children.length - 1] as HTMLElement;
     expect(right.style.fontSize).toBe('0.72rem');
+  });
+});
+
+// **컨트롤 행은 전폭 둘째 줄이어야 한다.** 가운데 칼럼 안에 두면 320px에서 그 칼럼이 97px까지
+// 눌리는데 행 자체는 188px가 필요해 91px이 넘쳤고, 📖 기록장과 오디오 토글이 **우측 상태 블록
+// 위에 겹쳐 그려졌다**(390px에서도 14px 침범). 라벨도 전부 2줄로 쪼개졌다.
+//
+// 실브라우저 측정(수치는 PR 본문): 넘침 91 → 0, HUD 높이 115 → 93px, 겹침 2건 → 0.
+// jsdom은 레이아웃을 안 재므로 여기서는 그 수치를 만들어 낸 **구조**를 잡는다.
+describe('#445 후속 HUD — 컨트롤 행이 가운데 칼럼 안으로 돌아가지 않는다', () => {
+  function renderHud() {
+    return render(
+      <HudPanel
+        gender="male" mood="☀️" weekInfo="중2 1학기 12주차" month="5월"
+        isVacation={false} fatigue={0} fatigueColor="var(--green)" fatigueLabel="좋음"
+        money={1569} parents={['strict', 'emotional']} year={3}
+        mentalStat={60} mentalState="normal" weeklyActivityCost={0} weeklyOverBudget={false}
+        onOpenHome={() => {}} onOpenAlbum={() => {}} onOpenMenu={() => {}}
+      />,
+    );
+  }
+
+  it('컨트롤 행이 1행(초상·제목·상태) 바깥에 있다', () => {
+    const { container } = renderHud();
+    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
+    const row1 = hud.children[0] as HTMLElement;
+    const home = screen.getByText('💬 가정');
+
+    expect(hud.children.length, 'HUD가 2단이 아니면 컨트롤이 다시 가운데 칼럼으로 들어간 것이다')
+      .toBeGreaterThanOrEqual(2);
+    expect(row1.contains(home),
+      '컨트롤이 1행 안에 있으면 320px에서 가운데 97px 안에 188px를 넣으려다 우측과 겹친다')
+      .toBe(false);
+    // 우측 상태 블록은 반대로 1행 안에 남아 있어야 한다(같이 내려가면 제목 옆이 비어 버린다).
+    expect(row1.textContent, '우측 상태 블록이 1행을 떠나면 안 된다').toContain('1569');
+  });
+
+  it('컨트롤 행의 폭을 가운데 칼럼이 제한하지 않는다', () => {
+    const { container } = renderHud();
+    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
+    const controls = hud.children[1] as HTMLElement;
+    // flex:1 컬럼의 자손이면 그 컬럼의 minWidth:0에 갇힌다.
+    const mid = (hud.children[0] as HTMLElement).children[1] as HTMLElement;
+    expect(mid.contains(controls), '컨트롤이 축소되는 칼럼의 자손이면 다시 넘친다').toBe(false);
+    expect(hud.contains(controls)).toBe(true);
+  });
+
+  it('모든 컨트롤이 같은 행에 모여 있다 (흩어지지 않았다)', () => {
+    const { container } = renderHud();
+    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
+    const controls = hud.children[1] as HTMLElement;
+    for (const label of ['💬 가정', '📖 기록장']) {
+      expect(controls.textContent, `${label}이 컨트롤 행 밖에 있다`).toContain(label);
+    }
+    expect(controls.querySelector('[aria-label="메뉴 열기"]'), '메뉴 버튼도 같은 행이어야 한다').toBeTruthy();
+  });
+
+  // 글자 크기를 키운 환경(브라우저 기본 폰트 확대)에서는 전폭이어도 넘칠 수 있다.
+  it('넘치면 겹치지 않고 줄바꿈한다', () => {
+    const { container } = renderHud();
+    const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
+    const row = (hud.children[1] as HTMLElement).children[0] as HTMLElement;
+    expect(row.style.flexWrap, 'nowrap이면 넘친 만큼 이웃 위에 그려진다').toBe('wrap');
   });
 });
