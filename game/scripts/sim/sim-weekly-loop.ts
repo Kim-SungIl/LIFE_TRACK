@@ -24,33 +24,10 @@ import { createInitialState, processWeek, getWeekInfo } from '../../src/engine/g
 import { ACTIVITIES, getAvailableActivities, getActivityCost } from '../../src/engine/activities';
 import { getWeeklyIncome } from '../../src/engine/parentModifiers';
 import { resolveEventLikeStore } from '../lib/y1-sim-resolve';
-import type { GameState, ParentStrength } from '../../src/engine/types';
+// 루틴 표는 SSOT(scripts/lib/sim-routines.ts) — 하네스마다 지어내면 같은 엔진에서 정반대 결론이 난다.
+import { SIM_ROUTINES as ROUTINES, assertRoutineIds, type Routine } from '../lib/sim-routines';
+import type { GameState } from '../../src/engine/types';
 
-interface Routine {
-  name: string;
-  label: string;
-  parents: [ParentStrength, ParentStrength];
-  slot2: string;
-  slot3: string;
-  weekend: string[];
-  vacation: string[];
-}
-
-// 대조군을 무료 루틴 하나로 두면 안 된다(과거 오판 전례) — 유료·혼합·무료 셋을 나란히 본다.
-const ROUTINES: Routine[] = [
-  { name: 'paid', label: '유료 루틴(학원+헬스)', parents: ['strict', 'info'],
-    slot2: 'academy', slot3: 'gym', weekend: ['self-study', 'club'], vacation: ['academy', 'rest', 'rest'] },
-  { name: 'mixed', label: '혼합(학원+독학)', parents: ['emotional', 'info'],
-    slot2: 'academy', slot3: 'self-study', weekend: ['club', 'rest'], vacation: ['self-study', 'club', 'rest'] },
-  { name: 'free', label: '무료 루틴(독학+가벼운운동)', parents: ['resilience', 'freedom'],
-    slot2: 'self-study', slot3: 'light-exercise', weekend: ['self-study', 'club'], vacation: ['rest', 'self-study', 'rest'] },
-  // 지출형 — "유료 활동을 쓰고 싶은 플레이어"가 실제로 감당되는지. 여기서만 스킵이 관측된다.
-  { name: 'paid-spend', label: '지출형(유료루틴+유료주말/방학)', parents: ['strict', 'info'],
-    slot2: 'academy', slot3: 'gym', weekend: ['art-lesson', 'hang-out'], vacation: ['intensive-academy', 'sports-camp', 'rest'] },
-  // 부모 wealth(+2만/주)가 지출형을 구제하는가.
-  { name: 'paid-wealth', label: '지출형+부유한 부모(+2만/주)', parents: ['wealth', 'info'],
-    slot2: 'academy', slot3: 'gym', weekend: ['art-lesson', 'hang-out'], vacation: ['intensive-academy', 'sports-camp', 'rest'] },
-];
 
 /** 돈이 무한이라면 열릴 활동 — 학년/계절 게이트만 남긴 상태로 물어본다. */
 function availableWithInfiniteMoney(s: GameState): Set<string> {
@@ -154,6 +131,7 @@ const f1 = (x: number) => x.toFixed(1);
 const UI_PICK = process.argv[3] === 'ui';
 
 function main() {
+  assertRoutineIds(); // 없는 활동 id는 조용히 스킵돼 피로가 반토막 난 채로 돌아간다
   const seeds = Number(process.argv[2]) || 5;
   console.log(UI_PICK ? '(모드: uiPick — 매주 고를 수 있는 것만 고른다)\n' : '(모드: raw — 계획이 그대로 유지된다고 가정)\n');
   console.log(`# 주간 루프 진단 — 루틴 ${ROUTINES.length}종 × 시드 ${seeds}\n`);
