@@ -324,3 +324,69 @@ describe('모달 계약 — 선언한 대로 동작한다', () => {
     expect(onClose, '내용 클릭까지 닫히면 메뉴를 쓸 수 없다').not.toHaveBeenCalled();
   });
 });
+
+// z-index와 align은 렌더 결과에 나타나지만 **아무것도 단언하지 않고 있었다** — 실측으로
+// `zIndex={300}`을 100으로, `align="bottom"`을 center로 바꿔도 전부 초록이었다.
+// 300을 내리면 메뉴가 상점·슬롯 편집기 **아래로 깔린다**(키보드는 DOM 스택 기준이라 정상
+// 동작하므로 테스트가 더더욱 안 걸린다 — 사용자는 안 보이는 메뉴를 조작하게 된다).
+describe('메뉴는 다른 다이얼로그보다 위에 그려진다', () => {
+  /** 소스에서 `<Dialog ... zIndex={N}>`을 전부 긁는다 — 숫자를 박으면 새 다이얼로그가 늘 때 늙는다. */
+  function dialogZIndexes(): { file: string; z: number }[] {
+    const files = import.meta.glob('../**/*.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+    const out: { file: string; z: number }[] = [];
+    for (const [file, src] of Object.entries(files)) {
+      if (file.includes('__tests__')) continue;
+      // `<Dialog` 여는 태그 안의 zIndex만 본다(다른 컴포넌트의 인라인 zIndex와 섞이지 않게).
+      for (const tag of src.match(/<Dialog[\s\S]*?>/g) ?? []) {
+        const m = tag.match(/zIndex=\{(\d+)\}/);
+        if (m) out.push({ file, z: Number(m[1]) });
+      }
+    }
+    return out;
+  }
+
+  it('메뉴의 z가 앱 안 모든 다이얼로그보다 높다', () => {
+    const all = dialogZIndexes();
+    expect(all.length, '코퍼스가 비면 이 검사는 공허하게 참이 된다').toBeGreaterThan(1);
+
+    const menu = all.filter(d => d.file.includes('SystemMenu'));
+    expect(menu.length, 'SystemMenu가 zIndex를 명시하지 않으면 Dialog 기본값(100)으로 깔린다').toBe(1);
+
+    const others = all.filter(d => !d.file.includes('SystemMenu'));
+    const highest = Math.max(...others.map(d => d.z));
+    expect(menu[0].z,
+      `메뉴 z=${menu[0].z}인데 다른 다이얼로그 최대가 ${highest}다 — 메뉴가 그 아래로 깔린다`)
+      .toBeGreaterThan(highest);
+  });
+
+  it('렌더된 메뉴가 아래 다이얼로그보다 실제로 위다', () => {
+    render(
+      <>
+        <Dialog onClose={vi.fn()} ariaLabel="상점" zIndex={250}>
+          <button type="button">🏪 편의점</button>
+        </Dialog>
+        <SystemMenu onExit={vi.fn()} onClose={vi.fn()} />
+      </>,
+    );
+    const z = (name: string) => {
+      const el = screen.getByRole('dialog', { name, hidden: true });
+      // Dialog는 오버레이에 zIndex를 건다 — 다이얼로그 자신 또는 그 조상에서 찾는다.
+      for (let n: HTMLElement | null = el; n; n = n.parentElement) {
+        if (n.style.zIndex) return Number(n.style.zIndex);
+      }
+      return NaN;
+    };
+    expect(z('메뉴'), '메뉴가 아래 다이얼로그보다 낮으면 사용자는 안 보이는 것을 조작한다')
+      .toBeGreaterThan(z('상점'));
+  });
+
+  it('메뉴는 화면 아래에 붙는 바텀시트다', () => {
+    render(<SystemMenu onExit={vi.fn()} onClose={vi.fn()} />);
+    const el = screen.getByRole('dialog', { name: '메뉴' });
+    let align = '';
+    for (let n: HTMLElement | null = el; n && !align; n = n.parentElement) {
+      if (n.style.alignItems) align = n.style.alignItems;
+    }
+    expect(align, 'center로 바뀌면 엄지가 닿는 자리에서 화면 한가운데로 올라간다').toBe('flex-end');
+  });
+});

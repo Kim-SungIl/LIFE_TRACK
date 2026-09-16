@@ -48,8 +48,10 @@ describe('예외가 안 나는 손상도 거부한다', () => {
     ['npcs가 빈 배열', { npcs: [] }],
     ['gender가 모르는 값', { gender: 'other' }],
     ['phase가 모르는 값', { phase: 'nowhere' }],
-    ['year가 범위 밖', { year: 99 }],
+    ['year가 상한 밖', { year: 99 }],
+    ['year가 하한 밖', { year: 0 }],    // 상한만 두면 반대쪽이 통째로 빈다(실측: 하한을 지워도 초록이었다)
     ['week이 0', { week: 0 }],
+    ['week이 상한 밖', { week: 50 }],   // 하한만 두면 단방향 잠금이다 — 상한을 지워도 초록이었다
     ['money가 문자열', { money: '1569' }],
     ['fatigue가 null', { fatigue: null }],
   ];
@@ -131,5 +133,42 @@ describe('진단 문자열은 어느 필드가 깨졌는지 말한다', () => {
       expect(() => describeUnplayable(v)).not.toThrow();
       expect(describeUnplayable(v)).not.toBeNull();
     }
+  });
+});
+
+// 직렬화를 거치면 NaN·Infinity는 `null`이 되어 `typeof v === 'number'`에서 이미 걸린다.
+// 그래서 **세이브 경로로는 `Number.isFinite`를 잠글 수 없다** — 실제로 그 호출을 지워도
+// 1301개가 전부 통과했다(3자 검수 실측). 픽스처 라벨은 'NaN'인데 디스크에 닿는 값은 null이었다.
+// 판정 함수를 직접 태워 못박는다.
+describe('NaN·Infinity는 직접 호출로만 잠긴다', () => {
+  const base = () => JSON.parse(JSON.stringify(
+    createInitialState('male', ['wealth', 'info'], { rngSeed: 5 }),
+  )) as Record<string, unknown>;
+
+  const bad: [string, (s: Record<string, unknown>) => void][] = [
+    ['stats.academic = NaN', s => { (s.stats as Record<string, number>).academic = NaN; }],
+    ['stats.mental = Infinity', s => { (s.stats as Record<string, number>).mental = Infinity; }],
+    ['money = NaN', s => { s.money = NaN; }],
+    ['fatigue = -Infinity', s => { s.fatigue = -Infinity; }],
+    ['year = NaN', s => { s.year = NaN; }],
+    ['week = Infinity', s => { s.week = Infinity; }],
+  ];
+
+  for (const [label, mutate] of bad) {
+    it(`${label} → 거부 (NaN은 막대·등급·엔딩 판정을 조용히 물들인다)`, () => {
+      const s = base();
+      mutate(s);
+      expect(describeUnplayable(s), `${label}이 통과하면 화면 전체가 NaN이 된다`).not.toBeNull();
+    });
+  }
+
+  it('유한수는 그대로 통과한다 (가드가 과잉거부하지 않는다)', () => {
+    expect(describeUnplayable(base())).toBeNull();
+  });
+
+  // 직렬화가 왜 이 축을 못 잠그는지 자체를 못박는다 — 라벨과 실제가 갈리면 또 속는다.
+  it('JSON 왕복은 NaN을 null로 바꾼다 (세이브 경로로 못 잠그는 이유)', () => {
+    expect(JSON.parse(JSON.stringify({ v: NaN })).v).toBeNull();
+    expect(JSON.parse(JSON.stringify({ v: Infinity })).v).toBeNull();
   });
 });

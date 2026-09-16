@@ -991,15 +991,29 @@ function advanceWeekCounter(state: GameState): void {
  * 누적은 원시값으로 해 두고 **여기서 한 번만 반올림한다** — 선택지마다 반올림한 값을 다시
  * 더하면 고스탯 구간에서 로그가 실제보다 커진다(+0.25를 +0.3으로 세는 식).
  */
-function foldPendingIntoLog(state: GameState, log: WeekLog): void {
+/**
+ * 보류분을 이번 주 로그에 접고 비운다.
+ *
+ * **export는 테스트를 위한 것이다.** 정상 경로에서는 `processWeek` 첫머리의 `migrateLoadedState`가
+ * 이미 손상값을 걸러 내므로(`sanitizePendingWeekDelta`), 여기 유한수 가드에는 나쁜 값이 도달할
+ * 길이 없다 — 즉 **제품 경로만으로는 이 가드를 잠글 수 없다**(가드를 지워도 전부 초록이었다).
+ * 잠글 수 없는 방어는 방어처럼 보이는 장식이라, 불변식을 직접 태워 못박는다.
+ */
+export function foldPendingIntoLog(state: GameState, log: WeekLog): void {
   const p = state.pendingWeekDelta;
   if (!p) return;
+  // 여기 닿는 값은 processWeek 첫머리의 migrateLoadedState가 이미 걸렀다(sanitizePendingWeekDelta).
+  // 그래도 유한수만 접는다 — 이 불변식이 깨진 채 통과하면 `-3 + '3'`이 **-33**이 되고
+  // `4 + '-8'`은 NaN이 되어, 결산이 틀린 걸 틀렸다고 말하지도 못한 채 숫자만 바뀐다.
+  const add = (base: number, d: unknown): number =>
+    typeof d === 'number' && Number.isFinite(d) ? round1(base + d) : base;
+
   for (const [key, val] of Object.entries(p.stats)) {
     const k = key as StatKey;
-    log.statChanges[k] = round1((log.statChanges[k] ?? 0) + (val as number));
+    log.statChanges[k] = add(log.statChanges[k] ?? 0, val);
   }
-  if (p.fatigue) log.fatigueChange = round1(log.fatigueChange + p.fatigue);
-  if (p.money) log.moneyChange = round1(log.moneyChange + p.money);
+  if (p.fatigue) log.fatigueChange = add(log.fatigueChange, p.fatigue);
+  if (p.money) log.moneyChange = add(log.moneyChange, p.money);
   // 접었으면 비운다 — 안 비우면 다음 주 결산이 같은 값을 또 센다.
   state.pendingWeekDelta = undefined;
 }

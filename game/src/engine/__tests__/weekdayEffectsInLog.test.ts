@@ -15,9 +15,11 @@
 //
 // 돈은 스탯보다 나쁘다 — `+`/`-`와 초록/빨강으로 방향을 **명시**하기 때문이다.
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useGameStore } from '../store';
+import { useGameStore, loadFromStorage } from '../store';
 import { createInitialState, processWeek } from '../gameEngine';
 import { SHOP_ITEMS, canBuyItem } from '../shopSystem';
+import { NPC_MINI_EVENTS } from '../talkData/miniEvents';
+import { getAvailableNpcEvents } from '../talkSystem';
 import type { GameState, StatKey } from '../types';
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -207,5 +209,126 @@ describe('보류분은 로그에만 얹고 엔진을 안 건드린다', () => {
       '피로 접기를 지워도 통과하면 그 줄은 잠겨 있지 않다').toBe(3);
     expect(round1(withPending.weekLog!.moneyChange - plain.weekLog!.moneyChange),
       '돈 접기를 지워도 통과하면 그 줄은 잠겨 있지 않다').toBe(-12);
+  });
+});
+
+// 여기까지는 전부 `pendingWeekDelta`를 **직접 주입**해 소비자(fold)만 잠갔다.
+// 생산자(store의 accruePendingDelta)는 무검사였다 — 뮤테이션으로 확인했다:
+//
+//   `if (d !== 0)` → `if (d > 0)`      음수 스탯 델타가 결산에서 사라진다 → SURVIVED
+//   accrue의 피로 줄 삭제               말걸기·상점 피로가 결산에서 사라진다 → SURVIVED
+//
+// 둘 다 실제로 도달하는 경로다 — 미니이벤트에 음수 스탯이 있고, 상점 `snack`은 피로 -3이다.
+describe('생산자(accrue)도 잠근다 — 실제 store 경로', () => {
+  it('상점 구매의 피로 감소가 결산에 들어간다', () => {
+    const snack = SHOP_ITEMS.find(i => i.id === 'snack')!;
+    expect(snack.effects.some(e => e.type === 'instant' && e.stat === 'fatigue' && (e.value ?? 0) < 0),
+      '전제: snack이 피로를 내린다 — 이 전제가 깨지면 아래 단언은 공허해진다').toBe(true);
+
+    const base = inPlay({ money: 100, fatigue: 40 });
+    useGameStore.setState({ state: { ...base } });
+    const st0 = useGameStore.getState().state!;
+    expect(canBuyItem(snack, st0, st0.weekPurchases || {}).ok, '전제: 살 수 있는 상태').toBe(true);
+    useGameStore.getState().buyItem(snack);
+
+    const pending = useGameStore.getState().state!.pendingWeekDelta;
+    expect(pending?.fatigue, 'accrue의 피로 줄을 지우면 여기가 0이 된다').toBeLessThan(0);
+
+    // 대조군은 `base`가 아니라 **같은 상태에서 보류분만 뺀 것**이다. 구매로 피로가 이미
+    // 내려가 있어서 base와 비교하면 그 주 동역학 차이까지 섞인다(실측 -2.5 vs -3).
+    const bought = useGameStore.getState().state!;
+    const after = processWeek({ ...bought });
+    const ctl = processWeek({ ...bought, pendingWeekDelta: undefined });
+    // ±0.1은 `round1`이 접을 때 한 번만 걸리기 때문이다(대조군의 기준값은 반올림 전).
+    // UI는 정수로 보여 주므로 안 보이는 드리프트다 — 잡아야 할 회귀는 이 줄이 통째로
+    // 죽는 것(차이 0)이므로 precision 0으로도 충분히 걸린다.
+    expect(round1(after.weekLog!.fatigueChange - ctl.weekLog!.fatigueChange),
+      '피로 감소가 결산에 안 나타나면 생산자가 죽은 것이다').toBeCloseTo(round1(pending!.fatigue), 0);
+  });
+
+  it('미니이벤트의 음수 스탯이 결산에서 사라지지 않는다', () => {
+    // 음수 스탯은 **선택지 없는 이벤트의 top-level effects**에만 있다(실측).
+    // 부모 쪽 `talk_parent_strict`는 선택지가 2개라 top-level effects가 아예 안 쓰이므로
+    // 실제로 도달하는 음수 경로는 NPC 미니이벤트다.
+    const negative = NPC_MINI_EVENTS.filter(e =>
+      e.npcId && !e.choices?.length
+      && Object.values(e.effects.stats ?? {}).some(v => typeof v === 'number' && v < 0));
+    expect(negative.length,
+      '선택지 없는 음수 스탯 NPC 미니이벤트가 0건이면 이 축은 검사할 대상이 없다').toBeGreaterThan(0);
+
+    const ev = negative[0];
+    const [negKey] = Object.entries(ev.effects.stats!)
+      .find(([, v]) => typeof v === 'number' && v < 0)!;
+
+    // talkToNpc도 available[0]을 집는다 — 앞선 후보를 발동기록에 넣어 이 컷을 고정한다.
+    const seeded = inPlay({ npcEventPendingThisWeek: true }) as GameState;
+    const target = seeded.npcs.find(n => n.id === ev.npcId);
+    expect(target, `전제: ${ev.npcId}가 명부에 있어야 한다`).toBeTruthy();
+    target!.intimacy = Math.max(target!.intimacy, ev.intimacyMin ?? 70);
+    target!.met = true;
+    seeded.talkEventsFired = getAvailableNpcEvents(seeded, ev.npcId!)
+      .filter(e => e.id !== ev.id).map(e => e.id);
+    expect(getAvailableNpcEvents(seeded, ev.npcId!)[0]?.id,
+      `전제: ${ev.id}가 available[0]이어야 talkToNpc가 이걸 집는다`).toBe(ev.id);
+
+    useGameStore.setState({ state: { ...seeded } });
+    const before = useGameStore.getState().state!.stats[negKey as StatKey];
+    useGameStore.getState().talkToNpc(ev.npcId!);
+
+    const fired = useGameStore.getState().state!;
+    expect(fired.stats[negKey as StatKey], `전제: ${negKey}가 실제로 깎여야 한다`).toBeLessThan(before);
+
+    const pending = fired.pendingWeekDelta;
+    expect(pending?.stats?.[negKey as StatKey],
+      `${negKey} 음수 델타가 보류분에 없다 — \`d !== 0\`을 \`d > 0\`으로 바꾸면 이렇게 된다`)
+      .toBeLessThan(0);
+
+    // 대조군은 같은 상태에서 보류분만 뺀 것 — 스탯이 이미 달라져 있어 base와는 못 비교한다.
+    const withNeg = processWeek({ ...fired });
+    const ctl = processWeek({ ...fired, pendingWeekDelta: undefined });
+    expect(round1((withNeg.weekLog!.statChanges[negKey as StatKey] ?? 0)
+                - (ctl.weekLog!.statChanges[negKey as StatKey] ?? 0)),
+      '음수 델타가 결산에 안 실리면 플레이어는 깎인 만큼을 못 본다')
+      .toBe(round1(pending!.stats![negKey as StatKey]!));
+  });
+
+  // statChanges는 5축 고정이 아니다 — 지연 생성이라 안 건드린 축은 키 자체가 없다
+  // (gameEngine.ts: `if (!log.statChanges[statKey]) log.statChanges[statKey] = 0;`).
+  // fold가 "있는 키만 갱신"하도록 바뀌면 그 주에 처음 생기는 축이 통째로 사라진다.
+  it('로그에 없던 축도 보류분이 새로 만든다', () => {
+    // 휴식 루틴이 있으면 5축이 전부 생긴다 — 슬롯3을 비워야 mental 키가 안 생긴다(실측).
+    const base = inPlay({ routineSlot3: null });
+    const plain = processWeek({ ...base });
+    const missing = (['academic', 'social', 'talent', 'mental', 'health'] as StatKey[])
+      .find(k => !(k in plain.weekLog!.statChanges));
+    expect(missing, '전제: 이번 주에 안 건드린 축이 있어야 이 검사가 의미를 갖는다').toBeDefined();
+
+    const withPending = processWeek({
+      ...base,
+      pendingWeekDelta: { stats: { [missing!]: 2 }, fatigue: 0, money: 0 },
+    });
+    expect(withPending.weekLog!.statChanges[missing!],
+      '없던 키를 안 만들면 그 주 효과가 결산에서 통째로 사라진다').toBe(2);
+  });
+
+  // 보류분은 자동저장을 타고 디스크를 왕복한다 — 저장에서 벗겨지면 새로고침 한 번에 사라진다.
+  it('보류분은 저장·로드를 왕복해도 살아남는다', () => {
+    const base = inPlay({ money: 100, fatigue: 40 });
+    useGameStore.setState({ state: { ...base } });
+    useGameStore.getState().buyItem(SHOP_ITEMS.find(i => i.id === 'snack')!);
+    const before = useGameStore.getState().state!.pendingWeekDelta;
+    expect(before, '전제: 구매로 보류분이 생겼다').toBeTruthy();
+
+    // **직접 쓰면 안 된다** — 그러면 실제 저장 경로를 안 타서, 저장이 이 필드를 벗겨도
+    // 테스트가 통과한다(실측: saveToStorage에서 벗기는 뮤테이션이 SURVIVED였다).
+    // buyItem의 set()이 자동저장 구독을 깨우므로 디스크에는 이미 써져 있어야 한다.
+    const onDisk = loadFromStorage();
+    expect(onDisk?.state?.pendingWeekDelta,
+      '자동저장이 보류분을 디스크에 안 남기면 새로고침 한 번에 그 주 지출이 사라진다').toEqual(before);
+
+    useGameStore.setState({ state: null });
+    expect(useGameStore.getState().loadSavedGame()).toBe(true);
+    expect(useGameStore.getState().state!.pendingWeekDelta,
+      '저장이 이 필드를 벗기면 새로고침 한 번에 그 주 지출이 결산에서 사라진다').toEqual(before);
   });
 });

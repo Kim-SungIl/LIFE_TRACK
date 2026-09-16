@@ -7,7 +7,7 @@
 // 테스트만 옛 값을 붙들고 통과한다(폰트 검증에서 겪은 형태 — 검사하는 층과 실제 층이 갈리는 것).
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'fs';
-import { resolve, join } from 'path';
+import { resolve, join, relative } from 'path';
 
 const CSS_PATH = resolve(process.cwd(), 'src/styles/game.css');
 const CSS = readFileSync(CSS_PATH, 'utf8');
@@ -555,6 +555,57 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
       lowContrastOnLightBg(readFileSync(f, 'utf8')).map(hit => `${f.replace(SRC, 'src')} — ${hit}`));
     expect(bad).toEqual([]);
   });
+
+  describe('파서 동기화 — 안 보이는 파일이 늘지 않는다', () => {
+    /** 따옴표가 짝이 안 맞는 파일. 파서가 그 지점부터 길을 잃는다. */
+    function desyncedFiles(): string[] {
+      const bad: string[] = [];
+      for (const f of sourceFiles()) {
+        const src = stripComments(readFileSync(f, 'utf8'));
+        let q: string | null = null;
+        for (let i = 0; i < src.length; i++) {
+          const c = src[i];
+          if (c === '\\') { i++; continue; }
+          if (q) { if (c === q) q = null; }
+          else if (c === '"' || c === "'" || c === '`') q = c;
+        }
+        if (q) bad.push(relative(SRC, f));
+      }
+      return bad;
+    }
+
+    // 알려진 2건. **늘면 실패한다** — 새로 들어온 파일이 스타일 쌍을 가지고 있으면
+    // 그 파일의 대비 검사가 통째로 사라지는데, 탐지기는 아무 말도 안 한다.
+    const KNOWN_DESYNCED = [
+      'components/screens/shared.ts',
+      'styles/first-paint-fonts.ts',
+    ];
+
+    it('파서가 길을 잃는 파일이 알려진 것보다 늘지 않았다', () => {
+      const now = desyncedFiles().sort();
+      const added = now.filter(f => !KNOWN_DESYNCED.includes(f));
+      expect(added,
+        `이 파일들은 탐지기에 일부만 보인다 — 스타일 쌍이 있으면 그 아래가 무검사가 된다.\n` +
+        `파서를 고치거나(별건: JS 렉서), 그 줄을 옮기거나, 정말 괜찮으면 KNOWN_DESYNCED에 추가할 것.`)
+        .toEqual([]);
+    });
+
+    it('알려진 2건이 아직 실재한다 (목록이 늙으면 이 검사가 헐거워진다)', () => {
+      const now = desyncedFiles();
+      const stale = KNOWN_DESYNCED.filter(f => !now.includes(f));
+      expect(stale, '고쳐진 파일이 목록에 남아 있으면 그만큼 새 유입을 봐주게 된다').toEqual([]);
+    });
+
+    // 탐지기 자체가 죽은 것과 "위반 0건"을 구분한다.
+    it('합성 결함을 실제로 잡는다 (자기검사)', () => {
+      const clean = `const a = { background: 'var(--accent)', color: '#ffffff' };`;
+      expect(lowContrastOnLightBg(clean).length, '양성 대조군을 못 잡으면 탐지기가 죽은 것이다')
+        .toBeGreaterThan(0);
+      const desynced = `const re = /["']/g;\n` + clean;
+      expect(lowContrastOnLightBg(desynced).length,
+        '이 0이 바로 위에서 막으려는 현상이다 — 정규식 한 줄이 아래 전부를 지운다').toBe(0);
+    });
+  });
 });
 
 /**
@@ -592,3 +643,13 @@ describe('NPC 이름 칩 — 표의 모든 색이 글자와 대비를 지킨다'
     expect(src).toContain("color: npc?.met === false ? '#fff' : 'var(--btn-ink)'");
   });
 });
+
+// 이 파서는 **정규식 리터럴과 JSX 어포스트로피를 모른다.** `/["']/g` 같은 한 줄을 만나면
+// 따옴표 상태가 어긋나고, 그 지점부터 EOF까지 파일이 탐지기에 통째로 안 보인다.
+// 3자 검수 실측: 120개 소스 중 이미 2개가 어긋나 있었다(둘 다 스타일 쌍이 없어 현재 유실은 0건).
+//
+//   src/components/screens/shared.ts:58   text.replace(/(?<![.!?])([.!?]"?)\s+(?=\S)/g, ...)
+//   src/styles/first-paint-fonts.ts:92    block.match(/url\(\s*(['"]?)([^)'"]+)\1\s*\)/i)
+//
+// 제대로 고치려면 파서에 JS 렉서를 넣어야 하고 그건 별건이다. 여기서는 **늘어나는 것**을 막는다 —
+// 스타일 쌍을 가진 파일에 저런 줄이 하나 들어오면 그 아래 전부가 조용히 무검사가 되기 때문이다.
