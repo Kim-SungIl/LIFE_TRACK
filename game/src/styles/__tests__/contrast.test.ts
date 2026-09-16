@@ -259,29 +259,106 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
   }
 
   /**
-   * prop의 값을 괄호·따옴표 깊이를 세며 **최상위 쉼표까지** 읽는다.
-   * 정규식 `[^,}]+`로 자르면 `rgba(255,255,255,0.06)` 안의 쉼표에서 잘려 값이 반토막 난다 —
-   * 그러면 삼항 가지 수가 어긋나 아래 zip이 무너지고, 실제로 함께 나타나지 않는 조합을
-   * 결함으로 신고한다(실측: 그 상태로 오탐 3건이 났다).
+   * 주석을 지운다. 주석 안의 중괄호·콜론이 블록 경계와 선언으로 잘못 읽힌다 —
+   * 이 리포는 주석이 길고 많아서 그냥 두면 잡음이 실제 쌍보다 많다.
+   * 문자열 안의 `//`(URL 등)는 건드리지 않는다.
    */
-  function readValue(block: string, prop: string): string | null {
-    const m = new RegExp(`(?:^|[{,\\s])${prop}:\\s*`).exec(block);
-    if (!m) return null;
-    let depth = 0, q: string | null = null, out = '';
-    for (let i = m.index + m[0].length; i < block.length; i++) {
-      const c = block[i];
-      if (q) { out += c; if (c === q && block[i - 1] !== '\\') q = null; continue; }
+  function stripComments(text: string): string {
+    let out = '', q: string | null = null;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        out += c;
+        if (c === '\\') { out += text[++i] ?? ''; continue; }
+        if (c === q) q = null;
+        continue;
+      }
       if (c === "'" || c === '"' || c === '`') { q = c; out += c; continue; }
-      if ('([{'.includes(c)) depth++;
-      if (')]}'.includes(c)) { if (depth === 0) break; depth--; }
-      if (c === ',' && depth === 0) break;
+      if (c === '/' && text[i + 1] === '/') { while (i < text.length && text[i] !== '\n') i++; out += '\n'; continue; }
+      if (c === '/' && text[i + 1] === '*') { i += 2; while (i < text.length && !(text[i] === '*' && text[i + 1] === '/')) i++; i++; continue; }
       out += c;
     }
-    return out.trim() || null;
+    return out;
   }
 
-  /** 최상위 삼항을 가지로 편다. `?.`(옵셔널 체이닝)과 `??`는 삼항이 아니다. */
-  function branches(value: string): string[] {
+  /**
+   * 균형 잡힌 `{...}` **전부**의 본문을 낸다 — 중첩된 것도 포함해서.
+   *
+   * 예전에는 `/\{[^{}]*\}/g`로 **가장 안쪽 중괄호만** 잡았다. 그래서 스타일 객체에
+   * 템플릿 리터럴(`` `0 1px ${n}px` ``) 한 줄만 섞여 있어도 그 객체는 통째로 검사 대상에서
+   * 빠졌다 — 실측: 그 사각지대에 최상위 background+color를 함께 선언한 객체가 6개 있었고,
+   * `color`를 흰색으로 되돌리는 회귀를 넣어도 25/25가 통과했다.
+   */
+  function blocks(text: string): string[] {
+    const out: string[] = [];
+    const stack: number[] = [];
+    let q: string | null = null;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '\\') { i++; continue; }
+        if (c === q) q = null;
+        continue;
+      }
+      if (c === "'" || c === '"' || c === '`') { q = c; continue; }
+      if (c === '{') { stack.push(i); continue; }
+      if (c === '}' && stack.length) out.push(text.slice(stack.pop()! + 1, i));
+    }
+    return out;
+  }
+
+  /**
+   * 블록 본문의 **최상위 선언**만 `이름 → 값`으로 읽는다.
+   *
+   * 최상위로 한정하는 것이 요점이다. 문자열 전체에서 `background:`를 정규식으로 찾으면
+   * `{ a: { background: X }, b: { color: Y } }`처럼 **서로 다른 객체**의 값이 한 쌍으로
+   * 묶여 있지도 않은 조합을 신고한다.
+   *
+   * 구분자는 `,`와 **`;` 둘 다**다. `;`를 모르면 CSS 규칙의 값이
+   * `var(--accent); color: #ffffff`로 통째로 읽혀 색으로 안 풀리고 조용히 건너뛰어진다 —
+   * `sourceFiles()`가 `.css`를 수집하는데도 **검사하는 척만 하고 있었다**(실측: game.css에
+   * 2.64:1 규칙을 넣어도 25/25 통과).
+   */
+  function topLevelDecls(body: string): Map<string, string> {
+    const decls = new Map<string, string>();
+    let depth = 0, q: string | null = null, buf = '';
+    const flush = () => {
+      const s = buf.trim(); buf = '';
+      if (!s) return;
+      const i = s.indexOf(':');
+      if (i <= 0) return;
+      const key = s.slice(0, i).trim().replace(/^['"]|['"]$/g, '');
+      if (!/^[\w-]+$/.test(key)) return;
+      const val = s.slice(i + 1).trim();
+      if (val && !decls.has(key)) decls.set(key, val);
+    };
+    for (let i = 0; i < body.length; i++) {
+      const c = body[i];
+      if (q) { buf += c; if (c === '\\') { buf += body[++i] ?? ''; continue; } if (c === q) q = null; continue; }
+      if (c === "'" || c === '"' || c === '`') { q = c; buf += c; continue; }
+      if ('([{'.includes(c)) { depth++; buf += c; continue; }
+      if (')]}'.includes(c)) { depth--; buf += c; continue; }
+      if (depth === 0 && (c === ',' || c === ';')) { flush(); continue; }
+      buf += c;
+    }
+    flush();
+    return decls;
+  }
+
+  /** 삼항 트리. 잎은 값 하나, 가지는 조건 + 양쪽. */
+  type Node = { leaf: string } | { cond: string; then: Node; else: Node };
+
+  /** 조건 문자열 정규화 — 공백을 접고 선행 `!`는 부호로 뗀다(`!open`과 `open`은 같은 축이다). */
+  function normCond(c: string): { key: string; neg: boolean } {
+    let s = c.trim().replace(/\s+/g, ' ');
+    let neg = false;
+    while (s.startsWith('!')) { neg = !neg; s = s.slice(1).trim(); }
+    if (s.startsWith('(') && s.endsWith(')')) s = s.slice(1, -1).trim();
+    return { key: s, neg };
+  }
+
+  /** 최상위 삼항 하나를 찾아 트리로 편다. `?.`·`??`는 삼항이 아니다. */
+  function parseTernary(value: string): Node {
     let depth = 0, q: string | null = null;
     for (let i = 0; i < value.length; i++) {
       const c = value[i];
@@ -303,49 +380,83 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
         if (d === ':') {
           if (value[j + 1] === ':' || value[j - 1] === ':') continue;
           if (nest > 0) { nest--; continue; }
-          return [...branches(value.slice(i + 1, j)), ...branches(value.slice(j + 1))];
+          return {
+            cond: value.slice(0, i),
+            then: parseTernary(value.slice(i + 1, j)),
+            else: parseTernary(value.slice(j + 1)),
+          };
         }
       }
       break;
     }
-    return [value.trim()];
+    return { leaf: value.trim() };
   }
 
-  function declOf(block: string, props: string[]): string | null {
-    for (const p of props) {
-      const v = readValue(block, p);
-      if (v) return v;
-    }
-    return null;
+  function condKeys(n: Node, acc = new Set<string>()): Set<string> {
+    if ('leaf' in n) return acc;
+    acc.add(normCond(n.cond).key);
+    condKeys(n.then, acc); condKeys(n.else, acc);
+    return acc;
+  }
+
+  function evalNode(n: Node, env: Map<string, boolean>): string {
+    if ('leaf' in n) return n.leaf;
+    const { key, neg } = normCond(n.cond);
+    const v = (env.get(key) ?? true) !== neg;
+    return evalNode(v ? n.then : n.else, env);
+  }
+
+  function leaves(n: Node, acc: string[] = []): string[] {
+    if ('leaf' in n) { acc.push(n.leaf); return acc; }
+    leaves(n.then, acc); leaves(n.else, acc); return acc;
   }
 
   /**
-   * 스타일 객체를 훑어 AA 미달 쌍을 낸다.
+   * 배경과 글자가 **실제로 함께 나타날 수 있는** 조합만 낸다.
    *
-   * **삼항은 가지 수가 같으면 같은 인덱스끼리 짝짓는다** — `isActive ? accent : rgba` 배경과
-   * `isActive ? ink : secondary` 글자를 교차로 곱하면 실제로 함께 나타나지 않는 조합을
-   * 결함으로 신고한다. 과검출은 게이트를 죽이는 가장 빠른 길이다.
+   * 예전에는 "가지 수가 같으면 같은 인덱스끼리, 다르면 교차곱"이었다. 둘 다 틀렸다:
+   * - 조건이 **서로 다른** 삼항 둘은 가지 수가 같다는 이유로 zip되어, 실제로 함께 나는
+   *   조합(예: `isActive ? accent : card` 배경 × `isGift ? ink : #fff` 글자의 accent+#fff)을
+   *   통째로 건너뛰었다.
+   * - 가지 수가 다르면 교차곱이라, 같은 조건의 중첩 삼항에서 **존재하지 않는 조합**을
+   *   신고했다(실측: 전부 AA를 넘는 코드에 오탐 3건). 과검출은 게이트를 죽이는 가장 빠른 길이다.
+   *
+   * 그래서 조건을 **변수로 보고 참/거짓을 전부 대입한다** — 도달 가능한 조합이 정확히 나온다.
+   * 조건이 너무 많으면(2^5 이상) 조합 폭발을 피해 보수적으로 잎의 교차곱으로 떨어진다.
    */
+  function reachablePairs(bgRaw: string, fgRaw: string): [string, string][] {
+    const bg = parseTernary(bgRaw), fg = parseTernary(fgRaw);
+    const keys = [...new Set([...condKeys(bg), ...condKeys(fg)])];
+    if (keys.length > 4) {
+      return leaves(bg).flatMap(b => leaves(fg).map(f => [b, f] as [string, string]));
+    }
+    const seen = new Set<string>();
+    const out: [string, string][] = [];
+    for (let mask = 0; mask < (1 << keys.length); mask++) {
+      const env = new Map(keys.map((k, i) => [k, Boolean(mask & (1 << i))]));
+      const pair: [string, string] = [evalNode(bg, env), evalNode(fg, env)];
+      const sig = `${pair[0]} ${pair[1]}`;
+      if (!seen.has(sig)) { seen.add(sig); out.push(pair); }
+    }
+    return out;
+  }
+
+  /** 스타일 객체·CSS 규칙을 훑어 AA 미달 쌍을 낸다. */
   function lowContrastOnLightBg(text: string): string[] {
-    const out: string[] = [];
-    for (const m of text.matchAll(/\{[^{}]*\}/g)) {
-      const block = m[0];
-      const bgRaw = declOf(block, ['background', 'backgroundColor']);
-      const fgRaw = declOf(block, ['color']);
+    const out = new Set<string>();
+    for (const body of blocks(stripComments(text))) {
+      const decls = topLevelDecls(body);
+      const bgRaw = decls.get('background') ?? decls.get('backgroundColor') ?? decls.get('background-color');
+      const fgRaw = decls.get('color');
       if (!bgRaw || !fgRaw) continue;
-      const bgs = branches(bgRaw), fgs = branches(fgRaw);
-      const pairs: [string, string][] =
-        bgs.length === fgs.length && bgs.length > 1
-          ? bgs.map((b, i) => [b, fgs[i]] as [string, string])
-          : bgs.flatMap(b => fgs.map(f => [b, f] as [string, string]));
-      for (const [b, f] of pairs) {
+      for (const [b, f] of reachablePairs(bgRaw, fgRaw)) {
         const bg = resolveColor(b), fg = resolveColor(f);
         if (!bg || !fg) continue;                     // 판정 불가는 건너뛴다
         const r = ratio(fg, bg);
-        if (r < AA) out.push(`${fg} on ${bg} = ${r.toFixed(2)}:1`);
+        if (r < AA) out.add(`${fg} on ${bg} = ${r.toFixed(2)}:1`);
       }
     }
-    return out;
+    return [...out];
   }
 
   // 탐지기가 살아 있다는 증거부터. 정규식을 죽이면 아래 전수 검사가 조용히 공회전한다.
@@ -358,25 +469,83 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
     expect(lowContrastOnLightBg(`{ background: 'var(--accent)', color: 'var(--btn-ink)' }`)).toEqual([]);
     // 어두운 배경 위의 흰 글자는 정상이다 — 여기서 걸리면 대화 오버레이 전부가 오탐이 된다
     expect(lowContrastOnLightBg(`{ background: 'var(--bg-card)', color: '#fff' }`)).toEqual([]);
-    // 삼항 가지는 같은 인덱스끼리 — 교차로 곱하면 없는 조합을 신고한다
+    // 같은 조건의 삼항은 같은 인덱스끼리 — 교차로 곱하면 없는 조합을 신고한다
     expect(lowContrastOnLightBg(`{ background: ok ? 'var(--accent)' : 'var(--bg-card)', color: ok ? 'var(--btn-ink)' : '#fff' }`)).toEqual([]);
     // 판정 불가(그라디언트·rgba)는 조용히 건너뛴다
     expect(lowContrastOnLightBg(`{ background: 'linear-gradient(135deg, #fff, #000)', color: '#fff' }`)).toEqual([]);
   });
 
+  /**
+   * **탐지기가 못 보던 세 가지.** 전부 3자 검수에서 합성 결함으로 확인됐다 —
+   * 아래 형태로 회귀를 심으면 25/25가 그대로 통과했다. 사각지대를 남긴 게이트는
+   * "검사 안 함"과 구별되지 않는다.
+   */
+  it('사각지대 3종을 이제 잡는다 (예전엔 전부 통과했다)', () => {
+    // ① 중첩 중괄호가 하나라도 있으면 객체 전체가 검사에서 빠졌다(가장 안쪽만 매칭).
+    expect(lowContrastOnLightBg(
+      "{ boxShadow: `0 1px ${n}px rgba(0,0,0,0.2)`, background: 'var(--accent)', color: 'white' }",
+    ), '템플릿 리터럴 한 줄로 검사를 통째로 피할 수 있으면 안 된다').toHaveLength(1);
+
+    // ② CSS 규칙은 `;`를 몰라 값이 통째로 읽혀 조용히 건너뛰어졌다.
+    //    sourceFiles()가 .css를 수집하는데도 검사하는 척만 하고 있었다.
+    expect(lowContrastOnLightBg(
+      '.probe { background: var(--accent); color: #ffffff; }',
+    ), 'CSS를 수집만 하고 못 읽으면 game.css는 영원히 무검사다').toHaveLength(1);
+
+    // ③ **조건이 서로 다른** 삼항 둘은 가지 수가 같다는 이유로 zip돼 실제 조합을 건너뛰었다.
+    //    조건이 독립이면 네 조합이 전부 가능하고, 그중 accent+#ffffff가 2.64:1이다.
+    //    (같은 픽스처에서 bg-card+btn-ink도 걸린다 — 어두운 표면에 어두운 잉크. 둘 다 진짜다.)
+    const zipBlind = lowContrastOnLightBg(
+      "{ background: isActive ? 'var(--accent)' : 'var(--bg-card)', color: cat === 'gift' ? 'var(--btn-ink)' : '#ffffff' }",
+    );
+    expect(zipBlind.some(h => h.includes(token('accent'))),
+      `조건이 다르면 zip이 아니라 전 조합을 봐야 한다: ${JSON.stringify(zipBlind)}`).toBe(true);
+
+    // ④ 변수로 빼낸 스타일 객체도 같은 블록이므로 이제 보인다(cursor 지적).
+    expect(lowContrastOnLightBg(
+      "const s = { background: 'var(--accent)', color: 'white' }; return <div style={s} />;",
+    ), 'style={{}} 인라인만 보면 변수로 한 줄 빼는 것으로 게이트를 피할 수 있다').toHaveLength(1);
+  });
+
+  /**
+   * **과검출 음성 짝.** 위 ③을 고치느라 교차곱으로 되돌리면 존재하지 않는 조합을 신고한다 —
+   * 실측으로 오탐 3건이 나서 CI가 깨졌던 모양이다. 게이트를 죽이는 가장 빠른 길이라
+   * 반대 방향도 같이 잠근다.
+   */
+  it('실제로 날 수 없는 조합은 신고하지 않는다 (과검출 방지)', () => {
+    // 같은 조건의 중첩 삼항: 배경 2가지 × 글자 3가지지만 도달 가능한 조합은 전부 AA 통과.
+    expect(lowContrastOnLightBg(
+      "{ background: on ? 'var(--accent)' : 'var(--bg-card)', color: on ? 'var(--btn-ink)' : (dim ? 'var(--text-secondary)' : '#ffffff') }",
+    ), '가지 수가 다르다고 교차곱하면 accent+#ffffff를 지어낸다').toEqual([]);
+
+    // 부정 조건도 같은 축이다 — `!open`과 `open`을 따로 세면 없는 조합이 생긴다.
+    expect(lowContrastOnLightBg(
+      "{ background: !open ? 'var(--bg-card)' : 'var(--accent)', color: open ? 'var(--btn-ink)' : '#ffffff' }",
+    ), '!x와 x를 다른 조건으로 보면 오탐이 난다').toEqual([]);
+
+    // 서로 다른 객체의 값이 한 쌍으로 묶이면 안 된다(최상위 선언만 읽는 이유).
+    expect(lowContrastOnLightBg(
+      "{ head: { background: 'var(--accent)' }, body: { color: '#ffffff' } }",
+    ), '다른 객체끼리 묶으면 있지도 않은 쌍을 신고한다').toEqual([]);
+  });
+
   // corpus가 0이면 탐지기를 지워도 초록이다. 실제로 볼 쌍이 있다는 것부터 세운다.
+  // **파일 종류별로** 센다 — 합계만 보면 CSS를 통째로 못 읽어도 tsx 쪽 수치로 가려진다.
   it('검사 대상 쌍이 실제로 존재한다 (공회전 방지)', () => {
-    let pairs = 0;
+    let tsxPairs = 0, cssPairs = 0;
     for (const f of sourceFiles()) {
-      const text = readFileSync(f, 'utf8');
-      for (const m of text.matchAll(/\{[^{}]*\}/g)) {
-        const b = /(?:^|[{,\s])(?:background|backgroundColor):\s*([^,}\n]+)/.exec(m[0]);
-        const c = /(?:^|[{,\s])color:\s*([^,}\n]+)/.exec(m[0]);
-        if (b && c) pairs++;
+      const text = stripComments(readFileSync(f, 'utf8'));
+      for (const body of blocks(text)) {
+        const d = topLevelDecls(body);
+        const hasBg = d.has('background') || d.has('backgroundColor') || d.has('background-color');
+        if (!hasBg || !d.has('color')) continue;
+        if (f.endsWith('.css')) cssPairs++; else tsxPairs++;
       }
     }
-    expect(pairs, '배경·글자를 함께 선언한 스타일 객체가 하나도 없다면 탐지기가 헛도는 것이다')
+    expect(tsxPairs, '배경·글자를 함께 선언한 스타일 객체가 하나도 없다면 탐지기가 헛도는 것이다')
       .toBeGreaterThan(10);
+    expect(cssPairs, 'CSS 쌍이 0이면 .css를 수집만 하고 못 읽던 그 상태로 돌아간 것이다')
+      .toBeGreaterThan(0);
   });
 
   it('밝은 배경 위에 AA 미달 글자가 없다', () => {
