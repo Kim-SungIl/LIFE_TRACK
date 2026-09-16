@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { portraitCandidates, spriteCandidates, pickExisting } from '../characterAssets';
+import { portraitCandidates, spriteCandidates, pickExisting, pickAllExisting } from '../characterAssets';
 // @ts-expect-error — 스크립트 쪽 .mjs라 타입 선언이 없다. 규칙을 생성기와 공유하는 게 목적이다.
 import { isAssetFile } from '../../../scripts/lib/asset-filter.mjs';
 import { CHARACTER_MANIFEST } from '../../character-manifest.generated';
@@ -82,7 +82,7 @@ describe('초상 후보 해석', () => {
 });
 
 describe('스프라이트 후보 해석', () => {
-  // 여주는 `_f` 변주를 먼저 보는데 실물은 28장 중 jihun_elementary 하나뿐이었다.
+  // 여주는 `_f` 변주를 먼저 보는데 실물은 전신 29장(공용 28 + `_f` 1) 중 jihun_elementary 하나뿐이었다.
   it('여주 변주가 있으면 그것을 고른다', () => {
     expect(pickExisting(spriteCandidates('jihun', 'female', 1), CHARACTER_MANIFEST))
       .toBe('jihun_elementary_fullbody_f.png');
@@ -95,6 +95,50 @@ describe('스프라이트 후보 해석', () => {
 
   it('남주는 _f를 아예 후보에 넣지 않는다', () => {
     expect(spriteCandidates('doyun', 'male', 6).some(f => f.includes('_f.png'))).toBe(false);
+  });
+
+  // **합성 manifest로 규칙을 직접 본다.** 실데이터에는 `_fullbody`가 없으면서 `_neutral`은
+  // 있는 (id, 학교급) 조합이 0건이라, 실데이터만 보면 spriteCandidates의 `_neutral` 두 줄을
+  // 지워도 전 조합 결과가 같고 테스트가 전부 초록이다(#437과 같은 corpus-0 구멍 — 실측 확인).
+  it('전신이 없고 neutral만 있으면 neutral을 세운다 (합성 manifest)', () => {
+    const only = (f: string) => new Set([f]);
+    expect(pickExisting(spriteCandidates('x', 'male', 3), only('x_middle_neutral.png')))
+      .toBe('x_middle_neutral.png');
+    // 여주도 같은 바닥을 탄다 — `_f` 경로가 neutral 폴백을 건너뛰면 안 된다.
+    expect(pickExisting(spriteCandidates('x', 'female', 6), only('x_high_neutral.png')))
+      .toBe('x_high_neutral.png');
+    // base(_middle) neutral도 바닥으로 남아 있어야 한다(staged 자산이 통째로 없는 NPC).
+    expect(pickExisting(spriteCandidates('x', 'female', 6), only('x_middle_neutral.png')))
+      .toBe('x_middle_neutral.png');
+  });
+
+  // 전신이 있으면 neutral보다 먼저다 — 위 단언이 "neutral을 항상 고른다"로 퇴화하지 않게.
+  it('전신과 neutral이 둘 다 있으면 전신이 이긴다', () => {
+    expect(pickExisting(spriteCandidates('x', 'male', 3),
+      new Set(['x_middle_neutral.png', 'x_middle_fullbody.png'])))
+      .toBe('x_middle_fullbody.png');
+  });
+
+  // 폴백 캐스케이드의 재료 — 실재 후보를 **순서대로 전부** 남긴다.
+  // 첫 후보만 돌려주면 그 파일이 로드에 실패했을 때 갈 곳이 CSS 아바타뿐이다.
+  describe('pickAllExisting — 실패 시 넘어갈 다음 후보', () => {
+    it('실재하는 후보를 후보 순서대로 전부 남긴다', () => {
+      const got = pickAllExisting(spriteCandidates('x', 'female', 6),
+        new Set(['x_high_fullbody_f.png', 'x_high_neutral.png', 'x_middle_fullbody.png', '없는파일.png']));
+      expect(got).toEqual(['x_high_fullbody_f.png', 'x_high_neutral.png', 'x_middle_fullbody.png']);
+    });
+
+    it('manifest에 없는 것은 섞이지 않는다 (헛 요청 0의 근거)', () => {
+      expect(pickAllExisting(portraitCandidates('x', 'happy', 3), new Set(['x_middle_neutral.png'])))
+        .toEqual(['x_middle_neutral.png']);
+      expect(pickAllExisting(portraitCandidates('x', 'happy', 3), new Set())).toEqual([]);
+    });
+
+    it('pickExisting은 이 목록의 첫 항목과 같다', () => {
+      const cands = spriteCandidates('jihun', 'female', 1);
+      expect(pickExisting(cands, CHARACTER_MANIFEST))
+        .toBe(pickAllExisting(cands, CHARACTER_MANIFEST)[0]);
+    });
   });
 
   // 전수 — 어떤 (NPC, 성별, 학년) 조합도 실재하지 않는 파일을 고르지 않는다.

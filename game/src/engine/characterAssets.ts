@@ -51,8 +51,24 @@ export function pickExisting(
   candidates: readonly string[],
   has: ReadonlySet<string>,
 ): string | null {
-  for (const f of candidates) if (has.has(f)) return f;
-  return null;
+  return pickAllExisting(candidates, has)[0] ?? null;
+}
+
+/**
+ * 후보 목록에서 **실재하는 것만** 순서대로 남긴다.
+ *
+ * 첫 후보만 고르면(`pickExisting`) 그 파일이 로드에 실패했을 때 갈 곳이 CSS 아바타뿐이다.
+ * 예전 `onError` 체인은 다음 파일명으로 넘어갔는데, 선선택으로 바꾸면서 그 견고함이 사라졌다.
+ * 목록을 통째로 돌려주면 호출부가 **실패할 때만** 다음으로 넘어갈 수 있다 —
+ * 전부 manifest 소속이므로 정상 경로의 헛 요청은 여전히 0이다.
+ *
+ * manifest가 디스크보다 앞선 경우(파일을 지웠는데 predev를 안 돌림)가 실사용 경로다.
+ */
+export function pickAllExisting(
+  candidates: readonly string[],
+  has: ReadonlySet<string>,
+): string[] {
+  return candidates.filter(f => has.has(f));
 }
 
 /**

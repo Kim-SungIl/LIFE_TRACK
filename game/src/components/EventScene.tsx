@@ -4,7 +4,7 @@ import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
 import { presentEvent } from '../engine/eventPresentation';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
-import { spriteCandidates, pickExisting } from '../engine/characterAssets';
+import { spriteCandidates, pickAllExisting } from '../engine/characterAssets';
 import { CHARACTER_MANIFEST } from '../character-manifest.generated';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 import { prefetchAssets } from '../engine/assetPrefetch';
@@ -75,19 +75,25 @@ interface CharacterImageProps {
 
 function CharacterImage({ npcId, height, isActive, delay, year, gender }: CharacterImageProps) {
   // **없는 파일을 먼저 두드리지 않는다.** 여주 플레이는 `{id}_{stage}_fullbody_f.png`를 먼저 봤는데
-  // 실물은 28장 중 jihun_elementary 하나뿐이라 **NPC 스프라이트마다 헛 왕복 1회**였다.
+  // 실물은 전신 29장 중 여주 변주가 jihun_elementary 하나뿐이라 **NPC 스프라이트마다 헛 왕복 1회**였다.
   // 이벤트 장면은 전신이 가장 큰 자산이라 체감 비용이 HUD 초상보다 크다.
   // 후보 순서(성별 변주 → 전신 → neutral → base)는 characterAssets.ts가 SSOT다.
-  const picked = pickExisting(spriteCandidates(npcId, gender === 'female' ? 'female' : 'male', year), CHARACTER_MANIFEST);
-  const src = picked ? `${BASE_URL}images/characters/${picked}` : null;
-  const [useFallback, setUseFallback] = useState(false);
+  const existing = pickAllExisting(spriteCandidates(npcId, gender === 'female' ? 'female' : 'male', year), CHARACTER_MANIFEST);
+  const key = existing.join('|');
+
+  // 정상 경로는 요청 1회(전 후보가 manifest 소속). manifest가 디스크보다 앞선 경우에만
+  // 다음 후보로 넘어간다 — 그래야 실재하는 공용 전신을 두고 CSS 아바타로 떨어지지 않는다.
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- npc/학년/성별이 바뀌면 폴백 상태 리셋
-    setUseFallback(false);
-  }, [src]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- npc/학년/성별이 바뀌면 후보 커서 리셋
+    setIdx(0);
+  }, [key]);
 
-  if (src && !useFallback) {
+  const picked = existing[idx] ?? null;
+  const src = picked ? `${BASE_URL}images/characters/${picked}` : null;
+
+  if (src) {
     return (
       <div style={{
         animation: `es-slide-up 0.4s ease-out ${delay}s both`,
@@ -104,7 +110,7 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
             objectFit: 'contain',
             display: 'block',
           }}
-          onError={() => setUseFallback(true)}
+          onError={() => setIdx(i => i + 1)}
         />
       </div>
     );

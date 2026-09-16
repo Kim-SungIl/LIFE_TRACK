@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { portraitCandidates, pickExisting } from '../engine/characterAssets';
+import { portraitCandidates, pickAllExisting } from '../engine/characterAssets';
 import { CHARACTER_MANIFEST } from '../character-manifest.generated';
 import { webpSrc } from '../engine/assetWebp';
 import { CharacterAvatar, NPC_APPEARANCES, mentalToExpression, type AvatarExpression } from './CharacterAvatar';
@@ -33,18 +33,23 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
   // 없는 파일을 요청하고 실패한 뒤 neutral로 되돌아왔다. manifest로 먼저 고른다.
   // 표정 실물이 들어오면 manifest가 자동으로 잡아 코드 수정 없이 켜진다.
   const base = import.meta.env.BASE_URL;
-  const picked = pickExisting(portraitCandidates(characterId, expr, year), CHARACTER_MANIFEST);
-  const exactPath = picked ? `${base}images/characters/${picked}` : null;
+  const existing = pickAllExisting(portraitCandidates(characterId, expr, year), CHARACTER_MANIFEST);
+  const key = existing.join('|');
 
-  const [useFallback, setUseFallback] = useState(false);
+  // **실패했을 때만** 다음 후보로 넘어간다. 전부 manifest 소속이라 정상 경로의 요청은 1회다.
+  // 이게 필요한 경우: manifest가 디스크보다 앞선 상태(파일을 지웠는데 predev 미실행).
+  // 그때 첫 후보만 있으면 갈 곳이 CSS 아바타뿐이라, 실재하는 neutral을 두고도 그림이 사라진다.
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 캐릭터/표정/학년이 바뀌면 폴백 상태 리셋(prop 동기화)
-    setUseFallback(false);
-  }, [exactPath]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 캐릭터/표정/학년이 바뀌면 후보 커서 리셋(prop 동기화)
+    setIdx(0);
+  }, [key]);
 
-  // manifest가 stale하면(dev에서 파일을 넣고 predev를 안 돌린 경우) onError가 받아 준다.
-  if (exactPath && !useFallback) {
+  const picked = existing[idx] ?? null;
+  const exactPath = picked ? `${base}images/characters/${picked}` : null;
+
+  if (exactPath) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <img
@@ -70,7 +75,7 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
               boxShadow: '0 2px 10px rgba(0,0,0,0.38)',
             } : {}),
           }}
-          onError={() => setUseFallback(true)}
+          onError={() => setIdx(i => i + 1)}
         />
         {label && (
           <div style={{ fontSize: Math.max(size * 0.15, 11), fontWeight: 600, textAlign: 'center' }}>
