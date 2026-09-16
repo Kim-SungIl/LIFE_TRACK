@@ -4,7 +4,8 @@ import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
 import { presentEvent } from '../engine/eventPresentation';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
-import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
+import { spriteCandidates, pickExisting } from '../engine/characterAssets';
+import { CHARACTER_MANIFEST } from '../character-manifest.generated';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
 import { prefetchAssets } from '../engine/assetPrefetch';
 import { webpSrc } from '../engine/assetWebp';
@@ -73,28 +74,20 @@ interface CharacterImageProps {
 }
 
 function CharacterImage({ npcId, height, isActive, delay, year, gender }: CharacterImageProps) {
-  const isElementary = year === 1;
-  const isHigh = year !== undefined && year >= 5;
-  const isStaged = isElementary || isHigh;
-  // 학년 분기 자산: elementary(Y1) / middle(Y2~4) / high(Y5+) — SSOT는 characterAssets.ts
-  const prefix = characterStagePrefix(npcId, year);
-  const basePrefix = characterFallbackPrefix(npcId); // 폴백 바닥 = _middle
-  const g = gender === 'female' ? 'f' : 'm';
-  // elementary/high 는 _f gendered 변주 가능
-  const stagedFullbodyGendered = gender === 'female'
-    ? `${BASE_URL}images/characters/${prefix}_fullbody_${g}.png`
-    : null;
-  const stagedFullbody = `${BASE_URL}images/characters/${prefix}_fullbody.png`;
-  const stagedNeutral = `${BASE_URL}images/characters/${prefix}_neutral.png`;
-  const baseFullbodyGendered = gender === 'female'
-    ? `${BASE_URL}images/characters/${basePrefix}_fullbody_${g}.png`
-    : null;
-  const baseFullbody = `${BASE_URL}images/characters/${basePrefix}_fullbody.png`;
-  const baseNeutral = `${BASE_URL}images/characters/${basePrefix}_neutral.png`;
-  const [src, setSrc] = useState(stagedFullbodyGendered || stagedFullbody);
+  // **없는 파일을 먼저 두드리지 않는다.** 여주 플레이는 `{id}_{stage}_fullbody_f.png`를 먼저 봤는데
+  // 실물은 28장 중 jihun_elementary 하나뿐이라 **NPC 스프라이트마다 헛 왕복 1회**였다.
+  // 이벤트 장면은 전신이 가장 큰 자산이라 체감 비용이 HUD 초상보다 크다.
+  // 후보 순서(성별 변주 → 전신 → neutral → base)는 characterAssets.ts가 SSOT다.
+  const picked = pickExisting(spriteCandidates(npcId, gender === 'female' ? 'female' : 'male', year), CHARACTER_MANIFEST);
+  const src = picked ? `${BASE_URL}images/characters/${picked}` : null;
   const [useFallback, setUseFallback] = useState(false);
 
-  if (!useFallback) {
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- npc/학년/성별이 바뀌면 폴백 상태 리셋
+    setUseFallback(false);
+  }, [src]);
+
+  if (src && !useFallback) {
     return (
       <div style={{
         animation: `es-slide-up 0.4s ease-out ${delay}s both`,
@@ -111,24 +104,7 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
             objectFit: 'contain',
             display: 'block',
           }}
-          onError={() => {
-            // 폴백 순서 (staged = elementary 또는 high):
-            // (여자면) staged gendered → staged fullbody → staged neutral → base gendered → base fullbody → base neutral → CSS
-            // (남자면) staged fullbody → staged neutral → base fullbody → base neutral → CSS
-            if (isStaged && stagedFullbodyGendered && src === stagedFullbodyGendered) {
-              setSrc(stagedFullbody);
-            } else if (isStaged && src === stagedFullbody) {
-              setSrc(stagedNeutral);
-            } else if (isStaged && src === stagedNeutral) {
-              setSrc(baseFullbodyGendered || baseFullbody);
-            } else if (baseFullbodyGendered && src === baseFullbodyGendered) {
-              setSrc(baseFullbody);
-            } else if (src !== baseNeutral) {
-              setSrc(baseNeutral);
-            } else {
-              setUseFallback(true);
-            }
-          }}
+          onError={() => setUseFallback(true)}
         />
       </div>
     );

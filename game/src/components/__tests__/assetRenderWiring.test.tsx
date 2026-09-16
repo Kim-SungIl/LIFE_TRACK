@@ -52,12 +52,25 @@ describe('Portrait — 캐릭터 초상 경로', () => {
     expectNoUnwrappedImage(container);
   });
 
-  it('Y6(고등) 초상은 _high 프리픽스로 붙는다 — 학년이 바뀌어도 래핑은 유지된다', () => {
+  // **이 단언은 원래 `jihun_high_happy.png`였다 — 즉 결함을 잠그고 있었다.**
+  // 그 파일은 실재한 적이 없고(표정 실물은 부모 happy 2장뿐), Portrait은 그걸 요청했다가
+  // 실패한 뒤 neutral로 되돌아왔다. 이제 manifest로 먼저 걸러 실재하는 것만 요청한다.
+  // 학년 프리픽스(_high)가 유지되는지는 그대로 본다 — 원래 이 테스트의 관심사다.
+  it('Y6(고등) 초상은 _high 프리픽스로 붙는다 — 없는 표정은 요청하지 않는다', () => {
     const { container } = render(<Portrait characterId="jihun" year={6} expression="happy" />);
 
     expect(container.querySelector('img')!.getAttribute('src'))
-      .toBe(`WEBP::${BASE}images/characters/jihun_high_happy.png`);
+      .toBe(`WEBP::${BASE}images/characters/jihun_high_neutral.png`);
     expectNoUnwrappedImage(container);
+  });
+
+  // 실재하는 표정은 그대로 간다 — 위 단언이 "표정을 통째로 무시"로 퇴화하지 않게 잠근다.
+  // (부모 happy 2장이 지금 유일한 양성 표본이다. 표정 발주가 들어오면 여기가 넓어진다.)
+  it('실재하는 표정은 요청한다 (부모 happy)', () => {
+    const { container } = render(<Portrait characterId="mother" year={3} expression="happy" />);
+
+    expect(container.querySelector('img')!.getAttribute('src'))
+      .toBe(`WEBP::${BASE}images/characters/mother_middle_happy.png`);
   });
 });
 

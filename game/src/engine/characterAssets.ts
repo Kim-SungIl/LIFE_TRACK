@@ -36,3 +36,52 @@ export function characterStagePrefix(id: string, year?: number): string {
 export function characterFallbackPrefix(id: string): string {
   return `${id}_middle`;
 }
+
+/**
+ * 후보 목록에서 **실재하는 첫 파일**을 고른다. 없으면 null(→ CSS 아바타).
+ *
+ * 이전엔 첫 후보를 그냥 요청하고 `onError`로 다음으로 넘어갔다. 그래서 실물이 없는
+ * 축(표정·성별 변주)에서 **매번 헛 왕복이 났다.** dev는 SPA 폴백이 200 text/html을 주고
+ * 디코드가 깨지며, 배포는 404다. 어느 쪽이든 요청 1회 + 디코드 실패 + 리렌더가 붙는다.
+ *
+ * `has`는 build 시점 manifest다(`CHARACTER_MANIFEST`). dev에서 새 파일을 넣으면
+ * predev 훅이 다시 돌아야 보인다 — CG manifest와 같은 규약이다.
+ */
+export function pickExisting(
+  candidates: readonly string[],
+  has: ReadonlySet<string>,
+): string | null {
+  for (const f of candidates) if (has.has(f)) return f;
+  return null;
+}
+
+/**
+ * 초상 파일명 후보 — staged 표정 → staged neutral → base 표정 → base neutral.
+ * **파일명만 돌려준다**(경로·webp 스왑은 호출부 책임).
+ */
+export function portraitCandidates(id: string, expr: string, year?: number): string[] {
+  const stage = characterStagePrefix(id, year);
+  const base = characterFallbackPrefix(id);
+  const out = [`${stage}_${expr}.png`, `${stage}_neutral.png`];
+  if (stage !== base) out.push(`${base}_${expr}.png`, `${base}_neutral.png`);
+  return [...new Set(out)];
+}
+
+/**
+ * 이벤트 전신 스프라이트 후보 — 여주는 `_f` 변주를 먼저 본다.
+ * 전신이 아예 없으면 neutral(파스텔 배경)이라도 세우는 기존 동작을 유지한다.
+ */
+export function spriteCandidates(id: string, gender: 'male' | 'female', year?: number): string[] {
+  const stage = characterStagePrefix(id, year);
+  const base = characterFallbackPrefix(id);
+  const g = gender === 'female' ? '_f' : '';
+  const out = [
+    ...(g ? [`${stage}_fullbody${g}.png`] : []),
+    `${stage}_fullbody.png`,
+    `${stage}_neutral.png`,
+    ...(g ? [`${base}_fullbody${g}.png`] : []),
+    `${base}_fullbody.png`,
+    `${base}_neutral.png`,
+  ];
+  return [...new Set(out)];
+}
