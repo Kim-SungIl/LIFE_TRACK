@@ -306,6 +306,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         <div aria-live="polite" style={{
           textAlign: 'center', fontSize: '0.66rem', color: 'var(--text-muted)',
           marginTop: -4, marginBottom: 10,
+          // HUD와 함께, 배경 사진 위에 맨몸으로 남던 나머지 한 곳. text-muted라 가장 먼저 묻힌다.
+          background: 'rgba(42,34,48,0.7)', backdropFilter: 'blur(4px)',
+          borderRadius: 999, padding: '3px 10px', width: 'fit-content', marginInline: 'auto',
         }}>
           💾 자동 저장됨
           <span aria-hidden="true"> · {new Date(getLastSavedAt()!).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>

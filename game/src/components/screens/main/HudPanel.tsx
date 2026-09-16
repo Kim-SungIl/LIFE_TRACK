@@ -59,7 +59,18 @@ export const HudPanel = memo(function HudPanel({
   const reducedMotion = usePrefersReducedMotion();
   const mods = getParentMods(parents);
   return (
-    <div data-tutorial="hud" style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)', marginBottom: 10 }}>
+    // 유리 바닥 — 배경 사진을 0.25에서 올리면(BG_IMAGE_OPACITY) HUD만 맨몸으로 사진 위에
+    // 남는다. 이 화면에서 카드 밖에 있던 건 HUD와 자동저장 표시 둘뿐이라, 나머지 카드와
+    // 같은 rgba(42,34,48,0.85)+blur(6px)를 준다. 파스텔 배경인 초상(neutral은 누끼가 아니라
+    // 불투명 파스텔이 규약이다)도 이 바닥 위에 올라가면서 사진과 직접 부딪히지 않는다.
+    //
+    // **래퍼를 새로 감싸지 않는다** — #444 잠금이 이 요소의 children 인덱스(0=초상,
+    // 1=가운데, last=우측)로 축소 거동을 본다. 배경은 이 div가 직접 받는다.
+    <div data-tutorial="hud" style={{
+      display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)', marginBottom: 10,
+      background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)',
+      borderRadius: 12, padding: '8px 10px',
+    }}>
       <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} />
       {/* minWidth:0 — flex 자식의 기본 min-width:auto는 콘텐츠보다 작아지지 않아
           축소 압력이 전부 우측 블록으로 갔다(320px에서 34px까지 찌그러짐). */}

@@ -344,6 +344,48 @@ body {
   transition: width 0.3s;
 }
 
+/* ===== 셋업 화면(인트로 / 성별 / 부모 기억) =====
+   타이틀만 표지였고 그 다음 세 화면은 단색 카드였다. 쓸 배경은 이미 디스크에 있었다 —
+   인트로의 "저녁 식탁의 냄새"에 dinner_table이, "우리 집은..."에 home_evening이 있는데
+   둘 다 이벤트에서만 쓰고 정작 그 문장 뒤에는 안 깔려 있었다. 새 그림 0장.
+
+   배경 사진은 CSS가 아니라 TSX에서 --setup-bg-image로 주입한다 — 릴리즈 빌드가 png를
+   지우므로 webpSrc를 경유해야 하는데 번들 CSS의 url()은 스왑 대상이 아니다(.title-screen과 같은 이유). */
+.setup-screen {
+  position: relative;
+  overflow: hidden;
+  /* isolation + 배경의 z-index:-1 = 자식에게 아무 규칙도 걸지 않고 사진을 바닥에 깐다.
+     타이틀이 쓰는 `> :not(...) { position: relative }` 방식을 여기서 쓰면 **부모 기억
+     화면의 sticky 푸터를 relative로 덮는다**(인라인 스타일이라 지금은 안 덮이지만,
+     그 우연에 기대는 배선이다). isolate가 스태킹 컨텍스트를 만들어 -1이 이 요소 밖으로
+     새지 않으므로, 사진은 제 배경 위·본문 아래에만 머문다. */
+  isolation: isolate;
+}
+
+.setup-screen__bg {
+  position: absolute;
+  inset: 0;
+  /* 스크림이 균일하면 사진이 죽거나 글자가 죽는다. 카드가 자기 바닥을 갖는 화면이라
+     가장자리는 열어두고 중앙만 눌러, 사진은 분위기로 남고 글자는 바닥색 근처를 유지한다. */
+  background:
+    /* 상단 띠 — 기억 선택의 헤딩(text-muted 0.8rem)이 화면 최상단이라 방사형만으로는
+       가장자리가 열려 여유가 깎였다(실측 4.87:1, 단색 기준선은 6.33:1). */
+    linear-gradient(180deg, rgba(23, 21, 28, 0.84) 0%, rgba(23, 21, 28, 0.42) 16%, rgba(23, 21, 28, 0) 32%),
+    radial-gradient(ellipse 96% 72% at 50% 46%, rgba(23, 21, 28, 0.88) 34%, rgba(23, 21, 28, 0.74) 72%, rgba(23, 21, 28, 0.62) 100%),
+    var(--setup-bg-image, none) center / cover no-repeat;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* 인트로는 카드가 없는 순수 텍스트 화면이라 글자가 사진에 직접 닿는다.
+   중앙을 더 눌러 본문 대비를 지키고, 사진은 가장자리로만 보이게 한다. */
+.setup-screen--text .setup-screen__bg {
+  background:
+    linear-gradient(180deg, rgba(23, 21, 28, 0.84) 0%, rgba(23, 21, 28, 0.42) 16%, rgba(23, 21, 28, 0) 32%),
+    radial-gradient(ellipse 92% 64% at 50% 50%, rgba(23, 21, 28, 0.94) 30%, rgba(23, 21, 28, 0.8) 68%, rgba(23, 21, 28, 0.66) 100%),
+    var(--setup-bg-image, none) center / cover no-repeat;
+}
+
 /* ===== 타이틀 화면 =====
    첫 진입 시 "앱 화면"이 아니라 성장 시뮬레이션의 표지로 인지되게 한다. */
 .title-screen {

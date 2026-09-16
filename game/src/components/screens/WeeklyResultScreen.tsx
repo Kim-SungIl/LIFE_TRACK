@@ -109,7 +109,8 @@ export function WeeklyResultScreen({
 
         {/* 주인공 + 독백 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} />
+          {/* framed — 이 초상만 카드 밖에 맨몸으로 배경 사진 위에 선다(옆 말풍선은 자기 바닥이 있다). */}
+          <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} framed />
           <div style={{
             flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
             borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
