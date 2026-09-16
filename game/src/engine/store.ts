@@ -3,6 +3,7 @@ import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './ty
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
 import { cloneGameState } from './stateClone';
+import { describeUnplayable } from './saveIntegrity';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
 import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
 import { assignCurrentEvent } from './eventPresentation';
@@ -404,6 +405,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
     try {
       // 단계형(버전 격상) → 정규화(백필·재수화) 순서 — step은 격상 전 구조를 전제로 쓴다.
       const loaded = migrateLoadedState(runSaveMigrations(save.state, save.version));
+      // **try/catch만으로는 부족하다.** 그 방어는 마이그레이션 중 실제로 터지는 손상만 거른다 —
+      // `parents: null`이라도 rngSeed가 멀쩡하면 아무 데서도 안 터져 그대로 통과했고,
+      // 그러면 손상 안내가 안 뜬 채 깨진 state가 set 되고 자동저장이 그걸 디스크에 다시 썼다.
+      const why = describeUnplayable(loaded);
+      if (why !== null) {
+        console.error('[loadSavedGame] 구조가 깨진 세이브:', why);
+        return false;
+      }
       // 즉시 적립이 배포되기 전에 만들어진 세이브는 이 판의 이벤트가 archive를 한 번도 지나지
       // 않았다 — 여기서만 구제된다. 멱등이고, 이미 다 적립된 세이브면 쓰기 없이 끝난다.
       accrueFromState(loaded);
