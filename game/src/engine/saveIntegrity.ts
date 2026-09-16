@@ -19,34 +19,50 @@
 // 못 여는 것보다 나쁘다. 이 판정은 "복구 가능한가"가 아니라 "이 값으로 게임이 성립하는가"만 본다.
 import type { GameState, Gender, ParentStrength, StatKey } from './types';
 
-const GENDERS: readonly string[] = ['male', 'female'] satisfies readonly Gender[];
+const GENDERS = ['male', 'female'] as const satisfies readonly Gender[];
 
-const STRENGTHS: readonly string[] = [
+const STRENGTHS = [
   'wealth', 'info', 'resilience', 'emotional', 'freedom', 'strict',
-] satisfies readonly ParentStrength[];
+] as const satisfies readonly ParentStrength[];
 
-const PHASES: readonly string[] = [
+const PHASES = [
   'setup', 'weekday', 'weekend', 'vacation', 'result', 'event', 'semester-end', 'year-end', 'ending',
-] satisfies readonly GameState['phase'][];
+] as const satisfies readonly GameState['phase'][];
 
-const STAT_KEYS: readonly string[] = [
+const STAT_KEYS = [
   'academic', 'social', 'talent', 'mental', 'health',
-] satisfies readonly StatKey[];
+] as const satisfies readonly StatKey[];
 
 /**
  * 컴파일 타임 완전성 가드.
  *
- * 위 배열들은 유니온에서 **파생되지 않는다**(런타임 값이 필요하다). 유니온에 멤버가 추가되면
- * 배열은 조용히 뒤처지고, 새 값을 가진 정상 세이브가 "손상"으로 거부된다 — 이 파일에서 가장
- * 위험한 실패 모드다. 빠진 멤버가 있으면 여기서 타입 에러가 난다.
+ * 유니온에 멤버가 추가되면 위 배열은 조용히 뒤처지고, 새 값을 가진 **정상 세이브가 "손상"으로
+ * 거부된다** — 이 파일에서 가장 위험한 실패 모드다. 빠진 멤버가 있으면 여기서 타입 에러가 난다.
+ *
+ * **두 번 틀렸던 자리라 형태가 중요하다.**
+ *
+ * 1) 처음에는 `const _x: [_MissingPhase, ...] = [] as unknown as [never, ...]` 였다. 이건
+ *    **원리적으로 위반될 수 없다** — `never`는 모든 타입에 대입 가능하므로 `_MissingPhase`가
+ *    무엇이 되든 통과한다. 실측: `phase` 유니온에 `'epilogue'`를 넣어도 `tsc -b` rc=0,
+ *    vitest 1301개 전부 초록. 가드가 지키겠다고 적어 둔 것을 한 번도 안 지키고 있었다.
+ *    그래서 방향을 뒤집었다 — 이제 **`_Missing*`이 `never`에 대입되어야** 한다.
+ *
+ * 2) 그것만으로는 절반이다. `Exclude`의 리터럴 목록을 따로 적으면 표가 **두 층**이 되어,
+ *    유니온 추가는 잡아도 배열에서 멤버를 **지우는 것**은 못 잡는다(실측: `PHASES`에서
+ *    `'vacation'` 삭제 → tsc·전체 테스트 초록). 그래서 배열을 SSOT로 두고 `typeof X[number]`로
+ *    파생시킨다. 이제 어느 쪽을 건드려도 한 곳에서 걸린다.
+ *
+ * 양방향 실측:
+ *   정상                      → rc=0
+ *   PHASES에서 'vacation' 삭제 → rc=2  Type '[never, never, "vacation", never]' …
+ *   유니온에 'epilogue' 추가   → rc=2  Type '[never, never, "epilogue", never]' …
  */
-type _MissingGender = Exclude<Gender, 'male' | 'female'>;
-type _MissingStrength = Exclude<ParentStrength, 'wealth' | 'info' | 'resilience' | 'emotional' | 'freedom' | 'strict'>;
-type _MissingPhase = Exclude<GameState['phase'],
-  'setup' | 'weekday' | 'weekend' | 'vacation' | 'result' | 'event' | 'semester-end' | 'year-end' | 'ending'>;
-type _MissingStatKey = Exclude<StatKey, 'academic' | 'social' | 'talent' | 'mental' | 'health'>;
-const _exhaustive: [_MissingGender, _MissingStrength, _MissingPhase, _MissingStatKey] =
-  [] as unknown as [never, never, never, never];
+type _MissingGender = Exclude<Gender, typeof GENDERS[number]>;
+type _MissingStrength = Exclude<ParentStrength, typeof STRENGTHS[number]>;
+type _MissingPhase = Exclude<GameState['phase'], typeof PHASES[number]>;
+type _MissingStatKey = Exclude<StatKey, typeof STAT_KEYS[number]>;
+const _exhaustive: [never, never, never, never] =
+  [] as unknown as [_MissingGender, _MissingStrength, _MissingPhase, _MissingStatKey];
 void _exhaustive;
 
 const isFiniteNumber = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
@@ -61,12 +77,12 @@ export function describeUnplayable(state: unknown): string | null {
   if (typeof state !== 'object' || state === null || Array.isArray(state)) return 'state가 객체가 아니다';
   const s = state as Record<string, unknown>;
 
-  if (typeof s.gender !== 'string' || !GENDERS.includes(s.gender)) return `gender=${JSON.stringify(s.gender)}`;
-  if (typeof s.phase !== 'string' || !PHASES.includes(s.phase)) return `phase=${JSON.stringify(s.phase)}`;
+  if (typeof s.gender !== 'string' || !(GENDERS as readonly string[]).includes(s.gender)) return `gender=${JSON.stringify(s.gender)}`;
+  if (typeof s.phase !== 'string' || !(PHASES as readonly string[]).includes(s.phase)) return `phase=${JSON.stringify(s.phase)}`;
 
   // 부모 2종. 마이그레이션이 'gene' 별칭을 이미 폈으므로 여기서는 최종 이름만 본다.
   if (!Array.isArray(s.parents) || s.parents.length !== 2) return `parents=${JSON.stringify(s.parents)}`;
-  if (!s.parents.every(p => typeof p === 'string' && STRENGTHS.includes(p))) {
+  if (!s.parents.every(p => typeof p === 'string' && (STRENGTHS as readonly string[]).includes(p))) {
     return `parents 값=${JSON.stringify(s.parents)}`;
   }
 
