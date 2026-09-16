@@ -95,6 +95,22 @@ describe('손상 세이브 — 타이틀이 사실대로 말한다', () => {
     expect(useGameStore.getState().state, '멀쩡한 세이브는 열려야 한다').not.toBeNull();
   });
 
+  // **예외가 안 나는 손상**도 같은 안내로 가야 한다. 이 축이 통째로 비어 있었다 —
+  // 기존 케이스(`parents: 'wealth'`)는 전부 마이그레이션 중 실제로 터지는 값이라
+  // try/catch가 잡았고, 안 터지는 손상은 `ret=true`로 조용히 열렸다(실측 4종).
+  it.each([
+    ['parents가 null(rngSeed 정상)', { parents: null }],
+    ['stats가 null', { stats: null }],
+    ['npcs가 null', { npcs: null }],
+    ['stats가 문자열', { stats: 'broken' }],
+  ])('%s → 안내가 뜬다', (_label, patch) => {
+    seed(patch);
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('이어하기'));
+    expect(screen.getByText('이 저장을 열 수 없어요'),
+      '조용히 열리면 깨진 state가 화면에 올라가고 자동저장이 그걸 디스크에 다시 쓴다').toBeTruthy();
+  });
+
   // 끝난 판(엔딩)의 라벨에서도 같은 안내가 나와야 한다 — 버튼 문구만 다르고 경로는 같다.
   it('"엔딩 다시 보기"에서도 안내가 뜬다', () => {
     seed({ phase: 'ending', year: 8, week: 1, parents: 'wealth' });
