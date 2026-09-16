@@ -353,7 +353,11 @@ body {
    지우므로 webpSrc를 경유해야 하는데 번들 CSS의 url()은 스왑 대상이 아니다(.title-screen과 같은 이유). */
 .setup-screen {
   position: relative;
-  overflow: hidden;
+  /* **`overflow: hidden`을 두면 안 된다.** 스크롤 컨테이너가 생기고 sticky는 가장 가까운
+     scrollport를 기준으로 잡는데, 이 요소는 제 높이만큼 자라 스스로 스크롤되지 않는다.
+     그러면 부모 기억 화면의 sticky 푸터가 그냥 본문과 함께 흘러내린다 —
+     실측(Chromium): 320px에서 CTA가 화면 아래 299px, 375px(SE)에서 186px.
+     #443/#444가 잠근 대역이다. 배경은 inset:0이라 넘칠 것이 없어 애초에 불필요했다. */
   /* isolation + 배경의 z-index:-1 = 자식에게 아무 규칙도 걸지 않고 사진을 바닥에 깐다.
      타이틀이 쓰는 `> :not(...) { position: relative }` 방식을 여기서 쓰면 **부모 기억
      화면의 sticky 푸터를 relative로 덮는다**(인라인 스타일이라 지금은 안 덮이지만,

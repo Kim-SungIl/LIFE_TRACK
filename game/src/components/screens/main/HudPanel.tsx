@@ -68,7 +68,7 @@ export const HudPanel = memo(function HudPanel({
     // 1=가운데, last=우측)로 축소 거동을 본다. 배경은 이 div가 직접 받는다.
     <div data-tutorial="hud" style={{
       display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)', marginBottom: 10,
-      background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)',
+      background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
       borderRadius: 12, padding: '8px 10px',
     }}>
       <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} />

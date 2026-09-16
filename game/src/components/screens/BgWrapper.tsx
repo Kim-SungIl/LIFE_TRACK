@@ -1,16 +1,6 @@
 import { BgInfo } from '../../engine/backgrounds';
 import { webpSrc } from '../../engine/assetWebp';
-
-// 배경 사진의 불투명도. **0.25였다** — 같은 교실 그림이 이벤트 장면(EventScene은 1.0)에선
-// 무대였는데 주간 화면에선 희미한 텍스처였다. 플레이 시간의 대부분이 이 화면인데 그림이
-// 4배 옅게 깔려 있었고, 그래서 "게임"이 아니라 "앱"으로 읽혔다.
-//
-// 올려도 글자가 안 죽는 이유: 이 래퍼 안의 카드는 전부 rgba(42,34,48,0.85)+blur(6px)로
-// 자기 바닥을 갖는다(StatsPanel·ExamTimeline·독백 말풍선). 카드 밖에 맨몸으로 있던 둘
-// (HUD·자동저장 표시)은 같은 유리 바닥을 받았다 — 배경을 올리는 일과 한 쌍이다.
-//
-// 최종 값은 **게임에서 눈으로 보고 정할 것**. 화면마다 다르게 하려면 bgOpacity로 넘긴다.
-export const BG_IMAGE_OPACITY = 0.55;
+import { BG_IMAGE_OPACITY } from './surface';
 
 interface BgWrapperProps {
   bg: BgInfo;

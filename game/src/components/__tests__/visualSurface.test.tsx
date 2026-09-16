@@ -24,7 +24,7 @@ vi.mock('../../engine/assetPrefetch', async (importOriginal) => ({
 
 import { GameScreen } from '../GameScreen';
 import { TitleScreen } from '../TitleScreen';
-import { BG_IMAGE_OPACITY } from '../screens/BgWrapper';
+import { BG_IMAGE_OPACITY, BG_IMAGE_OPACITY_UNTREATED, GLASS_BASE, tintedGlass } from '../screens/surface';
 import { useGameStore } from '../../engine/store';
 import { createInitialState, processWeek } from '../../engine/gameEngine';
 import { clearArchive } from '../../engine/archive';
@@ -41,13 +41,33 @@ function alphaOf(css: string): number | null {
   return parts.length < 4 ? 1 : Number(parts[3]);
 }
 
+/** React가 쓴 **원시 style 속성**에서 background를 뽑는다.
+ *  jsdom CSSOM은 `linear-gradient(...), rgba(...)` 같은 레이어드 단축을 통째로 버려서
+ *  `el.style.background`가 빈 문자열이 된다 — 이 리포가 clamp에서 이미 겪은 함정과 같은 층이다.
+ *  (실측: tintedGlass를 먹인 배너가 CSSOM에선 아예 안 보였다.) */
+function rawBackground(el: Element): string {
+  const m = /(?:^|;)\s*background:\s*([^;]+)/.exec(el.getAttribute('style') || '');
+  // 공백을 걷는다 — jsdom은 `rgba(224,138,91,0.15)`를 `rgba(224, 138, 91, 0.15)`로 정규화해서
+  // 소스 그대로의 문자열로 찾으면 못 찾는다(실측: 배너가 렌더돼 있는데 undefined였다).
+  return m ? m[1].replace(/\s+/g, '') : '';
+}
+
+/** 레이어드 값이면 **마지막 레이어**(바닥)의 알파를 본다. */
+function baseAlpha(css: string): number | null {
+  if (!css) return null;
+  const last = /(rgba?\([^)]*\))\s*$/.exec(css);
+  return alphaOf(last ? last[1] : css);
+}
+
 function weekdayState(): GameState {
   return createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
 }
 
-function resultState(): GameState {
+// ⚠️ tsconfig.app.json이 `src/**/__tests__/**`를 제외해서 **테스트 파일은 tsc를 안 거친다.**
+// 인자 개수가 안 맞아도 조용히 통과하니(이 함수에서 실제로 겪었다) 시그니처 변경에 주의.
+function resultState(year = 1, week = 4): GameState {
   let s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
-  s = { ...s, year: 1, week: 4, routineSlot2: 'self-study', routineSlot3: 'light-exercise' };
+  s = { ...s, year, week, routineSlot2: 'self-study', routineSlot3: 'light-exercise' };
   s = processWeek(s);
   return { ...s, currentEvent: null, phase: 'result' as GameState['phase'] };
 }
@@ -63,7 +83,8 @@ describe('주간 화면 — 배경 사진이 텍스처가 아니라 무대다', 
   // 0.25였다. 같은 교실 그림이 EventScene에선 1.0인데 여기선 4배 옅었고,
   // 플레이 시간의 대부분이 이 화면이다.
   it('상수가 옛 값(0.25)으로 돌아가지 않는다', () => {
-    expect(BG_IMAGE_OPACITY, '0.4 이하면 사진이 다시 텍스처가 된다').toBeGreaterThan(0.4);
+    // `> 0.4`는 0.41을 통과시켰다(3자 검수 실측). 0.41은 0.55와 눈에 띄게 다르다.
+    expect(BG_IMAGE_OPACITY, '0.5 미만이면 사진이 다시 텍스처가 된다').toBeGreaterThanOrEqual(0.5);
   });
 
   // 위쪽도 막는다 — 1.0에 가까우면 유리 카드의 blur 뒤가 요란해지고,
@@ -100,11 +121,15 @@ describe('배경을 올리면 카드 밖 요소는 자기 바닥을 가져야 �
     localStorage.setItem('lifetrack_save_at', String(Date.now()));
     useGameStore.setState({ state: weekdayState() });
     const { container } = render(<GameScreen />);
-    const pill = container.querySelector<HTMLElement>('[aria-live="polite"]');
+    // `[aria-live="polite"]` 첫 매칭에 기대면 안 된다 — 예상 피로 프리뷰도 polite라
+    // DOM 순서가 바뀌면 엉뚱한 요소를 잰다(3자 검수 지적). 글자로 찾는다.
+    const pill = [...container.querySelectorAll<HTMLElement>('[aria-live="polite"]')]
+      .find(el => el.textContent?.includes('자동 저장됨'));
     expect(pill, '전제: 자동저장 표시가 떠 있다').toBeTruthy();
-    const a = alphaOf(pill!.style.background);
-    expect(a).not.toBeNull();
-    expect(a!).toBeGreaterThanOrEqual(0.6);
+    // 0.7로 뒀다가 실측 3.14:1이었다 — muted 0.66rem이라 카드와 같은 0.85가 필요하다.
+    expect(baseAlpha(rawBackground(pill!))!, 'muted 0.66rem에 얇은 바닥을 주면 사진이 비친다')
+      .toBeGreaterThanOrEqual(0.85);
+    expect(pill!.style.backdropFilter, 'blur가 국소 극단을 뭉갠다').toContain('blur');
   });
 
   // 주간 결산의 초상만 카드 밖에 맨몸으로 선다(옆 말풍선은 제 바닥이 있다).
@@ -116,6 +141,90 @@ describe('배경을 올리면 카드 밖 요소는 자기 바닥을 가져야 �
     expect(portrait, '전제: 결산 화면에 주인공 초상이 있다').toBeTruthy();
     expect(portrait!.style.outline, '액자가 없으면 파스텔 사각형이 사진 위에 뜬다').toContain('solid');
     expect(portrait!.style.boxShadow).toBeTruthy();
+  });
+});
+
+// 3자 검수(cursor 정적 지적 + codex 합성 계산)를 렌더 픽셀로 재현한 결과다.
+// 사진을 올리는 일은 **그 화면의 맨몸 요소에 바닥을 까는 일과 한 쌍**이다.
+// 짝을 안 맞춘 채 0.55를 먹이면 대비가 내려간다 — 실측(글자 숨김, dsf 2, 95퍼센타일 배경):
+//   결산 "이번 주의 기록"  6.54:1 → 3.54:1  (AA 이탈)
+//   엔딩 AA 미달           21건  → 24건
+//   학년말 AA 미달          1건  → 2건
+// 손본 화면(주간·결산)은 맨몸 요소가 0이 됐고, 안 손본 화면은 옛 값으로 되돌렸다.
+describe('사진을 올린 화면만 올린다 — 짝을 안 맞춘 화면은 옛 값', () => {
+  it('아직 손보지 않은 화면의 값은 옛 값 그대로다', () => {
+    expect(BG_IMAGE_OPACITY_UNTREATED).toBe(0.25);
+    expect(BG_IMAGE_OPACITY).toBeGreaterThan(BG_IMAGE_OPACITY_UNTREATED);
+  });
+
+  it('학년말·엔딩은 그 값을 실제로 쓴다 (사진만 올라가지 않는다)', () => {
+    const src = ['screens/YearEndScreen', 'screens/EndingScreen'].map(
+      f => readFileSync(resolve(process.cwd(), `src/components/${f}.tsx`), 'utf8'),
+    );
+    for (const s of src) {
+      const tags = s.match(/<BgWrapper[^>]*>/g) ?? [];
+      expect(tags.length, '전제: BgWrapper를 쓴다').toBeGreaterThan(0);
+      for (const t of tags) {
+        expect(t, '손보지 않은 화면에 사진만 올리면 맨몸 글자가 먼저 죽는다')
+          .toContain('bgOpacity={BG_IMAGE_OPACITY_UNTREATED}');
+      }
+    }
+  });
+
+  // `rgba(224,138,91,0.15)`류는 색을 입힐 뿐 바닥이 아니다. 색조를 유지한 채 바닥만 깐다.
+  it('색조 패널은 색을 지키면서 불투명 바닥을 갖는다', () => {
+    const out = tintedGlass('rgba(224,138,91,0.15)');
+    expect(out).toContain('rgba(224,138,91,0.15)');
+    expect(out.endsWith(GLASS_BASE), `바닥이 마지막 레이어여야 한다: ${out}`).toBe(true);
+    expect(alphaOf(GLASS_BASE)!).toBeGreaterThanOrEqual(0.7);
+  });
+
+  it('결산 화면의 맨몸 세 곳이 바닥을 갖는다', () => {
+    // Y1은 4주 안에 시험이 없어 '다가오는 이벤트'가 안 뜬다 — 세 패널이 다 뜨는 Y5로 본다.
+    useGameStore.setState({ state: resultState(5, 4) });
+    const { container } = render(<GameScreen />);
+    const header = [...container.querySelectorAll('div')]
+      .find(el => el.textContent?.trim().endsWith('이번 주의 기록') && rawBackground(el));
+    expect(header, '헤더 블록이 바닥을 잃었다 — 실측 3.54:1로 AA 아래다').toBeTruthy();
+    expect(baseAlpha(rawBackground(header!))!).toBeGreaterThanOrEqual(0.7);
+
+    // 손실 행 · 다가오는 이벤트 — 색조 패널 둘도 바닥을 갖는다(각각 0.06 / 0.1이었다).
+    for (const [tint, label] of [['217,100,88', '손실 행'], ['224,138,91', '다가오는 이벤트']] as const) {
+      const panel = [...container.querySelectorAll('div')]
+        .find(el => rawBackground(el).includes(tint));
+      expect(panel, `전제: ${label} 패널이 렌더된다`).toBeTruthy();
+      expect(baseAlpha(rawBackground(panel!))!, `${label}에 바닥이 없다`).toBeGreaterThanOrEqual(0.7);
+    }
+  });
+
+  // 조건부 렌더라 기본 상태 스캔에 안 잡혔던 둘. 루틴 슬롯을 채우면 둘 다 뜬다.
+  // 실측(classroom_middle_afternoon, muted): 0.25에서도 2.06:1이었고 0.55에서 1.00:1이 됐다.
+  it('조건부로만 뜨는 맨몸 둘도 바닥을 갖는다', () => {
+    useGameStore.setState({ state: { ...weekdayState(), year: 5, week: 4,
+      routineSlot2: 'self-study', routineSlot3: 'light-exercise' } as GameState });
+    const { container } = render(<GameScreen />);
+    expect(container.textContent, '전제: 예상 피로 프리뷰가 뜬다').toContain('예상 피로');
+
+    for (const [tint, label] of [
+      ['255,255,255,0.08', '선택 안내'],
+      ['255,255,255,0.05', '예상 피로 프리뷰'],
+    ] as const) {
+      const el = [...container.querySelectorAll('div')]
+        .find(e => rawBackground(e).startsWith(`linear-gradient(rgba(${tint})`));
+      expect(el, `${label}에 바닥이 없다 — 사진 위 맨몸이면 1.00:1까지 떨어진다`).toBeTruthy();
+      expect(baseAlpha(rawBackground(el!))!).toBeGreaterThanOrEqual(0.85);
+    }
+  });
+
+  it('주간 화면의 다가오는 이벤트 배너도 바닥을 갖는다', () => {
+    useGameStore.setState({ state: { ...weekdayState(), year: 5, week: 4 } });
+    const { container } = render(<GameScreen />);
+    const banner = [...container.querySelectorAll('div')]
+      .find(el => rawBackground(el).includes('224,138,91'));
+    // `if (banner)`로 감싸면 배너가 안 뜨는 상태에서 공허하게 통과한다 — 존재부터 단언한다.
+    expect(banner, '전제: 고1 4주차엔 다가오는 이벤트 배너가 뜬다').toBeTruthy();
+    expect(baseAlpha(rawBackground(banner!))!, '색조만 있으면 사진 위에서 1.60:1까지 떨어진다')
+      .toBeGreaterThanOrEqual(0.7);
   });
 });
 
@@ -171,6 +280,14 @@ describe('셋업 배경의 쌓임 순서', () => {
     expect(c, '전제: 규칙 자체가 있어야 한다').toContain('.setup-screen__bg');
     expect(c).toMatch(/\.setup-screen\s*\{[^}]*isolation:\s*isolate/);
     expect(c).toMatch(/\.setup-screen__bg\s*\{[^}]*z-index:\s*-1/);
+    // `position: absolute` 한 줄을 지우면 z-index가 안 먹고 빈 div가 flex 자식으로 0×0이 된다
+    // — 셋업 배경 3장이 전부 사라지는데 이 파일 전체가 그린이었다(3자 검수 실측).
+    expect(c, 'static이면 z-index가 안 먹고 배경이 0×0으로 붕괴한다')
+      .toMatch(/\.setup-screen__bg\s*\{[^}]*position:\s*absolute/);
+    expect(c, 'inset:0이 없으면 크기가 0이다').toMatch(/\.setup-screen__bg\s*\{[^}]*inset:\s*0/);
+    // F1 — overflow:hidden은 scrollport를 만들어 sticky 푸터를 죽인다(320px에서 CTA가 299px 아래).
+    expect(c, 'overflow:hidden이 돌아오면 좁은 기기에서 CTA가 첫 화면 밖으로 나간다')
+      .not.toMatch(/\.setup-screen\s*\{[^}]*overflow:\s*hidden/);
     expect(c, 'position을 강제하면 sticky 푸터가 죽는다')
       .not.toMatch(/\.setup-screen\s*>\s*:not\([^)]*\)\s*\{[^}]*position:/);
   });

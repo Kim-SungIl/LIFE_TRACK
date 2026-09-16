@@ -15,6 +15,7 @@ import { Dialog } from '../../Dialog';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import { Tutorial } from '../../Tutorial';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
+import { GLASS_BASE, tintedGlass } from '../surface';
 import { breakSentences, getFatigueDisplay, getUpcomingEvents } from '../shared';
 import { HudPanel } from './HudPanel';
 import { StatsPanel } from './StatsPanel';
@@ -307,7 +308,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
           textAlign: 'center', fontSize: '0.66rem', color: 'var(--text-muted)',
           marginTop: -4, marginBottom: 10,
           // HUD와 함께, 배경 사진 위에 맨몸으로 남던 나머지 한 곳. text-muted라 가장 먼저 묻힌다.
-          background: 'rgba(42,34,48,0.7)', backdropFilter: 'blur(4px)',
+          // 0.7로 뒀다가 실측에서 3.14:1이 나왔다(muted 0.66rem — 가장 약한 색에 가장 얇은 바닥).
+          // 카드와 같은 0.85로 올린다. Webkit 접두는 이 리포의 기존 선례를 따른다.
+          background: GLASS_BASE, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
           borderRadius: 999, padding: '3px 10px', width: 'fit-content', marginInline: 'auto',
         }}>
           💾 자동 저장됨
@@ -331,7 +334,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {/* 다가오는 이벤트 배너 */}
       {upcomingEvents.length > 0 && (
         <div style={{
-          background: 'rgba(224,138,91,0.15)', border: '1px solid rgba(224,138,91,0.3)',
+          background: tintedGlass('rgba(224,138,91,0.15)'), border: '1px solid rgba(224,138,91,0.3)',
           borderRadius: 10, padding: '8px 14px', marginBottom: 10,
           fontSize: '0.8rem', fontWeight: 600, textAlign: 'center',
           color: 'var(--accent-soft)',
@@ -511,7 +514,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         <div style={{
           textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)',
           padding: '6px 12px', marginBottom: 4,
-          background: 'rgba(255,255,255,0.08)', borderRadius: 8,
+          // 카드 밖이라 사진 위 맨몸이었다 — 조건부 렌더라 한 상태만 보는 스캔에 안 걸렸다.
+          background: tintedGlass('rgba(255,255,255,0.08)'), borderRadius: 8,
         }}>
           {state.isVacation
             ? '위의 빈 슬롯을 탭해서 방학 활동을 선택하세요!'
@@ -529,7 +533,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         return (
           <div aria-live="polite" style={{
             marginBottom: 8, padding: '9px 14px', borderRadius: 10,
-            background: p.burnoutRisk ? 'rgba(214,110,110,0.10)' : 'rgba(255,255,255,0.05)',
+            background: tintedGlass(p.burnoutRisk ? 'rgba(214,110,110,0.10)' : 'rgba(255,255,255,0.05)'),
             border: p.burnoutRisk ? '1px solid rgba(214,110,110,0.35)' : '1px solid rgba(255,255,255,0.08)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: '0.82rem' }}>
