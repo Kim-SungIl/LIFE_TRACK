@@ -461,6 +461,9 @@ export function GameScreen() {
         <SystemMenu
           onExit={() => { setMenuOpen(false); exitToTitle(); }}
           onClose={() => setMenuOpen(false)}
+          // 저장이 죽었으면 "진행은 저장돼 있어요"가 거짓이 된다 — exitToTitle이 메모리
+          // state를 버리므로. 엔딩 화면이 이미 같은 값을 받고 있다(같은 진실, 같은 출처).
+          saveFailed={isStorageSaveFailed()}
         />
       )}
     </Suspense>

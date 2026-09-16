@@ -8,10 +8,14 @@
 // "오디오 항목 하나 때문에 화면을 늘리면 절제 원칙에 어긋난다"고 적어 뒀다 —
 // 이 메뉴의 존재 이유는 나가는 길이고, 오디오는 이미 있는 것을 같은 자리에 모아 둔 것뿐이다.
 //
-// **aria-modal을 선언했으면 실제로 가둬야 한다.** 이 리포에는 선언만 해 놓고 뒤 요소가
-// 전부 탭 순서에 남아 있는 자리가 있다(EventScene의 선택 안내) — 스크린리더에 거짓말을 하는
-// 최악의 조합이다. 여기서는 열릴 때 포커스를 옮기고, Tab을 가두고, Escape로 닫는다.
-import { useEffect, useRef } from 'react';
+// **공용 Dialog를 쓴다.** 처음에는 포커스 트랩·Escape를 여기서 직접 구현했는데, 그러면
+// 이 메뉴가 `Dialog`의 `dialogStack` 밖에 서게 된다. 상점이 열린 채 뒤로가기를 누르면
+// 상점의 **캡처 단계** 핸들러(Dialog.tsx:116)가 먼저 받아 `stopPropagation`으로 끊으므로
+// 이 메뉴의 버블 리스너는 아예 실행되지 않았다 — 실측: Tab이 보이지 않는 상점으로 새고,
+// Escape가 메뉴가 아니라 **상점을 닫았다**(두 번 눌러야 메뉴가 닫혔다). 게다가 aria-modal
+// 다이얼로그 둘이 동시에 뜬 채 둘 다 inert가 아니었다 — 스크린리더에 거짓말을 하는 조합이다.
+// 스택·inert·캡처 Escape/Tab·포커스 복귀가 전부 Dialog에 있으므로 거기에 태우는 것이 답이다.
+import { Dialog } from './Dialog';
 import { AudioToggle } from './AudioToggle';
 import { playSfx } from '../audio/sfx';
 
@@ -19,82 +23,65 @@ type Props = {
   /** 타이틀로 나간다. 세이브는 남는다(store.exitToTitle) — 라벨이 그렇게 약속한다. */
   onExit: () => void;
   onClose: () => void;
+  /**
+   * 마지막 저장이 실패한 상태인가(용량 초과·사파리 프라이빗 등).
+   *
+   * 이때 "진행은 저장돼 있어요"는 **거짓말이다.** `exitToTitle`은 메모리 state를 버리므로
+   * 마지막 성공 저장 이후의 진행이 사라진다. 페이지 언로드가 아니라 상태 전환이라
+   * `beforeunload` 경고도 안 뜬다 — 여기서 말하지 않으면 아무 데서도 안 말한다.
+   */
+  saveFailed?: boolean;
 };
 
-const FOCUSABLE = 'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
-
-export function SystemMenu({ onExit, onClose }: Props) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // 열릴 때 포커스를 안으로 옮긴다. 안 하면 키보드 사용자는 오버레이 뒤의
-    // 보이지 않는 버튼들 사이를 헤매게 된다.
-    const first = ref.current?.querySelector<HTMLElement>(FOCUSABLE);
-    first?.focus();
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
-      if (e.key !== 'Tab') return;
-      const items = [...(ref.current?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [])];
-      if (items.length === 0) return;
-      const [head, tail] = [items[0], items[items.length - 1]];
-      // 양 끝에서 감아 준다 — 이게 없으면 Tab이 오버레이 밖으로 빠져나간다.
-      if (!e.shiftKey && document.activeElement === tail) { e.preventDefault(); head.focus(); }
-      else if (e.shiftKey && document.activeElement === head) { e.preventDefault(); tail.focus(); }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
+export function SystemMenu({ onExit, onClose, saveFailed = false }: Props) {
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed', inset: 0, zIndex: 300,
-        background: 'rgba(12,10,16,0.72)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+    <Dialog
+      onClose={onClose}
+      ariaLabel="메뉴"
+      align="bottom"
+      maxWidth={600}
+      zIndex={300}
+      overlayStyle={{ background: 'rgba(12,10,16,0.72)' }}
+      contentStyle={{
+        width: '100%',
+        background: 'var(--bg-card)',
+        borderTopLeftRadius: 18,
+        borderTopRightRadius: 18,
+        padding: '18px 20px calc(18px + env(safe-area-inset-bottom, 0px))',
+        border: '1px solid rgba(255,242,225,0.12)',
+        borderBottom: 'none',
       }}
     >
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-label="메뉴"
-        onClick={e => e.stopPropagation()}
-        style={{
-          width: '100%', maxWidth: 600,
-          background: 'var(--bg-card)',
-          borderTopLeftRadius: 18, borderTopRightRadius: 18,
-          padding: '18px 20px calc(18px + env(safe-area-inset-bottom, 0px))',
-          border: '1px solid rgba(255,242,225,0.12)', borderBottom: 'none',
-        }}
-      >
-        <div style={{ textAlign: 'center', fontSize: '0.9rem', fontWeight: 700, marginBottom: 14 }}>
-          메뉴
-        </div>
-
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '10px 4px', marginBottom: 6,
-        }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>소리</span>
-          <AudioToggle />
-        </div>
-
-        <button
-          type="button" className="btn btn-secondary"
-          onClick={() => { playSfx('tap'); onExit(); }}
-          style={{ marginBottom: 10 }}
-        >
-          🚪 타이틀로 나가기
-          {/* 이 문장이 참이려면 exitToTitle이 세이브를 남겨야 한다 — 계약으로 잠가 둔다. */}
-          <span className="btn__sub">진행은 저장돼 있어요</span>
-        </button>
-
-        <button type="button" className="btn btn-secondary" onClick={onClose}>
-          닫기
-        </button>
+      <div style={{ textAlign: 'center', fontSize: '0.9rem', fontWeight: 700, marginBottom: 14 }}>
+        메뉴
       </div>
-    </div>
+
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '10px 4px', marginBottom: 6,
+      }}>
+        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>소리</span>
+        <AudioToggle />
+      </div>
+
+      <button
+        type="button" className="btn btn-secondary"
+        onClick={() => { playSfx('tap'); onExit(); }}
+        style={{ marginBottom: 10 }}
+      >
+        🚪 타이틀로 나가기
+        {/* 이 문장이 참이려면 exitToTitle이 세이브를 남겨야 한다 — 계약으로 잠가 둔다.
+            저장이 죽은 환경에서는 참이 아니므로 문구를 바꾼다(경고를 상시로 두면 경고가 아니다). */}
+        <span className="btn__sub" style={saveFailed ? { color: 'var(--red)' } : undefined}>
+          {saveFailed
+            ? '저장이 안 되는 중이에요 — 나가면 최근 진행이 사라져요'
+            : '진행은 저장돼 있어요'}
+        </span>
+      </button>
+
+      <button type="button" className="btn btn-secondary" onClick={onClose}>
+        닫기
+      </button>
+    </Dialog>
   );
 }
