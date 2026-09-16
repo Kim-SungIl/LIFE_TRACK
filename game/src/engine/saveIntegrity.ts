@@ -29,7 +29,11 @@ const PHASES = [
   'setup', 'weekday', 'weekend', 'vacation', 'result', 'event', 'semester-end', 'year-end', 'ending',
 ] as const satisfies readonly GameState['phase'][];
 
-const STAT_KEYS = [
+/**
+ * 스탯 5축의 런타임 목록. **아래 `_MissingStatKey` 가드가 걸린 유일한 표라 여기가 SSOT다** —
+ * `stateMigration`의 보류분 정규화도 이걸 쓴다(같은 표를 또 적으면 한쪽만 늙는다).
+ */
+export const STAT_KEYS = [
   'academic', 'social', 'talent', 'mental', 'health',
 ] as const satisfies readonly StatKey[];
 
