@@ -1,5 +1,6 @@
 import { BgInfo } from '../../engine/backgrounds';
 import { webpSrc } from '../../engine/assetWebp';
+import { BG_IMAGE_OPACITY } from './surface';
 
 interface BgWrapperProps {
   bg: BgInfo;
@@ -7,10 +8,12 @@ interface BgWrapperProps {
   onImgError: () => void;
   children: React.ReactNode;
   extraStyle?: React.CSSProperties;
+  /** 배경 사진 불투명도. 기본 BG_IMAGE_OPACITY. */
+  bgOpacity?: number;
 }
 
 // 모듈 레벨 컴포넌트 — 부모 렌더마다 새 함수 참조 생성을 피해 자식 트리 unmount/remount 방지
-export function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: BgWrapperProps) {
+export function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle, bgOpacity = BG_IMAGE_OPACITY }: BgWrapperProps) {
   return (
     <div style={{
       minHeight: '100dvh', position: 'relative', overflow: 'hidden',
@@ -21,7 +24,7 @@ export function BgWrapper({ bg, bgImgError, onImgError, children, extraStyle }: 
         <img
           src={webpSrc(`${import.meta.env.BASE_URL}${bg.image.replace(/^\//, '')}`)} alt=""
           decoding="async"
-          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.25, pointerEvents: 'none' }}
+          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: bgOpacity, pointerEvents: 'none' }}
           onError={onImgError}
         />
       )}
