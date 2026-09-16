@@ -139,6 +139,43 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
     throw new Error('이벤트 주에 도달하지 못했다');
   });
 
+  // **스탯만 잠그면 나머지 두 축은 열려 있다.** 실측으로 확인했다: `foldOutcomeIntoWeekLog`에서
+  // 피로·돈 두 줄을 통째로 지워도 이 파일과 배선 테스트가 13/13 전부 통과했다.
+  // 돈은 특히 나쁘다 — 결산이 `+`/`-`와 초록/빨강으로 방향을 **명시**하기 때문이다.
+  //
+  // 합성 이벤트를 쓰는 이유: 피로와 돈을 **함께** 움직이는 선택지를 실제 코퍼스에서 찾아
+  // 거기까지 플레이로 도달하면, 그 이벤트가 개편될 때 이 계약이 조용히 사라진다.
+  it('이벤트의 피로·돈도 그 주의 변화량에 들어간다', () => {
+    const api = useGameStore.getState();
+    api.startGame('male', ['emotional', 'info'], {});
+    const s0 = useGameStore.getState().state!;
+
+    const synthetic: GameEvent = {
+      id: 'test_fold_fatigue_money',
+      title: '테스트',
+      description: '테스트',
+      choices: [{ text: '고른다', effects: {}, fatigueEffect: 6, moneyEffect: -4 }],
+    } as GameEvent;
+
+    useGameStore.setState({
+      state: {
+        ...s0,
+        phase: 'event' as GameState['phase'],
+        fatigue: 20, money: 50,
+        currentEvent: synthetic,
+        weekLog: { statChanges: {}, fatigueChange: 1, moneyChange: 3, messages: [], skipped: [], milestoneMessages: [] },
+      },
+    });
+
+    const applied = useGameStore.getState().resolveEvent(0)!;
+    expect(applied.fatigue, '전제: 선택지가 실제로 피로를 올렸다').toBe(6);
+    expect(applied.money, '전제: 선택지가 실제로 돈을 깎았다').toBe(-4);
+
+    const log = useGameStore.getState().state!.weekLog!;
+    expect(log.fatigueChange, '피로 접기를 지워도 통과하면 그 줄은 잠겨 있지 않다').toBe(7);
+    expect(log.moneyChange, '돈 접기를 지워도 통과하면 결산이 지출을 초록 "+"로 그린다').toBe(-1);
+  });
+
   // 부팅 이벤트가 안전한 **이유**를 잠근다 — "그냥 null이니까 건너뛴다"로 두면
   // 나중에 결산 화면의 weekLog 가드가 사라져도 아무도 모른다.
   it('weekLog가 없는 이벤트는 결산이 없다 (부팅 이벤트)', () => {

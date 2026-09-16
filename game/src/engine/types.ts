@@ -38,6 +38,24 @@ export interface GameState {
   semester: 1 | 2;
   isVacation: boolean;
   weekLog: WeekLog | null;
+  /**
+   * **주 확정 전에 이미 적용된 가시 효과**의 누적. `processWeek`이 새 로그에 접고 비운다.
+   *
+   * 말걸기·가정 대화·상점 구매는 weekday 단계에서 `state.stats`/`fatigue`/`money`를 **즉시**
+   * 바꾼다. 그런데 그 시점의 `state.weekLog`는 **지난 주 로그**이고, 이번 주 로그는 잠시 뒤
+   * `processWeek`이 빈 채로 새로 만든다 — 그래서 효과가 현재값에는 있는데 변화량에는 없었다.
+   * 실측: 태블릿 15만원을 산 주에 실제 변화는 **-8만원**인데 결산은 **"+7"을 초록으로** 적었다
+   * (주간 용돈만 세고 지출을 못 봄). #442가 이벤트 경로에서 고친 것과 **같은 부호 역전**이다.
+   *
+   * 여기 담지 않고 `state.weekLog`에 바로 접으면 이미 보여준 지난 주 결산을 오염시키고,
+   * 그마저도 `processWeek`이 새 로그로 덮어써 사라진다.
+   *
+   * **주당 축 상한(+2)에는 세지 않는다** — 접기는 로그 확정 직전에 한 번만 일어나므로
+   * 활동 캡 계산(`log.statChanges`를 읽는 구간)은 이 값을 보지 못한다. 밸런스 불변.
+   *
+   * 구세이브에는 없다(undefined = 보류분 없음).
+   */
+  pendingWeekDelta?: PendingWeekDelta;
   npcs: NpcState[];
   events: GameEvent[];
   currentEvent: GameEvent | null;
@@ -128,6 +146,13 @@ export interface SkippedActivity {
   reason: 'money' | 'gate';
   /** routine = 학기 중 방과후 슬롯, choice = 주말/방학 선택 슬롯 */
   origin: 'routine' | 'choice';
+}
+
+/** 주 확정 전에 적용된 가시 효과의 누적분. 값은 **실제 적용된 델타**(클램프 뒤)다. */
+export interface PendingWeekDelta {
+  stats: Partial<Stats>;
+  fatigue: number;
+  money: number;
 }
 
 export interface WeekLog {
