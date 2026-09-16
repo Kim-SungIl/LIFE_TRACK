@@ -4,6 +4,7 @@ import { josa } from '../../engine/korean';
 import { MemorySlot, MilestoneScene, Stats, Gender, ExamResult, EXAM_TYPE_LABELS } from '../../engine/types';
 import { resolveEventCgUrl } from '../../engine/eventCg';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
+import { BG_IMAGE_OPACITY_UNTREATED } from './surface';
 // 기억 시각 언어(엠블럼·톤 필터·갤러리·썸네일)는 엔딩 화면과 공유 — memoryVisuals.tsx.
 import { CgItem, PANEL, TEXT_SHADOW, TONE_GLOW, catOf } from './memoryTokens';
 import { HeroGallery, MemoryThumb } from './memoryVisuals';
@@ -61,7 +62,7 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
   // reachedYears가 빈 배열인 건 이 경우뿐(진행 모드는 undefined, 2학년+는 length≥1).
   if (readonly && reachedYears && reachedYears.length === 0) {
     return (
-      <BgWrapper {...bgProps}>
+      <BgWrapper {...bgProps} bgOpacity={BG_IMAGE_OPACITY_UNTREATED}>
         <div style={{ maxWidth: 480, margin: '0 auto', padding: '28px 16px 40px', textAlign: 'center' }}>
           <div className="ye-stagger" style={{ animationDelay: '120ms', fontSize: '1.6rem', fontWeight: 700, color: 'var(--text-primary)', textShadow: TEXT_SHADOW, marginBottom: 6 }}>
             📖 기록장
@@ -146,7 +147,7 @@ export function YearEndScreen({ year, gender, memorySlots, milestoneScenes, stat
   const tCta = Math.min(tClosing + 600 + shownCards.length * 140, 2600);
 
   return (
-    <BgWrapper {...bgProps}>
+    <BgWrapper {...bgProps} bgOpacity={BG_IMAGE_OPACITY_UNTREATED}>
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '28px 16px 40px', textAlign: 'center' }}>
         {/* 기록장 모드 — 도달 학년 탭으로 넘겨본다 */}
         {readonly && reachedYears && reachedYears.length > 0 && (
