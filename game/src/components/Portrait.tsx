@@ -11,9 +11,15 @@ interface Props {
   mental?: number;
   mentalState?: string;
   year?: number;
+  /** 배경 사진 위에 맨몸으로 놓일 때의 액자 처리.
+   *  neutral 초상은 **투명 누끼가 아니라 불투명 파스텔 배경**이 규약이라(누끼 금지),
+   *  배경 사진이 진해지면 분홍 사각형이 사진 위에 뜬 것처럼 보인다. 테두리와 그림자를
+   *  줘서 "사진을 세워둔 것"으로 읽히게 한다.
+   *  카드(유리 바닥) 안에 있는 초상은 사진과 직접 닿지 않으므로 필요 없다. */
+  framed?: boolean;
 }
 
-export function Portrait({ characterId, expression, size = 80, label, mental, mentalState, year }: Props) {
+export function Portrait({ characterId, expression, size = 80, label, mental, mentalState, year, framed }: Props) {
   const expr = expression || (mental !== undefined && mentalState
     ? mentalToExpression(mental, mentalState)
     : 'neutral');
@@ -60,6 +66,13 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
             aspectRatio: '1 / 1.25',
             objectFit: 'cover',
             borderRadius: size * 0.15,
+            // outline은 레이아웃을 안 건드린다 — border를 쓰면 box-sizing:border-box라
+            // 그림이 들어갈 자리가 줄고, #443이 잠근 aspectRatio 계산에도 끼어든다.
+            ...(framed ? {
+              outline: '2px solid rgba(255,255,255,0.18)',
+              outlineOffset: '-2px',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.38)',
+            } : {}),
           }}
           onError={() => {
             if (src === exactPath && expr !== 'neutral') {

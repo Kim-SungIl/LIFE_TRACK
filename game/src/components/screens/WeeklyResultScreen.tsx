@@ -4,6 +4,7 @@ import { playSfx } from '../../audio/sfx';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
+import { GLASS_BASE, tintedGlass } from './surface';
 import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
 
 interface WeeklyResultScreenProps {
@@ -81,7 +82,13 @@ export function WeeklyResultScreen({
     <BgWrapper {...bgProps}>
       <div className="fade-in">
         {/* 일기 스타일 결산 */}
-        <div style={{ textAlign: 'center', marginBottom: 16, marginTop: 8 }}>
+        {/* 사진 위 맨몸이었다 — 배경을 올리자 "이번 주의 기록"이 6.54:1에서 3.54:1로 AA를 넘어갔다.
+            주간 화면 HUD와 같은 유리 바닥을 준다. */}
+        <div style={{
+          textAlign: 'center', marginBottom: 16, marginTop: 8,
+          background: GLASS_BASE, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+          borderRadius: 12, padding: '8px 12px',
+        }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{bgProps.bg.mood} {weekInfo}</div>
           <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: 4 }}>이번 주의 기록</div>
         </div>
@@ -109,7 +116,8 @@ export function WeeklyResultScreen({
 
         {/* 주인공 + 독백 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} />
+          {/* framed — 이 초상만 카드 밖에 맨몸으로 배경 사진 위에 선다(옆 말풍선은 자기 바닥이 있다). */}
+          <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} framed />
           <div style={{
             flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
             borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
@@ -175,7 +183,7 @@ export function WeeklyResultScreen({
           <div style={{
             display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10,
             padding: '8px 10px', borderRadius: 10,
-            background: 'rgba(217,100,88,0.06)', border: '1px solid rgba(217,100,88,0.2)',
+            background: tintedGlass('rgba(217,100,88,0.06)'), border: '1px solid rgba(217,100,88,0.2)',
           }}>
             {losses.map((loss, i) => (
               <div key={i} style={{
@@ -333,7 +341,7 @@ export function WeeklyResultScreen({
 
         {/* 다음 주 예고 */}
         {upcomingEvents.length > 0 && (
-          <div style={{ background: 'rgba(224,138,91,0.1)', borderRadius: 10, padding: '8px 12px', marginBottom: 16, fontSize: '0.78rem', textAlign: 'center' }}>
+          <div style={{ background: tintedGlass('rgba(224,138,91,0.1)'), borderRadius: 10, padding: '8px 12px', marginBottom: 16, fontSize: '0.78rem', textAlign: 'center' }}>
             📅 {upcomingEvents.map(e => e.text).join(' · ')}
           </div>
         )}

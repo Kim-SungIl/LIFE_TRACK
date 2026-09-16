@@ -355,7 +355,15 @@ export function TitleScreen() {
   // 인트로 — 감정 도입
   if (phase === 'intro') {
     return (
-      <div className="screen fade-in" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+      <div className="screen setup-screen setup-screen--text fade-in" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <div
+          className="setup-screen__bg"
+          aria-hidden="true"
+          style={{
+            '--setup-bg-image': `url(${webpSrc(`${assetBase}images/backgrounds/dinner_table.png`)})`,
+          } as React.CSSProperties}
+        />
+
         <div style={{ maxWidth: 360 }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 24 }}>
             어렴풋한 기억
@@ -385,7 +393,16 @@ export function TitleScreen() {
   // 성별 선택
   if (phase === 'gender') {
     return (
-      <div className="screen fade-in" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+      <div className="screen setup-screen fade-in" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+        <div
+          className="setup-screen__bg"
+          aria-hidden="true"
+          style={{
+            '--setup-bg-image': `url(${webpSrc(`${assetBase}images/backgrounds/school_gate_elementary.png`)})`,
+          } as React.CSSProperties}
+        />
+
+
         {/* width:100% — 없으면 이 래퍼가 내용(424px)에 맞춰 늘어나 부모의 중앙정렬이
             화면 밖으로 밀어낸다. 카드를 유동으로 바꿔도 여기가 고정이면 소용없다. */}
         <div style={{ width: '100%' }}>
@@ -455,7 +472,15 @@ export function TitleScreen() {
 
   // 부모 선택 — 기억 장면으로
   return (
-    <div className="screen fade-in">
+    <div className="screen setup-screen fade-in">
+      <div
+        className="setup-screen__bg"
+        aria-hidden="true"
+        style={{
+          '--setup-bg-image': `url(${webpSrc(`${assetBase}images/backgrounds/home_evening.png`)})`,
+        } as React.CSSProperties}
+      />
+
       <div style={{ textAlign: 'center', marginBottom: 8, marginTop: 12 }}>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
           어릴 적 기억 속, 우리 집은...
