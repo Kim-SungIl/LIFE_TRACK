@@ -19,12 +19,37 @@ import { calculateEnding } from './ending';
 import { recordMoneySpent, recordMoneyBlockedWeek } from './moneyTrajectory';
 import { saveLastSetup } from './lastSetup';
 
+/** 가시 효과의 "적용 전" 스냅샷 — 실제로 얼마가 먹혔는지는 클램프 뒤에만 알 수 있다. */
+function visibleSnapshot(s: GameState): { stats: GameState['stats']; fatigue: number; money: number } {
+  return { stats: { ...s.stats }, fatigue: s.fatigue, money: s.money };
+}
+
+/**
+ * 스냅샷 대비 실제 변화를 **그 주의 보류분**에 더한다(types.ts `pendingWeekDelta` 참조).
+ *
+ * 원본 효과값이 아니라 차분을 쓴다 — 0~100 클램프에 걸리면 표와 실제가 갈리고, 결산이
+ * 또 다른 거짓말을 한다. 반올림은 여기서 하지 않는다(접을 때 한 번만).
+ */
+function accruePendingDelta(state: GameState, before: ReturnType<typeof visibleSnapshot>): void {
+  const p = state.pendingWeekDelta ?? { stats: {}, fatigue: 0, money: 0 };
+  for (const key of Object.keys(state.stats) as StatKey[]) {
+    const d = state.stats[key] - before.stats[key];
+    if (d !== 0) p.stats[key] = (p.stats[key] ?? 0) + d;
+  }
+  p.fatigue += state.fatigue - before.fatigue;
+  p.money += state.money - before.money;
+  state.pendingWeekDelta = p;
+}
+
 // 가시 효과(스탯/피로/돈) 적용 헬퍼 — 미니이벤트/선택지 공통.
+// 적용한 만큼을 보류분에 적어 둔다: 이 경로는 processWeek **이전**이라 이번 주 로그가 아직
+// 없고, 남기지 않으면 현재값에만 반영돼 결산의 변화량과 어긋난다(#442와 같은 부호 역전).
 function applyVisibleTalkEffects(
   state: GameState,
   effects: { stats?: Partial<GameState['stats']>; fatigue?: number; money?: number } | undefined,
 ): void {
   if (!effects) return;
+  const before = visibleSnapshot(state);
   if (effects.stats) {
     for (const [k, v] of Object.entries(effects.stats)) {
       const key = k as keyof GameState['stats'];
@@ -40,6 +65,7 @@ function applyVisibleTalkEffects(
     if (state.money < 0) state.money = 0;
     recordMoneySpent(state, Math.round((beforeMoney - state.money) * 10) / 10);
   }
+  accruePendingDelta(state, before);
 }
 
 // 부모 미니이벤트 발동 기록(쿨다운/로테이션용) — id당 마지막 발동 주차만 유지.
@@ -565,7 +591,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 시즌·주간 한도·학년·스탯·중복 buff 게이트가 무시되지 않도록 여기서도 검증.
     const gate = canBuyItem(item, s, s.weekPurchases || {});
     if (!gate.ok) return gate.reason ? [gate.reason] : [];
+    const before = visibleSnapshot(s);
     const { newState, messages } = applyItemEffects(item, s, targetNpcId);
+    // 구매도 weekday 단계라 이번 주 로그가 아직 없다 — 남기지 않으면 결산이 지출을 못 보고
+    // 주간 용돈만 세서 **부호를 뒤집는다**(15만원을 쓴 주에 "+7" 초록). 즉시 효과만 잡히고
+    // 나중에 발동하는 buff는 그때의 로그가 가져간다(여기선 차분이 0).
+    accruePendingDelta(newState, before);
     // 구매 횟수 추적 (limitGroup 공유 슬롯은 그룹 키로 합산)
     const key = limitKey(item);
     newState.weekPurchases = { ...newState.weekPurchases };

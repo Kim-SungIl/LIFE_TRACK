@@ -19,6 +19,7 @@ import { GameScreen } from '../../GameScreen';
 import { useGameStore } from '../../../engine/store';
 import { createInitialState, processWeek } from '../../../engine/gameEngine';
 import { clearArchive } from '../../../engine/archive';
+import { SHOP_ITEMS, canBuyItem } from '../../../engine/shopSystem';
 import type { GameState } from '../../../engine/types';
 
 /** N주차를 실제로 처리해 결산 직전 상태를 만든다(로그·스탬프 전부 진짜 경로로). */
@@ -72,6 +73,56 @@ describe('결산 제목 배선', () => {
     useGameStore.setState({ state: legacy });
     render(<GameScreen />);
     expect(screen.getByText(/주차/), '폴백 경로가 죽으면 제목 자리가 비어 버린다').toBeTruthy();
+  });
+});
+
+// 돈은 결산에서 **방향을 명시**하는 유일한 줄이다 — `+`/`-`와 초록/빨강을 직접 쓴다
+// (WeeklyResultScreen:219-227). 그래서 부호가 틀리면 다른 축보다 더 크게 틀린다.
+describe('돈 표기는 그 주에 실제로 오간 액수를 말한다', () => {
+  // **전 구간 배선.** 상점에서 진짜로 사고, 진짜로 주를 넘기고, 화면을 그린다.
+  // 엔진 단언만 두면 화면이 `weekLog.moneyChange` 대신 딴 값을 읽어도 통과한다.
+  it('산 주에는 빨간 (-) 표기가 뜬다 (초록 (+)가 아니라)', () => {
+    const s0 = createInitialState('male', ['wealth', 'info'], { rngSeed: 5 });
+    const start: GameState = {
+      ...s0, year: 5, week: 10, money: 1569,
+      phase: 'weekday' as GameState['phase'],
+      routineSlot2: 'self-study', routineSlot3: 'rest',
+    };
+    useGameStore.setState({ state: start });
+
+    const item = SHOP_ITEMS.find(i => i.price >= 15 && canBuyItem(i, start, {}).ok);
+    expect(item, '15만원 이상 살 수 있는 아이템이 없으면 부호 역전을 재현할 수 없다').toBeTruthy();
+    useGameStore.getState().buyItem(item!);
+    expect(useGameStore.getState().state!.money, '전제: 구매가 실제로 돈을 깎았다').toBe(1569 - item!.price);
+
+    useGameStore.getState().advanceWeek();
+    const after = useGameStore.getState().state!;
+    useGameStore.setState({ state: { ...after, currentEvent: null, phase: 'result' as GameState['phase'] } });
+    render(<GameScreen />);
+
+    // 실측 증상: 이 자리에 "(+7)"이 초록으로 떴다 — 15만원을 쓴 주에.
+    expect(screen.getByText(/^\(-[\d.]+\)$/),
+      '지출이 큰 주에 (-)가 없으면 화면이 아직 주간 용돈만 세고 있다').toBeTruthy();
+    expect(screen.queryByText(/^\(\+[\d.]+\)$/),
+      '같은 주에 (+)가 뜨면 부호가 뒤집힌 것이다').toBeNull();
+  });
+
+  // 음성 짝 — 안 산 주는 예전처럼 초록 (+)여야 한다. 없으면 "항상 (-)"도 통과한다.
+  it('아무것도 안 산 주에는 초록 (+) 표기가 뜬다', () => {
+    const s0 = createInitialState('male', ['wealth', 'info'], { rngSeed: 5 });
+    const start: GameState = {
+      ...s0, year: 5, week: 10, money: 1569,
+      phase: 'weekday' as GameState['phase'],
+      routineSlot2: 'self-study', routineSlot3: 'rest',
+    };
+    useGameStore.setState({ state: start });
+    useGameStore.getState().advanceWeek();
+    const after = useGameStore.getState().state!;
+    useGameStore.setState({ state: { ...after, currentEvent: null, phase: 'result' as GameState['phase'] } });
+    render(<GameScreen />);
+
+    expect(screen.getByText(/^\(\+[\d.]+\)$/),
+      '용돈만 들어온 주에 (+)가 없으면 반대로 지어낸 것이다').toBeTruthy();
   });
 });
 

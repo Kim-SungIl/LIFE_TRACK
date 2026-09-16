@@ -982,6 +982,30 @@ function advanceWeekCounter(state: GameState): void {
 }
 
 // ===== 주간 처리 (메인 루프) =====
+/**
+ * 주 확정 전에 쌓인 보류분(`state.pendingWeekDelta`)을 그 주의 로그에 접고 비운다.
+ *
+ * 없으면 결산이 **부호를 뒤집는다.** 실측: 태블릿 15만원을 산 주에 실제 변화는 -8만원인데
+ * 결산은 주간 용돈만 세어 "+7"을 초록으로 적었다. 스탯도 같다(체력 실제 +1.6, 로그 +0.6).
+ *
+ * 누적은 원시값으로 해 두고 **여기서 한 번만 반올림한다** — 선택지마다 반올림한 값을 다시
+ * 더하면 고스탯 구간에서 로그가 실제보다 커진다(+0.25를 +0.3으로 세는 식).
+ */
+function foldPendingIntoLog(state: GameState, log: WeekLog): void {
+  const p = state.pendingWeekDelta;
+  if (!p) return;
+  for (const [key, val] of Object.entries(p.stats)) {
+    const k = key as StatKey;
+    log.statChanges[k] = round1((log.statChanges[k] ?? 0) + (val as number));
+  }
+  if (p.fatigue) log.fatigueChange = round1(log.fatigueChange + p.fatigue);
+  if (p.money) log.moneyChange = round1(log.moneyChange + p.money);
+  // 접었으면 비운다 — 안 비우면 다음 주 결산이 같은 값을 또 센다.
+  state.pendingWeekDelta = undefined;
+}
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
   const newState = migrateLoadedState(cloneGameState(state)) as GameState;
 
@@ -1053,6 +1077,13 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     newState.stats[key] = Math.max(0, Math.min(100, Math.round(newState.stats[key] * 10) / 10));
   }
   newState.fatigue = Math.max(0, Math.min(100, Math.round(newState.fatigue * 10) / 10));
+
+  // 주 확정 **전에** 적용된 효과(말걸기·가정 대화·상점 구매)를 이 주의 로그에 접는다.
+  //
+  // **위치가 계약이다.** 주당 축 상한(+2)·동일축 중복 감쇠는 `log.statChanges`를 읽어 활동 몫을
+  // 깎는다(applyActivity). 보류분을 그 앞에서 접으면 말을 한 번 건 주에 활동 효율이 조용히
+  // 떨어져 밸런스가 바뀐다 — 그래서 캡 계산이 전부 끝난 여기서 한 번만 접는다.
+  foldPendingIntoLog(newState, log);
 
   // 이 로그가 어느 주의 것인지 박는다 — week++ 전이라 여기가 유일하게 정확한 지점이다.
   log.year = newState.year;
