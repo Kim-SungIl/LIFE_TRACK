@@ -1,7 +1,10 @@
 // Smoke test — feat/high-school-fullbody-promotion
 // EventScene.tsx의 prefix 분기 로직을 노드에서 재현하여
 // 모든 (NPC × year × gender) 조합의 예상 URL이 dev 서버에서 200을 반환하는지 검증.
-// 200이 아니면 fallback chain이 동작하는지 확인 필요.
+//
+// ⚠ 제품은 더 이상 첫 후보를 그냥 요청하지 않는다 — manifest로 먼저 걸러
+// **실재하는 후보만** 요청하고, 로드에 실패할 때만 다음 후보로 넘어간다(characterAssets.ts).
+// 그래서 여기서 나오는 누락은 "헛 요청"이 아니라 **자산 공백의 목록**으로 읽어야 한다.
 //
 // 실행: cd game && node scripts/smoke-character-urls.mjs
 
@@ -89,7 +92,8 @@ if (missing.length > 0) {
     const flag = m.critical ? '⚠️  CRITICAL' : '   non-crit';
     console.log(`${flag} | Y${m.year} | ${m.npc} (${m.kind}) | ${m.url.replace(BASE, '')} | ${m.status}`);
   }
-  console.log('\n참고: Y2~Y4 NPC들은 base fullbody가 없어도 onError 폴백으로 base neutral → CSS로 떨어짐.');
+  console.log('\n참고: 제품은 manifest(character-manifest.generated.ts)로 **실재하는 후보만** 요청한다.');
+  console.log('      여기 누락은 헛 요청이 아니라 자산 공백이다 — 해당 조합은 다음 실재 후보(공용 전신/neutral)로 내려간다.');
   console.log('CRITICAL은 Y1(elementary) 또는 Y5+(high) 자산 — 이건 반드시 있어야 함.');
 }
 
