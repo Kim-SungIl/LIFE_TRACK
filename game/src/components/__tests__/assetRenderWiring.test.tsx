@@ -11,6 +11,8 @@
 //   EndingScreen.tsx    — 회상 갤러리/썸네일. 두 화면이 memoryVisuals.tsx를 공유하지만
 //                         **URL을 만드는 건 각 화면**이라(resolveEventCgUrl 호출부가 따로다)
 //                         한쪽만 잠그면 다른 쪽의 래핑 누락은 dev에서 안 보이고 릴리즈만 404다.
+//   EventScene.tsx      — 이벤트 전신 스프라이트. 같은 파일의 배경 img는 assetUrlContract가 보지만
+//                         **캐릭터 img는 아무도 안 봤다.** 여기서 래핑·성별·학년을 함께 잠근다.
 // (TitleScreen 은 TitleScreenAssets.test.tsx, GameScreen prefetch 는 assetExistence.test.ts 가 잡는다.)
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
@@ -22,10 +24,11 @@ vi.mock('../../engine/assetWebp', () => ({
 }));
 
 import { Portrait } from '../Portrait';
+import { EventScene } from '../EventScene';
 import { YearEndScreen } from '../screens/YearEndScreen';
 import { EndingScreen } from '../screens/EndingScreen';
 import { calculateEnding } from '../../engine/ending';
-import { makeState } from '../../test/fixtures';
+import { makeState, makeEvent } from '../../test/fixtures';
 
 vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
 vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
@@ -52,11 +55,78 @@ describe('Portrait — 캐릭터 초상 경로', () => {
     expectNoUnwrappedImage(container);
   });
 
-  it('Y6(고등) 초상은 _high 프리픽스로 붙는다 — 학년이 바뀌어도 래핑은 유지된다', () => {
+  // **이 단언은 원래 `jihun_high_happy.png`였다 — 즉 결함을 잠그고 있었다.**
+  // 그 파일은 실재한 적이 없고(표정 실물은 부모 happy 2장뿐), Portrait은 그걸 요청했다가
+  // 실패한 뒤 neutral로 되돌아왔다. 이제 manifest로 먼저 걸러 실재하는 것만 요청한다.
+  // 학년 프리픽스(_high)가 유지되는지는 그대로 본다 — 원래 이 테스트의 관심사다.
+  it('Y6(고등) 초상은 _high 프리픽스로 붙는다 — 없는 표정은 요청하지 않는다', () => {
     const { container } = render(<Portrait characterId="jihun" year={6} expression="happy" />);
 
     expect(container.querySelector('img')!.getAttribute('src'))
-      .toBe(`WEBP::${BASE}images/characters/jihun_high_happy.png`);
+      .toBe(`WEBP::${BASE}images/characters/jihun_high_neutral.png`);
+    expectNoUnwrappedImage(container);
+  });
+
+  // 실재하는 표정은 그대로 간다 — 위 단언이 "표정을 통째로 무시"로 퇴화하지 않게 잠근다.
+  // (부모 happy 2장이 지금 유일한 양성 표본이다. 표정 발주가 들어오면 여기가 넓어진다.)
+  it('실재하는 표정은 요청한다 (부모 happy)', () => {
+    const { container } = render(<Portrait characterId="mother" year={3} expression="happy" />);
+
+    expect(container.querySelector('img')!.getAttribute('src'))
+      .toBe(`WEBP::${BASE}images/characters/mother_middle_happy.png`);
+  });
+});
+
+describe('EventScene — 이벤트 전신 스프라이트 경로', () => {
+  // **이 describe 하나가 생존 뮤테이션 4종을 닫는다.** 추가 전에는 아래 넷이 전부
+  // 전체 스위트를 초록으로 통과했다(실측):
+  //   · src={webpSrc(src)} → src={src}          — dev는 멀쩡하고 릴리즈만 전 스프라이트 404
+  //   · manifest 선선택 제거                     — 헛 요청이 되살아나도 순수함수 테스트는 초록
+  //   · gender를 'male'로 고정                   — 여주 변주가 영구 미노출
+  //   · year 인자 제거                           — 학년 프리픽스가 죽는다
+  // 순수함수(spriteCandidates)는 characterManifest.test.ts가 잠그지만, **그걸 부르는 층**은
+  // 여기서만 보인다(#431: prop을 받는 쪽 테스트는 prop을 만드는 층의 누락을 원리상 못 잡는다).
+  function spriteSrc(gender: 'male' | 'female', year: number): string {
+    const { container } = render(
+      <EventScene
+        event={makeEvent({ speakers: ['jihun'] })}
+        gender={gender}
+        year={year}
+        onChoice={() => {}}
+      />,
+    );
+    const img = container.querySelector('img[alt="jihun"]');
+    expect(img, `jihun 스프라이트가 렌더되지 않았다 (${gender}, Y${year})`).toBeTruthy();
+    return img!.getAttribute('src') ?? '';
+  }
+
+  it('여주 Y1 — 실재하는 _f 변주를 webpSrc로 감싸 요청한다', () => {
+    // jihun_elementary_fullbody_f.png 는 리포에서 유일한 `_f` 실물이다.
+    // 성별 분기가 죽으면 이 단언이 공용 전신으로 떨어져 실패한다.
+    expect(spriteSrc('female', 1))
+      .toBe(`WEBP::${BASE}images/characters/jihun_elementary_fullbody_f.png`);
+  });
+
+  it('남주 Y1 — _f를 건너뛰고 공용 전신으로 간다', () => {
+    expect(spriteSrc('male', 1))
+      .toBe(`WEBP::${BASE}images/characters/jihun_elementary_fullbody.png`);
+  });
+
+  it('여주 Y6 — _f 실물이 없는 학년은 공용 전신, 학년 프리픽스는 _high', () => {
+    // year를 안 넘기면 _middle로 떨어지므로 학년 전달이 여기서 잠긴다.
+    expect(spriteSrc('female', 6))
+      .toBe(`WEBP::${BASE}images/characters/jihun_high_fullbody.png`);
+  });
+
+  it('렌더 트리에 래핑 안 된 이미지 경로가 없다', () => {
+    const { container } = render(
+      <EventScene
+        event={makeEvent({ speakers: ['jihun'] })}
+        gender="female"
+        year={1}
+        onChoice={() => {}}
+      />,
+    );
     expectNoUnwrappedImage(container);
   });
 });

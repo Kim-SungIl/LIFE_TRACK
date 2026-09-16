@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { characterStagePrefix, characterFallbackPrefix } from '../engine/characterAssets';
+import { portraitCandidates, pickAllExisting } from '../engine/characterAssets';
+import { CHARACTER_MANIFEST } from '../character-manifest.generated';
 import { webpSrc } from '../engine/assetWebp';
 import { CharacterAvatar, NPC_APPEARANCES, mentalToExpression, type AvatarExpression } from './CharacterAvatar';
 
@@ -20,39 +21,39 @@ interface Props {
 }
 
 export function Portrait({ characterId, expression, size = 80, label, mental, mentalState, year, framed }: Props) {
-  const expr = expression || (mental !== undefined && mentalState
+  // `?? 'neutral'`이 필요하다 — mentalToExpression의 반환 타입이 `AvatarExpression | undefined`라
+  // (CharacterAvatar Props의 expression이 optional) 이대로 두면 `string | undefined`가 된다.
+  // 예전엔 템플릿 문자열에 바로 꽂아서 타입이 안 걸렸다.
+  const expr: string = expression || (mental !== undefined && mentalState
     ? mentalToExpression(mental, mentalState)
-    : 'neutral');
+    : 'neutral') || 'neutral';
 
-  // 학년 분기 프리픽스: Y1 → elementary, Y2~4 → middle, Y5+ → high (SSOT: characterAssets.ts)
-  const isElementary = year === 1;
-  const isHigh = year !== undefined && year >= 5;
-  const isStaged = isElementary || isHigh;
-  const prefix = characterStagePrefix(characterId, year);
-  const basePrefix = characterFallbackPrefix(characterId); // 폴백 바닥 = _middle
-
-  // 폴백 체인: staged 표정 → staged neutral → base(_middle) 표정 → base neutral → CSS 아바타
-  // (staged 자산이 없는 NPC는 _middle로 자동 폴백되므로 안전)
+  // **없는 파일을 먼저 두드리지 않는다.** mentalToExpression은 happy/sad/tired/burnout을
+  // 돌려주는데 실물은 (부모 happy 2장을 빼면) 전부 neutral뿐이라, 예전엔 멘탈이 바뀔 때마다
+  // 없는 파일을 요청하고 실패한 뒤 neutral로 되돌아왔다. manifest로 먼저 고른다.
+  // 표정 실물이 들어오면 manifest가 자동으로 잡아 코드 수정 없이 켜진다.
   const base = import.meta.env.BASE_URL;
-  const exactPath = `${base}images/characters/${prefix}_${expr}.png`;
-  const neutralPath = `${base}images/characters/${prefix}_neutral.png`;
-  const baseExactPath = isStaged ? `${base}images/characters/${basePrefix}_${expr}.png` : null;
-  const baseNeutralPath = `${base}images/characters/${basePrefix}_neutral.png`;
+  const existing = pickAllExisting(portraitCandidates(characterId, expr, year), CHARACTER_MANIFEST);
+  const key = existing.join('|');
 
-  const [src, setSrc] = useState(exactPath);
-  const [useFallback, setUseFallback] = useState(false);
+  // **실패했을 때만** 다음 후보로 넘어간다. 전부 manifest 소속이라 정상 경로의 요청은 1회다.
+  // 이게 필요한 경우: manifest가 디스크보다 앞선 상태(파일을 지웠는데 predev 미실행).
+  // 그때 첫 후보만 있으면 갈 곳이 CSS 아바타뿐이라, 실재하는 neutral을 두고도 그림이 사라진다.
+  const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- 캐릭터/표정/학년 경로가 바뀌면 이미지 src 리셋(prop 동기화)
-    setSrc(exactPath);
-    setUseFallback(false);
-  }, [exactPath]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- 캐릭터/표정/학년이 바뀌면 후보 커서 리셋(prop 동기화)
+    setIdx(0);
+  }, [key]);
 
-  if (!useFallback) {
+  const picked = existing[idx] ?? null;
+  const exactPath = picked ? `${base}images/characters/${picked}` : null;
+
+  if (exactPath) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
         <img
-          src={webpSrc(src)}
+          src={webpSrc(exactPath)}
           alt={`${characterId} ${expr}`}
           decoding="async"
           style={{
@@ -74,20 +75,7 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
               boxShadow: '0 2px 10px rgba(0,0,0,0.38)',
             } : {}),
           }}
-          onError={() => {
-            if (src === exactPath && expr !== 'neutral') {
-              setSrc(neutralPath);
-            } else if (src === neutralPath && baseExactPath) {
-              // staged(elementary/high) neutral 없으면 base 표정으로 폴백
-              setSrc(baseExactPath);
-            } else if (src === baseExactPath && expr !== 'neutral') {
-              setSrc(baseNeutralPath);
-            } else if (src !== baseNeutralPath && isStaged) {
-              setSrc(baseNeutralPath);
-            } else {
-              setUseFallback(true);
-            }
-          }}
+          onError={() => setIdx(i => i + 1)}
         />
         {label && (
           <div style={{ fontSize: Math.max(size * 0.15, 11), fontWeight: 600, textAlign: 'center' }}>
