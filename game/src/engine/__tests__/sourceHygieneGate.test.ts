@@ -15,7 +15,11 @@
 // 루트별 하한은 "루트가 **줄어드는** 것"을 막고, 이 파일은 "루트가 **사라지는** 것"을 막는다.
 // 스크립트 자신은 원리적으로 후자를 못 본다 — 없는 항목은 순회에 안 잡히기 때문이다.
 import { describe, it, expect } from 'vitest';
-import { existsSync, readdirSync } from 'fs';
+import { existsSync, readdirSync, writeFileSync, rmSync, mkdtempSync, mkdirSync, copyFileSync,
+  realpathSync } from 'fs';
+import { symlinkSync } from 'fs';
+import { spawnSync } from 'child_process';
+import { tmpdir } from 'os';
 import { resolve, relative, join } from 'path';
 import { SCAN_ROOTS, TEXT_EXT, FLOOR_SELF_CHECKS, selfCheck, scanBuffer, listTextFiles }
   from '../../../scripts/verify/verify-source-hygiene';
@@ -48,6 +52,18 @@ describe('스캔 범위가 줄어들지 않는다', () => {
   /** 반드시 훑어야 하는 곳. 지우려면 여기서 먼저 실패한다. */
   const REQUIRED_ROOTS = ['src', 'scripts', ''] as const;   // '' = 리포 루트(설정 파일들)
 
+  // **목록 자체가 줄어드는 것을 막는다.** `it.each([])`는 실패하지 않고 **0개를 돈다** —
+  // 3자 검수 실측: `REQUIRED_EXT = []`로 바꾸면 이 파일이 34개에서 **20개**로 줄면서 rc=0,
+  // `REQUIRED_ROOTS = []`는 34개 전원 통과였다. 스펙을 비우는 것이 가장 싼 우회로다.
+  it('스펙 목록이 비어 있지 않다 (빈 목록은 실패가 아니라 무검사다)', () => {
+    expect(REQUIRED_ROOTS.length, '루트 목록을 비우면 아래 검사가 아무것도 안 본다')
+      .toBeGreaterThanOrEqual(3);
+    expect(Object.keys(MIN_FLOOR).length, '하한 표를 비우면 floor가 1까지 내려간다')
+      .toBeGreaterThanOrEqual(3);
+    expect(ROOT_CONFIGS.length, '루트 설정 파일 목록을 비우면 루트 스캔이 무의미해진다')
+      .toBeGreaterThanOrEqual(4);
+  });
+
   it('필수 루트가 전부 SCAN_ROOTS에 있다', () => {
     const dirs = SCAN_ROOTS.map(r => relative(ROOT, r.dir));
     for (const need of REQUIRED_ROOTS) {
@@ -65,11 +81,14 @@ describe('스캔 범위가 줄어들지 않는다', () => {
     expect(root?.recurse, '루트를 재귀하면 node_modules까지 들어가 몇 분씩 걸린다').toBe(false);
   });
 
+  /** 잠금 스택이 문자열로 읽는 루트 파일들. 비우면 아래 검사가 조용히 공허해진다. */
+  const ROOT_CONFIGS = ['vite.config.ts', 'package.json', 'eslint.config.js', 'index.html'];
+
   it('잠금 스택이 지키는 루트 설정 파일들이 실제로 스캔에 잡힌다', () => {
     const scanned = new Set(
       SCAN_ROOTS.flatMap(r => listTextFiles(r.dir, [], r.recurse)).map(f => relative(ROOT, f)),
     );
-    for (const f of ['vite.config.ts', 'package.json', 'eslint.config.js', 'index.html']) {
+    for (const f of ROOT_CONFIGS) {
       expect(existsSync(resolve(ROOT, f)), `전제: ${f}가 리포에 있어야 한다`).toBe(true);
       expect(scanned, `${f}는 게이트들이 문자열로 읽는 파일이다`).toContain(f);
     }
@@ -121,13 +140,23 @@ describe('텍스트로 취급하는 확장자가 줄어들지 않는다', () => 
   const REQUIRED_EXT = ['ts', 'tsx', 'mts', 'cts', 'js', 'mjs', 'cjs', 'jsx',
     'css', 'json', 'md', 'txt', 'html', 'svg'];
 
+  /** 과검출 음성 짝. 이것도 비우면 "에셋을 제외한다"는 조건이 사라진다. */
+  const ASSET_EXT = ['png', 'woff2', 'webp', 'mp3', 'jpg'];
+
+  it('확장자 목록이 비어 있지 않다 (it.each([])는 0개를 돈다)', () => {
+    expect(REQUIRED_EXT.length, '비우면 이 describe가 통째로 사라지면서 rc=0이다')
+      .toBeGreaterThanOrEqual(14);
+    expect(ASSET_EXT.length, '음성 짝이 없으면 TEXT_EXT를 `/./`로 만들어도 통과한다')
+      .toBeGreaterThanOrEqual(5);
+  });
+
   it.each(REQUIRED_EXT)('.%s를 텍스트로 본다', (ext) => {
     expect(TEXT_EXT.test(`a.${ext}`),
       `.${ext} 파일은 사람이 읽는 소스다 — 빼면 그만큼이 조용히 무검사가 된다`).toBe(true);
   });
 
   it('에셋 확장자는 여전히 제외한다 (과검출 음성 짝)', () => {
-    for (const ext of ['png', 'woff2', 'webp', 'mp3', 'jpg']) {
+    for (const ext of ASSET_EXT) {
       expect(TEXT_EXT.test(`a.${ext}`), `.${ext}는 당연히 제어문자를 갖는다`).toBe(false);
     }
   });
@@ -177,5 +206,98 @@ describe('자기검사 자체가 살아 있다', () => {
       .toBeGreaterThan(0);
     expect(scanBuffer(Buffer.from('안녕\t줄\n바꿈\r\n', 'utf8')),
       '탭·개행·CR을 거부하면 모든 파일이 걸린다').toEqual([]);
+  });
+});
+
+// **여기까지는 전부 `scanBuffer`라는 순수함수와 `SCAN_ROOTS`라는 데이터만 본다.**
+// 그 사이의 배선 — "수집한 파일을 실제로 훑어서 rc를 낸다" — 은 아무도 안 봤다.
+// 3자 검수 실측, 셋 다 rc=0에 이 파일 34개 전원 초록이었다:
+//
+//   files.push(...found) 삭제   → ✅ 소스 위생 — **0개 파일**에 제어문자 0건
+//   hits.length > 0 → < 0       → ✅ 331개 … 0건   (심어 둔 NUL을 못 봄)
+//   루트별 floor 강제 블록 삭제 → ✅ 331개 … 0건   (루트가 통째로 비어도 통과)
+//
+// #381(순수함수만 잠그면 기능이 아예 안 도는 상태도 그린)·#397(훅을 잠가도 App이 부르는지는
+// 별개)과 같은 계열이다. 하필 이 파일이 존재하는 이유가 "조용히 무력화되는 것을 잡는다"인데.
+describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => {
+  const SCRIPT = resolve(ROOT, 'scripts/verify/verify-source-hygiene.ts');
+  const TSX = resolve(ROOT, 'node_modules/.bin/tsx');
+  const run = (script: string) =>
+    spawnSync(TSX, [script], { cwd: ROOT, encoding: 'utf8', timeout: 120_000 });
+
+  it('전제: 실행기와 스크립트가 제자리에 있다', () => {
+    expect(existsSync(TSX), 'tsx가 없으면 아래 검사들이 전부 공허해진다').toBe(true);
+    expect(existsSync(SCRIPT)).toBe(true);
+  });
+
+  it('깨끗한 리포에서는 rc=0 (음성 대조군)', () => {
+    const r = run(SCRIPT);
+    expect(r.status, `게이트가 깨끗한 리포를 거부하면 오탐이다\n${r.stdout}`).toBe(0);
+    expect(r.stdout).toContain('제어문자 0건');
+  });
+
+  it('제어문자를 심으면 rc=1이고 그 파일을 지목한다', () => {
+    // `.txt`로 심는다 — tsc·eslint가 안 보는 확장자라 다른 게이트를 흔들지 않는다.
+    // 날 바이트를 쓰지 않는다: 이 파일 자체가 게이트의 스캔 범위 안이라 소스에 박으면
+    // 게이트가 자기를 잡는다(#457에서 실제로 그랬다).
+    const probe = resolve(ROOT, 'scripts/__hygiene-probe.tmp.txt');
+    try {
+      writeFileSync(probe, `첫 줄\n둘째 줄${String.fromCharCode(0)}끝\n`, 'utf8');
+      const r = run(SCRIPT);
+      expect(r.status, `심어 둔 NUL을 못 봤다 — 배선이 끊긴 것이다\n${r.stdout}`).toBe(1);
+      expect(r.stdout, '어느 파일인지 말하지 않으면 진단이 무의미하다')
+        .toContain('__hygiene-probe.tmp.txt');
+      expect(r.stdout, '줄 번호가 실제 위치여야 한다').toContain(':2');
+    } finally {
+      rmSync(probe, { force: true });
+    }
+  });
+
+  // 루트별 하한은 **스크립트가 강제해야** 의미가 있다. 위쪽 검사들은 `SCAN_ROOTS`의
+  // 숫자만 보므로, 강제 블록을 통째로 지워도 아무 일이 없다(실측 rc=0).
+  // 스크립트의 `ROOT`는 자기 파일 위치에서 파생되니, 미니 리포에 복사해 돌리면
+  // 거기선 `src`가 텅 비어 하한에 걸려야 한다.
+  /** 스크립트만 복사한 미니 리포. `src`가 1개뿐이라 하한에 걸려야 한다. */
+  function miniRepo(prefix: string): string {
+    // **realpath로 받는다.** macOS의 `/tmp`는 `/private/tmp`로 가는 링크라, 링크 경로로
+    // 부르면 스크립트의 진입점 가드가 안 맞아 **아무것도 안 하고 rc=0**이 된다(실측).
+    // 그 상태를 "통과"로 읽으면 이 검사가 통째로 공허해진다.
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+    mkdirSync(join(dir, 'scripts/verify'), { recursive: true });
+    mkdirSync(join(dir, 'src'), { recursive: true });
+    writeFileSync(join(dir, 'package.json'), '{"type":"module"}\n', 'utf8');
+    writeFileSync(join(dir, 'src/only.ts'), 'export const a = 1;\n', 'utf8');
+    copyFileSync(SCRIPT, join(dir, 'scripts/verify/verify-source-hygiene.ts'));
+    return dir;
+  }
+
+  it('루트가 하한 아래로 비면 rc=1 (floor 강제)', () => {
+    const dir = miniRepo('hygiene-floor-');
+    try {
+      const r = run(join(dir, 'scripts/verify/verify-source-hygiene.ts'));
+      expect(r.status, `src가 1개뿐인데 통과했다 — 하한 강제가 없다\n${r.stdout}`).toBe(1);
+      expect(r.stdout, '어느 루트가 비었는지 말해야 한다').toMatch(/src의 스캔 대상이 1\/\d+개/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // **조용한 no-op이 통과로 읽힌다.** `import.meta.url`은 노드가 링크를 푼 경로인데
+  // `process.argv[1]`은 안 푼 경로다. 링크를 거쳐 부르면 진입점 가드가 안 맞아
+  // **블록 전체가 안 돌고 출력 0바이트에 rc=0**이다(실측 — 이 검사를 쓰다가 걸렸다).
+  // rc만 보는 호출자는 "제어문자 0건"과 "아예 시작을 안 함"을 구별할 수 없다.
+  it('심볼릭 링크 경로로 불러도 실제로 돈다', () => {
+    const dir = miniRepo('hygiene-link-');
+    const link = `${dir}-link`;
+    try {
+      symlinkSync(dir, link, 'dir');
+      const r = run(join(link, 'scripts/verify/verify-source-hygiene.ts'));
+      expect(r.stdout.trim().length,
+        '출력이 0바이트다 — 통과한 게 아니라 시작을 안 했다').toBeGreaterThan(0);
+      expect(r.status, `링크 경로에서 하한을 못 봤다\n${r.stdout}`).toBe(1);
+    } finally {
+      rmSync(link, { force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });

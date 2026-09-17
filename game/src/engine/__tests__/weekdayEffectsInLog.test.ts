@@ -376,6 +376,51 @@ describe('한 주에 여러 번 사도 전부 누적된다', () => {
       .toBe(tired);
   });
 
+  // **stats 축은 위 테스트가 안 본다.** money·fatigue만 단언해서, `p.stats[key]`를
+  // 누적에서 대입으로 바꿔도 **1424개 전부 초록이었다**(3자 검수 실측 — 제품 축에 닿는
+  // 유일한 SURVIVED였다). 같은 함수의 세 축 중 둘만 잠근 것이다.
+  //
+  // 위 테스트로는 원리상 못 잡는다 — 값싼 4종은 fatigue를 두 번 건드리지만
+  // **StatKey는 mental 한 번뿐**이라(실측: {fatigue:2, mental:1}) 대입과 누적이 같은 값을 낸다.
+  // 그래서 같은 스탯을 여러 번 건드리는 조합을 따로 만든다.
+  it('같은 스탯을 여러 번 건드려도 전부 쌓인다 (stats 축)', () => {
+    const base = inPlay({ money: 500, fatigue: 50 });
+    useGameStore.setState({ state: { ...base } });
+
+    // mental을 겹쳐서 올리는 조합. sweet-drink(+2, 주 2회) · new-clothes(social+2/mental+2, 무제한).
+    const plan = ['sweet-drink', 'new-clothes', 'sweet-drink', 'new-clothes'];
+    const before = { ...useGameStore.getState().state!.stats };
+
+    const pick = (id: string) => {
+      const s = useGameStore.getState().state!;
+      const item = SHOP_ITEMS.find(i => i.id === id)!;
+      expect(canBuyItem(item, s, s.weekPurchases || {}).ok, `전제: ${id}를 살 수 있어야 한다`).toBe(true);
+      useGameStore.getState().buyItem(item);
+    };
+
+    pick(plan[0]);
+    // **누적이 관측 가능한지 먼저 확인한다.** 한 번만 쌓여도 통과하는 기대값이면
+    // 대입 변이가 그대로 빠져나간다.
+    const afterFirst = round1(useGameStore.getState().state!.stats.mental - before.mental);
+    expect(afterFirst, '전제: 첫 구매가 mental을 실제로 올렸다').toBeGreaterThan(0);
+
+    for (const id of plan.slice(1)) pick(id);
+    const after = useGameStore.getState().state!;
+
+    const total = round1(after.stats.mental - before.mental);
+    expect(total, '전제: 네 번 사서 mental이 첫 구매보다 더 올라야 누적을 볼 수 있다')
+      .toBeGreaterThan(afterFirst);
+
+    // **기대값은 보류분이 아니라 실제 스탯 차분.** 단계별 차분의 합은 총 차분과 같으므로
+    // (클램프에 걸려도 텔레스코핑) 독립 기준으로 쓸 수 있다.
+    for (const key of Object.keys(after.stats) as StatKey[]) {
+      const moved = round1(after.stats[key] - before[key]);
+      expect(round1(after.pendingWeekDelta!.stats[key] ?? 0),
+        `${key}의 보류분이 실제 변화와 다르다 — 누적을 대입으로 바꾸면 마지막 한 건만 남는다`)
+        .toBe(moved);
+    }
+  });
+
   it('구매 사이에 말걸기가 끼어도 둘 다 남는다 (경로가 섞여도 누적)', () => {
     const base = inPlay({ money: 500, fatigue: 50, npcEventPendingThisWeek: true });
     useGameStore.setState({ state: { ...base } });

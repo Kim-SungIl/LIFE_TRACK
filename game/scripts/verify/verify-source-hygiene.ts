@@ -20,7 +20,7 @@
 //
 // 실행: cd game && npx tsx scripts/verify/verify-source-hygiene.ts
 
-import { readdirSync, readFileSync } from 'fs';
+import { readdirSync, readFileSync, realpathSync } from 'fs';
 import { resolve, join, relative } from 'path';
 
 const ROOT = resolve(import.meta.dirname, '../..');
@@ -137,7 +137,12 @@ export function selfCheck(): number {
  */
 export const FLOOR_SELF_CHECKS = 7;
 
-if (process.argv[1] && import.meta.url === (await import('url')).pathToFileURL(process.argv[1]).href) {
+// **realpath로 비교한다.** `import.meta.url`은 노드가 심볼릭 링크를 푼 뒤의 경로인데
+// `process.argv[1]`은 안 푼 경로다. macOS의 `/tmp`(→`/private/tmp`)처럼 링크를 거쳐
+// 부르면 둘이 안 맞아 **이 블록 전체가 조용히 안 돈다** — 출력 0바이트에 rc=0이다.
+// 게이트가 통과한 게 아니라 아예 시작을 안 한 건데 호출자는 구별할 수 없다(실측).
+const entry = process.argv[1] ? realpathSync(process.argv[1]) : '';
+if (entry && import.meta.url === (await import('url')).pathToFileURL(entry).href) {
   const checks = selfCheck();
   if (checks < FLOOR_SELF_CHECKS) {
     console.log(`❌ 자기검사가 ${checks}/${FLOOR_SELF_CHECKS}종만 돌았다 — selfCheck가 무력화되면 스캐너의 죽음도 못 본다`);
