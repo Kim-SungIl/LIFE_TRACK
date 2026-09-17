@@ -29,8 +29,9 @@ import { resolve, relative, join } from 'path';
 const ROOT = resolve(import.meta.dirname, '../..');
 const SRC = resolve(ROOT, 'src');
 export const REPORT = resolve(ROOT, 'node_modules/.tmp/vitest-report.json');
-/** corpus 퇴화 방지용 바닥. 1차 잠금은 집합 동등성이고 이건 "양쪽 다 0" 만 막는다. */
-const FLOOR_TEST_FILES = 50;
+/** corpus 퇴화 방지용 바닥. 1차 잠금은 집합 동등성이고 이건 "양쪽 다 0" 만 막는다.
+ *  verify-typecheck-coverage도 같은 바닥을 쓴다 — 복제하면 두 층이 조용히 갈린다(#441). */
+export const FLOOR_TEST_FILES = 50;
 
 export interface Report { numTotalTests?: number; numPassedTests?: number; numFailedTests?: number; numPendingTests?: number; numTodoTests?: number; testResults?: { name?: string }[] }
 export interface Problem { kind: string; detail: string }
