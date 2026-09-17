@@ -25,14 +25,32 @@ import { resolve, join, relative } from 'path';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 /**
- * 스캔 대상. **`scripts/`를 빼면 안 된다** — 이 리포의 텍스트 검증기가 전부 거기 살고,
- * 정작 이 파일을 처음 썼을 때 픽스처에 날 바이트가 들어갔는데 `src/`만 훑느라 못 봤다.
- * 자기를 안 보는 게이트는 자기가 무력화된 것도 못 본다.
+ * 스캔 대상과 **각각의 최소 파일 수**.
+ *
+ * 왜 루트마다 하한을 두는가: 전역 하한 하나(`files.length < 100`)만 두면 `src`가 235개라
+ * **`scripts`가 통째로 빠져도 통과한다**(3자 검수 실측 — SCAN_ROOTS에서 `scripts`를 지워도 ✅).
+ * 이 파일 상단 주석이 "`scripts/`를 빼면 안 된다"고 적어 두고도 강제가 없었다.
+ *
+ * 루트 파일(`vite.config.ts`·`package.json`·`eslint.config.js`·`index.html`·tsconfig 4종)도
+ * 처음엔 빠져 있었다. 하필 **이 리포의 잠금 스택이 지키려는 바로 그 파일들**이다 —
+ * `vite.config.ts`의 `include`와 `package.json`의 `test` 스크립트에 NUL이 박히면
+ * 그걸 검사하는 게이트들이 파일을 통째로 못 본다.
+ *
+ * 하한은 현재 수치보다 넉넉히 낮게 잡는다(정당한 정리로 오탐이 나면 안 된다).
+ * 지키려는 건 "이 루트가 통째로 사라지는 것"이지 파일 수 자체가 아니다.
  */
-const SCAN_ROOTS = [resolve(ROOT, 'src'), resolve(ROOT, 'scripts')];
+export const SCAN_ROOTS: readonly { dir: string; floor: number; recurse: boolean }[] = [
+  { dir: resolve(ROOT, 'src'), floor: 100, recurse: true },       // 현재 235
+  { dir: resolve(ROOT, 'scripts'), floor: 30, recurse: true },    // 현재 82
+  { dir: ROOT, floor: 5, recurse: false },                        // 현재 9 (루트 파일만)
+];
 
-/** 텍스트로 취급하는 확장자. 에셋(png·woff2 등)은 당연히 제어문자를 갖는다. */
-const TEXT_EXT = /\.(ts|tsx|js|jsx|css|json|md|html|svg)$/;
+/**
+ * 텍스트로 취급하는 확장자. 에셋(png·woff2 등)은 당연히 제어문자를 갖는다.
+ *
+ * `.mjs`가 처음에 빠져 있었다 — `scripts/`에 6개가 살고 있어서 그 파일들은 무검사였다.
+ */
+export const TEXT_EXT = /\.(ts|tsx|mts|cts|js|mjs|cjs|jsx|css|json|md|html|svg)$/;
 /** 소스 트리이지만 텍스트가 아닌 것이 사는 곳. */
 const SKIP_DIRS = new Set(['assets', 'node_modules']);
 
@@ -52,10 +70,10 @@ export function scanBuffer(buf: Buffer, file = '<mem>'): Hit[] {
   return hits;
 }
 
-export function listTextFiles(dir: string, out: string[] = []): string[] {
+export function listTextFiles(dir: string, out: string[] = [], recurse = true): string[] {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.isDirectory()) {
-      if (!SKIP_DIRS.has(e.name)) listTextFiles(join(dir, e.name), out);
+      if (recurse && !SKIP_DIRS.has(e.name)) listTextFiles(join(dir, e.name), out, true);
     } else if (TEXT_EXT.test(e.name)) {
       out.push(join(dir, e.name));
     }
@@ -100,16 +118,34 @@ export function selfCheck(): number {
   return checks;
 }
 
-/** 코퍼스 하한 — 스캔 대상이 비면 집합이 공허하게 참이 된다. */
-const FLOOR_FILES = 100;
+/**
+ * 자기검사가 **실제로 몇 개를 돌았는지**의 하한. (코퍼스 하한은 `SCAN_ROOTS`의 `floor`)
+ *
+ * 없으면 `selfCheck`를 `return 0` 한 줄로 만들어도 rc=0이고, 출력은
+ * `✅ 소스 위생 — 317개 파일에 제어문자 0건 (자기검사 0종 통과)`다 —
+ * **자기 입으로 0종이라고 말하면서 통과한다**(3자 검수 실측).
+ *
+ * 이게 치명적인 이유: `scanBuffer`가 죽었을 때 유일하게 잡아 주는 층이 `selfCheck`다.
+ * 둘을 같이 무력화하면 게이트가 아무것도 안 보면서 초록이었다. 이 파일이 존재하는 이유가
+ * "조용히 무력화되는 것을 잡는다"인데 정작 자기 자신이 그렇게 죽었다.
+ */
+export const FLOOR_SELF_CHECKS = 7;
 
 if (process.argv[1] && import.meta.url === (await import('url')).pathToFileURL(process.argv[1]).href) {
   const checks = selfCheck();
-
-  const files = SCAN_ROOTS.flatMap(d => listTextFiles(d));
-  if (files.length < FLOOR_FILES) {
-    console.log(`❌ 스캔 대상이 ${files.length}/${FLOOR_FILES}개 — 코퍼스가 비면 이 게이트는 아무것도 안 지킨다`);
+  if (checks < FLOOR_SELF_CHECKS) {
+    console.log(`❌ 자기검사가 ${checks}/${FLOOR_SELF_CHECKS}종만 돌았다 — selfCheck가 무력화되면 스캐너의 죽음도 못 본다`);
     process.exit(1);
+  }
+
+  const files: string[] = [];
+  for (const { dir, floor, recurse } of SCAN_ROOTS) {
+    const found = listTextFiles(dir, [], recurse);
+    if (found.length < floor) {
+      console.log(`❌ ${relative(ROOT, dir) || '(루트)'}의 스캔 대상이 ${found.length}/${floor}개 — 이 루트가 통째로 빠지면 전역 합계로는 안 보인다`);
+      process.exit(1);
+    }
+    files.push(...found);
   }
 
   const hits: Hit[] = [];
@@ -122,6 +158,7 @@ if (process.argv[1] && import.meta.url === (await import('url')).pathToFileURL(p
     process.exit(1);
   }
 
-  console.log(`✅ 소스 위생 — ${files.length}개 파일에 제어문자 0건 (자기검사 ${checks}종 통과)`);
+  const per = SCAN_ROOTS.map(r => `${relative(ROOT, r.dir) || '루트'} ${listTextFiles(r.dir, [], r.recurse).length}`).join(' · ');
+  console.log(`✅ 소스 위생 — ${files.length}개 파일에 제어문자 0건 (${per} / 자기검사 ${checks}종 통과)`);
   process.exit(0);
 }

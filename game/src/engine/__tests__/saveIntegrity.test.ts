@@ -49,9 +49,10 @@ describe('예외가 안 나는 손상도 거부한다', () => {
     ['gender가 모르는 값', { gender: 'other' }],
     ['phase가 모르는 값', { phase: 'nowhere' }],
     ['year가 상한 밖', { year: 99 }],
+    ['year가 상한 바로 밖', { year: 9 }],   // 99만 두면 경계 8이 안 핀된다(`> 9`로 풀어도 초록이었다)
     ['year가 하한 밖', { year: 0 }],    // 상한만 두면 반대쪽이 통째로 빈다(실측: 하한을 지워도 초록이었다)
     ['week이 0', { week: 0 }],
-    ['week이 상한 밖', { week: 50 }],   // 하한만 두면 단방향 잠금이다 — 상한을 지워도 초록이었다
+    ['week이 상한 바로 밖', { week: 50 }],   // 하한만 두면 단방향 잠금이다 — 상한을 지워도 초록이었다
     ['money가 문자열', { money: '1569' }],
     ['fatigue가 null', { fatigue: null }],
   ];
@@ -171,4 +172,32 @@ describe('NaN·Infinity는 직접 호출로만 잠긴다', () => {
     expect(JSON.parse(JSON.stringify({ v: NaN })).v).toBeNull();
     expect(JSON.parse(JSON.stringify({ v: Infinity })).v).toBeNull();
   });
+});
+
+// **거부 픽스처만으로는 절반이다.** 경계를 *조이는* 방향은 완화와 정반대의 사고를 낸다 —
+// 손상을 통과시키는 게 아니라 **정상 세이브를 손상으로 거부한다**. 이 파일이 "7년을 버리는
+// 것보다 낫다"며 피하겠다고 적어 둔 바로 그 실패 모드인데, 픽스처가 한쪽만 있었다.
+//
+// 3자 검수 실측 — 아래 두 값이 없을 때:
+//   `week > 49` → `> 48`  : 1379개 전부 초록  (W48 학년말 이벤트 대기 세이브가 죽는다)
+//   `year > 8`  → `> 9`   : 1379개 전부 초록  (상한 경계 8이 안 핀된다)
+describe('경계값은 통과해야 한다 (조이는 방향)', () => {
+  const ok: [string, Record<string, unknown>][] = [
+    // week=49는 실재하는 저장 상태다 — W48 학년말 이벤트가 뜬 주의 대기 상태이고
+    // (verify-year-end-event.ts가 `afterAdvance.week === 49`를 단언한다) 자동저장으로 디스크에 내려간다.
+    ['week 상한 경계(49)', { week: 49 }],
+    ['week 하한 경계(1)', { week: 1 }],
+    // year=8은 엔딩 화면이 쓰는 값이다. 7로 조이면 "엔딩 다시 보기"가 통째로 죽는다.
+    ['year 상한 경계(8)', { year: 8, phase: 'ending' }],
+    ['year 하한 경계(1)', { year: 1 }],
+  ];
+
+  for (const [label, patch] of ok) {
+    it(`${label} → 열린다`, () => {
+      seed(patch);
+      expect(useGameStore.getState().loadSavedGame(),
+        `${label}을 거부하면 정상 플레이 중인 판이 사라진다 — 손상을 통과시키는 것보다 나쁘다`)
+        .toBe(true);
+    });
+  }
 });

@@ -590,6 +590,27 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
         .toEqual([]);
     });
 
+    // **목록에 있는 파일 안쪽은 여전히 무검사다.** desync 지점 뒤에 저대비 쌍을 넣으면
+    // 파일 목록은 그대로라 위 두 검사가 전부 통과한다(3자 검수 실측 — `shared.ts`에 심으면
+    // 30 passed, 같은 쌍을 정상 파일에 심으면 1 failed). 목록이 "봐주는 파일"이 되지 않도록,
+    // 그 파일들에는 **스타일 쌍 자체가 없어야** 한다는 조건을 따로 건다.
+    it('알려진 desync 파일에는 스타일 쌍이 아예 없다', () => {
+      for (const rel of KNOWN_DESYNCED) {
+        const raw = readFileSync(join(SRC, rel), 'utf8');
+        // **파서를 쓰지 않는다.** 이 파일들은 그 파서가 길을 잃는 곳이라, 같은 파서로 검사하면
+        // 검사도 같이 눈이 먼다(첫 판이 그랬다 — 저대비 쌍을 심어도 31개 전부 초록이었다).
+        // 그래서 따옴표 상태를 안 보는 순수 텍스트 스캔으로 본다. 넉넉히 잡히는 쪽이 맞다 —
+        // 여기 걸리면 "이 파일에 스타일을 두지 말라"는 뜻이지 대비가 틀렸다는 뜻이 아니다.
+        const pairs = /(^|[^-\w])(background(-color)?|backgroundColor)\s*:/m.test(raw)
+          && /(^|[^-\w])color\s*:/m.test(raw)
+          ? [rel] : [];
+        expect(pairs,
+          `${rel}은 파서가 중간에 길을 잃는 파일이라 여기 스타일 쌍이 생기면 ` +
+          `대비 검사를 통째로 피해 간다. 파서를 고치거나(별건: JS 렉서) 그 쌍을 다른 파일로 옮길 것.`)
+          .toEqual([]);
+      }
+    });
+
     it('알려진 2건이 아직 실재한다 (목록이 늙으면 이 검사가 헐거워진다)', () => {
       const now = desyncedFiles();
       const stale = KNOWN_DESYNCED.filter(f => !now.includes(f));

@@ -332,3 +332,86 @@ describe('생산자(accrue)도 잠근다 — 실제 store 경로', () => {
       '저장이 이 필드를 벗기면 새로고침 한 번에 그 주 지출이 결산에서 사라진다').toEqual(before);
   });
 });
+
+// **한 주에 accrue는 여러 번 돈다.** 위 테스트들은 전부 1회 경로(구매 1건·말걸기 1건)만
+// 태워서, 누적(`+=`)이 대입(`=`)으로 바뀌어도 전부 초록이었다(3자 검수 실측 — F6·F7·F8).
+//
+// 실제 증상: money 500·fatigue 50에서 네 번 사면
+//   정상   pending = {stats:{mental:2}, fatigue:-8, money:-3.5}
+//   `=` 변이 pending = {stats:{mental:2}, fatigue:0,  money:-1.5}
+// 결산이 지출 3.5만원 중 1.5만원만 보고한다 — #442·#453이 잡았던 "결산이 거짓말한다"와 같은 계열이다.
+describe('한 주에 여러 번 사도 전부 누적된다', () => {
+  /** 이번 주에 실제로 살 수 있는 아이템을 가격 낮은 순으로 n개. */
+  function buyableItems(s: GameState, n: number) {
+    return SHOP_ITEMS
+      .filter(i => canBuyItem(i, s, s.weekPurchases || {}).ok)
+      .sort((a, b) => a.price - b.price)
+      .slice(0, n);
+  }
+
+  it('연속 구매의 지출이 전부 보류분에 쌓인다', () => {
+    const base = inPlay({ money: 500, fatigue: 50 });
+    useGameStore.setState({ state: { ...base } });
+
+    const items = buyableItems(useGameStore.getState().state!, 4);
+    expect(items.length, '전제: 이 주에 4개 이상 살 수 있어야 누적을 검사할 수 있다').toBe(4);
+
+    // **기대값을 보류분에서 읽지 않는다.** 시험 대상이 만든 값을 기대값으로 쓰면 생산자가
+    // 크기를 틀려도 양변이 같이 움직여 원리상 못 잡는다(실측: accrue에 /2를 넣어도 초록).
+    // 독립 기준은 지갑이다 — 실제 잔액 차분.
+    const moneyBefore = useGameStore.getState().state!.money;
+    const fatigueBefore = useGameStore.getState().state!.fatigue;
+    for (const item of items) useGameStore.getState().buyItem(item);
+    const after = useGameStore.getState().state!;
+
+    const spent = round1(after.money - moneyBefore);
+    const tired = round1(after.fatigue - fatigueBefore);
+    expect(spent, '전제: 네 번 사서 돈이 실제로 줄었다').toBeLessThan(0);
+
+    expect(round1(after.pendingWeekDelta!.money),
+      `보류분이 지갑 차분과 다르다 — \`+=\`를 \`=\`로 바꾸면 마지막 한 건만 남는다`)
+      .toBe(spent);
+    expect(round1(after.pendingWeekDelta!.fatigue),
+      '피로도 같다 — 마지막 구매의 피로만 남으면 결산이 나머지를 통째로 잃는다')
+      .toBe(tired);
+  });
+
+  it('구매 사이에 말걸기가 끼어도 둘 다 남는다 (경로가 섞여도 누적)', () => {
+    const base = inPlay({ money: 500, fatigue: 50, npcEventPendingThisWeek: true });
+    useGameStore.setState({ state: { ...base } });
+
+    const moneyBefore = useGameStore.getState().state!.money;
+    const [first] = buyableItems(useGameStore.getState().state!, 1);
+    useGameStore.getState().buyItem(first);
+    const afterFirst = round1(useGameStore.getState().state!.pendingWeekDelta!.money);
+
+    // 말걸기는 돈을 안 건드리므로, 그 뒤 두 번째 구매가 첫 구매 위에 쌓여야 한다.
+    for (const npc of useGameStore.getState().state!.npcs.slice(0, 3)) {
+      useGameStore.getState().talkToNpc(npc.id);
+    }
+    const [second] = buyableItems(useGameStore.getState().state!, 1);
+    useGameStore.getState().buyItem(second);
+
+    const st = useGameStore.getState().state!;
+    expect(round1(st.pendingWeekDelta!.money),
+      '두 번째 구매가 첫 구매를 덮으면 결산이 첫 지출을 잃는다').toBe(round1(st.money - moneyBefore));
+    expect(round1(st.pendingWeekDelta!.money), '누적이면 첫 구매보다 더 많이 나가 있어야 한다')
+      .toBeLessThan(afterFirst);
+  });
+
+  it('누적분이 결산에 그대로 실린다', () => {
+    const base = inPlay({ money: 500, fatigue: 50 });
+    useGameStore.setState({ state: { ...base } });
+    const moneyBefore = useGameStore.getState().state!.money;
+    for (const item of buyableItems(useGameStore.getState().state!, 3)) {
+      useGameStore.getState().buyItem(item);
+    }
+    const bought = useGameStore.getState().state!;
+    const spent = round1(bought.money - moneyBefore);
+
+    const after = processWeek({ ...bought });
+    const ctl = processWeek({ ...bought, pendingWeekDelta: undefined });
+    expect(round1(after.weekLog!.moneyChange - ctl.weekLog!.moneyChange),
+      '세 번의 지출 합이 결산에 안 실리면 플레이어는 돈이 어디 갔는지 못 본다').toBe(spent);
+  });
+});
