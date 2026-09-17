@@ -25,5 +25,11 @@
     "noUncheckedSideEffectImports": true
   },
   "include": ["src"],
+  // 테스트는 tsconfig.test.json이 node 타입과 함께 검사한다 — 여기서 빼는 이유는
+  // **앱 소스에 node 전역을 열지 않기 위해서다**. 이 프로젝트의 types에 "node"를 넣으면
+  // 브라우저에서 도는 소스가 `process.env`를 쓰고도 tsc를 통과한다.
+  // 제외를 지우면 오류 80건이 난다 — 테스트가 직접 fs를 써서가 아니라 **테스트가 scripts/를
+  // import해서** node 모듈이 이 프로그램으로 끌려오기 때문이다(ciGateWiring.test.ts 등).
+  // 이 제외가 지워지거나 include가 좁아지면 verify-typecheck-coverage가 잡는다.
   "exclude": ["src/**/__tests__/**"]
 }
