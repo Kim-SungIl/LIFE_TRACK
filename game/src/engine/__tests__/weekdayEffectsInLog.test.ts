@@ -386,9 +386,25 @@ describe('한 주에 여러 번 사도 전부 누적된다', () => {
     const afterFirst = round1(useGameStore.getState().state!.pendingWeekDelta!.money);
 
     // 말걸기는 돈을 안 건드리므로, 그 뒤 두 번째 구매가 첫 구매 위에 쌓여야 한다.
-    for (const npc of useGameStore.getState().state!.npcs.slice(0, 3)) {
-      useGameStore.getState().talkToNpc(npc.id);
-    }
+    //
+    // **친밀도를 올려 둔다.** 기본 명부는 30 이상이 jihun 한 명뿐이라(실측), 그냥 돌리면
+    // 전부 smalltalk로 흘러 이 테스트가 "구매 두 번"만 검증하게 된다(3자 검수 지적).
+    // 미니이벤트가 실제로 떠야 accrue가 두 경로에서 도는 것을 보는 것이다.
+    const talkTargets = useGameStore.getState().state!.npcs.slice(0, 3);
+    useGameStore.setState({
+      state: {
+        ...useGameStore.getState().state!,
+        npcs: useGameStore.getState().state!.npcs.map(n =>
+          talkTargets.some(t => t.id === n.id) ? { ...n, intimacy: 75, met: true } : n),
+      },
+    });
+    const statsBeforeTalk = { ...useGameStore.getState().state!.stats };
+    for (const npc of talkTargets) useGameStore.getState().talkToNpc(npc.id);
+    const statsAfterTalk = useGameStore.getState().state!.stats;
+    expect(
+      (Object.keys(statsAfterTalk) as StatKey[]).some(k => statsAfterTalk[k] !== statsBeforeTalk[k]),
+      '전제: 말걸기가 실제 미니이벤트를 띄워 스탯을 바꿨다 — smalltalk만 나오면 이 테스트는 구매 두 번짜리다',
+    ).toBe(true);
     const [second] = buyableItems(useGameStore.getState().state!, 1);
     useGameStore.getState().buyItem(second);
 
@@ -403,11 +419,13 @@ describe('한 주에 여러 번 사도 전부 누적된다', () => {
     const base = inPlay({ money: 500, fatigue: 50 });
     useGameStore.setState({ state: { ...base } });
     const moneyBefore = useGameStore.getState().state!.money;
-    for (const item of buyableItems(useGameStore.getState().state!, 3)) {
-      useGameStore.getState().buyItem(item);
-    }
+    const items = buyableItems(useGameStore.getState().state!, 3);
+    // 전제가 없으면 0개일 때 spent=0이고 양변이 0이라 조용히 통과한다(3자 검수 지적).
+    expect(items.length, '전제: 세 번 사야 "누적"을 검사하는 것이다').toBe(3);
+    for (const item of items) useGameStore.getState().buyItem(item);
     const bought = useGameStore.getState().state!;
     const spent = round1(bought.money - moneyBefore);
+    expect(spent, '전제: 실제로 돈이 나갔다').toBeLessThan(0);
 
     const after = processWeek({ ...bought });
     const ctl = processWeek({ ...bought, pendingWeekDelta: undefined });

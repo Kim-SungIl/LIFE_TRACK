@@ -601,9 +601,11 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
         // 검사도 같이 눈이 먼다(첫 판이 그랬다 — 저대비 쌍을 심어도 31개 전부 초록이었다).
         // 그래서 따옴표 상태를 안 보는 순수 텍스트 스캔으로 본다. 넉넉히 잡히는 쪽이 맞다 —
         // 여기 걸리면 "이 파일에 스타일을 두지 말라"는 뜻이지 대비가 틀렸다는 뜻이 아니다.
-        const pairs = /(^|[^-\w])(background(-color)?|backgroundColor)\s*:/m.test(raw)
-          && /(^|[^-\w])color\s*:/m.test(raw)
-          ? [rel] : [];
+        // 키 표기 세 가지를 전부 본다 — `background:` · `'background-color':` · `['backgroundColor']:`.
+        // 인용 키와 계산된 키를 놓치면 그게 곧 우회로다(3자 검수 실측, 둘 다 미검출이었다).
+        const KEY = (name: string) => new RegExp(`(^|[^-\\w])\\[?['"\`]?${name}['"\`]?\\]?\\s*:`, 'm');
+        const hasBg = KEY('background(-color)?').test(raw) || KEY('backgroundColor').test(raw);
+        const pairs = hasBg && KEY('color').test(raw) ? [rel] : [];
         expect(pairs,
           `${rel}은 파서가 중간에 길을 잃는 파일이라 여기 스타일 쌍이 생기면 ` +
           `대비 검사를 통째로 피해 간다. 파서를 고치거나(별건: JS 렉서) 그 쌍을 다른 파일로 옮길 것.`)

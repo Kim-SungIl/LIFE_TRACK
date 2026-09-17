@@ -50,9 +50,15 @@ export const SCAN_ROOTS: readonly { dir: string; floor: number; recurse: boolean
  *
  * `.mjs`가 처음에 빠져 있었다 — `scripts/`에 6개가 살고 있어서 그 파일들은 무검사였다.
  */
-export const TEXT_EXT = /\.(ts|tsx|mts|cts|js|mjs|cjs|jsx|css|json|md|html|svg)$/;
-/** 소스 트리이지만 텍스트가 아닌 것이 사는 곳. */
-const SKIP_DIRS = new Set(['assets', 'node_modules']);
+export const TEXT_EXT = /\.(ts|tsx|mts|cts|js|mjs|cjs|jsx|css|json|md|txt|html|svg)$/;
+/**
+ * 내려가지 않는 디렉터리.
+ *
+ * `assets`를 통째로 빼면 그 안의 **텍스트 파일도 같이 빠진다** — `src/assets/fonts/pretendard/OFL.txt`가
+ * 실재한다(3자 검수 지적). 확장자로 이미 거르므로 디렉터리 단위 제외는 `node_modules`만 남긴다.
+ * 에셋(png·woff2)은 `TEXT_EXT`에 없어서 어차피 안 잡힌다.
+ */
+const SKIP_DIRS = new Set(['node_modules']);
 
 const ALLOWED = new Set([0x09, 0x0a, 0x0d]);
 const isBad = (b: number) => (b < 0x20 && !ALLOWED.has(b)) || b === 0x7f;

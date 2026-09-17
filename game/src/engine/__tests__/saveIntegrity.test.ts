@@ -182,14 +182,16 @@ describe('NaN·Infinity는 직접 호출로만 잠긴다', () => {
 //   `week > 49` → `> 48`  : 1379개 전부 초록  (W48 학년말 이벤트 대기 세이브가 죽는다)
 //   `year > 8`  → `> 9`   : 1379개 전부 초록  (상한 경계 8이 안 핀된다)
 describe('경계값은 통과해야 한다 (조이는 방향)', () => {
+  // **phase까지 실제 도달 조합으로 맞춘다.** 범위만 맞고 phase가 엉뚱하면 "도달 불가능한
+  // 조합을 허용하는지"만 보게 된다(3자 검수 지적). week=49는 W48 학년말 이벤트가 뜬 주의
+  // 대기 상태라 phase는 'event' 또는 'year-end'이고, 엔딩은 year=8·week=1·phase='ending'이다.
   const ok: [string, Record<string, unknown>][] = [
-    // week=49는 실재하는 저장 상태다 — W48 학년말 이벤트가 뜬 주의 대기 상태이고
-    // (verify-year-end-event.ts가 `afterAdvance.week === 49`를 단언한다) 자동저장으로 디스크에 내려간다.
-    ['week 상한 경계(49)', { week: 49 }],
-    ['week 하한 경계(1)', { week: 1 }],
+    ['week 상한 경계(49) · 이벤트 대기', { week: 49, phase: 'event' }],
+    ['week 상한 경계(49) · 학년말', { week: 49, phase: 'year-end' }],
+    ['week 하한 경계(1)', { week: 1, phase: 'weekday' }],
     // year=8은 엔딩 화면이 쓰는 값이다. 7로 조이면 "엔딩 다시 보기"가 통째로 죽는다.
-    ['year 상한 경계(8)', { year: 8, phase: 'ending' }],
-    ['year 하한 경계(1)', { year: 1 }],
+    ['year 상한 경계(8) · 엔딩', { year: 8, week: 1, phase: 'ending' }],
+    ['year 하한 경계(1)', { year: 1, week: 1, phase: 'weekday' }],
   ];
 
   for (const [label, patch] of ok) {
