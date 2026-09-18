@@ -42,7 +42,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 export const SCAN_ROOTS: readonly { dir: string; floor: number; recurse: boolean }[] = [
   { dir: resolve(ROOT, 'src'), floor: 100, recurse: true },       // 현재 235
   { dir: resolve(ROOT, 'scripts'), floor: 30, recurse: true },    // 현재 82
-  { dir: ROOT, floor: 5, recurse: false },                        // 현재 9 (루트 파일만)
+  { dir: ROOT, floor: 5, recurse: false },                        // 현재 11 (루트 파일만)
 ];
 
 /**
