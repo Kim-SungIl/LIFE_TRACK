@@ -243,15 +243,23 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
   it('총계가 루트별 내역의 합과 같다', () => {
     const r = run(SCRIPT);
     const total = Number(/— (\d+)개 파일/.exec(r.stdout)?.[1]);
-    const per = [...r.stdout.matchAll(/(\S+) (\d+)(?= ·| \/)/g)].map(m => [m[1], Number(m[2])] as const);
+
+    // **라벨을 이름으로 박는다.** "라벨처럼 생긴 것 N개"를 세면 출력 형식이 바뀔 때
+    // 엉뚱한 토큰이 자리를 메운다(3자 검수 지적 — `자기검사 9 /`가 세 번째 내역으로
+    // 잡히면 합까지 맞아 조용히 통과한다). 세 루트가 **이 순서로 이름째** 찍혀야 한다.
+    const seg = /\(([^)]*?) \/ 자기검사/.exec(r.stdout)?.[1];
+    expect(seg, `루트별 내역 구간을 못 읽었다 — 출력 형식이 바뀌었다\n${r.stdout}`).toBeTruthy();
+    const per = seg!.split(' · ').map(t => /^(\S+) (\d+)$/.exec(t));
 
     expect(Number.isFinite(total), `총계를 못 읽었다 — 출력 형식이 바뀌었다\n${r.stdout}`).toBe(true);
-    expect(per.length, `루트별 내역이 ${per.length}개다 — 세 루트가 다 찍혀야 한다\n${r.stdout}`).toBe(3);
-    expect(per.reduce((a, [, n]) => a + n, 0),
+    expect(per.map(m => m?.[1]),
+      `루트 라벨이 어긋났다 — 어느 루트가 내역에서 빠진 것이다\n${r.stdout}`)
+      .toEqual(['src', 'scripts', '루트']);
+    expect(per.reduce((a, m) => a + Number(m?.[2]), 0),
       `총계 ${total}과 루트별 합이 다르다 — 어느 루트가 수집에서 빠진 것이다\n${r.stdout}`)
       .toBe(total);
-    for (const [name, n] of per) {
-      expect(n, `${name}이 비었다`).toBeGreaterThan(0);
+    for (const m of per) {
+      expect(Number(m?.[2]), `${m?.[1]}이 비었다`).toBeGreaterThan(0);
     }
   });
 
@@ -274,7 +282,10 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
       expect(r.status, `심어 둔 NUL을 못 봤다 — 배선이 끊겼거나 앞부분만 훑는다\n${r.stdout}`).toBe(1);
       expect(r.stdout, '어느 파일인지 말하지 않으면 진단이 무의미하다')
         .toContain('__hygiene-probe.tmp.txt');
-      expect(r.stdout, '줄 번호가 실제 위치여야 한다').toContain(`:201`);
+      // 줄 번호는 **채움에서 계산한다.** 상수로 박으면 채움을 한 줄만 손봐도
+      // 스캐너가 멀쩡한데 거짓 실패한다(3자 검수 지적).
+      const line = filler.split('\n').length;
+      expect(r.stdout, '줄 번호가 실제 위치여야 한다').toContain(`:${line}`);
       expect(Number(/offset (\d+)/.exec(r.stdout)?.[1]),
         'offset이 실제 위치여야 한다 — 8KB 안쪽으로 나오면 절단된 것이다').toBe(planted);
     } finally {
