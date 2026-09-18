@@ -204,12 +204,20 @@ describe('자기검사 자체가 살아 있다', () => {
   // **탐침 하나로는 상수 절단을 다 못 막는다.** e2e 탐침은 "적어도 거기까지는 훑는다"만
   // 증명하므로, 그보다 큰 상한(64KB 등)은 그대로 빠져나간다(실측 — `Math.min(buf.length, 65536)`
   // 절단이 45개 전원 통과). 파일 입출력 없이 큰 버퍼를 직접 먹여 **상한 자체를 없앤다.**
-  it('큰 버퍼의 끝까지 훑는다 (상수 절단 방지)', () => {
-    const size = 200_000;   // 이 리포 최대 파일(package-lock.json 약 182KB)보다 크다
-    const hits = scanBuffer(Buffer.concat([Buffer.alloc(size, 0x61), Buffer.from([0])]));
+  it('큰 버퍼의 끝까지 훑는다 (바이트·줄 상한 방지)', () => {
+    // **개행을 섞는다.** `Buffer.alloc(size, 0x61)`처럼 한 줄짜리로 만들면 바이트 상한만
+    // 보고 **줄 축 상한은 원리상 못 본다**(실측 — `if (line > 500) break;`를 넣어도 46개
+    // 전원 초록이었다. 그 캡이면 리포 334개 중 27개가 부분 무검사가 된다).
+    const body = ('a'.repeat(99) + '\n').repeat(2_000);   // 200,000바이트 · 2,000줄
+    const size = Buffer.byteLength(body, 'utf8');          // 리포 최대 파일(약 182KB)보다 크다
+    const hits = scanBuffer(Buffer.concat([Buffer.from(body, 'utf8'), Buffer.from([0])]));
+
+    expect(size, '전제: 리포 최대 파일보다 커야 상한을 잡는다').toBeGreaterThan(182_000);
     expect(hits.length,
-      `버퍼 끝(offset ${size})의 NUL을 놓쳤다 — 순회에 상수 상한이 걸린 것이다`).toBe(1);
+      `버퍼 끝(offset ${size} · ${body.split('\n').length}번째 줄)의 NUL을 놓쳤다 — ` +
+      `순회에 상수 상한이 걸린 것이다`).toBe(1);
     expect(hits[0].offset, '보고된 위치도 실제와 같아야 한다').toBe(size);
+    expect(hits[0].line, '줄 번호도 끝까지 세어져야 한다').toBe(body.split('\n').length);
   });
 
   it('스캐너가 살아 있다 (양성·음성 짝)', () => {
@@ -300,6 +308,11 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
     try {
       writeFileSync(probe, `${filler}둘째${String.fromCharCode(0)}끝\n`, 'utf8');
       const planted = Buffer.byteLength(filler, 'utf8') + Buffer.byteLength('둘째', 'utf8');
+      // **상수 자체를 못 박는다.** 채움은 이 상수가 잠그는데(줄이면 전제가 터진다)
+      // 정작 상수는 아무것도 안 잠갔다 — 21433을 100으로 낮춰도 46개 전원 초록이었다.
+      // 둘을 같이 내리면 커버가 통째로 열린다(임계값은 양방향으로 잠글 것).
+      expect(INCIDENT_OFFSET, '#457의 NUL은 offset 21433에 있었다 — 이 값을 낮추면 가드가 약해진다')
+        .toBeGreaterThanOrEqual(21433);
       expect(planted,
         `전제: 탐침이 #457의 ${INCIDENT_OFFSET} 너머에 있어야 한다 — 8KB만 넘기면 ` +
         `Math.min(buf.length, 20000) 절단이 그대로 통과한다(실측: 그 상태로 ${INCIDENT_OFFSET}에 ` +
@@ -386,8 +399,8 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
   //
   // 실제 리포 소스에 심을 수는 없으니 미니 리포에 심는다. 우리가 만든 것이라 수집기에
   // 목록을 그대로 물어볼 수 있다 — **스크립트와 같은 순회 순서**로 마지막 파일을 찾아 심는다.
-  it('목록의 마지막 파일도 훑는다 (꼬리 off-by-one)', () => {
-    const dir = miniRepo('hygiene-tail-', { src: 105, scripts: 35, root: 6 });
+  it('목록의 처음과 마지막 파일을 둘 다 훑는다 (양끝 off-by-one)', () => {
+    const dir = miniRepo('hygiene-ends-', { src: 105, scripts: 35, root: 6 });
     try {
       // SCAN_ROOTS와 같은 순서 · 같은 recurse. 루트는 얕게 훑으므로 꼬리는 루트 설정 파일이다.
       const collected = [
@@ -397,14 +410,54 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
       ];
       expect(collected.length, '전제: 미니 리포가 비면 이 검사가 공허하다').toBeGreaterThan(100);
 
+      const first = collected[0];
       const last = collected[collected.length - 1];
+      expect(first, '전제: 양끝이 같은 파일이면 한쪽만 보는 것이다').not.toBe(last);
       expect(relative(dir, last), '전제: 꼬리는 루트 파일이어야 한다 — 루트를 얕게 훑기 때문')
         .not.toContain('/');
+      // **`package.json`이 꼬리로 걸리면 안 된다.** 거기 NUL을 넣으면 tsx가 `Invalid package
+      // config`로 죽어 stdout 0바이트에 rc=1이 된다 — 엉뚱한 이유로 통과하는 거짓 초록이다.
+      // macOS(이름순)·리눅스 ext4(삽입순) 둘 다 현재는 안 걸리지만, 정렬이 다른 FS를 대비한다.
+      expect(relative(dir, last), '전제: 꼬리가 package.json이면 rc가 다른 이유로 1이 된다')
+        .not.toBe('package.json');
 
+      writeFileSync(first, `첫 파일${String.fromCharCode(0)}\n`, 'utf8');
       writeFileSync(last, `{"끝"${String.fromCharCode(0)}: 1}\n`, 'utf8');
       const r = run(join(dir, 'scripts/verify/verify-source-hygiene.ts'));
-      expect(r.status, `목록 마지막 파일의 NUL을 못 봤다 — 순회가 꼬리를 빠뜨린다\n${r.stdout}`).toBe(1);
-      expect(r.stdout, '어느 파일인지 말해야 한다').toContain(relative(dir, last));
+
+      expect(r.status, `심어 둔 NUL을 못 봤다\n${r.stdout}`).toBe(1);
+      expect(r.stdout, '목록 **처음** 파일을 빠뜨린다 — `files.slice(1)`류 머리 off-by-one')
+        .toContain(relative(dir, first));
+      expect(r.stdout, '목록 **마지막** 파일을 빠뜨린다 — `files.slice(0, -1)`류 꼬리 off-by-one')
+        .toContain(relative(dir, last));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // **읽기 경로의 절단은 위 단위 검사가 못 본다.** 200KB 버퍼 검사는 `scanBuffer` **내부**
+  // 상한만 없앤다 — 호출부를 `readFileSync(f).subarray(0, 65536)`으로 바꾸면 전체 스위트가
+  // 초록이다(실측). 그 상태에서 무검사가 되는 것은 `package-lock.json`(181891) ·
+  // `npcSmalltalk.ts`(88607) · `reachMid.ts`(69748) 셋이다. "큰 파일은 앞부분만 읽자"는
+  // 성능 리팩터 모양이라 현실성이 낮지 않다. 실제 파일을 읽는 경로로 한 번 더 태운다.
+  it('큰 파일도 끝까지 읽는다 (읽기 경로 절단)', () => {
+    const dir = miniRepo('hygiene-big-', { src: 105, scripts: 35, root: 6 });
+    try {
+      const body = ('a'.repeat(99) + '\n').repeat(2_500);   // 250,000바이트 · 2,500줄
+      const big = join(dir, 'src', 'big.ts');
+      writeFileSync(big, `${body}끝${String.fromCharCode(0)}\n`, 'utf8');
+
+      const planted = Buffer.byteLength(body, 'utf8') + Buffer.byteLength('끝', 'utf8');
+      expect(planted, '전제: 리포 최대 파일(약 182KB)보다 뒤에 있어야 읽기 절단을 잡는다')
+        .toBeGreaterThan(182_000);
+
+      const r = run(join(dir, 'scripts/verify/verify-source-hygiene.ts'));
+      expect(r.status, `250KB 파일 끝의 NUL을 못 봤다 — 읽기 경로가 잘린 것이다\n${r.stdout}`).toBe(1);
+      expect(r.stdout, '어느 파일인지 말해야 한다').toContain('src/big.ts');
+      expect(Number(/offset (\d+)/.exec(r.stdout)?.[1]), '보고된 위치가 실제와 같아야 한다')
+        .toBe(planted);
+      expect(r.stdout, '줄 번호도 끝까지 세어져야 한다')
+        .toContain(`:${body.split('\n').length}`);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
