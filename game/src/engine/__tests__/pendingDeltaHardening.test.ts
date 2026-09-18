@@ -43,6 +43,9 @@ describe('손상된 보류분 — 세이브는 열리고 결산은 오염되지 
     ['money가 문자열', { stats: {}, fatigue: 0, money: '-8' }],
     ['stats가 null', { stats: null, fatigue: 0, money: 0 }],
     ['통째로 문자열', 'corrupt'],
+    // 배열은 `Array.isArray` 가드에 걸리지만, 그 가드가 없어도 결과는 같다 —
+    // JSON이 만든 배열은 stats/fatigue/money 프로퍼티가 없어 전부-0으로 접힌다.
+    // 즉 이 픽스처는 가드를 태우지 **않는다**(등가 변이). 방어의 의도를 남기는 쪽이다.
     ['통째로 배열', [1, 2, 3]],
     ['money가 NaN 직렬화(null)', { stats: {}, fatigue: 0, money: NaN }],
     ['모르는 축', { stats: { wisdom: 3 }, fatigue: 0, money: 0 }],
@@ -72,9 +75,11 @@ describe('손상된 보류분 — 세이브는 열리고 결산은 오염되지 
     });
   }
 
-  // 손상 케이스가 "정상이라도 통과하는" 단언으로만 이뤄지면 공허하다.
-  // 정규화를 지웠을 때 실제로 틀린 값이 나오는지를 같은 경로로 못박는다.
-  it('정규화가 없으면 문자열이 이어붙어 부호·자릿수가 바뀐다 (양성 대조군)', () => {
+  // 왜 이게 위험한 값인지를 남겨 둔다. **이건 잠금이 아니다** — 제품 코드를 한 줄도 안 거치는
+  // 리터럴 연산이라 어떤 회귀로도 실패할 수 없다. 처음엔 "양성 대조군"이라고 이름 붙였는데
+  // 거짓말이었다(3자 검수 지적, 실측 확인: 정규화를 identity로 만들면 이 파일에서 11개가
+  // 깨지는데 이 블록은 그 목록에 없었다). 진짜 대조군은 아래 `fold의 유한수 불변식`이다.
+  it('문자열이 섞이면 부호와 자릿수가 바뀐다 (실패 모드 기록 — 잠금 아님)', () => {
     expect(-3 + ('3' as unknown as number)).toBe('-33');
     expect(4 + ('-8' as unknown as number)).toBe('4-8');
     expect(Math.round(Number('4-8') * 10) / 10).toBeNaN();
@@ -84,8 +89,11 @@ describe('손상된 보류분 — 세이브는 열리고 결산은 오염되지 
 describe('정상 보류분은 반드시 살아남는다', () => {
   // migrateLoadedState는 **매주 processWeek 첫머리에서도** 돈다. 여기서 정상값을 버리면
   // #453이 통째로 죽는다 — 상점·말걸기 효과가 결산에서 다시 사라진다.
-  it('유효한 보류분은 값 그대로 통과한다', () => {
-    const ok = { stats: { academic: 1.5, mental: -1 }, fatigue: 3, money: -15 };
+  // fatigue에 **소수**를 넣는 것이 중요하다. 정수만 두면 `Math.round`·`trunc` 변형이
+  // 전부 통과한다(실측 A11·J6). 클램프 걸린 구매에서 실제로 소수 차분이 난다
+  // (예: fatigue 1.5에 snack -3 → 실제 변화 -1.5).
+  it('유효한 보류분은 값 그대로 통과한다 (소수 포함)', () => {
+    const ok = { stats: { academic: 1.5, mental: -1 }, fatigue: -1.5, money: -15 };
     expect(sanitizePendingWeekDelta(ok)).toEqual(ok);
   });
 
@@ -175,6 +183,26 @@ describe('fold의 유한수 불변식 (직접 호출)', () => {
     log.statChanges.academic = 0.2;
     foldPendingIntoLog(st, log);
     expect(log.statChanges.academic, "0.2 + '5'는 0.2로 뭉개진다").toBe(0.2);
+  });
+
+  // 문자열만 태우면 `Number.isFinite`를 지워도 통과한다(실측 C2) — `typeof d === 'number'`가
+  // 문자열은 막지만 NaN·Infinity는 통과시키기 때문이다. `p.stats`의 NaN은 `if (p.fatigue)` 같은
+  // falsy 게이트도 없어서 `round1(0 + NaN)` = NaN으로 로그에 그대로 박힌다.
+  it('NaN·Infinity도 접지 않는다', () => {
+    const cases: [string, unknown][] = [
+      ['stats가 NaN', { stats: { academic: NaN }, fatigue: 0, money: 0 }],
+      ['fatigue가 Infinity', { stats: {}, fatigue: Infinity, money: 0 }],
+      ['money가 -Infinity', { stats: {}, fatigue: 0, money: -Infinity }],
+    ];
+    for (const [label, pending] of cases) {
+      const st = { pendingWeekDelta: pending } as unknown as GameState;
+      const log = emptyLog();
+      log.statChanges.academic = 0.2;
+      foldPendingIntoLog(st, log);
+      expect(Number.isFinite(log.statChanges.academic), `${label} → statChanges 오염`).toBe(true);
+      expect(Number.isFinite(log.fatigueChange), `${label} → fatigueChange 오염`).toBe(true);
+      expect(Number.isFinite(log.moneyChange), `${label} → moneyChange 오염`).toBe(true);
+    }
   });
 
   it('정상값은 그대로 접는다 (가드가 과잉거부하지 않는다)', () => {

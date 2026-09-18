@@ -590,6 +590,57 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
         .toEqual([]);
     });
 
+    // **목록에 있는 파일 안쪽은 여전히 무검사다.** desync 지점 뒤에 저대비 쌍을 넣으면
+    // 파일 목록은 그대로라 위 두 검사가 전부 통과한다(3자 검수 실측 — `shared.ts`에 심으면
+    // 30 passed, 같은 쌍을 정상 파일에 심으면 1 failed). 목록이 "봐주는 파일"이 되지 않도록,
+    // 그 파일들에는 **스타일 쌍 자체가 없어야** 한다는 조건을 따로 건다.
+    /**
+     * 파서를 쓰지 않는 순수 텍스트 스캔. 키 표기 세 가지를 전부 본다 —
+     * `background:` · `'background-color':` · `['backgroundColor']:`.
+     * 인용 키와 계산된 키를 놓치면 그게 곧 우회로다(3자 검수 실측, 둘 다 미검출이었다).
+     */
+    function hasStylePair(raw: string): boolean {
+      const KEY = (name: string) => new RegExp(`(^|[^-\\w])\\[?['"\`]?${name}['"\`]?\\]?\\s*:`, 'm');
+      const hasBg = KEY('background(-color)?').test(raw) || KEY('backgroundColor').test(raw);
+      return hasBg && KEY('color').test(raw);
+    }
+
+    // **탐지기 자신에 대한 자기검사.** 아래 검사는 부정형 단언(`toEqual([])`)뿐이고
+    // 코퍼스 위반이 0건이라, **탐지기가 죽은 것과 위반이 없는 것이 구분되지 않는다** —
+    // 3자 검수 실측: 정규식을 항상 거짓으로 죽여도 31개 전부 초록이었다.
+    // 바로 위 본체 탐지기에는 합성 결함 자기검사를 붙여 놓고 여기엔 안 붙였다.
+    it('스타일 쌍 탐지기가 살아 있다 (자기검사)', () => {
+      for (const [label, src] of [
+        ['평범한 키', `const s = { background: '#ffffff', color: '#eeeeee' };`],
+        ['인용 키', `const s = { 'background-color': '#fff', color: '#eee' };`],
+        ['계산된 키', `const s = { ['backgroundColor']: '#fff', color: '#eee' };`],
+      ] as const) {
+        expect(hasStylePair(src), `${label}을 못 보면 그게 곧 우회로다`).toBe(true);
+      }
+      for (const [label, src] of [
+        ['배경만', `const s = { background: '#ffffff', fontSize: 12 };`],
+        ['글자색만', `const s = { color: '#eeeeee', padding: 4 };`],
+        ['스타일 아님', `export const TITLE = '배경';\nconst n = 3;`],
+      ] as const) {
+        expect(hasStylePair(src), `${label}은 쌍이 아니다 — 여기서 걸리면 오탐이다`).toBe(false);
+      }
+    });
+
+    it('알려진 desync 파일에는 스타일 쌍이 아예 없다', () => {
+      for (const rel of KNOWN_DESYNCED) {
+        const raw = readFileSync(join(SRC, rel), 'utf8');
+        // **파서를 쓰지 않는다.** 이 파일들은 그 파서가 길을 잃는 곳이라, 같은 파서로 검사하면
+        // 검사도 같이 눈이 먼다(첫 판이 그랬다 — 저대비 쌍을 심어도 31개 전부 초록이었다).
+        // 넉넉히 잡히는 쪽이 맞다 — 여기 걸리면 "이 파일에 스타일을 두지 말라"는 뜻이지
+        // 대비가 틀렸다는 뜻이 아니다.
+        const pairs = hasStylePair(raw) ? [rel] : [];
+        expect(pairs,
+          `${rel}은 파서가 중간에 길을 잃는 파일이라 여기 스타일 쌍이 생기면 ` +
+          `대비 검사를 통째로 피해 간다. 파서를 고치거나(별건: JS 렉서) 그 쌍을 다른 파일로 옮길 것.`)
+          .toEqual([]);
+      }
+    });
+
     it('알려진 2건이 아직 실재한다 (목록이 늙으면 이 검사가 헐거워진다)', () => {
       const now = desyncedFiles();
       const stale = KNOWN_DESYNCED.filter(f => !now.includes(f));
