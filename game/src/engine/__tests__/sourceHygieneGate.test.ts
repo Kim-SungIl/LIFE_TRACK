@@ -236,18 +236,47 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
     expect(r.stdout).toContain('제어문자 0건');
   });
 
+  // **출력이 스스로 모순돼도 아무도 안 봤다.** `files.push`를 `src`에서만 건너뛰게 하면
+  // 같은 줄이 `총 92개`와 `src 239`를 동시에 말하면서 rc=0이다(실측 — 41개 전원 통과,
+  // src에 NUL을 심은 양성 대조군까지 초록이었다). 총계만 보면 "0개 파일"만 걸리고
+  // "한 루트만 빠진" 상태는 통과한다. 두 근거가 갈리면 라벨이 거짓말한다 — 합을 맞춘다.
+  it('총계가 루트별 내역의 합과 같다', () => {
+    const r = run(SCRIPT);
+    const total = Number(/— (\d+)개 파일/.exec(r.stdout)?.[1]);
+    const per = [...r.stdout.matchAll(/(\S+) (\d+)(?= ·| \/)/g)].map(m => [m[1], Number(m[2])] as const);
+
+    expect(Number.isFinite(total), `총계를 못 읽었다 — 출력 형식이 바뀌었다\n${r.stdout}`).toBe(true);
+    expect(per.length, `루트별 내역이 ${per.length}개다 — 세 루트가 다 찍혀야 한다\n${r.stdout}`).toBe(3);
+    expect(per.reduce((a, [, n]) => a + n, 0),
+      `총계 ${total}과 루트별 합이 다르다 — 어느 루트가 수집에서 빠진 것이다\n${r.stdout}`)
+      .toBe(total);
+    for (const [name, n] of per) {
+      expect(n, `${name}이 비었다`).toBeGreaterThan(0);
+    }
+  });
+
   it('제어문자를 심으면 rc=1이고 그 파일을 지목한다', () => {
     // `.txt`로 심는다 — tsc·eslint가 안 보는 확장자라 다른 게이트를 흔들지 않는다.
     // 날 바이트를 쓰지 않는다: 이 파일 자체가 게이트의 스캔 범위 안이라 소스에 박으면
     // 게이트가 자기를 잡는다(#457에서 실제로 그랬다).
     const probe = resolve(ROOT, 'scripts/__hygiene-probe.tmp.txt');
+    // **8KB 너머에 심는다.** 짧은 픽스처만 쓰면 `buf.length`를 `Math.min(buf.length, 8000)`으로
+    // 잘라도 전부 초록이다(실측 — 41개 통과, 그 상태로 offset 21433의 NUL을 못 봤다).
+    // 하필 #457의 NUL이 있던 자리가 21433이고, 이 파일 주석이 "git은 앞 8000바이트만 봐서
+    // 못 잡는다"고 적어 둔 그 실패 양상이다. 게이트가 같은 모양으로 눈이 멀면 안 된다.
+    const filler = '// 채움 줄 — 앞부분만 훑는 절단을 잡으려고 길이를 벌어 둔다.\n'.repeat(200);
     try {
-      writeFileSync(probe, `첫 줄\n둘째 줄${String.fromCharCode(0)}끝\n`, 'utf8');
+      writeFileSync(probe, `${filler}둘째${String.fromCharCode(0)}끝\n`, 'utf8');
+      const planted = Buffer.byteLength(filler, 'utf8') + Buffer.byteLength('둘째', 'utf8');
+      expect(planted, '전제: 탐침이 8KB 너머에 있어야 절단을 잡는다').toBeGreaterThan(8192);
+
       const r = run(SCRIPT);
-      expect(r.status, `심어 둔 NUL을 못 봤다 — 배선이 끊긴 것이다\n${r.stdout}`).toBe(1);
+      expect(r.status, `심어 둔 NUL을 못 봤다 — 배선이 끊겼거나 앞부분만 훑는다\n${r.stdout}`).toBe(1);
       expect(r.stdout, '어느 파일인지 말하지 않으면 진단이 무의미하다')
         .toContain('__hygiene-probe.tmp.txt');
-      expect(r.stdout, '줄 번호가 실제 위치여야 한다').toContain(':2');
+      expect(r.stdout, '줄 번호가 실제 위치여야 한다').toContain(`:201`);
+      expect(Number(/offset (\d+)/.exec(r.stdout)?.[1]),
+        'offset이 실제 위치여야 한다 — 8KB 안쪽으로 나오면 절단된 것이다').toBe(planted);
     } finally {
       rmSync(probe, { force: true });
     }
@@ -257,26 +286,54 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
   // 숫자만 보므로, 강제 블록을 통째로 지워도 아무 일이 없다(실측 rc=0).
   // 스크립트의 `ROOT`는 자기 파일 위치에서 파생되니, 미니 리포에 복사해 돌리면
   // 거기선 `src`가 텅 비어 하한에 걸려야 한다.
-  /** 스크립트만 복사한 미니 리포. `src`가 1개뿐이라 하한에 걸려야 한다. */
-  function miniRepo(prefix: string): string {
+  /**
+   * 스크립트만 복사한 미니 리포. `counts`로 각 루트의 파일 수를 정해 **원하는 루트 하나만**
+   * 하한 아래로 굶긴다. 복사본의 `ROOT`는 자기 파일 위치에서 파생되므로 여기선 실제 리포가
+   * 아니라 이 디렉터리를 본다.
+   *
+   * `mkdtemp` 이후를 try로 감싼다 — 감싸지 않으면 여기서 예외가 날 때 호출부의 `finally`에
+   * 진입하기 전이라 임시 디렉터리가 남는다(3자 검수 3축이 전부 지적, 실측으로 2개 잔류).
+   */
+  function miniRepo(prefix: string, counts: { src: number; scripts: number; root: number }): string {
     // **realpath로 받는다.** macOS의 `/tmp`는 `/private/tmp`로 가는 링크라, 링크 경로로
     // 부르면 스크립트의 진입점 가드가 안 맞아 **아무것도 안 하고 rc=0**이 된다(실측).
     // 그 상태를 "통과"로 읽으면 이 검사가 통째로 공허해진다.
     const dir = realpathSync(mkdtempSync(join(tmpdir(), prefix)));
-    mkdirSync(join(dir, 'scripts/verify'), { recursive: true });
-    mkdirSync(join(dir, 'src'), { recursive: true });
-    writeFileSync(join(dir, 'package.json'), '{"type":"module"}\n', 'utf8');
-    writeFileSync(join(dir, 'src/only.ts'), 'export const a = 1;\n', 'utf8');
-    copyFileSync(SCRIPT, join(dir, 'scripts/verify/verify-source-hygiene.ts'));
-    return dir;
+    try {
+      mkdirSync(join(dir, 'scripts/verify'), { recursive: true });
+      mkdirSync(join(dir, 'src'), { recursive: true });
+      // 복사본 자신이 scripts의 1번째, package.json이 루트의 1번째다.
+      copyFileSync(SCRIPT, join(dir, 'scripts/verify/verify-source-hygiene.ts'));
+      writeFileSync(join(dir, 'package.json'), '{"type":"module"}\n', 'utf8');
+      for (let i = 0; i < counts.src; i++)
+        writeFileSync(join(dir, `src/f${i}.ts`), 'export const a = 1;\n', 'utf8');
+      for (let i = 1; i < counts.scripts; i++)
+        writeFileSync(join(dir, `scripts/s${i}.ts`), '// 채움\n', 'utf8');
+      for (let i = 1; i < counts.root; i++)
+        writeFileSync(join(dir, `r${i}.json`), '{}\n', 'utf8');
+      return dir;
+    } catch (e) {
+      rmSync(dir, { recursive: true, force: true });
+      throw e;
+    }
   }
 
-  it('루트가 하한 아래로 비면 rc=1 (floor 강제)', () => {
-    const dir = miniRepo('hygiene-floor-');
+  // 루트별 하한은 **스크립트가 강제해야** 의미가 있다. 위쪽 검사들은 `SCAN_ROOTS`의
+  // 숫자만 보므로, 강제 블록을 통째로 지워도 아무 일이 없다(실측 rc=0).
+  //
+  // **세 루트를 각각 굶긴다.** 하나만 굶기면 강제를 `relative(ROOT, dir) === 'src'`로
+  // 좁혀도 전원 초록이다(실측 — scripts 82개나 루트 설정 10개가 거의 비어도 조용해진다).
+  it.each([
+    ['src', { src: 1, scripts: 35, root: 6 }],
+    ['scripts', { src: 105, scripts: 1, root: 6 }],
+    ['(루트)', { src: 105, scripts: 35, root: 1 }],
+  ] as const)('%s가 하한 아래로 비면 rc=1 (floor 강제)', (label, counts) => {
+    const dir = miniRepo('hygiene-floor-', counts);
     try {
       const r = run(join(dir, 'scripts/verify/verify-source-hygiene.ts'));
-      expect(r.status, `src가 1개뿐인데 통과했다 — 하한 강제가 없다\n${r.stdout}`).toBe(1);
-      expect(r.stdout, '어느 루트가 비었는지 말해야 한다').toMatch(/src의 스캔 대상이 1\/\d+개/);
+      expect(r.status, `${label}을 굶겼는데 통과했다 — 그 루트의 하한 강제가 없다\n${r.stdout}`).toBe(1);
+      expect(r.stdout, `어느 루트가 비었는지 말해야 한다`)
+        .toContain(`${label}의 스캔 대상이`);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -287,7 +344,7 @@ describe('게이트가 실제로 파일을 훑고 rc를 낸다 (배선)', () => 
   // **블록 전체가 안 돌고 출력 0바이트에 rc=0**이다(실측 — 이 검사를 쓰다가 걸렸다).
   // rc만 보는 호출자는 "제어문자 0건"과 "아예 시작을 안 함"을 구별할 수 없다.
   it('심볼릭 링크 경로로 불러도 실제로 돈다', () => {
-    const dir = miniRepo('hygiene-link-');
+    const dir = miniRepo('hygiene-link-', { src: 1, scripts: 35, root: 6 });
     const link = `${dir}-link`;
     try {
       symlinkSync(dir, link, 'dir');

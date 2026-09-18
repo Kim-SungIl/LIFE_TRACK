@@ -37,3 +37,7 @@ scripts/sim/_analyze-npc-effects.ts
 
 # 캐릭터 이미지 아카이브 (디스크 보관 전용 — 재생성 이전 버전 등)
 public/images/characters/_archive/
+
+# 위생 게이트 e2e가 심는 탐침. **NUL이 든 파일이라** 워커가 SIGKILL로 죽어
+# finally를 못 돌면 커밋 가능한 상태로 남는다 — 게이트가 막으려던 바로 그 물건이다.
+scripts/__hygiene-probe.tmp.txt
