@@ -30,6 +30,13 @@ jobs:
         working-directory: ./game
         run: npm ci
 
+      # 크로미움. **`npm test`보다 먼저**여야 한다 — distBootGate.test.ts가 합성 dist에
+      # 대고 부팅 게이트를 실제로 돌려서 rc를 확인한다(스크립트는 자기 종료 경로를 스스로
+      # 못 잠근다). 아래 게이트 2g도 같은 브라우저를 쓴다.
+      - name: Install browser
+        working-directory: ./game
+        run: npx playwright install --with-deps chromium
+
       # 게이트 1 — ESLint (--max-warnings 0: error/warning 모두 실패 처리)
       - name: Lint
         working-directory: ./game
@@ -105,6 +112,14 @@ jobs:
       - name: Verify dist CG thumbnails
         working-directory: ./game
         run: npm run verify:dist-cg-thumbs
+
+      # 게이트 2g — **브라우저에서 실제로 뜨는가.** 여기 오기 전까지 CI에 브라우저 층이
+      # 0건이었다: 위 게이트들은 전부 파일·문자열을 읽고, 유닛 테스트도 jsdom이라 번들·경로·
+      # 실행 순서를 안 지나간다. 그래서 "파일이 다 있고 문자열도 맞는데 화면은 빈 채"가 전
+      # 게이트를 통과한다(실측: 엔트리에 throw 한 줄을 넣어도 다른 게이트는 전부 초록이다).
+      - name: Verify dist boot (browser)
+        working-directory: ./game
+        run: npm run verify:dist-boot
 
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3

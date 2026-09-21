@@ -24,6 +24,7 @@
     "verify:dist-chunks": "tsx scripts/verify/verify-dist-chunks.ts",
     "verify:dist-typography": "tsx scripts/verify/verify-dist-typography.ts",
     "verify:dist-cg-thumbs": "tsx scripts/verify/verify-dist-cg-thumbs.ts",
+    "verify:dist-boot": "tsx scripts/verify/verify-dist-boot.ts",
     "verify:test-floor": "tsx scripts/verify/verify-test-floor.ts"
   },
   "dependencies": {

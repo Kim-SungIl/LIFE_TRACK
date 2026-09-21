@@ -86,16 +86,16 @@ const SUB_DIRS = ['', 'styles', 'components', 'engine'];
 
 describe('스캔 범위가 줄어들지 않는다', () => {
   /** 반드시 훑어야 하는 곳. 지우려면 여기서 먼저 실패한다. */
-  const REQUIRED_ROOTS = ['src', 'scripts', ''] as const;   // '' = 리포 루트(설정 파일들)
+  const REQUIRED_ROOTS = ['src', 'scripts', 'tools', ''] as const;   // '' = 리포 루트(설정 파일들)
 
   // **목록 자체가 줄어드는 것을 막는다.** `it.each([])`는 실패하지 않고 **0개를 돈다** —
   // 3자 검수 실측: `REQUIRED_EXT = []`로 바꾸면 이 파일이 34개에서 **20개**로 줄면서 rc=0,
   // `REQUIRED_ROOTS = []`는 34개 전원 통과였다. 스펙을 비우는 것이 가장 싼 우회로다.
   it('스펙 목록이 비어 있지 않다 (빈 목록은 실패가 아니라 무검사다)', () => {
     expect(REQUIRED_ROOTS.length, '루트 목록을 비우면 아래 검사가 아무것도 안 본다')
-      .toBeGreaterThanOrEqual(3);
+      .toBeGreaterThanOrEqual(4);
     expect(Object.keys(MIN_FLOOR).length, '하한 표를 비우면 floor가 1까지 내려간다')
-      .toBeGreaterThanOrEqual(3);
+      .toBeGreaterThanOrEqual(4);
     expect(ROOT_CONFIGS.length, '루트 설정 파일 목록을 비우면 루트 스캔이 무의미해진다')
       .toBeGreaterThanOrEqual(4);
   });
@@ -134,7 +134,7 @@ describe('스캔 범위가 줄어들지 않는다', () => {
   // `floor`를 1로 낮추고 `recurse`를 false로 바꾸면 각 디렉터리 최상위만 훑으면서
   // rc=0이다(실측: 334 → **16개**로 줄어도 ✅). 하한은 스크립트가 자기 자신에 대해
   // 선언한 값이라, 그 값 자체가 줄어드는 것은 바깥에서 봐야 한다.
-  const MIN_FLOOR: Record<string, number> = { src: 100, scripts: 30, '': 5 };
+  const MIN_FLOOR: Record<string, number> = { src: 100, scripts: 30, tools: 1, '': 5 };
 
   it.each(Object.entries(MIN_FLOOR))('%s 루트의 하한이 %d 아래로 못 내려간다', (name, min) => {
     const r = SCAN_ROOTS.find(x => relative(ROOT, x.dir) === name);

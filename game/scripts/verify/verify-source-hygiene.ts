@@ -36,12 +36,17 @@ const ROOT = resolve(import.meta.dirname, '../..');
  * `vite.config.ts`의 `include`와 `package.json`의 `test` 스크립트에 NUL이 박히면
  * 그걸 검사하는 게이트들이 파일을 통째로 못 본다.
  *
+ * `tools/`는 나중에 들어왔다. `cg-review.html`(27KB)이 추적되는 텍스트 파일인데 스캔 밖이라
+ * "전수"의 모수에서 빠져 있었다(3자 검수 지적). 예전엔 루트를 더하면 미니 리포 e2e가 거짓
+ * 실패를 냈는데, `miniRepo`를 SCAN_ROOTS에서 파생시킨 뒤로 그 비용이 없어졌다.
+ *
  * 하한은 현재 수치보다 넉넉히 낮게 잡는다(정당한 정리로 오탐이 나면 안 된다).
  * 지키려는 건 "이 루트가 통째로 사라지는 것"이지 파일 수 자체가 아니다.
  */
 export const SCAN_ROOTS: readonly { dir: string; floor: number; recurse: boolean }[] = [
   { dir: resolve(ROOT, 'src'), floor: 100, recurse: true },       // 현재 240
   { dir: resolve(ROOT, 'scripts'), floor: 30, recurse: true },    // 현재 83
+  { dir: resolve(ROOT, 'tools'), floor: 1, recurse: true },       // 현재 1 (cg-review.html)
   { dir: ROOT, floor: 5, recurse: false },                        // 현재 11 (루트 파일만)
 ];
 
