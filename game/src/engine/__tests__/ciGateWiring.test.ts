@@ -28,6 +28,7 @@ const WF = [
   '    runs-on: ubuntu-latest',
   '    steps:',
   '      - run: npm run lint',
+  '      - run: npx playwright install --with-deps chromium',
   '      - run: npm test',
   '      - run: npm run verify:test-floor',
   '      - run: npm run build:release',
