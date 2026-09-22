@@ -2,7 +2,10 @@ import { Activity, GameState } from './types';
 import { getSchoolLevel } from './backgrounds';
 import { getExamSchedule } from './examSystem';
 
-/** 마지막 학년(고3). 이 게임은 초6~고3 7년이다. */
+/** 마지막 학년(고3). 이 게임은 초6~고3 7년이다.
+ *  주의: 아직 SSOT가 아니다 — 같은 "7"이 `gameEngine`(학년 전환·졸업), `store`, `examSystem`,
+ *  `talkSystem`, `relationshipSignals`에 리터럴로 남아 있다. 지금은 값이 같아 무해하지만,
+ *  한쪽만 바뀌면 라벨이 거짓말한다(#441). 옮길 때 같이 옮길 것. */
 export const FINAL_YEAR = 7;
 
 /**
@@ -343,14 +346,25 @@ export const ACTIVITIES: Activity[] = [
   // 수능은 Y7 W35에 끝나는데 학년은 W48까지 간다 — **13주가 남는데 그동안 열리는 게 하나도 없었다.**
   // (Y6은 2종, Y5는 3종이 열린다. Y7만 0이었다.)
   //
-  // 이 구간의 성격이 앞과 다르다. **진로는 못 바꾼다** — 수능 점수는 직전 모의 2회와 내신으로
-  // W35에 확정된다(`examSystem.generateSuneungResult`). 그래서 academic을 키워 봐야 엔딩의
-  // 진로 갈래는 그대로다. 대신 **행복 궤적은 48주 전부를 표본으로 삼으므로**
-  // (`ending.HAPPINESS_WEEKS_PER_YEAR`) 이 13주가 Y7 행복의 27%다.
-  // 그래서 세 활동의 무게를 academic이 아니라 **mental·social**에 둔다.
-  // mental은 주당 +2 축 상한에서 면제된 유일한 축이라(`applyActivity`) 이 구간에서 실효 지렛대다.
+  // **수능 점수는 W35에 확정된다** — 직전 모의 2회와 내신으로 계산되고
+  // (`examSystem.generateSuneungResult`) Y7 일정에 수능은 W35 하나뿐이라 재계산이 없다.
+  //
+  // **그렇다고 진로 갈래까지 확정된 건 아니다.** `ending.determineCareer`는 mockGrade 말고
+  // 졸업 시점의 라이브 스탯도 읽는다 — talent 85/90 · academic 70/80/85/88 · mental 15/30/40이
+  // 절벽이다. 그러니 이 13주의 스탯도 진로를 바꿀 수 있다. **다만 그건 이 3종이 연 통로가 아니다** —
+  // 수능 이후에도 학업 13종·특기 8종이 그대로 열려 있고 전부 신규보다 세다(실측: talent 절벽 85를
+  // `art-lesson`은 루틴 2칸으로 넘는데 `license-course`는 4칸을 다 써야 겨우 닿는다. academic도
+  // 기존 2종이 +1.4/주인데 `admission-prep`을 섞으면 +1.3/주로 오히려 내려간다). **신규가 그 통로를
+  // 넓히지 않는 것**이 아래 수치의 제약 조건이다.
+  //
+  // 무게를 두는 곳은 따로 있다. **행복 궤적은 48주 전부를 표본으로 삼으므로**
+  // (`ending.HAPPINESS_WEEKS_PER_YEAR`) 이 13주가 Y7 행복의 27%다. 그래서 세 활동의 무게를
+  // **mental·social**에 둔다. mental은 주당 +2 축 상한에서 면제된 유일한 축이라(`applyActivity`)
+  // 이 구간에서 실효 지렛대고, social은 `determineCareer`가 읽지 않는 유일한 축이다.
   //
   // 셋 다 `slots: 1` · 비-rest라 **루틴 슬롯에도 들어간다**(SlotEditPopup의 후보 필터 조건).
+  // 단 루틴에 박으면 동행이 안 붙는다 — `companionEligible`이 routine1/2를 제외하므로
+  // `overdue-meetup`의 NPC 선택과 친밀도 +3은 주말/방학 슬롯에서만 붙는다(`hang-out`과 같은 규칙).
   // 학기(W36~42)와 겨울방학(W43~48) 양쪽에서 열려야 하므로 seasonGate는 두지 않는다.
   {
     id: 'license-course', name: '운전면허 학원', slots: 1, fatigue: 5,
@@ -363,7 +377,7 @@ export const ACTIVITIES: Activity[] = [
   },
   {
     id: 'admission-prep', name: '원서·면접 준비', slots: 1, fatigue: 6,
-    effects: { academic: 1, mental: -1 }, moneyCost: 0, category: 'study',
+    effects: { academic: 1, social: 1, mental: -1 }, moneyCost: 0, category: 'study',
     requires: (s) => s.year === FINAL_YEAR && s.week >= POST_SUNEUNG_WEEK,
     unlockYear: FINAL_YEAR,
     description: '자소서를 고치고 면접을 연습한다. 결과는 이미 정해졌는데도 손이 떨린다.',

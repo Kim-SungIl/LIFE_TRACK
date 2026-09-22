@@ -196,10 +196,14 @@ describe('Y7 수능 이후 3종 — 밸런스 수치 잠금', () => {
   // 위 6종과 같은 규약(리터럴 잠금)이되 **주차 축이 하나 더 있다.** 그래서 SPEC 테이블을
   // 따로 둔다 — 위 블록의 경계 판정은 기본 주차를 쓰므로 주차 게이트가 있는 활동엔 안 맞는다.
   //
-  // 이 3종의 수치 근거는 앞 학년과 다르다. 수능 점수는 W35에 확정되므로(모의 2회+내신)
-  // 이후의 academic은 진로를 못 바꾼다. 반면 행복 궤적은 48주 전부를 표본으로 삼아
-  // 이 13주가 Y7 행복의 27%다. 그래서 무게가 mental에 실려 있고, mental은 주당 +2 축 상한에서
-  // 면제된 유일한 축이다. 값이 조용히 mental에서 빠지면 이 구간은 다시 아무 의미가 없어진다.
+  // 이 3종의 수치 근거는 앞 학년과 다르다. 수능 점수는 W35에 확정되지만(모의 2회+내신),
+  // 진로 갈래까지 확정되는 건 아니다 — `determineCareer`는 졸업 시점 스탯의 절벽
+  // (talent 85/90 · academic 70/80/85/88 · mental 15/30/40)을 여전히 읽는다. 그래서 이 3종의
+  // 제약은 "진로에 무관할 것"이 아니라 **"기존 활동이 이미 연 통로를 넓히지 말 것"**이다
+  // (수능 이후에도 학업 13종·특기 8종이 열려 있고 전부 이 3종보다 세다).
+  // 무게가 실린 곳은 행복이다 — 궤적이 48주 전부를 표본으로 삼아 이 13주가 Y7 행복의 27%다.
+  // 그래서 값이 mental·social에 있고, mental은 주당 +2 축 상한에서 면제된 유일한 축이다.
+  // 값이 조용히 mental에서 빠지면 이 구간은 다시 아무 의미가 없어진다.
   const POST_SPEC: Record<string, BalanceSpec> = {
     'license-course': {
       name: '운전면허 학원', slots: 1, fatigue: 5, moneyCost: 4, category: 'talent', unlockYear: 7,
@@ -208,8 +212,8 @@ describe('Y7 수능 이후 3종 — 밸런스 수치 잠금', () => {
     },
     'admission-prep': {
       name: '원서·면접 준비', slots: 1, fatigue: 6, moneyCost: 0, category: 'study', unlockYear: 7,
-      effects: { academic: 1, mental: -1 },
-      rationale: 'mental -1이 이 활동의 전부다 — 진로는 이미 확정이라 academic 1은 거의 무의미하고, 대가만 남는 선택지로 성립한다',
+      effects: { academic: 1, social: 1, mental: -1 },
+      rationale: 'social 1이 이 활동을 선택지로 만든다 — academic 1·피로 6은 self-study(1.5/5)에 지고, social이 없으면 self-study·study-group·library·study-with-parent 4종에 전 축 열등이라 고를 이유가 0인 함정이 된다. 면접 연습이 사람 앞에서 말하는 일이라는 것이 그 근거고, social은 determineCareer가 안 읽어 진로 절벽도 안 건드린다',
     },
     'overdue-meetup': {
       name: '밀린 약속', slots: 1, fatigue: 3, moneyCost: 1, category: 'social', unlockYear: 7,
