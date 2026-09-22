@@ -1,5 +1,28 @@
 import { Activity, GameState } from './types';
 import { getSchoolLevel } from './backgrounds';
+import { getExamSchedule } from './examSystem';
+
+/** 마지막 학년(고3). 이 게임은 초6~고3 7년이다.
+ *  주의: 아직 SSOT가 아니다 — 같은 "7"이 `gameEngine`(학년 전환·졸업), `store`, `examSystem`,
+ *  `talkSystem`, `relationshipSignals`에 리터럴로 남아 있다. 지금은 값이 같아 무해하지만,
+ *  한쪽만 바뀌면 라벨이 거짓말한다(#441). 옮길 때 같이 옮길 것. */
+export const FINAL_YEAR = 7;
+
+/**
+ * 수능 **다음** 주. 이 주부터 '수능 이후' 활동이 열린다.
+ *
+ * 하드코딩하지 않고 시험 일정 SSOT(`getExamSchedule`)에서 파생한다 — 수능 주를 옮기면
+ * 활동 게이트가 따라와야 하고, 두 숫자가 따로 놀면 "수능 전에 열리는 수능 이후 활동"이나
+ * 반대로 영영 안 열리는 활동이 조용히 생긴다.
+ */
+export const POST_SUNEUNG_WEEK: number = (() => {
+  const week = Object.entries(getExamSchedule(FINAL_YEAR))
+    .find(([, type]) => type === 'suneung')?.[0];
+  if (week === undefined) {
+    throw new Error(`Y${FINAL_YEAR} 시험 일정에 수능이 없다 — 수능 이후 활동의 기준점이 사라졌다`);
+  }
+  return Number(week) + 1;
+})();
 
 // 학년별 비용 차등 헬퍼 — 현실 고증 (초등 종합반 < 중등 입시 < 고등 단과)
 // yearlyCost가 정의된 활동만 학년 차등, 그 외는 base moneyCost 그대로.
@@ -14,7 +37,7 @@ export function getActivityCost(activity: Pick<Activity, 'moneyCost' | 'yearlyCo
 
 // NPC 동행 선택이 열리는 활동(선택 시 친밀도 +3 부여) — SlotEditPopup·activityHints 공용 SSOT.
 // category와 무관: study-group은 category 'study'지만 동행 활동이고, 같은 social이라도 sns 등은 동행 아님.
-export const NPC_COMPANION_ACTIVITIES: string[] = ['hang-out', 'club', 'study-group'];
+export const NPC_COMPANION_ACTIVITIES: string[] = ['hang-out', 'club', 'study-group', 'overdue-meetup'];
 
 // v6.2: 활동 기본값 전면 하향 — 7년 장기 레이스에 맞는 Y1 성장 속도
 // 목표: 일반 플레이어 Y1 종료 시 주력 스탯 50~60, 집중형 65~75
@@ -317,6 +340,58 @@ export const ACTIVITIES: Activity[] = [
     description: '후배들의 공부를 봐준다.',
     flavor: '설명하다 막히는 데가 내가 모르는 데였다. 가르치면서 내가 배운다.',
     tags: ['고등', '관계', '가르치며 배움'],
+  },
+
+  // ===== Y7 수능 이후 3종 =====
+  // 수능은 Y7 W35에 끝나는데 학년은 W48까지 간다 — **13주가 남는데 그동안 열리는 게 하나도 없었다.**
+  // (Y6은 2종, Y5는 3종이 열린다. Y7만 0이었다.)
+  //
+  // **수능 점수는 W35에 확정된다** — 직전 모의 2회와 내신으로 계산되고
+  // (`examSystem.generateSuneungResult`) Y7 일정에 수능은 W35 하나뿐이라 재계산이 없다.
+  //
+  // **그렇다고 진로 갈래까지 확정된 건 아니다.** `ending.determineCareer`는 mockGrade 말고
+  // 졸업 시점의 라이브 스탯도 읽는다 — talent 85/90 · academic 70/80/85/88 · mental 15/30/40이
+  // 절벽이다. 그러니 이 13주의 스탯도 진로를 바꿀 수 있다. **다만 그건 이 3종이 연 통로가 아니다** —
+  // 수능 이후에도 학업 13종·특기 8종이 그대로 열려 있고 전부 신규보다 세다(실측: talent 절벽 85를
+  // `art-lesson`은 루틴 2칸으로 넘는데 `license-course`는 4칸을 다 써야 겨우 닿는다. academic도
+  // 기존 2종이 +1.4/주인데 `admission-prep`을 섞으면 +1.3/주로 오히려 내려간다). **신규가 그 통로를
+  // 넓히지 않는 것**이 아래 수치의 제약 조건이다.
+  //
+  // 무게를 두는 곳은 따로 있다. **행복 궤적은 48주 전부를 표본으로 삼으므로**
+  // (`ending.HAPPINESS_WEEKS_PER_YEAR`) 이 13주가 Y7 행복의 27%다. 그래서 세 활동의 무게를
+  // **mental·social**에 둔다. mental은 주당 +2 축 상한에서 면제된 유일한 축이라(`applyActivity`)
+  // 이 구간에서 실효 지렛대고, social은 `determineCareer`가 읽지 않는 유일한 축이다.
+  //
+  // 셋 다 `slots: 1` · 비-rest라 **루틴 슬롯에도 들어간다**(SlotEditPopup의 후보 필터 조건).
+  // 단 루틴에 박으면 동행이 안 붙는다 — `companionEligible`이 routine1/2를 제외하므로
+  // `overdue-meetup`의 NPC 선택과 친밀도 +3은 주말/방학 슬롯에서만 붙는다(`hang-out`과 같은 규칙).
+  // 학기(W36~42)와 겨울방학(W43~48) 양쪽에서 열려야 하므로 seasonGate는 두지 않는다.
+  {
+    id: 'license-course', name: '운전면허 학원', slots: 1, fatigue: 5,
+    effects: { mental: 2, talent: 0.5 }, moneyCost: 4, category: 'talent',
+    requires: (s) => s.year === FINAL_YEAR && s.week >= POST_SUNEUNG_WEEK && s.money >= 4,
+    unlockYear: FINAL_YEAR,
+    description: '수능이 끝나고 처음으로 학교 밖의 자격을 딴다.',
+    flavor: '핸들을 처음 잡았다. 배우는 것 중에 시험이 아닌 게 12년 만이었다.',
+    tags: ['고등', '수능 이후', '어른의 문턱'],
+  },
+  {
+    id: 'admission-prep', name: '원서·면접 준비', slots: 1, fatigue: 6,
+    effects: { academic: 1, social: 1, mental: -1 }, moneyCost: 0, category: 'study',
+    requires: (s) => s.year === FINAL_YEAR && s.week >= POST_SUNEUNG_WEEK,
+    unlockYear: FINAL_YEAR,
+    description: '자소서를 고치고 면접을 연습한다. 결과는 이미 정해졌는데도 손이 떨린다.',
+    flavor: '같은 문장을 스무 번 고쳤다. 고칠수록 내 얘기가 아닌 것 같았다.',
+    tags: ['고등', '수능 이후', '불안'],
+  },
+  {
+    id: 'overdue-meetup', name: '밀린 약속', slots: 1, fatigue: 3,
+    effects: { social: 1.5, mental: 2.5 }, moneyCost: 1, category: 'social',
+    requires: (s) => s.year === FINAL_YEAR && s.week >= POST_SUNEUNG_WEEK && s.money >= 1,
+    unlockYear: FINAL_YEAR,
+    description: '"수능 끝나고 보자"고 미뤄둔 사람을 만난다.',
+    flavor: '그 말을 몇 번이나 했는지 모른다. 이번엔 진짜로 만났다.',
+    tags: ['고등', '수능 이후', '관계'],
   },
 
   // ===== Phase 1: 방학 전용 활동 9종 =====

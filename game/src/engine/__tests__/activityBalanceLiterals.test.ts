@@ -20,6 +20,7 @@ import {
   getActivityCost,
   getAvailableActivities,
   isVacationLimitReached,
+  POST_SUNEUNG_WEEK,
 } from '../activities';
 import { createInitialState, processWeek } from '../gameEngine';
 import { SHOP_ITEMS } from '../shopSystem';
@@ -189,6 +190,147 @@ describe('학년 해금 6종 — 밸런스 수치 잠금', () => {
       }
     });
   }
+});
+
+describe('Y7 수능 이후 3종 — 밸런스 수치 잠금', () => {
+  // 위 6종과 같은 규약(리터럴 잠금)이되 **주차 축이 하나 더 있다.** 그래서 SPEC 테이블을
+  // 따로 둔다 — 위 블록의 경계 판정은 기본 주차를 쓰므로 주차 게이트가 있는 활동엔 안 맞는다.
+  //
+  // 이 3종의 수치 근거는 앞 학년과 다르다. 수능 점수는 W35에 확정되지만(모의 2회+내신),
+  // 진로 갈래까지 확정되는 건 아니다 — `determineCareer`는 졸업 시점 스탯의 절벽
+  // (talent 85/90 · academic 70/80/85/88 · mental 15/30/40)을 여전히 읽는다. 그래서 이 3종의
+  // 제약은 "진로에 무관할 것"이 아니라 **"기존 활동이 이미 연 통로를 넓히지 말 것"**이다
+  // (수능 이후에도 학업 13종·특기 8종이 열려 있고 전부 이 3종보다 세다).
+  // 무게가 실린 곳은 행복이다 — 궤적이 48주 전부를 표본으로 삼아 이 13주가 Y7 행복의 27%다.
+  // 그래서 값이 mental·social에 있고, mental은 주당 +2 축 상한에서 면제된 유일한 축이다.
+  // 값이 조용히 mental에서 빠지면 이 구간은 다시 아무 의미가 없어진다.
+  const POST_SPEC: Record<string, BalanceSpec> = {
+    'license-course': {
+      name: '운전면허 학원', slots: 1, fatigue: 5, moneyCost: 4, category: 'talent', unlockYear: 7,
+      effects: { mental: 2, talent: 0.5 },
+      rationale: '수능 후 유일한 유료 선택. 4만은 실기레슨(4만)과 동급 — 이 구간에 남은 돈의 출구이되 무료 2종을 못 이기게',
+    },
+    'admission-prep': {
+      name: '원서·면접 준비', slots: 1, fatigue: 6, moneyCost: 0, category: 'study', unlockYear: 7,
+      effects: { academic: 1, social: 1, mental: -1 },
+      rationale: 'social 1이 이 활동을 선택지로 만든다 — academic 1·피로 6은 self-study(1.5/5)에 지고, social이 없으면 self-study·study-group·library·study-with-parent 4종에 전 축 열등이라 고를 이유가 0인 함정이 된다. 면접 연습이 사람 앞에서 말하는 일이라는 것이 그 근거고, social은 determineCareer가 안 읽어 진로 절벽도 안 건드린다',
+    },
+    'overdue-meetup': {
+      name: '밀린 약속', slots: 1, fatigue: 3, moneyCost: 1, category: 'social', unlockYear: 7,
+      effects: { social: 1.5, mental: 2.5 },
+      rationale: 'mental 2.5는 hang-out(2)보다 높다 — 수능 후 13주에 관계로 회복하는 경로를 공부 경로보다 세게 둔다. 1만은 hang-out과 동급',
+    },
+  };
+
+  const OPEN = POST_SUNEUNG_WEEK;
+
+  it('검사 모수가 살아 있다 — unlockYear 7 활동 전수를 덮는다', () => {
+    const y7 = ACTIVITIES.filter(a => a.unlockYear === 7).map(a => a.id).sort();
+    expect(y7).toEqual(Object.keys(POST_SPEC).sort());
+  });
+
+  for (const [id, spec] of Object.entries(POST_SPEC)) {
+    describe(`${id} (${spec.name})`, () => {
+      it(`수치가 스펙과 정확히 같다 — ${spec.rationale}`, () => {
+        const a = pick(id);
+        expect(a.name).toBe(spec.name);
+        expect(a.slots).toBe(spec.slots);
+        expect(a.fatigue).toBe(spec.fatigue);
+        expect(a.moneyCost).toBe(spec.moneyCost);
+        expect(a.category).toBe(spec.category);
+        expect(a.unlockYear).toBe(spec.unlockYear);
+        expect(a.effects).toStrictEqual(spec.effects);
+      });
+
+      it('실효 가격이 moneyCost와 같다 — yearlyCost로 우회되지 않는다', () => {
+        expect(getActivityCost(pick(id), 7)).toBe(spec.moneyCost);
+      });
+
+      it('SPEC에 없는 선택 필드는 붙어 있지 않다', () => {
+        const a = pick(id) as unknown as Record<string, unknown>;
+        for (const field of OPTIONAL_BALANCE_FIELDS) {
+          expect(a[field], `${id}.${field}`).toBeUndefined();
+        }
+      });
+
+      it('수능 주에는 닫히고 다음 주에 열린다 (픽스처 변형 전부에서)', () => {
+        for (const { label, patch } of FIXTURE_VARIANTS) {
+          const base = { year: 7, money: 999, isVacation: false, ...patch };
+          expect(availableIn({ ...base, week: OPEN - 1 }, id), `${label} / W${OPEN - 1}`).toBe(false);
+          expect(availableIn({ ...base, week: OPEN }, id), `${label} / W${OPEN}`).toBe(true);
+        }
+      });
+
+      it('Y6에는 어느 주차에도 안 열린다', () => {
+        for (const { label, patch } of FIXTURE_VARIANTS) {
+          for (const week of [1, OPEN - 1, OPEN, 48]) {
+            expect(
+              availableIn({ year: 6, week, money: 999, isVacation: week >= 43, ...patch }, id),
+              `${label} / Y6 W${week}`,
+            ).toBe(false);
+          }
+        }
+      });
+
+      if (spec.moneyCost > 0) {
+        it(`잔액 ${spec.moneyCost - 1}만이면 빠지고 ${spec.moneyCost}만이면 나온다 (가격 리터럴)`, () => {
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            const base = { year: 7, week: OPEN, isVacation: false, ...patch };
+            expect(availableIn({ ...base, money: spec.moneyCost - 1 }, id), label).toBe(false);
+            expect(availableIn({ ...base, money: spec.moneyCost }, id), label).toBe(true);
+          }
+        });
+      } else {
+        it('무료라 잔액 0에서도 나온다', () => {
+          for (const { label, patch } of FIXTURE_VARIANTS) {
+            expect(availableIn({ year: 7, week: OPEN, money: 0, isVacation: false, ...patch }, id), label).toBe(true);
+          }
+        });
+      }
+    });
+  }
+
+  // 엔진이 열어도 **화면이 조용히 막으면 죽은 컷**이다. 그래서 prop을 주입하지 않고
+  // 제품과 같은 경로(getAvailableActivities → ActivityPicker)로 한 번 렌더해서 본다
+  // — prop으로 받는 테스트는 그 prop을 만드는 층의 누락을 원리상 못 잡는다(#431).
+  it('제품 경로로 렌더하면 W36에 셋 다 뜨고 누를 수 있다 (W35엔 없다)', () => {
+    const at = (week: number) => {
+      const state = makeState({ year: 7, week, money: 999, isVacation: false });
+      render(createElement(ActivityPicker, {
+        activities: getAvailableActivities(state),
+        selected: [], onToggle: vi.fn(), maxSlots: 2, currentSlots: 0, availableMoney: 999, state,
+      }));
+    };
+    // 카테고리는 접힌 채로 그려진다 — 해당 카테고리를 펴야 활동 버튼이 DOM에 들어온다.
+    const expand = (category: Activity['category']) => {
+      const header = screen.getAllByRole('button')
+        .filter(el => el.getAttribute('aria-expanded') !== null)
+        .find(el => within(el).queryAllByText(CAT_LABEL[category]).length > 0);
+      if (!header) throw new Error(`카테고리 헤더 없음: ${category}`);
+      if (header.getAttribute('aria-expanded') === 'false') fireEvent.click(header);
+    };
+
+    at(POST_SUNEUNG_WEEK - 1);
+    for (const spec of Object.values(POST_SPEC)) {
+      expand(spec.category);
+      expect(screen.queryByText(spec.name), `W${POST_SUNEUNG_WEEK - 1} ${spec.name}`).toBeNull();
+    }
+    cleanup();
+    at(POST_SUNEUNG_WEEK);
+    for (const spec of Object.values(POST_SPEC)) {
+      expand(spec.category);
+      const btn = screen.getByText(spec.name).closest('button');
+      expect(btn, `${spec.name} 버튼`).not.toBeNull();
+      expect(btn, `${spec.name} 비활성`).not.toBeDisabled();
+    }
+  });
+
+  it('무게가 mental에 실려 있다 — 셋의 |mental| 합이 |academic| 합보다 크다', () => {
+    const ids = Object.keys(POST_SPEC);
+    const sum = (k: 'mental' | 'academic') =>
+      ids.reduce((t, id) => t + Math.abs(pick(id).effects[k] ?? 0), 0);
+    expect(sum('mental')).toBeGreaterThan(sum('academic'));
+  });
 });
 
 describe('학년 해금 6종 — 설계 의도 관계', () => {

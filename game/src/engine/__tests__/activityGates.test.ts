@@ -6,23 +6,42 @@ import {
   ACTIVITIES,
   canApplyActivity,
   collapseActivityChoices,
+  FINAL_YEAR,
+  getActivityCost,
   getAvailableActivities,
   isVacationLimitReached,
+  NPC_COMPANION_ACTIVITIES,
+  POST_SUNEUNG_WEEK,
 } from '../activities';
+import { getExamSchedule } from '../examSystem';
 import { canBuyItem, limitKey, SHOP_ITEMS } from '../shopSystem';
 import type { Activity } from '../types';
 import { makeState } from '../../test/fixtures';
 
-const GRADE_UNLOCK_IDS = [
-  'free-semester',
-  'study-room',
-  'supplementary-class',
-  'night-study',
-  'practical-lesson',
-  'mentoring',
-] as const;
+// unlockYear를 가진 활동 **전수**. 하드코딩 목록이면 새 활동이 조용히 무검사가 된다 —
+// 실제로 그랬다: 목록은 6개였는데 데이터에는 9개였고(private-tutoring·part-time·short-term-job
+// 누락) 아무도 몰랐다. 데이터에서 파생하면 활동을 추가하는 것만으로 검사 대상이 된다.
+const UNLOCK_ACTIVITIES = ACTIVITIES.filter(a => a.unlockYear !== undefined);
 
-const PAID_GRADE_UNLOCK_IDS = ['study-room', 'supplementary-class', 'practical-lesson'] as const;
+/** corpus 퇴화 방지 — 필터가 0건이 되면 아래 for문이 전부 공허하게 통과한다. */
+const UNLOCK_FLOOR = 12;
+
+/**
+ * 나머지 게이트(방학·돈)를 전부 열어 준 상태. 학년·주차만 바꿔 가며 해금 경계를 본다.
+ * `isVacation`을 활동의 seasonGate에 맞추는 이유: vacation-only 활동은 방학이 아니면
+ * 학년과 무관하게 빠지므로, 그대로 두면 "해금됐다"를 영영 관측할 수 없다.
+ */
+function openStateFor(a: Activity, year: number, week: number) {
+  return makeState({ year, week, money: 9999, isVacation: a.seasonGate === 'vacation-only' });
+}
+
+/** 그 학년에서 활동이 열리는 가장 이른 주차. 없으면 null(= 그 학년엔 안 열린다). */
+function earliestOpenWeek(a: Activity, year: number): number | null {
+  for (let week = 1; week <= 48; week++) {
+    if (canApplyActivity(openStateFor(a, year, week), a.id)) return week;
+  }
+  return null;
+}
 
 function pickActivity(pred: (a: Activity) => boolean, why: string): Activity {
   const found = ACTIVITIES.find(pred);
@@ -210,43 +229,41 @@ describe('collapseActivityChoices', () => {
   });
 });
 
-describe('학년 해금 활동 6종 — 게이트 계약', () => {
-  it('해금 학년 경계 양방향: unlockYear-1에는 없고 unlockYear에는 있다', () => {
-    for (const id of GRADE_UNLOCK_IDS) {
-      const a = pickActivity(x => x.id === id, `${id} 없음`);
-      expect(a.unlockYear, `${id} unlockYear`).toEqual(expect.any(Number));
+describe('학년 해금 활동 — 게이트 계약 (데이터 파생 전수)', () => {
+  it('검사 모수가 살아 있다', () => {
+    expect(UNLOCK_ACTIVITIES.length).toBeGreaterThanOrEqual(UNLOCK_FLOOR);
+  });
+
+  it('해금 학년 경계 양방향: unlockYear-1에는 어느 주차에도 없고, unlockYear에는 열리는 주차가 있다', () => {
+    for (const a of UNLOCK_ACTIVITIES) {
       const year = a.unlockYear!;
-      const before = getAvailableActivities(makeState({ year: year - 1, money: 999, isVacation: false }));
-      const at = getAvailableActivities(makeState({ year, money: 999, isVacation: false }));
-      expect(before.some(x => x.id === id), `${id} year ${year - 1}`).toBe(false);
-      expect(at.some(x => x.id === id), `${id} year ${year}`).toBe(true);
+      expect(earliestOpenWeek(a, year - 1), `${a.id} year ${year - 1}에서 열린 주차`).toBeNull();
+      expect(earliestOpenWeek(a, year), `${a.id} year ${year}에서 열린 주차`).not.toBeNull();
     }
   });
 
   it('unlockYear와 requires의 year 조건이 일치한다 (배지만 달고 차단 없는 상태 금지)', () => {
-    // passesActivityGates는 비공개 — 공개면(canApplyActivity)으로 동일 판정을 잠근다.
-    for (const id of GRADE_UNLOCK_IDS) {
-      const a = pickActivity(x => x.id === id, `${id} 없음`);
-      expect(a.unlockYear, `${id} unlockYear`).toEqual(expect.any(Number));
-      expect(typeof a.requires, `${id} requires`).toBe('function');
+    for (const a of UNLOCK_ACTIVITIES) {
+      expect(typeof a.requires, `${a.id} requires`).toBe('function');
       const year = a.unlockYear!;
-      expect(
-        canApplyActivity(makeState({ year: year - 1, money: 999, isVacation: false }), id),
-        `${id} year ${year - 1}`,
-      ).toBe(false);
+      // 어느 주차로도 열리지 않아야 한다 — 주차 게이트가 있는 활동도 같은 기준으로 잡힌다.
+      expect(earliestOpenWeek(a, year - 1), `${a.id} year ${year - 1}`).toBeNull();
     }
   });
 
-  it('유료 3종은 해금 학년이어도 잔액 cost-1이면 빠지고 cost이면 나온다', () => {
-    for (const id of PAID_GRADE_UNLOCK_IDS) {
-      const a = pickActivity(x => x.id === id, `${id} 없음`);
-      expect(a.unlockYear, `${id} unlockYear`).toEqual(expect.any(Number));
-      const cost = a.moneyCost;
+  it('유료 해금 활동은 잔액 cost-1이면 빠지고 cost이면 나온다', () => {
+    const paid = UNLOCK_ACTIVITIES.filter(a => getActivityCost(a, a.unlockYear!) > 0);
+    expect(paid.length, '유료 해금 활동이 0건 — 이 검사가 공허하다').toBeGreaterThan(0);
+    for (const a of paid) {
       const year = a.unlockYear!;
-      const under = getAvailableActivities(makeState({ year, money: cost - 1, isVacation: false }));
-      const exact = getAvailableActivities(makeState({ year, money: cost, isVacation: false }));
-      expect(under.some(x => x.id === id), `${id} money ${cost - 1}`).toBe(false);
-      expect(exact.some(x => x.id === id), `${id} money ${cost}`).toBe(true);
+      const cost = getActivityCost(a, year);
+      const week = earliestOpenWeek(a, year);
+      expect(week, `${a.id} 열리는 주차`).not.toBeNull();
+      const at = (money: number) => getAvailableActivities(
+        makeState({ year, week: week!, money, isVacation: a.seasonGate === 'vacation-only' }),
+      ).some(x => x.id === a.id);
+      expect(at(cost - 1), `${a.id} money ${cost - 1}`).toBe(false);
+      expect(at(cost), `${a.id} money ${cost}`).toBe(true);
     }
   });
 
@@ -254,6 +271,59 @@ describe('학년 해금 활동 6종 — 게이트 계약', () => {
     const night = pickActivity(a => a.id === 'night-study', 'night-study 없음');
     expect(night.slots).toBe(2);
     expect(night.effects.social).toBe(1);
+  });
+});
+
+describe('Y7 수능 이후 활동 — 주차 게이트 계약', () => {
+  const POST_IDS = ['license-course', 'admission-prep', 'overdue-meetup'] as const;
+
+  it('POST_SUNEUNG_WEEK는 시험 일정에서 파생된다 (하드코딩 금지)', () => {
+    const suneung = Object.entries(getExamSchedule(FINAL_YEAR)).find(([, t]) => t === 'suneung');
+    expect(suneung, `Y${FINAL_YEAR} 일정에 수능이 없다`).toBeDefined();
+    expect(POST_SUNEUNG_WEEK).toBe(Number(suneung![0]) + 1);
+  });
+
+  it('수능 주에는 닫혀 있고 그 다음 주에 열린다', () => {
+    for (const id of POST_IDS) {
+      const before = makeState({ year: FINAL_YEAR, week: POST_SUNEUNG_WEEK - 1, money: 9999 });
+      const after = makeState({ year: FINAL_YEAR, week: POST_SUNEUNG_WEEK, money: 9999 });
+      expect(canApplyActivity(before, id), `${id} W${POST_SUNEUNG_WEEK - 1}`).toBe(false);
+      expect(canApplyActivity(after, id), `${id} W${POST_SUNEUNG_WEEK}`).toBe(true);
+    }
+  });
+
+  it('겨울방학(W43+)에도 열려 있다 — seasonGate로 학기에 묶이지 않는다', () => {
+    for (const id of POST_IDS) {
+      const winter = makeState({ year: FINAL_YEAR, week: 45, money: 9999, isVacation: true });
+      expect(canApplyActivity(winter, id), `${id} 겨울방학`).toBe(true);
+    }
+  });
+
+  it('이전 학년에서는 어느 주차에도 열리지 않는다', () => {
+    for (const id of POST_IDS) {
+      const a = pickActivity(x => x.id === id, `${id} 없음`);
+      for (let year = 1; year < FINAL_YEAR; year++) {
+        expect(earliestOpenWeek(a, year), `${id} Y${year}`).toBeNull();
+      }
+    }
+  });
+
+  it('무료 선택지가 하나는 있다 — 돈 0으로도 이 구간에 할 게 있어야 한다', () => {
+    const broke = makeState({ year: FINAL_YEAR, week: POST_SUNEUNG_WEEK, money: 0 });
+    const open = POST_IDS.filter(id => canApplyActivity(broke, id));
+    expect(open, '수능 이후 무료 활동 0건 — 가난한 플레이어는 13주가 그대로 빈다').not.toHaveLength(0);
+  });
+
+  it('셋 다 루틴 슬롯 후보 자격을 갖는다 (slots 1 · 비-rest)', () => {
+    for (const id of POST_IDS) {
+      const a = pickActivity(x => x.id === id, `${id} 없음`);
+      expect(a.slots, `${id} slots`).toBe(1);
+      expect(a.category, `${id} category`).not.toBe('rest');
+    }
+  });
+
+  it('밀린 약속은 NPC 동행 활동이다 — 동행이 아니면 관계 회복이 안 붙는다', () => {
+    expect(NPC_COMPANION_ACTIVITIES).toContain('overdue-meetup');
   });
 });
 
