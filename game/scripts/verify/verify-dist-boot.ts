@@ -108,7 +108,7 @@ const fail = (msg: string) => problems.push(msg);
 const PROBE_CONSOLE = '__boot-probe__';
 const PROBE_ASSET = '__boot-probe-missing__.json';
 const SELF_CHECKS = [
-  { marker: PROBE_CONSOLE, msg: '자기검사: 일부러 낸 콘솔 에러를 판정이 안 담았다 — 위 "콘솔 에러 0건"은 근거가 없다' },
+  { marker: PROBE_CONSOLE, msg: '자기검사: 일부러 낸 콘솔 에러를 판정이 안 담았다 — 위 "콘솔 에러 0건"은 근거가 없다 (관측기·판정이 죽었거나, 제품이 console.error를 가로채 삼키고 있다)' },
   { marker: PROBE_ASSET, msg: '자기검사: 일부러 낸 404를 판정이 안 담았다 — 위 "404 0건"은 근거가 없다' },
 ] as const;
 

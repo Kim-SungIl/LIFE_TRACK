@@ -61,6 +61,12 @@ function fakeDist(prefix: string, body: string, opts: { title?: string; bodyHtml
   }
 }
 
+/**
+ * 정상 픽스처가 서버에서 받아 가는 파일 수 — `index.html` + `assets/app.js`.
+ * 탐침은 빠진 수다(게이트가 자기 요청을 빼고 센다). `fakeDist`가 파일을 늘리면 여기가 깨진다.
+ */
+const HEALTHY_REQUESTS = 2;
+
 /** 첫 화면이 그려진 것처럼 보이는 본문 — 글자 20자 이상 + 버튼 1개. */
 const HEALTHY_BODY =
   `document.getElementById('root').innerHTML =` +
@@ -84,6 +90,9 @@ describe('브라우저 부팅 게이트가 실제로 rc를 낸다', () => {
       // **통과 수까지 본다.** 자기검사 블록을 통째로 지우면 `0/2`가 된다 — 문자열이
       // 무조건 찍히던 때는 그 삭제가 6/6으로 살아남았다(실측).
       expect(r.stdout, '자기검사가 죽었다 — 아래 채널 검사들이 전부 공허해진다').toContain('자기검사 2/2종 통과');
+      // 요청 수도 본다. `realServed` 필터가 탐침 말고 다른 것까지 걷어내면 여기가 줄어든다
+      // (그 필터는 진짜 판정이 보는 집합이라, 조용히 좁아지면 404를 통째로 못 본다).
+      expect(r.stdout, '판정이 보는 요청 집합이 달라졌다').toContain(`요청 ${HEALTHY_REQUESTS}건`);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -177,6 +186,42 @@ describe('브라우저 부팅 게이트가 실제로 rc를 낸다', () => {
       const r = run(dir);
       expect(r.status, `요청 실패를 통과시켰다 — 요청 실패 판정이 죽었다\n${r.stdout}`).toBe(1);
       expect(r.stdout, '어느 요청인지 말해야 한다').toContain('__refused__');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('base가 어긋난 경로도 rc=1 — 서버의 base 밖 가지', () => {
+    // 파일은 dist에 있는데 브라우저가 **다른 URL로** 찾는 상태. 이 게이트가 잡겠다고
+    // 헤더에 선언한 1급 케이스인데, 위 픽스처들은 전부 base 안쪽이라 서버의
+    // `!url.startsWith(BASE)` 가지를 하나도 안 지나갔다.
+    //
+    // 실측: 그 가지의 `record(404)`를 `record(200)`으로 바꾸면 **rc는 1로 남고**
+    // (딸려 나오는 콘솔 에러가 잡는다) stdout에서 URL만 사라진다 — rc만 보는 검사로는
+    // 못 잡는다. 그래서 URL을 단언한다.
+    const dir = fakeDist('boot-base-', HEALTHY_BODY,
+      { bodyHtml: `<img src="/__WRONG_BASE__/images/bg.webp">` });
+    try {
+      const r = run(dir);
+      expect(r.status, `base 밖 요청을 통과시켰다\n${r.stdout}`).toBe(1);
+      expect(r.stdout, '어느 URL로 찾았는지 말해야 한다').toContain('__WRONG_BASE__');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('제품이 console.error를 삼키면 rc=1 — 자기검사의 음성 대조군', () => {
+    // **자기검사가 유일하게 잠그는 실제 성질이다.** 위 콘솔 픽스처는 `console.error`를
+    // *호출*할 뿐 *가로채지* 않는다 — 로거나 에러 수집기가 제품에 들어와 콘솔을 삼키면
+    // 콘솔 채널 전체가 조용히 죽고 게이트는 "콘솔 에러 0건"을 계속 주장한다.
+    //
+    // 이 검사가 없으면 자기검사 블록을 지우고 카운터를 상수로 위조하는 2편집이
+    // 살아남는다(실측: 그 상태에서 이 dist가 `✅ … 콘솔 에러·404 0건` rc=0이었다).
+    const dir = fakeDist('boot-mute-', `console.error = function () {}; ${HEALTHY_BODY}`);
+    try {
+      const r = run(dir);
+      expect(r.status, `콘솔이 삼켜진 것을 통과시켰다 — 자기검사가 죽었다\n${r.stdout}`).toBe(1);
+      expect(r.stdout, '자기검사가 말해야 한다').toContain('일부러 낸 콘솔 에러를 판정이 안 담았다');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
