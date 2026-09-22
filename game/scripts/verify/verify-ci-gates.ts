@@ -38,7 +38,13 @@ const REPORT_REL = 'node_modules/.tmp/vitest-report.json';
 /** dist를 만드는 스텝. dist 게이트는 전부 이것보다 **뒤**에 와야 한다(앞이면 볼 dist가 없다). */
 const BUILD_STEP = 'npm run build:release';
 /** package.json에서 파생할 수 없는 필수 스텝 — 스크립트 이름만으로는 "CI가 불러야 한다"를 알 수 없다. */
-const REQUIRED_BUILD_STEPS = ['npm run lint', 'npm test', 'npm run verify:test-floor', BUILD_STEP] as const;
+const REQUIRED_BUILD_STEPS = [
+  'npm run lint', 'npm test', 'npm run verify:test-floor', BUILD_STEP,
+  // 크로미움. devDependency라 `npm ci`가 바이너리를 안 받는다 — 이 스텝이 사라지면
+  // `verify:dist-boot`와 `distBootGate.test.ts`가 둘 다 죽는다(실측: 스텝을 지워도
+  // 배선 검증 rc=0에 스펙 22/22 통과였다. 시끄럽게 죽긴 하지만 잠겨 있지는 않았다).
+  'npx playwright install --with-deps chromium',
+] as const;
 const CONTENT_STEP = 'npm run verify:ci';
 const BUILD_JOB = 'build';
 const CONTENT_JOB = 'content-verify';
@@ -545,6 +551,8 @@ jobs:
     steps:
       - name: Lint
         run: npm run lint
+      - name: Browser
+        run: npx playwright install --with-deps chromium
       - name: Test
         run: npm test
       - name: Floor
@@ -772,7 +780,10 @@ const SELF_CHECK_COUNT: number = (() => {
 
   // ── 파서 ──
   const parsed = parseWorkflow(SELF_OK);
-  check('파서: job·스텝·needs', [parsed.map(j => j.name).join(','), String(parsed[0].runs.length), String(parsed[2].needs.length)], ['build,content-verify,deploy', '5', '2']);
+  // 스텝 수는 **픽스처 구성에서 파생**시킨다 — 리터럴로 두면 필수 스텝을 하나 더할 때마다
+  // 여기가 조용히 어긋난다(실제로 어긋났다). build job의 `run:` 스텝 = 필수 스텝 + dist 게이트 1개.
+  const SELF_BUILD_RUN_COUNT = REQUIRED_BUILD_STEPS.length + 1;
+  check('파서: job·스텝·needs', [parsed.map(j => j.name).join(','), String(parsed[0].runs.length), String(parsed[2].needs.length)], ['build,content-verify,deploy', String(SELF_BUILD_RUN_COUNT), '2']);
   check('파서: 트리거 이름·브랜치', [parseTriggers(SELF_OK).map(t => t.name).join(','), (parseTriggers(SELF_OK)[0].branches ?? []).join(',')], ['push,pull_request', 'main']);
 
   // 합성 픽스처가 실파일을 안 닮게 되면 위 케이스가 전부 무의미해진다(#437: corpus 0이면 초록).
