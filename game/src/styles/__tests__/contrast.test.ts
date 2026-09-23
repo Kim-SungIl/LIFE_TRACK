@@ -13,12 +13,52 @@ const CSS_PATH = resolve(process.cwd(), 'src/styles/game.css');
 const CSS = readFileSync(CSS_PATH, 'utf8');
 const SRC = resolve(process.cwd(), 'src');
 
+/** #rgb·#rrggbb → 0~255 채널 셋. 합성과 휘도가 **같은 파서**를 쓰게 한다. */
+function channels(hex: string): [number, number, number] {
+  const h = hex.length === 4 ? '#' + [...hex.slice(1)].map(c => c + c).join('') : hex;
+  return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+}
+
 /** WCAG 상대 휘도. #rgb 축약도 받는다(#444). */
 function luminance(hex: string): number {
-  const h = hex.length === 4 ? '#' + [...hex.slice(1)].map(c => c + c).join('') : hex;
-  const ch = [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255)
+  const ch = channels(hex).map(v => v / 255)
     .map(v => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+}
+
+/**
+ * `rgb()/rgba()` 리터럴 → 채널 + 알파. 풀 수 없으면 null.
+ *
+ * **공백을 정규화한다.** 같은 색을 소스는 `rgba(255,255,255,0.4)`로 쓰고 game.css와
+ * jsdom(`getComputedStyle`)은 `rgba(255, 255, 255, 0.4)`로 돌려준다. 한쪽 표기만 보면
+ * 나머지 절반이 조용히 무검사가 된다 — 이 리포가 CSSOM에서 이미 겪은 형태다.
+ * 선행 0을 뗀 `.4`, 퍼센트 알파(`40%`), 알파 없는 `rgb(...)`, 슬래시 구분도 같이 받는다.
+ */
+function parseRgb(raw: string): { rgb: [number, number, number]; a: number } | null {
+  const m = /^rgba?\(\s*([\d.]+)\s*(?:,\s*)?([\d.]+)\s*(?:,\s*)?([\d.]+)\s*(?:[,/]\s*([\d.]+%?)\s*)?\)$/
+    .exec(raw.trim());
+  if (!m) return null;
+  const rgb = [m[1], m[2], m[3]].map(Number) as [number, number, number];
+  if (rgb.some(v => !Number.isFinite(v) || v < 0 || v > 255)) return null;
+  const a = m[4] === undefined ? 1
+    : m[4].endsWith('%') ? parseFloat(m[4]) / 100
+    : Number(m[4]);
+  if (!Number.isFinite(a) || a < 0 || a > 1) return null;
+  return { rgb, a };
+}
+
+/**
+ * **알파 합성.** 반투명 글자는 그 자체로는 색이 아니다 — 바닥에 얹혀야 눈에 닿는 색이 된다.
+ * 그걸 "판정 불가"로 접으면 `rgba(255,255,255,0.4)`(3.5~3.8:1)가 게이트를 그냥 통과한다.
+ * 실측: 이벤트 씬 제목 칩과 화자 구분자 두 자리가 그 사각지대에 있었다.
+ */
+function flatten(raw: string, base: string): string | null {
+  const c = parseRgb(raw);
+  if (!c) return null;
+  const bg = channels(base);
+  return '#' + c.rgb
+    .map((v, i) => Math.round(v * c.a + bg[i] * (1 - c.a)).toString(16).padStart(2, '0'))
+    .join('');
 }
 
 function ratio(fg: string, bg: string): number {
@@ -162,11 +202,27 @@ describe('토큰을 거치지 않은 글자색', () => {
    */
   const NOT_TEXT_COLOR = /(?:DebugPanel\.tsx|memoryTokens\.ts)$/;
 
+  /**
+   * 글자색 리터럴 — `#hex`와 `rgb()/rgba()` **둘 다**.
+   *
+   * 예전엔 hex만 봤다. 그래서 `color: 'rgba(255,255,255,0.4)'`는 토큰도 아니고 hex도 아니라
+   * 어느 탐지기에도 안 걸렸다(쌍 탐지기는 같은 객체에 `background`가 있어야 보는데 이 자리들엔
+   * 없다). 실측: 그 사각지대에 3.45:1짜리 글자가 두 자리 있었고 게이트는 전부 초록이었다.
+   *
+   * `(?<![-\w])`로 **`border-color`·`background-color`를 뗀다.** `\b`만 쓰면 `-` 앞에서도
+   * 경계가 서서 테두리 색이 글자 미달로 신고된다(game.css에 반투명 테두리가 실제로 2곳 있다).
+   */
+  const TEXT_COLOR_LITERAL = /(?<![-\w])color:\s*'?(#[0-9a-fA-F]{3,6}|rgba?\([^)'"]*\))'?/g;
+
   /** 한 파일 내용에서 AA 미달 하드코딩 글자색을 뽑는다. 파일과 분리해야 탐지기를 시험할 수 있다. */
   function lowContrastLiterals(text: string, bg: string): string[] {
     const out: string[] = [];
-    for (const m of text.matchAll(/\bcolor:\s*'?(#[0-9a-fA-F]{3,6})'?/g)) {
-      const r = ratio(m[1], bg);
+    for (const m of text.matchAll(TEXT_COLOR_LITERAL)) {
+      // 반투명이면 **바닥에 얹은 뒤** 잰다. bg는 가장 밝은 표면(--bg-card-hover)이라
+      // 밝은 글자엔 이게 최악의 경우다.
+      const c = m[1].startsWith('#') ? m[1] : flatten(m[1], bg);
+      if (!c) continue;
+      const r = ratio(c, bg);
       if (r < AA) out.push(`${m[1]} = ${r.toFixed(2)}:1`);
     }
     return out;
@@ -179,6 +235,71 @@ describe('토큰을 거치지 않은 글자색', () => {
     expect(lowContrastLiterals(`color: '#8a8078'`, bg)).toHaveLength(1);
     expect(lowContrastLiterals(`color: #888`, bg)).toHaveLength(1);
     expect(lowContrastLiterals(`color: '#f1e9dc'`, bg)).toEqual([]);
+  });
+
+  /**
+   * **합성 공식 자체를 값으로 잠근다.** 아래 판정들은 전부 이 함수 위에 서 있어서,
+   * 여기가 조용히 틀어지면(알파를 뒤집는다든지) 미달이 통과로 바뀌어도 아무 데서도 안 걸린다.
+   */
+  it('알파 합성이 실제 색을 낸다 (착지값)', () => {
+    // 절반 흰색을 검정에 얹으면 중간 회색. 반대 방향(절반 검정을 흰색에)도 같은 값이어야 한다.
+    expect(flatten('rgba(255,255,255,0.5)', '#000000')).toBe('#808080');
+    expect(flatten('rgba(0,0,0,0.5)', '#ffffff')).toBe('#808080');
+    // 알파가 1이면 바닥이 무의미하다 — 토큰 값과 정확히 같아야 한다.
+    expect(flatten('rgb(224,138,91)', '#ffffff')).toBe(token('accent'));
+    expect(flatten('rgba(224,138,91,1)', '#000000')).toBe(token('accent'));
+    // 색이 아닌 것은 접지 않는다(그라디언트·계산값은 여전히 판정 불가여야 한다).
+    expect(flatten('linear-gradient(135deg,#fff,#000)', '#000000')).toBeNull();
+    expect(flatten('var(--accent)', '#000000')).toBeNull();
+  });
+
+  /**
+   * **합성 사각지대 자기검사.** 이 describe의 전수 단언은 `toEqual([])` 부정형이라,
+   * rgba 가지를 지워도 "위반 0건"과 구별되지 않는다. 양성·음성을 같이 세운다.
+   * 경계값은 손으로 박지 않고 AA와 표면 토큰에서 파생시킨다.
+   */
+  it('반투명 글자를 바닥에 합성해 판정한다 (양성 3 · 음성 3)', () => {
+    const bg = token('bg-card-hover');
+    // 양성 — 고치기 전 이벤트 씬 두 자리의 실제 모양. 표기 세 가지 전부 보여야 한다.
+    for (const [label, src] of [
+      ['인라인 표기', `color: 'rgba(255,255,255,0.4)'`],
+      ['CSS/jsdom 공백 표기', `color: rgba(255, 255, 255, 0.4)`],
+      ['선행 0 생략', `color: 'rgba(255,255,255,.4)'`],
+    ] as const) {
+      expect(lowContrastLiterals(src, bg), `${label}을 못 보면 그게 곧 우회로다`).toHaveLength(1);
+    }
+    // 음성 — 알파를 올리면 통과해야 한다. 여기서 걸리면 과검출이라 게이트가 죽는다.
+    for (const [label, src] of [
+      ['고친 값(0.56)', `color: 'rgba(255,255,255,0.56)'`],
+      ['0.7', `color: 'rgba(255,255,255,0.7)'`],
+      ['불투명', `color: 'rgb(255,255,255)'`],
+    ] as const) {
+      expect(lowContrastLiterals(src, bg), `${label}은 AA를 넘는다 — 걸리면 오탐이다`).toEqual([]);
+    }
+    // 판정의 근거를 값으로도 못 박는다 — 0.4는 미달, 0.56은 통과.
+    expect(ratio(flatten('rgba(255,255,255,0.4)', bg)!, bg)).toBeLessThan(AA);
+    expect(ratio(flatten('rgba(255,255,255,0.56)', bg)!, bg)).toBeGreaterThanOrEqual(AA);
+  });
+
+  // `\bcolor:`는 `-` 앞에서도 경계가 선다. 테두리를 글자로 세면 game.css의 반투명 테두리
+  // 2곳이 즉시 미달로 신고돼(1.2:1대) 게이트가 거짓 빨강이 된다.
+  it('테두리·배경 색을 글자로 세지 않는다 (과검출 방지)', () => {
+    const bg = token('bg-card-hover');
+    expect(lowContrastLiterals(`border-color: rgba(255,255,255,0.15);`, bg)).toEqual([]);
+    expect(lowContrastLiterals(`background-color: rgba(255,255,255,0.06);`, bg)).toEqual([]);
+    expect(lowContrastLiterals(`backgroundColor: 'rgba(255,255,255,0.06)'`, bg)).toEqual([]);
+  });
+
+  // 코퍼스에 반투명 글자가 0건이면 rgba 가지를 통째로 지워도 초록이다.
+  it('반투명 글자색이 코퍼스에 실제로 존재한다 (공회전 방지)', () => {
+    const translucent = sourceFiles()
+      .filter(p => !NOT_TEXT_COLOR.test(p))
+      .flatMap(f => [...readFileSync(f, 'utf8').matchAll(TEXT_COLOR_LITERAL)].map(m => m[1]))
+      .filter(v => !v.startsWith('#'))
+      .filter(v => (parseRgb(v)?.a ?? 1) < 1);
+    expect(translucent.length,
+      '반투명 글자가 하나도 안 잡히면 위 전수 검사는 rgba를 검사하는 척만 하는 것이다')
+      .toBeGreaterThan(5);
   });
 
   it('배포되는 코드에 AA 미달 하드코딩 색이 없다', () => {
@@ -247,15 +368,28 @@ describe('죽은 토큰', () => {
  * 수정(`--btn-ink`)이 CSS 파일에는 들어갔는데 **인라인 스타일 호출부가 못 받았다.**
  */
 describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/color 쌍', () => {
-  /** 색 표현 하나를 #hex로. 풀 수 없으면 null(투명·그라디언트·계산값·테이블 조회). */
-  function resolveColor(raw: string): string | null {
+  /**
+   * 색 표현 하나를 #hex로. 풀 수 없으면 null(그라디언트·계산값·테이블 조회).
+   *
+   * `base`를 주면 **반투명 값을 그 바닥에 합성해서** 푼다. 예전엔 `rgba(...)`를 통째로
+   * "판정 불가"로 접었는데, 그건 알파를 아는 척도 모르는 척도 아니라 그냥 구멍이었다 —
+   * 같은 스타일 객체에 배경이 이미 있으면 바닥은 알려져 있다.
+   * 바닥을 모르면(배경 쪽 값) 그대로 null이다. 없는 바닥을 지어내면 오탐이 나고,
+   * 오탐은 게이트를 죽이는 가장 빠른 길이다.
+   */
+  function resolveColor(raw: string, base?: string): string | null {
     const v = raw.trim().replace(/^['"]|['"]$/g, '');
     if (/^#[0-9a-fA-F]{3,6}$/.test(v)) return v;
     if (v === 'white') return '#ffffff';
     if (v === 'black') return '#000000';
     const t = /^var\(--([\w-]+)\)$/.exec(v);
     if (t) { try { return token(t[1]); } catch { return null; } }
-    return null;   // rgba/그라디언트/transparent/식별자 — 판정 불가
+    const c = parseRgb(v);
+    if (c) {
+      if (c.a >= 1) return flatten(v, '#000000');   // 불투명이면 바닥과 무관
+      return base ? flatten(v, base) : null;
+    }
+    return null;   // 그라디언트/transparent/식별자 — 판정 불가
   }
 
   /**
@@ -452,8 +586,10 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
       const fgRaw = decls.get('color');
       if (!bgRaw || !fgRaw) continue;
       for (const [b, f] of reachablePairs(bgRaw, fgRaw)) {
-        const bg = resolveColor(b), fg = resolveColor(f);
-        if (!bg || !fg) continue;                     // 판정 불가는 건너뛴다
+        const bg = resolveColor(b);
+        if (!bg) continue;                            // 바닥을 모르면 글자도 못 푼다
+        const fg = resolveColor(f, bg);               // 반투명 글자는 이 바닥에 합성
+        if (!fg) continue;                            // 판정 불가는 건너뛴다
         const r = ratio(fg, bg);
         if (r < AA) out.add(`${fg} on ${bg} = ${r.toFixed(2)}:1`);
       }
@@ -473,8 +609,32 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
     expect(lowContrastOnLightBg(`{ background: 'var(--bg-card)', color: '#fff' }`)).toEqual([]);
     // 같은 조건의 삼항은 같은 인덱스끼리 — 교차로 곱하면 없는 조합을 신고한다
     expect(lowContrastOnLightBg(`{ background: ok ? 'var(--accent)' : 'var(--bg-card)', color: ok ? 'var(--btn-ink)' : '#fff' }`)).toEqual([]);
-    // 판정 불가(그라디언트·rgba)는 조용히 건너뛴다
+    // 판정 불가(그라디언트·계산값)는 조용히 건너뛴다
     expect(lowContrastOnLightBg(`{ background: 'linear-gradient(135deg, #fff, #000)', color: '#fff' }`)).toEqual([]);
+  });
+
+  /**
+   * **반투명 글자.** 배경을 아는 자리에서는 `rgba(...)`도 판정할 수 있다 —
+   * 예전엔 통째로 "판정 불가"였고, 그래서 배경이 확정된 객체 안의 흐린 글자도 그냥 통과했다.
+   */
+  it('같은 객체에 배경이 있으면 반투명 글자를 합성해서 잡는다', () => {
+    // 밝은 표면 위의 반투명 흰 글자 — 합성하면 3.45:1이다.
+    expect(lowContrastOnLightBg(`{ background: 'var(--bg-card-hover)', color: 'rgba(255,255,255,0.4)' }`),
+      'rgba를 접으면 알파가 깎은 대비가 통째로 안 보인다').toHaveLength(1);
+    // 공백 표기(CSS·jsdom)도 같은 색이다.
+    expect(lowContrastOnLightBg(`.probe { background: var(--bg-card-hover); color: rgba(255, 255, 255, 0.4); }`))
+      .toHaveLength(1);
+    // 반대 방향 — 밝은 배경 위의 반투명 검정.
+    expect(lowContrastOnLightBg(`{ background: '#ffffff', color: 'rgba(0,0,0,0.3)' }`)).toHaveLength(1);
+    // 불투명 rgb()도 이제 풀린다(예전엔 hex만 봤다). accent 위의 흰 글자는 2.64:1이다.
+    expect(lowContrastOnLightBg(`{ background: 'var(--accent)', color: 'rgb(255,255,255)' }`)).toHaveLength(1);
+
+    // 알파를 올리면 통과한다 — 이벤트 씬 두 자리를 고친 값.
+    expect(lowContrastOnLightBg(`{ background: 'var(--bg-card-hover)', color: 'rgba(255,255,255,0.56)' }`))
+      .toEqual([]);
+    // **배경이 반투명이면 바닥을 모른다.** 지어내면 오탐이 난다 — 그대로 판정 불가여야 한다.
+    expect(lowContrastOnLightBg(`{ background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' }`),
+      '없는 바닥을 가정하면 통과하던 조합이 무더기로 빨강이 된다').toEqual([]);
   });
 
   /**
