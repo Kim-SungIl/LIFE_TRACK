@@ -29,6 +29,7 @@ import {
 import { migrateLoadedState } from '../../src/engine/stateMigration';
 import { selectMemorialHighlights } from '../../src/engine/memorySystem';
 import { getParentMods } from '../../src/engine/parentModifiers';
+import { getWeekSlotCount } from '../../src/engine/weekendPlan';
 import { useGameStore } from '../../src/engine/store';
 import type { GameState, MemorySlot, ParentStrength } from '../../src/engine/types';
 
@@ -87,26 +88,39 @@ console.log('\n=== P13. wealth memory bias 매핑 (dead → live 카테고리) =
 }
 
 // ============================================================================
-console.log('\n=== P14. MainWeekScreen maxSlots SSOT (parentModifiers.vacationSlotBonus) ===');
+console.log('\n=== P14. 주간 슬롯 수 SSOT (parentModifiers.vacationSlotBonus) ===');
 // ============================================================================
-// P1-3 에서 maxSlots/parentModifiers 로직이 GameScreen → MainWeekScreen 으로 이동.
+// P1-3 에서 maxSlots/parentModifiers 로직이 GameScreen → MainWeekScreen 으로 이동했고,
+// T34("지난주처럼")에서 한 번 더 `weekendPlan.getWeekSlotCount`로 모았다 — 계획 화면과
+// 복사 판정이 **같은 상한**을 봐야 하기 때문이다(같은 표가 두 층에 박히면 한쪽만 늙는다).
+// 그래서 여기서는 화면이 표를 다시 적지 않는지 + 그 함수가 실제로 몇을 내는지 둘 다 본다.
 {
   const src = readFileSync('./src/components/screens/main/MainWeekScreen.tsx', 'utf8');
+  const planSrc = readFileSync('./src/engine/weekendPlan.ts', 'utf8');
 
-  assert('MainWeekScreen이 parentModifiers를 import',
-    /from\s+['"](?:\.\.\/){3}engine\/parentModifiers['"]/.test(src));
-  assert('MainWeekScreen이 maxSlots에 getParentMods 사용',
-    /maxSlots[^=]*=[^;]*getParentMods/.test(src));
+  assert('MainWeekScreen이 슬롯 수를 weekendPlan SSOT에서 받는다',
+    /from\s+['"](?:\.\.\/){3}engine\/weekendPlan['"]/.test(src)
+    && /maxSlots[^=]*=\s*getWeekSlotCount\(/.test(src));
   assert('MainWeekScreen에서 maxSlots 직접 includes(\'freedom\') 호출 제거',
     !/parents\.includes\(['"]freedom['"]\)\s*\?\s*6/.test(src));
+  assert('getWeekSlotCount가 parentModifiers의 vacationSlotBonus를 쓴다',
+    /getParentMods\([^)]*\)\.vacationSlotBonus/.test(planSrc));
 
   // 실효 검증: parentModifiers가 freedom일 때 vacationSlotBonus +1
   const freedomMods = getParentMods(['freedom', 'wealth']);
   const otherMods = getParentMods(['emotional', 'strict']);
   assert('freedom 부모: vacationSlotBonus = 1', freedomMods.vacationSlotBonus === 1);
   assert('비-freedom 부모: vacationSlotBonus = 0', otherMods.vacationSlotBonus === 0);
-  assert('5 + bonus → freedom 6, 그 외 5',
-    5 + freedomMods.vacationSlotBonus === 6 && 5 + otherMods.vacationSlotBonus === 5);
+
+  // 값으로도 잠근다 — 소스 문자열만 보면 상수를 바꿔도 통과한다(존재만 세는 게이트의 함정).
+  const vacWith = (parents: [ParentStrength, ParentStrength]) =>
+    ({ ...createInitialState('male', parents, { rngSeed: 1 }), isVacation: true });
+  assert('getWeekSlotCount: 방학 freedom 6 / 그 외 5',
+    getWeekSlotCount(vacWith(['freedom', 'wealth'])) === 6
+    && getWeekSlotCount(vacWith(['emotional', 'strict'])) === 5);
+  assert('getWeekSlotCount: 학기 주말은 부모와 무관하게 2',
+    getWeekSlotCount(createInitialState('male', ['freedom', 'wealth'], { rngSeed: 1 })) === 2
+    && getWeekSlotCount(createInitialState('male', ['emotional', 'strict'], { rngSeed: 1 })) === 2);
 }
 
 // ============================================================================

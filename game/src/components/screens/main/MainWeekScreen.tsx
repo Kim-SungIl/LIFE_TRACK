@@ -4,6 +4,7 @@ import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
+import { getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
 import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
@@ -100,7 +101,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
   // ===== 메인 변수들 =====
   const weekInfo = getWeekLabel(state);
   const month = getMonthLabel(state.week);
-  const maxSlots = state.isVacation ? 5 + getParentMods(state.parents).vacationSlotBonus : 2;
+  const maxSlots = getWeekSlotCount(state);
   const activities = getAvailableActivities(state);
   // 2칸 활동은 onToggle에서 같은 id로 인접 슬롯에 중복 저장됨. 슬롯/비용 계산 시 한 인스턴스로 collapse.
   // 엔진의 vacationChoices 처리(gameEngine.ts)와 동일한 헬퍼 사용 — SSOT.
@@ -134,6 +135,24 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
     () => predictWeekOutcome(state, selectedActivities, npcChoices),
     [state, selectedActivities, npcChoices],
   );
+
+  // "지난주처럼" — 336주 중 주말 2탭만 매주 처음부터 다시 고르던 자리다(주중 루틴은
+  // state에 지속되는데 주말 선택은 확정마다 비워진다). 지난주 계획이 **지금도 그대로
+  // 가능할 때만** 복사 대상이 된다 — 판정은 전부 weekendPlan.ts(엔진 한 주를 돌려 본다).
+  // deps가 state 하나인 이유: 계획을 고치는 동안 같은 엔진 실행을 반복하지 않기 위해서다.
+  const repeatablePlan = useMemo(() => getRepeatablePlan(state), [state]);
+  // 버튼은 **아직 아무것도 안 고른 주**에만 뜬다. 고치는 중인 계획을 통째로 덮어쓰지 않고,
+  // 슬롯이 차는 순간 사라져 크롬이 남지 않는다.
+  const canRepeatPlan = !!repeatablePlan && selectedActivities.length === 0;
+  // **채우기만 한다 — 확정은 기존 CTA가 한다.** 유료 주말 활동이 플레이어 모르게 확정되면
+  // 돈을 조용히 쓰는 경로가 된다.
+  const handleRepeatPlan = useCallback(() => {
+    if (!repeatablePlan) return;
+    playSfx('tap');
+    setSelectedActivities(repeatablePlan.activities);
+    setNpcChoices(repeatablePlan.npcChoices);
+    setLastReaction(null);
+  }, [repeatablePlan]);
 
   // 돈이 모자라 실행되지 않을 활동 — **엔진이 직접 남긴 기록**을 읽는다(위 프리뷰가 돌린
   // 같은 processWeek의 WeekLog.skipped). 화면이 판정을 재구현하지 않는 것이 요점이다:
@@ -370,6 +389,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         slot2ComboWeeks={slot2ComboWeeks}
         slot3ComboWeeks={slot3ComboWeeks}
         maxSlots={maxSlots}
+        onRepeatLastPlan={canRepeatPlan ? handleRepeatPlan : undefined}
       />
 
       {/* 슬롯 편집 팝업 */}

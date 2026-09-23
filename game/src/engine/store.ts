@@ -18,6 +18,7 @@ import {
 } from './archive';
 import { calculateEnding } from './ending';
 import { recordMoneySpent, recordMoneyBlockedWeek } from './moneyTrajectory';
+import { captureWeekendPlan } from './weekendPlan';
 import { saveLastSetup } from './lastSetup';
 
 /** 가시 효과의 "적용 전" 스냅샷 — 실제로 얼마가 먹혔는지는 클램프 뒤에만 알 수 있다. */
@@ -150,6 +151,14 @@ interface GameStore {
   setRoutine: (slot2: string | null, slot3: string | null) => void;
   setWeekendChoices: (choices: string[]) => void;
   setVacationChoices: (choices: string[]) => void;
+  /**
+   * 확정한 주의 주말/방학 계획을 스냅샷으로 남긴다 — "지난주처럼" 1탭 복사의 원본.
+   *
+   * **확정 경로에서만, `advanceWeek` 직전에** 부른다(그래야 processWeek이 클론에 싣고 간다).
+   * 계획이 비어 있으면 스냅샷을 **지운다** — 라벨이 '지난주처럼'이라 두 주 전 계획을
+   * 되살리면 거짓말이 된다.
+   */
+  recordWeekendPlan: (activities: string[], npcChoices: Record<string, string>) => void;
   setNpcActivityMap: (map: Record<string, string>) => void;
   advanceWeek: () => void;
   // 반환: 실제 적용된 효과(구간 감쇠·클램프 반영) — 결과 화면 표시는 이 실측값을 쓴다.
@@ -488,6 +497,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     if (!s) return;
     set({ state: { ...s, vacationChoices: choices } });
+  },
+
+  recordWeekendPlan: (activities, npcChoices) => {
+    const s = get().state;
+    if (!s) return;
+    // captureWeekendPlan이 빈 계획에 null을 준다 → 스냅샷을 지운다(위 주석).
+    set({ state: { ...s, lastWeekendPlan: captureWeekendPlan(activities, npcChoices, s.isVacation) ?? undefined } });
   },
 
   setNpcActivityMap: (map) => {

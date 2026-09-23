@@ -35,6 +35,15 @@ export interface GameState {
   routineSlot3Weeks: number;
   weekendChoices: string[];     // 이번 주 주말 선택
   vacationChoices: string[];    // 방학 슬롯 선택
+  /**
+   * 마지막으로 **확정한** 주의 주말/방학 계획. "지난주처럼" 버튼이 이걸 슬롯에 채운다.
+   *
+   * **옵셔널인 이유**: 구세이브에는 없다. 없으면 버튼이 안 뜰 뿐이고, 빈 배열로 백필하면
+   * "지난주에 아무것도 안 했다"는 없는 사실이 생긴다(T25 돈 궤적과 같은 이유).
+   * 빈 주말을 확정하면 **지운다** — 라벨이 '지난주처럼'인데 두 주 전 계획을 채우면 거짓말이다.
+   * 판정·복사 규칙은 전부 `weekendPlan.ts`에 있다.
+   */
+  lastWeekendPlan?: WeekendPlanSnapshot;
   semester: 1 | 2;
   isVacation: boolean;
   weekLog: WeekLog | null;
@@ -140,6 +149,20 @@ export interface ParentBonusApplied {
  * 놓쳐 거짓 경고를 냈던 것이 실제 사례). 그래서 판정 주체를 엔진 하나로 두고, 화면은
  * `predictWeekOutcome`이 돌린 같은 `processWeek`의 이 기록을 읽는다.
  */
+/**
+ * 확정한 주의 주말/방학 계획 스냅샷 — "지난주처럼" 1탭 복사의 원본.
+ *
+ * `activities`는 **슬롯 배열 그대로**다(2칸 활동은 같은 id가 인접 중복, 빈 칸은 `''`).
+ * 압축하면 동행 키 `${activityId}:${slotIdx}`가 가리키는 칸이 어긋난다.
+ * `npcChoices`는 확정 시점 UI 표현 그대로(레거시 키는 `activityId` 단독).
+ */
+export interface WeekendPlanSnapshot {
+  activities: string[];
+  npcChoices: Record<string, string>;
+  /** 그 주가 방학이었는가 — 슬롯 구조가 달라 같은 구조의 주끼리만 복사한다. */
+  isVacation: boolean;
+}
+
 export interface SkippedActivity {
   activityId: string;
   /** money = 잔액 부족, gate = 학년·계절·방학횟수(canApplyActivity) */
