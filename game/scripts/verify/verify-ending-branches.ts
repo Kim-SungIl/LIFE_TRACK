@@ -19,7 +19,10 @@
 }
 
 import { createInitialState } from '../../src/engine/gameEngine';
-import { calculateEnding } from '../../src/engine/ending';
+import {
+  AXIS_WEAKNESS, BOND_MIN_FRIENDS, BOND_TITLE, calculateEnding, closeFriends,
+} from '../../src/engine/ending';
+import { BEST_TIER, DEPARTED_NPC_ID } from '../../src/engine/endingNpc';
 import type { GameState, ExamResult, Track } from '../../src/engine/types';
 
 interface Scenario {
@@ -326,6 +329,49 @@ console.log('\n=== 엔딩 타이틀 수식 ===');
   const e3 = calculateEnding(happy);
   if (e3.title.startsWith('행복한 평범함')) { console.log(`  ✓ 행복한 평범함 수식 적용`); passed++; }
   else { console.log(`  ✗ 행복한 평범함 미적용 (title="${e3.title}", achievement=${e3.achievement}, happiness=${e3.happiness})`); failed++; }
+
+  // ===== 곁에 남은 이름들 (T30) — 관계 중심 인생 =====
+  // 수능·학업을 안 보는 유일한 특수 타이틀이라, 다른 넷과 달리 mockGrade를 흔들어도 안 흔들려야 한다.
+  // 게이트 재료(절친 수)는 세이브의 npcs에서 오므로 여기서만 npcs를 손댄다.
+  const withFriends = (s: GameState, count: number, intimacy: number): GameState => {
+    const ids = s.npcs.filter(n => n.id !== DEPARTED_NPC_ID).slice(0, count).map(n => n.id);
+    s.npcs = s.npcs.map(n => (ids.includes(n.id)
+      ? { ...n, met: true, intimacy }
+      : { ...n, met: true, intimacy: 0 }));
+    return s;
+  };
+  const relationalStats = { academic: 70, talent: 86, social: 97, mental: 92, health: 80 };
+
+  // 양성 — 절친이 문턱만큼 있고 마음·몸이 성하다. 수능 4등급(평범)이라 위 분기는 전부 비껴간다.
+  const bond = withFriends(withScenario({
+    label: '', stats: relationalStats, mockGrade: 4, track: 'humanities', expectCareer: '',
+  }), BOND_MIN_FRIENDS, BEST_TIER);
+  const e6 = calculateEnding(bond);
+  if (e6.title.startsWith(BOND_TITLE)) { console.log(`  ✓ ${BOND_TITLE} 수식 적용 (절친 ${BOND_MIN_FRIENDS}명)`); passed++; }
+  else { console.log(`  ✗ ${BOND_TITLE} 미적용 (title="${e6.title}", 절친=${closeFriends(bond).length})`); failed++; }
+
+  // 수능 무관 — 같은 판에 수능만 1등급으로 바꿔도 여전히 이 타이틀이다(멘탈 70으로 완벽한 청춘 게이트는 비켜 둔다).
+  const bondTop = withFriends(withScenario({
+    label: '', stats: { ...relationalStats, mental: 70 }, mockGrade: 1, track: 'humanities', expectCareer: '',
+  }), BOND_MIN_FRIENDS, BEST_TIER);
+  const e7 = calculateEnding(bondTop);
+  if (e7.title.startsWith(BOND_TITLE)) { console.log(`  ✓ ${BOND_TITLE} — 수능 1등급에서도 유지(학업·수능 무관 게이트)`); passed++; }
+  else { console.log(`  ✗ ${BOND_TITLE} 수능 1등급에서 유실 (title="${e7.title}")`); failed++; }
+
+  // 음성 ① 한 명 모자람 ② 인원은 맞는데 티어가 절친 아래 ③ 몸이 부서짐
+  const negatives: { why: string; state: GameState }[] = [
+    { why: `절친 ${BOND_MIN_FRIENDS - 1}명`, state: withFriends(withScenario({
+      label: '', stats: relationalStats, mockGrade: 4, track: 'humanities', expectCareer: '' }), BOND_MIN_FRIENDS - 1, BEST_TIER) },
+    { why: `친밀도 ${BEST_TIER - 1}(절친 임계 아래)`, state: withFriends(withScenario({
+      label: '', stats: relationalStats, mockGrade: 4, track: 'humanities', expectCareer: '' }), BOND_MIN_FRIENDS, BEST_TIER - 1) },
+    { why: `health ${AXIS_WEAKNESS - 1}(부서진 축)`, state: withFriends(withScenario({
+      label: '', stats: { ...relationalStats, health: AXIS_WEAKNESS - 1 }, mockGrade: 4, track: 'humanities', expectCareer: '' }), BOND_MIN_FRIENDS, BEST_TIER) },
+  ];
+  for (const neg of negatives) {
+    const t = calculateEnding(neg.state).title;
+    if (!t.startsWith(BOND_TITLE)) { console.log(`  ✓ ${BOND_TITLE} 미적용 — ${neg.why}`); passed++; }
+    else { console.log(`  ✗ ${BOND_TITLE}가 열리면 안 되는 판에서 열렸다 — ${neg.why} (title="${t}")`); failed++; }
+  }
 }
 
 // ========================================
