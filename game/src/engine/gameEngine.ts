@@ -147,13 +147,82 @@ export function getMonthLabel(week: number): string {
 }
 
 // ===== 구간 감쇠 (문서 §1-3 표 기준) =====
-function getDiminishingReturn(value: number): number {
-  if (value < 30) return 1.2;  // 0~29 초반 가속
-  if (value < 50) return 1.0;  // 30~49 기본
-  if (value < 70) return 0.8;  // 50~69
-  if (value < 85) return 0.5;  // 70~84
-  if (value < 95) return 0.3;  // 85~94
-  return 0.1;                  // 95~100
+// 이 표가 성장 곡선의 SSOT다. 두 소비자가 같은 경계를 읽는다 — 감쇠 배율(getDiminishingReturn)과
+// 성장 최저 보장의 테이퍼 구간(growthFloorRatio). 예전엔 감쇠는 if 사다리로, 최저 보장은
+// `stats < 85` 리터럴로 각자 박혀 있어서 한쪽만 움직여도 조용히 어긋났다.
+export const DIMINISHING_TIERS = [
+  { upTo: 30, factor: 1.2 },   // 0~29 초반 가속
+  { upTo: 50, factor: 1.0 },   // 30~49 기본
+  { upTo: 70, factor: 0.8 },   // 50~69
+  { upTo: 85, factor: 0.5 },   // 70~84
+  { upTo: 95, factor: 0.3 },   // 85~94
+  { upTo: 100, factor: 0.1 },  // 95~100
+] as const;
+
+/**
+ * 표의 각 구간을 대표하는 마디 — **구간이 시작하는 좌표**에 그 구간의 계단값을 꽂는다.
+ * 계단을 이 마디들을 지나는 꺾은선으로 바꾸면 경계의 점프가 사라진다.
+ *
+ * 왜 구간 **중앙**이 아니라 시작인가 — 중앙 앵커(=계단값의 평균을 보존하는 판본)는 각 구간의
+ * 윗절반에서 계단보다 **커진다**. 85에서 0.3이던 감쇠가 0.4(+33%)가 되고, 그 여유분이 고스란히
+ * "무료 플레이도 85를 넘는 힘"으로 갔다 — 그 판본으로 QA 360판을 돌리니 성취 S가 87.5% →
+ * 96.7%로 **악화**됐다. 시작 앵커는 모든 좌표에서 계단 이하라 이 방향의 사고가 원천적으로 없다.
+ * 대가는 30~70 구간이 5~19% 느려지는 것이고(최소투입 완주 학업 40.7 → 35.3, 등급은 C 그대로),
+ * 그 값은 achievementReach.test.ts가 착지값으로 잠근다.
+ */
+const DIMINISHING_NODES = DIMINISHING_TIERS.map((t, i) => ({
+  x: i === 0 ? 0 : DIMINISHING_TIERS[i - 1].upTo,
+  y: t.factor,
+}));
+
+/**
+ * T29: 계단이 아니라 연속(구간선형) 곡선.
+ *
+ * 왜 바꿨나 — 계단이면 경계에서 성장률이 한 번에 40% 떨어진다(85에서 0.5→0.3). 그 절벽이
+ * 아래의 최저 보장 절벽과 겹치는 지점이 정확히 85였고, 그래서 **7년을 어떻게 살든 성취
+ * bestAxis가 85 언저리 한 점으로 빨려 들어갔다**(360판 중 89판이 84.8~85.35, 그 중 33판이
+ * 소수점까지 똑같은 84.9 — 그리고 그 89판은 **전부 특기 축**이었다).
+ */
+export function getDiminishingReturn(value: number): number {
+  const n = DIMINISHING_NODES;
+  if (value <= n[0].x) return n[0].y;
+  for (let i = 1; i < n.length; i++) {
+    if (value <= n[i].x) {
+      const t = (value - n[i - 1].x) / (n[i].x - n[i - 1].x);
+      return n[i - 1].y + t * (n[i].y - n[i - 1].y);
+    }
+  }
+  return n[n.length - 1].y;
+}
+
+// ===== 무료 활동 소프트캡 (v5.2) =====
+// 돈 안 드는 활동은 이 스탯부터 ×0.1. "유료 = 고구간 통로"라는 유·무료 갈림의 핵심이라
+// **유지한다**. 예전엔 applyActivity 안에 80과 0.1이 리터럴로 박혀 있었는데, 아래 최저 보장이
+// 이 좌표를 파생해 쓰므로(바닥이 캡을 이기면 갈림이 지워진다) 상수로 꺼냈다.
+export const FREE_SOFTCAP_STAT = 80;
+export const FREE_SOFTCAP_FACTOR = 0.1;
+
+// ===== 성장 최저 보장 =====
+// 어떤 활동이든 baseValue의 이 비율만큼은 오른다 — 감쇠·피로를 전부 맞아도 "했는데 아무 일도
+// 안 일어났다"는 주를 만들지 않기 위한 바닥.
+export const GROWTH_FLOOR_RATIO = 0.1;
+// 테이퍼 구간: 70(감쇠가 0.5로 꺾이는 마디)에서 시작해 **무료 소프트캡이 켜지는 좌표(80)**에서 0.
+//
+// 왜 80에서 끝나야 하는가 — 바닥은 감쇠·피로·소프트캡을 **하나도 안 맞는** 상수 수입이다
+// (baseValue×0.1 = 슬롯당 0.15/주). 그래서 바닥이 살아 있는 구간에서는 무료 3슬롯이 0.45/주를
+// 벌고, 이건 고등 학업 자연감쇠 0.3/주는 물론 특기 감쇠 0.1/주를 압도한다. 예전 판본은 바닥을
+// 85까지 끌고 갔고(절벽으로 끊었고), 그래서 **무슨 플레이를 하든 특기가 85로 빨려 들어갔다**.
+// 반대로 바닥을 85 **위로** 늘리는 판본(70→95 테이퍼)은 무료 플레이에 85를 넘을 힘을 줘서
+// 성취 S를 87.5% → 96.7%로 악화시켰다(360판 실측). 바닥이 캡을 넘겨 살면 안 된다는 뜻이다.
+export const GROWTH_FLOOR_TAPER_FROM = DIMINISHING_TIERS[2].upTo;   // 70
+export const GROWTH_FLOOR_TAPER_TO = FREE_SOFTCAP_STAT;             // 80
+
+/** 스탯 x에서의 최저 보장 비율. 70 이하 전액 → 80에서 0으로 선형 테이퍼. */
+export function growthFloorRatio(stat: number): number {
+  if (stat <= GROWTH_FLOOR_TAPER_FROM) return GROWTH_FLOOR_RATIO;
+  if (stat >= GROWTH_FLOOR_TAPER_TO) return 0;
+  const span = GROWTH_FLOOR_TAPER_TO - GROWTH_FLOOR_TAPER_FROM;
+  return GROWTH_FLOOR_RATIO * (GROWTH_FLOOR_TAPER_TO - stat) / span;
 }
 
 // ===== 멘탈 회복 감쇠 =====
@@ -205,7 +274,12 @@ export function getRoutineBonus(weeks: number): number {
 }
 
 // ===== 활동 적용 =====
-function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0): void {
+/**
+ * 활동 1회의 효과 적용. **export는 계약이다** — 성장 곡선 g(x)를 재려면 이 함수를 그 스탯에서
+ * 직접 불러야 한다. processWeek로 감싸 재면 학교 수업·자연 감쇠·피로 회복이 섞여 곡선의
+ * 연속성을 증명할 수 없다(activityGrowthCurve.test.ts가 84.99/85.01을 여기로 직접 넣는다).
+ */
+export function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0): void {
   const activity = ACTIVITIES.find(a => a.id === activityId);
   if (!activity) return;
 
@@ -265,15 +339,21 @@ function applyActivity(state: GameState, activityId: string, log: WeekLog, routi
       if (priorGain > 2) value *= 0.45;       // 3회째+ → 45%
       else if (priorGain > 0.5) value *= 0.7;  // 2회째 → 70%
 
-      // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감
-      if (getActivityCost(activity, state.year) === 0 && state.stats[statKey] >= 80) {
-        value *= 0.1;
+      // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감 (유·무료 갈림의 핵심)
+      if (getActivityCost(activity, state.year) === 0 && state.stats[statKey] >= FREE_SOFTCAP_STAT) {
+        value *= FREE_SOFTCAP_FACTOR;
       }
     }
 
-    // 최저 보장 — v6.2: 85+ 구간은 최저 보장 없음 (고구간은 진짜 어려워야 함)
-    if (baseValue > 0 && state.stats[statKey] < 85 && value < baseValue * 0.1) {
-      value = baseValue * 0.1;
+    // 최저 보장 — v6.2는 85에서 **절벽으로** 끊었다("고구간은 진짜 어려워야 함"). 방향은 맞았지만
+    // 절벽이라 85 바로 아래에서는 보장이 감쇠·소프트캡을 전부 이기고(무료 3슬롯 0.45/주 > 고등
+    // 감쇠 0.3/주), 바로 위에서는 못 이겼다(0.15/주 < 0.3/주). 그 사이에 평형점이 **한 점으로**
+    // 박혀서 7년을 어떻게 살든 성취가 85로 빨려 들어갔다. T29에서 70→80 테이퍼로 바꿨다
+    // (growthFloorRatio 주석이 왜 80인지 설명한다). 적용 **순서는 그대로**다 — 소프트캡 뒤에
+    // 바닥. 뒤집으면 바닥까지 ×0.1을 맞아 무료 활동이 80에서 딱 멈추는 새 절벽이 생긴다.
+    const floorValue = baseValue * growthFloorRatio(state.stats[statKey]);
+    if (baseValue > 0 && value < floorValue) {
+      value = floorValue;
     }
 
     // v6.2: 주당 스탯 성장 상한 (+2/주) — 활동값 하향과 함께 조정
