@@ -105,17 +105,17 @@ describe('배선 — 타이틀로 나가는 두 길은 세이브 처리가 다�
   // 양성 짝: 한쪽만 두면 "둘 다 지운다"·"둘 다 남긴다"가 통과한다.
   it('exitToTitle은 세이브를 남긴다 (엔딩 다시 보기의 근거)', () => {
     useGameStore.getState().startGame('male', PARENTS);
-    expect(loadFromStorage(), '전제: 시작하면 세이브가 있다').not.toBeNull();
+    expect(loadFromStorage().kind, '전제: 시작하면 세이브가 있다').toBe('ok');
     useGameStore.getState().exitToTitle();
     expect(useGameStore.getState().state).toBeNull();
-    expect(loadFromStorage(), 'exitToTitle이 세이브를 지우면 그 판의 엔딩은 두 번 다시 못 본다').not.toBeNull();
+    expect(loadFromStorage().kind, 'exitToTitle이 세이브를 지우면 그 판의 엔딩은 두 번 다시 못 본다').toBe('ok');
   });
 
   it('resetGame은 세이브를 지운다', () => {
     useGameStore.getState().startGame('male', PARENTS);
     useGameStore.getState().resetGame();
     expect(useGameStore.getState().state).toBeNull();
-    expect(loadFromStorage()).toBeNull();
+    expect(loadFromStorage().kind).toBe('none');
   });
 
   it('exitToTitle은 직전 판 설정도 남긴다 (같은 집으로 되돌아올 수 있다)', () => {

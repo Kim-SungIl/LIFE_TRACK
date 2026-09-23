@@ -125,9 +125,10 @@ describe('나가기는 세이브를 남긴다', () => {
 
     expect(useGameStore.getState().state, '나갔으면 App이 타이틀을 그린다').toBeNull();
     const save = loadFromStorage();
-    expect(save, '세이브를 지우면 그 판이 사라진다 — 라벨이 거짓말이 된다').not.toBeNull();
-    expect(save!.state.year).toBe(2);
-    expect(save!.state.week).toBe(10);
+    expect(save.kind, '세이브를 지우면 그 판이 사라진다 — 라벨이 거짓말이 된다').toBe('ok');
+    const data = save.kind === 'ok' ? save.data : null;
+    expect(data!.state.year).toBe(2);
+    expect(data!.state.week).toBe(10);
   });
 
   it('닫기는 아무것도 바꾸지 않는다 (음성 짝)', () => {
@@ -135,7 +136,7 @@ describe('나가기는 세이브를 남긴다', () => {
     pressBack();
     fireEvent.click(screen.getByText('닫기'));
     expect(useGameStore.getState().state, '닫기가 게임을 끝내면 안 된다').not.toBeNull();
-    expect(loadFromStorage()).not.toBeNull();
+    expect(loadFromStorage().kind).toBe('ok');
   });
 });
 

@@ -24,37 +24,70 @@ beforeEach(() => {
   useGameStore.setState({ state: null });
 });
 
-describe('loadFromStorage 버전 게이트', () => {
-  it('세이브가 없으면 null', () => {
-    expect(loadFromStorage()).toBeNull();
+describe('loadFromStorage 버전 게이트 — 없음 / 정상 / 못 읽음을 구별한다', () => {
+  // **`null` 하나로 접으면 "세이브가 없다"와 구별이 안 된다.** 그러면 타이틀은 이어하기를
+  // 안 그리는 것으로 끝나고, 플레이어는 자기 저장이 왜 사라졌는지 못 듣는다 (T36).
+  it('세이브가 없으면 none', () => {
+    expect(loadFromStorage()).toEqual({ kind: 'none' });
   });
 
   it('현재 버전 세이브를 그대로 돌려준다', () => {
     putSave({ version: CURRENT_SAVE_VERSION, state: serializedState() });
-    expect(loadFromStorage()?.version).toBe(CURRENT_SAVE_VERSION);
+    const r = loadFromStorage();
+    expect(r.kind).toBe('ok');
+    expect(r.kind === 'ok' && r.data.version).toBe(CURRENT_SAVE_VERSION);
   });
 
   it('버전 스탬프가 없거나 손상된 세이브는 v1로 정규화해 살린다', () => {
     putSave({ state: serializedState() });
-    expect(loadFromStorage()?.version).toBe(1);
+    const r1 = loadFromStorage();
+    expect(r1.kind === 'ok' && r1.data.version).toBe(1);
     putSave({ version: 'abc', state: serializedState() });
-    expect(loadFromStorage()?.version).toBe(1);
+    const r2 = loadFromStorage();
+    expect(r2.kind === 'ok' && r2.data.version).toBe(1);
   });
 
   it('미래 버전(다운그레이드) 세이브는 거부한다 — 미지의 구조를 구버전 step으로 못 다룬다', () => {
     putSave({ version: CURRENT_SAVE_VERSION + 1, state: serializedState() });
-    expect(loadFromStorage()).toBeNull();
+    expect(loadFromStorage()).toEqual({ kind: 'unreadable', reason: 'future-version' });
   });
 
-  it('state가 없거나 JSON이 깨진 세이브는 null', () => {
-    putSave({ version: 1 });
-    expect(loadFromStorage()).toBeNull();
+  it('미래 버전은 읽기만으로 지우지 않는다 — 최신 빌드에서는 그대로 열리는 데이터다', () => {
+    putSave({ version: CURRENT_SAVE_VERSION + 1, state: serializedState() });
+    loadFromStorage();
+    expect(localStorage.getItem(SAVE_KEY),
+      '읽는 것만으로 지우면 기기를 옮긴 사람의 판이 증발한다').not.toBeNull();
+  });
+
+  it('JSON이 잘린 세이브는 truncated — 없는 것처럼 굴지 않는다', () => {
+    const full = JSON.stringify({ version: CURRENT_SAVE_VERSION, state: serializedState(), savedAt: '2026-01-01T00:00:00Z' });
+    localStorage.setItem(SAVE_KEY, full.slice(0, Math.floor(full.length * 0.8)));
+    expect(loadFromStorage()).toEqual({ kind: 'unreadable', reason: 'truncated' });
     localStorage.setItem(SAVE_KEY, '{broken');
-    expect(loadFromStorage()).toBeNull();
+    expect(loadFromStorage()).toEqual({ kind: 'unreadable', reason: 'truncated' });
+  });
+
+  it('파싱은 되는데 진행 내용이 없으면 no-state', () => {
+    putSave({ version: 1 });
+    expect(loadFromStorage()).toEqual({ kind: 'unreadable', reason: 'no-state' });
   });
 });
 
 describe('loadSavedGame 마이그레이션 와이어링', () => {
+  // 못 읽는 세이브는 **열리지 않아야** 한다 — 사유를 들고 오는 것과 여는 것은 별개다.
+  it.each([
+    ['절단', () => {
+      const full = JSON.stringify({ version: CURRENT_SAVE_VERSION, state: serializedState(), savedAt: 'x' });
+      localStorage.setItem(SAVE_KEY, full.slice(0, Math.floor(full.length * 0.8)));
+    }],
+    ['미래 버전', () => putSave({ version: CURRENT_SAVE_VERSION + 1, state: serializedState() })],
+  ])('%s 세이브로는 게임이 열리지 않는다', (_label, inject) => {
+    inject();
+    expect(useGameStore.getState().loadSavedGame()).toBe(false);
+    expect(useGameStore.getState().state, '깨진 state가 화면에 올라가면 자동저장이 그걸 디스크에 다시 쓴다').toBeNull();
+  });
+
+
   it('구세이브(레거시 필드)가 로드 경로에서 정규화되어 들어온다', () => {
     const legacy = serializedState();
     legacy.parents = ['gene', 'info'] as unknown as GameState['parents'];
