@@ -24,7 +24,7 @@ import {
 } from '../activities';
 import { createInitialState, processWeek } from '../gameEngine';
 import { SHOP_ITEMS } from '../shopSystem';
-import type { Activity, GameState } from '../types';
+import type { Activity, GameState, StatKey } from '../types';
 import { getWeeklyIncome } from '../parentModifiers';
 import { makeState } from '../../test/fixtures';
 
@@ -397,9 +397,23 @@ describe('학년 해금 6종 — 설계 의도 관계', () => {
     expect(paid2.skipped, '유료 2칸이 실행되지 못하고 밀린 주 (돈·게이트 무관하게 전부)').toBe(0);
     expect(paid2.talent, '2칸: 유료가 무료보다 높아야 한다').toBeGreaterThan(free2.talent);
 
-    // 슬롯을 더 부으면 유료의 우위가 커져야 한다. 격차가 줄어들면 "돈 낼 이유"가 슬롯 수에
-    // 반비례한다는 뜻이라, 함정이 형태만 바뀐 것이다.
-    expect(paid2.talent - free2.talent).toBeGreaterThan(paid1.talent - free1.talent);
+    // T28로 이 단언의 전제가 바뀌었다 — 원래는 "슬롯을 더 부으면 유료의 우위가 커진다"였다.
+    // 이 테스트의 루틴 2칸이 **학원+헬스**다. T28이 그 둘의 피로를 7+7 → 4+3으로 낮추자
+    // 매주 얹히던 피로가 14 → 7로 반이 됐고, 그러자 **무료 2칸도 주당 특기 상한(+2)에 닿는다.**
+    // 예전엔 무료 2칸만 피로에 눌려 캡 아래에 있었기 때문에 슬롯을 늘릴수록 격차가 벌어졌던 것이다.
+    //
+    // 18주·시드 42·wealth 실측:
+    //   학원 f7 · 헬스 f7 (T24) → 1칸 43.30/40.10 (격차 3.20) · 2칸 58.40/54.90 (격차 3.50)
+    //   학원 f4 · 헬스 f3 (T28) → 1칸 52.30/46.30 (격차 6.00) · 2칸 59.00/58.40 (격차 0.60)
+    //
+    // 2칸 격차가 눌린 건 **상한의 작용이지 함정이 아니다**(T24 자신이 "값 인상은 눌린 상태에서만
+    // 먹힌다"고 적었다 — 여기서는 무료 쪽이 눌림에서 풀린 것이다). 그리고 T24가 막으려던 진짜
+    // 함정(2칸에서 무료가 이김: 52.6 vs 54.9)은 바로 위 `paid2 > free2`가 그대로 잡는다.
+    // 그래서 잠그는 대상을 바꾼다 — **캡이 물리지 않는 1칸 배치에서 돈 낼 이유가 남아 있는가.**
+    // 루틴 피로가 T24 수준으로 되돌아가면 이 격차가 3.20으로 내려앉아 여기서 걸린다.
+    const T24_ONE_SLOT_GAP = 3.2;   // 학원 f7 · 헬스 f7이던 시절의 1칸 격차 (실측)
+    expect(paid1.talent - free1.talent, '1칸 격차 — 루틴 피로가 오르면 여기로 돌아온다')
+      .toBeGreaterThan(T24_ONE_SLOT_GAP);
   });
 
   it('실기 레슨은 예체능 레슨의 상위다 — 특기도 가격도 위', () => {
@@ -434,6 +448,128 @@ describe('학년 해금 6종 — 설계 의도 관계', () => {
       .sort();
     expect(freeUnlocks).toEqual(['free-semester', 'mentoring', 'night-study']);
   });
+});
+
+// ── 유료 상위 규약 (T24 → T28) ───────────────────────────────────────────────────────────
+// "유료는 싼 대안의 상위 — 효율↑ 피로↓를 돈으로 산다." 원형은 독서실(academic 2.0/f4/3만)과
+// 독학(1.5/f5/무료)이고, T24가 예체능 레슨에서 이 규약이 깨진 걸 잡았다(f6 = 창작 f3의 2배라
+// 18주 누적에서 무료가 이겼다). 위의 짝 테스트 둘은 그 두 짝을 개별로 잠근다.
+//
+// T28은 남은 두 짝(학업·운동)을 **표 하나**로 잠근다. 개별 it을 더 쓰지 않는 이유는 세 번째 짝이
+// 생겼을 때 추가할 자리가 한 곳이어야 하기 때문이다.
+//
+// 술어는 T24가 예체능에 쓴 것 그대로 — **유료의 피로가 대안보다 1칸 넘게 높지 않다.**
+// (독서실 −1 · 예체능 +1 · 학원 0 · 헬스 +1 로 넷 다 이 안에 든다.)
+// 피로 "리터럴"도 양쪽 다 잠근다. 관계만 걸면 둘을 나란히 올려 같은 함정을 되살릴 수 있고,
+// 한쪽만 걸면 반대쪽을 움직여 피할 수 있다(T24에서 실제로 지적된 구멍).
+const MAX_FATIGUE_PREMIUM = 1;
+
+interface PaidUpgradePair {
+  paid: string;        // 비싼 쪽
+  alt: string;         // 같은 자리를 놓고 다투는 싼 대안
+  paidFatigue: number; // 리터럴 잠금 (양쪽 다)
+  altFatigue: number;
+  costYear: number;    // 실효 가격을 비교할 학년 — yearlyCost가 있는 활동이 있어 필요하다
+  otherSlot: string;   // 누적 대조에서 고정할 나머지 루틴 슬롯
+  // 짝을 어느 슬롯에 놓는지까지 스펙이다. 루틴은 슬롯2 → 슬롯3 순으로 적용되고 피로 배율은
+  // **적용 시점의** state.fatigue/health를 읽으므로, 같은 두 활동도 순서를 바꾸면 결과가 달라진다.
+  slotIndex: 2 | 3;
+  winStat: StatKey;    // 돈을 낸 대가로 앞서야 하는 축
+  rationale: string;
+}
+
+// 시드·부모·주말을 고정한 48주 대조의 조건. **주말을 rest로 두면 안 된다** — 피로가 매주 −10으로
+// 상쇄돼 f7과 f3의 결과가 소수점까지 같아지고(실측), 이 테스트는 무엇을 바꿔도 초록이 된다.
+const CUMULATIVE_WEEKS = 48;
+const CUMULATIVE_SEED = 42;
+const CUMULATIVE_WEEKEND = ['self-study', 'club'];
+const CUMULATIVE_VACATION = ['rest', 'self-study', 'rest'];
+
+const PAID_UPGRADE_PAIRS: PaidUpgradePair[] = [
+  {
+    paid: 'academy', alt: 'internet-lecture', paidFatigue: 4, altFatigue: 4, costYear: 6,
+    otherSlot: 'light-exercise', slotIndex: 2, winStat: 'social',
+    rationale: '학원(1.5 + social 0.4 / 3만)은 인강(1.5 / 1만)의 상위 — 학업이 같으니 3배를 받는 근거는 '
+      + 'social과 "덜 지친다"뿐이다. f7이던 때는 피로만 +3이라 7년 96시드에서 수능점수 89.51 → 85.23 · '
+      + 'SKY 9/96 → 0/96이었다(482만을 더 쓰고).',
+  },
+  {
+    paid: 'gym', alt: 'light-exercise', paidFatigue: 3, altFatigue: 2, costYear: 6,
+    otherSlot: 'internet-lecture', slotIndex: 3, winStat: 'health',
+    rationale: '헬스/PT(health 2 + mental 0.5 / 2만)는 가벼운 운동(health 1.5 + mental 1 / 무료)의 상위 — '
+      + '효과 합은 2.5로 같고 무게가 체력 쪽으로 옮겨간 게 산 것이다. f7이던 때는 피로가 3.5배라 '
+      + '수능점수 89.51 → 84.16 · SKY 9/96 → 0/96이었다.',
+  },
+];
+
+const sumEffects = (a: Activity): number =>
+  Object.values(a.effects).reduce((t, v) => t + (v ?? 0), 0);
+
+describe('유료 상위 규약 — 돈을 내면 피로가 따라 오르지 않는다 (T24·T28)', () => {
+  it('짝 표가 비어 있지 않다 — it.each는 빈 배열이면 0개 테스트로 조용히 통과한다', () => {
+    // 길이를 먼저 못 박지 않으면 표를 통째로 비워도 아래 it.each가 "0 tests"로 초록이 된다.
+    expect(PAID_UPGRADE_PAIRS).toHaveLength(2);
+    for (const p of PAID_UPGRADE_PAIRS) {
+      expect(p.rationale.length, `${p.paid} rationale — 왜 이 값인지가 빠지면 다음 사람이 되돌린다`)
+        .toBeGreaterThan(50);
+    }
+  });
+
+  it.each(PAID_UPGRADE_PAIRS)(
+    '$paid는 $alt의 상위다 — 더 비싸고, 효과 합은 낮지 않고, 피로는 1칸 넘게 높지 않다',
+    ({ paid, alt, paidFatigue, altFatigue, costYear }) => {
+      const p = pick(paid);
+      const a = pick(alt);
+      // 비교값은 전부 카탈로그에서 읽는다 — 양쪽을 스펙에 적으면 표가 표를 검사하는 자기참조가 된다.
+      expect(getActivityCost(p, costYear), `${paid} 실효가격`)
+        .toBeGreaterThan(getActivityCost(a, costYear));
+      expect(p.slots, `${paid} 슬롯`).toBe(a.slots);          // 슬롯이 다르면 같은 자리의 대안이 아니다
+      expect(sumEffects(p), `${paid} 효과 합`).toBeGreaterThanOrEqual(sumEffects(a));
+      expect(p.fatigue, `${paid} 피로 리터럴`).toBe(paidFatigue);
+      expect(a.fatigue, `${alt} 피로 리터럴`).toBe(altFatigue);
+      expect(p.fatigue - a.fatigue, `${paid} 피로 프리미엄`).toBeLessThanOrEqual(MAX_FATIGUE_PREMIUM);
+    },
+  );
+
+  it.each(PAID_UPGRADE_PAIRS)(
+    `$paid를 ${CUMULATIVE_WEEKS}주 돌리면 $alt를 산 축에서 앞서고 무관한 축을 갉지 않는다`,
+    ({ paid, alt, otherSlot, slotIndex, winStat }) => {
+      // 진짜 계약. 수치 부등호(학원은 social이 +0.4 더 있다)만 보면 유료가 이기는 것처럼 보이지만,
+      // 피로는 getFatigueModifier로 그 주의 **모든** 양수 성장에 곱해지고 tired/burnout 게이트를
+      // 부르기 때문에 누적에서는 뒤집힐 수 있었다. f7이던 때 실측(48주·시드 42·wealth):
+      //   헬스 f7  학업 80.8 (무료 84.4) · 지침 17주 (무료 0)
+      //   학원 f7  학업 81.6 (인강 84.4) · 지침 10주 (인강 0)
+      // 지금은 학원 f4가 인강과 학업·체력·멘탈·특기가 소수점까지 같고 관계만 24.4 → 28.2로 앞선다.
+      //
+      // 부모를 wealth로 두는 건 돈을 변수에서 빼기 위해서다. 일반 가정이면 유료가 스킵돼
+      // "돈이 없어 진 것"과 "돌았는데 진 것"이 구별되지 않는다 — 그래서 스킵 0을 먼저 단언한다.
+      const play = (varied: string) => {
+        let s = createInitialState('male', ['wealth', 'wealth'], { rngSeed: CUMULATIVE_SEED });
+        let skipped = 0;
+        for (let i = 0; i < CUMULATIVE_WEEKS; i++) {
+          s.routineSlot2 = slotIndex === 2 ? varied : otherSlot;
+          s.routineSlot3 = slotIndex === 2 ? otherSlot : varied;
+          s.weekendChoices = CUMULATIVE_WEEKEND;
+          s.vacationChoices = CUMULATIVE_VACATION;
+          s = processWeek(s);
+          skipped += (s.weekLog?.skipped ?? []).length;
+        }
+        return { stats: s.stats, skipped };
+      };
+      const paidRun = play(paid);
+      const altRun = play(alt);
+      expect(paidRun.skipped, `${paid}가 실행되지 못하고 밀린 슬롯`).toBe(0);
+      expect(altRun.skipped, `${alt}가 실행되지 못하고 밀린 슬롯`).toBe(0);
+
+      // ① 돈을 낸 축에서는 이긴다
+      expect(paidRun.stats[winStat], `${paid} vs ${alt} — ${winStat}`)
+        .toBeGreaterThan(altRun.stats[winStat]);
+      // ② 그 대가로 **무관한 축**(같은 학업 슬롯이 돌린 학업)을 갉아먹지 않는다.
+      //    f7 회귀는 여기서 잡힌다 — 피로 배율은 축을 가리지 않는다.
+      expect(paidRun.stats.academic, `${paid} vs ${alt} — 학업(피로 배율이 갉는 축)`)
+        .toBeGreaterThanOrEqual(altRun.stats.academic);
+    },
+  );
 });
 
 describe('입시 설명회 — 상점 아이템 수치 잠금', () => {

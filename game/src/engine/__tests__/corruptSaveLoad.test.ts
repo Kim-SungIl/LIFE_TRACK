@@ -95,7 +95,7 @@ describe('손상된 세이브 — 던지지 않고 false를 낸다', () => {
   it('타이틀이 읽는 경로(loadFromStorage)는 손상 세이브에서도 안전하다', () => {
     seed({ parents: 'wealth' });
     expect(() => loadFromStorage()).not.toThrow();
-    expect(loadFromStorage()).not.toBeNull();
+    expect(loadFromStorage().kind).toBe('ok');
   });
 });
 
@@ -105,7 +105,8 @@ describe('복구 — 새 게임이 손상 세이브를 덮어쓴다', () => {
     expect(useGameStore.getState().loadSavedGame()).toBe(false);
 
     useGameStore.getState().startGame('female', ['strict', 'emotional'], {});
-    const after = loadFromStorage()!.state as GameState;
+    const read = loadFromStorage();
+    const after = (read.kind === 'ok' ? read.data.state : null) as GameState;
     expect(Array.isArray(after.parents), '새 판이 손상 세이브를 덮어써야 복구가 끝난다').toBe(true);
 
     useGameStore.setState({ state: null });

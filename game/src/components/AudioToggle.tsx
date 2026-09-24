@@ -17,9 +17,21 @@ import {
   getAudioSettings, setMuted, setBgmEnabled, subscribeAudioSettings,
 } from '../audio/audioEngine';
 import { playSfx } from '../audio/sfx';
+import { hitArea } from './touchTarget';
+
+// 24×20.8이었다 — 가로는 AA(24)에 닿는데 세로가 3.2px 모자랐다.
+// 아이콘·패딩은 그대로 두고 `hitArea`가 박스만 24로 올린다(음수 마진으로 자리 상쇄).
+//
+// 되돌릴 자리를 상수로 두지 않고 **계산한다** — 타이틀 화면의 토글은 `position:absolute`라
+// 가운데 정렬로 흡수되지 않고, 상쇄가 0.6px만 틀려도 아이콘이 그만큼 내려앉는다.
+const ICON_PAD = 4;
+const ICON_FONT_REM = 0.8;
+/** 넓히기 전 바깥 상자 = 글자 상자(0.8rem × lineHeight 1) + 상하 패딩. 실측 20.8px. */
+const ICON_BOX = ICON_FONT_REM * 16 + ICON_PAD * 2;
 
 const ICON_STYLE: React.CSSProperties = {
-  fontSize: '0.8rem', lineHeight: 1, padding: 4, cursor: 'pointer',
+  ...hitArea('y', ICON_BOX),
+  fontSize: `${ICON_FONT_REM}rem`, lineHeight: 1, padding: ICON_PAD, cursor: 'pointer',
   color: 'var(--text-secondary)',
 };
 

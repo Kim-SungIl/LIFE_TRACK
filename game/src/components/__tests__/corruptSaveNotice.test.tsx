@@ -16,12 +16,25 @@ vi.mock('../../engine/assetPrefetch', async (importOriginal) => ({
 }));
 
 import { TitleScreen } from '../TitleScreen';
+import { SAVE_NOTICE_MESSAGE } from '../saveNotice';
 import { useGameStore } from '../../engine/store';
 import { createInitialState } from '../../engine/gameEngine';
 import { CURRENT_SAVE_VERSION } from '../../engine/stateMigration';
 import { clearArchive } from '../../engine/archive';
 
 const KEY = 'lifetrack_save';
+
+/** 사유 문구의 첫 줄 — 어느 사유인지를 화면에서 구별하는 지문. 문구는 코드에서 파생한다. */
+function firstLine(kind: keyof typeof SAVE_NOTICE_MESSAGE): string {
+  return SAVE_NOTICE_MESSAGE[kind].split('\n')[0];
+}
+
+/** 정상 세이브 한 판을 문자열로 — 절단 주입은 이걸 잘라서 쓴다. */
+function savePayload(version = CURRENT_SAVE_VERSION): string {
+  const s = JSON.parse(JSON.stringify(createInitialState('male', ['wealth', 'info'], { rngSeed: 5 })));
+  Object.assign(s, { year: 2, week: 10 });
+  return JSON.stringify({ version, state: s, savedAt: new Date().toISOString() });
+}
 
 function seed(patch: Record<string, unknown>): void {
   const s: Record<string, unknown> = JSON.parse(JSON.stringify(
@@ -117,5 +130,93 @@ describe('손상 세이브 — 타이틀이 사실대로 말한다', () => {
     render(<TitleScreen />);
     fireEvent.click(screen.getByText('엔딩 다시 보기'));
     expect(screen.getByText('이 저장을 열 수 없어요')).toBeTruthy();
+  });
+});
+
+// ===== T36 — 못 읽는 세이브(절단·미래 버전)도 사실대로 말한다 =====
+//
+// 구조 손상 14종은 이미 안내가 떴는데 이 둘만 **조용히 사라졌다**(Chromium 주입 실측:
+// 이어하기 버튼 소멸 + 안내 0건 + 콘솔 0건). 둘은 loadFromStorage가 `null`로 접던 갈래라
+// savedData가 없고, 그래서 **버튼 클릭을 기다리는 안내는 영원히 안 뜬다** — 렌더가 곧 안내다.
+describe('못 읽는 세이브 — 타이틀이 렌더만으로 말한다', () => {
+  it('절단된 세이브: 누를 것도 없이 안내가 떠 있다', () => {
+    const full = savePayload();
+    localStorage.setItem(KEY, full.slice(0, Math.floor(full.length * 0.8)));
+    render(<TitleScreen />);
+    expect(screen.queryByText('이어하기'), '전제: 못 읽는 세이브는 이어하기 버튼이 없다').toBeNull();
+    expect(screen.getByText('이 저장을 열 수 없어요'),
+      '침묵하면 플레이어는 자기 저장이 왜 사라졌는지 영영 못 듣는다').toBeTruthy();
+    expect(screen.getByText(new RegExp(firstLine('truncated')))).toBeTruthy();
+    expect(screen.queryByText(new RegExp(firstLine('future-version'))),
+      '사유가 뒤바뀌면 안내가 거짓말이 된다').toBeNull();
+  });
+
+  it('미래 버전 세이브: 안내가 뜨고, 그 사유를 말한다', () => {
+    localStorage.setItem(KEY, savePayload(CURRENT_SAVE_VERSION + 1));
+    render(<TitleScreen />);
+    expect(screen.getByText('이 저장을 열 수 없어요')).toBeTruthy();
+    expect(screen.getByText(new RegExp(firstLine('future-version')))).toBeTruthy();
+    expect(screen.queryByText(new RegExp(firstLine('truncated')))).toBeNull();
+  });
+
+  it('미래 버전 세이브를 안내하는 동안 **지우지 않는다** (사용자가 누를 때만 지운다)', () => {
+    localStorage.setItem(KEY, savePayload(CURRENT_SAVE_VERSION + 1));
+    render(<TitleScreen />);
+    expect(localStorage.getItem(KEY),
+      '다른 기기·최신 빌드에서는 열리는 세이브다 — 읽었다고 지우면 그 판이 증발한다').not.toBeNull();
+    fireEvent.click(screen.getByText('지우고 새로 시작'));
+    expect(localStorage.getItem(KEY), '누르면 지워져야 막다른 길이 아니다').toBeNull();
+  });
+
+  it('닫기는 못 읽는 세이브도 남긴다 (백업을 뜨고 싶을 수 있다)', () => {
+    const full = savePayload();
+    localStorage.setItem(KEY, full.slice(0, Math.floor(full.length * 0.8)));
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('닫기'));
+    expect(localStorage.getItem(KEY)).not.toBeNull();
+    expect(screen.queryByText('이 저장을 열 수 없어요')).toBeNull();
+  });
+
+  it('절단 세이브도 "지우고 새로 시작"으로 지워진다', () => {
+    const full = savePayload();
+    localStorage.setItem(KEY, full.slice(0, Math.floor(full.length * 0.8)));
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('지우고 새로 시작'));
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(screen.getByText('새 게임')).toBeTruthy();
+  });
+
+  // 음성 짝 둘 — 상시 뜨는 경고는 경고가 아니다.
+  it('멀쩡한 세이브에서는 렌더만으로 안내가 안 뜬다', () => {
+    seed({});
+    render(<TitleScreen />);
+    expect(screen.queryByText('이 저장을 열 수 없어요')).toBeNull();
+    expect(screen.getByText('이어하기')).toBeTruthy();
+  });
+
+  it('세이브가 아예 없으면 안내가 안 뜬다 (처음 온 사람)', () => {
+    render(<TitleScreen />);
+    expect(screen.queryByText('이 저장을 열 수 없어요'),
+      '첫 플레이어에게 손상 안내를 띄우면 그건 그냥 버그다').toBeNull();
+    expect(screen.queryByText('이어하기')).toBeNull();
+  });
+
+  // 못 읽는 세이브는 savedData가 null이라 덮어쓰기 확인을 건너뛸 수 있었다 —
+  // 미래 버전 세이브에는 그게 곧 "말없는 삭제"다.
+  it('새 게임이 미래 버전 세이브를 말없이 덮어쓰지 않는다', () => {
+    localStorage.setItem(KEY, savePayload(CURRENT_SAVE_VERSION + 1));
+    render(<TitleScreen />);
+    fireEvent.click(screen.getByText('닫기'));
+    fireEvent.click(screen.getByText('새 게임'));
+    fireEvent.click(screen.getByLabelText('남자 주인공으로 시작'));
+    fireEvent.click(screen.getByText('기억을 더듬어본다'));
+    const memories = Array.from(document.querySelectorAll('[aria-pressed]'));
+    expect(memories.length, '전제: 기억 카드가 그려졌다').toBeGreaterThan(1);
+    fireEvent.click(memories[0]);
+    fireEvent.click(memories[1]);
+    fireEvent.click(screen.getByText('그래, 그런 집이었지'));
+    expect(screen.getByText('새 게임을 시작할까요?'),
+      '확인 없이 시작하면 최신 빌드에서 열리던 판이 소리 없이 사라진다').toBeTruthy();
+    expect(localStorage.getItem(KEY), '확인 전에는 아직 그대로다').not.toBeNull();
   });
 });

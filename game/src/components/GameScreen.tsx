@@ -52,13 +52,14 @@ export function GameScreen() {
   const {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
-    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
+    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, recordWeekendPlan,
     startGame, exitToTitle,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
     setWeekendChoices: s.setWeekendChoices,
     setVacationChoices: s.setVacationChoices,
+    recordWeekendPlan: s.recordWeekendPlan,
     setRoutine: s.setRoutine,
     advanceWeek: s.advanceWeek,
     advanceFromYearEnd: s.advanceFromYearEnd,
@@ -441,6 +442,9 @@ export function GameScreen() {
             else setWeekendChoices(activities);
             // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
             setNpcActivityMap(npcChoices);
+            // "지난주처럼" 1탭 복사의 원본 — 확정 시점의 계획을 그대로 스냅샷한다.
+            // **advanceWeek 앞에 둔다**: processWeek이 클론에 실어 다음 주로 넘긴다.
+            recordWeekendPlan(activities, npcChoices);
             // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
             advanceWeek();
           }}

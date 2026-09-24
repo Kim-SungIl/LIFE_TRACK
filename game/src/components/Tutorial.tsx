@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import { STEPS } from './tutorialSteps';
+import { focusFirst, isTopLayer, popLayer, pushLayer, trapTab } from './focusTrap';
 
 interface Props {
   onComplete: () => void;
@@ -115,8 +116,67 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   const pad = 8;
   const isInteractive = current.interactive && !waitDone;
 
+  // ===== 키보드 접근성 =====
+  // 마우스로 막히는 것은 키보드로도 막고, 마우스로 통하는 것은 키보드로도 통해야 한다.
+  // 비인터랙티브 스텝은 오버레이(pointerEvents:'auto')가 뒤 화면 클릭을 전부 먹으므로
+  // Tab도 말풍선 안에 가둔다. 인터랙티브 스텝은 오버레이가 pointerEvents:'none'이라
+  // 뒤 화면을 그대로 누를 수 있으니(그게 이 스텝의 과제다) Tab도 풀어 둔다.
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const trapTabRef = useRef(true);
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    trapTabRef.current = !isInteractive;
+    onCompleteRef.current = onComplete;
+  });
+
+  // **바깥을 inert로 덮지 않는다.** 이건 모달이 아니라 뒤 UI를 가리키는 코치마크라,
+  // 배경을 접근성 트리에서 빼면 "이게 이번 주 시간표예요"가 가리키는 대상이 스크린리더에서
+  // 사라진다. 인터랙티브 스텝은 그 대상을 직접 눌러야 하는데 inert가 클릭까지 막는다.
+  // 그래서 Dialog와 달리 트랩만 쓰고 inert는 안 건다. 스택은 공유한다 —
+  // 슬롯 편집 Dialog가 위에 열렸을 때 Escape가 튜토리얼까지 건너뛰면 안 되기 때문.
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el) return;
+    const prevFocus = document.activeElement as HTMLElement | null;
+    pushLayer(el);
+    focusFirst(el);
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isTopLayer(el)) return;
+      if (e.key === 'Escape') {
+        // 건너뛰기와 같은 출구. 마지막 스텝은 건너뛰기가 없지만 onComplete가 곧 "완료"라
+        // 어느 스텝에서 눌러도 "튜토리얼을 끝낸다"로 일관된다(ever_seen까지 호출부가 세팅).
+        e.stopPropagation();
+        e.preventDefault();
+        onCompleteRef.current();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      if (!trapTabRef.current) return;
+      trapTab(el, e);
+    };
+    document.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      popLayer(el);
+      if (prevFocus?.isConnected) prevFocus.focus?.();
+    };
+  }, []);
+
+  // 포커스를 쥐고 있던 버튼이 사라지면 body로 떨어진다. 실제로 **마운트 직후에 그렇다** —
+  // 첫 렌더는 rect=null이라 중앙 폴백 카드를 그리고, rect를 측정한 뒤 말풍선으로 갈아끼운다.
+  // 스텝 이동(이전 버튼 등장/퇴장)도 같은 경로다. 트랩이 도는 스텝에서만 다시 끌어온다 —
+  // 인터랙티브 스텝은 포커스가 밖(하이라이트 대상)에 있는 게 정상이라 뺏으면 안 된다.
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el || isInteractive || !isTopLayer(el)) return;
+    if (!el.contains(document.activeElement)) focusFirst(el);
+  });
+
   return (
-    <div style={{
+    <div ref={overlayRef} tabIndex={-1} style={{
+      outline: 'none',
       position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200,
       // 인터랙티브 스텝이면 오버레이 자체는 클릭 불가, 하이라이트 영역만 통과
       pointerEvents: isInteractive ? 'none' : 'auto',
@@ -243,12 +303,19 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
               )}
             </div>
             {!isLast && (
-              <span
+              <button
+                type="button"
+                className="btn-reset"
                 onClick={onComplete}
-                style={{ fontSize: '0.7rem', color: 'var(--text-muted)', cursor: 'pointer' }}
+                style={{
+                  fontSize: '0.7rem', color: 'var(--text-muted)', cursor: 'pointer',
+                  // span일 때 38.7×14px이라 Tab으로도 못 닿고 손가락으로도 작았다.
+                  // 시각 톤(배경 없음·muted·작은 글씨)은 그대로 두고 패딩으로만 히트 영역을 키운다.
+                  padding: '6px 8px', minWidth: 24, minHeight: 24, lineHeight: 1.6,
+                }}
               >
                 건너뛰기
-              </span>
+              </button>
             )}
           </div>
         </div>

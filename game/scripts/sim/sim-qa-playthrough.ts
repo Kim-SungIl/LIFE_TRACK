@@ -326,7 +326,8 @@ function runPersona(p: Persona, seed: number): Result {
   };
 }
 
-// ===== 플레이 페르소나 (29종) — 시드 12개와 곱해 348판. 개수를 바꾸면 이 주석도 고칠 것 =====
+// ===== 플레이 페르소나 (31종) — 시드 12개와 곱해 372판. 개수를 바꾸면 이 주석도 고칠 것 =====
+// (주의: 이 주석은 T30 전까지 "29종/348판"이었는데 배열은 이미 30종이었다 — 실측으로 바로잡았다.)
 const PERSONAS: Persona[] = [
   { name: 'academic-max', label: '공부 몰빵(학업 최대화)', gender: 'male', parents: ['strict', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true },
   { name: 'social-max', label: '친구 몰빵(관계 최대화)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['club', 'club'], vacation: ['club', 'rest', 'rest'], policy: 'social', talk: true },
@@ -360,6 +361,12 @@ const PERSONAS: Persona[] = [
   { name: 'focus-siwoo', label: '시우 집중(고1 데뷔 몰빵+동행)', gender: 'male', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'siwoo', companionFocus: 'siwoo' },
   { name: 'focus-yerin', label: '예린 집중(고1 데뷔 몰빵+동행)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'yerin', companionFocus: 'yerin' },
   { name: 'all-friends-max', label: '전원 친구(관계 극한+동행 분산)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, companionSpread: true },
+  // **관계형의 진짜 최적점(T30 추가).** all-friends-max와 루틴 한 칸(club → light-exercise)만 다르다.
+  // 그 한 칸이 health 12.4 → 77.5를 가른다(6시드 실측) — 즉 이 배열은 여태 "절친을 9명 남기면서
+  // 자기도 안 부순 판"을 한 번도 밟지 않았다. 그래서 360판 전체의 절친 최대치가 (몸이 성한 판에서)
+  // 4명이었고, 그건 엔진이 5명을 못 내는 게 아니라 **하네스가 그 구간에 닿지 않은 것**이다
+  // (min-input 페르소나를 넣은 이유와 같다). 관계 엔딩 타이틀의 양성 대조군이 여기다.
+  { name: 'bond-max', label: '관계 극한+자기 관리(동행 분산·운동 1칸)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'light-exercise', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, companionSpread: true },
 
   // ===== 유료 루틴 (2026-08-09 추가) =====
   // ⚠ 해석 주의: 이 하네스는 processWeek(엔진)만 돌린다. 엔진은 잔액이 모자라면 그 슬롯을
