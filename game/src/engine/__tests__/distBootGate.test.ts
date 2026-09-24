@@ -72,11 +72,22 @@ const HEALTHY_BODY =
   `document.getElementById('root').innerHTML =` +
   ` '<h1>7년의 시간표 — 새 게임을 시작합니다</h1><button>새 게임</button>';`;
 
+/**
+ * 스크립트 한 번의 상한. 크로미움 기동 + 합성 dist 부팅 + 탐침 대기(500ms)라 평시 1~2초,
+ * CI 실측 2.1초/건이다. 180초는 "행이 걸렸다"를 판정하는 하드 킬이다.
+ */
+const SPAWN_TIMEOUT = 180_000;
+
 function run(dist: string) {
-  return spawnSync(TSX, [SCRIPT, dist], { cwd: ROOT, encoding: 'utf8', timeout: 180_000 });
+  return spawnSync(TSX, [SCRIPT, dist], { cwd: ROOT, encoding: 'utf8', timeout: SPAWN_TIMEOUT });
 }
 
-describe('브라우저 부팅 게이트가 실제로 rc를 낸다', () => {
+// **vitest 기본 5초는 이 파일에 맞지 않는다.** 각 케이스가 크로미움을 새로 띄우는데, 워크트리
+// 10개가 같은 머신에서 스위트를 동시에 돌리자 기동이 5초를 넘겨 **전원에게서 플레이크가
+// 재현됐다**(실패 목록이 회차마다 달라지고, 단독 실행은 27/27 통과). `spawnSync`는 동기라
+// vitest 타이머가 중간에 끊지 못하고 **끝난 뒤에** 5초 초과를 선고한다 — 그래서 여기 값은
+// 실제 상한인 SPAWN_TIMEOUT에서 파생시킨다. 리터럴 둘이 따로 놀면 한쪽만 고쳐진다.
+describe('브라우저 부팅 게이트가 실제로 rc를 낸다', { timeout: SPAWN_TIMEOUT + 20_000 }, () => {
   it('전제: 실행기와 스크립트가 제자리에 있다', () => {
     expect(existsSync(TSX), 'tsx가 없으면 아래 검사들이 전부 공허해진다').toBe(true);
     expect(existsSync(SCRIPT)).toBe(true);
