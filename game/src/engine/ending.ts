@@ -1,10 +1,10 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
-import { GameState, ParentStrength } from './types';
+import { GameState, NpcState, ParentStrength } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';
 import {
-  DEPARTED_NPC_ID, MIN_INTIMACY, isClosureExcluded, resolveDepartedClosure, resolveNpcClosure,
+  BEST_TIER, DEPARTED_NPC_ID, MIN_INTIMACY, isClosureExcluded, resolveDepartedClosure, resolveNpcClosure,
 } from './endingNpc';
 
 // ===== 행복 등급 =====
@@ -308,14 +308,42 @@ function bestRecallFor(state: GameState, npcId: string, excludeTexts: Set<string
   return (preferred ?? mems[0])?.recallText ?? null;
 }
 
+// "아직 이어진 사이"의 모집단 — 근황 레인(getTopNpcStories)과 관계 타이틀 게이트가 **같은 사람**을 센다.
+// 두 층이 각자 필터를 들고 있으면 화면은 "그리고 그 후"에 세 명을 적어 놓고 타이틀은 다른 집합을
+// 세는 식으로 조용히 갈라진다(#441 계열: 같은 사실을 두 화면이 각자 계산하면 양쪽 테스트가
+// 초록인 채로 갈린다). 도윤은 전출 후 상호작용이 막혀 친밀도가 영구히 바닥이라 별도 레인이고,
+// 관계를 명시적으로 닫은 런(excludeWhen)은 근황에서 침묵하는 게 맞으므로 여기서도 빠진다.
+export function connectedNpcs(state: GameState, minIntimacy: number = MIN_INTIMACY): NpcState[] {
+  return [...state.npcs]
+    .filter(n => n.met && n.id !== DEPARTED_NPC_ID && n.intimacy >= minIntimacy
+      && !isClosureExcluded(state, n.id))
+    .sort((a, b) => b.intimacy - a.intimacy);
+}
+
+// 절친 = 근황 모집단 중 BEST_TIER 이상. 그 선은 grind 소프트캡(80)의 **바깥**이라 동행·선물
+// 반복만으로는 절대 닿지 않는다 — 이벤트 보상 + 주간 감쇠(-0.2/주)를 이겨낸 유지 관리의 증거다
+// (endingNpc.ts BEST_TIER 주석). 그래서 이 수가 곧 "7년을 사람에게 썼는가"의 계량이 된다.
+export function closeFriends(state: GameState): NpcState[] {
+  return connectedNpcs(state, BEST_TIER);
+}
+
+// 관계 타이틀(T30)이 열리는 절친 수. **5는 실측에서 나온 최소 분리선이다** —
+// QA 하네스 기존 30페르소나 × 12시드 = 360판에서, 마음·몸이 성한(mental·health ≥ AXIS_WEAKNESS)
+// 판의 절친 최대치가 **4명**이었다(balanced·mental-care·poor-resilience 등 6종이 정확히 4).
+// 동행을 분산하지 않은 관계형(bond-no-spread)도 4에서 멈춘다. 반대로 동행 분산 + 매주 말걸기 +
+// 운동 한 칸을 함께 가져간 최적점(bond-max)은 6시드 전부 9명이다. 5는 그 둘 사이의 유일한 칸이고,
+// 6~9로 올려도 같은 판만 걸러지므로(분리력 동일) 더 높일 이유가 없다 — 대신 자연 감쇠로 한 명을
+// 놓친 플레이가 타이틀을 통째로 잃게 된다.
+export const BOND_MIN_FRIENDS = 5;
+
+// 타이틀 문자열은 상수로 둔다 — ACHIEVEMENT_NOTE와 같은 이유로, 화면 배선 테스트와 검증
+// 스크립트가 리터럴을 각자 베껴 들고 있으면 문구를 고쳐도 옛 문자열을 지키며 초록이 된다.
+export const BOND_TITLE = '곁에 남은 이름들';
+
 // NPC별 전용 클로저(endingNpc.ts) 우선, 미등록 id만 범용 티어 템플릿 폴백.
 // 도윤은 전출 후 친밀도가 항상 바닥이라 티어 흐름에서 빼고, 이력 게이트 별도 레인으로 끝에 1줄.
 function getTopNpcStories(state: GameState, excludeTexts: Set<string> = new Set(), limit = 3): string[] {
-  const sorted = [...state.npcs]
-    .filter(n => n.met && n.id !== DEPARTED_NPC_ID && n.intimacy >= MIN_INTIMACY
-      && !isClosureExcluded(state, n.id))
-    .sort((a, b) => b.intimacy - a.intimacy)
-    .slice(0, limit);
+  const sorted = connectedNpcs(state).slice(0, limit);
 
   const stories: string[] = [];
   for (const npc of sorted) {
@@ -359,6 +387,11 @@ export const ACHIEVEMENT_NOTE = {
   weakness: '한 축은 거의 비워둔 채였다.',
 } as const;
 
+// 축이 "부서졌다"의 두 선. 성취 노트·최상위 타이틀 게이트·관계 타이틀(T30)이 전부 이 값을 읽는다 —
+// 리터럴을 세 자리에 박아 두면 한 자리만 고쳐도 나머지가 조용히 옛 값으로 남는다(#441/#431 계열).
+export const AXIS_COLLAPSE = 10;
+export const AXIS_WEAKNESS = 20;
+
 // ===== 엔딩 산정 =====
 export function calculateEnding(state: GameState) {
   const { academic, social, talent, mental, health } = state.stats;
@@ -373,8 +406,8 @@ export function calculateEnding(state: GameState) {
   const achievement = achievementGradeOf(bestAxis);
 
   const allStats = [academic, social, talent, mental, health];
-  const hasCollapse = allStats.some(v => v < 10);
-  const hasWeakness = allStats.some(v => v < 20);
+  const hasCollapse = allStats.some(v => v < AXIS_COLLAPSE);
+  const hasWeakness = allStats.some(v => v < AXIS_WEAKNESS);
   // 붕괴(<10)가 약점(<20)보다 강한 신호 — 둘 다면 붕괴 문장을 쓴다.
   const achievementNote: string | null = hasCollapse
     ? ACHIEVEMENT_NOTE.collapse
@@ -388,6 +421,9 @@ export function calculateEnding(state: GameState) {
 
   // 행복 지수 — 7년 전체 궤적. 학년말은 happinessTrajectoryForYear(그 해).
   const happiness = calculateHappinessGrade(mental, social, health, happinessTrajectoryLifetime(state));
+
+  // 관계 타이틀(T30) 게이트의 재료 — 근황 레인과 같은 모집단에서 절친만 추린다.
+  const friends = closeFriends(state);
 
   // 진로 판정
   const career = determineCareer(state);
@@ -415,6 +451,29 @@ export function calculateEnding(state: GameState) {
   } else if (state.burnoutCount >= 3 && suneungGrade && suneungGrade <= 4) {
     title = `불꽃은 꺼지지 않는다 — ${career.path}`;
     description = '몇 번이고 쓰러졌지만, 그래도 일어났다. ' + career.detail;
+  } else if (friends.length >= BOND_MIN_FRIENDS && mental >= AXIS_WEAKNESS && health >= AXIS_WEAKNESS) {
+    // **T30 — 관계 중심 인생.** 여기 오기 전까지 특수 타이틀 넷은 전부 수능(≤2·≤4) 아니면
+    // 저학업(<60) 게이트라, 관계·멘탈·건강을 다 챙긴 최적 관계형 빌드(24시드 실측:
+    // soc 97.1 · men 92.4 · hea 79.6 · 성취 S 24/24 · 행복 S 24/24 · 절친 8명)가 받는 화면이
+    // 「수도권 대학」이었다 — 특수 타이틀 0/24. 7년을 사람에게 쓴 판을 게임이 한 번도
+    // 이름 불러 주지 않았다는 뜻이다. 그래서 **수능·학업을 아예 안 본다**: 관계는 성적의
+    // 부상이 아니라 그 자체로 하나의 결말이다(진로 축은 determineCareer가 그대로 말한다).
+    //
+    // 게이트가 절친 수 + 멘탈/건강 둘뿐인 이유:
+    //  · 절친(BEST_TIER)은 grind 소프트캡 바깥이라 반복 클릭으로는 수가 안 늘어난다 —
+    //    이벤트를 실제로 겪고 유지한 관계만 여기 쌓인다.
+    //  · mental·health 하한(AXIS_WEAKNESS)은 "친구는 많은데 내가 부서졌다"를 막는다. 그 판은
+    //    관계로 버틴 서사가 아니라 대가의 서사라 아래·위 분기(승리자/불꽃)가 이미 말한다.
+    //  · social 수치는 **안 본다**. 친밀도와 social은 다른 축이고(동아리만 돌려도 social은 오른다),
+    //    이 타이틀이 세는 건 "몇 명이 곁에 남았나"다.
+    //
+    // 우선순위: 「불꽃」 아래 — 번아웃 3회+로 쓰러진 판은 그 서사가 더 크고, 관계 문장을
+    // 그 위에 얹으면 7년이 어두웠다는 사실을 덮는다. 「행복한 평범함」 위 — 그쪽은 academic<60
+    // 하나로 열리는 넓은 문이라, 절친을 여럿 남긴 판까지 "성적은 평범했지만"으로 뭉개면
+    // 더 구체적인 사실이 덜 구체적인 라벨에 먹힌다.
+    title = `${BOND_TITLE} — ${career.path}`;
+    description = `${friends[0].name}, 그리고 7년을 함께 건너온 얼굴들. `
+      + '무엇을 이뤘냐고 묻는다면, 그 이름들부터 꺼내게 된다. ' + career.detail;
   } else if (happiness === 'S' && !flawlessTop && academic < 60) {
     // QA C1-B 연동: 기존 (happiness S && achievement C)는 C1-B 후 도달 불가
     // (happiness S 가 health≥20 을 요구 → lifeScore≥53 → achievement 최소 B).
