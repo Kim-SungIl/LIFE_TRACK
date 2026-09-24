@@ -323,7 +323,7 @@ describe('생산자(accrue)도 잠근다 — 실제 store 경로', () => {
     // 테스트가 통과한다(실측: saveToStorage에서 벗기는 뮤테이션이 SURVIVED였다).
     // buyItem의 set()이 자동저장 구독을 깨우므로 디스크에는 이미 써져 있어야 한다.
     const onDisk = loadFromStorage();
-    expect(onDisk?.state?.pendingWeekDelta,
+    expect(onDisk.kind === 'ok' ? onDisk.data.state.pendingWeekDelta : null,
       '자동저장이 보류분을 디스크에 안 남기면 새로고침 한 번에 그 주 지출이 사라진다').toEqual(before);
 
     useGameStore.setState({ state: null });

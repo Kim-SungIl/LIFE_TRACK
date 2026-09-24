@@ -3,6 +3,7 @@ import { AudioToggle } from './AudioToggle';
 import { ParentStrength } from '../engine/types';
 import { useGameStore } from '../engine/store';
 import { loadFromStorage } from '../engine/store';
+import { SAVE_NOTICE_MESSAGE, type SaveNoticeKind } from './saveNotice';
 import { Portrait } from './Portrait';
 import { ConfirmDialog } from './ConfirmDialog';
 import { webpSrc } from '../engine/assetWebp';
@@ -76,11 +77,17 @@ export function TitleScreen() {
   const startGame = useGameStore(s => s.startGame);
   const loadSavedGame = useGameStore(s => s.loadSavedGame);
   const resetGame = useGameStore(s => s.resetGame);
+  const saveRead = loadFromStorage();
+  const savedData = saveRead.kind === 'ok' ? saveRead.data : null;
   // 세이브를 못 연 상태. 예전엔 onClick 안에서 예외가 나 **화면에 아무 일도 안 일어났다** —
   // 에러 바운더리는 렌더 중 예외만 잡으므로 여기까지 못 온다(ErrorBoundary.tsx의
   // "저장 삭제하고 처음부터 시작" 탈출구가 정확히 이 상황용인데 도달을 못 했다).
-  const [loadFailed, setLoadFailed] = useState(false);
-  const savedData = loadFromStorage();
+  //
+  // **초기값이 배선의 본체다**(T36). 절단·미래 버전 세이브는 savedData가 null이라
+  // 이어하기 버튼 자체가 안 그려진다 — 클릭을 기다리면 안내는 영원히 안 뜬다.
+  const [saveNotice, setSaveNotice] = useState<SaveNoticeKind | null>(
+    saveRead.kind === 'unreadable' ? saveRead.reason : null,
+  );
   // 끝난 판은 "이어하기"가 아니다 — 세이브에 phase='ending'이 그대로 저장돼 있고
   // (엔딩 진입 때 year++가 되어) 서브라벨이 "8년차 1주차"로 나오던 자리다.
   const savedFinished = savedData?.state.phase === 'ending';
@@ -148,7 +155,9 @@ export function TitleScreen() {
 
   // 기존 저장이 있으면 무경고로 덮어쓰지 않게 확인 — 데이터 손실 방지(인게임 다이얼로그, Phase 3).
   const requestStart = (kind: 'select' | 'lastSetup') => {
-    if (savedData) { setPendingStart(kind); return; }
+    // **savedData가 아니라 "저장 칸이 비었나"로 본다.** 미래 버전 세이브는 못 읽을 뿐
+    // 멀쩡한 데이터라(최신 빌드에선 열린다) 새 게임이 말없이 덮어쓰면 그게 곧 자동 삭제다.
+    if (saveRead.kind !== 'none') { setPendingStart(kind); return; }
     if (kind === 'lastSetup') startFromLastSetup(); else startFromSelect();
   };
   const runPendingStart = () => {
@@ -178,17 +187,18 @@ export function TitleScreen() {
     />
   );
 
-  // 세이브가 손상돼 못 열 때. 지우는 것 말고는 길이 없으므로 그 사실을 말하고 확인을 받는다.
-  // (새 게임도 어차피 이 세이브를 덮어쓴다 — 여기서 지우는 건 같은 일을 먼저 하는 것이다.)
-  const corruptDialog = loadFailed && (
+  // 세이브를 못 열 때. 사유는 넷이지만 화면은 하나다 — 문구만 갈린다.
+  // **자동으로 지우지 않는다.** 미래 버전 세이브는 최신 빌드에서 멀쩡히 열리므로,
+  // 삭제는 여기 "지우고 새로 시작"을 사용자가 누를 때만 일어난다(onConfirm).
+  const corruptDialog = saveNotice && (
     <ConfirmDialog
       title="이 저장을 열 수 없어요"
-      message={'저장된 데이터가 손상돼 이어서 할 수 없어요.\n지우고 새로 시작하는 것 말고는 방법이 없어요.\n(기록실의 이야기는 그대로 남습니다.)'}
+      message={`${SAVE_NOTICE_MESSAGE[saveNotice]}\n(기록실의 이야기는 그대로 남습니다.)`}
       confirmLabel="지우고 새로 시작"
       cancelLabel="닫기"
       danger
-      onConfirm={() => { resetGame(); setLoadFailed(false); setPhase('title'); }}
-      onCancel={() => setLoadFailed(false)}
+      onConfirm={() => { resetGame(); setSaveNotice(null); setPhase('title'); }}
+      onCancel={() => setSaveNotice(null)}
     />
   );
 
@@ -312,7 +322,7 @@ export function TitleScreen() {
                 쪽은 되돌릴 수 없다. year 표기를 빼는 이유: 엔딩 시점 state.year는 8이다. */}
             <button
               className={`btn ${savedFinished ? 'btn-secondary' : 'btn-primary'}`}
-              onClick={() => { if (!loadSavedGame()) setLoadFailed(true); }}
+              onClick={() => { if (!loadSavedGame()) setSaveNotice('structure'); }}
             >
               {savedFinished ? '엔딩 다시 보기' : '이어하기'}
               <span className="btn__sub">

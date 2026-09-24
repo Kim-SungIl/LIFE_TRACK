@@ -111,21 +111,61 @@ export function isStorageSaveFailed(): boolean { return storageSaveFailed; }
 let lastSavedAt: string | null = null;
 export function getLastSavedAt(): string | null { return lastSavedAt; }
 
-export function loadFromStorage(): SaveData | null {
+/**
+ * 세이브가 **있는데 못 읽는** 이유. (T36)
+ *
+ * 예전엔 이 셋이 전부 `null`이었다 — "세이브가 없다"와 같은 값이다. 그래서 타이틀은
+ * 이어하기를 안 그리는 것으로 끝났고, 플레이어는 자기 저장이 왜 사라졌는지 한 마디도 못 들었다.
+ * Chromium 주입 실측: 절단 JSON·`version=99` 둘 다 **안내 0건·콘솔 0건**(구조 손상 14종은
+ * 전부 "이 저장을 열 수 없어요"가 떴다 — 그 비대칭을 메운다).
+ *
+ * 거부는 유지한다(#441 "판정 불가 손상값은 접지 말고 거부") — 다만 **말하고** 거부한다.
+ */
+export type SaveUnreadableReason =
+  /** JSON이 안 풀린다. 쓰는 도중 탭이 죽으면 뒷부분이 잘린 채 남는다 — 복구 불가. */
+  | 'truncated'
+  /** 파싱은 됐는데 진행 내용(`state`)이 없다. */
+  | 'no-state'
+  /** 더 새로운 빌드가 쓴 세이브. 구버전 step으로 미지의 구조를 다룰 수 없다 — **지우지 않는다.** */
+  | 'future-version';
+
+/**
+ * 세이브 읽기 결과. **`null` 하나로 접지 않는다** — `none`(처음 온 사람)과
+ * `unreadable`(저장이 있는데 못 연다)은 화면에서 서로 다른 일이기 때문이다.
+ */
+export type SaveReadResult =
+  | { kind: 'none' }
+  | { kind: 'ok'; data: SaveData }
+  | { kind: 'unreadable'; reason: SaveUnreadableReason };
+
+export function loadFromStorage(): SaveReadResult {
+  let raw: string | null;
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as SaveData;
-    if (!data.state) return null;
-    // 스탬프 정규화(버전 도입 이전/손상 세이브 = v1). 과거 버전은 버리지 않는다 —
-    // loadSavedGame에서 단계형 마이그레이션(runSaveMigrations)으로 살린다.
-    // 미래 버전(구버전 앱에서 신버전 세이브를 여는 다운그레이드)만 로드 거부.
-    const version = Number.isInteger(data.version) && data.version >= 1 ? data.version : 1;
-    if (version > CURRENT_SAVE_VERSION) return null;
-    return { ...data, version };
+    raw = localStorage.getItem(SAVE_KEY);
   } catch {
-    return null;
+    // 저장소 접근 자체가 막힌 경우(사생활 보호 모드 등). 이건 이 세이브의 문제가 아니라
+    // 브라우저 상태이고, 지울 것도 없으므로 손상 안내를 띄우지 않는다.
+    return { kind: 'none' };
   }
+  if (!raw) return { kind: 'none' };
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { kind: 'unreadable', reason: 'truncated' };
+  }
+  if (typeof parsed !== 'object' || parsed === null || !(parsed as SaveData).state) {
+    return { kind: 'unreadable', reason: 'no-state' };
+  }
+  const data = parsed as SaveData;
+  // 스탬프 정규화(버전 도입 이전/손상 세이브 = v1). 과거 버전은 버리지 않는다 —
+  // loadSavedGame에서 단계형 마이그레이션(runSaveMigrations)으로 살린다.
+  const version = Number.isInteger(data.version) && data.version >= 1 ? data.version : 1;
+  // 미래 버전(구버전 앱에서 신버전 세이브를 여는 다운그레이드)은 거부하되 **지우지 않는다** —
+  // 다른 기기나 최신 빌드에서는 멀쩡히 열리는 세이브다. 삭제는 사용자가 누를 때만.
+  if (version > CURRENT_SAVE_VERSION) return { kind: 'unreadable', reason: 'future-version' };
+  return { kind: 'ok', data: { ...data, version } };
 }
 
 export function deleteSave() {
@@ -427,10 +467,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
    */
   loadSavedGame: () => {
     const save = loadFromStorage();
-    if (!save) return false;
+    // 못 읽는 세이브(절단·미래 버전)는 여기서 끝난다 — **사유는 타이틀이 말한다**(SaveReadResult).
+    if (save.kind !== 'ok') return false;
     try {
       // 단계형(버전 격상) → 정규화(백필·재수화) 순서 — step은 격상 전 구조를 전제로 쓴다.
-      const loaded = migrateLoadedState(runSaveMigrations(save.state, save.version));
+      const loaded = migrateLoadedState(runSaveMigrations(save.data.state, save.data.version));
       // **try/catch만으로는 부족하다.** 그 방어는 마이그레이션 중 실제로 터지는 손상만 거른다 —
       // `parents: null`이라도 rngSeed가 멀쩡하면 아무 데서도 안 터져 그대로 통과했고,
       // 그러면 손상 안내가 안 뜬 채 깨진 state가 set 되고 자동저장이 그걸 디스크에 다시 썼다.

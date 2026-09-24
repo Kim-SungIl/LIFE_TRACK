@@ -113,7 +113,7 @@ describe('판정은 마이그레이션 뒤에만 옳다', () => {
     seed({ stats: null });
     // 타이틀은 "세이브가 있나"만 본다 — 여기서 거르면 이어하기 버튼이 사라져
     // 사용자가 손상 사실을 안내받을 기회조차 없어진다.
-    expect(loadFromStorage(), '타이틀이 못 읽으면 손상 안내 자체가 안 뜬다').not.toBeNull();
+    expect(loadFromStorage().kind, '타이틀이 못 읽으면 손상 안내 자체가 안 뜬다').toBe('ok');
   });
 });
 

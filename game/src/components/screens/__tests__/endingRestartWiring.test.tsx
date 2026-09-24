@@ -223,8 +223,8 @@ describe('GameScreen 배선 — 스토어까지 왕복', () => {
 
     expect(useGameStore.getState().state).toBeNull();
     const save = loadFromStorage();
-    expect(save, '여기서 세이브를 지우면 그 판의 엔딩은 두 번 다시 못 본다').not.toBeNull();
-    expect(save!.state.phase).toBe('ending');
+    expect(save.kind, '여기서 세이브를 지우면 그 판의 엔딩은 두 번 다시 못 본다').toBe('ok');
+    expect(save.kind === 'ok' && save.data.state.phase).toBe('ending');
   });
 
   // 구세이브(`lifetrack_last_setup`이 배포되기 전에 저장한 사람)는 이어하기로 완주할 수 있다.
