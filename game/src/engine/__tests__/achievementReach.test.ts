@@ -136,7 +136,10 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // 그게 엔진이 원래 선언한 "무료 80+ ×0.1 캡 / 유료는 면제" 설계다.
     expect(DILIGENT_PAID.weekend, '주말이 다르면 유료의 순효과가 아니다').toEqual(DILIGENT_FREE.weekend);
     expect(DILIGENT_PAID.vacation, '방학이 다르면 유료의 순효과가 아니다').toEqual(DILIGENT_FREE.vacation);
-    const landings: Record<number, number> = { 1: 88.3, 7: 89.7 };
+    // 착지값은 #470(T28, 학원 피로 7→4 · 헬스 7→3)이 main에 먼저 들어가며 88.3/89.7 → 89.3/89.9로
+    // 올랐다. 방향이 맞다 — 유료 루틴의 피로가 줄었으니 성장이 늘고, 무료 표(위)는 그 두 활동을
+    // 안 쓰므로 그대로다. 이 PR과 #470은 옛 main에서 각자 초록이었고 합쳐서 처음 만났다.
+    const landings: Record<number, number> = { 1: 89.3, 7: 89.9 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_PAID, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);
