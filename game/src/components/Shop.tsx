@@ -4,6 +4,7 @@ import { josa } from '../engine/korean';
 import { GameState, STAT_LABELS, StatKey } from '../engine/types';
 import { isNpcInteractable } from '../engine/relationshipSignals';
 import { Dialog } from './Dialog';
+import { chipSurface } from './screens/surface';
 
 interface Props {
   state: GameState;
@@ -135,7 +136,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                       {activeBuff && (
                         <span style={{
                           fontSize: '0.62rem', padding: '1px 6px', borderRadius: 4,
-                          background: 'rgba(125,163,217,0.2)', color: 'var(--blue)', fontWeight: 600,
+                          background: chipSurface('rgba(125,163,217,0.2)'), color: 'var(--blue)', fontWeight: 600,
                         }}>
                           적용 중 {activeBuff.remainingWeeks}주 남음
                         </span>
@@ -149,7 +150,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                       {effects.map((e, i) => (
                         <span key={i} style={{
                           fontSize: '0.65rem', padding: '2px 6px', borderRadius: 4,
-                          background: 'rgba(143,181,115,0.1)', color: 'var(--green)',
+                          background: chipSurface('rgba(143,181,115,0.1)'), color: 'var(--green)',
                         }}>
                           {e}
                         </span>
@@ -161,7 +162,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                     onClick={() => check.ok && handleBuy(item)}
                     style={{
                       padding: '8px 16px', borderRadius: 8, border: 'none', marginLeft: 10,
-                      background: check.ok ? 'var(--accent)' : 'rgba(255,255,255,0.08)',
+                      background: check.ok ? 'var(--accent)' : chipSurface('rgba(255,255,255,0.08)'),
                       // 구매 가능 버튼은 accent 배경 — 위와 같은 이유로 --btn-ink.
                       color: check.ok ? 'var(--btn-ink)' : 'var(--text-muted)',
                       cursor: check.ok ? 'pointer' : 'not-allowed',
@@ -189,7 +190,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
               {state.activeBuffs.map(b => (
                 <span key={b.id} style={{
                   fontSize: '0.65rem', padding: '2px 8px', borderRadius: 6,
-                  background: 'rgba(125,163,217,0.15)', color: 'var(--blue)',
+                  background: chipSurface('rgba(125,163,217,0.15)'), color: 'var(--blue)',
                 }}>
                   {b.name} ({b.remainingWeeks}주)
                 </span>

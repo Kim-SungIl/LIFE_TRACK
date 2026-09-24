@@ -16,7 +16,7 @@ import { Dialog } from '../../Dialog';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import { Tutorial } from '../../Tutorial';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
-import { GLASS_BASE, tintedGlass } from '../surface';
+import { GLASS_BASE, chipSurface, tintedGlass } from '../surface';
 import { breakSentences, getFatigueDisplay, getUpcomingEvents } from '../shared';
 import { HudPanel } from './HudPanel';
 import { StatsPanel } from './StatsPanel';
@@ -316,7 +316,7 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
       {/* 저장 실패 경고 — 진행 손실을 사용자가 모른 채 지나가지 않게 (storage full/사파리 프라이빗 등) */}
       {saveFailed && (
         <div role="alert" aria-live="assertive" style={{
-          background: 'rgba(217,100,88,0.15)', border: '1px solid rgba(217,100,88,0.4)',
+          background: chipSurface('rgba(217,100,88,0.15)'), border: '1px solid rgba(217,100,88,0.4)',
           borderRadius: 10, padding: '8px 14px', marginBottom: 10,
           fontSize: '0.75rem', fontWeight: 600, textAlign: 'center', color: 'var(--red)',
         }}>

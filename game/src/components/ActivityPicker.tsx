@@ -3,6 +3,7 @@ import { playSfx } from '../audio/sfx';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
 import { activityHints } from '../engine/activityHints';
+import { chipSurface } from './screens/surface';
 
 const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = {
   study:    { emoji: '📚', name: '공부',     desc: '학업 성적을 올린다' },
@@ -194,7 +195,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                             <span style={{
                               fontSize: '0.62rem', fontWeight: 600,
                               color: 'var(--accent)',
-                              background: 'rgba(224,138,91,0.15)',
+                              background: chipSurface('rgba(224,138,91,0.15)'),
                               padding: '1px 6px', borderRadius: 4,
                             }}>
                               🏖 방학
@@ -204,7 +205,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                             <span style={{
                               fontSize: '0.62rem', fontWeight: 700,
                               color: 'var(--green)',
-                              background: 'rgba(143,181,115,0.15)',
+                              background: chipSurface('rgba(143,181,115,0.15)'),
                               padding: '1px 6px', borderRadius: 4,
                             }}>
                               NEW
@@ -214,7 +215,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                             <span style={{
                               fontSize: '0.62rem', fontWeight: 600,
                               color: 'var(--yellow)',
-                              background: 'rgba(224,179,84,0.15)',
+                              background: chipSurface('rgba(224,179,84,0.15)'),
                               padding: '1px 6px', borderRadius: 4,
                             }}>
                               ⬆ 인상
@@ -224,7 +225,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                             <span style={{
                               fontSize: '0.62rem', fontWeight: 600,
                               color: 'var(--green)',
-                              background: 'rgba(143,181,115,0.15)',
+                              background: chipSurface('rgba(143,181,115,0.15)'),
                               padding: '1px 6px', borderRadius: 4,
                             }}>
                               ⬆ 시급
@@ -277,7 +278,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           {hintTags.map((tag, i) => (
                             <span key={i} style={{
                               fontSize: '0.68rem', color: tag.color,
-                              background: tag.color.includes('green') ? 'rgba(143,181,115,0.1)' : 'rgba(217,100,88,0.1)',
+                              background: chipSurface(tag.color.includes('green') ? 'rgba(143,181,115,0.1)' : 'rgba(217,100,88,0.1)'),
                               padding: '2px 7px', borderRadius: 4,
                             }}>
                               {tag.text}
@@ -292,7 +293,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           {Object.entries(a.effects).map(([k, v]) => (
                             <span key={k} style={{
                               fontSize: '0.7rem', color: (v as number) > 0 ? 'var(--green)' : 'var(--red)',
-                              background: (v as number) > 0 ? 'rgba(143,181,115,0.1)' : 'rgba(217,100,88,0.1)',
+                              background: chipSurface((v as number) > 0 ? 'rgba(143,181,115,0.1)' : 'rgba(217,100,88,0.1)'),
                               padding: '1px 6px', borderRadius: 4,
                             }}>
                               {STAT_LABELS[k as StatKey]}{(v as number) > 0 ? '+' + v : v}
@@ -301,7 +302,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                           <span style={{
                             fontSize: '0.7rem',
                             color: a.fatigue > 0 ? 'var(--red)' : 'var(--green)',
-                            background: a.fatigue > 0 ? 'rgba(217,100,88,0.1)' : 'rgba(143,181,115,0.1)',
+                            background: chipSurface(a.fatigue > 0 ? 'rgba(217,100,88,0.1)' : 'rgba(143,181,115,0.1)'),
                             padding: '1px 6px', borderRadius: 4,
                           }}>
                             피로{a.fatigue > 0 ? '+' : ''}{a.fatigue}
@@ -316,7 +317,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                             <span key={i} style={{
                               fontSize: '0.68rem', fontWeight: 600,
                               color: h.tone === 'good' ? 'var(--green)' : 'var(--accent)',
-                              background: h.tone === 'good' ? 'rgba(143,181,115,0.12)' : 'rgba(224,138,91,0.15)',
+                              background: chipSurface(h.tone === 'good' ? 'rgba(143,181,115,0.12)' : 'rgba(224,138,91,0.15)'),
                               border: `1px solid ${h.tone === 'good' ? 'rgba(143,181,115,0.3)' : 'rgba(224,138,91,0.35)'}`,
                               padding: '2px 7px', borderRadius: 4,
                             }}>

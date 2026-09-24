@@ -4,6 +4,7 @@ import { ROUTINE_BONUS_PLATEAU_WEEKS, routineTierIndex } from '../../../engine/g
 import { getParentMods } from '../../../engine/parentModifiers';
 import { josa } from '../../../engine/korean';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
+import { chipSurface } from '../surface';
 
 type Props = {
   state: GameState;
@@ -107,11 +108,11 @@ export function WeekPlanner({
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{activityName}</span>
-                {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: 'rgba(125,163,217,0.15)', padding: '1px 4px', borderRadius: 3 }}>매주</span>}
+                {isRoutine && <span style={{ fontSize: '0.55rem', color: 'var(--blue)', background: chipSurface('rgba(125,163,217,0.15)'), padding: '1px 4px', borderRadius: 3 }}>매주</span>}
                 {/* 연속 주차는 플레이어 자신의 기록이라 실제 값을 그대로 보여준다. 대신 상한에 닿으면
                     "· 최대"를 붙여 더 쌓아도 보너스는 안 는다는 걸 같이 말한다 — 예전엔 "88주 연속"만
                     떠서 계속 자라는 보상으로 읽혔고, 그렇다고 "8주+"로 접으면 기록이 사라진다. */}
-                {isRoutine && tierOf(slotComboWeeks) >= 0 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: 'rgba(224,179,84,0.15)', padding: '1px 4px', borderRadius: 3 }}>{labelFor(slotComboWeeks)}{slotComboWeeks}주 연속{isMaxed(slotComboWeeks) ? ' · 최대' : ''}</span>}
+                {isRoutine && tierOf(slotComboWeeks) >= 0 && <span style={{ fontSize: '0.55rem', color: 'var(--yellow)', background: chipSurface('rgba(224,179,84,0.15)'), padding: '1px 4px', borderRadius: 3 }}>{labelFor(slotComboWeeks)}{slotComboWeeks}주 연속{isMaxed(slotComboWeeks) ? ' · 최대' : ''}</span>}
               </div>
               {(moneyCost !== undefined && moneyCost > 0 || withNpc) && (
                 <div style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginTop: 1 }}>
@@ -154,7 +155,7 @@ export function WeekPlanner({
       {/* 돈 부족 경고 */}
       {routineTooExpensive && (
         <div style={{
-          background: 'rgba(217,100,88,0.15)', border: '1px solid rgba(217,100,88,0.3)',
+          background: chipSurface('rgba(217,100,88,0.15)'), border: '1px solid rgba(217,100,88,0.3)',
           borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem',
           textAlign: 'center', color: 'var(--red)',
         }}>
@@ -167,7 +168,7 @@ export function WeekPlanner({
           어느 활동인지 이름을 대는 게 핵심이다 — 합계만 보여주면 무엇을 바꿔야 할지 모른다. */}
       {unaffordable.length > 0 && (
         <div style={{
-          background: 'rgba(217,100,88,0.15)', border: '1px solid rgba(217,100,88,0.3)',
+          background: chipSurface('rgba(217,100,88,0.15)'), border: '1px solid rgba(217,100,88,0.3)',
           borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem',
           textAlign: 'center', color: 'var(--red)', lineHeight: 1.6,
         }}>
