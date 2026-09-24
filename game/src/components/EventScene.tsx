@@ -166,7 +166,7 @@ function renderDescription(
               {speakerLabel}
             </span>
           )}
-          {speakerLabel && <span style={{ color: 'rgba(255,255,255,0.4)' }}> : </span>}
+          {speakerLabel && <span style={{ color: 'rgba(255,255,255,0.56)' }}> : </span>}
           <span style={{ color: '#fff', fontWeight: 500 }}>"{dialogue}"</span>
           {after && <span style={{ color: 'rgba(255,255,255,0.7)' }}>{after}</span>}
         </div>
@@ -553,7 +553,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
           <div style={{
             fontSize: '0.78rem',
             fontWeight: 600,
-            color: 'rgba(255,255,255,0.4)',
+            color: 'rgba(255,255,255,0.56)',
             marginBottom: 6,
             letterSpacing: '0.5px',
           }}>
