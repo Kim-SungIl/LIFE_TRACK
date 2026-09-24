@@ -20,6 +20,8 @@
 //    최소 개수를 먼저 단언해서, 셀렉터가 아무것도 못 잡으면 그 자리에서 빨강이 된다.
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { EventScene } from '../EventScene';
+import { makeEvent, makeChoice } from '../../test/fixtures';
 
 vi.mock('../../engine/assetWebp', () => ({
   webpSrc: (p: string) => `WEBP::${p}`,
@@ -275,6 +277,27 @@ describe('조건부 렌더 — 메뉴를 열어도, 타이틀에서도 바닥이
       const top = marginPx(el, 'Top');
       expect(TOUCH_TARGET_MIN + 2 * (top ?? 0), '20.8px 자리가 안 지켜지면 타이틀 아이콘이 움직인다')
         .toBeCloseTo(20.8, 5);
+    }
+  });
+});
+
+describe('이벤트 화면 — 이전/다음 페이지 버튼도 24×24 바닥을 갖는다', () => {
+  // 320px 실측 53.5×23 — 세로 1px 미달. 페이저는 본문이 두 페이지 이상일 때만 그려지므로
+  // 한 페이지짜리 이벤트로 재면 대상이 0개라 게이트가 조용히 초록이 된다(#437). 그래서
+  // 전제 단언으로 두 버튼이 **실제로 렌더됐는지** 먼저 본다.
+  const longEvent = makeEvent({
+    description: '첫째 줄이다.\n둘째 줄이다.\n셋째 줄이다.\n넷째 줄이다.',
+    choices: [makeChoice({ text: '마지막 선택지' })],
+  });
+
+  it('이전/다음 페이지', () => {
+    const { container } = render(<EventScene event={longEvent} gender="male" year={1} onChoice={() => {}} />);
+    const els = byLabel(container, /^(이전|다음) 페이지$/);
+    expect(els.length, '전제: 페이저가 그려져야 이 단언이 무언가를 본다').toBe(2);
+    for (const el of els) {
+      const label = el.getAttribute('aria-label');
+      expect(axisFloor(el, 'width'), `${label} 가로 바닥`).toBeGreaterThanOrEqual(TOUCH_TARGET_MIN);
+      expect(axisFloor(el, 'height'), `${label} 세로 바닥`).toBeGreaterThanOrEqual(TOUCH_TARGET_MIN);
     }
   });
 });
