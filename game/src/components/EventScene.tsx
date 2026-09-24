@@ -11,6 +11,7 @@ import { Dialog } from './Dialog';
 import { prefetchAssets } from '../engine/assetPrefetch';
 import { webpSrc } from '../engine/assetWebp';
 import { CG_MANIFEST } from '../cg-manifest.generated';
+import { TOUCH_TARGET_MIN } from './touchTarget';
 
 const BASE_URL = import.meta.env.BASE_URL;
 
@@ -214,6 +215,22 @@ function paginateDescription(
   if (current.length > 0) pages.push(current);
   return pages.map(p => p.join('\n'));
 }
+
+/**
+ * 이전/다음 페이지 버튼의 포인터 타깃 바닥. 320px 실측 53.5×23 — WCAG 2.5.8 AA(24)에서
+ * **세로 1px** 모자랐다. 텍스트 버튼이라 가로는 넉넉하고, 세로는 `padding 4px` + 줄높이가
+ * 23으로 떨어진다. 보이는 것(글자·여백)은 그대로 두고 박스 바닥만 24로 올린다 —
+ * `touchTarget.ts`의 원칙("UI 절제는 크롬에만")과 같다. 페이저는 자기 행에 홀로 있어
+ * +1px가 다른 요소를 밀지 않으므로 HUD처럼 음수 마진으로 되돌리지 않는다.
+ * 두 축을 **둘 다** 선언한다 — 한 축만 두면 반대 축이 폰트 변경으로 내려가도 조용히 통과한다.
+ */
+const PAGER_HIT = {
+  minWidth: TOUCH_TARGET_MIN,
+  minHeight: TOUCH_TARGET_MIN,
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+} as const;
 
 export function EventScene({ event, gender, year, npcs, onChoice, state }: EventSceneProps) {
   const [bgLoaded, setBgLoaded] = useState(false);
@@ -620,6 +637,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                   opacity: isFirstPage ? 0.3 : 1,
                   padding: '4px 8px',
                   transition: 'opacity 0.15s',
+                  ...PAGER_HIT,
                 }}
               >
                 ◀ 이전
@@ -636,6 +654,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                   opacity: isLastPage ? 0.3 : 1,
                   padding: '4px 8px',
                   transition: 'opacity 0.15s',
+                  ...PAGER_HIT,
                 }}
               >
                 다음 ▶
