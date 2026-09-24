@@ -1,6 +1,7 @@
-import { memo, useState } from 'react';
+import { memo, useState, Fragment, type CSSProperties } from 'react';
 import { getExamSchedule } from '../../../engine/examSystem';
 import { ExamType, EXAM_TYPE_LABELS } from '../../../engine/types';
+import { TOUCH_TARGET_MIN } from '../../touchTarget';
 
 type Props = { year: number; week: number };
 
@@ -15,6 +16,28 @@ const EXAM_COLOR: Record<ExamType, string> = {
 
 // 방학 구간(학기 리듬 음영) — SSOT 겸 툴팁 기간 표시에 재사용.
 const VACATIONS: [number, number][] = [[20, 24], [43, 48]];
+
+// 트랙 높이. 보이는 것(기준선 2px · 점 6~8px · 방학 띠 4px)이 전부 이 안에 그려진다.
+export const TRACK_HEIGHT = 10;
+
+// **투명 히트 영역** — 보이는 점·띠는 그대로 두고 잡히는 상자만 24×24로 넓힌다(WCAG 2.5.8 AA).
+// 320px 실측에서 이 마커들이 14×14 · 18×16 · 21.8×10 · 27.2×10이었다.
+// 전부 `position:absolute`라 레이아웃에 영향이 없다 — 트랙 위아래로 7px씩 넘지만
+// 카드 패딩(위 5+, 아래 9) 안이고, 좌우 끝 마커가 넘는 12px도 카드 좌우 패딩 12 안이다.
+//
+// **남는 것**: 48주를 320px 트랙(256px)에 펴면 1주가 5.4px다. Y7의 W33 모의고사와
+// W35 수능은 10.9px 떨어져 있어 24px 상자 둘이 겹치고, 나중에 그려지는 W35가 W33의
+// 중심을 덮는다(390px에서는 13.9px이라 안 겹친다 — 실측). 간격이 24보다 좁으면 두 타깃을
+// 겹치지 않게 놓을 방법이 없어서(2.5.8의 Spacing 예외가 존재하는 이유가 이것이다)
+// 상자 크기를 지키고 겹침을 받는다. W33은 왼쪽 10.9px 띠와 **키보드 포커스**로 여전히 닿는다.
+const HIT_TOP = (TRACK_HEIGHT - TOUCH_TARGET_MIN) / 2;
+const HIT_BOX: CSSProperties = {
+  position: 'absolute', top: HIT_TOP,
+  height: TOUCH_TARGET_MIN, minWidth: TOUCH_TARGET_MIN,
+  cursor: 'help',
+};
+/** 히트 상자가 트랙 기준 `absTop`px에 보이는 것을 그리려면 안쪽 요소의 top. */
+const inner = (absTop: number) => absTop - HIT_TOP;
 
 // 연간 시험 스트립 — 48주 트랙에 시험 마커 + 현재 주 위치. 상시 노출.
 // 초등 2점 → 중등 4점 → 고등 6점(+수능)의 밀도 차이가 "읽지 않아도 보이는" 스테이지 체감 장치.
@@ -51,7 +74,7 @@ export const ExamTimeline = memo(function ExamTimeline({ year, week }: Props) {
         </span>
         <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>W{week}/48</span>
       </div>
-      <div style={{ position: 'relative', height: 10 }}>
+      <div style={{ position: 'relative', height: TRACK_HEIGHT }}>
         {/* 툴팁 — 트랙 위에 떠서 표시. 가장자리 오버플로 방지로 left 8~92% 클램프. */}
         {tip && (
           <div
@@ -71,35 +94,35 @@ export const ExamTimeline = memo(function ExamTimeline({ year, week }: Props) {
         )}
         {/* 트랙 기준선 */}
         <div style={{ position: 'absolute', top: 4, left: 0, right: 0, height: 2, background: 'rgba(255,255,255,0.1)', borderRadius: 1 }} />
-        {/* 방학 구간 음영 + 히트영역(기간 툴팁) */}
+        {/* 방학 구간 음영 + 히트영역(기간 툴팁).
+            띠와 히트 영역을 **따로** 그린다 — 히트 영역에 minWidth 24를 주면서 띠를 그 안에
+            두면 320px에서 W20~24 띠가 21.8 → 24px로 2.2px 길어져 보이는 게 바뀐다. */}
         {VACATIONS.map(([s, e]) => {
           const mid = (pct(s) + pct(e)) / 2;
           return (
-            <div
-              key={s}
-              {...tipProps(`vac-${s}`, `방학 · W${s}~${e}`, mid)}
-              style={{
-                position: 'absolute', top: 0, height: 10, cursor: 'help',
-                left: `${pct(s)}%`, width: `${pct(e) - pct(s)}%`,
-              }}
-            >
+            <Fragment key={s}>
               <div style={{
-                position: 'absolute', top: 3, left: 0, right: 0, height: 4,
+                position: 'absolute', top: 3, height: 4,
+                left: `${pct(s)}%`, width: `${pct(e) - pct(s)}%`,
                 background: 'rgba(224,138,91,0.18)', borderRadius: 2,
               }} />
-            </div>
+              <div
+                {...tipProps(`vac-${s}`, `방학 · W${s}~${e}`, mid)}
+                style={{ ...HIT_BOX, left: `${pct(s)}%`, width: `${pct(e) - pct(s)}%` }}
+              />
+            </Fragment>
           );
         })}
         {/* 현재 주 마커 + 히트영역(현재 주 툴팁) */}
         <div
           {...tipProps('now', `지금 · W${week}`, pct(week))}
           style={{
-            position: 'absolute', top: -2, height: 14, width: 14, cursor: 'help',
-            left: `calc(${pct(week)}% - 7px)`,
+            ...HIT_BOX, width: TOUCH_TARGET_MIN,
+            left: `calc(${pct(week)}% - ${TOUCH_TARGET_MIN / 2}px)`,
           }}
         >
           <div style={{
-            position: 'absolute', top: 2, left: 'calc(50% - 1px)', height: 10, width: 2,
+            position: 'absolute', top: inner(0), left: 'calc(50% - 1px)', height: 10, width: 2,
             background: 'var(--text-primary)', borderRadius: 1, opacity: 0.9,
           }} />
         </div>
@@ -111,12 +134,12 @@ export const ExamTimeline = memo(function ExamTimeline({ year, week }: Props) {
               key={w}
               {...tipProps(`exam-${w}`, `W${w} · ${EXAM_TYPE_LABELS[type]}`, pct(w))}
               style={{
-                position: 'absolute', top: -3, height: 16, width: 18, cursor: 'help',
-                left: `calc(${pct(w)}% - 9px)`,
+                ...HIT_BOX, width: TOUCH_TARGET_MIN,
+                left: `calc(${pct(w)}% - ${TOUCH_TARGET_MIN / 2}px)`,
               }}
             >
               <div style={{
-                position: 'absolute', top: type === 'suneung' ? 4 : 5,
+                position: 'absolute', top: inner(type === 'suneung' ? 1 : 2),
                 left: `calc(50% - ${size / 2}px)`, width: size, height: size,
                 background: EXAM_COLOR[type], borderRadius: '50%',
                 opacity: w < week ? 0.3 : 1,

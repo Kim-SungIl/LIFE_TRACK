@@ -6,6 +6,7 @@ import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion'
 import { Portrait } from '../../Portrait';
 import { PARENT_ICONS } from '../shared';
 import { AudioToggle } from '../../AudioToggle';
+import { hitArea, CHROME_ROW_BOX } from '../../touchTarget';
 
 type Props = {
   parents: readonly ParentStrength[];
@@ -121,7 +122,8 @@ export const HudPanel = memo(function HudPanel({
         <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{getWeeklyIncome(parents, year) - mods.livingCost}만원 입금</div>
       </div>
     </div>
-      {/* 부모 칩 — 22×22 발동 시 펄스. 칩의 역할은 '부모 강점 설명 노출'(정보). (Phase 4)
+      {/* 부모 칩 — 보이는 원은 22×22, 히트 영역만 24×24(WCAG 2.5.8 AA). 발동 시 펄스.
+          칩의 역할은 '부모 강점 설명 노출'(정보). (Phase 4)
           데스크톱은 hover, 터치/키보드는 탭·포커스로 툴팁을 토글한다(layout shift 방지 absolute popover).
           Home 진입은 칩이 아니라 아래 "💬 가정" 버튼이 전담 — 터치에서 정보 보려다 Home으로 튕기던 문제 해소. */}
       <div style={{ marginTop: 6, position: 'relative' }}>
@@ -139,15 +141,22 @@ export const HudPanel = memo(function HudPanel({
                 // 순수 탭/활성화 토글 — hover/focus 자동표시를 두면 클릭이 방금 세팅된 상태를
                 // 뒤집어 툴팁이 안 열리고(데스크톱·키보드), 터치 emulated-hover에서도 깨진다.
                 onClick={() => setActiveParentTip(prev => (prev === p ? null : p))}
-                style={{
-                  width: 22, height: 22, borderRadius: '50%',
-                  background: isActive ? 'rgba(224,138,91,0.28)' : 'rgba(224,138,91,0.12)',
-                  border: '1px solid rgba(224,138,91,0.4)',
-                  display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
-                  cursor: 'pointer', userSelect: 'none',
-                  animation: justFired && !reducedMotion ? 'parentChipPulse 0.6s ease' : 'none',
-                }}
-              >{PARENT_ICONS[p]}</button>
+                // 버튼은 투명한 24×24 히트 영역, 보이는 원은 안쪽 span이 그린다.
+                // 음수 마진(-1)이 레이아웃 자리를 22로 되돌려 칩 간격·행 높이가 그대로다.
+                style={{ ...hitArea('both'), cursor: 'pointer', userSelect: 'none' }}
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: CHROME_ROW_BOX, height: CHROME_ROW_BOX, borderRadius: '50%',
+                    background: isActive ? 'rgba(224,138,91,0.28)' : 'rgba(224,138,91,0.12)',
+                    border: '1px solid rgba(224,138,91,0.4)',
+                    display: 'inline-grid', placeItems: 'center', fontSize: '0.7rem',
+                    // 펄스는 box-shadow 글로우다 — 사각 히트 영역에 걸면 네모난 빛이 된다.
+                    animation: justFired && !reducedMotion ? 'parentChipPulse 0.6s ease' : 'none',
+                  }}
+                >{PARENT_ICONS[p]}</span>
+              </button>
             );
           })}
           {/* 클릭 가능 affordance — "💬 가정" 라벨로 진입점 명시 */}
@@ -155,7 +164,8 @@ export const HudPanel = memo(function HudPanel({
             type="button" className="btn-reset" data-tutorial="home"
             onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenHome(); }}
             style={{
-              marginLeft: 4, fontSize: '0.65rem', color: 'var(--accent-soft)',
+              ...hitArea('y'), marginLeft: 4,
+              fontSize: '0.65rem', color: 'var(--accent-soft)',
               cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
             }}
           >💬 가정</button>
@@ -166,7 +176,8 @@ export const HudPanel = memo(function HudPanel({
               type="button" className="btn-reset" aria-label="메뉴 열기"
               onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenMenu(); }}
               style={{
-                marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
+                ...hitArea('y'), marginLeft: 8,
+                fontSize: '0.65rem', color: 'var(--accent-soft)',
                 cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
               }}
             >🚪 메뉴</button>
@@ -177,7 +188,8 @@ export const HudPanel = memo(function HudPanel({
               type="button" className="btn-reset"
               onClick={() => { playSfx('tap'); setActiveParentTip(null); onOpenAlbum(); }}
               style={{
-                marginLeft: 8, fontSize: '0.65rem', color: 'var(--accent-soft)',
+                ...hitArea('y'), marginLeft: 8,
+                fontSize: '0.65rem', color: 'var(--accent-soft)',
                 cursor: 'pointer', userSelect: 'none', fontWeight: 600, letterSpacing: '0.02em',
               }}
             >📖 기록장</button>
