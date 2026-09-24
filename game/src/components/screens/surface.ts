@@ -28,3 +28,28 @@ export const GLASS_BASE = 'rgba(42,34,48,0.85)';
 export function tintedGlass(tint: string): string {
   return `linear-gradient(${tint}, ${tint}), ${GLASS_BASE}`;
 }
+
+/**
+ * 틴트 칩이 스스로 갖는 **불투명** 바닥.
+ *
+ * `tintedGlass`의 바닥(GLASS_BASE)은 0.85라 여전히 반투명이다 — 사진이 비치는 화면에서는
+ * 충분했지만, "그 칩이 실제로 몇 대 몇이냐"는 **바닥을 모르면 대답할 수 없다.** 알파가
+ * 하나라도 1 미만이면 아래로 계속 내려가야 하고, 그 아래는 화면마다 다르다.
+ *
+ * 값은 팔레트의 `--bg-secondary`다. 새 색을 만들지 않고 **명도만** 고정한다(hue 유지 원칙).
+ * 이 바닥 위에서 각 틴트의 실측 대비는 4.66~6.44:1 — 가장 빠듯한 게 blue 0.2(4.66)다.
+ */
+export const CHIP_BASE = 'var(--bg-secondary)';
+
+/**
+ * 색조 칩(배지·태그·경고 배너)의 표면. **색조는 그대로, 바닥만 깐다.**
+ *
+ * 왜 필요한가 — `rgba(224,138,91,0.15)`는 색일 뿐 바닥이 아니다. 그래서 같은 배지가
+ * 어디에 얹히느냐에 따라 대비가 통째로 달라진다(실측: 활동 카드 위 3.91:1,
+ * 선택된 카드 위 3.08:1, 사진 위 맨몸 2.77:1 — 틴트를 0으로 지워도 사진 위는 3.14:1이라
+ * **알파를 낮추는 것으로는 못 고친다**). 바닥을 깔면 그 값이 한 자리로 고정되고,
+ * 대비 게이트도 비로소 그 칩을 판정할 수 있다(바닥을 가정하지 않고).
+ */
+export function chipSurface(tint: string): string {
+  return `linear-gradient(${tint}, ${tint}), ${CHIP_BASE}`;
+}

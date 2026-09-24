@@ -577,24 +577,86 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
     return out;
   }
 
-  /** 스타일 객체·CSS 규칙을 훑어 AA 미달 쌍을 낸다. */
-  function lowContrastOnLightBg(text: string): string[] {
+  /**
+   * **바닥을 선언한 배경 헬퍼의 껍질을 벗긴다.**
+   *
+   * `rgba(224,138,91,0.15)`는 색일 뿐 바닥이 아니다. 그래서 같은 배지가 어디에 얹히느냐에
+   * 따라 대비가 통째로 달라진다(실측: 활동 카드 위 3.91:1 · 선택된 카드 위 3.08:1 ·
+   * 사진 위 맨몸 2.77:1). 바닥을 **가정하면** 세 값 중 어느 것도 맞지 않는다.
+   *
+   * 그래서 컴포넌트가 바닥을 말하게 한다 — `chipSurface(tint)`는 tint를 불투명 바닥 위에
+   * 얹은 배경을 낸다. 껍질을 여기서 벗기면 안쪽 삼항도 그대로 `reachablePairs`를 탄다.
+   * `tintedGlass`의 바닥(GLASS_BASE)은 0.85라 **여전히 반투명** — 알면서도 못 푸는 것이라
+   * 통과시키지 않고 '판정 불가'로 센다.
+   */
+  const SURFACE_TS = resolve(SRC, 'components/screens/surface.ts');
+  function surfaceConst(name: string): string {
+    const src = readFileSync(SURFACE_TS, 'utf8');
+    const m = new RegExp(`export const ${name} = ['\`]([^'\`]+)['\`]`).exec(src);
+    if (!m) throw new Error(`surface.ts에 ${name}이 없다 — 바닥 선언의 SSOT가 사라졌다`);
+    return m[1];
+  }
+  function unwrapSurface(bgRaw: string): { raw: string; floor: string | null } {
+    const m = /^(chipSurface|tintedGlass)\(([\s\S]*)\)$/.exec(bgRaw.trim());
+    if (!m) return { raw: bgRaw, floor: null };
+    return { raw: m[2], floor: surfaceConst(m[1] === 'chipSurface' ? 'CHIP_BASE' : 'GLASS_BASE') };
+  }
+
+  /**
+   * 배경 값을 #hex로. `floor`는 컴포넌트가 **선언한** 바닥이다.
+   * 바닥이 없거나 그 바닥마저 반투명이면 null — 없는 바닥을 지어내지 않는다.
+   */
+  function resolveBackground(raw0: string, floor0: string | null): string | null {
+    // **잎에서도 껍질을 벗긴다.** `ok ? 'var(--accent)' : chipSurface('rgba(...)')`처럼
+    // 삼항 *안쪽*에 헬퍼가 있으면 바깥 unwrap이 못 본다 — 실측: Shop 구매불가 버튼이
+    // 그 모양이라 판정도 카운트도 안 되고 **조용히 건너뛰어졌다**.
+    const { raw, floor } = floor0 ? { raw: raw0, floor: floor0 } : unwrapSurface(raw0);
+    const opaque = resolveColor(raw);
+    if (opaque) return opaque;                        // 불투명 색·토큰
+    const v = raw.trim().replace(/^['"]|['"]$/g, '');
+    if (!parseRgb(v)) return null;                    // 그라디언트·계산값
+    const base = floor ? resolveColor(floor) : null;  // 반투명 바닥은 resolveColor가 null을 낸다
+    return base ? flatten(v, base) : null;
+  }
+
+  /** 잎이 판정 불가일 때 "반투명이라 바닥만 있으면 풀리는" 자리인지 — 카운트 대상 판별 */
+  function needsFloor(raw: string): boolean {
+    const v = unwrapSurface(raw).raw.trim().replace(/^['"]|['"]$/g, '');
+    const c = parseRgb(v);
+    return !!c && c.a < 1;
+  }
+
+  /**
+   * 스타일 객체·CSS 규칙을 훑어 AA 미달 쌍을 낸다.
+   * `undecided`는 **반투명 배경인데 바닥을 모르는** 자리 — 조용히 건너뛰지 않고 세서 돌려준다.
+   */
+  function scanPairs(text: string): { bad: string[]; undecided: string[] } {
     const out = new Set<string>();
+    const unknown = new Set<string>();
     for (const body of blocks(stripComments(text))) {
       const decls = topLevelDecls(body);
       const bgRaw = decls.get('background') ?? decls.get('backgroundColor') ?? decls.get('background-color');
       const fgRaw = decls.get('color');
       if (!bgRaw || !fgRaw) continue;
-      for (const [b, f] of reachablePairs(bgRaw, fgRaw)) {
-        const bg = resolveColor(b);
-        if (!bg) continue;                            // 바닥을 모르면 글자도 못 푼다
+      const { raw: bgSrc, floor } = unwrapSurface(bgRaw);
+      for (const [b, f] of reachablePairs(bgSrc, fgRaw)) {
+        const bg = resolveBackground(b, floor);
+        if (!bg) {
+          // 반투명이라 바닥이 있어야 풀리는 자리만 센다(그라디언트·계산값은 색 자체가 아니다).
+          if (needsFloor(b)) unknown.add(`${b.trim()} + color:${f.trim()}`);
+          continue;
+        }
         const fg = resolveColor(f, bg);               // 반투명 글자는 이 바닥에 합성
-        if (!fg) continue;                            // 판정 불가는 건너뛴다
+        if (!fg) continue;                            // 글자 쪽 판정 불가는 별개 축이다
         const r = ratio(fg, bg);
         if (r < AA) out.add(`${fg} on ${bg} = ${r.toFixed(2)}:1`);
       }
     }
-    return [...out];
+    return { bad: [...out], undecided: [...unknown] };
+  }
+
+  function lowContrastOnLightBg(text: string): string[] {
+    return scanPairs(text).bad;
   }
 
   // 탐지기가 살아 있다는 증거부터. 정규식을 죽이면 아래 전수 검사가 조용히 공회전한다.
@@ -714,6 +776,127 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
     const bad = sourceFiles().flatMap(f =>
       lowContrastOnLightBg(readFileSync(f, 'utf8')).map(hit => `${f.replace(SRC, 'src')} — ${hit}`));
     expect(bad).toEqual([]);
+  });
+
+  /**
+   * **반투명 배경 위의 글자.** 글자 쪽 알파는 #468에서 잠갔지만 배경 쪽은 "판정 불가"로
+   * 남겨 뒀다 — 바닥을 가정하면 결과가 통째로 달라지기 때문이다. 실측이 그 걱정을 확인해 줬다:
+   * 같은 `rgba(224,138,91,0.15)` 배지가 활동 카드 위에서 3.91:1, 선택된 카드 위에서 3.08:1,
+   * 사진 위 맨몸으로는 2.77:1이었다(틴트를 0으로 지워도 사진 위는 3.14:1 — **알파로는 못 고친다**).
+   *
+   * 그래서 가정하지 않는다. 컴포넌트가 `chipSurface()`로 **자기 바닥을 선언**하면 판정하고,
+   * 선언이 없으면 판정 불가로 **센다**. 조용히 통과시키는 것과 세는 것의 차이가 이 축의 전부다.
+   */
+  describe('반투명 배경 — 바닥을 선언한 자리는 판정하고, 모르는 자리는 센다', () => {
+    /** 코퍼스 전체의 판정 불가(바닥 미선언 반투명 배경) 목록 */
+    function undecidedTranslucentBg(): string[] {
+      return sourceFiles().flatMap(f =>
+        scanPairs(readFileSync(f, 'utf8')).undecided.map(u => `${f.replace(SRC, 'src')} — ${u}`)).sort();
+    }
+
+    /**
+     * **상한은 코퍼스에서 파생한다.** 지금 값이 곧 상한이고, 늘면 빨강이다.
+     * 줄었는데 안 내리면 그만큼 새 유입을 봐주게 되므로 아래에서 정확히 같은지도 본다
+     * (#461·#462에서 세운 래칫 — 임계는 손으로 박지 않는다).
+     *
+     * 이 32건 중 8자리는 이번에 **픽셀로 직접 쟀고 전부 통과**다(4.55~5.84:1):
+     * SlotEditPopup ✕닫기 4.60 · ActivityPicker 수치토글 4.61 · HomeModal 강점 pill 5.08 ·
+     * HomeModal 잡담 5.19 · Shop 효과칩 5.04 · Shop 취소 5.84 · WeekPlanner 연속주차 4.55 ·
+     * Tutorial 이전 버튼(바닥 ≈ 모달 그라디언트). 나머지는 **아직 안 쟀다** — 그래서
+     * "통과"가 아니라 "판정 불가"로 센다. 세는 것과 조용히 통과시키는 것의 차이가 이 축의 전부다.
+     */
+    const MAX_UNDECIDED = 32;
+
+    it('판정 불가가 상한을 넘지 않는다 (새로 늘면 빨강)', () => {
+      const now = undecidedTranslucentBg();
+      expect(now.length,
+        `바닥을 선언하지 않은 반투명 배경이 늘었다. chipSurface()로 바닥을 깔거나,\n` +
+        `정말 괜찮으면 MAX_UNDECIDED를 올릴 것(그 순간부터 그만큼 무검사다).\n${now.join('\n')}`)
+        .toBeLessThanOrEqual(MAX_UNDECIDED);
+    });
+
+    it('상한이 늙지 않았다 (줄었으면 상한도 내릴 것)', () => {
+      expect(undecidedTranslucentBg().length,
+        '판정 불가가 줄었는데 상한이 그대로면 그만큼 새 유입을 봐주는 것이다 — MAX_UNDECIDED를 내릴 것')
+        .toBe(MAX_UNDECIDED);
+    });
+
+    // 상한만 있으면 "세는 척"과 구별이 안 된다. 카운터가 0이 아니고, 실제로 그 형태를 센다는 것부터.
+    it('판정 불가 카운터가 실제로 센다 (자기검사 · 양성 2 · 음성 3)', () => {
+      expect(scanPairs(`const s = { background: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary)' };`).undecided,
+        '바닥 미선언 반투명 배경을 못 세면 그게 곧 조용한 통과다').toHaveLength(1);
+      expect(scanPairs(`.probe { background: rgba(255, 255, 255, 0.06); color: var(--text-secondary); }`).undecided)
+        .toHaveLength(1);
+      // 음성 — 세면 안 되는 것들
+      expect(scanPairs(`const s = { background: 'var(--bg-card)', color: '#fff' };`).undecided,
+        '불투명 배경은 판정 불가가 아니다').toEqual([]);
+      expect(scanPairs(`const s = { background: 'linear-gradient(135deg,#fff,#000)', color: '#fff' };`).undecided,
+        '그라디언트는 색 자체가 아니다 — 반투명 축으로 세면 상한이 잡음으로 찬다').toEqual([]);
+      expect(scanPairs(`const s = { background: chipSurface('rgba(255,255,255,0.06)'), color: 'var(--text-secondary)' };`).undecided,
+        '바닥을 선언했으면 판정 불가가 아니다').toEqual([]);
+    });
+
+    // 바닥 값을 이 파일에 복사해두면 surface.ts가 바뀔 때 테스트만 옛 값을 붙든다.
+    it('바닥을 surface.ts에서 읽는다 (SSOT)', () => {
+      expect(surfaceConst('CHIP_BASE')).toBe('var(--bg-secondary)');
+      expect(resolveColor(surfaceConst('CHIP_BASE')), 'CHIP_BASE는 불투명해야 판정이 성립한다')
+        .toBe(token('bg-secondary'));
+      // GLASS_BASE는 0.85라 여전히 반투명 — 그래서 tintedGlass는 판정 불가로 남는다.
+      expect(resolveColor(surfaceConst('GLASS_BASE'))).toBeNull();
+    });
+
+    /**
+     * **합성 자기검사.** 아래 전수 단언은 `toEqual([])` 부정형이라, chipSurface 가지를
+     * 통째로 지워도 "위반 0건"과 구별되지 않는다. 양성·음성을 값으로 같이 세운다.
+     * 경계는 손으로 박지 않고 CHIP_BASE와 팔레트 토큰에서 파생시킨다.
+     */
+    it('선언된 바닥 위에서 배경 알파를 실제로 판정한다 (양성 3 · 음성 3)', () => {
+      const base = token('bg-secondary');
+      // 양성 — 알파를 올리면 바닥이 밝아져 같은 글자색이 죽는다.
+      for (const [label, src] of [
+        ['accent 0.45', `{ background: chipSurface('rgba(224,138,91,0.45)'), color: 'var(--accent)' }`],
+        ['흰 틴트 0.35', `{ background: chipSurface('rgba(255,255,255,0.35)'), color: 'var(--text-muted)' }`],
+        ['CSS 표기', `.p { background: chipSurface('rgba(224, 138, 91, 0.45)'); color: var(--accent); }`],
+      ] as const) {
+        expect(lowContrastOnLightBg(src), `${label}을 못 보면 배경 알파는 여전히 무검사다`).toHaveLength(1);
+      }
+      // 음성 — 실제 값들. 여기서 걸리면 과검출이라 게이트가 죽는다.
+      for (const [label, src] of [
+        ['방학 배지', `{ background: chipSurface('rgba(224,138,91,0.15)'), color: 'var(--accent)' }`],
+        ['적용 중 칩', `{ background: chipSurface('rgba(125,163,217,0.2)'), color: 'var(--blue)' }`],
+        ['삼항 틴트', `{ background: chipSurface(ok ? 'rgba(143,181,115,0.1)' : 'rgba(217,100,88,0.1)'), color: ok ? 'var(--green)' : 'var(--red)' }`],
+      ] as const) {
+        expect(lowContrastOnLightBg(src), `${label}은 실측 AA 통과다 — 걸리면 오탐이다`).toEqual([]);
+      }
+      // **삼항 안쪽의 헬퍼**(Shop 구매불가 버튼의 모양). 바깥 껍질만 벗기면 이 잎은
+      // 판정도 카운트도 안 되고 조용히 빠진다 — 실측으로 한 번 그렇게 빠져 있었다.
+      expect(lowContrastOnLightBg(
+        `{ background: ok ? 'var(--accent)' : chipSurface('rgba(255,255,255,0.45)'), color: ok ? 'var(--btn-ink)' : 'var(--text-muted)' }`,
+      ), '삼항 잎의 chipSurface를 못 풀면 그 자리는 통째로 무검사다').toHaveLength(1);
+      expect(scanPairs(
+        `{ background: ok ? 'var(--accent)' : chipSurface('rgba(255,255,255,0.08)'), color: ok ? 'var(--btn-ink)' : 'var(--text-muted)' }`,
+      ).undecided, '바닥을 선언한 잎은 판정 불가가 아니다').toEqual([]);
+      // 판정의 근거를 값으로도 못 박는다.
+      expect(ratio(token('accent'), flatten('rgba(224,138,91,0.45)', base)!)).toBeLessThan(AA);
+      expect(ratio(token('accent'), flatten('rgba(224,138,91,0.15)', base)!)).toBeGreaterThanOrEqual(AA);
+      // 가장 빠듯한 자리 — blue 0.2. 여기가 무너지면 바닥 값을 다시 골라야 한다.
+      expect(ratio(token('blue'), flatten('rgba(125,163,217,0.2)', base)!)).toBeGreaterThanOrEqual(AA);
+    });
+
+    // 코퍼스에 chipSurface 쌍이 0건이면 껍질 벗기기·합성 가지를 통째로 지워도 초록이다.
+    it('바닥을 선언한 쌍이 코퍼스에 실제로 존재한다 (공회전 방지)', () => {
+      const declared = sourceFiles().filter(f => !f.endsWith('surface.ts'))
+        .flatMap(f => [...stripComments(readFileSync(f, 'utf8')).matchAll(/chipSurface\(/g)]);
+      expect(declared.length,
+        'chipSurface 사용처가 0이면 이 describe의 판정 가지는 검사하는 척만 하는 것이다')
+        .toBeGreaterThan(10);
+    });
+
+    it('선언된 바닥 위에 AA 미달 배경이 없다', () => {
+      const bad = sourceFiles().flatMap(f =>
+        scanPairs(readFileSync(f, 'utf8')).bad.map(hit => `${f.replace(SRC, 'src')} — ${hit}`));
+      expect(bad).toEqual([]);
+    });
   });
 
   describe('파서 동기화 — 안 보이는 파일이 늘지 않는다', () => {
