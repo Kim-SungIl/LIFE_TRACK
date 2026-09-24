@@ -3,7 +3,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it, vi } from 'vitest';
 import { GAME_EVENTS } from '../events';
-import { PRESIDENT_CHORE_IDS } from '../events/president';
+import { MIN_VARIANTS_PER_BAND, PRESIDENT_CHORE_IDS } from '../events/president';
+import { getWeekInfo } from '../gameEngine';
 import {
   assignCurrentEvent,
   pickVariantIndex,
@@ -30,15 +31,23 @@ function ctx(year: number, week: number, gender: 'male' | 'female' = 'male') {
 }
 
 describe('schoolVariants 커버리지', () => {
-  it('presidentChore_schoolBandCoverage: 잡무 3종은 초/중/고 모두 2개 이상이다', () => {
+  it('presidentChore_schoolBandCoverage: 잡무 3종은 초/중/고 모두 하한 이상이다', () => {
+    // 하한은 `MIN_VARIANTS_PER_BAND`에서 **파생**한다 — 리터럴을 여기 박으면 상수를 올려도
+    // 테스트가 옛 하한을 계속 본다(그 반대도 마찬가지로 조용하다).
+    let checked = 0;
     for (const id of PRESIDENT_CHORE_IDS) {
       const ev = chore(id);
       expect(ev.schoolVariants, `${id} schoolVariants`).toBeDefined();
       for (const band of BANDS) {
         const n = ev.schoolVariants![band].length;
-        expect(n, `${id} ${band} 변이 수`).toBeGreaterThanOrEqual(2);
+        expect(n, `${id} ${band} 변이 수`).toBeGreaterThanOrEqual(MIN_VARIANTS_PER_BAND);
+        checked++;
       }
     }
+    // 루프를 좁히는 것만으로 검사가 공허해지지 않게 — 무엇을 봤는지도 잠근다.
+    expect(checked, '잡무 3종 × 밴드 3개').toBe(PRESIDENT_CHORE_IDS.length * BANDS.length);
+    // 상수 자체가 계약이다(T37). 이 줄이 없으면 "상수를 2로 낮추고 변이를 지우는" 변이가 산다.
+    expect(MIN_VARIANTS_PER_BAND, 'T37: 밴드당 4개 — 동일 텍스트 노출 4.8회 → 2.4회').toBeGreaterThanOrEqual(4);
   });
 
   it('variant copy has no digits or stat names (hide-numbers)', () => {
@@ -51,6 +60,206 @@ describe('schoolVariants 커버리지', () => {
         }
       }
     }
+  });
+});
+
+// ===== T37: 밴드당 2 → 4로 늘리면서 같이 잠근 것들 =====
+// 변이는 "문장만" 갈리는 축이다. 개수를 늘리는 순간 새로 생기는 위험 셋을 각각 잠근다.
+//   ① 복붙 — 늘린 만큼 실제로 다른 문장이어야 노출이 준다(같은 문장을 두 칸에 넣으면 숫자만 늘고 체감은 그대로).
+//   ② 학교급 오염 — 초등 반장이 야자 감독을 하면 안 된다.
+//   ③ 밸런스 누수 — 변이 payload에 effects가 섞여 들어오면 같은 선택이 판마다 다른 결과를 낸다.
+describe('T37 변이 증설 계약', () => {
+  const norm = (s: string) => s.replace(/["'…\s.?!,~]/g, '');
+  // npcDialogueCoverage.test.ts와 같은 판별자 — 문두 5자. 근거는 그쪽 주석에 실측으로 남아 있다.
+  const HEAD = 5;
+
+  type Line = { where: string; text: string };
+  function allVariantLines(): Line[] {
+    const out: Line[] = [];
+    for (const id of PRESIDENT_CHORE_IDS) {
+      for (const band of BANDS) {
+        chore(id).schoolVariants![band].forEach((v, i) => {
+          out.push({ where: `${id}/${band}[${i}].description`, text: v.description });
+          v.choices.forEach((c, j) => {
+            out.push({ where: `${id}/${band}[${i}].c${j}.text`, text: c.text });
+            out.push({ where: `${id}/${band}[${i}].c${j}.message`, text: c.message });
+          });
+        });
+      }
+    }
+    return out;
+  }
+
+  // 코퍼스가 0건이면 중복 검사는 자기가 지워져도 초록이다(#437). 모수를 먼저 잠근다.
+  function dupesByKey(lines: Line[], key: (t: string) => string): string[] {
+    const seen = new Map<string, Line[]>();
+    for (const l of lines) {
+      const k = key(l.text);
+      if (!k) continue;
+      seen.set(k, [...(seen.get(k) ?? []), l]);
+    }
+    return [...seen.entries()]
+      .filter(([, ls]) => ls.length > 1)
+      .map(([k, ls]) => `[${k.slice(0, 12)}] ${ls.map(l => l.where).join(' ↔ ')}`);
+  }
+
+  it('variant_copy_globally_unique: 변이 문장은 전역에서 한 번만 쓰인다', () => {
+    const lines = allVariantLines();
+    // 모수 하한 — 잡무 3종 × 밴드 3 × 하한 × (본문 1 + 선택지 2 × (text+message))
+    const floor = PRESIDENT_CHORE_IDS.length * BANDS.length * MIN_VARIANTS_PER_BAND * 5;
+    expect(lines.length, '검사 대상 문장 수').toBeGreaterThanOrEqual(floor);
+
+    // 양성 대조군 — 판별자가 실제로 중복을 잡는지 자기검사한다. 안 잡으면 여기서 죽는다.
+    const probe: Line[] = [{ where: 'probe/a', text: '같은 문장이다.' }, { where: 'probe/b', text: '같은 문장이다.' }];
+    if (dupesByKey(probe, norm).length !== 1) throw new Error('중복 판별자 자기검사 실패');
+
+    expect(dupesByKey(lines, norm), 'variant_copy_globally_unique').toEqual([]);
+  });
+
+  it('variant_copy_head5_unique: 변이 문장은 문두 5자도 전역에서 겹치지 않는다', () => {
+    // 정확 일치만 보면 '월요일 조회. 담임이…' ↔ '월요일 조회. 이번 주…' 같은 근사 중복을 놓친다.
+    // 한 판에서 초→중→고를 모두 지나므로, 밴드가 달라도 같은 문두를 두 번 보면 반복으로 느껴진다.
+    const lines = allVariantLines();
+    const head = (t: string) => { const h = norm(t).slice(0, HEAD); return h.length === HEAD ? h : ''; };
+
+    const probe: Line[] = [
+      { where: 'probe/a', text: '종례 직전에 담임이 나를 불렀다.' },
+      { where: 'probe/b', text: '종례 직전에 교실이 조용해졌다.' },
+    ];
+    if (dupesByKey(probe, head).length !== 1) throw new Error('문두 판별자 자기검사 실패');
+
+    expect(dupesByKey(lines, head), 'variant_copy_head5_unique').toEqual([]);
+  });
+
+  it('variant_carries_no_balance_fields: 변이 payload는 문장 필드만 갖는다', () => {
+    // presentEvent가 effects를 안 읽는다는 건 이미 잠겨 있다. 여기서는 **데이터 쪽**을 막는다 —
+    // 변이에 effects를 적어 두면 읽히지 않으니 조용히 죽은 밸런스 의도가 되고, 나중에
+    // 누군가 "왜 안 먹지" 하며 표현 층을 고치게 만든다.
+    const VARIANT_KEYS = new Set(['description', 'femaleDescription', 'choices']);
+    const CHOICE_KEYS = new Set(['text', 'message', 'femaleText', 'femaleMessage']);
+    const stray: string[] = [];
+    let scanned = 0;
+    for (const id of PRESIDENT_CHORE_IDS) {
+      for (const band of BANDS) {
+        chore(id).schoolVariants![band].forEach((v, i) => {
+          scanned++;
+          for (const k of Object.keys(v)) if (!VARIANT_KEYS.has(k)) stray.push(`${id}/${band}[${i}].${k}`);
+          v.choices.forEach((c, j) => {
+            for (const k of Object.keys(c)) if (!CHOICE_KEYS.has(k)) stray.push(`${id}/${band}[${i}].c${j}.${k}`);
+          });
+        });
+      }
+    }
+    expect(scanned, '스캔한 변이 블록 수')
+      .toBeGreaterThanOrEqual(PRESIDENT_CHORE_IDS.length * BANDS.length * MIN_VARIANTS_PER_BAND);
+    expect(stray, 'variant_carries_no_balance_fields').toEqual([]);
+  });
+
+  it('chore_balance_table_frozen: T37은 문장만 바꾼다 — 잡무 효과표는 그대로다', () => {
+    // 아래 `variant_effects_identical_across_every_index`는 "구운 것 == 카탈로그"를 본다.
+    // 그래서 **카탈로그 자체를 고치면 양쪽이 함께 움직여 조용히 통과한다**(뮤테이션 실측:
+    // president-errand c0 social 2 → 3 이 전 스위트를 통과했다). 변이 작업이 밸런스를
+    // 건드리지 않았다는 건 값을 직접 적어 두는 것 말고는 잠글 방법이 없다.
+    // 값을 의도적으로 바꾸는 PR은 이 표를 함께 고치고 근거를 남길 것.
+    const FROZEN: Record<string, Array<{ effects: Record<string, number>; fatigueEffect?: number }>> = {
+      'president-errand': [
+        { effects: { social: 2, academic: 1 }, fatigueEffect: 3 },
+        { effects: { social: 1 }, fatigueEffect: 2 },
+      ],
+      'president-mediate': [
+        { effects: { social: 4, mental: -2 }, fatigueEffect: 3 },
+        { effects: { social: -1, mental: 1 }, fatigueEffect: undefined },
+      ],
+      'president-speech': [
+        { effects: { social: 3, mental: 2 }, fatigueEffect: 2 },
+        { effects: { social: 1, mental: -1 }, fatigueEffect: undefined },
+      ],
+    };
+    expect(Object.keys(FROZEN).sort(), '표가 잡무 전수를 덮는다').toEqual([...PRESIDENT_CHORE_IDS].sort());
+    for (const id of PRESIDENT_CHORE_IDS) {
+      const ev = chore(id);
+      expect(ev.choices, `${id} 선택지 수`).toHaveLength(FROZEN[id].length);
+      ev.choices.forEach((c, i) => {
+        expect(c.effects, `${id} c${i} effects`).toEqual(FROZEN[id][i].effects);
+        expect(c.fatigueEffect, `${id} c${i} fatigueEffect`).toBe(FROZEN[id][i].fatigueEffect);
+        expect(c.moneyEffect, `${id} c${i} moneyEffect`).toBeUndefined();
+      });
+    }
+  });
+
+  it('variant_effects_identical_across_every_index: 어느 변이가 걸려도 효과가 같다', () => {
+    // 기존 테스트는 주차 두 개([5,6])만 봤다 — 밴드당 2개일 땐 그게 전수였지만 4개가 되면
+    // 절반만 본다. **모든 인덱스를 실제로 지나갔는지**를 커버리지로 잠근다.
+    for (const id of PRESIDENT_CHORE_IDS) {
+      const catalog = chore(id);
+      for (const band of BANDS) {
+        const n = catalog.schoolVariants![band].length;
+        const year = YEAR_FOR_BAND[band];
+        const hit = new Set<number>();
+        for (let week = 1; week <= 48; week++) {
+          hit.add(pickVariantIndex(year, week, n));
+          const presented = presentEvent({ ...catalog, week }, ctx(year, week));
+          for (let i = 0; i < catalog.choices.length; i++) {
+            expect(presented.choices[i].effects, `${id}/${band} W${week}`).toEqual(catalog.choices[i].effects);
+            expect(presented.choices[i].fatigueEffect, `${id}/${band} W${week}`).toBe(catalog.choices[i].fatigueEffect);
+            expect(presented.choices[i].moneyEffect, `${id}/${band} W${week}`).toBe(catalog.choices[i].moneyEffect);
+            expect(presented.choices[i].npcEffects, `${id}/${band} W${week}`).toEqual(catalog.choices[i].npcEffects);
+          }
+        }
+        expect(hit.size, `${id}/${band}: 모든 변이 인덱스를 지나갔나`).toBe(n);
+      }
+    }
+  });
+
+  it('every_variant_reachable_in_play: 늘린 변이가 실플레이 주차에서 전부 도달 가능하다', () => {
+    // "픽 가능성"만 잠그면 도달 가능성은 통째로 빠진다(#409). 잡무 3종은 전부 `!isVacation`이고
+    // president-errand는 `week > 4`까지 요구한다 — 모듈로 주기가 그 창과 어긋나면 늘린 변이가
+    // 카탈로그엔 있는데 화면엔 영영 안 나온다.
+    const semesterWeeks = Array.from({ length: 48 }, (_, i) => i + 1).filter(w => !getWeekInfo(w).isVacation && w > 4);
+    expect(semesterWeeks.length, '학기 주 코퍼스가 비면 이 검사는 공허하다').toBeGreaterThan(20);
+
+    for (const id of PRESIDENT_CHORE_IDS) {
+      const catalog = chore(id);
+      for (const band of BANDS) {
+        const n = catalog.schoolVariants![band].length;
+        const years = [1, 2, 3, 4, 5, 6, 7].filter(y => schoolBandForYear(y) === band);
+        const bodies = new Set<string>();
+        for (const y of years) {
+          for (const w of semesterWeeks) bodies.add(presentEvent({ ...catalog, week: w }, ctx(y, w)).description);
+        }
+        expect(bodies.size, `${id}/${band}: 실플레이 주차에서 보이는 본문 수`).toBe(n);
+      }
+    }
+  });
+
+  it('variant_copy_matches_school_band: 학교급에 없는 생활 소재가 섞이지 않는다', () => {
+    // 초등 반장이 야자 감독을 하면 안 된다. 금칙어는 **그 밴드에 존재하지 않는 제도**만 고른다
+    // (수행평가는 중학교에도 있으므로 중등에서 금지하지 않는다).
+    // '수시'·'정시'는 뺐다 — 부분 문자열이라 '진정시켰다'에서 오탐이 났다(실측). 같은 축은
+    // '수능'·'원서'·'고사장'이 이미 덮는다. 금칙 표는 오탐이 나는 순간 게이트가 아니라 잡음이 된다.
+    const FORBIDDEN: Record<SchoolBand, RegExp> = {
+      elementary: /야자|야간자율학습|자습실|수능|모의고사|내신|원서|고사장|수행평가|진학\s?상담/,
+      middle: /야자|야간자율학습|자습실|수능|고사장|진학\s?상담/,
+      high: /우유\s?당번|알림장|받아쓰기|유치원|색종이|접시콘|피구/,
+    };
+    const offenders: string[] = [];
+    let scanned = 0;
+    for (const id of PRESIDENT_CHORE_IDS) {
+      for (const band of BANDS) {
+        for (const [i, v] of chore(id).schoolVariants![band].entries()) {
+          scanned++;
+          const blob = [v.description, ...v.choices.flatMap(c => [c.text, c.message])].join('\n');
+          const hit = blob.match(FORBIDDEN[band]);
+          if (hit) offenders.push(`${id}/${band}[${i}]: "${hit[0]}"`);
+        }
+      }
+    }
+    // 양성 대조군 — 금칙 표가 실제로 문장을 잡는지. 정규식을 통째로 지우는 변이를 여기서 죽인다.
+    expect('오늘도 야자 감독이다'.match(FORBIDDEN.elementary)?.[0], '금칙 표 자기검사(초등)').toBe('야자');
+    expect('우유 당번을 정한다'.match(FORBIDDEN.high)?.[0], '금칙 표 자기검사(고등)').toBe('우유 당번');
+    expect(scanned, '스캔한 변이 블록 수')
+      .toBeGreaterThanOrEqual(PRESIDENT_CHORE_IDS.length * BANDS.length * MIN_VARIANTS_PER_BAND);
+    expect(offenders, 'variant_copy_matches_school_band').toEqual([]);
   });
 });
 
@@ -75,13 +284,14 @@ describe('presentEvent 결정론', () => {
     const ev = chore('president-speech');
     const w5 = presentEvent(ev, ctx(1, 5));
     const w6 = presentEvent(ev, ctx(1, 6));
-    expect(pickVariantIndex(1, 5, 2)).not.toBe(pickVariantIndex(1, 6, 2));
+    const n = ev.schoolVariants!.elementary.length;   // 리터럴을 박으면 개수를 늘릴 때 조용히 빗나간다
+    expect(pickVariantIndex(1, 5, n)).not.toBe(pickVariantIndex(1, 6, n));
     expect(w5.description, 'rotation_not_always_index_0').not.toBe(w6.description);
   });
 
   it('school_band_not_constant_elementary: 초/중/고 본문이 서로 다르다', () => {
     const ev = chore('president-errand');
-    const week = 6; // absWeek % 2 === 0 → 각 밴드 [0]
+    const week = 6; // 밴드마다 다른 인덱스가 걸려도 본문은 밴드끼리 겹치지 않아야 한다
     const texts = BANDS.map(band => presentEvent(ev, ctx(YEAR_FOR_BAND[band], week)).description);
     expect(new Set(texts).size, 'school_band_not_constant_elementary').toBe(3);
     expect(schoolBandForYear(1)).toBe('elementary');
