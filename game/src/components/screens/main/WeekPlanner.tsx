@@ -19,6 +19,12 @@ type Props = {
   slot2ComboWeeks: number;
   slot3ComboWeeks: number;
   maxSlots: number;
+  /**
+   * "지난주처럼" — 누르면 지난주 확정 계획을 슬롯에 **채우기만** 한다(확정은 CTA가 한다).
+   * `undefined`면 버튼을 그리지 않는다: 지난주 계획이 없거나, 지금은 그대로 못 하거나
+   * (돈·게이트·전출한 동행 친구), 이미 이번 주 슬롯을 건드린 경우. 판정은 `weekendPlan.ts`.
+   */
+  onRepeatLastPlan?: () => void;
 };
 
 // 이번 주 일과 — 학기 중(주중/주말 2단) · 방학(자유 슬롯) 플래너.
@@ -26,7 +32,7 @@ type Props = {
 export function WeekPlanner({
   state, selectedActivities, setSelectedActivities, npcChoices, onEditSlot,
   routineTooExpensive, routineCost, unaffordable, maxComboWeeks,
-  slot2ComboWeeks, slot3ComboWeeks, maxSlots,
+  slot2ComboWeeks, slot3ComboWeeks, maxSlots, onRepeatLastPlan,
 }: Props) {
   const reducedMotion = usePrefersReducedMotion();
   // 접두는 엔진 티어 인덱스에 그대로 매핑한다 — 임계 숫자는 gameEngine에만 두고 여기엔 표현만 남긴다.
@@ -39,6 +45,24 @@ export function WeekPlanner({
   const labelFor = (w: number) => TIER_PREFIX[tierOf(w)] ?? '';
   const isMaxed = (w: number) => w + routineBoost >= ROUTINE_BONUS_PLATEAU_WEEKS;
   const routineComboLabel = labelFor(maxComboWeeks);
+
+  // "지난주처럼" 보조 버튼 — 학기 주말 칸과 방학 슬롯 아래, 둘 다 같은 것을 그린다.
+  // 라벨이 '채우기'로 끝나는 게 계약이다: 이 버튼은 확정하지 않는다.
+  // 톤은 의도적으로 조용하다(크롬은 절제, 변화는 슬롯이 차면서 또렷이 보인다).
+  const repeatButton = onRepeatLastPlan ? (
+    <button
+      type="button" className="btn-reset"
+      onClick={onRepeatLastPlan}
+      style={{
+        display: 'block', width: '100%', marginTop: 6, padding: '7px 10px',
+        borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+        background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.18)',
+        color: 'var(--text-secondary)', fontSize: '0.72rem', fontWeight: 600,
+      }}
+    >
+      ↩ 지난주처럼 채우기
+    </button>
+  ) : null;
 
   // 슬롯 렌더 헬퍼 — routine 슬롯의 경우 그 슬롯의 카운터를 명시적으로 전달
   const renderSlot = (
@@ -223,6 +247,8 @@ export function WeekPlanner({
               );
             })()}
 
+            {repeatButton}
+
             {/* 주말 미선택 안내 — 경고가 아니라 조작 힌트다.
                 예전엔 노란 경고가 맥박치며 "비어있어요! 채우세요"라고 재촉했는데, 실측상
                 주말을 비우는 게 최적해인 구간이 있다(피로가 학업 총량을 깎는 구조 —
@@ -303,6 +329,7 @@ export function WeekPlanner({
               )}
             </div>
           ))}
+          {repeatButton}
         </>
       )}
     </div>
