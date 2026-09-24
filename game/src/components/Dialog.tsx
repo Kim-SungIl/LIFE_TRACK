@@ -1,4 +1,5 @@
 import { useEffect, useRef, ReactNode, CSSProperties } from 'react';
+import { focusFirst, isTopLayer, popLayer, pushLayer, topLayer, trapTab } from './focusTrap';
 
 // Phase 1(UX 마찰 제거) — 전 모달 공통 다이얼로그 셸.
 // 접근성: role=dialog + aria-modal, Escape 닫기, 포커스 트랩, 열기 전 포커스 복귀.
@@ -10,6 +11,9 @@ import { useEffect, useRef, ReactNode, CSSProperties } from 'react';
 //      상위 대신 닫히는 오작동이 없다.
 //  - 새 다이얼로그가 열리면 직전 최상위 콘텐츠에 `inert`를 걸어 배경 모달을
 //    접근성 트리·조작에서 제외한다(aria-modal 중복 해소).
+//
+// 스택·트랩 구현체는 focusTrap.ts로 분리했다 — Tutorial(코치마크)이 같은 스택에 올라타야
+// Escape 우선순위가 두 층 사이에서도 성립하기 때문이다(그 파일 상단 주석 참조).
 
 type Props = {
   onClose: () => void;
@@ -34,18 +38,6 @@ type Props = {
       내용이 통째로 교체되는 경우(예: SlotEditPopup 루틴1→루틴2) 포커스 유실 방지 */
   focusKey?: string | number;
 };
-
-// 포커스 가능한 요소 셀렉터
-const FOCUSABLE =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-// 열린 다이얼로그 콘텐츠 스택(최상위 = 마지막). 중첩 시 최상위만 키보드에 반응.
-const dialogStack: HTMLElement[] = [];
-
-function focusFirst(el: HTMLElement) {
-  const first = el.querySelector<HTMLElement>(FOCUSABLE);
-  (first ?? el).focus();
-}
 
 export function Dialog({
   onClose,
@@ -73,14 +65,14 @@ export function Dialog({
     // 열기 직전 포커스 저장 → 닫힐 때 복귀
     prevFocus.current = document.activeElement as HTMLElement | null;
     // 직전 최상위를 inert 처리(배경 모달 비활성)
-    const prevTop = dialogStack[dialogStack.length - 1];
+    const prevTop = topLayer();
     if (prevTop) prevTop.inert = true;
-    dialogStack.push(el);
+    pushLayer(el);
     focusFirst(el);
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // 최상위 다이얼로그만 처리 — 포커스가 body로 떨어졌어도 Escape/Tab 유효
-      if (dialogStack[dialogStack.length - 1] !== el) return;
+      if (!isTopLayer(el)) return;
       if (e.key === 'Escape') {
         e.stopPropagation();
         e.preventDefault();
@@ -88,39 +80,15 @@ export function Dialog({
         return;
       }
       if (e.key !== 'Tab') return;
-      const nodes = Array.from(el.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
-        n => n.offsetParent !== null,
-      );
-      const active = document.activeElement;
-      // 포커스가 콘텐츠 밖(자식 unmount 등으로 body)으로 샜으면 다시 안으로
-      if (!el.contains(active)) {
-        e.preventDefault();
-        (nodes[0] ?? el).focus();
-        return;
-      }
-      if (nodes.length === 0) {
-        e.preventDefault();
-        el.focus();
-        return;
-      }
-      const firstEl = nodes[0];
-      const lastEl = nodes[nodes.length - 1];
-      if (e.shiftKey && (active === firstEl || active === el)) {
-        e.preventDefault();
-        lastEl.focus();
-      } else if (!e.shiftKey && active === lastEl) {
-        e.preventDefault();
-        firstEl.focus();
-      }
+      trapTab(el, e);
     };
     document.addEventListener('keydown', handleKeyDown, true);
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true);
-      const i = dialogStack.indexOf(el);
-      if (i >= 0) dialogStack.splice(i, 1);
+      popLayer(el);
       // 새 최상위 복원(inert 해제)
-      const newTop = dialogStack[dialogStack.length - 1];
+      const newTop = topLayer();
       if (newTop) newTop.inert = false;
       prevFocus.current?.focus?.();
     };
@@ -131,7 +99,7 @@ export function Dialog({
   useEffect(() => {
     if (!mountedRef.current) { mountedRef.current = true; return; }
     const el = contentRef.current;
-    if (el && dialogStack[dialogStack.length - 1] === el) focusFirst(el);
+    if (el && isTopLayer(el)) focusFirst(el);
   }, [focusKey]);
 
   return (

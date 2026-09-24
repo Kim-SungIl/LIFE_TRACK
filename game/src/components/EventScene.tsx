@@ -7,6 +7,7 @@ import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIEN
 import { spriteCandidates, pickAllExisting } from '../engine/characterAssets';
 import { CHARACTER_MANIFEST } from '../character-manifest.generated';
 import { CharacterAvatar, NPC_APPEARANCES } from './CharacterAvatar';
+import { Dialog } from './Dialog';
 import { prefetchAssets } from '../engine/assetPrefetch';
 import { webpSrc } from '../engine/assetWebp';
 import { CG_MANIFEST } from '../cg-manifest.generated';
@@ -327,6 +328,20 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // 한 번이라도 마지막 페이지에 도달했으면 true — 이후 ◀ 이전으로 돌아가도 선택지 유지.
   // 단일 페이지 이벤트는 maxPageReached(0) >= pages.length-1(0)이라 즉시 true.
   const hasReachedEnd = maxPageReached >= pages.length - 1;
+  // 안내가 화면을 덮고 있는 동안은 뒤쪽 선택지·페이지 버튼을 키보드로도 못 만져야 한다.
+  // (손으로 만든 오버레이 시절엔 Tab이 가려진 선택지 3개에 먼저 닿고 활성화까지 됐다.)
+  const choiceHintOpen = showChoiceHint && hasReachedEnd && !choiceIntroDismissed;
+  // 안내를 닫으면 포커스를 첫 선택지로 보낸다. Dialog의 기본 복귀 대상은 "안내가 열리던 순간의
+  // 포커스"인데 여기선 씬이 막 뜬 직후라 body다 — 그대로 두면 키보드 사용자는 문서 처음부터
+  // 다시 Tab을 눌러야 한다. Dialog의 복귀(언마운트 cleanup)가 먼저 돌고 이 effect가 나중에 돈다.
+  const choicesRef = useRef<HTMLDivElement>(null);
+  const hintWasOpen = useRef(false);
+  useEffect(() => {
+    if (choiceHintOpen) { hintWasOpen.current = true; return; }
+    if (!hintWasOpen.current) return;
+    hintWasOpen.current = false;
+    choicesRef.current?.querySelector<HTMLButtonElement>('button:not([disabled])')?.focus();
+  }, [choiceHintOpen]);
   const advancePage = () => {
     if (!isLastPage) {
       playSfx('page');
@@ -524,7 +539,9 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       {/* 모바일: 고정 35% 대신 콘텐츠에 맞춰 늘어나되 상한(80dvh)을 둠 — 작은 화면에서
           description(10em)이 공간을 다 먹어 선택지가 잘리던 문제 방지.
           데스크탑: 기존 고정 35% 유지. */}
-      <div style={{
+      {/* inert: 씬의 포커스 가능한 요소(페이지 ◀▶, 선택지)는 전부 이 안에 있다.
+          첫 선택 안내가 떠 있는 동안 이 블록만 비활성화하면 "안내 뒤로 Tab이 새는" 경로가 닫힌다. */}
+      <div inert={choiceHintOpen || undefined} style={{
         position: 'absolute',
         bottom: 0,
         left: 0,
@@ -627,7 +644,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
           )}
 
           {/* Choices — 한 번이라도 마지막 페이지 도달 후 영구 노출 (재읽기 시 사라지지 않게) */}
-          <div style={{
+          <div ref={choicesRef} style={{
             display: hasReachedEnd ? 'flex' : 'none',
             flexDirection: 'column',
             gap: 8,
@@ -717,48 +734,48 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       </div>
 
       {/* 첫 플레이 안내 오버레이 — 선택지가 뜨는 순간 씬(지훈) 위를 덮어 확실히 인지시킨다.
-          첫 장면(first-week) + 튜토리얼 미경험자 한정. '골라볼게요!'로 닫으면 선택지 조작 가능. */}
-      {showChoiceHint && hasReachedEnd && !choiceIntroDismissed && (
-        <div
-          onClick={() => setChoiceIntroDismissed(true)}
-          style={{
-            position: 'absolute', inset: 0, zIndex: 60,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 24, background: 'rgba(0,0,0,0.74)', backdropFilter: 'blur(3px)',
+          첫 장면(first-week) + 튜토리얼 미경험자 한정. '골라볼게요!'로 닫으면 선택지 조작 가능.
+          손으로 만든 role="dialog"였던 것을 공용 Dialog로 이관 — 포커스 이동·트랩·Escape·복귀를
+          직접 짜지 않는다(그때는 셋 다 없어서 Tab이 가려진 선택지를 먼저 잡았다).
+          외형은 그대로: 배경 0.74 + blur(3), 패딩 24, 카드 폭 340. */}
+      {choiceHintOpen && (
+        <Dialog
+          onClose={() => setChoiceIntroDismissed(true)}
+          ariaLabel="선택 안내"
+          maxWidth={340}
+          zIndex={60}
+          overlayStyle={{
+            padding: 24, background: 'rgba(0,0,0,0.74)',
+            backdropFilter: 'blur(3px)', WebkitBackdropFilter: 'blur(3px)',
             animation: 'es-choice-fade-up 0.3s ease both',
           }}
+          contentStyle={{
+            width: '100%', textAlign: 'center',
+            background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
+            border: '1px solid rgba(224,138,91,0.45)', borderRadius: 18,
+            padding: '28px 24px 22px', boxShadow: '0 14px 44px rgba(0,0,0,0.55)',
+          }}
         >
-          <div
-            role="dialog" aria-label="선택 안내" aria-modal="true"
-            onClick={e => e.stopPropagation()}
+          <div style={{ fontSize: '2rem', marginBottom: 10 }}>👆</div>
+          <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 12, color: '#fff' }}>
+            이제 선택할 차례예요
+          </div>
+          <div style={{ fontSize: '0.92rem', lineHeight: 1.7, color: 'var(--text-secondary)', marginBottom: 22 }}>
+            정답은 없어요. 마음이 가는 대로 하나 골라 보세요.<br />
+            <span style={{ color: 'var(--accent)', fontWeight: 600 }}>고른 선택에 따라 이야기가 조금씩 달라져요.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setChoiceIntroDismissed(true)}
             style={{
-              width: '100%', maxWidth: 340, textAlign: 'center',
-              background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
-              border: '1px solid rgba(224,138,91,0.45)', borderRadius: 18,
-              padding: '28px 24px 22px', boxShadow: '0 14px 44px rgba(0,0,0,0.55)',
+              width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 10,
+              // accent 위 흰 글자 2.64:1 → --btn-ink 6.35:1 (신규 플레이어가 반드시 누르는 CTA다).
+              padding: '13px 28px', color: 'var(--btn-ink)', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
             }}
           >
-            <div style={{ fontSize: '2rem', marginBottom: 10 }}>👆</div>
-            <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 12, color: '#fff' }}>
-              이제 선택할 차례예요
-            </div>
-            <div style={{ fontSize: '0.92rem', lineHeight: 1.7, color: 'var(--text-secondary)', marginBottom: 22 }}>
-              정답은 없어요. 마음이 가는 대로 하나 골라 보세요.<br />
-              <span style={{ color: 'var(--accent)', fontWeight: 600 }}>고른 선택에 따라 이야기가 조금씩 달라져요.</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setChoiceIntroDismissed(true)}
-              style={{
-                width: '100%', background: 'var(--accent)', border: 'none', borderRadius: 10,
-                // accent 위 흰 글자 2.64:1 → --btn-ink 6.35:1 (신규 플레이어가 반드시 누르는 CTA다).
-                padding: '13px 28px', color: 'var(--btn-ink)', fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
-              }}
-            >
-              골라볼게요!
-            </button>
-          </div>
-        </div>
+            골라볼게요!
+          </button>
+        </Dialog>
       )}
     </div>
   );
