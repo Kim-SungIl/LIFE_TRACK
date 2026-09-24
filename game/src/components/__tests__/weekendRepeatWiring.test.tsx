@@ -146,14 +146,18 @@ describe('세이브 왕복 — 새로고침 뒤에도 남는다', () => {
     render(<GameScreen />);
     pickActivity('reading', '토요일');
     confirmWeek();
+    // T36(#467)부터 loadFromStorage는 판별 가능한 결과를 낸다 — 읽었으면 `ok`, 그 안의 `data`가
+    // 세이브다. 읽기 실패를 `null`로 접지 않으므로 여기서도 `kind`를 먼저 단언한다.
     const saved = loadFromStorage();
-    expect(saved?.state.lastWeekendPlan, '자동 저장이 계획을 안 실었다').toEqual({
+    expect(saved.kind, '확정 직후 세이브가 읽히지 않는다').toBe('ok');
+    if (saved.kind !== 'ok') throw new Error('unreachable');
+    expect(saved.data.state.lastWeekendPlan, '자동 저장이 계획을 안 실었다').toEqual({
       activities: ['reading'], npcChoices: {}, isVacation: false,
     });
 
     useGameStore.setState({ state: null });
     expect(useGameStore.getState().loadSavedGame()).toBe(true);
-    expect(current().lastWeekendPlan).toEqual(saved!.state.lastWeekendPlan);
+    expect(current().lastWeekendPlan).toEqual(saved.data.state.lastWeekendPlan);
   });
 
   it('스냅샷이 없는 구세이브도 그대로 열리고, 버튼만 안 뜬다 (부재를 거부하지 않는다)', () => {
