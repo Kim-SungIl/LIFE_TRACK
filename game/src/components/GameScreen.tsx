@@ -10,6 +10,7 @@ import { deriveSetup } from '../engine/lastSetup';
 import { setBgmTrack, type BgmId } from '../audio/bgm';
 import { characterStagePrefixByLevel } from '../engine/characterAssets';
 import { getResultDialogue } from '../engine/dialogues';
+import { LIGHT_RESULT_EVENT_IDS } from '../engine/events/light-result';
 import { prefetchAssets, runWhenIdle } from '../engine/assetPrefetch';
 import { webpSrc } from '../engine/assetWebp';
 import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
@@ -357,6 +358,21 @@ export function GameScreen() {
           if (!choice || !applied) {
             setEventResultData({ message: '잠시 머뭇거리다 자리를 떴다.', effects: [], event: evt, choiceIndex: index, year: state.year });
             return;
+          }
+          // T46: 가벼운 사건(잡무 3종, light-result.ts)은 결과 화면을 건너뛰고 곧장 결산으로 간다 —
+          // 같은 문장이 결과 화면·결산 hero에 두 번 뜨던 것을 한 번으로. 단 **곧 뜰 화면이 결산일
+          // 때만**이다. resolveEvent는 같은 set 안에서 체인/followup을 걸거나(phase 'event'),
+          // W48이면 학년 전환(year-end/ending)으로 보내므로, 그 뒤 상태를 getState()로 본다.
+          //  - 다음 이벤트가 걸렸으면 결과 화면이 "다음 장면으로 넘어가는 문"이고, 이 문장은 hero
+          //    (마지막 📖)가 아니라 목록으로 밀리니 유지한다. 반대로 생략되는 문장은 늘 hero다.
+          //  - 결산이 아니면(year-end·ending·weekLog 없는 부팅 장면) 문장이 hero에 못 오르니 유지한다.
+          //  - 문장이 실제로 weekLog에 실렸는지도 본다 — 스토어가 push를 멈추면 화면이 되살아나는
+          //    방향으로 실패한다(판별 불가 시 결과 화면 유지).
+          if (LIGHT_RESULT_EVENT_IDS.has(evt.id)) {
+            const after = useGameStore.getState().state;
+            const landsOnWeeklyResult = after?.phase === 'result'
+              && !!after.weekLog?.messages.some(m => m.includes(choice.message));
+            if (landsOnWeeklyResult) return;
           }
           const effects: Record<string, string>[] = [];
           const fmt = (v: number) => `${v > 0 ? '+' : ''}${Number.isInteger(v) ? v : v.toFixed(1)}`;
