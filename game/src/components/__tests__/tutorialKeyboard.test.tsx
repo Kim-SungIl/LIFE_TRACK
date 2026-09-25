@@ -18,6 +18,7 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { Tutorial } from '../Tutorial';
 import { Dialog } from '../Dialog';
+import { popLayer, pushLayer } from '../focusTrap';
 import { STEPS } from '../tutorialSteps';
 
 // jsdom 미구현 — Tutorial이 타겟으로 스크롤하는 effect에서 던진다(키보드 계약과 무관).
@@ -176,5 +177,25 @@ describe('튜토리얼 위에 Dialog가 열렸을 때 — 스택을 공유하는
     // Dialog가 내려간 뒤에는 튜토리얼이 최상위다 — 이제 Escape가 튜토리얼의 출구다.
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  // 위 케이스는 가드가 아니라 **배선 셋** 위에서만 가드를 본다 — Tutorial이 capture로 먼저 등록되고
+  // Dialog가 Escape에서 stopPropagation을 하기 때문에, 가드를 지우면서 리스너를 bubble로 옮기면
+  // 10/10 초록이었다(#483 3자 검수 B4). 키 리스너가 아예 없는 레이어를 위에 올리면 stopPropagation도
+  // 등록 순서도 끼어들 수 없어, 남는 건 `isTopLayer` 가드뿐이다.
+  it('tutorial_guard_alone: 키 리스너가 없는 레이어가 최상위면 Escape가 튜토리얼을 안 닫는다', () => {
+    const { onComplete } = renderTutorial();
+    const dummy = document.createElement('div');
+    document.body.appendChild(dummy);
+    pushLayer(dummy);
+    try {
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onComplete, '최상위가 아닌데 Escape에 반응했다 — isTopLayer 가드가 빠졌다').not.toHaveBeenCalled();
+    } finally {
+      popLayer(dummy);
+      dummy.remove();
+    }
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onComplete, '레이어가 내려가면 다시 튜토리얼이 최상위다').toHaveBeenCalledTimes(1);
   });
 });

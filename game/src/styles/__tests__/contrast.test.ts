@@ -293,6 +293,9 @@ describe('토큰을 거치지 않은 글자색', () => {
     expect(lowContrastLiterals(`border-color: rgba(255,255,255,0.15);`, bg)).toEqual([]);
     expect(lowContrastLiterals(`background-color: rgba(255,255,255,0.06);`, bg)).toEqual([]);
     expect(lowContrastLiterals(`backgroundColor: 'rgba(255,255,255,0.06)'`, bg)).toEqual([]);
+    // 큰따옴표 짝 — 양성 대조에 큰따옴표를 넣었으니 음성에도 같은 표기가 있어야 대칭이다.
+    expect(lowContrastLiterals(`border-color: "rgba(255,255,255,0.15)"`, bg)).toEqual([]);
+    expect(lowContrastLiterals(`backgroundColor: "rgba(255,255,255,0.06)"`, bg)).toEqual([]);
   });
 
   // 코퍼스에 반투명 글자가 0건이면 rgba 가지를 통째로 지워도 초록이다.
