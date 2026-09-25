@@ -509,6 +509,9 @@ async function main() {
           fail(`${c.msg} (빠진 마커: ${missing.join(', ')})\n    판정이 낸 말:\n    ${text || '(없음)'}`);
         }
       }
+      // 루프가 비거나 일부만 돌면 위 카운터가 모자란다. 성공 줄의 "N/M"은 사람이 읽는 것이고,
+      // rc는 여기서 낸다 — 이 줄이 없으면 루프를 비우는 한 줄 편집이 `0/4`를 찍고도 초록이다.
+      if (selfPassed !== SELF_CHECKS.length) fail(`자기검사가 ${selfPassed}/${SELF_CHECKS.length}종만 돌았다 — 나머지 판정은 근거가 없다`);
     }
   } finally {
     await browser?.close();
