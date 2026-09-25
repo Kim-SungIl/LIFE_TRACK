@@ -8,6 +8,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { resolve, join, relative } from 'path';
+import { CHIP_BASE, chipSurface } from '../../components/screens/surface';
 
 const CSS_PATH = resolve(process.cwd(), 'src/styles/game.css');
 const CSS = readFileSync(CSS_PATH, 'utf8');
@@ -212,7 +213,9 @@ describe('토큰을 거치지 않은 글자색', () => {
    * `(?<![-\w])`로 **`border-color`·`background-color`를 뗀다.** `\b`만 쓰면 `-` 앞에서도
    * 경계가 서서 테두리 색이 글자 미달로 신고된다(game.css에 반투명 테두리가 실제로 2곳 있다).
    */
-  const TEXT_COLOR_LITERAL = /(?<![-\w])color:\s*'?(#[0-9a-fA-F]{3,6}|rgba?\([^)'"]*\))'?/g;
+  // 따옴표는 셋 다 받는다(작은·큰·없음). 코퍼스는 작은따옴표뿐이지만 lint에 따옴표 규칙이 없어
+  // 큰따옴표 한 줄이 들어오면 조용히 빠지는 자리였다(3자 검수).
+  const TEXT_COLOR_LITERAL = /(?<![-\w])color:\s*["']?(#[0-9a-fA-F]{3,6}|rgba?\([^)'"]*\))["']?/g;
 
   /** 한 파일 내용에서 AA 미달 하드코딩 글자색을 뽑는다. 파일과 분리해야 탐지기를 시험할 수 있다. */
   function lowContrastLiterals(text: string, bg: string): string[] {
@@ -234,6 +237,8 @@ describe('토큰을 거치지 않은 글자색', () => {
     const bg = token('bg-card-hover');
     expect(lowContrastLiterals(`color: '#8a8078'`, bg)).toHaveLength(1);
     expect(lowContrastLiterals(`color: #888`, bg)).toHaveLength(1);
+    expect(lowContrastLiterals(`color: "#8a8078"`, bg), '큰따옴표를 못 보면 그게 곧 우회로다').toHaveLength(1);
+    expect(lowContrastLiterals(`color: "rgba(255,255,255,0.35)"`, bg), '큰따옴표 rgba').toHaveLength(1);
     expect(lowContrastLiterals(`color: '#f1e9dc'`, bg)).toEqual([]);
   });
 
@@ -805,7 +810,7 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
      * Tutorial 이전 버튼(바닥 ≈ 모달 그라디언트). 나머지는 **아직 안 쟀다** — 그래서
      * "통과"가 아니라 "판정 불가"로 센다. 세는 것과 조용히 통과시키는 것의 차이가 이 축의 전부다.
      */
-    const MAX_UNDECIDED = 32;
+    const MAX_UNDECIDED = 31;
 
     it('판정 불가가 상한을 넘지 않는다 (새로 늘면 빨강)', () => {
       const now = undecidedTranslucentBg();
@@ -843,6 +848,19 @@ describe('밝은 배경 위의 글자 — 같은 스타일 객체의 background/
         .toBe(token('bg-secondary'));
       // GLASS_BASE는 0.85라 여전히 반투명 — 그래서 tintedGlass는 판정 불가로 남는다.
       expect(resolveColor(surfaceConst('GLASS_BASE'))).toBeNull();
+    });
+
+    // 위 단언은 전부 **소스 문자열**을 읽는다. 함수 본체는 한 번도 평가되지 않아서,
+    // chipSurface가 tint만 돌려줘도(=사진 위 2.77:1로 복귀) 1,671개가 전부 초록이었다
+    // (3자 검수 G2, 직접 재현). 검사하는 층(텍스트)과 배포되는 층(런타임 값)이 달랐다(#389 계열).
+    // 선언을 믿는 만큼, 그 선언이 내는 값을 한 번은 실제로 평가해 잠근다.
+    it('chipSurface가 실제로 CHIP_BASE 위에 tint를 얹는다 (함수 본체 잠금)', () => {
+      const tint = 'rgba(224,138,91,0.15)';
+      expect(chipSurface(tint), 'tint만 돌려주면 바닥이 없다 — 게이트는 문자열만 보고 통과시킨다')
+        .toBe(`linear-gradient(${tint}, ${tint}), ${CHIP_BASE}`);
+      expect(CHIP_BASE, '런타임 상수와 소스 정규식이 같은 값을 봐야 한다').toBe(surfaceConst('CHIP_BASE'));
+      // 바닥이 tint 뒤(마지막 층)에 있어야 불투명하다 — 순서를 뒤집으면 tint가 바닥 밑에 깔린다.
+      expect(chipSurface(tint).endsWith(CHIP_BASE)).toBe(true);
     });
 
     /**

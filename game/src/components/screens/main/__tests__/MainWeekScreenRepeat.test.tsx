@@ -92,8 +92,11 @@ describe('"지난주처럼" — 그려지는가', () => {
   });
 
   it('방학 스냅샷은 학기 주말에 안 뜬다 — 슬롯 구조가 다르다', () => {
-    renderScreen({ lastWeekendPlan: { activities: ['vacation-library'], npcChoices: {}, isVacation: true } });
-    expect(repeatButton()).toBeNull();
+    // 활동은 **학기에도 가능한 것**(PLAN 그대로)으로 둔다. 방학 전용 활동을 쓰면 seasonGate 스킵만으로도
+    // null이 나와서, 구조 검사(isVacation 불일치)를 지워도 이 단언이 초록이었다(3자 검수 D8).
+    // 같은 활동이 isVacation=false면 뜬다는 건 위 첫 테스트가 잠근다 — 차이는 구조뿐이다.
+    renderScreen({ lastWeekendPlan: { ...PLAN, isVacation: true } });
+    expect(repeatButton(), '방학 모양의 스냅샷이 학기 주말에 떴다').toBeNull();
   });
 });
 
