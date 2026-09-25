@@ -15,7 +15,10 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { Tutorial } from '../Tutorial';
+import { Dialog } from '../Dialog';
+import { popLayer, pushLayer } from '../focusTrap';
 import { STEPS } from '../tutorialSteps';
 
 // jsdom 미구현 — Tutorial이 타겟으로 스크롤하는 effect에서 던진다(키보드 계약과 무관).
@@ -139,5 +142,60 @@ describe('튜토리얼 포커스 트랩', () => {
     // 그런데 Tab만 가두면 키보드 사용자는 대상 요소를 누를 방법이 없어 튜토리얼이 막힌다.
     screen.getByRole('button', { name: '건너뛰기' }).focus();
     expect(pressTab(), '인터랙티브 스텝에서 Tab을 가두면 진행 불가 상태가 된다').toBe(false);
+  });
+});
+
+describe('튜토리얼 위에 Dialog가 열렸을 때 — 스택을 공유하는 이유', () => {
+  // focusTrap 스택을 두 컴포넌트가 공유하는 유일한 이유다: 루틴 스텝에서 슬롯 편집 Dialog가
+  // 튜토리얼 위에 열리는데, 레이어마다 스택이 갈리면 Escape 한 번에 팝업이 닫히면서 튜토리얼까지
+  // 건너뛰어진다. 그런데 Tutorial의 `isTopLayer` 가드를 지워도 전 스위트 1,671개가 초록이었다
+  // (3자 검수 F7, 직접 재현) — 두 층을 같이 띄운 픽스처가 없었다.
+  function StackFixture({ onComplete }: { onComplete: () => void }) {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        {[...new Set(STEPS.map(s => s.target))].map(t => <div key={t} data-tutorial={t} />)}
+        <Tutorial onComplete={onComplete} />
+        {open && (
+          <Dialog onClose={() => setOpen(false)} ariaLabel="슬롯 편집">
+            <button>팝업 안 버튼</button>
+          </Dialog>
+        )}
+      </>
+    );
+  }
+
+  it('tutorial_escape_closes_dialog_only: Escape는 위의 Dialog만 닫고 튜토리얼은 남는다', () => {
+    const onComplete = vi.fn();
+    render(<StackFixture onComplete={onComplete} />);
+    expect(screen.getByRole('dialog'), '전제: Dialog가 튜토리얼 위에 떠 있다').toBeInTheDocument();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog'), '최상위 Dialog가 먼저 닫혀야 한다').toBeNull();
+    expect(onComplete, 'Escape 한 번에 튜토리얼까지 건너뛰었다 — 가드가 빠졌다').not.toHaveBeenCalled();
+
+    // Dialog가 내려간 뒤에는 튜토리얼이 최상위다 — 이제 Escape가 튜토리얼의 출구다.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onComplete).toHaveBeenCalledTimes(1);
+  });
+
+  // 위 케이스는 가드가 아니라 **배선 셋** 위에서만 가드를 본다 — Tutorial이 capture로 먼저 등록되고
+  // Dialog가 Escape에서 stopPropagation을 하기 때문에, 가드를 지우면서 리스너를 bubble로 옮기면
+  // 10/10 초록이었다(#483 3자 검수 B4). 키 리스너가 아예 없는 레이어를 위에 올리면 stopPropagation도
+  // 등록 순서도 끼어들 수 없어, 남는 건 `isTopLayer` 가드뿐이다.
+  it('tutorial_guard_alone: 키 리스너가 없는 레이어가 최상위면 Escape가 튜토리얼을 안 닫는다', () => {
+    const { onComplete } = renderTutorial();
+    const dummy = document.createElement('div');
+    document.body.appendChild(dummy);
+    pushLayer(dummy);
+    try {
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(onComplete, '최상위가 아닌데 Escape에 반응했다 — isTopLayer 가드가 빠졌다').not.toHaveBeenCalled();
+    } finally {
+      popLayer(dummy);
+      dummy.remove();
+    }
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onComplete, '레이어가 내려가면 다시 튜토리얼이 최상위다').toHaveBeenCalledTimes(1);
   });
 });

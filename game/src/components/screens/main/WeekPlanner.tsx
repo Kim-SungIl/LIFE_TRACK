@@ -50,6 +50,8 @@ export function WeekPlanner({
   // "지난주처럼" 보조 버튼 — 학기 주말 칸과 방학 슬롯 아래, 둘 다 같은 것을 그린다.
   // 라벨이 '채우기'로 끝나는 게 계약이다: 이 버튼은 확정하지 않는다.
   // 톤은 의도적으로 조용하다(크롬은 절제, 변화는 슬롯이 차면서 또렷이 보인다).
+  // 배경은 같은 배치(#481)의 규약대로 바닥을 선언한다 — 맨몸 rgba는 대비 게이트가 판정을 못 해
+  // '판정 불가' 32건에 이 버튼이 들어가 있었다(3자 검수).
   const repeatButton = onRepeatLastPlan ? (
     <button
       type="button" className="btn-reset"
@@ -57,7 +59,7 @@ export function WeekPlanner({
       style={{
         display: 'block', width: '100%', marginTop: 6, padding: '7px 10px',
         borderRadius: 8, cursor: 'pointer', textAlign: 'center',
-        background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.18)',
+        background: chipSurface('rgba(255,255,255,0.05)'), border: '1px dashed rgba(255,255,255,0.18)',
         color: 'var(--text-secondary)', fontSize: '0.72rem', fontWeight: 600,
       }}
     >

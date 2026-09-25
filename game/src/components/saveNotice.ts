@@ -25,7 +25,9 @@ export type SaveNoticeKind = SaveUnreadableReason | 'structure';
  */
 export const SAVE_NOTICE_MESSAGE: Record<SaveNoticeKind, string> = {
   structure: '저장된 데이터가 손상돼 이어서 할 수 없어요.\n지우고 새로 시작하는 것 말고는 방법이 없어요.',
-  truncated: '저장 데이터가 잘려 있어요.\n저장하던 중에 창이 닫히면 이렇게 됩니다.\n지우고 새로 시작하는 것 말고는 방법이 없어요.',
+  // JSON 파싱 실패는 전부 여기로 온다 — 절단만이 아니라 손상·인코딩 오류도 같은 문구를 보므로
+  // 원인을 단정하지 않는다(3자 검수). 처방(지우고 새로)은 같다.
+  truncated: '저장 데이터를 읽을 수 없어요.\n저장하던 중에 창이 닫히면 이렇게 될 수 있어요.\n지우고 새로 시작하는 것 말고는 방법이 없어요.',
   'no-state': '저장 데이터에 진행 내용이 없어요.\n지우고 새로 시작하는 것 말고는 방법이 없어요.',
   'future-version': '더 새로운 버전의 저장이에요.\n지금 이 버전에서는 열 수 없어요. 앱을 최신 버전으로 열면 그대로 이어서 할 수 있어요.\n여기서 지우면 되돌릴 수 없어요.',
 };
