@@ -226,3 +226,122 @@ describe('결산 제목은 방금 끝난 주를 말한다', () => {
     expect(getWeekLabelAt(3, 22)).toContain('여름방학');
   });
 });
+
+// 부팅 도입 장면(first-week)은 첫 processWeek **이전**에 풀린다 — 이번 주 로그가 아직 없다.
+// 장부(state.events)는 이 사건을 week 1로 적는데, 결산은 그 몫을 못 봤다: applyChoiceOutcome이
+// weekLog(null)에 접으려다 건너뛰고, 보류분(#453 pendingWeekDelta)에도 안 적었다.
+// 실측(시드 11): 도입 선택지 인기 +2 → 시작 25, 1주차 끝 26.4(+1.4)인데 결산은 **-0.6**에
+// "잃은 것" 칩까지 띄웠다 — 이벤트 결과 화면에서 "인기 +2"를 본 직후에, 같은 "1주차" 제목으로.
+// #448("결산은 그 주 모든 것")·#453("주 확정 전 효과도 그 주 것")의 규칙에서 이 경로만 빠져 있었다.
+describe('첫 주 결산은 부팅 도입 장면을 포함한다', () => {
+  const SAVE_KEY = 'lifetrack_save';
+
+  function bootAndResolveIntro(seed: number) {
+    useGameStore.getState().startGame('male', ['emotional', 'info'],
+      { rngSeed: seed } as unknown as { useReducedRecovery?: boolean });
+    const boot = useGameStore.getState().state!;
+    expect(boot.phase, '전제: 부팅은 도입 장면(event)으로 시작한다').toBe('event');
+    expect(boot.weekLog, '전제: 첫 주 진행 전이라 로그가 없다 — 이 결함의 조건이다').toBeNull();
+    const applied = useGameStore.getState().resolveEvent(0)!;
+    expect(applied, '전제: 도입 장면이 적용값을 돌려준다').toBeTruthy();
+    return { boot, introId: boot.currentEvent!.id, applied };
+  }
+
+  function playFirstWeek(): GameState {
+    const s = useGameStore.getState().state!;
+    expect(s.phase, '전제: 도입 장면 뒤엔 결산 없이 계획 화면이다(bootFirstScene)').toBe('weekday');
+    useGameStore.getState().setRoutine('self-study', 'light-exercise');
+    useGameStore.getState().setWeekendChoices(['self-study']);
+    useGameStore.getState().advanceWeek();
+    return useGameStore.getState().state!;
+  }
+
+  it('도입 장면이 준 것이 1주차 결산에 들어간다 (시작값 + 로그 = 1주차 끝값)', () => {
+    const { boot, introId, applied } = bootAndResolveIntro(11);
+    const moved = (Object.keys(applied.stats) as StatKey[]).filter(k => Math.abs(applied.stats[k] ?? 0) >= 0.5);
+    expect(moved.length, '전제: 도입 선택지가 스탯을 실제로 움직였다 — 아니면 이 테스트는 아무것도 못 본다')
+      .toBeGreaterThan(0);
+
+    // 피로도 같은 통로를 탄다 — 보류분에 실제 적용값 그대로. (로그의 fatigueChange를 시작값 대비
+    // 실제 차이와 직접 비교하지는 않는다: 도입 장면이 없는 엔진 경로에서도 그 둘은 원래 다르다
+    // (실측 0→7인데 로그 2). 그건 별건이고, 여기서 잠그는 건 도입 장면 몫이 통로에 실리는가다.)
+    const pending = useGameStore.getState().state!.pendingWeekDelta;
+    expect(pending?.fatigue, '도입 장면의 피로가 보류분에 안 실리면 결산이 덜 피곤했다고 말한다')
+      .toBe(applied.fatigue ?? 0);
+
+    const w1 = playFirstWeek();
+    // 장부와 결산이 같은 주를 가리킨다 — 도입 장면은 1주차 사건이고, 방금 확정된 로그도 1주차 것이다.
+    const ledger = w1.events.find(e => e.id === introId);
+    expect(ledger?.week, '전제: 장부는 도입 장면을 첫 주로 적는다').toBe(boot.week);
+    expect(w1.weekLog?.week, '전제: 방금 확정된 로그는 그 주 것이다').toBe(ledger?.week);
+
+    // 본체: 부팅 시점 스탯 + 로그 = 1주차 끝 스탯. 도입 장면 몫이 빠지면 여기서 어긋난다
+    // (실측: social 로그 -0.6, 실제 +1.4).
+    expect(logAgreesWithStats(boot, w1), '1주차 결산이 도입 장면 몫을 빼고 말한다').toEqual([]);
+    for (const k of moved) {
+      const actual = round1(w1.stats[k] - boot.stats[k]);
+      expect(round1(w1.weekLog!.statChanges[k] ?? 0),
+        `${k}: 도입 장면 ${applied.stats[k]}가 빠지면 결산이 얻은 것을 손실로 그린다`).toBe(actual);
+    }
+    expect(w1.pendingWeekDelta, '접고 나서 안 비우면 2주차가 같은 값을 또 센다').toBeUndefined();
+  });
+
+  // 부팅과 1주차 사이에 새로고침하면 보류분은 세이브에서 돌아온다 — 정화(sanitizePendingWeekDelta)가
+  // 정상값을 버리면 새로고침 한 번에 결산이 도로 거짓말한다. 디스크에 쓰인 것과 읽힌 것을 둘 다 본다.
+  it('부팅과 1주차 사이의 새로고침에도 도입 장면 몫이 살아남는다 (세이브 왕복)', () => {
+    const { boot } = bootAndResolveIntro(11);
+    const inMemory = useGameStore.getState().state!.pendingWeekDelta;
+    expect(inMemory, '전제: 도입 장면 몫이 보류분에 적혔다').toBeTruthy();
+    expect(Object.keys(inMemory!.stats).length, '전제: 보류분에 스탯 축이 있다').toBeGreaterThan(0);
+
+    const onDisk = JSON.parse(localStorage.getItem(SAVE_KEY)!).state.pendingWeekDelta;
+    expect(onDisk, '자동저장이 보류분을 안 쓰면 새로고침이 그 몫을 지운다').toEqual(inMemory);
+
+    // 새로고침 — 메모리를 비우고 세이브에서 다시 연다.
+    useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
+    expect(useGameStore.getState().loadSavedGame()).toBe(true);
+    const reloaded = useGameStore.getState().state!;
+    expect(reloaded.weekLog, '전제: 여전히 첫 주 진행 전이다').toBeNull();
+    expect(reloaded.pendingWeekDelta, '정화가 정상 보류분을 버리면 결산이 도로 거짓말한다').toEqual(inMemory);
+
+    const w1 = playFirstWeek();
+    expect(logAgreesWithStats(boot, w1), '새로고침 뒤 1주차 결산이 도입 장면 몫을 잃었다').toEqual([]);
+  });
+
+  // 음성 대조 ① — 도입 장면이 없는 경로(엔진만)는 보류분 없이도 원래 맞았다.
+  // 없으면 "항상 뭔가를 더하는" 구현도 위 테스트를 통과한다.
+  it('도입 장면이 없는 첫 주는 보류분 없이 그대로 맞는다 (엔진 경로)', () => {
+    const s0 = createInitialState('male', ['emotional', 'info'], { rngSeed: 11 });
+    expect(s0.pendingWeekDelta, '전제: 도입 장면을 안 거친 초기 상태엔 보류분이 없다').toBeUndefined();
+    const s1 = processWeek({ ...s0, routineSlot2: 'self-study', routineSlot3: 'light-exercise' });
+    expect(logAgreesWithStats(s0, s1)).toEqual([]);
+    expect(s1.pendingWeekDelta).toBeUndefined();
+  });
+
+  // 음성 대조 ② — 로그가 있는 주의 이벤트는 예전처럼 그 주 로그에 바로 접고, 보류분을 만들지 않는다.
+  // 둘 다 하면(접고 + 적고) 다음 주 결산이 같은 값을 또 센다.
+  it('로그가 있는 주의 이벤트는 보류분을 만들지 않는다 (#448 경로 불변)', () => {
+    bootAndResolveIntro(11);
+    for (let i = 0; i < 40; i++) {
+      const s = useGameStore.getState().state!;
+      if (s.currentEvent && s.phase === 'event') {
+        expect(s.weekLog, '전제: 첫 주를 지났으니 로그가 있다').toBeTruthy();
+        const before = s;
+        const applied = useGameStore.getState().resolveEvent(0)!;
+        const after = useGameStore.getState().state!;
+        expect(after.pendingWeekDelta, '로그가 있는데 보류분에도 적으면 다음 주가 이중 계상한다').toBeUndefined();
+        for (const k of Object.keys(applied.stats) as StatKey[]) {
+          expect(round1(after.weekLog!.statChanges[k] ?? 0))
+            .toBe(round1((before.weekLog!.statChanges[k] ?? 0) + (applied.stats[k] ?? 0)));
+        }
+        return;
+      }
+      if (s.phase === 'result') { useGameStore.getState().setPhase('weekday'); continue; }
+      if (s.phase === 'year-end') { useGameStore.getState().advanceFromYearEnd(); continue; }
+      useGameStore.getState().setRoutine('self-study', 'light-exercise');
+      useGameStore.getState().setWeekendChoices(['self-study']);
+      useGameStore.getState().advanceWeek();
+    }
+    throw new Error('40주 안에 이벤트 주에 도달하지 못했다 — 하네스 문제이지 제품 통과가 아니다');
+  });
+});

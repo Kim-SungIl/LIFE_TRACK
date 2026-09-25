@@ -240,6 +240,8 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 // 반환값 = 실제 적용된 델타 모음 (표시용 — 게임 로직은 여전히 state mutate가 본체).
 function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice, occurrenceWeek: number): AppliedEventOutcome {
   const outcome: AppliedEventOutcome = { stats: {}, npcs: [] };
+  // 적용 전 스냅샷 — 아래 끝에서 이번 주 로그가 아직 없을 때(부팅 도입 장면) 보류분으로 적는 데 쓴다.
+  const atEntry = visibleSnapshot(state);
   // 스탯 효과 — 구간별 감쇠(scaleStatChange)로 활동과 동일하게 고구간 캡 적용 (QA C3 근본원인).
   for (const [key, val] of Object.entries(choice.effects)) {
     const k = key as keyof typeof state.stats;
@@ -313,7 +315,18 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
     applyParentIntimacyDelta(state, choice.parentEffect.baseDelta, choice.parentEffect.tag);
     state.actedWithParentThisWeek = true;
   }
-  foldOutcomeIntoWeekLog(state, outcome);
+  if (state.weekLog) {
+    foldOutcomeIntoWeekLog(state, outcome);
+  } else {
+    // **이번 주 로그가 아직 없는 이벤트** = 부팅 도입 장면(first-week)과 그 뒤에 붙는 체인.
+    // 첫 processWeek 이전이라 접을 로그가 없는데, 그렇다고 버리면 1주차 결산이 도입 장면의
+    // 효과를 못 본다. 실측(시드 11): 도입 선택지 인기 +2 → 시작 25 → 1주차 끝 26.4인데
+    // 결산은 "인기 −0.6"에 잃은 것 칩까지 띄웠다(이벤트 결과 화면에서 "+2"를 본 직후에).
+    // 장부(state.events)는 이 사건을 week 1로 적으므로 결산도 그 주 것으로 세야 한다 —
+    // 말걸기·상점(#453)과 같은 통로(pendingWeekDelta)로 남기면 첫 processWeek이
+    // 캡 계산 뒤(foldPendingIntoLog)에서 접는다. 위치가 캡 뒤라 활동 몫은 안 깎인다(밸런스 불변).
+    accruePendingDelta(state, atEntry);
+  }
   return outcome;
 }
 

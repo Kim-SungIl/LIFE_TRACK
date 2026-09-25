@@ -20,7 +20,7 @@ import { useGameStore } from '../../../engine/store';
 import { createInitialState, processWeek } from '../../../engine/gameEngine';
 import { clearArchive } from '../../../engine/archive';
 import { SHOP_ITEMS, canBuyItem } from '../../../engine/shopSystem';
-import type { GameState } from '../../../engine/types';
+import { STAT_LABELS, type GameState, type StatKey } from '../../../engine/types';
 
 /** N주차를 실제로 처리해 결산 직전 상태를 만든다(로그·스탬프 전부 진짜 경로로). */
 function stateAfterResolving(week: number, year = 1): GameState {
@@ -159,5 +159,54 @@ describe('손실 칩은 실제로 내려간 축만 가리킨다', () => {
     render(<GameScreen />);
     expect(chip('멘탈'), '손실 칩 자체가 안 뜨면 위 테스트가 무의미해진다').toBeTruthy();
     expect(chip('학업'), '오른 축은 손실 칩에 없어야 한다').toBeNull();
+  });
+});
+
+// 부팅 도입 장면(first-week)은 첫 주 진행 **전**에 풀린다. 실측: 이벤트 결과 화면에서 "인기 +2"를
+// 본 직후, 같은 "1학기 1주차" 제목의 결산이 "인기 26, -0.6"에 **잃은 것 칩 "인기 -0.6"**을 띄웠다
+// (시작 25 → 26.4, 실제 +1.4). 엔진 단언(weeklyResultTruth)만 두면 화면이 딴 값을 읽어도 통과하므로
+// 진짜 부팅 → 도입 해결 → 진짜 주 확정 → 렌더까지 전 구간을 잇는다.
+describe('첫 주 결산 배선 — 도입 장면이 준 것을 잃은 것으로 그리지 않는다', () => {
+  const chip = (label: string) => screen.queryByText(new RegExp(`${label}\\s-`));
+  /** 스탯 행의 변화량 셀(행의 마지막 칸) 텍스트. 라벨이 다른 곳에도 있을 수 있어 행 구조로 고른다. */
+  function changeCellOf(label: string): string {
+    const cells = screen.getAllByText(label)
+      .map(el => el.parentElement!.lastElementChild!.textContent ?? '')
+      .filter(t => /^[+-]?\d/.test(t));
+    expect(cells.length, `${label} 행의 변화량 셀이 정확히 하나여야 한다`).toBe(1);
+    return cells[0];
+  }
+
+  it('도입 장면으로 오른 축은 손실 칩에 없고 변화량이 +로 뜬다', () => {
+    useGameStore.getState().startGame('male', ['emotional', 'info'],
+      { rngSeed: 11 } as unknown as { useReducedRecovery?: boolean });
+    const boot = useGameStore.getState().state!;
+    expect(boot.weekLog, '전제: 부팅 도입 장면은 첫 주 진행 전이다').toBeNull();
+    const applied = useGameStore.getState().resolveEvent(0)!;
+    expect(useGameStore.getState().state!.phase, '전제: 도입 장면 뒤는 계획 화면이다').toBe('weekday');
+
+    useGameStore.getState().setRoutine('self-study', 'light-exercise');
+    useGameStore.getState().setWeekendChoices(['self-study']);
+    useGameStore.getState().advanceWeek();
+    const after = useGameStore.getState().state!;
+    expect(after.weekLog?.week, '전제: 방금 확정된 로그는 1주차 것이다').toBe(boot.week);
+
+    // 도입 장면이 올렸고, 1주차 끝에도 시작값보다 위인 축 — 화면에서 반드시 "얻은 것"이어야 한다.
+    const risen = (Object.keys(after.stats) as StatKey[])
+      .filter(k => (applied.stats[k] ?? 0) >= 0.5 && after.stats[k] - boot.stats[k] >= 0.5);
+    expect(risen.length, '전제: 도입 장면이 올린 축이 하나도 없으면 이 테스트는 아무것도 못 본다')
+      .toBeGreaterThan(0);
+
+    useGameStore.setState({ state: { ...after, currentEvent: null, phase: 'result' as GameState['phase'] } });
+    render(<GameScreen />);
+    expect(screen.getByText(/1학기 1주차/), '결산 제목은 도입 장면과 같은 1주차다').toBeTruthy();
+    for (const k of risen) {
+      const label = STAT_LABELS[k];
+      expect(chip(label), `${label}: 도입 장면으로 얻은 축이 손실 칩에 올라갔다(실측 "인기 -0.6")`).toBeNull();
+      const cell = changeCellOf(label);
+      expect(cell.startsWith('+'), `${label}: 변화량 "${cell}" — 시작값보다 올랐는데 +가 아니다`).toBe(true);
+      expect(Number(cell), `${label}: 변화량은 시작값 대비 실제 차이다`)
+        .toBe(Math.round((after.stats[k] - boot.stats[k]) * 10) / 10);
+    }
   });
 });
