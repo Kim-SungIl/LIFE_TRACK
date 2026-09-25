@@ -98,11 +98,14 @@ async function pickFirstChoice(state: GameState) {
 const continueBtn = () => screen.queryByRole('button', { name: '계속 →' });
 const nextWeekBtn = () => screen.queryByRole('button', { name: '다음 주로 →' });
 
+// (f)가 store 액션을 감싸므로 매 테스트 원본으로 되돌린다.
+const ORIGINAL_RESOLVE_EVENT = useGameStore.getState().resolveEvent;
+
 beforeEach(() => {
   clearArchive();
   localStorage.clear();
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
-  useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
+  useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {}, resolveEvent: ORIGINAL_RESOLVE_EVENT });
 });
 
 // 집합의 첫 원소를 쓴다 — 리터럴 id를 박으면 집합에서 그 id를 빼도 테스트가 옛 id를 계속 본다.
@@ -185,5 +188,30 @@ describe('가벼운 사건은 결과 화면 없이 결산으로 간다 (T46)', (
     // 이때 결과 문장은 hero(마지막 📖)가 아니라 결산 목록으로 밀린다 — 뒤 사건의 문장이 hero를
     // 가져간다. 그래서 결과 화면이 이 문장을 또렷이 보여주는 유일한 자리이고, 유지가 맞다.
     expect(after.weekLog!.messages.some(m => m.startsWith('📖'))).toBe(true);
+  });
+
+  it('(f) 보수적 폴백 — 결과 문장이 weekLog에 안 실리면 결산으로 가더라도 결과 화면을 유지한다', async () => {
+    // 생략의 전제는 "문장이 결산에 실린다"이고 그건 store의 일이다. store가 📖 push를 멈추면
+    // (형식 변경·리팩터) phase만 보는 가드는 문장을 어디에도 안 보여주고 넘어간다. 그 상황을
+    // 액션을 감싸 흉내 낸다 — 해결 직후 📖 줄만 지운다. phase는 그대로 'result'다.
+    const s = eventWeek(catalog(lightId), blockedChainRecords());
+    useGameStore.setState({
+      state: s,
+      resolveEvent: (index: number) => {
+        const applied = ORIGINAL_RESOLVE_EVENT(index);
+        const st = useGameStore.getState().state!;
+        useGameStore.setState({ state: { ...st, weekLog: { ...st.weekLog!, messages: st.weekLog!.messages.filter(m => !m.startsWith('📖')) } } });
+        return applied;
+      },
+    });
+    render(<GameScreen />);
+
+    await pickFirstChoice(s);
+
+    const after = useGameStore.getState().state!;
+    expect(after.phase, '전제: phase는 result').toBe('result');
+    expect(after.weekLog!.messages.some(m => m.startsWith('📖')), '전제: 📖 줄이 지워져 있어야 한다').toBe(false);
+    // 착지 가드를 지우고 phase만 보면 결과 화면 없이 결산이 떠서 문장이 사라진다 — 여기서 빨강.
+    expect(await screen.findByRole('button', { name: '계속 →' })).toBeTruthy();
   });
 });
