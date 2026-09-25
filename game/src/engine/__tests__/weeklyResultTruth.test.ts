@@ -37,7 +37,8 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
   // 엔진만 돌리면 이벤트가 대기 상태로 남아 이 결함 자체가 재현되지 않는다.
   // **weekLog가 null인 이벤트는 건너뛴다.** 부팅 이벤트(첫 주 진행 전)가 그렇고,
   // 그 경우 GameScreen.tsx:373의 `phase === 'result' && state.weekLog` 가드 때문에
-  // 결산 화면이 아예 안 뜬다 — 접을 로그도 없고 거짓말할 자리도 없다.
+  // 결산 화면이 아예 안 뜬다 — 접을 로그가 없다. 그 몫은 버려지지 않고 보류분으로
+  // 1주차 로그에 접힌다(T45, 이 파일 마지막 describe).
   // 이 구간을 지나지 않으면 테스트가 "로그가 null이라 안 맞는다"를 결함으로 오판한다.
   function playUntilEvent(maxWeeks = 40): GameState | null {
     const api = useGameStore.getState();
@@ -96,7 +97,10 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
       }
       if (s.phase === 'result') { useGameStore.getState().setPhase('weekday'); continue; }
       if (s.phase === 'year-end') { useGameStore.getState().advanceFromYearEnd(); continue; }
-      before = s;   // 이 주의 시작값
+      // 이 주의 시작값. **첫 주는 부팅 시점이다** — 도입 장면(first-week)은 week 1 사건이고 그 몫이
+      // 보류분으로 1주차 로그에 접히므로(T45, 아래 describe), 도입 뒤 상태를 시작값으로 잡으면
+      // 1주차에 이벤트가 뜨는 시드에서 도입 몫이 이중 계상처럼 보여 거짓 빨강이 난다(시드 5 실측).
+      if (s.weekLog) before = s;
       useGameStore.getState().setRoutine('self-study', 'light-exercise');
       useGameStore.getState().setWeekendChoices(['self-study']);
       useGameStore.getState().advanceWeek();
