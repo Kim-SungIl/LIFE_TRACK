@@ -3,8 +3,16 @@
  * 결정론적(seededRandom) 풀 플레이 → 최종 스탯/엔딩/번아웃/이벤트/친밀도/시험 수집.
  * store.resolveEvent 와 동일한 해결(resolveEventLikeStore) 사용 — 메모리 슬롯·followup 반영.
  *
- * 실행: npx tsx scripts/sim/sim-qa-playthrough.ts [출력디렉토리]
+ * 실행: npx tsx scripts/sim/sim-qa-playthrough.ts [출력디렉토리] [시드수]
  * 출력: <dir>/qa-<persona>.json (페르소나별) + 콘솔 요약표
+ *
+ * **정직성(T47)** — 이 하네스는 값을 재는 도구라 자기 결함이 곧 밸런스 오판이 된다. 세 가지를 못 박는다:
+ *   · 페르소나는 제품에서 만들 수 있는 조합이어야 유효 표에 든다(lib/qa-persona.ts validatePersona).
+ *     위반 페르소나는 지우지 않고 `invalid`로 표시해 **별도 표**로 낸다(극단 스트레스 표본).
+ *   · 돈 계측(minMoney·brokeWeeks·moneyByYear)은 이벤트 해결·미니톡 money 효과 **뒤**에 읽는다.
+ *     앞에서 읽으면 이벤트가 쓴 돈이 안 보여 paid-full-spend의 빠듯한 주가 0으로 나왔다(실측 36~38주).
+ *   · 매주 processWeek 직전에 제품의 확정 잠금 규칙 3종을 재현해 센다(lib/qa-ui-week-gates.ts).
+ *     엔진은 조용히 스킵하지만 제품은 그 주를 넘길 수 없다 — "스킵된 슬롯"과 "잠긴 주"는 다른 수다.
  */
 import { createInitialState, processWeek, hashInitialState, getWeekInfo } from '../../src/engine/gameEngine';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../../src/engine/activities';
@@ -13,32 +21,13 @@ import { resolveEventLikeStore, talkToNpcLikeStore } from '../lib/y1-sim-resolve
 import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import { getAvailableNpcEvents } from '../../src/engine/talkSystem';
 import { NPC_MINI_EVENTS } from '../../src/engine/talkData';
-import type { GameState, ParentStrength, EventChoice } from '../../src/engine/types';
+import type { GameState, EventChoice } from '../../src/engine/types';
+import { validatePersona, personaMarkMismatches, type Persona, type ChoicePolicy } from './lib/qa-persona';
+import { evaluateUiWeekGates, productViewOfWeek } from './lib/qa-ui-week-gates';
 import * as fs from 'fs';
+import { pathToFileURL } from 'url';
 
-type ChoicePolicy = 'first' | 'academic' | 'social' | 'talent' | 'mental' | 'health' | 'balanced' | 'last' | 'axis-min';
-
-interface Persona {
-  name: string;
-  label: string;          // 사람이 읽는 설명
-  gender: 'male' | 'female';
-  parents: [ParentStrength, ParentStrength];
-  routineSlot2: string;   // '' = 슬롯 비움 (엔진이 falsy를 "루틴 없음"으로 읽는다, gameEngine.ts:833)
-  routineSlot3: string;   // 학기 중 슬롯2는 제품에서 필수다(MainWeekScreen.tsx) — 최소투입은 슬롯3만 비운다
-  weekend: string[];
-  vacation: string[];
-  policy: ChoicePolicy;
-  talk?: boolean;        // 매주 친밀도 최상위 NPC에게 말걸기 (미니톡/tier 측정)
-  talkFocus?: string;    // 설정 시 그 NPC에게만 집중 말걸기 (focused ceiling 측정)
-  companionFocus?: string; // 주말/방학 동행 활동(+3)을 이 NPC에게 몰빵 (met 이후부터)
-  companionSpread?: boolean; // 동행을 최저 친밀도 met NPC에게 분산 (전원 친구 상한 측정)
-  tutoringY6?: boolean;  // Y6+ 주말 슬롯에 집중과외 투입 (돈 sink 측정)
-  // 알바 밸브 측정 — part-time은 unlockYear 4(중3)이고 requires도 year>=4다(activities.ts:216).
-  // processWeek는 돈만 보고 unlock/requires를 안 보므로 tutoringY6과 동일하게 **하네스에서 수동 게이트**한다.
-  // 이 게이트를 빼면 Y1~Y3에 존재하지 않는 수입이 생겨 측정 자체가 거짓이 된다.
-  partTimeY4?: boolean;        // Y4+ 주말 1슬롯을 알바로 (Y1~3은 p.weekend 그대로)
-  partTimeVacationY4?: boolean; // Y4+ 방학 1슬롯도 알바로 (밸브 상한 측정)
-}
+export type { Persona } from './lib/qa-persona';
 
 // 선택지 정책 — effects 를 보고 인덱스 선택. tie 면 첫 번째.
 function pickChoice(choices: EventChoice[], policy: ChoicePolicy): number {
@@ -121,9 +110,26 @@ interface Result {
   routineSkippedForMoney: number;          // 돈이 없어 방과후 루틴이 안 돌아간 슬롯 수
   weekendSkippedForMoney: number;          // 돈이 없어 주말/방학 활동이 스킵된 슬롯 수
   routineSpend: number;                    // 7년 누적 루틴 지출(실제 집행분)
+  // ===== 제품 확정 잠금 재현(T47, lib/qa-ui-week-gates.ts) — 매주 processWeek 직전에 판정 =====
+  // 엔진은 조용히 스킵하지만 제품은 그 주를 넘길 수 없다. "제품이라면 확정이 잠겼을 주"를 규칙별로 센다.
+  uiRoutineLockWeeks: number;   // ① routineTooExpensive (MainWeekScreen.tsx:130)
+  uiPreviewSkipWeeks: number;   // ② predictWeekOutcome.skipped reason==='money' (MainWeekScreen.tsx:168-177)
+  uiPickerBlockWeeks: number;   // ③ 선택 순서 누적 잔액 게이트 (ActivityPicker.tsx:135 + MainWeekScreen.tsx:407)
+  uiConfirmLockWeeks: number;   // ① ∨ ② = 제품 moneyBlocked — 돈 때문에 확정 버튼이 잠긴 주
 }
 
-function runPersona(p: Persona, seed: number): Result {
+/**
+ * 엔진·해결 함수 주입 — 테스트가 계측 **순서**(이벤트 뒤에 잔액을 읽는가)를 잠글 때만 바꾼다.
+ * 제품 경로는 DEFAULT_DEPS 하나다. 순수 계측 함수만 잠그면 배선(호출 순서)이 빈다(#381 전례).
+ */
+export interface PlaythroughDeps {
+  processWeek: typeof processWeek;
+  resolveEvent: typeof resolveEventLikeStore;
+  talkToNpc: typeof talkToNpcLikeStore;
+}
+export const DEFAULT_DEPS: PlaythroughDeps = { processWeek, resolveEvent: resolveEventLikeStore, talkToNpc: talkToNpcLikeStore };
+
+export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEFAULT_DEPS): Result {
   let s = createInitialState(p.gender, p.parents, { rngSeed: seed });
   s.routineSlot2 = p.routineSlot2;
   s.routineSlot3 = p.routineSlot3;
@@ -136,6 +142,7 @@ function runPersona(p: Persona, seed: number): Result {
   const moneyByYear: Record<number, number> = {};
   let minMoney = s.money, brokeWeeks = 0;
   let routineSkippedForMoney = 0, weekendSkippedForMoney = 0, routineSpend = 0, routineWeeks = 0;
+  let uiRoutineLockWeeks = 0, uiPreviewSkipWeeks = 0, uiPickerBlockWeeks = 0, uiConfirmLockWeeks = 0;
   const peakIntimacy: Record<string, number> = {};  // 드리프트(감쇠) 전 최고점 — scarcity 측정용
   const yearPeaks: Record<string, Record<number, number>> = {};  // npc → year → 그 학년 내 최고점 (학년 게이트 tier 도달성)
 
@@ -171,11 +178,27 @@ function runPersona(p: Persona, seed: number): Result {
     }
     const yearBefore = s.year;
     const wasVacation = getWeekInfo(s.week).isVacation;
-    s = processWeek(s, npcMap);
 
-    // ── 돈 계측 ──
+    // ── 제품 확정 잠금 재현(T47) — 플레이어가 확정 버튼을 누르는 바로 그 상태에서 판정한다 ──
+    // 값은 바꾸지 않는다. 잠겼어도 하네스는 그대로 진행한다(엔진이 스킵) — 그래서 "잠겼을 주"는
+    // 실제 플레이와 다른 궤적 위의 수다. 유료 페르소나 해석 시 이 수가 0이 아니면 그 판은
+    // 제품에서 그대로 재현되지 않는 판이다.
+    {
+      const view = productViewOfWeek(s);
+      const planned = view.isVacation ? s.vacationChoices : s.weekendChoices;
+      const g = evaluateUiWeekGates(view, planned ?? [], npcMap);
+      if (g.routineLocked) uiRoutineLockWeeks++;
+      if (g.previewSkipped.length > 0) uiPreviewSkipWeeks++;
+      if (g.pickerBlocked.length > 0) uiPickerBlockWeeks++;
+      if (g.confirmLocked) uiConfirmLockWeeks++;
+    }
+
+    s = deps.processWeek(s, npcMap);
+
+    // ── 스킵 계측 ── (엔진이 이 주에 남긴 로그 — 이벤트·미니톡과 무관하므로 여기서 읽는다)
     // 스킵 판정은 로그 메시지로만 가능하다. 루틴/주말이 같은 문구를 쓰므로 활동 이름으로 가른다
     // (그래서 유료 페르소나는 루틴과 주말에 서로 다른 활동을 쓴다).
+    let nextRoutineCost = 0;
     {
       const msgs = (s.weekLog?.messages ?? []).filter(m => m.includes('돈이 부족해서'));
       const routineNames = [s.routineSlot2, s.routineSlot3]
@@ -185,7 +208,6 @@ function runPersona(p: Persona, seed: number): Result {
         if (routineNames.some(n => m.includes(n))) routineSkippedForMoney++;
         else weekendSkippedForMoney++;
       }
-      let nextRoutineCost = 0;
       if (!wasVacation) {
         routineWeeks++;
         for (const id of [s.routineSlot2, s.routineSlot3]) {
@@ -197,10 +219,6 @@ function runPersona(p: Persona, seed: number): Result {
           if (cost > 0 && !msgs.some(m => m.includes(act.name))) routineSpend += cost;
         }
       }
-      minMoney = Math.min(minMoney, s.money);
-      // 다음 주 루틴비를 못 낼 상태로 주를 마쳤는가 — UI의 routineTooExpensive와 같은 판정.
-      if (nextRoutineCost > 0 && s.money < nextRoutineCost) brokeWeeks++;
-      moneyByYear[yearBefore] = Math.round(s.money);
     }
 
     // 말걸기 — processWeek가 npcEventPendingThisWeek를 굴린 직후, 친밀도 최상위 met NPC에게.
@@ -208,7 +226,7 @@ function runPersona(p: Persona, seed: number): Result {
     if (p.talk) {
       if (p.talkFocus) {
         // 집중 측정: 대상 NPC가 met이면 그 NPC에게만 말걸기 (focused ceiling 측정)
-        if (s.npcs.find(n => n.id === p.talkFocus && isNpcInteractable(n, s))) s = talkToNpcLikeStore(s, p.talkFocus);
+        if (s.npcs.find(n => n.id === p.talkFocus && isNpcInteractable(n, s))) s = deps.talkToNpc(s, p.talkFocus);
       } else {
         // 부재(전출·졸업) 친구는 플레이어가 고를 수 없다. met만으로 뽑으면 게이트에 걸려 no-op이 되고
         // 그 주 말걸기가 통째로 날아가 미니톡·친밀도가 과소 측정된다(특히 ?? candidates[0]가
@@ -216,7 +234,7 @@ function runPersona(p: Persona, seed: number): Result {
         const candidates = s.npcs.filter(n => isNpcInteractable(n, s)).sort((a, b) => b.intimacy - a.intimacy);
         const target = candidates.find(n => n.intimacy >= 30 && getAvailableNpcEvents(s, n.id).length > 0)
           ?? candidates[0];
-        if (target) s = talkToNpcLikeStore(s, target.id);
+        if (target) s = deps.talkToNpc(s, target.id);
       }
     }
 
@@ -225,8 +243,19 @@ function runPersona(p: Persona, seed: number): Result {
       const ev = s.currentEvent;
       const choices = s.gender === 'female' && ev.femaleChoices ? ev.femaleChoices : ev.choices;
       const idx = pickChoice(choices, p.policy);
-      s = resolveEventLikeStore(s, idx);
+      s = deps.resolveEvent(s, idx);
       eventsResolved++;
+    }
+
+    // ── 돈 계측 ── **이벤트 해결·미니톡 뒤에** 읽는다(T47). 이벤트 선택지(moneyEffect)와 미니톡
+    // (effects.money)이 잔액을 바꾸는데, 그 앞에서 읽으면 "주를 마친 잔액"이 아니라 활동 직후 잔액이다.
+    // 실측: paid-full-spend에서 앞에서 읽으면 brokeWeeks 0, 뒤에서 읽으면 36~38주 — 이벤트가 쓴 돈이
+    // 다음 주 루틴비를 못 내게 만드는 주가 통째로 안 보였다.
+    {
+      minMoney = Math.min(minMoney, s.money);
+      // 다음 주 루틴비를 못 낼 상태로 주를 마쳤는가 — UI의 routineTooExpensive와 같은 판정.
+      if (nextRoutineCost > 0 && s.money < nextRoutineCost) brokeWeeks++;
+      moneyByYear[yearBefore] = Math.round(s.money);
     }
 
     for (const n of s.npcs) {
@@ -239,9 +268,15 @@ function runPersona(p: Persona, seed: number): Result {
     if (s.mentalState === 'tired' || s.mentalState === 'burnout') tiredWeeks++;
 
     if (s.phase === 'year-end') {
+      // store.advanceFromYearEnd 미러 — isVacation·semester를 안 고치면 새 학년 1주차가 겨울방학 값을
+      // 들고 확정 화면 규칙(①의 방학 0원)에 들어간다. 엔진 자체는 prepareWeekContext가 다시 계산하므로 무해.
       s.week = 1;
       s.year++;
+      s.currentEvent = null;
       s.phase = 'weekday';
+      const nextInfo = getWeekInfo(s.week);
+      s.semester = nextInfo.semester;
+      s.isVacation = nextInfo.isVacation;
     }
     if (s.phase === 'ending') break;
   }
@@ -323,36 +358,47 @@ function runPersona(p: Persona, seed: number): Result {
     routineSkippedForMoney,
     weekendSkippedForMoney,
     routineSpend: Math.round(routineSpend),
+    uiRoutineLockWeeks, uiPreviewSkipWeeks, uiPickerBlockWeeks, uiConfirmLockWeeks,
   };
 }
 
 // ===== 플레이 페르소나 (31종) — 시드 12개와 곱해 372판. 개수를 바꾸면 이 주석도 고칠 것 =====
 // (주의: 이 주석은 T30 전까지 "29종/348판"이었는데 배열은 이미 30종이었다 — 실측으로 바로잡았다.)
-const PERSONAS: Persona[] = [
-  { name: 'academic-max', label: '공부 몰빵(학업 최대화)', gender: 'male', parents: ['strict', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true },
-  { name: 'social-max', label: '친구 몰빵(관계 최대화)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['club', 'club'], vacation: ['club', 'rest', 'rest'], policy: 'social', talk: true },
+//
+// **`invalid: true`(T47) — 제품에서 만들 수 없는 조합 10종.** 부모 강점 동일(TitleScreen toggle이 못 만들고
+// lastSetup이 거부) 5종 + 루틴 슬롯2=슬롯3(SlotEditPopup이 후보에서 제외) 6종, 겹침 1(money-poor-acad).
+// 지우지 않는 이유: 극단 스트레스 표본이다 — 같은 강점 2배 배율의 상한, 한 활동 2칸의 피로 축적, 번아웃 락이
+// 실패 엔딩으로 라우팅되는지 같은 회귀 가드는 이 표본에서만 보인다. 다만 유효 표본과 **섞어 세면** 헤드라인이
+// 부푼다(3시드 93판 실측: 번아웃 24.7 → 11.8%, S 67.7 → 70.6%). 요약은 두 표로 가른다.
+// 사유는 손으로 적지 않는다 — validatePersona가 낸다. 표시와 판정이 어긋나면 main()이 기동을 거부한다.
+export const PERSONAS: Persona[] = [
+  { name: 'academic-max', label: '공부 몰빵(학업 최대화)', gender: 'male', parents: ['strict', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true, invalid: true },
+  { name: 'social-max', label: '친구 몰빵(관계 최대화)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['club', 'club'], vacation: ['club', 'rest', 'rest'], policy: 'social', talk: true, invalid: true },
   { name: 'talent-max', label: '특기충(창작/코딩)', gender: 'male', parents: ['wealth', 'emotional'], routineSlot2: 'creative', routineSlot3: 'coding', weekend: ['creative', 'club'], vacation: ['creative', 'art-lesson', 'rest'], policy: 'talent', talk: true, tutoringY6: true },
   { name: 'balanced', label: '균형형(올라운드)', gender: 'female', parents: ['emotional', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'light-exercise', weekend: ['self-study', 'club'], vacation: ['self-study', 'creative', 'rest'], policy: 'balanced', talk: true, tutoringY6: true },
   { name: 'mental-care', label: '멘탈 우선(쉼/회복형)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'light-exercise', routineSlot3: 'club', weekend: ['rest', 'club'], vacation: ['rest', 'rest', 'club'], policy: 'mental', talk: true },
-  { name: 'health-max', label: '체력/운동형', gender: 'male', parents: ['resilience', 'strict'], routineSlot2: 'light-exercise', routineSlot3: 'light-exercise', weekend: ['light-exercise', 'club'], vacation: ['light-exercise', 'rest', 'rest'], policy: 'health', talk: true },
+  { name: 'health-max', label: '체력/운동형', gender: 'male', parents: ['resilience', 'strict'], routineSlot2: 'light-exercise', routineSlot3: 'light-exercise', weekend: ['light-exercise', 'club'], vacation: ['light-exercise', 'rest', 'rest'], policy: 'health', talk: true, invalid: true },
   // **진짜 최소투입 페르소나.** 이 배열의 다른 29종은 이름이 '방치형'이어도 루틴 2칸과 주말·방학을
   // 전부 채운다 — 그래서 348판 최저 bestAxis가 84.9였고 성취 C·D가 0판이었다. 그건 엔진이 C를
   // 못 내는 게 아니라 **하네스가 그 구간에 닿지 않은 것**이다(이 페르소나로 C가 잡힌다).
   // 제품 합법성: 학기 중 루틴 슬롯2는 비울 수 없고(MainWeekScreen) 루틴 슬롯엔 rest 계열을 못 넣는다
   // (SlotEditPopup) — 그래서 슬롯2는 가장 이득이 적은 비휴식(sns, 피로 2 / social +1 mental −1)으로
   // 채우고 슬롯3·주말·방학만 비운다. 말걸기도 안 한다.
-  { name: 'min-input', label: '최소투입(루틴1칸·주말비움·축최소 선택)', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'sns-activity', routineSlot3: '', weekend: [], vacation: [], policy: 'axis-min' },
-  { name: 'neglect-first', label: '방치형(항상 첫 선택)', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'light-exercise', weekend: ['self-study', 'club'], vacation: ['rest', 'rest', 'rest'], policy: 'first', talk: true },
-  { name: 'grind-burnout', label: '갈아넣기(번아웃 유도)', gender: 'female', parents: ['strict', 'strict'], routineSlot2: 'self-study', routineSlot3: 'coding', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'self-study'], policy: 'academic', talk: true, tutoringY6: true },
+  // (T47) 부모 freedom×2는 제품 불가 — 그래도 남긴다: 성취 C의 양성 대조군은 이 표본뿐이다(achievementReach.test도 같은 조합).
+  { name: 'min-input', label: '최소투입(루틴1칸·주말비움·축최소 선택)', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'sns-activity', routineSlot3: '', weekend: [], vacation: [], policy: 'axis-min', invalid: true },
+  { name: 'neglect-first', label: '방치형(항상 첫 선택)', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'light-exercise', weekend: ['self-study', 'club'], vacation: ['rest', 'rest', 'rest'], policy: 'first', talk: true, invalid: true },
+  // (T47) strict×2는 제품 불가 — 번아웃 락(100주+ tired)이 실패 엔딩으로 라우팅되는지(#266)의 회귀 가드라 남긴다.
+  { name: 'grind-burnout', label: '갈아넣기(번아웃 유도)', gender: 'female', parents: ['strict', 'strict'], routineSlot2: 'self-study', routineSlot3: 'coding', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'self-study'], policy: 'academic', talk: true, tutoringY6: true, invalid: true },
   { name: 'last-choice', label: '청개구리(항상 마지막 선택)', gender: 'male', parents: ['emotional', 'info'], routineSlot2: 'club', routineSlot3: 'creative', weekend: ['club', 'creative'], vacation: ['rest', 'creative', 'club'], policy: 'last', talk: true },
   { name: 'info-parent', label: '정보형 부모+균형', gender: 'female', parents: ['info', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'club', weekend: ['self-study', 'club'], vacation: ['self-study', 'rest', 'club'], policy: 'balanced', talk: true, tutoringY6: true },
   { name: 'poor-resilience', label: '저자원 회복형(무지출 가정)', gender: 'male', parents: ['resilience', 'freedom'], routineSlot2: 'light-exercise', routineSlot3: 'self-study', weekend: ['self-study', 'rest'], vacation: ['rest', 'self-study', 'rest'], policy: 'balanced', talk: true },
-  { name: 'social-female-romance', label: '여주 관계+균형(연애루트 노출)', gender: 'female', parents: ['emotional', 'emotional'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['club', 'self-study'], vacation: ['club', 'creative', 'rest'], policy: 'social', talk: true },
+  { name: 'social-female-romance', label: '여주 관계+균형(연애루트 노출)', gender: 'female', parents: ['emotional', 'emotional'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['club', 'self-study'], vacation: ['club', 'creative', 'rest'], policy: 'social', talk: true, invalid: true },
   // ⓐ 검증용 — 중간 과부하: 열심히 하지만 갈아넣진 않음(휴식 없음). fatigue 45~59 밴드를 노림.
   { name: 'mid-overload-study', label: '중간과부하(공부+동아리, 무휴식)', gender: 'male', parents: ['strict', 'emotional'], routineSlot2: 'self-study', routineSlot3: 'club', weekend: ['self-study', 'club'], vacation: ['self-study', 'club', 'self-study'], policy: 'academic', talk: true },
   // C7-B 검증용 — 동일 학업+과외 루틴, wealth(수입5) vs 무-wealth(수입3): 돈 희소화로 wealth가 과외를 더 감당하는가
-  { name: 'money-rich-acad', label: '돈검증: wealth 학업+과외', gender: 'male', parents: ['wealth', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true },
-  { name: 'money-poor-acad', label: '돈검증: 무-wealth 학업+과외', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true },
+  // (T47) 이 쌍은 self-study×2 루틴이라 제품 불가. wealth 대조는 그대로 읽히지만(두 쪽이 같은 위반) 유효 표엔 못 든다.
+  { name: 'money-rich-acad', label: '돈검증: wealth 학업+과외', gender: 'male', parents: ['wealth', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true, invalid: true },
+  { name: 'money-poor-acad', label: '돈검증: 무-wealth 학업+과외', gender: 'male', parents: ['freedom', 'freedom'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true, invalid: true },
   { name: 'mid-overload-allround', label: '중간과부하(올라운드 풀가동, 무휴식)', gender: 'female', parents: ['emotional', 'info'], routineSlot2: 'self-study', routineSlot3: 'creative', weekend: ['club', 'creative'], vacation: ['self-study', 'creative', 'club'], policy: 'balanced', talk: true },
   { name: 'focus-haeun', label: '하은 집중(선배 관계 몰빵)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['club', 'rest'], vacation: ['rest', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'haeun' },
   { name: 'focus-junha', label: '준하 집중(전학생 관계 몰빵)', gender: 'male', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['club', 'rest'], vacation: ['rest', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'junha' },
@@ -360,7 +406,7 @@ const PERSONAS: Persona[] = [
   { name: 'focus-seoa', label: '서아 집중(중2 데뷔 몰빵+동행)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'seoa', companionFocus: 'seoa' },
   { name: 'focus-siwoo', label: '시우 집중(고1 데뷔 몰빵+동행)', gender: 'male', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'siwoo', companionFocus: 'siwoo' },
   { name: 'focus-yerin', label: '예린 집중(고1 데뷔 몰빵+동행)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, talkFocus: 'yerin', companionFocus: 'yerin' },
-  { name: 'all-friends-max', label: '전원 친구(관계 극한+동행 분산)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, companionSpread: true },
+  { name: 'all-friends-max', label: '전원 친구(관계 극한+동행 분산)', gender: 'female', parents: ['emotional', 'freedom'], routineSlot2: 'club', routineSlot3: 'club', weekend: ['hang-out', 'club'], vacation: ['hang-out', 'club', 'rest'], policy: 'social', talk: true, companionSpread: true, invalid: true },
   // **관계형의 진짜 최적점(T30 추가).** all-friends-max와 루틴 한 칸(club → light-exercise)만 다르다.
   // 그 한 칸이 health 12.4 → 77.5를 가른다(6시드 실측) — 즉 이 배열은 여태 "절친을 9명 남기면서
   // 자기도 안 부순 판"을 한 번도 밟지 않았다. 그래서 360판 전체의 절친 최대치가 (몸이 성한 판에서)
@@ -422,6 +468,12 @@ interface PersonaAgg {
   weekendSkipMean: number;
   routineSpendMean: number;
   moneyY2Mean: number;   // 중2 종료 잔액 — 기존 백로그가 "529만원"이라고 적은 지점
+  reachedEndingRuns: number;   // 엔딩 도달 run 수(7년 완주)
+  // 제품 확정 잠금 재현(T47) — 규칙별 "잠겼을 주" 평균
+  uiRoutineLockMean: number;
+  uiPreviewSkipMean: number;
+  uiPickerBlockMean: number;
+  uiConfirmLockMean: number;
 }
 
 function tally(into: Record<string, number>, key: string): void {
@@ -488,13 +540,81 @@ function aggregate(p: Persona, runs: Result[]): PersonaAgg {
     weekendSkipMean: Math.round(runs.reduce((a, r) => a + r.weekendSkippedForMoney, 0) / runs.length),
     routineSpendMean: Math.round(runs.reduce((a, r) => a + r.routineSpend, 0) / runs.length),
     moneyY2Mean: Math.round(runs.reduce((a, r) => a + (r.moneyByYear[2] ?? 0), 0) / runs.length),
+    reachedEndingRuns: runs.filter(r => r.reachedEnding).length,
+    uiRoutineLockMean: Math.round(runs.reduce((a, r) => a + r.uiRoutineLockWeeks, 0) / runs.length),
+    uiPreviewSkipMean: Math.round(runs.reduce((a, r) => a + r.uiPreviewSkipWeeks, 0) / runs.length),
+    uiPickerBlockMean: Math.round(runs.reduce((a, r) => a + r.uiPickerBlockWeeks, 0) / runs.length),
+    uiConfirmLockMean: Math.round(runs.reduce((a, r) => a + r.uiConfirmLockWeeks, 0) / runs.length),
   };
+}
+
+// 위반 페르소나 표시(invalid)와 판정(validatePersona)이 어긋나면 기동을 거부한다 — 표가 거짓이 되기 전에.
+export function assertPersonaMarks(personas: readonly Persona[] = PERSONAS): void {
+  const mismatches = personaMarkMismatches(personas);
+  if (mismatches.length > 0) {
+    throw new Error(`페르소나 invalid 표시와 판정이 어긋난다(${mismatches.length}건):\n  ${mismatches.join('\n  ')}`);
+  }
+}
+
+function printGroupSummary(title: string, aggs: PersonaAgg[], runs: Result[], seeds: number): void {
+  const pad = (s: unknown, n: number) => String(s).padEnd(n);
+  console.log(`\n=== ${title}: ${aggs.length} 페르소나 × ${seeds} 시드 = ${runs.length} runs, 7년 ===\n`);
+  if (aggs.length === 0) { console.log('(없음)'); return; }
+  console.log(pad('persona', 28), pad('번아웃%', 10), pad('avgFat', 7), pad('tired%', 7), pad('maxTir', 7), pad('엔딩도달', 9), pad('성취', 10), pad('행복', 10), pad('수능', 12));
+  for (const a of aggs) {
+    console.log(
+      pad(a.persona, 28),
+      pad(`${a.burnoutRate}%(${a.burnoutMean})`, 10),
+      pad(a.avgFatigue, 7),
+      pad(`${a.tiredRate}%`, 7),
+      pad(a.maxTired, 7),
+      pad(`${a.reachedEndingRuns}/${a.runs}`, 9),
+      pad(fmtDist(a.achievementDist), 10),
+      pad(fmtDist(a.happinessDist), 10),
+      pad(fmtDist(a.suneungDist), 12),
+    );
+  }
+  // ===== 그룹 집계 (밸런스 핵심 신호) =====
+  const overall = {
+    achievement: {} as Record<string, number>,
+    happiness: {} as Record<string, number>,
+    suneung: {} as Record<string, number>,
+    path: {} as Record<string, number>,
+    burnoutRuns: 0,
+    reached: 0,
+  };
+  for (const r of runs) {
+    tally(overall.achievement, r.ending.achievement);
+    tally(overall.happiness, r.ending.happiness);
+    tally(overall.suneung, r.suneungMockGrade == null ? '-' : String(r.suneungMockGrade));
+    tally(overall.path, r.ending.path);
+    if (r.burnoutCount > 0) overall.burnoutRuns++;
+    if (r.reachedEnding) overall.reached++;
+  }
+  const pct = (n: number) => Math.round(n / Math.max(1, runs.length) * 100);
+  console.log(`\n--- ${title} ${runs.length} runs 집계 ---`);
+  console.log(`번아웃 발생 run: ${overall.burnoutRuns}/${runs.length} (${pct(overall.burnoutRuns)}%)`);
+  console.log(`엔딩 도달 run: ${overall.reached}/${runs.length} (${pct(overall.reached)}%)`);
+  const maxTiredAll = Math.max(0, ...runs.map(r => r.maxConsecutiveTired));
+  const lockRuns = runs.filter(r => r.maxConsecutiveTired >= 100).length;
+  // 100주+ 락은 오류 아님 — 만성 탈진은 실패엔딩(재수/쉼표)으로 라우팅됨(#266). 무휴식 grind 페르소나에서 예상되는 값.
+  console.log(`최장 연속 tired: ${maxTiredAll}주 / 100주+ 락 run: ${lockRuns} (만성 탈진 → 실패엔딩 라우팅, grind 페르소나 예상값 — #266)`);
+  console.log(`성취:  ${fmtDist(overall.achievement)}`);
+  console.log(`행복:  ${fmtDist(overall.happiness)}`);
+  console.log(`수능:  ${fmtDist(overall.suneung)}`);
+  console.log(`진로:  ${fmtDist(overall.path)}`);
 }
 
 function main() {
   const outDir = process.argv[2] || '/tmp/qa-results';
   const SEEDS = Number(process.argv[3]) || 12;   // 페르소나당 시드 수 (분포 표본)
   fs.mkdirSync(outDir, { recursive: true });
+
+  // ===== 페르소나 유효성(T47) — 제품에서 만들 수 없는 조합은 별도 표로 =====
+  assertPersonaMarks(PERSONAS);
+  const invalidPersonas = PERSONAS.filter(p => p.invalid);
+  console.log(`\n페르소나 ${PERSONAS.length}종 = 유효 ${PERSONAS.length - invalidPersonas.length} + 위반 ${invalidPersonas.length}(제품 불가 조합 — 극단 스트레스 표본, 유효 표와 섞어 세지 않는다)`);
+  for (const p of invalidPersonas) console.log(`  ✗ ${p.name}: ${validatePersona(p).join(' / ')}`);
 
   const aggs: PersonaAgg[] = [];
   const allRuns: Result[] = [];
@@ -512,30 +632,27 @@ function main() {
   }
   fs.writeFileSync(`${outDir}/qa-agg.json`, JSON.stringify(aggs, null, 2));
 
+  const invalidNames = new Set(invalidPersonas.map(p => p.name));
+  const validAggs = aggs.filter(a => !invalidNames.has(a.persona));
+  const invalidAggs = aggs.filter(a => invalidNames.has(a.persona));
+  const validRuns = allRuns.filter(r => !invalidNames.has(r.persona));
+  const invalidRuns = allRuns.filter(r => invalidNames.has(r.persona));
+
+  printGroupSummary('QA 분포 요약 — 유효 페르소나(제품에서 만들 수 있는 조합)', validAggs, validRuns, SEEDS);
+  printGroupSummary('QA 분포 요약 — 위반 페르소나(제품 불가 · 극단 스트레스 표본, 밸런스 근거로 쓰지 말 것)', invalidAggs, invalidRuns, SEEDS);
+
   const pad = (s: unknown, n: number) => String(s).padEnd(n);
-  console.log(`\n=== QA 분포 요약 (${aggs.length} 페르소나 × ${SEEDS} 시드 = ${allRuns.length} runs, 7년) ===\n`);
-  console.log(pad('persona', 22), pad('번아웃%', 9), pad('avgFat', 7), pad('tired%', 7), pad('maxTir', 7), pad('성취', 10), pad('행복', 8), pad('수능', 12));
-  for (const a of aggs) {
-    console.log(
-      pad(a.persona, 22),
-      pad(`${a.burnoutRate}%(${a.burnoutMean})`, 9),
-      pad(a.avgFatigue, 7),
-      pad(`${a.tiredRate}%`, 7),
-      pad(a.maxTired, 7),
-      pad(fmtDist(a.achievementDist), 10),
-      pad(fmtDist(a.happinessDist), 8),
-      pad(fmtDist(a.suneungDist), 12),
-    );
-  }
 
   // ===== 돈 흐름 =====
   // 최종 잔액만 보면 전부 "쌓였다"로 보인다. 루틴 고정비를 켠 페르소나가 도중에 마르는지,
   // 말라서 루틴이 실제로 안 돌아간 주가 몇 주인지가 이 표의 목적이다.
-  console.log(`\n=== 돈 흐름 (평균 / ${SEEDS} 시드) ===`);
-  console.log(pad('persona', 30), pad('중2末', 8), pad('최종', 8), pad('최저', 7), pad('빠듯주', 8), pad('루틴스킵', 14), pad('주말스킵', 9), pad('루틴지출', 9));
+  // UI 열(T47): 제품이라면 확정이 잠겼을 주 — ①루틴합계 ②프리뷰스킵 ③피커누적 / 잠금=①∨②.
+  // 엔진은 스킵하고 넘어가지만 제품은 여기서 멈춘다. 이 열이 0이 아닌 판은 제품에서 그대로 재현되지 않는다.
+  console.log(`\n=== 돈 흐름 (평균 / ${SEEDS} 시드 · 위반 페르소나는 ✗) ===`);
+  console.log(pad('persona', 30), pad('중2末', 8), pad('최종', 8), pad('최저', 7), pad('빠듯주', 8), pad('루틴스킵', 14), pad('주말스킵', 9), pad('루틴지출', 9), pad('UI①루틴', 8), pad('UI②프리뷰', 10), pad('UI③피커', 8), pad('UI잠금주', 8));
   for (const a of aggs) {
     console.log(
-      pad(a.persona, 30),
+      pad(`${invalidNames.has(a.persona) ? '✗' : ' '}${a.persona}`, 30),
       pad(`${a.moneyY2Mean}만`, 8),
       pad(`${a.moneyMean}만`, 8),
       pad(`${a.minMoneyMean}만`, 7),
@@ -543,49 +660,27 @@ function main() {
       pad(`${a.routineSkipMean}슬롯(${a.routineSkipRate}%)`, 14),
       pad(`${a.weekendSkipMean}회`, 9),
       pad(`${a.routineSpendMean}만`, 9),
+      pad(`${a.uiRoutineLockMean}주`, 8),
+      pad(`${a.uiPreviewSkipMean}주`, 10),
+      pad(`${a.uiPickerBlockMean}주`, 8),
+      pad(`${a.uiConfirmLockMean}주`, 8),
     );
   }
 
-  // ===== 전체 집계 (밸런스 핵심 신호) =====
-  const overall = {
-    achievement: {} as Record<string, number>,
-    happiness: {} as Record<string, number>,
-    suneung: {} as Record<string, number>,
-    path: {} as Record<string, number>,
-    burnoutRuns: 0,
-  };
-  for (const r of allRuns) {
-    tally(overall.achievement, r.ending.achievement);
-    tally(overall.happiness, r.ending.happiness);
-    tally(overall.suneung, r.suneungMockGrade == null ? '-' : String(r.suneungMockGrade));
-    tally(overall.path, r.ending.path);
-    if (r.burnoutCount > 0) overall.burnoutRuns++;
-  }
-  console.log(`\n--- 전체 ${allRuns.length} runs 집계 ---`);
-  console.log(`번아웃 발생 run: ${overall.burnoutRuns}/${allRuns.length} (${Math.round(overall.burnoutRuns / allRuns.length * 100)}%)`);
-  const maxTiredAll = Math.max(...allRuns.map(r => r.maxConsecutiveTired));
-  const lockRuns = allRuns.filter(r => r.maxConsecutiveTired >= 100).length;
-  // 100주+ 락은 오류 아님 — 만성 탈진은 실패엔딩(재수/쉼표)으로 라우팅됨(#266). 무휴식 grind 페르소나에서 예상되는 값.
-  console.log(`최장 연속 tired: ${maxTiredAll}주 / 100주+ 락 run: ${lockRuns} (만성 탈진 → 실패엔딩 라우팅, grind 페르소나 예상값 — #266)`);
-  console.log(`성취:  ${fmtDist(overall.achievement)}`);
-  console.log(`행복:  ${fmtDist(overall.happiness)}`);
-  console.log(`수능:  ${fmtDist(overall.suneung)}`);
-  console.log(`진로:  ${fmtDist(overall.path)}`);
-
-  // ===== 미니톡/tier 도달 집계 (intimacyMin으로 정확 매핑) =====
+  // ===== 미니톡/tier 도달 집계 (intimacyMin으로 정확 매핑) — 전체(유효+위반) =====
   const idToTier: Record<string, number> = {};
   for (const e of NPC_MINI_EVENTS) idToTier[e.id] = e.intimacyMin ?? 30;
   const firedIds = allRuns.flatMap(r => r.talkEventIds);
   const tierCount = (t: number) => firedIds.filter(id => (idToTier[id] ?? 30) === t).length;
   const uniqueIds = new Set(firedIds);
-  console.log(`\n--- 미니톡 발동 ---`);
+  console.log(`\n--- 미니톡 발동 (전체 ${allRuns.length} runs, 유효+위반) ---`);
   console.log(`총 발동: ${firedIds.length}회 / 고유 이벤트 ${uniqueIds.size}종 / run당 평균 ${Math.round(firedIds.length / allRuns.length * 10) / 10}회`);
   // 미니톡 tier 임계: 30/50/70/80 (80-게이트가 "tier90" 딥 콘텐츠). NPC별 도달 친밀도가 게이트.
   const deepUnique = [...uniqueIds].filter(id => (idToTier[id] ?? 30) === 80);
   console.log(`tier별: t30=${tierCount(30)}  t50=${tierCount(50)}  t70=${tierCount(70)}  t80(tier90딥)=${tierCount(80)}  (딥 고유 ${deepUnique.length}종: ${deepUnique.join(',')})`);
 
-  // ===== 후회카드 재료 측정 (Phase 0) =====
-  console.log(`\n--- 후회카드 재료 (regret/melancholy/burden 톤 OR failure/betrayal/bypass/unspoken_debt 카테고리) ---`);
+  // ===== 후회카드 재료 측정 (Phase 0) — 전체(유효+위반) =====
+  console.log(`\n--- 후회카드 재료 (regret/melancholy/burden 톤 OR failure/betrayal/bypass/unspoken_debt 카테고리) — 전체 ${allRuns.length} runs ---`);
   const regretCounts = allRuns.map(r => r.regretSlots);
   const avgRegret = Math.round(regretCounts.reduce((a, b) => a + b, 0) / allRuns.length * 10) / 10;
   const runsWith2plus = allRuns.filter(r => r.regretSlots >= 2).length;
@@ -606,7 +701,7 @@ function main() {
   console.log(`regret recallText 샘플(${sampleRecalls.length}종):`);
   for (const t of sampleRecalls) console.log(`  · ${t}`);
   // ===== 후회카드 실제 노출 측정 (selectRegretHighlights 구현 검증) =====
-  console.log(`\n--- 후회카드 실제 노출 (selectRegretHighlights) ---`);
+  console.log(`\n--- 후회카드 실제 노출 (selectRegretHighlights) — 전체 ${allRuns.length} runs ---`);
   const shownRuns = allRuns.filter(r => r.regretCardShown).length;
   const bodyCounts = allRuns.map(r => r.regretCardBody);
   const avgBody = Math.round(bodyCounts.reduce((a, b) => a + b, 0) / allRuns.length * 10) / 10;
@@ -623,4 +718,7 @@ function main() {
   console.log(`\n결과 JSON: ${outDir}/qa-<persona>.json (시드별 배열) + qa-agg.json`);
 }
 
-main();
+// 직접 실행일 때만 돈다 — 테스트가 PERSONAS·runPersona를 import해도 372판이 돌지 않게(run-chain.ts와 같은 가드).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
+}
