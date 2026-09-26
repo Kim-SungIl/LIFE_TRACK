@@ -93,11 +93,12 @@ console.log('\n=== 2. junha-birthday W18 이동 — W20 summer-start 마스킹 �
   assert(ev?.id !== 'junha-birthday', `Y6 W18 junha 미만남 → not junha-birthday (실제: ${ev?.id})`);
 }
 {
-  // Y6 W20: junha와 친해도 summer-start가 나온다 (더 이상 가려지지 않는다)
-  const s = setupAt(20, 6);
+  // Y6 W19: junha와 친해도 summer-start가 나온다 (더 이상 가려지지 않는다)
+  // summer-start는 W20→W19로 옮겼다 — 종업식은 학기 마지막 주(W19)고 W20은 이미 방학이다.
+  const s = setupAt(19, 6);
   meetNpc(s, 'junha', 30);
   const ev = getEventForWeek(s).event;
-  assert(ev?.id === 'summer-start', `Y6 W20 junha 친밀도 30 → summer-start (실제: ${ev?.id})`);
+  assert(ev?.id === 'summer-start', `Y6 W19 junha 친밀도 30 → summer-start (실제: ${ev?.id})`);
 }
 
 console.log('\n=== 2-bis. 학교 의례 4종 매년 재발동 (발동 이력을 심은 상태) ===');
@@ -107,7 +108,7 @@ console.log('\n=== 2-bis. 학교 의례 4종 매년 재발동 (발동 이력을 
 {
   const cases: Array<{ id: string; week: number; year: number; firedYear: number }> = [
     { id: 'winter-start', week: 43, year: 3, firedYear: 1 },
-    { id: 'summer-start', week: 20, year: 5, firedYear: 1 },
+    { id: 'summer-start', week: 19, year: 5, firedYear: 1 },
     { id: 'sports-day', week: 10, year: 4, firedYear: 2 },
     { id: 'school-festival', week: 31, year: 6, firedYear: 2 },
   ];

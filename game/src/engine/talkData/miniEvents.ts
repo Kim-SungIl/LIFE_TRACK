@@ -31,6 +31,10 @@ export interface MiniTalkEvent {
   yearMin?: number;                      // 학년 하한 (예: haeun 졸업 시드 Y6). 시점 의존 시드 게이팅
   yearMax?: number;                      // 학년 상한 (선택적)
   gender?: Gender;                       // 특정 성별 전용 (없으면 양쪽 다 발동)
+  // 계절 게이트 (2026-09-26) — 'semester'면 방학(W20~24·W43~48)에 안 뜬다.
+  // 지금 학교에 있어야 성립하는 장면(교실·복도·급식판·사물함·매점)만 단다. 1회성 풀이라
+  // 방학에 걸러져도 유실이 아니라 **미룸**이다. 졸업식 강당처럼 방학 중 학교 장면은 달지 않는다.
+  season?: 'semester' | 'vacation';
   description: string;                   // 본문 (NPC/부모 대사 + 상황)
   effects: {
     intimacy?: number;                   // NPC 친밀도 변화
@@ -56,7 +60,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_jihun_badminton',
-    npcId: 'jihun', intimacyMin: 30, gender: 'female',
+    npcId: 'jihun', intimacyMin: 30, gender: 'female', season: 'semester',
     description: '"야, 라켓 챙겨왔어. 체육관 잠깐 비었대, 한 판만 치자."\n지훈이가 가방에서 셔틀콕을 꺼내 보인다.',
     effects: { intimacy: 2, stats: { health: 1 }, fatigue: 1 },
     message: '지훈이와 배드민턴 한 판 — 체력 +1, 친밀도 +2',
@@ -98,14 +102,14 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_doyun_soccer',
-    npcId: 'doyun', intimacyMin: 30, gender: 'male',
+    npcId: 'doyun', intimacyMin: 30, gender: 'male', season: 'semester',
     description: '"야, 잠깐만. 점심 축구 한 명 비어. 너 와줘야 해."\n도윤이가 가방을 슥 메며 운동장을 가리킨다.',
     effects: { intimacy: 2, stats: { health: 1, social: 1 }, fatigue: 1 },
     message: '도윤이와 점심 축구 — 체력 +1, 사회 +1, 친밀도 +2',
   },
   {
     id: 'talk_doyun_classroom',
-    npcId: 'doyun', intimacyMin: 30, gender: 'female',
+    npcId: 'doyun', intimacyMin: 30, gender: 'female', season: 'semester',
     description: '"이 책상 같이 옮길까? 혼자 들기엔 좀 무거운 것 같아."\n도윤이가 쉬는 시간을 쪼개 책상 자리를 다시 맞추는 중이다.',
     effects: { intimacy: 2, stats: { social: 1, mental: 1 }, fatigue: 1 },
     message: '도윤이와 책상 옮기기 — 사회 +1, 멘탈 +1, 친밀도 +2',
@@ -141,14 +145,14 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_haeun_50_window',
-    npcId: 'haeun', intimacyMin: 45,
+    npcId: 'haeun', intimacyMin: 45, season: 'semester',
     description: '"오늘은 대답 안 해도 되는 날."\n하은 선배가 복도 끝 창문을 조금 열어 둔다. 바람이 들어오면, 둘 사이에선 잠깐 쉬어도 된다는 신호가 된다.',
     effects: { intimacy: 3, stats: { mental: 1, social: 1 }, fatigue: -1 },
     message: '하은 선배의 창문 — 멘탈 +1, 사회 +1, 피로 -1, 친밀도 +3',
   },
   {
     id: 'talk_junha_50_seabreeze',
-    npcId: 'junha', intimacyMin: 38,
+    npcId: 'junha', intimacyMin: 38, season: 'semester',
     description: '"이 바람은 좀 부산 같다. 진짜로."\n준하가 교실 창문 틈으로 들어오는 바람을 맡고는 작게 웃는다. 이제 너도 그 말이 그리움인지 농담인지 대충 알아듣는다.',
     effects: { intimacy: 3, stats: { social: 1, mental: 1 }, fatigue: -1 },
     message: '준하의 바람 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +3',
@@ -156,7 +160,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   // ===== 친밀도 70 단계 (Phase 2.3 — 속마음 한 조각) =====
   {
     id: 'talk_jihun_70_locker',
-    npcId: 'jihun', intimacyMin: 70,
+    npcId: 'jihun', intimacyMin: 70, season: 'semester',
     description: '"나 운동 좋아하는 거랑 공부 싫어하는 거랑 같은 말은 아닌데."\n지훈이가 사물함 문을 괜히 두 번 닫는다. 평소처럼 웃으려다 말고, "가끔은 나도 잘하고 싶은 게 많아" 하고 작게 덧붙인다.',
     effects: { intimacy: 4, stats: { mental: 2 }, fatigue: 1 },
     message: '지훈이의 사물함 앞 말 — 멘탈 +2, 피로 +1, 친밀도 +4',
@@ -191,21 +195,21 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_yuna_70_chalk_dust',
-    npcId: 'yuna', intimacyMin: 70,
+    npcId: 'yuna', intimacyMin: 70, season: 'semester',
     description: '"잘한다는 말, 좋긴 한데 무서울 때도 있어."\n유나가 칠판 지우개를 털다 말고 손끝의 분필가루를 본다. 곧 다시 웃지만, 그 웃음이 평소보다 조금 늦게 올라온다.',
     effects: { intimacy: 4, stats: { talent: 1, mental: 1 }, fatigue: 1 },
     message: '유나의 분필가루 — 재능 +1, 멘탈 +1, 피로 +1, 친밀도 +4',
   },
   {
     id: 'talk_haeun_70_direction',
-    npcId: 'haeun', intimacyMin: 56,
+    npcId: 'haeun', intimacyMin: 56, season: 'semester',
     description: '"후배들이 자꾸 나한테 길을 물어보는데, 사실 나도 여기가 어딘지 모르겠어."\n하은 선배가 계단참에 잠깐 멈춰 난간을 짚는다. "...아는 척하는 것도, 가끔은 길을 잃는 일이더라." 말끝을 흐리곤, 별일 아니라는 듯 다시 계단을 오른다.',
     effects: { intimacy: 4, stats: { mental: 1, social: -1 }, fatigue: -1 },
     message: '하은 선배의 흔들림 — 멘탈 +1, 사회 -1, 피로 -1, 친밀도 +4',
   },
   {
     id: 'talk_junha_70_speech',
-    npcId: 'junha', intimacyMin: 44,
+    npcId: 'junha', intimacyMin: 44, season: 'semester',
     description: '"내 말투 고치면 애들이 덜 쳐다보긴 하거든."\n준하가 급식판 모서리를 젓가락으로 톡톡 친다. "근데 그라면 내가 좀 없어지는 것 같아서, 그게 좀 웃기제." 농담처럼 말하지만 눈은 식판에 남아 있다.',
     effects: { intimacy: 4, stats: { social: 1, mental: 1 }, fatigue: -1 },
     message: '준하의 말투 — 사회 +1, 멘탈 +1, 피로 -1, 친밀도 +4',
@@ -213,7 +217,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   // ===== tier90 코어 (친밀도 80+ 도달 — 80↑ 감쇠 벽 고려해 90→80 하향, Phase 2.4 / importance 5 필수) =====
   {
     id: 'talk_jihun_90_bench',
-    npcId: 'jihun', intimacyMin: 80, yearMin: 2,
+    npcId: 'jihun', intimacyMin: 80, yearMin: 2, season: 'semester',
     description: '"넌 왜 힘들 때 더 실실 웃냐. 바보같이."\n매점 평상, 지훈이가 말없이 이온 음료를 툭 쥐여 준다. "나한텐 힘든 척해도 돼. 내가 힘은 세니까, 대충 다 받아줄 수 있어." 앞만 보며 툭 던지는 목소리에 서툰 다정함이 묻어 있다.',
     effects: { intimacy: 5, stats: { mental: 2 }, fatigue: -2 },
     message: '지훈이가 장난 대신 기댈 어깨를 내밀었다.',
@@ -241,7 +245,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_minjae_90_unmasked',
-    npcId: 'minjae', intimacyMin: 80, yearMin: 2,
+    npcId: 'minjae', intimacyMin: 80, yearMin: 2, season: 'semester',
     description: '"나... 사실 다 괜찮은 척하느라 좀 지쳤나 봐."\n방과후 빈 교실, 민재가 늘 날 서 있던 표정을 슬쩍 푼다. "근데 너 앞에선 안 괜찮아도 되더라. 그게 좀, 이상하게 편해."',
     effects: { intimacy: 5, stats: { mental: 2, social: 1 } },
     message: "민재가 늘 쓰던 '괜찮은 척'을 처음 벗었다.",
@@ -371,14 +375,14 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_siwoo_50_linked_corridor',
-    npcId: 'siwoo', intimacyMin: 50, yearMin: 5,
+    npcId: 'siwoo', intimacyMin: 50, yearMin: 5, season: 'semester',
     description: '"이 통로만 벽돌 색이 다르잖아. 나중에 이은 거야. 매일 비 맞던 누가 있었겠지."\n시우가 구관과 신관 사이 연결 복도의 벽을 손바닥으로 짚는다. "…나는 이런 거 짓고 싶어. 대단한 거 말고, 누가 매일 지나다니는 거."\n말해놓고 본인이 먼저 걸음을 옮긴다.',
     effects: { intimacy: 3, stats: { mental: 2 } },
     message: '시우의 연결 통로 — 멘탈 +2, 친밀도 +3',
   },
   {
     id: 'talk_siwoo_70_dry_route',
-    npcId: 'siwoo', intimacyMin: 70, yearMin: 5,
+    npcId: 'siwoo', intimacyMin: 70, yearMin: 5, season: 'semester',
     description: '"너 우산 잘 안 갖고 다니잖아."\n시우가 접은 종이 한 장을 내민다. 교문에서 매점까지, 지붕 이어진 데만 골라 이은 동선이 그려져 있다. "이대로만 밟으면 안 맞아. …시험해 본 사람이 있어." 한 박자 늦게 픽.',
     effects: { intimacy: 4, stats: { mental: 2 }, fatigue: -1 },
     message: '시우의 비 안 맞는 동선 — 멘탈 +2, 피로 -1, 친밀도 +4',

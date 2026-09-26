@@ -99,7 +99,10 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
   it('최소투입 플레이는 C에 착지한다', { timeout: 30_000 }, () => {
     // 시드마다 착지값을 먼저 못박는다 — 등급만 단언하면 경계 근처로 밀려도(예: 학업 49.9)
     // 여전히 C라서 통과하고, 임계가 조용히 이동한 것을 놓친다.
-    const landings: Record<number, number> = { 1: 35.3, 7: 36.0 };
+    // 시드 1은 #489(방학식 summer-start W20→W19 이동)로 착지값이 움직였다 — W19가 학기 마지막 주라
+    // 그 주의 주간 맥락이 달라지고, 비워진 W20엔 도달형(jihun-basketball 등)이 대신 들어온다.
+    // 두 시드 모두 움직였다. 등급 밴드는 셋 다 그대로다.
+    const landings: Record<number, number> = { 1: 36.0, 7: 36.7 };
     for (const [seed, academic] of Object.entries(landings)) {
       const r = playSevenYears(MIN_INPUT, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);
@@ -117,8 +120,11 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
   it('무료 성실 플레이는 A에 착지한다 — 시간만으로는 S에 못 닿는다', { timeout: 30_000 }, () => {
     // T29 전에는 85.6/85.4로 **S 임계에 걸쳐** 있었다. 그 85는 실력의 좌표가 아니라
     // 최저 보장이 꺼지는 좌표였다 — 그래서 시드가 달라도 소수점까지 비슷한 값이 나왔다.
-    // 보장을 소프트캡 문턱에서 끄자 같은 플레이가 83~84에 앉는다. 여전히 높지만 S는 아니다.
-    const landings: Record<number, number> = { 1: 84.0, 7: 83.0 };
+    // 보장을 소프트캡 문턱에서 끄자 같은 플레이가 84대에 앉는다. 여전히 높지만 S는 아니다.
+    // #489(방학식 summer-start W20→W19 이동)로 두 시드 다 올라갔다(84.0→84.1 · 83.0→84.3).
+    // W19가 학기 마지막 주라 그 주의 주간 맥락이 달라지고, 비워진 W20엔 도달형이 대신 들어온다.
+    // **S 임계(85)까지 여유가 0.7로 줄었다** — 이 구간을 건드리는 다음 변경은 이 값을 먼저 볼 것.
+    const landings: Record<number, number> = { 1: 84.1, 7: 84.3 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_FREE, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);
@@ -139,7 +145,10 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // 착지값은 #470(T28, 학원 피로 7→4 · 헬스 7→3)이 main에 먼저 들어가며 88.3/89.7 → 89.3/89.9로
     // 올랐다. 방향이 맞다 — 유료 루틴의 피로가 줄었으니 성장이 늘고, 무료 표(위)는 그 두 활동을
     // 안 쓰므로 그대로다. 이 PR과 #470은 옛 main에서 각자 초록이었고 합쳐서 처음 만났다.
-    const landings: Record<number, number> = { 1: 89.3, 7: 89.9 };
+    // 시드 1은 #489(방학식 summer-start W20→W19 이동)로 착지값이 움직였다 — W19가 학기 마지막 주라
+    // 그 주의 주간 맥락이 달라지고, 비워진 W20엔 도달형(jihun-basketball 등)이 대신 들어온다.
+    // 두 시드 모두 움직였다. 등급 밴드는 셋 다 그대로다.
+    const landings: Record<number, number> = { 1: 90.2, 7: 89.7 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_PAID, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);

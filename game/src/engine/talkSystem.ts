@@ -9,11 +9,13 @@
 import { GameState } from './types';
 import { seededRandomTalk } from './rng';
 import { getSchoolLevel } from './backgrounds';
+import { getWeekInfo } from './gameEngine';
 import {
   MiniTalkEvent,
   ParentClimaxEvent,
   GenderedPool,
   SmalltalkBucket,
+  SmalltalkTiers,
   NPC_MINI_EVENTS,
   PARENT_MINI_EVENTS,
   PARENT_CLIMAX_EVENTS,
@@ -35,16 +37,24 @@ export function getNpcSmalltalk(state: GameState, npcId: string): string {
   if (!entry) return pickRandomLine(state, []);
   const intimacy = state.npcs.find(n => n.id === npcId)?.intimacy ?? 0;
   const level = getSchoolLevel(state.year); // Y1=elementary / Y2~Y4=middle / Y5~Y7=high
+  // 계절은 **주차에서 파생**한다(state.isVacation을 읽지 않는다) — 달력 SSOT는 getWeekInfo 하나여야
+  // 하고, 두 근거가 갈리면 "방학인데 학교 대사"가 조용히 되돌아온다.
+  const isVacation = getWeekInfo(state.week).isVacation;
   // common + 현재 성별 풀을 합침 (events.ts 분기와 톤 일치)
   const genderLines = (p?: GenderedPool): string[] =>
     p ? [...(p.common ?? []), ...(state.gender === 'female' ? p.female ?? [] : p.male ?? [])] : [];
   // 친밀도가 오를수록 warm/close/deep 티어의 "현재 학교급" 셀을 base 위에 누적.
   const tierLines = (b?: SmalltalkBucket): string[] => genderLines(b?.[level]);
+  // base와 계절 풀이 같은 모양이라 한 벌을 똑같이 펼친다.
+  const spread = (t?: SmalltalkTiers): string[] => t ? [
+    ...genderLines(t),
+    ...(intimacy >= 30 ? tierLines(t.warm) : []),
+    ...(intimacy >= 50 ? tierLines(t.close) : []),
+    ...(intimacy >= 70 ? tierLines(t.deep) : []),
+  ] : [];
   const pool = [
-    ...genderLines(entry),
-    ...(intimacy >= 30 ? tierLines(entry.warm) : []),
-    ...(intimacy >= 50 ? tierLines(entry.close) : []),
-    ...(intimacy >= 70 ? tierLines(entry.deep) : []),
+    ...spread(entry),
+    ...spread(isVacation ? entry.vacationOnly : entry.schoolOnly),
   ];
   return pickRandomLine(state, pool);
 }
@@ -87,12 +97,15 @@ export function getHomeSmalltalk(state: GameState): string {
 export function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalkEvent[] {
   const npc = state.npcs.find(n => n.id === npcId);
   if (!npc) return [];
+  // 계절은 주차에서 파생한다 — 잡담(getNpcSmalltalk)과 같은 근거를 써야 한쪽만 새지 않는다.
+  const season = getWeekInfo(state.week).isVacation ? 'vacation' : 'semester';
   return NPC_MINI_EVENTS.filter(e =>
     e.npcId === npcId
     && (!e.intimacyMin || npc.intimacy >= e.intimacyMin)
     && (!e.yearMin || state.year >= e.yearMin)
     && (!e.yearMax || state.year <= e.yearMax)
     && (!e.gender || e.gender === state.gender)
+    && (!e.season || e.season === season)
     && !state.talkEventsFired.includes(e.id),
   );
 }

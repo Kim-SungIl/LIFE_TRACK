@@ -1,7 +1,7 @@
 // 신규 3인(서아·시우·예린) 스몰톡 풀 — 엔트리 부재로 범용 폴백("별 다른 일 없이")에
 // 빠지던 회귀 방지. 티어·학교급 셀이 실제로 풀에 누적되는지까지 확인한다.
 import { describe, expect, it } from 'vitest';
-import { NPC_SMALLTALK } from '../talkData/npcSmalltalk';
+import { NPC_SMALLTALK, type SmalltalkBucket } from '../talkData/npcSmalltalk';
 import { getNpcSmalltalk } from '../talkSystem';
 import { createInitialState } from '../gameEngine';
 import type { GameState, ParentStrength } from '../types';
@@ -47,11 +47,15 @@ describe('신규 3인 스몰톡 풀', () => {
   it('진행형 대화 원칙 — 종결형 폴백 문구가 풀에 섞여 있지 않다', () => {
     for (const id of ['seoa', 'siwoo', 'yerin'] as const) {
       const pool = NPC_SMALLTALK[id];
-      const all = [
-        ...pool.common,
-        ...[pool.warm, pool.close, pool.deep].flatMap(t =>
-          [t?.elementary, t?.middle, t?.high].flatMap(g => g?.common ?? [])),
-      ];
+      // 계절 분할(2026-09-26) 이후 같은 줄이 base·schoolOnly·vacationOnly 셋에 나뉘어 산다.
+      // 톤 검사도 총량 하한도 **세 벌을 합친 풀** 기준이어야 의미가 유지된다 —
+      // base만 세면 학기 전용을 옮긴 만큼 하한이 저절로 깎인다.
+      const tiersOf = (t?: { common?: string[]; warm?: SmalltalkBucket; close?: SmalltalkBucket; deep?: SmalltalkBucket }) => t ? [
+        ...(t.common ?? []),
+        ...[t.warm, t.close, t.deep].flatMap(b =>
+          [b?.elementary, b?.middle, b?.high].flatMap(g => g?.common ?? [])),
+      ] : [];
+      const all = [...tiersOf(pool), ...tiersOf(pool.schoolOnly), ...tiersOf(pool.vacationOnly)];
       expect(all.length).toBeGreaterThanOrEqual(15);
       for (const line of all) expect(line).not.toContain('지나갔다');
     }
