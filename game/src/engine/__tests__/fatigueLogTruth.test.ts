@@ -19,6 +19,8 @@
 // 이벤트 몫(store `foldOutcomeIntoWeekLog`)과 주 확정 전 효과(`foldPendingIntoLog`)는 **이미
 // 실제 델타**라 그 줄 뒤에 더해진다 — 순서가 뒤집히면 둘이 지워진다. 아래 마지막 두 describe가
 // 그 순서를 잠근다.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store';
 import { processWeek } from '../gameEngine';
@@ -314,5 +316,37 @@ describe('보류분(주 확정 전 효과)이 로그에 남는다 — 새 줄이
       '새 줄이 foldPendingIntoLog 뒤로 가면 이 차이가 0이 된다').toBe(SNACK);
     // 주 시작(= 간식 먹기 전 40)에서 본 실제 변화와도 같아야 한다.
     expect(round1(withPending.fatigue - WEEK_START)).toBe(round1(withPending.weekLog!.fatigueChange));
+  });
+});
+
+// 위 계약은 **값**만 본다. 값이 같으면 통과하므로, 헬퍼에 옛 누적(`log.fatigueChange -= recovery`)을
+// 되살려도 마지막 절대 대입이 덮어써서 전부 초록이다(실측: 뮤테이션 SURVIVED). 그건 지금은
+// 무해하지만 **죽은 코드**이고, 절대 대입이 언젠가 위로 올라가거나 `+=`로 바뀌는 순간 곧장
+// 이중 계상이 된다 — 피로 축이 원래 그렇게 새고 있었다.
+//
+// 그래서 값이 아니라 **모양**을 잠근다: 금지 목록이 아니라 **허용 형태**다(쓰기는 전부 `=`).
+describe('피로 로그는 누적하지 않는다 — 쓰기 형태가 계약이다', () => {
+  const WRITE_RE = /log\.fatigueChange\s*(\+=|-=|\*=|\/=|=)/g;
+  const writesIn = (src: string) => [...src.matchAll(WRITE_RE)].map(m => m[1]);
+
+  // 자기검사 — 코퍼스가 0건이거나 정규식이 늙으면 이 검사는 자기가 지워져도 초록이다.
+  it('자기검사: 누적 형태를 실제로 찾아낸다', () => {
+    expect(writesIn('log.fatigueChange -= recovery;'), '누적을 못 잡으면 아래는 공허하다').toEqual(['-=']);
+    expect(writesIn('log.fatigueChange += 2;')).toEqual(['+=']);
+    expect(writesIn('log.fatigueChange = round1(x);')).toEqual(['=']);
+    expect(writesIn('const n = log.fatigueChange ?? 0;')).toEqual([]);
+  });
+
+  it.each([
+    ['gameEngine.ts', 'src/engine/gameEngine.ts'],
+    ['store.ts', 'src/engine/store.ts'],
+  ])('%s의 fatigueChange 쓰기는 전부 절대 대입이다', (_label, rel) => {
+    const src = readFileSync(resolve(process.cwd(), rel), 'utf8');
+    const writes = writesIn(src);
+    expect(writes.length, `${rel}에 fatigueChange 쓰기가 0건이면 이 검사는 아무것도 안 본다`)
+      .toBeGreaterThan(0);
+    expect(writes.filter(op => op !== '='),
+      '누적(+=/-=)은 클램프를 못 보는 옛 방식이다 — 값은 같아 보여도 대입 위치가 바뀌는 순간 샌다')
+      .toEqual([]);
   });
 });
