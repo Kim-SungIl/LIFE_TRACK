@@ -2,7 +2,8 @@
 // 순수 데이터: NPC/부모 미니 이벤트 풀, 정적 인사말, 잡담 폴백.
 // 로직(필터/픽업/RNG)은 talkSystem.ts. 데이터/로직 분리 P3-9 (2026-05-29).
 
-import { Gender, MemorySlotDraft, ParentStrength, Stats } from '../types';
+import { Gender, GameState, MemorySlotDraft, ParentStrength, Stats } from '../types';
+import { getSeason } from '../weekMath';
 import type { ParentTag, ParentEffect } from '../parentIntimacy';
 
 // ===== 미니 이벤트 선택지 (Phase 2A) =====
@@ -47,6 +48,22 @@ export interface MiniTalkEvent {
   memorySlotDraft?: MemorySlotDraft;     // 70+ 단계: 회상 슬롯 후보 (importance ≥3만 실제 생성)
   parentTag?: ParentTag;                 // 부모 이벤트: 친밀도 반응 태그 (없으면 familyTime). 강점 반응 배율 결정
   choices?: MiniTalkChoice[];            // Phase 2A: ±트레이드오프 선택지. 있으면 선택-후-적용(모달에서 분기)
+}
+
+/**
+ * 미니이벤트의 **친밀도를 뺀** 맥락 게이트 — 학년·성별·계절.
+ *
+ * `talkSystem.getAvailableNpcEvents`(실제 발동)와 `relationshipSignals.nextIntimacyThreshold`
+ * (관계 패널의 "곧 더 가까워질 듯" 신호)가 **같은 함수를 쓴다.** 전엔 두 곳이 조건을 각자
+ * 나열했고 주석만 "동일 필터"라고 주장했는데, 한쪽에 season이 생기자 바로 갈렸다 —
+ * 방학에 "곧 열린다"고 말해놓고 실제로는 아무것도 안 열렸다(#441: 두 근거가 갈리면 라벨이 거짓말한다).
+ */
+export function miniEventFitsContext(e: MiniTalkEvent, state: GameState): boolean {
+  if (e.yearMin !== undefined && state.year < e.yearMin) return false;
+  if (e.yearMax !== undefined && state.year > e.yearMax) return false;
+  if (e.gender !== undefined && e.gender !== state.gender) return false;
+  if (e.season !== undefined && e.season !== getSeason(state.week)) return false;
+  return true;
 }
 
 // ===== NPC 미니 이벤트 풀 (Phase 2.1 시드) =====
@@ -368,7 +385,7 @@ export const NPC_MINI_EVENTS: MiniTalkEvent[] = [
   },
   {
     id: 'talk_siwoo_30_railing',
-    npcId: 'siwoo', intimacyMin: 30, yearMin: 5,
+    npcId: 'siwoo', intimacyMin: 30, season: 'semester', yearMin: 5,
     description: '"여기만 색이 옅어. 다들 마지막 세 칸은 난간 안 잡고 뛰거든."\n시우가 텀블러 든 손으로 계단 난간의 한 뼘을 가리킨다. 방금 세 칸을 뛰어 내려온 나를 보고는, 한 박자 늦게 덧붙인다. "방금 너처럼."',
     effects: { intimacy: 2, stats: { mental: 1 } },
     message: '시우의 난간 한 뼘 — 멘탈 +1, 친밀도 +2',

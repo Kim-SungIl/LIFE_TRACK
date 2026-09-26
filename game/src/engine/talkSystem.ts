@@ -12,6 +12,7 @@ import { getSchoolLevel } from './backgrounds';
 import { getWeekInfo } from './gameEngine';
 import {
   MiniTalkEvent,
+  miniEventFitsContext,
   ParentClimaxEvent,
   GenderedPool,
   SmalltalkBucket,
@@ -97,15 +98,11 @@ export function getHomeSmalltalk(state: GameState): string {
 export function getAvailableNpcEvents(state: GameState, npcId: string): MiniTalkEvent[] {
   const npc = state.npcs.find(n => n.id === npcId);
   if (!npc) return [];
-  // 계절은 주차에서 파생한다 — 잡담(getNpcSmalltalk)과 같은 근거를 써야 한쪽만 새지 않는다.
-  const season = getWeekInfo(state.week).isVacation ? 'vacation' : 'semester';
+  // 학년·성별·계절은 miniEventFitsContext(SSOT)가 판정한다 — 관계 신호도 같은 함수를 쓴다.
   return NPC_MINI_EVENTS.filter(e =>
     e.npcId === npcId
     && (!e.intimacyMin || npc.intimacy >= e.intimacyMin)
-    && (!e.yearMin || state.year >= e.yearMin)
-    && (!e.yearMax || state.year <= e.yearMax)
-    && (!e.gender || e.gender === state.gender)
-    && (!e.season || e.season === season)
+    && miniEventFitsContext(e, state)
     && !state.talkEventsFired.includes(e.id),
   );
 }
@@ -127,8 +124,10 @@ export function getAvailableHomeEvents(state: GameState): MiniTalkEvent[] {
   const avail = PARENT_MINI_EVENTS.filter(e =>
     e.parentStrength
     && state.parents.includes(e.parentStrength)
-    && (!e.yearMin || state.year >= e.yearMin)   // NPC 경로와 동일하게 학년 게이트 적용(진학 이벤트가 초등 발동 방지)
-    && (!e.yearMax || state.year <= e.yearMax)
+    // 학년·계절 판정은 NPC 경로·관계 신호와 **같은 함수**다(miniEventFitsContext).
+    // season은 MiniTalkEvent 공용 필드라, 여기서 안 보면 부모 풀에 다는 순간 조용히 죽는다.
+    // (gender는 부모 이벤트에 안 쓰이므로 술어 안에서 자연히 통과한다)
+    && miniEventFitsContext(e, state)
     && now - lastFiredWeek(state, e.id) >= PARENT_EVENT_COOLDOWN_WEEKS,
   );
   // 로테이션: 가장 오래전 발동(미발동 = -Infinity가 최우선) 순 → available[0]이 자연 교대

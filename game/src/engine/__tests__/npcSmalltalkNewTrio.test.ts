@@ -1,7 +1,7 @@
 // 신규 3인(서아·시우·예린) 스몰톡 풀 — 엔트리 부재로 범용 폴백("별 다른 일 없이")에
 // 빠지던 회귀 방지. 티어·학교급 셀이 실제로 풀에 누적되는지까지 확인한다.
 import { describe, expect, it } from 'vitest';
-import { NPC_SMALLTALK, type SmalltalkBucket } from '../talkData/npcSmalltalk';
+import { NPC_SMALLTALK, type SmalltalkBucket, type NpcSmalltalkPool } from '../talkData/npcSmalltalk';
 import { getNpcSmalltalk } from '../talkSystem';
 import { createInitialState } from '../gameEngine';
 import type { GameState, ParentStrength } from '../types';
@@ -28,18 +28,29 @@ describe('신규 3인 스몰톡 풀', () => {
   });
 
   it('서아는 중등·고등 티어 셀을 모두 갖고, 시우·예린은 high 셀만 갖는다 (등장 창 정합)', () => {
+    // 계절 분할(2026-09-26) 이후 티어 셀이 base·schoolOnly·vacationOnly 셋에 나뉜다.
+    // "등장 창에 티어 셀이 있다"는 계약은 **세 벌 합산** 기준이어야 유지된다 —
+    // 실제로 siwoo의 고등 warm 4줄은 전부 학교 시설 관찰이라 schoolOnly로 갔고 base는 비었다.
+    const cell = (pool: NpcSmalltalkPool, tier: 'warm' | 'close' | 'deep', level: 'elementary' | 'middle' | 'high') =>
+      [pool[tier], pool.schoolOnly?.[tier], pool.vacationOnly?.[tier]]
+        .flatMap(b => b?.[level]?.common ?? []);
+    const absent = (pool: NpcSmalltalkPool, tier: 'warm' | 'close' | 'deep', level: 'elementary' | 'middle' | 'high') =>
+      pool[tier]?.[level] === undefined
+      && pool.schoolOnly?.[tier]?.[level] === undefined
+      && pool.vacationOnly?.[tier]?.[level] === undefined;
+
     const seoa = NPC_SMALLTALK.seoa;
-    for (const tier of [seoa.warm, seoa.close, seoa.deep]) {
-      expect(tier?.middle?.common?.length).toBeGreaterThan(0);
-      expect(tier?.high?.common?.length).toBeGreaterThan(0);
-      expect(tier?.elementary).toBeUndefined();
+    for (const tier of ['warm', 'close', 'deep'] as const) {
+      expect(cell(seoa, tier, 'middle').length, `seoa.${tier}.middle`).toBeGreaterThan(0);
+      expect(cell(seoa, tier, 'high').length, `seoa.${tier}.high`).toBeGreaterThan(0);
+      expect(absent(seoa, tier, 'elementary'), `seoa.${tier}.elementary`).toBe(true);
     }
     for (const id of ['siwoo', 'yerin'] as const) {
       const pool = NPC_SMALLTALK[id];
-      for (const tier of [pool.warm, pool.close, pool.deep]) {
-        expect(tier?.high?.common?.length).toBeGreaterThan(0);
-        expect(tier?.elementary).toBeUndefined();
-        expect(tier?.middle).toBeUndefined();
+      for (const tier of ['warm', 'close', 'deep'] as const) {
+        expect(cell(pool, tier, 'high').length, `${id}.${tier}.high`).toBeGreaterThan(0);
+        expect(absent(pool, tier, 'elementary'), `${id}.${tier}.elementary`).toBe(true);
+        expect(absent(pool, tier, 'middle'), `${id}.${tier}.middle`).toBe(true);
       }
     }
   });

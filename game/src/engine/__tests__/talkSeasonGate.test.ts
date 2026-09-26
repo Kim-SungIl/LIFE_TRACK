@@ -4,6 +4,9 @@ import { NPC_SMALLTALK, type SmalltalkTiers, type GenderedPool } from '../talkDa
 import { NPC_MINI_EVENTS } from '../talkData/miniEvents';
 import { GAME_EVENTS } from '../events';
 import { getWeekInfo } from '../gameEngine';
+import { nextIntimacyThreshold } from '../relationshipSignals';
+import { PARENT_MINI_EVENTS, miniEventFitsContext, type MiniTalkEvent } from '../talkData/miniEvents';
+import { getAvailableHomeEvents } from '../talkSystem';
 import { makeState } from '../../test/fixtures';
 import type { GameState, Gender } from '../types';
 
@@ -22,10 +25,12 @@ const TIERS = [0, 30, 50, 70];
 
 /** 실현 풀 하한 — 이보다 얇으면 같은 줄이 눈에 띄게 반복된다. */
 const POOL_FLOOR = 8;
-/** corpus 하한 — 분류가 통째로 지워지면 이 게이트가 제 손으로 초록이 된다. */
-const SCHOOL_ONLY_FLOOR = 90;
-const VACATION_ONLY_FLOOR = 25;
-const SEMESTER_MINI_FLOOR = 10;
+/** corpus 하한 — 분류가 통째로 지워지면 이 게이트가 제 손으로 초록이 된다.
+ *  실측(326 / 246 / 14)의 약 80%. 전엔 90/25/10이라 슬랙이 64~88%여서
+ *  "통째로 지워지면 잡는다"는 주석이 사실상 거짓이었다(3자 검수 지적). */
+const SCHOOL_ONLY_FLOOR = 260;
+const VACATION_ONLY_FLOOR = 195;
+const SEMESTER_MINI_FLOOR = 12;
 
 function lines(p: GenderedPool | undefined, gender: Gender): string[] {
   return p ? [...(p.common ?? []), ...(gender === 'female' ? p.female ?? [] : p.male ?? [])] : [];
@@ -63,15 +68,15 @@ const LEVELS = Object.keys(LEVEL_YEAR) as (keyof typeof LEVEL_YEAR)[];
 //   회상("체육 시간에 너 움직임 좋더라")·일반론·미래형("다음 체육대회는")은 방학에도 말이 되므로 제외.
 //   졸업식 강당(talk_haeun_90_empty_line)은 졸업식이 W46=겨울방학이라 일부러 안 달았다.
 const CLASSIFIED: Record<string, { schoolOnly: number; vacationOnly: number }> = {
-  jihun: { schoolOnly: 41, vacationOnly: 3 },
-  subin: { schoolOnly: 4, vacationOnly: 3 },
-  minjae: { schoolOnly: 5, vacationOnly: 3 },
-  yuna: { schoolOnly: 7, vacationOnly: 3 },
-  doyun: { schoolOnly: 24, vacationOnly: 6 },
-  haeun: { schoolOnly: 3, vacationOnly: 3 },
-  junha: { schoolOnly: 4, vacationOnly: 3 },
-  seoa: { schoolOnly: 5, vacationOnly: 3 },
-  siwoo: { schoolOnly: 9, vacationOnly: 5 },
+  jihun: { schoolOnly: 48, vacationOnly: 3 },
+  subin: { schoolOnly: 7, vacationOnly: 3 },
+  minjae: { schoolOnly: 19, vacationOnly: 3 },
+  yuna: { schoolOnly: 11, vacationOnly: 3 },
+  doyun: { schoolOnly: 29, vacationOnly: 8 },
+  haeun: { schoolOnly: 4, vacationOnly: 3 },
+  junha: { schoolOnly: 5, vacationOnly: 3 },
+  seoa: { schoolOnly: 7, vacationOnly: 3 },
+  siwoo: { schoolOnly: 14, vacationOnly: 11 },
   yerin: { schoolOnly: 2, vacationOnly: 3 },
 };
 
@@ -80,7 +85,7 @@ const SEMESTER_MINI_IDS = [
   'talk_haeun_50_window', 'talk_junha_50_seabreeze', 'talk_jihun_70_locker',
   'talk_yuna_70_chalk_dust', 'talk_haeun_70_direction', 'talk_junha_70_speech',
   'talk_jihun_90_bench', 'talk_minjae_90_unmasked',
-  'talk_siwoo_50_linked_corridor', 'talk_siwoo_70_dry_route',
+  'talk_siwoo_30_railing', 'talk_siwoo_50_linked_corridor', 'talk_siwoo_70_dry_route',
 ];
 
 function countLines(node: unknown): number {
@@ -107,9 +112,12 @@ describe('분류 수치 잠금 — 태그 하나가 조용히 빠지지 않는�
   });
 
   // 줄 수만 세면 **방학 풀에 학교 소재를 써 넣는 회귀**를 못 잡는다(개수가 그대로라서).
-  // vacationOnly는 새로 쓴 작은 풀이라, 모호하지 않은 표지만 좁게 막는다. base 풀엔 적용하지 않는다
-  //  — 거긴 회상·일반론이 정상적으로 학교 낱말을 쓴다("체육 시간에 너 움직임 좋더라").
-  const SCHOOL_MARKERS = ['급식', '사물함', '쉬는 시간', '점심시간', '야자', '교실', '칠판', '매점', '담임'];
+  // 모호하지 않은 표지만 좁게 고른다 — 여기 있는 낱말은 방학에 절대 나오면 안 된다.
+  // (교복·운동장·체육 시간처럼 해석 여지가 있는 것은 안 넣는다. 그건 분류 판단의 영역이다.)
+  const SCHOOL_MARKERS = [
+    '급식', '사물함', '쉬는 시간', '점심시간', '야자', '교실', '칠판', '매점', '담임',
+    '자습실', '자습 시간', '자습 끝나고', '수행평가', '반 정리', '도서실', '교무실', '종례', '조회',
+  ];
 
   // 잡담은 전부 대화 인용부호로 감싼 형식이다(UI가 그대로 출력). 새 줄을 넣다가 이 껍데기를
   // 빠뜨리면 그 줄만 따옴표 없이 떠서 톤이 깨지는데, 개수·내용 검사로는 안 보인다.
@@ -130,15 +138,45 @@ describe('분류 수치 잠금 — 태그 하나가 조용히 빠지지 않는�
     expect(offenders).toEqual([]);
   });
 
-  it('방학 전용 대사에 학교 한정 표지가 없다', () => {
+  // **base 풀까지 함께 본다.** 전엔 vacationOnly에만 걸어서 base에 남은 학교 대사를 못 봤다 —
+  // '야자'는 이 목록에 이미 있는 낱말인데 yuna의 base 줄("야자 끝나고 학교 빠져나올 때")이
+  // 방학에 그대로 나왔다(3자 검수 지적). 검사 대상은 "분류한 것"이 아니라 **방학에 실제로 뜨는 것**이다.
+  // 마커는 낱말 단위라 두 줄에서 오탐한다. 지우지 않고 **이유를 적어 예외로 둔다** —
+  // 마커를 빼면 다음에 진짜로 새는 줄을 놓친다. 예외가 데이터에서 사라지면 아래 테스트가 알려준다.
+  const MARKER_EXCEPTIONS: Record<string, string> = {
+    '"네가 오늘 한숨 쉬는 횟수가 늘었어. 데이터상으로 쉬는 시간이 필요해 보여."':
+      "여기 '쉬는 시간'은 학교 시간표가 아니라 휴식 일반이다. 방학에 오히려 더 맞는 말이다.",
+    '"조용한 데 알아. 도서실 말고. …아니다, 이건 아직 안 알려줄래."':
+      "'도서실 말고'라는 부정문이다. 학교 도서실을 소재로 삼는 게 아니라 배제한다.",
+  };
+
+  it('마커 예외가 데이터에 실재한다 (낡은 예외가 가드를 뚫지 않는다)', () => {
+    const all = new Set<string>();
+    for (const pool of Object.values(NPC_SMALLTALK)) {
+      for (const level of LEVELS) for (const gender of GENDERS) for (const intimacy of TIERS) {
+        for (const l of spread(pool, gender, level, intimacy)) all.add(l);
+        for (const l of spread(pool.vacationOnly, gender, level, intimacy)) all.add(l);
+      }
+    }
+    for (const line of Object.keys(MARKER_EXCEPTIONS)) expect(all.has(line), line).toBe(true);
+  });
+
+  it('방학에 실제로 뜨는 풀 전체에 학교 한정 표지가 없다', () => {
+    const offenders: string[] = [];
     for (const [npc, pool] of Object.entries(NPC_SMALLTALK)) {
-      for (const level of LEVELS) for (const gender of GENDERS) {
-        for (const line of spread(pool.vacationOnly, gender, level, 70)) {
+      for (const level of LEVELS) for (const gender of GENDERS) for (const intimacy of TIERS) {
+        const realized = [
+          ...spread(pool, gender, level, intimacy),
+          ...spread(pool.vacationOnly, gender, level, intimacy),
+        ];
+        for (const line of realized) {
+          if (MARKER_EXCEPTIONS[line]) continue;
           const hit = SCHOOL_MARKERS.filter(m => line.includes(m));
-          expect(hit, `${npc}: ${line}`).toEqual([]);
+          if (hit.length > 0) offenders.push(`${npc}[${hit.join(',')}]: ${line}`);
         }
       }
     }
+    expect([...new Set(offenders)]).toEqual([]);
   });
 
   it("season 값은 'semester' 아니면 'vacation'만 쓴다", () => {
@@ -263,6 +301,82 @@ describe('미니 이벤트 — season 게이트', () => {
       s.year = year;
       expect(getAvailableNpcEvents(s, e.npcId!).map(x => x.id), e.id).toContain(e.id);
     }
+  });
+});
+
+describe('관계 신호가 같은 계절 근거를 쓴다', () => {
+  // 패널의 "곧 더 가까워질 듯"은 미니이벤트 후보를 **따로** 세던 자리다. 전엔 조건을 각자
+  // 나열하고 주석만 "동일 필터"라고 주장했고, season이 한쪽에만 생기자 바로 갈렸다 —
+  // 방학에 "곧 열린다"고 말해놓고 실제로는 아무것도 안 열렸다(#441).
+  // 이제 두 곳이 miniEventFitsContext 한 함수를 쓴다. 그 배선을 잠근다.
+  const cases = NPC_MINI_EVENTS.filter(e => e.npcId && e.season === 'semester' && e.intimacyMin !== undefined);
+
+  it('검사 모수가 살아 있다', () => {
+    expect(cases.length).toBeGreaterThanOrEqual(SEMESTER_MINI_FLOOR);
+  });
+
+  it('학기 전용 미니는 방학에 "다음 문턱"을 만들지 않는다', () => {
+    let checked = 0;
+    for (const e of cases) {
+      const tier = e.intimacyMin!;
+      const year = Math.max(e.yearMin ?? 1, Math.min(e.yearMax ?? 7, 6));
+      const level = year <= 1 ? 'elementary' : year <= 4 ? 'middle' : 'high';
+      const gender = e.gender ?? 'male';
+      const semState = stateFor(e.npcId!, SEMESTER_WEEKS[5], level, gender, tier - 1);
+      semState.year = year;
+      const npcSem = semState.npcs.find(n => n.id === e.npcId)!;
+      npcSem.met = true;
+      // 학기엔 이 미니가 그 문턱을 만든다(= 신호의 근거로 살아 있다)
+      if (nextIntimacyThreshold(npcSem, semState) !== tier) continue; // 다른 소스가 더 가까운 문턱을 가진 경우
+      checked++;
+      for (const week of VACATION_WEEKS) {
+        const vacState = stateFor(e.npcId!, week, level, gender, tier - 1);
+        vacState.year = year;
+        const npcVac = vacState.npcs.find(n => n.id === e.npcId)!;
+        npcVac.met = true;
+        expect(nextIntimacyThreshold(npcVac, vacState), `${e.id} W${week}`).not.toBe(tier);
+      }
+    }
+    // 한 건도 못 재면 이 테스트는 공허하다
+    expect(checked, '실제로 검증된 미니 수').toBeGreaterThan(0);
+  });
+});
+
+describe('부모 경로도 같은 술어를 쓴다', () => {
+  // season은 MiniTalkEvent 공용 필드다. 부모 풀엔 아직 하나도 안 달려 있어서,
+  // 배선이 빠져도 아무 테스트가 안 깨진다 — 합성 이벤트를 실제 풀에 넣어 배선을 직접 잠근다.
+  const synthetic: MiniTalkEvent = {
+    id: '__test_parent_semester_only',
+    parentStrength: 'strict',
+    season: 'semester',
+    description: '합성 — 계절 배선 검사용',
+    effects: {},
+    message: '합성',
+  };
+
+  it('season이 달린 부모 이벤트는 방학에 후보에서 빠진다', () => {
+    PARENT_MINI_EVENTS.push(synthetic);
+    try {
+      const semState = makeState({ year: 3, week: SEMESTER_WEEKS[5] });
+      semState.parents = ['strict', 'emotional'];
+      expect(getAvailableHomeEvents(semState).map(e => e.id), '학기엔 뜬다').toContain(synthetic.id);
+      for (const week of VACATION_WEEKS) {
+        const vacState = makeState({ year: 3, week });
+        vacState.parents = ['strict', 'emotional'];
+        expect(getAvailableHomeEvents(vacState).map(e => e.id), `방학 W${week}`).not.toContain(synthetic.id);
+      }
+    } finally {
+      PARENT_MINI_EVENTS.splice(PARENT_MINI_EVENTS.indexOf(synthetic), 1);
+    }
+  });
+
+  it('공용 술어가 세 축을 모두 본다 (학년·성별·계절)', () => {
+    const base = makeState({ year: 3, week: 10 });
+    expect(miniEventFitsContext({ ...synthetic, season: 'semester' }, base)).toBe(true);
+    expect(miniEventFitsContext({ ...synthetic, season: 'vacation' }, base)).toBe(false);
+    expect(miniEventFitsContext({ ...synthetic, season: undefined, yearMin: 5 }, base)).toBe(false);
+    expect(miniEventFitsContext({ ...synthetic, season: undefined, yearMax: 2 }, base)).toBe(false);
+    expect(miniEventFitsContext({ ...synthetic, season: undefined, gender: 'female' }, base)).toBe(false);
   });
 });
 
