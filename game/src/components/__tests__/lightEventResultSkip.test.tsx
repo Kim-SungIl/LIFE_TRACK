@@ -209,6 +209,31 @@ describe('가벼운 사건은 결과 화면 없이 결산으로 간다 (T46)', (
     expect(nextWeekBtn()).toBeNull();
   });
 
+  it('(h) 보수적 폴백 — store가 문장을 바꿔 실으면(정확 일치 아님) 결과 화면을 유지한다', async () => {
+    // 생략 판별은 `📖 ${message}` **정확 일치**다. `includes`로 보면 문장이 덧붙거나 잘려 실려도
+    // "착지했다"로 읽어 화면을 지운다(3자 검수: 빈 message면 모든 줄에 매칭). (f)와 같은 모양으로
+    // 액션을 감싸 📖 줄에 꼬리를 붙인다 — 부분 일치 판별로 되돌리면 여기서 빨강.
+    const s = eventWeek(catalog(lightId), blockedChainRecords());
+    useGameStore.setState({
+      state: s,
+      resolveEvent: (index: number) => {
+        const applied = ORIGINAL_RESOLVE_EVENT(index);
+        const st = useGameStore.getState().state!;
+        const messages = st.weekLog!.messages.map(m => (m.startsWith('📖') ? `${m} (덧붙은 꼬리)` : m));
+        useGameStore.setState({ state: { ...st, weekLog: { ...st.weekLog!, messages } } });
+        return applied;
+      },
+    });
+    render(<GameScreen />);
+
+    await pickFirstChoice(s);
+
+    const after = useGameStore.getState().state!;
+    expect(after.phase, '전제: phase는 result').toBe('result');
+    expect(after.weekLog!.messages.some(m => m.startsWith('📖') && m.endsWith('(덧붙은 꼬리)')), '전제: 📖 줄이 바뀌어 있어야 한다').toBe(true);
+    expect(await screen.findByRole('button', { name: '계속 →' })).toBeTruthy();
+  });
+
   it('(f) 보수적 폴백 — 결과 문장이 weekLog에 안 실리면 결산으로 가더라도 결과 화면을 유지한다', async () => {
     // 생략의 전제는 "문장이 결산에 실린다"이고 그건 store의 일이다. store가 📖 push를 멈추면
     // (형식 변경·리팩터) phase만 보는 가드는 문장을 어디에도 안 보여주고 넘어간다. 그 상황을
