@@ -9,7 +9,7 @@ import { GAME_EVENTS } from '../events';
 import { LIGHT_RESULT_EVENT_IDS, LIGHT_RESULT_EFFECT_CAP } from '../events/light-result';
 import { FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from '../events/constants';
 import { CG_MANIFEST } from '../../cg-manifest.generated';
-import type { EventChoice, GameEvent } from '../types';
+import type { EventChoice, GameEvent, SchoolBand } from '../types';
 
 const byId = new Map(GAME_EVENTS.map(e => [e.id, e]));
 const followupEvents = GAME_EVENTS.filter(e => FOLLOWUP_EVENT_IDS.has(e.id));
@@ -35,6 +35,26 @@ function cgFilesOf(id: string): string[] {
 
 function allChoices(e: GameEvent): EventChoice[] {
   return [...e.choices, ...(e.femaleChoices ?? [])];
+}
+
+// **플레이어가 보는** 결과 문장. schoolVariants가 있으면 presentEvent가 overlayChoices로 text·message를
+// 변이 문장(여성이면 femaleMessage가 truthy일 때 그것)으로 항상 덮어쓴다 — effects만 카탈로그에서 온다.
+// 카탈로그 choices[].message만 보던 판은 중학 변이 문장을 ''로 비워도 초록이었다(#488 3자 검수, 변이 6b 생존).
+// 카탈로그 문장도 남긴다: 변이에 그 인덱스 선택지가 없으면(overlayChoices `!v`) 카탈로그 문장이 그대로 나온다.
+type PresentedMessage = { layer: 'catalog' | 'variant'; where: string; message: string };
+function presentedMessages(e: GameEvent): PresentedMessage[] {
+  const out: PresentedMessage[] = allChoices(e).map((c, ci) => ({ layer: 'catalog', where: `카탈로그 선택지 ${ci}`, message: c.message }));
+  const variants = e.schoolVariants;
+  if (!variants) return out;
+  for (const band of Object.keys(variants) as SchoolBand[]) {
+    variants[band].forEach((v, vi) => v.choices.forEach((c, ci) => {
+      out.push({ layer: 'variant', where: `변이 ${band}[${vi}] 선택지 ${ci}`, message: c.message });
+      // overlayChoices는 `isFemale && v.femaleMessage ? v.femaleMessage : v.message` — truthy일 때만 쓰이므로
+      // undefined·''는 message로 떨어지고(위에서 검사), 공백만 있는 문자열은 그대로 화면에 간다.
+      if (c.femaleMessage) out.push({ layer: 'variant', where: `변이 ${band}[${vi}] 선택지 ${ci} (여성)`, message: c.femaleMessage });
+    }));
+  }
+  return out;
 }
 
 describe('LIGHT_RESULT_EVENT_IDS 자격 (카탈로그 파생)', () => {
@@ -65,16 +85,26 @@ describe('LIGHT_RESULT_EVENT_IDS 자격 (카탈로그 파생)', () => {
     }
   });
 
-  it('기준 1 보강 — 모든 선택지의 결과 문장이 비어 있지 않다 (생략 판별이 그 문장의 착지를 본다)', () => {
+  it('기준 1 보강 — 플레이어가 보는 모든 결과 문장이 비어 있지 않다 (생략 판별이 그 문장의 착지를 본다)', () => {
     // GameScreen은 `📖 ${message}`가 weekLog에 실렸을 때만 결과 화면을 건너뛴다. message가 비면
     // 보여줄 문장이 없는데 화면만 사라진다 — 집합에 넣기 전에 여기서 막는다.
+    // 화면에 닿는 문장은 카탈로그가 아니라 **변이 층**이라 presentedMessages로 전 밴드·전 변이를 편다.
     let checked = 0;
     for (const id of LIGHT_RESULT_EVENT_IDS) {
       const ev = byId.get(id);
       if (!ev) continue;
-      for (const [ci, c] of allChoices(ev).entries()) {
-        expect(c.message.trim().length, `${id} 선택지 ${ci}: 결과 문장이 비었다`).toBeGreaterThan(0);
+      const presented = presentedMessages(ev);
+      for (const { where, message } of presented) {
+        expect(message.trim().length, `${id} ${where}: 결과 문장이 비었다`).toBeGreaterThan(0);
         checked++;
+      }
+      if (ev.schoolVariants) {
+        // 변이 층을 실제로 읽었는가 — 헬퍼가 변이를 흘리면(필드명 변경 등) 카탈로그만 남아 위 루프가
+        // 옛 판과 같아진다. 변이 문장이 있고, 그중 카탈로그와 다른 문장이 하나는 있어야 산 것이다.
+        const catalog = new Set(allChoices(ev).map(c => c.message));
+        const fromVariants = presented.filter(m => m.layer === 'variant');
+        expect(fromVariants.length, `${id}: 변이 문장을 하나도 안 읽었다`).toBeGreaterThan(0);
+        expect(fromVariants.some(m => !catalog.has(m.message)), `${id}: 변이 층이 카탈로그와 같은 문장뿐이다`).toBe(true);
       }
     }
     expect(checked).toBeGreaterThanOrEqual(LIGHT_RESULT_EVENT_IDS.size * 2);

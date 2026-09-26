@@ -140,6 +140,9 @@ describe('UI 규칙 재현 — 단위', () => {
     const cheap = ACTIVITIES.find(a => a.id === 'internet-lecture')!;
     const costB = getActivityCost(cheap, Y1);
     expect(costA > costB && costB > 0, '전제: A가 B보다 비싸고 둘 다 유료').toBe(true);
+    // 전제: A는 1칸 활동. slots ≥ 2면 collapseActivityChoices가 인접 [A, A]를 한 칸으로 접어 결과가 []가
+    // 되고, 아래 단언은 "막힌 칸 차감"과 무관한 이유로 빨강이 된다(#488 3자 검수 LOW — 암묵 의존을 드러낸다).
+    expect(paidRoutine.slots, '전제: A(academy)가 1칸이 아니면 3칸 픽스처가 접힌다').toBe(1);
     const three = stateWith({ ...s, money: costA + costB });
     expect(pickerCumulativeBlocked(three, [paidRoutine.id, paidRoutine.id, cheap.id])).toEqual([paidRoutine.id]);
   });
