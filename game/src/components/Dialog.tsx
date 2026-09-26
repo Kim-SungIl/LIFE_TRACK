@@ -70,6 +70,9 @@ export function Dialog({
     pushLayer(el);
     focusFirst(el);
 
+    // 캡처 단계 + Escape의 stopPropagation은 한 쌍이다 — 아래 화면(조상 onKeyDown·문서 단축키)이 같은
+    // Escape를 보지 못하게. 둘 중 하나만 빠져도 오버레이끼리는 isTopLayer 가드로 멀쩡해 보이므로
+    // overlayKeyIsolation.test.tsx가 아래 화면 픽스처로 잠근다.
     const handleKeyDown = (e: KeyboardEvent) => {
       // 최상위 다이얼로그만 처리 — 포커스가 body로 떨어졌어도 Escape/Tab 유효
       if (!isTopLayer(el)) return;

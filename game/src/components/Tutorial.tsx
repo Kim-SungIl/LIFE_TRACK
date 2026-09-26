@@ -141,6 +141,9 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
     pushLayer(el);
     focusFirst(el);
 
+    // 캡처 단계 + Escape의 stopPropagation은 Dialog와 같은 한 쌍이다 — 인터랙티브 스텝은 포커스가
+    // 아래 화면(하이라이트 대상)에 있는 채로 Escape를 누르므로, 화면이 그 키를 받으면 건너뛰기가
+    // 화면의 두 번째 동작까지 일으킨다. overlayKeyIsolation.test.tsx가 잠근다.
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isTopLayer(el)) return;
       if (e.key === 'Escape') {
