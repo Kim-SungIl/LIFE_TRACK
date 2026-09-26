@@ -4,7 +4,7 @@
 // 신호-2(정밀판): docs/cast-restoration-master-plan.md Wave 5.
 import { GameState, NpcState } from './types';
 import { GAME_EVENTS } from './events/data';
-import { NPC_MINI_EVENTS } from './talkData/miniEvents';
+import { NPC_MINI_EVENTS, miniEventFitsContext } from './talkData/miniEvents';
 import { absWeek } from './weekMath';
 
 // 절대주차 SSOT는 ./weekMath로 이전 — 기존 import 경로(shopSystem/store/gameEngine) 유지 위해 재노출.
@@ -41,12 +41,13 @@ export function nextIntimacyThreshold(npc: NpcState, state: GameState): number |
     const probe: GameState = { ...state, npcs: state.npcs.map(n => n.id === npc.id ? { ...n, intimacy: tier } : n) };
     if (e.condition(probe)) consider(tier);
   }
-  // mini는 reach와 발동 경로가 다르며 isVacation 게이트가 없다(talkSystem.getAvailableNpcEvents와 동일 필터).
+  // mini는 reach와 발동 경로가 다르다. 학년·성별·계절 판정은 **miniEventFitsContext 한 함수**를
+  // talkSystem.getAvailableNpcEvents와 공유한다 — 전엔 여기서 조건을 따로 나열하고 주석만
+  // "동일 필터"라고 주장했는데, 한쪽에 season이 생기자 바로 갈렸다. 방학에 "곧 더 가까워질 듯"이
+  // 뜨는데 실제로는 아무것도 안 열렸다(#441: 두 근거가 갈리면 라벨이 거짓말한다).
   for (const m of NPC_MINI_EVENTS) {
     if (m.npcId !== npc.id || m.intimacyMin === undefined) continue;
-    if (m.yearMin !== undefined && state.year < m.yearMin) continue;
-    if (m.yearMax !== undefined && state.year > m.yearMax) continue;
-    if (m.gender !== undefined && m.gender !== state.gender) continue;
+    if (!miniEventFitsContext(m, state)) continue;
     if (firedMini.has(m.id)) continue;
     consider(m.intimacyMin);
   }

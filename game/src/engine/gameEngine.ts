@@ -15,6 +15,7 @@ import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } 
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { absWeek } from './relationshipSignals';
+import { getWeekInfo } from './weekMath';
 import { createInitialNpcs } from './npcRoster';
 
 // rng utility re-export (하위 호환)
@@ -118,13 +119,8 @@ export function createInitialState(
 }
 
 // ===== 학기 구조 =====
-export function getWeekInfo(week: number) {
-  // 1학기: W1~W19, 여름방학: W20~W24, 2학기: W25~W42, 겨울방학: W43~W48
-  if (week <= 19) return { semester: 1 as const, isVacation: false, label: `1학기 ${week}주차` };
-  if (week <= 24) return { semester: 1 as const, isVacation: true, label: `여름방학 ${week - 19}주차` };
-  if (week <= 42) return { semester: 2 as const, isVacation: false, label: `2학기 ${week - 24}주차` };
-  return { semester: 2 as const, isVacation: true, label: `겨울방학 ${week - 42}주차` };
-}
+// SSOT는 ./weekMath로 이전(leaf) — 기존 import 경로 유지 위해 재노출. absWeek과 같은 방식.
+export { getWeekInfo };
 
 const YEAR_NAMES = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
 

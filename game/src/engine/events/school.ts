@@ -722,7 +722,10 @@ export const SCHOOL_MIDDLE_HIGH = [
     id: 'summer-start',
     title: '여름방학 시작!',
     description: '드디어 방학이다! 종업식이 끝나고 교문을 나서는 순간, 자유의 공기가 느껴진다.\n이번 방학, 뭘 하고 싶어?',
-    week: 20,
+    // W19 = 1학기 마지막 주. 종업식은 학기의 마지막 날이고 방학은 **다음 주**(W20~24)부터다.
+    // 전엔 week:20이라 "여름방학 1주차"에 교문에서 종업식을 치르는 장면이 떴다.
+    // (winter-start는 W43에 집에서 "겨울방학이 시작됐다"라 앞뒤가 맞아 그대로 둔다.)
+    week: 19,
     location: 'school_gate',
     background: 'school_gate_{school}',
     choices: [
