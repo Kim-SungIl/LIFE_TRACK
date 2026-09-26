@@ -369,7 +369,7 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
 // lastSetup이 거부) 5종 + 루틴 슬롯2=슬롯3(SlotEditPopup이 후보에서 제외) 6종, 겹침 1(money-poor-acad).
 // 지우지 않는 이유: 극단 스트레스 표본이다 — 같은 강점 2배 배율의 상한, 한 활동 2칸의 피로 축적, 번아웃 락이
 // 실패 엔딩으로 라우팅되는지 같은 회귀 가드는 이 표본에서만 보인다. 다만 유효 표본과 **섞어 세면** 헤드라인이
-// 부푼다(3시드 93판 실측: 번아웃 24.7 → 11.8%, S 67.7 → 70.6%). 요약은 두 표로 가른다.
+// 부푼다(3시드 93판 실측: (a)(b)를 빼면 번아웃 24.7 → 14.3%, S 67.7 → 71.4%). 요약은 두 표로 가른다.
 // 사유는 손으로 적지 않는다 — validatePersona가 낸다. 표시와 판정이 어긋나면 main()이 기동을 거부한다.
 export const PERSONAS: Persona[] = [
   { name: 'academic-max', label: '공부 몰빵(학업 최대화)', gender: 'male', parents: ['strict', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'self-study', weekend: ['self-study', 'self-study'], vacation: ['self-study', 'self-study', 'rest'], policy: 'academic', talk: true, tutoringY6: true, invalid: true },

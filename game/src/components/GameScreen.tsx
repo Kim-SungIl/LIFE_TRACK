@@ -370,8 +370,12 @@ export function GameScreen() {
           //    방향으로 실패한다(판별 불가 시 결과 화면 유지).
           if (LIGHT_RESULT_EVENT_IDS.has(evt.id)) {
             const after = useGameStore.getState().state;
+            // 착지 판별은 store가 push하는 줄(`📖 ${message}`, store.ts resolveEvent)과 **정확히**
+            // 맞춘다. `includes`로 보면 빈 message가 모든 줄에 매칭돼 판별이 참으로 굳는다(3자 검수).
+            const heroLine = `📖 ${choice.message}`;
             const landsOnWeeklyResult = after?.phase === 'result'
-              && !!after.weekLog?.messages.some(m => m.includes(choice.message));
+              && choice.message.trim().length > 0
+              && !!after.weekLog?.messages.some(m => m === heroLine);
             if (landsOnWeeklyResult) return;
           }
           const effects: Record<string, string>[] = [];

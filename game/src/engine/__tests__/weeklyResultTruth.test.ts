@@ -32,6 +32,10 @@ beforeEach(() => {
   useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
 });
 
+// startGame의 options 타입엔 rngSeed가 없지만 createInitialState는 받는다(이 파일 마지막 describe와
+// 같은 우회). 시간 시드로 두면 "1주차에 이벤트가 뜨는 실행"에서만 빨개지는 플레이크가 있었다(T45).
+const seeded = (rngSeed: number) => ({ rngSeed }) as unknown as { useReducedRecovery?: boolean };
+
 describe('결산 변화량은 이벤트를 포함한다', () => {
   // 스토어를 거쳐야 하는 이유: 이벤트 효과는 processWeek이 아니라 resolveEvent(store)가 적용한다.
   // 엔진만 돌리면 이벤트가 대기 상태로 남아 이 결함 자체가 재현되지 않는다.
@@ -42,7 +46,7 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
   // 이 구간을 지나지 않으면 테스트가 "로그가 null이라 안 맞는다"를 결함으로 오판한다.
   function playUntilEvent(maxWeeks = 40): GameState | null {
     const api = useGameStore.getState();
-    api.startGame('male', ['emotional', 'info'], {});
+    api.startGame('male', ['emotional', 'info'], seeded(11));
     for (let i = 0; i < maxWeeks; i++) {
       const s = useGameStore.getState().state!;
       if (s.currentEvent && s.phase === 'event') {
@@ -82,7 +86,7 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
   // 이 판정이 본체다: 주 시작값 + 로그 = 화면 현재값.
   it('주 시작값 + 로그 변화량 = 현재값 (한 행에서 두 계층을 섞지 않는다)', () => {
     const api = useGameStore.getState();
-    api.startGame('male', ['emotional', 'info'], {});
+    api.startGame('male', ['emotional', 'info'], seeded(11));
     let before = useGameStore.getState().state!;
 
     for (let i = 0; i < 40; i++) {
@@ -112,7 +116,7 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
   // choice.effects를 그대로 더하면 로그가 또 다른 거짓말을 한다.
   it('구간 감쇠가 걸린 뒤의 실제 적용값을 접는다 (원본 수치가 아니라)', () => {
     const api = useGameStore.getState();
-    api.startGame('male', ['emotional', 'info'], {});
+    api.startGame('male', ['emotional', 'info'], seeded(11));
     // 고스탯으로 올려 감쇠 구간에 넣는다
     const s0 = useGameStore.getState().state!;
     useGameStore.setState({ state: { ...s0, stats: { ...s0.stats, academic: 95, social: 95, talent: 95, mental: 95, health: 95 } } });
@@ -151,7 +155,7 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
   // 거기까지 플레이로 도달하면, 그 이벤트가 개편될 때 이 계약이 조용히 사라진다.
   it('이벤트의 피로·돈도 그 주의 변화량에 들어간다', () => {
     const api = useGameStore.getState();
-    api.startGame('male', ['emotional', 'info'], {});
+    api.startGame('male', ['emotional', 'info'], seeded(11));
     const s0 = useGameStore.getState().state!;
 
     const synthetic: GameEvent = {
@@ -183,7 +187,7 @@ describe('결산 변화량은 이벤트를 포함한다', () => {
   // 부팅 이벤트가 안전한 **이유**를 잠근다 — "그냥 null이니까 건너뛴다"로 두면
   // 나중에 결산 화면의 weekLog 가드가 사라져도 아무도 모른다.
   it('weekLog가 없는 이벤트는 결산이 없다 (부팅 이벤트)', () => {
-    useGameStore.getState().startGame('male', ['emotional', 'info'], {});
+    useGameStore.getState().startGame('male', ['emotional', 'info'], seeded(11));
     const s = useGameStore.getState().state!;
     if (s.currentEvent && s.phase === 'event' && !s.weekLog) {
       useGameStore.getState().resolveEvent(0);
