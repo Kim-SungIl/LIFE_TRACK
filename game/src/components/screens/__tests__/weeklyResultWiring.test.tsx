@@ -210,3 +210,44 @@ describe('첫 주 결산 배선 — 도입 장면이 준 것을 잃은 것으로
     }
   });
 });
+
+// 피로 누적 칩은 결산에서 피로 축을 **유일하게** 읽는 자리다(WeeklyResultScreen:76,
+// `weekLog.fatigueChange >= 25`). 그래서 로그가 거짓이면 칩이 그대로 거짓말을 한다.
+//
+// 실측된 증상(T53 이전): 피로 97에서 방학 자유 슬롯을 갈아넣은 주는 회복·클램프·tired 자동
+// 회복까지 지나 **실제로는 피로가 내려갔는데**, 로그는 원값 합산이라 +29였고 결산이
+// "피로 누적"을 그렸다. 천장(100)에 잘려 실제로는 들어가지 못한 피로까지 세고 있었다.
+describe('피로 누적 칩은 실제로 피로가 쌓인 주만 가리킨다', () => {
+  const GRIND_SLOTS = 6;
+  /** 방학 자유 슬롯을 갈아넣는 한 주를 **진짜 엔진으로** 돌려 결산 직전 상태를 만든다. */
+  function grindWeek(fatigue: number): GameState {
+    const s0 = createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
+    const before: GameState = {
+      ...s0, year: 6, week: 22, isVacation: true, fatigue, money: 100000,
+      routineSlot2: null, routineSlot3: null,
+      vacationChoices: Array.from({ length: GRIND_SLOTS }, () => 'school-sports'),
+    };
+    const after = processWeek(before);
+    expect(after.weekLog!.skipped, '전제: 계획한 칸이 전부 실제로 돌았다').toEqual([]);
+    return { ...after, currentEvent: null, phase: 'result' as GameState['phase'] };
+  }
+
+  it('천장에 잘린 주에는 안 뜬다 — 실제로는 피로가 내려갔다', () => {
+    const s = grindWeek(97);
+    expect(s.fatigue, '전제: 주 시작(97)보다 낮게 끝났다').toBeLessThan(97);
+    useGameStore.setState({ state: s });
+    render(<GameScreen />);
+    expect(screen.queryByText('피로 누적'),
+      '원값을 더하면 +29가 된다 — 피로가 내려간 주에 "피로 누적"이 뜬다').toBeNull();
+  });
+
+  // 양성 짝 — 없으면 위 테스트는 "칩이 아예 안 뜨는 화면"에서도 통과한다.
+  it('여유가 있던 주에 같은 계획을 하면 뜬다 (칩 자체는 살아 있다)', () => {
+    const s = grindWeek(20);
+    expect(s.fatigue, '전제: 이번엔 실제로 크게 쌓였다').toBeGreaterThan(20);
+    useGameStore.setState({ state: s });
+    render(<GameScreen />);
+    expect(screen.getByText('피로 누적'),
+      '실제로 쌓인 주에 칩이 없으면 이 축은 아무것도 구별 못 한다').toBeTruthy();
+  });
+});

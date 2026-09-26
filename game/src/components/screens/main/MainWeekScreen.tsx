@@ -4,7 +4,7 @@ import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
-import { getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
+import { assignSlot, getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
 import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
@@ -262,9 +262,8 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
     const slotIdx = isSlotBased ? parseInt(npcSelectFor.split(':')[1]) : -1;
     const activityId = isSlotBased ? npcSelectFor.split(':')[2] : npcSelectFor;
     if (isSlotBased) {
-      const newArr = [...selectedActivities];
-      newArr[slotIdx] = activityId;
-      setSelectedActivities(newArr);
+      // 인덱스 대입은 앞 칸이 비면 배열 구멍을 만든다 — assignSlot이 ''로 편다(SlotEditPopup과 같은 통로).
+      setSelectedActivities(assignSlot(selectedActivities, slotIdx, activityId));
       setNpcChoices({ ...npcChoices, [`${activityId}:${slotIdx}`]: npcId });
     } else {
       setNpcChoices({ ...npcChoices, [npcSelectFor]: npcId });

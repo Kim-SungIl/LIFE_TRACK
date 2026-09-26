@@ -2,6 +2,7 @@ import { playSfx } from '../../../audio/sfx';
 import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
+import { assignSlot } from '../../../engine/weekendPlan';
 import { ActivityPicker } from '../../ActivityPicker';
 import { Dialog } from '../../Dialog';
 
@@ -119,15 +120,15 @@ export function SlotEditPopup({
                   setNpcSelectFor(`slot:${slotIdx}:${id}`);
                 } else {
                   const act = ACTIVITIES.find(a => a.id === id);
-                  const newArr = [...selectedActivities];
+                  // 인덱스 대입(`newArr[i] = id`)은 앞 칸이 비면 배열 구멍을 만든다 — assignSlot이 ''로 편다.
                   if (act && act.slots >= 2) {
                     // slots=N 활동: slotIdx부터 N개만 채움. 끝 근처 클릭이면 시작점을 앞으로 클립.
                     const startIdx = Math.min(slotIdx, maxSlots - act.slots);
-                    for (let i = 0; i < act.slots; i++) newArr[startIdx + i] = id;
+                    let newArr: string[] = selectedActivities;
+                    for (let i = 0; i < act.slots; i++) newArr = assignSlot(newArr, startIdx + i, id);
                     setSelectedActivities(newArr.slice(0, maxSlots));
                   } else {
-                    newArr[slotIdx] = id;
-                    setSelectedActivities(newArr);
+                    setSelectedActivities(assignSlot(selectedActivities, slotIdx, id));
                   }
                   setLastReaction(getActivityReaction(id));
                 }
