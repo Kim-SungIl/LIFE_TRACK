@@ -460,4 +460,20 @@ describe('WeekPlanner 방학', () => {
     expect(setSelectedActivities).toHaveBeenCalledWith([other.id]);
     expect(onEditSlot).toHaveBeenCalledWith('weekend1');
   });
+
+  // T53: 빈 칸의 표현이 배열 구멍에서 `''`로 바뀌면서 이 filter가 같이 바뀌었다.
+  // 구멍이던 시절 `filter`는 구멍을 **건너뛰어** 압축된 배열을 돌려줬다 — `''`를 남기면
+  // 아무것도 안 고른 계획이 `length > 0`이 되어 "지난주처럼" 버튼(선택 0칸에만 뜬다)과
+  // 주말 미선택 확인(`selectedActivities.length === 0`)이 둘 다 죽는다.
+  it('앞 칸이 빈 채로 2칸 활동을 지우면 빈 칸도 같이 떨어진다 — 계획이 "비었다"로 돌아간다', () => {
+    const multi = multiSlotSemOrVac(2);
+    const { setSelectedActivities } = renderPlanner({
+      state: makeState({ isVacation: true, week: 21 }),
+      selectedActivities: ['', multi.id, multi.id],
+      maxSlots: 3,
+    });
+
+    fireEvent.click(slotButton('활동 2'));
+    expect(setSelectedActivities).toHaveBeenCalledWith([]);
+  });
 });

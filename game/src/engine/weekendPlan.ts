@@ -31,6 +31,22 @@ export function getWeekSlotCount(state: GameState): number {
 }
 
 /**
+ * 슬롯 배열의 `idx` 칸에 `id`를 넣은 **구멍 없는** 복사본. 계획 화면의 칸 편집은 전부 이걸 거친다.
+ *
+ * `newArr[idx] = id`는 앞 칸이 비어 있으면 배열 구멍(hole)을 남긴다 — 일요일만 고르면
+ * `[<empty>, 'reading']`. 구멍은 `JSON.stringify`에서 `null`이 되고 `.map`·`.every`는 건너뛰며
+ * 스프레드는 `undefined`로 편다 — 같은 계획이 지나는 층마다 다른 모양이 된다. 빈 칸은 `''`다:
+ * `captureWeekendPlan`이 스냅샷에 쓰는 값이자 "지난주처럼"이 슬롯에 도로 채우는 값이고,
+ * 엔진은 falsy를 "없음"으로 읽는다(`collapseActivityChoices`).
+ */
+export function assignSlot(slots: readonly string[], idx: number, id: string): string[] {
+  // **map이 아니라 Array.from이다** — map은 구멍을 건너뛰어 구멍을 그대로 남긴다(captureWeekendPlan과 같은 이유).
+  const next = Array.from({ length: Math.max(slots.length, idx + 1) }, (_, i) => slots[i] || '');
+  next[idx] = id;
+  return next;
+}
+
+/**
  * 확정 시점의 계획을 스냅샷으로 접는다. **빈 주말이면 `null`** — 복사할 것이 없다.
  *
  * 슬롯 배열을 인덱스째로 보존하는 이유: 동행 키가 `${activityId}:${slotIdx}`라
