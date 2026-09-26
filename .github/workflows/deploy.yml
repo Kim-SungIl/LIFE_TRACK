@@ -121,6 +121,15 @@ jobs:
         working-directory: ./game
         run: npm run verify:dist-boot
 
+      # 게이트 2h — **브라우저에서 한 주를 실제로 돈다.** 2g는 첫 화면(TitleScreen)만 본다 — 지연
+      # 청크는 부팅 때 아예 안 받아 와서(실측 JS 15개 중 8개) "그 화면이 런타임에 던진다"·"그 화면
+      # 전용 자산이 404"를 원리상 못 본다. 여기서는 세이브를 주입해 이어하기 → 루틴 → 확정 → 결산 →
+      # 다음 주 → 새로고침 → 이어하기까지 크로미움이 실제로 지나가고(JS 청크 12/15 로드), 두 번째
+      # 패스에서 탐침을 심어 판정이 살아 있는지 스스로 확인한다(자기검사 4종). 실측 로컬 13초.
+      - name: Verify dist E2E (browser, one week)
+        working-directory: ./game
+        run: npm run verify:dist-e2e
+
       # 배포 아티팩트는 main push에서만 업로드 (PR 검증 시엔 스킵)
       - uses: actions/upload-pages-artifact@v3
         if: github.event_name == 'push'
