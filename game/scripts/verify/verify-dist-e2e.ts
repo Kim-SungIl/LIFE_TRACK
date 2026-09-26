@@ -171,7 +171,12 @@ async function buildFixture(): Promise<Fixture> {
  *   save-block     — "진행이 세이브에 실린다" 판정 (`Storage.prototype.setItem`이 세이브 키를 버린다)
  *   reload-corrupt — "새로고침 뒤 이어하기가 같은 주에 착지한다" 판정 (두 번째 로드에서 세이브를 픽스처로 되돌린다)
  */
-type ProbeKind = 'console' | 'missing' | 'save-block' | 'reload-corrupt';
+// 탐침 종류의 **단일 출처**. SELF_CHECKS는 이 튜플을 키로 하는 Record라 한 종을 빼면 타입이 막고,
+// 판정부는 이 길이로 "N/M"을 센다. 배열형이던 때는 통째로 비우면 `0/0`으로 rc=0이었다(3자 검수 M28).
+const PROBE_KINDS = ['console', 'missing', 'save-block', 'reload-corrupt', 'reload-routine-lost'] as const;
+type ProbeKind = typeof PROBE_KINDS[number];
+/** 종류 수 — 리터럴 타입(5)이 아니라 number로 두어 아래 `=== 0` 가드가 타입 오류 없이 살아 있게 한다. */
+const SELF_TOTAL: number = PROBE_KINDS.length;
 
 const PROBE_CONSOLE = '__e2e-probe-console__';
 const PROBE_ASSET = '__e2e-probe-missing__.json';
@@ -199,6 +204,13 @@ function seedScript(a: { save: string; saveKey: string; seenKey: string; probe: 
       sessionStorage.setItem('__e2e_seeded__', '1');
     } else if (a.probe === 'reload-corrupt') {
       localStorage.setItem(a.saveKey, a.save);
+    } else if (a.probe === 'reload-routine-lost') {
+      // 좌표(연·주·phase)는 그대로 두고 루틴만 지운다 — "세이브 왕복"이 좌표만 보면 못 잡는 모양.
+      const raw = localStorage.getItem(a.saveKey);
+      if (raw) {
+        const j = JSON.parse(raw);
+        if (j && j.state) { j.state.routineSlot2 = null; localStorage.setItem(a.saveKey, JSON.stringify(j)); }
+      }
     }
     if (a.probe === 'save-block') {
       const orig = Storage.prototype.setItem;
@@ -409,7 +421,8 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
         await continueButton().click();
         await confirmButton().waitFor({ state: 'visible', timeout: WAIT });
         const after = await readSave();
-        if (!after || after.year !== before!.year || after.week !== before!.week || after.phase !== before!.phase) {
+        if (!after || after.year !== before!.year || after.week !== before!.week || after.phase !== before!.phase
+          || after.routineSlot2 !== before!.routineSlot2) {
           found.push(`${MSG.roundtrip}: ${JSON.stringify(before)} → ${JSON.stringify(after)}`);
         }
         const body = await bodyText();
@@ -455,12 +468,13 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
 
 // ── 자기검사 ──────────────────────────────────────────────────────────────────────────────
 /** 탐침마다 판정이 말해야 하는 문자열. 하나라도 빠지면 그 갈래는 죽은 것이다. */
-const SELF_CHECKS: ReadonlyArray<{ probe: ProbeKind; markers: readonly string[]; msg: string }> = [
-  { probe: 'console', markers: [PROBE_CONSOLE], msg: '자기검사: 일부러 낸 콘솔 에러를 판정이 안 담았다 — 위 "콘솔 에러 0건"은 근거가 없다' },
-  { probe: 'missing', markers: [PROBE_ASSET], msg: '자기검사: 일부러 낸 404를 판정이 안 담았다 — 위 "404 0건"은 근거가 없다' },
-  { probe: 'save-block', markers: [MSG.routineNotSaved], msg: '자기검사: 세이브 쓰기를 막았는데 판정이 안 잡았다 — "진행이 저장된다"는 근거가 없다' },
-  { probe: 'reload-corrupt', markers: [MSG.continueLabel, MSG.roundtrip], msg: '자기검사: 새로고침에서 세이브를 되돌렸는데 판정이 안 잡았다 — "세이브 왕복"은 근거가 없다' },
-];
+const SELF_CHECKS: Readonly<Record<ProbeKind, { markers: readonly string[]; msg: string }>> = {
+  console: { markers: [PROBE_CONSOLE], msg: '자기검사: 일부러 낸 콘솔 에러를 판정이 안 담았다 — 위 "콘솔 에러 0건"은 근거가 없다' },
+  missing: { markers: [PROBE_ASSET], msg: '자기검사: 일부러 낸 404를 판정이 안 담았다 — 위 "404 0건"은 근거가 없다' },
+  'save-block': { markers: [MSG.routineNotSaved], msg: '자기검사: 세이브 쓰기를 막았는데 판정이 안 잡았다 — "진행이 저장된다"는 근거가 없다' },
+  'reload-corrupt': { markers: [MSG.continueLabel, MSG.roundtrip], msg: '자기검사: 새로고침에서 세이브를 되돌렸는데 판정이 안 잡았다 — "세이브 왕복"은 근거가 없다' },
+  'reload-routine-lost': { markers: [MSG.roundtrip], msg: '자기검사: 새로고침에서 루틴만 지웠는데 판정이 안 잡았다 — "세이브 왕복"이 좌표만 보고 있다' },
+};
 
 const problems: string[] = [];
 const fail = (msg: string) => problems.push(msg);
@@ -496,22 +510,25 @@ async function main() {
 
     // **탐침은 정상 패스가 통과한 뒤에만 의미가 있다.** 이미 빨간 판정에 탐침을 얹으면 "말했다"가 공허하다.
     if (!problems.length) {
-      for (const c of SELF_CHECKS) {
+      // 종류가 0이면 아래 "N/M"이 0/0으로 공허하다 — 그 자체를 실패로 센다.
+      if (SELF_TOTAL === 0) fail('자기검사 종류가 0개다 — 판정이 살아 있다는 근거가 없다');
+      for (const probe of PROBE_KINDS) {
+        const c = SELF_CHECKS[probe];
         const t2 = Date.now();
-        const out = await runScenario(browser, served, fx, port, c.probe);
+        const out = await runScenario(browser, served, fx, port, probe);
         const text = out.problems.join('\n');
         const missing = c.markers.filter((m) => !text.includes(m));
         const reached = out.steps.length;
         if (missing.length === 0) {
           selfPassed++;
-          console.log(`    ✓ 자기검사 ${c.probe} — ${reached}단계에서 잡힘 (${fmtMs(Date.now() - t2)})`);
+          console.log(`    ✓ 자기검사 ${probe} — ${reached}단계에서 잡힘 (${fmtMs(Date.now() - t2)})`);
         } else {
           fail(`${c.msg} (빠진 마커: ${missing.join(', ')})\n    판정이 낸 말:\n    ${text || '(없음)'}`);
         }
       }
       // 루프가 비거나 일부만 돌면 위 카운터가 모자란다. 성공 줄의 "N/M"은 사람이 읽는 것이고,
-      // rc는 여기서 낸다 — 이 줄이 없으면 루프를 비우는 한 줄 편집이 `0/4`를 찍고도 초록이다.
-      if (selfPassed !== SELF_CHECKS.length) fail(`자기검사가 ${selfPassed}/${SELF_CHECKS.length}종만 돌았다 — 나머지 판정은 근거가 없다`);
+      // rc는 여기서 낸다 — 이 줄이 없으면 루프를 비우는 한 줄 편집이 `0/5`를 찍고도 초록이다.
+      if (selfPassed !== SELF_TOTAL) fail(`자기검사가 ${selfPassed}/${SELF_TOTAL}종만 돌았다 — 나머지 판정은 근거가 없다`);
     }
   } finally {
     await browser?.close();
@@ -524,7 +541,7 @@ async function main() {
     console.log('\n  첫 화면 게이트(verify:dist-boot)는 여기서 실패한 화면을 원리상 못 본다.');
     process.exit(1);
   }
-  console.log(`\n✅ 배포 E2E — 이어하기→루틴→확정→결산→다음 주→새로고침→이어하기 ${healthy?.steps.length}단계 ${fmtMs(healthyMs)}, 콘솔 에러·404 0건 (요청 ${healthy?.requests}건 / JS 청크 ${healthy?.chunks}개 / 자기검사 ${selfPassed}/${SELF_CHECKS.length}종 통과 / 전체 ${fmtMs(Date.now() - t0)})`);
+  console.log(`\n✅ 배포 E2E — 이어하기→루틴→확정→결산→다음 주→새로고침→이어하기 ${healthy?.steps.length}단계 ${fmtMs(healthyMs)}, 콘솔 에러·404 0건 (요청 ${healthy?.requests}건 / JS 청크 ${healthy?.chunks}개 / 자기검사 ${selfPassed}/${SELF_TOTAL}종 통과 / 전체 ${fmtMs(Date.now() - t0)})`);
   process.exit(0);
 }
 

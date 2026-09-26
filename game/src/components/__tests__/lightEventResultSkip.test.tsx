@@ -39,12 +39,12 @@ const catalog = (id: string): GameEvent => {
   return ev;
 };
 // 기록 항목 — 체인 가드·followup 조건이 읽는 필드만 채운다.
-const record = (id: string, resolvedChoice = 0): GameEvent =>
-  ({ id, title: id, description: '', choices: [], resolvedChoice, week: OCCURRENCE_WEEK, year: 1 }) as GameEvent;
+const record = (id: string, resolvedChoice = 0, week = OCCURRENCE_WEEK): GameEvent =>
+  ({ id, title: id, description: '', choices: [], resolvedChoice, week, year: 1 }) as GameEvent;
 
-const freshLog = (): WeekLog => ({
+const freshLog = (week = OCCURRENCE_WEEK): WeekLog => ({
   statChanges: {}, fatigueChange: 0, moneyChange: 0, messages: [], skipped: [],
-  milestoneMessages: [], year: 1, week: OCCURRENCE_WEEK,
+  milestoneMessages: [], year: 1, week,
 });
 
 /**
@@ -53,14 +53,14 @@ const freshLog = (): WeekLog => ({
  * assignCurrentEvent로 굽는다 — 화면이 보여주는 변이 문장과 currentEvent.choices가 같아야
  * 선택지를 문장으로 찾아 누를 수 있다.
  */
-function eventWeek(evt: GameEvent, events: GameEvent[]): GameState {
+function eventWeek(evt: GameEvent, events: GameEvent[], week = OCCURRENCE_WEEK): GameState {
   const s = createInitialState('male', PARENTS, { rngSeed: 12345 });
   s.year = 1;
-  s.week = OCCURRENCE_WEEK + 1;
+  s.week = week + 1;
   s.events = events;
   s.talkEventsFired = [];
-  s.weekLog = freshLog();
-  assignCurrentEvent(s, evt, OCCURRENCE_WEEK);
+  s.weekLog = freshLog(week);
+  assignCurrentEvent(s, evt, week);
   return s;
 }
 
@@ -70,10 +70,10 @@ function eventWeek(evt: GameEvent, events: GameEvent[]): GameState {
  *  - 같은 주 이벤트가 3건 이상이면 conditional/milestone chain도 안 건다.
  * 이 둘은 resolveEventChain의 규칙이라, 규칙이 바뀌면 아래 전제 단언이 먼저 알려 준다.
  */
-function blockedChainRecords(): GameEvent[] {
+function blockedChainRecords(week = OCCURRENCE_WEEK): GameEvent[] {
   const followup = [...FOLLOWUP_EVENT_IDS].find(id => !DIRECT_SEQUEL_IDS.has(id));
   if (!followup) throw new Error('DIRECT_SEQUEL이 아닌 followup id가 하나는 있어야 한다');
-  return [record(followup), record('__filler-1'), record('__filler-2')];
+  return [record(followup, 0, week), record('__filler-1', 0, week), record('__filler-2', 0, week)];
 }
 
 /** 긴 본문은 여러 페이지로 갈리고 선택지는 마지막 페이지에서만 열린다 — 끝까지 넘긴다. */
@@ -188,6 +188,50 @@ describe('가벼운 사건은 결과 화면 없이 결산으로 간다 (T46)', (
     // 이때 결과 문장은 hero(마지막 📖)가 아니라 결산 목록으로 밀린다 — 뒤 사건의 문장이 hero를
     // 가져간다. 그래서 결과 화면이 이 문장을 또렷이 보여주는 유일한 자리이고, 유지가 맞다.
     expect(after.weekLog!.messages.some(m => m.startsWith('📖'))).toBe(true);
+  });
+
+  it('(g) 학년말 주(W48)에 걸린 가벼운 사건은 결산이 아니라 학년 전환으로 가므로 결과 화면을 유지한다', async () => {
+    // resolveEventChain은 week > 48이면 결산 대신 applyYearTransition(phase year-end)으로 보낸다.
+    // 가드를 `phase === 'result'`에서 `phase !== 'event'`로 완화해도 다른 케이스는 전부 초록이었다
+    // (3자 검수 M11) — 학년말 착지가 어디에도 없었다. 잡무 3종은 방학 조건이라 제품에서 W48에
+    // 뜨지 않지만, 집합이 늘면 열리는 구멍이라 여기서 잠근다.
+    const LAST_WEEK = 48;
+    const s = eventWeek(catalog(lightId), blockedChainRecords(LAST_WEEK), LAST_WEEK);
+    useGameStore.setState({ state: s });
+    render(<GameScreen />);
+
+    await pickFirstChoice(s);
+
+    const after = useGameStore.getState().state!;
+    expect(after.phase, '전제: W48 해결 뒤에는 학년 전환이어야 한다').toBe('year-end');
+    // 결산이 아니면 문장이 hero에 못 오른다 — 결과 화면이 이 문장을 보여주는 유일한 자리다.
+    expect(await screen.findByRole('button', { name: '계속 →' })).toBeTruthy();
+    expect(nextWeekBtn()).toBeNull();
+  });
+
+  it('(h) 보수적 폴백 — store가 문장을 바꿔 실으면(정확 일치 아님) 결과 화면을 유지한다', async () => {
+    // 생략 판별은 `📖 ${message}` **정확 일치**다. `includes`로 보면 문장이 덧붙거나 잘려 실려도
+    // "착지했다"로 읽어 화면을 지운다(3자 검수: 빈 message면 모든 줄에 매칭). (f)와 같은 모양으로
+    // 액션을 감싸 📖 줄에 꼬리를 붙인다 — 부분 일치 판별로 되돌리면 여기서 빨강.
+    const s = eventWeek(catalog(lightId), blockedChainRecords());
+    useGameStore.setState({
+      state: s,
+      resolveEvent: (index: number) => {
+        const applied = ORIGINAL_RESOLVE_EVENT(index);
+        const st = useGameStore.getState().state!;
+        const messages = st.weekLog!.messages.map(m => (m.startsWith('📖') ? `${m} (덧붙은 꼬리)` : m));
+        useGameStore.setState({ state: { ...st, weekLog: { ...st.weekLog!, messages } } });
+        return applied;
+      },
+    });
+    render(<GameScreen />);
+
+    await pickFirstChoice(s);
+
+    const after = useGameStore.getState().state!;
+    expect(after.phase, '전제: phase는 result').toBe('result');
+    expect(after.weekLog!.messages.some(m => m.startsWith('📖') && m.endsWith('(덧붙은 꼬리)')), '전제: 📖 줄이 바뀌어 있어야 한다').toBe(true);
+    expect(await screen.findByRole('button', { name: '계속 →' })).toBeTruthy();
   });
 
   it('(f) 보수적 폴백 — 결과 문장이 weekLog에 안 실리면 결산으로 가더라도 결과 화면을 유지한다', async () => {

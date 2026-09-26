@@ -1,6 +1,6 @@
 // 브라우저 E2E 게이트가 **자기 종료 경로를 내는가**. (`verify-dist-e2e.ts` 후속)
 //
-// 그 스크립트에는 자기검사 4종이 있다 — 정상 패스 뒤 탐침(콘솔 에러·404·세이브 쓰기 차단·
+// 그 스크립트에는 자기검사 5종이 있다 — 정상 패스 뒤 탐침(콘솔 에러·404·세이브 쓰기 차단·루틴만 지운 새로고침·
 // 새로고침 세이브 되돌림)을 심고 같은 판정이 그걸 말하는지 본다. 관측기·판정 갈래의 죽음은
 // 그걸로 잡힌다. **그런데 자기검사는 정상 패스가 통과한 뒤에만 돈다** — 스크립트가 "정상"을
 // 잘못 판정하는 쪽(단계 실패를 rc=0으로 흘리는 것)은 스스로 못 잠근다. 실제 dist는 멀쩡해서
@@ -13,7 +13,7 @@
 //     자체가 담당한다(별도 러너의 vitest에는 dist가 없다). 그 스텝의 존재는 `verify-ci-gates.ts`가
 //     `verify:dist-*` 집합에서 파생해 잠근다.
 import { describe, it, expect } from 'vitest';
-import { existsSync, writeFileSync, rmSync, mkdtempSync, mkdirSync, realpathSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync, rmSync, mkdtempSync, mkdirSync, realpathSync } from 'fs';
 import { spawnSync } from 'child_process';
 import { tmpdir } from 'os';
 import { resolve, join } from 'path';
@@ -110,3 +110,36 @@ describe('브라우저 E2E 게이트가 실제로 rc를 낸다', { timeout: SPAW
     }
   });
 });
+
+// 자기검사의 "N/M"은 스크립트 안 카운터에서 파생되는데, 종류 목록(PROBE_KINDS)이 비면 0/0으로 공허하다
+// (3자 검수 M28: SELF_CHECKS를 비워도 ✅ rc=0). 스크립트는 0종을 런타임에서 거부하지만, 한 종을
+// **일관되게** 빼면(튜플·Record·seedScript 가지 셋 다) 4/4로 초록이다. 그래서 밖에서 종류 목록을
+// 계약으로 잠근다 — 탐침을 늘리거나 줄이는 건 이 표를 같이 고치는 결정이어야 한다.
+describe('자기검사 종류는 계약이다 (소스 대조)', () => {
+  const src = readFileSync(SCRIPT, 'utf8');
+  const EXPECTED_PROBES = ['console', 'missing', 'save-block', 'reload-corrupt', 'reload-routine-lost'];
+
+  function probeKindsInSource(): string[] {
+    const m = /const PROBE_KINDS = \[([^\]]*)\] as const/.exec(src);
+    if (!m) throw new Error('PROBE_KINDS 튜플을 소스에서 못 찾았다 — 이름이 바뀌었으면 이 테스트도 같이');
+    return [...m[1].matchAll(/'([^']+)'/g)].map(x => x[1]);
+  }
+
+  it('탐침 종류 목록이 정확히 계약과 같다 (하나만 빼도 빨강)', () => {
+    expect(probeKindsInSource()).toEqual(EXPECTED_PROBES);
+  });
+
+  it('종류마다 판정표(SELF_CHECKS) 항목과 주입 스크립트(seedScript) 가지가 둘 다 있다', () => {
+    for (const kind of probeKindsInSource()) {
+      expect(src, `${kind}: SELF_CHECKS에 항목이 없다`).toMatch(new RegExp(`(^|[\\s{,])'?${kind}'?:\\s*\\{`, 'm'));
+      expect(src, `${kind}: seedScript에 a.probe === '${kind}' 가지가 없다`).toContain(`a.probe === '${kind}'`);
+    }
+  });
+
+  it('판정부가 종류 수로 N/M을 세고 0종을 거부한다', () => {
+    expect(src).toContain('const SELF_TOTAL: number = PROBE_KINDS.length');
+    expect(src).toContain('selfPassed !== SELF_TOTAL');
+    expect(src).toContain('SELF_TOTAL === 0');
+  });
+});
+

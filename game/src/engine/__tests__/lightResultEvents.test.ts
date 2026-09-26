@@ -40,7 +40,10 @@ function allChoices(e: GameEvent): EventChoice[] {
 describe('LIGHT_RESULT_EVENT_IDS 자격 (카탈로그 파생)', () => {
   it('탐지기 양성 대조 — 선거(class-president)는 후속을 끌고, CG가 있는 사건이 카탈로그에 있다', () => {
     // 이 둘이 죽으면 아래의 "없다" 단언은 전부 공허하다(#437: 검사 0건에도 ✅).
-    expect(followupsTriggeredBy('class-president'), 'followup 탐지기가 죽었다').not.toHaveLength(0);
+    // "1개 이상"만 요구하면 id 리터럴 하나(nudge)만 남아도 초록이라, 조건에서 id를 헬퍼로 감춘
+    // 변이가 살아남았다(3자 검수 M12). 선거의 직접 후속 3종이 **전부** 보여야 탐지기가 산 것이다.
+    expect(followupsTriggeredBy('class-president'), 'followup 탐지기가 죽었다')
+      .toEqual(expect.arrayContaining(['class-president-speech', 'class-president-win', 'class-president-lose']));
     expect(GAME_EVENTS.some(e => cgFilesOf(e.id).length > 0), 'CG 탐지기가 죽었다').toBe(true);
   });
 
@@ -60,6 +63,21 @@ describe('LIGHT_RESULT_EVENT_IDS 자격 (카탈로그 파생)', () => {
       expect(DIRECT_SEQUEL_IDS.has(id), `${id}: 자신이 직접 후속이다`).toBe(false);
       expect(followupsTriggeredBy(id), `${id}: 이 id를 조건으로 읽는 followup이 있다`).toEqual([]);
     }
+  });
+
+  it('기준 1 보강 — 모든 선택지의 결과 문장이 비어 있지 않다 (생략 판별이 그 문장의 착지를 본다)', () => {
+    // GameScreen은 `📖 ${message}`가 weekLog에 실렸을 때만 결과 화면을 건너뛴다. message가 비면
+    // 보여줄 문장이 없는데 화면만 사라진다 — 집합에 넣기 전에 여기서 막는다.
+    let checked = 0;
+    for (const id of LIGHT_RESULT_EVENT_IDS) {
+      const ev = byId.get(id);
+      if (!ev) continue;
+      for (const [ci, c] of allChoices(ev).entries()) {
+        expect(c.message.trim().length, `${id} 선택지 ${ci}: 결과 문장이 비었다`).toBeGreaterThan(0);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThanOrEqual(LIGHT_RESULT_EVENT_IDS.size * 2);
   });
 
   it('기준 3 — 매니페스트 어느 경로에도 CG가 없다', () => {

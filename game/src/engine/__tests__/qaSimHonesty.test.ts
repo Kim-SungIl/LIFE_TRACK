@@ -133,6 +133,15 @@ describe('UI 규칙 재현 — 단위', () => {
     // 루틴비가 먼저 빠진다(MainWeekScreen.tsx:407)
     const withRoutine = stateWith({ ...s, routineSlot2: paidRoutine.id, routineSlot3: paidRoutine2.id, money: routineCostY1 + weekendCostY1 - 0.1 });
     expect(pickerCumulativeBlocked(withRoutine, [paidWeekend.id])).toEqual([paidWeekend.id]);
+    // **막힌 슬롯은 차감하지 않는다** — 같은 활동 2칸으로는 관측이 안 된다(3자 검수 M19b: 막힌 칸도
+    // 차감하는 변이가 살아남았다). 비싼 A·싼 B로 3칸을 깐다: 잔액 A+B에 [A, A, B] → A 통과(잔액 B),
+    // A 막힘(차감 없음), B 통과. 막힌 A를 차감하면 B까지 막혀 [A, B]가 된다.
+    const costA = getActivityCost(paidRoutine, Y1);
+    const cheap = ACTIVITIES.find(a => a.id === 'internet-lecture')!;
+    const costB = getActivityCost(cheap, Y1);
+    expect(costA > costB && costB > 0, '전제: A가 B보다 비싸고 둘 다 유료').toBe(true);
+    const three = stateWith({ ...s, money: costA + costB });
+    expect(pickerCumulativeBlocked(three, [paidRoutine.id, paidRoutine.id, cheap.id])).toEqual([paidRoutine.id]);
   });
 
   it('② previewMoneySkips — 엔진이 미리 돌린 주의 money 스킵 id', () => {
