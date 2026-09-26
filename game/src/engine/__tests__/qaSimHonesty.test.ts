@@ -8,16 +8,23 @@
  *   3. 계측 순서 — 돈 계측(brokeWeeks·minMoney)이 이벤트 해결 **뒤**의 잔액을 읽는다. 순수 계측 함수가
  *      아니라 runPersona 배선을 주입 deps로 잠근다(#381: 순수함수만 잠그면 호출 순서가 빈다).
  *      같은 픽스처로 제품 확정 잠금 규칙 3종(UI①②③)이 runPersona에 배선돼 있는지도 본다.
+ *   4. (T54) 말걸기 순서 — 제품은 이벤트를 전부 닫고 결산을 넘긴 **다음 주 계획 화면**에서만 말을 건다
+ *      (GameScreen.tsx phase 라우터: event(:336) → result(:412) → MainWeekScreen(:446)만 onTalkNpc를 받는다).
+ *      하네스가 processWeek 직후·이벤트 앞에서 걸면 RNG 소비 순서와 미니톡 학년 게이트가 어긋난다. 주입 deps로
+ *      호출 **순서**와 말걸기 시점의 상태(currentEvent·phase·학년 경계)를 잠근다.
+ *   5. (T54) brokeWeeks의 "다음 주 루틴비"는 **다음 주 좌표**로 판정한다 — 학기 마지막 주(다음 주 방학)는 0,
+ *      방학 마지막 주(다음 주 학기)는 루틴비, 학년 경계(W48→W1)는 다음 학년 단가. 경계 주는 getWeekInfo에서 파생한다.
  *
  * 임계·비용은 리터럴이 아니라 카탈로그(ACTIVITIES·getActivityCost)에서 파생한다.
  */
 import { describe, expect, it } from 'vitest';
 import { ACTIVITIES, getActivityCost } from '../activities';
-import { createInitialState } from '../gameEngine';
+import { createInitialState, getWeekInfo } from '../gameEngine';
 import type { GameEvent, GameState, ParentStrength, WeekLog } from '../types';
 import { validatePersona, personaMarkMismatches, type Persona } from '../../../scripts/sim/lib/qa-persona';
 import {
-  evaluateUiWeekGates, pickerCumulativeBlocked, previewMoneySkips, productViewOfWeek, routineTooExpensive,
+  evaluateUiWeekGates, nextWeekCoord, nextWeekRoutineCost, pickerCumulativeBlocked, previewMoneySkips, productViewOfWeek,
+  routineCostOf, routineTooExpensive,
 } from '../../../scripts/sim/lib/qa-ui-week-gates';
 import { PERSONAS, DEFAULT_DEPS, assertPersonaMarks, runPersona, type PlaythroughDeps } from '../../../scripts/sim/sim-qa-playthrough';
 
@@ -224,5 +231,157 @@ describe('runPersona — 돈 계측은 이벤트 해결 뒤의 잔액을 읽는�
     expect(r.uiPickerBlockWeeks).toBeGreaterThanOrEqual(EVENT_WEEKS);
     expect(r.uiPreviewSkipWeeks).toBeGreaterThanOrEqual(EVENT_WEEKS);
     expect(r.uiConfirmLockWeeks).toBeGreaterThanOrEqual(EVENT_WEEKS);
+  });
+});
+
+// ===== (T54) 말걸기 순서 — runPersona 배선 =====
+// 세 스텁이 호출 토큰을 한 배열에 남긴다. 제품 순서는 주마다 [talk → processWeek → resolve…]이고, 말걸기 시점엔
+// 이벤트가 열려 있으면 안 된다(GameScreen 라우터가 EventScene을 먼저 고른다). 첫 주는 부팅 상태에서 건다 —
+// createInitialState의 jihun이 met이라 talkFocus='jihun'이면 매 주 정확히 한 번 호출된다.
+const TALK_NPC = 'jihun';
+interface TalkObservation { year: number; week: number; phase: GameState['phase']; eventOpen: boolean }
+
+function orderDeps(log: string[], talks: TalkObservation[]): PlaythroughDeps {
+  return {
+    processWeek: (s) => {
+      log.push('processWeek');
+      return s.week > EVENT_WEEKS
+        ? { ...s, phase: 'ending' }
+        : { ...s, week: s.week + 1, phase: 'event', currentEvent: MONEY_EVENT, weekLog: emptyLog() };
+    },
+    resolveEvent: (s) => { log.push('resolve'); return { ...s, currentEvent: null, phase: 'weekday' }; },
+    talkToNpc: (s, npcId) => {
+      log.push('talk');
+      expect(npcId).toBe(TALK_NPC);
+      talks.push({ year: s.year, week: s.week, phase: s.phase, eventOpen: s.currentEvent != null });
+      return s;
+    },
+  };
+}
+
+// 학년 경계용 — 이벤트 없이 W48까지 걷고 학년말(phase 'year-end', week 49)을 세운다. 하네스가 학년을 넘긴 뒤
+// 새 학년 W1에서 말을 걸어야 한다(제품: year-end 화면 → advanceFromYearEnd → W1 계획 화면 → 말걸기).
+function yearBoundaryDeps(talks: TalkObservation[]): PlaythroughDeps {
+  return {
+    processWeek: (s) => {
+      if (s.year >= 2 && s.week >= 2) return { ...s, phase: 'ending' };
+      if (s.week >= 48) return { ...s, week: 49, phase: 'year-end', currentEvent: null, weekLog: emptyLog() };
+      return { ...s, week: s.week + 1, phase: 'weekday', weekLog: emptyLog() };
+    },
+    resolveEvent: (s) => s,
+    talkToNpc: (s) => { talks.push({ year: s.year, week: s.week, phase: s.phase, eventOpen: s.currentEvent != null }); return s; },
+  };
+}
+
+const talkPersona = persona({ talk: true, talkFocus: TALK_NPC });
+
+describe('runPersona — 말걸기는 이벤트를 닫은 뒤, 다음 주 확정 앞에 한다(제품 순서)', () => {
+  it('전제: 픽스처 페르소나는 유효하고, 부팅 상태의 대상 NPC는 말을 걸 수 있다(met)', () => {
+    expect(validatePersona(talkPersona)).toEqual([]);
+    const s0 = createInitialState('male', PARENTS, { rngSeed: 1 });
+    expect(s0.npcs.find(n => n.id === TALK_NPC)?.met).toBe(true);
+    expect(s0.currentEvent).toBeNull();
+  });
+
+  it('호출 순서가 주마다 [talk → processWeek → resolve]이고 말걸기 시점에 이벤트가 열려 있지 않다', () => {
+    const log: string[] = [];
+    const talks: TalkObservation[] = [];
+    runPersona(talkPersona, 1, orderDeps(log, talks));
+    // 양성 대조군 — 말걸기가 실제로 배선돼 있다(주마다 한 번: 이벤트 주 EVENT_WEEKS + 엔딩 주 1).
+    expect(talks).toHaveLength(EVENT_WEEKS + 1);
+    // 순서 — 이벤트 주는 [talk, processWeek, resolve], 엔딩 주는 [talk, processWeek]. 말걸기가 processWeek 직후로
+    // 돌아가면(T47 배선) [processWeek, talk, resolve]가 되어 여기서 빨강.
+    const expected = [...Array.from({ length: EVENT_WEEKS }, () => ['talk', 'processWeek', 'resolve']).flat(), 'talk', 'processWeek'];
+    expect(log).toEqual(expected);
+    // 상태 — 말걸기 시점엔 지난주 이벤트가 닫혀 있고(currentEvent null) phase가 'event'가 아니다.
+    for (const t of talks) {
+      expect(t.eventOpen, `week ${t.week}: 이벤트가 열린 채 말을 걸었다`).toBe(false);
+      expect(t.phase, `week ${t.week}: phase ${t.phase}에서 말을 걸었다`).not.toBe('event');
+    }
+  });
+
+  it('학년 경계 — W48 뒤의 말걸기는 year-end(W49)가 아니라 다음 학년 W1 계획 화면에서 한다', () => {
+    const talks: TalkObservation[] = [];
+    runPersona(talkPersona, 1, yearBoundaryDeps(talks));
+    // 양성 대조군 — Y1 W1~W48 + Y2 W1~W2 = 50번(주마다 한 번).
+    expect(talks).toHaveLength(50);
+    expect(talks.some(t => t.year === 2 && t.week === 1 && t.phase === 'weekday'), '새 학년 W1 계획 화면의 말걸기가 없다').toBe(true);
+    for (const t of talks) {
+      expect(t.week <= 48, `week ${t.week}(year ${t.year}): 학년말 상태에서 말을 걸었다`).toBe(true);
+      expect(t.phase, `week ${t.week}(year ${t.year}): phase ${t.phase}`).not.toBe('year-end');
+    }
+  });
+});
+
+// ===== (T54) brokeWeeks — 다음 주 루틴비 =====
+// 경계 주는 달력(getWeekInfo)에서 파생한다: 학기 마지막 주(다음 주 방학)·방학 마지막 주(다음 주 학기). 학년 경계
+// W48은 후자에 든다(W48 겨울방학 → 다음 학년 W1 학기).
+const WEEKS = Array.from({ length: 48 }, (_, i) => i + 1);
+const lastSemesterWeeks = WEEKS.filter(w => !getWeekInfo(w).isVacation && getWeekInfo(nextWeekCoord(1, w).week).isVacation);
+const lastVacationWeeks = WEEKS.filter(w => getWeekInfo(w).isVacation && !getWeekInfo(nextWeekCoord(1, w).week).isVacation);
+
+/** 매주 잔액을 `moneyAt(학년, 이번 주)`로 두고 이벤트 없이 걷는 엔진. Y1 W48 → year-end, 그 뒤 첫 주 → ending. */
+function brokeDeps(moneyAt: (year: number, week: number) => number): PlaythroughDeps {
+  return {
+    processWeek: (s) => {
+      const money = moneyAt(s.year, s.week);
+      if (s.year >= 2) return { ...s, money, phase: 'ending' };
+      if (s.week >= 48) return { ...s, money, week: 49, phase: 'year-end', currentEvent: null, weekLog: emptyLog() };
+      return { ...s, money, week: s.week + 1, phase: 'weekday', weekLog: emptyLog() };
+    },
+    resolveEvent: (s) => s,
+    talkToNpc: (s) => s,
+  };
+}
+const PLENTY = 10_000;
+
+describe('nextWeekCoord / nextWeekRoutineCost — 다음 주 좌표와 루틴비', () => {
+  it('전제: 달력에 경계 주가 있고 학년 경계는 방학→학기다', () => {
+    expect(lastSemesterWeeks.length).toBeGreaterThan(0);
+    expect(lastVacationWeeks.length).toBeGreaterThan(1);
+    expect(lastVacationWeeks).toContain(48);
+    expect(nextWeekCoord(1, 48)).toEqual({ year: 2, week: 1 });
+    expect(nextWeekCoord(3, 19)).toEqual({ year: 3, week: 20 });
+  });
+
+  it('학기 마지막 주는 0, 방학 마지막 주는 다음 주 학년의 루틴비', () => {
+    const s = stateWith({ routineSlot2: paidRoutine.id, routineSlot3: paidRoutine2.id });
+    for (const w of lastSemesterWeeks) expect(nextWeekRoutineCost(s, 1, w), `W${w}`).toBe(0);
+    for (const w of lastVacationWeeks) {
+      const next = nextWeekCoord(1, w);
+      expect(nextWeekRoutineCost(s, 1, w), `W${w}`).toBe(routineCostOf({ ...s, year: next.year, isVacation: false }));
+      expect(nextWeekRoutineCost(s, 1, w), `W${w}`).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('runPersona — brokeWeeks는 다음 주 루틴비로 판정한다', () => {
+  const routineOf = (year: number) => routineCostOf(stateWith({ routineSlot2: paidRoutine.id, routineSlot3: paidRoutine2.id, year, isVacation: false }));
+
+  it('전제: 픽스처 루틴은 유료이고 잔액 PLENTY는 어느 학년 루틴비보다 크다', () => {
+    expect(routineOf(1)).toBeGreaterThan(0);
+    expect(PLENTY).toBeGreaterThan(routineOf(2));
+  });
+
+  it('방학 마지막 주(W24·W48)에 잔액 0 → 그 주들만 빠듯하다(다음 주가 학기)', () => {
+    const broke = new Set(lastVacationWeeks);
+    const r = runPersona(paidPersona, 1, brokeDeps((year, week) => (year === 1 && broke.has(week) ? 0 : PLENTY)));
+    expect(r.brokeWeeks).toBe(lastVacationWeeks.length);
+  });
+
+  it('학기 마지막 주(W19·W42)에 잔액 0 → 빠듯한 주 0(다음 주가 방학이라 루틴비가 없다)', () => {
+    const broke = new Set(lastSemesterWeeks);
+    const r = runPersona(paidPersona, 1, brokeDeps((year, week) => (year === 1 && broke.has(week) ? 0 : PLENTY)));
+    expect(r.brokeWeeks).toBe(0);
+  });
+
+  it('학년 경계 W48 — 잔액이 이번 학년 루틴비와 같으면 다음 학년 단가로는 모자란다', () => {
+    // 전제: 학원비가 학교급으로 오른다(Y1 초등 → Y2 중등). 같으면 이 축은 관측이 안 되므로 먼저 단언한다.
+    expect(routineOf(2), '전제: Y2 루틴비 > Y1 루틴비').toBeGreaterThan(routineOf(1));
+    const r = runPersona(paidPersona, 1, brokeDeps((year, week) => (year === 1 && week === 48 ? routineOf(1) : PLENTY)));
+    expect(r.brokeWeeks).toBe(1);
+    // 대조 — 다음 학년 단가만큼 있으면 빠듯하지 않다.
+    const ok = runPersona(paidPersona, 1, brokeDeps((year, week) => (year === 1 && week === 48 ? routineOf(2) : PLENTY)));
+    expect(ok.brokeWeeks).toBe(0);
   });
 });
