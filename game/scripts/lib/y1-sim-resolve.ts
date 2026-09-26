@@ -198,7 +198,10 @@ export function talkToNpcLikeStore(state: GameState, npcId: string): GameState {
       }
       if (ev.effects.intimacy && ev.npcId) {
         const target = newState.npcs.find(n => n.id === ev.npcId);
-        if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + ev.effects.intimacy));
+        // **제품과 같은 구간 감쇠를 거친다**(store.ts:713). raw 가산은 40/60/80 문턱 위에서 과대 계상이라
+        // 미니톡만으로 tier 게이트(BEST_TIER 82)를 조기 통과시킨다 — 잡담 경로(:65)는 처음부터 감쇠를
+        // 거쳤는데 미니이벤트 경로만 빠져 있었다(T51에서 시드 7의 절친이 8인데 9로 보였다).
+        if (target) target.intimacy = Math.max(0, Math.min(100, target.intimacy + scaleIntimacyChange(ev.effects.intimacy, target.intimacy)));
       }
       applyMemorySlotFromMiniTalk(newState, ev.id, ev.memorySlotDraft);
       newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
