@@ -37,13 +37,21 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
     const el = document.querySelector(`[data-tutorial="${current.target}"]`);
     let observer: MutationObserver | null = null;
     let rafId = 0;
+    // 변화 한 번이 후속 타이머 셋을 띄운다. 마지막 변화가 언마운트 직전이면 셋 다
+    // 죽은 컴포넌트 자리에서 발화한다 — 제품에선 무해한 setRect지만 테스트에서는
+    // jsdom이 먼저 해체돼 `document`가 없다(tutorialTimerCleanup.test.tsx가 잠근다).
+    const followUps = new Set<ReturnType<typeof setTimeout>>();
+    const scheduleFollowUp = (ms: number) => {
+      const id = setTimeout(() => { followUps.delete(id); updateRect(); }, ms);
+      followUps.add(id);
+    };
     if (el) {
       observer = new MutationObserver(() => {
         // 변화 감지 후 여러 프레임에 걸쳐 재계산 (애니메이션/펼침 대응)
         updateRect();
-        setTimeout(updateRect, 50);
-        setTimeout(updateRect, 150);
-        setTimeout(updateRect, 300);
+        scheduleFollowUp(50);
+        scheduleFollowUp(150);
+        scheduleFollowUp(300);
       });
       observer.observe(el, { childList: true, subtree: true, attributes: true });
 
@@ -59,6 +67,8 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
 
     return () => {
       clearTimeout(timer);
+      for (const id of followUps) clearTimeout(id);
+      followUps.clear();
       window.removeEventListener('scroll', updateRect, true);
       window.removeEventListener('resize', updateRect);
       observer?.disconnect();
@@ -69,10 +79,12 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   // 타겟으로 스크롤
   useEffect(() => {
     const el = document.querySelector(`[data-tutorial="${current.target}"]`);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(updateRect, 400);
-    }
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 부드러운 스크롤이 끝난 뒤 한 번 더 잰다. **스텝이 바뀌거나 언마운트되면 거둔다** —
+    // 안 거두면 이전 스텝의 타이머가 이전 타겟을 읽는다(선택자가 이미 갈렸다).
+    const timer = setTimeout(updateRect, 400);
+    return () => clearTimeout(timer);
   }, [current.target, updateRect]);
 
   // 인터랙티브 스텝에서 DOM 변화 감지 (루틴 설정 등)
