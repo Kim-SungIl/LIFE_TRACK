@@ -40,6 +40,24 @@ export function routineCostOf(s: GameState): number {
   return (r2 ? getActivityCost(r2, s.year) : 0) + (r3 ? getActivityCost(r3, s.year) : 0);
 }
 
+/**
+ * 다음 주 좌표 — 엔진 advanceWeekCounter(gameEngine.ts)의 `week++` / `week > 48 → 다음 학년 W1`을 그대로 옮긴 순수함수.
+ * 학년 경계(W48 → 다음 학년 W1)를 넘는 유일한 자리라 여기서만 판정한다.
+ */
+export function nextWeekCoord(year: number, week: number): { year: number; week: number } {
+  return week >= 48 ? { year: year + 1, week: 1 } : { year, week: week + 1 };
+}
+
+/**
+ * **다음 주**에 루틴이 과금될 금액(brokeWeeks 판정 분모, T54). 방학이면 0, 학기면 **다음 주 학년**의 루틴 2칸 합.
+ * 이번 주 방학 여부(`wasVacation`)로 재면 학기 마지막 주(W19·W42)는 있지도 않은 다음 주 루틴비로 빠듯하다고 세고,
+ * 방학 마지막 주(W24·W48)는 다음 주 루틴비를 0으로 봐서 놓친다. W48은 학년도 바뀌어 학원비 단가(getActivityCost)도 다르다.
+ */
+export function nextWeekRoutineCost(s: GameState, year: number, week: number): number {
+  const next = nextWeekCoord(year, week);
+  return routineCostOf({ ...s, year: next.year, isVacation: getWeekInfo(next.week).isVacation });
+}
+
 /** ① MainWeekScreen.tsx:130 */
 export function routineTooExpensive(s: GameState): boolean {
   const routineCost = routineCostOf(s);

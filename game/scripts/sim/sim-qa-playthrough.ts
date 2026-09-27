@@ -13,6 +13,11 @@
  *     앞에서 읽으면 이벤트가 쓴 돈이 안 보여 paid-full-spend의 빠듯한 주가 0으로 나왔다(실측 36~38주).
  *   · 매주 processWeek 직전에 제품의 확정 잠금 규칙 3종을 재현해 센다(lib/qa-ui-week-gates.ts).
  *     엔진은 조용히 스킵하지만 제품은 그 주를 넘길 수 없다 — "스킵된 슬롯"과 "잠긴 주"는 다른 수다.
+ * **충실도(T54)** — T47이 범위 밖으로 남긴 셋:
+ *   · 말걸기는 **이벤트를 닫은 뒤, 다음 주 확정 앞**에 한다(제품 순서 — runPersona 루프 머리의 근거 주석).
+ *     이벤트 앞에서 걸면 RNG 소비 순서·미니톡 학년 게이트(W48 말걸기가 다음 학년 W1로)가 제품과 어긋난다.
+ *   · brokeWeeks의 "다음 주 루틴비"는 **다음 주 좌표**(학년 경계 W48→W1 포함)로 판정한다(lib nextWeekRoutineCost).
+ *   · 극단 사이의 빈칸 — 중간 투입 페르소나 2종(mid-input-*)을 유효 표본에 넣었다.
  */
 import { createInitialState, processWeek, hashInitialState, getWeekInfo } from '../../src/engine/gameEngine';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../../src/engine/activities';
@@ -23,7 +28,7 @@ import { getAvailableNpcEvents } from '../../src/engine/talkSystem';
 import { NPC_MINI_EVENTS } from '../../src/engine/talkData';
 import type { GameState, EventChoice } from '../../src/engine/types';
 import { validatePersona, personaMarkMismatches, type Persona, type ChoicePolicy } from './lib/qa-persona';
-import { evaluateUiWeekGates, productViewOfWeek } from './lib/qa-ui-week-gates';
+import { evaluateUiWeekGates, nextWeekRoutineCost, productViewOfWeek } from './lib/qa-ui-week-gates';
 import * as fs from 'fs';
 import { pathToFileURL } from 'url';
 
@@ -148,6 +153,32 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
 
   // 학년 전환(week>48 → year-end 처리)이 학년당 49회 진행이라 7년에 343회+ 필요 → 상한 넉넉히.
   for (let week = 0; week < 420; week++) {
+    // ── 말걸기(T54) — **이번 주 확정 앞, 지난주 이벤트를 전부 닫은 뒤**. 제품 순서의 근거:
+    //   · GameScreen.tsx의 phase 라우터는 `currentEvent && phase==='event'`(:336 EventScene) →
+    //     `phase==='result'`(:412 WeeklyResultScreen) → 그 밖(:446 MainWeekScreen) 순으로 고르고,
+    //     `onTalkNpc`(:456)를 받는 화면은 MainWeekScreen뿐이다(MainWeekScreen.tsx:277 handleTalkNpc).
+    //   · store.advanceWeek(:567)은 processWeek 뒤 phase를 'result'(이벤트면 'event')로 두고, 이벤트 체인이
+    //     끝나면 다시 'result'(store.ts:415) → 결산 "계속"이 'weekday'로 돌려야 비로소 말걸기가 보인다.
+    //   즉 플레이어의 한 주는 [말걸기 → 확정(processWeek) → 이벤트 → 결산]이고, 말걸기는 지난주 processWeek가
+    //   굴린 npcEventPendingThisWeek를 **다음 주 계획 화면**에서 소비한다. 학년말도 같다 — year-end 화면을 넘긴
+    //   새 학년 W1 계획 화면에서 건다(W49·year-end 상태에서 걸면 미니톡 학년 게이트가 한 학년 어긋난다).
+    //   T47까지는 processWeek 직후·이벤트 **앞**이었다 — RNG(잡담이 rngSeed를 전진) 소비 순서가 제품과 달랐다.
+    // pending이면 발동 가능한 NPC를 우선 (미니톡 fire 극대화 → tier 도달 측정).
+    if (p.talk) {
+      if (p.talkFocus) {
+        // 집중 측정: 대상 NPC가 met이면 그 NPC에게만 말걸기 (focused ceiling 측정)
+        if (s.npcs.find(n => n.id === p.talkFocus && isNpcInteractable(n, s))) s = deps.talkToNpc(s, p.talkFocus);
+      } else {
+        // 부재(전출·졸업) 친구는 플레이어가 고를 수 없다. met만으로 뽑으면 게이트에 걸려 no-op이 되고
+        // 그 주 말걸기가 통째로 날아가 미니톡·친밀도가 과소 측정된다(특히 ?? candidates[0]가
+        // 친밀도 최고값인 부재 하은을 집으면 Y4·Y7 48주가 전부 유실).
+        const candidates = s.npcs.filter(n => isNpcInteractable(n, s)).sort((a, b) => b.intimacy - a.intimacy);
+        const target = candidates.find(n => n.intimacy >= 30 && getAvailableNpcEvents(s, n.id).length > 0)
+          ?? candidates[0];
+        if (target) s = deps.talkToNpc(s, target.id);
+      }
+    }
+
     // Y5+ 집중과외 투입 — requires(year>=5)를 하네스에서 수동 게이트 (processWeek는 돈만 체크)
     s.weekendChoices = (p.tutoringY6 && s.year >= 5)
       ? ['private-tutoring', p.weekend[1] ?? 'rest']
@@ -177,7 +208,8 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
       }
     }
     const yearBefore = s.year;
-    const wasVacation = getWeekInfo(s.week).isVacation;
+    const weekBefore = s.week;
+    const wasVacation = getWeekInfo(weekBefore).isVacation;
 
     // ── 제품 확정 잠금 재현(T47) — 플레이어가 확정 버튼을 누르는 바로 그 상태에서 판정한다 ──
     // 값은 바꾸지 않는다. 잠겼어도 하네스는 그대로 진행한다(엔진이 스킵) — 그래서 "잠겼을 주"는
@@ -198,7 +230,9 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
     // ── 스킵 계측 ── (엔진이 이 주에 남긴 로그 — 이벤트·미니톡과 무관하므로 여기서 읽는다)
     // 스킵 판정은 로그 메시지로만 가능하다. 루틴/주말이 같은 문구를 쓰므로 활동 이름으로 가른다
     // (그래서 유료 페르소나는 루틴과 주말에 서로 다른 활동을 쓴다).
-    let nextRoutineCost = 0;
+    // 다음 주 루틴비(T54) — **다음 주 좌표**로 판정한다. 이번 주 `wasVacation`으로 재면 학기 마지막 주(W19·W42)를
+    // 있지도 않은 루틴비로 빠듯하다 세고 방학 마지막 주(W24·W48)를 놓친다. W48→W1은 학년(단가)도 바뀐다.
+    const nextRoutineCost = nextWeekRoutineCost(s, yearBefore, weekBefore);
     {
       const msgs = (s.weekLog?.messages ?? []).filter(m => m.includes('돈이 부족해서'));
       const routineNames = [s.routineSlot2, s.routineSlot3]
@@ -208,6 +242,7 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
         if (routineNames.some(n => m.includes(n))) routineSkippedForMoney++;
         else weekendSkippedForMoney++;
       }
+      // 이번 주에 돌아간 루틴(지출·분모)은 이번 주 좌표가 맞다 — processWeek가 방금 과금한 주니까.
       if (!wasVacation) {
         routineWeeks++;
         for (const id of [s.routineSlot2, s.routineSlot3]) {
@@ -215,26 +250,8 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
           const act = ACTIVITIES.find(a => a.id === id);
           if (!act) continue;
           const cost = getActivityCost(act, yearBefore);
-          nextRoutineCost += cost;
           if (cost > 0 && !msgs.some(m => m.includes(act.name))) routineSpend += cost;
         }
-      }
-    }
-
-    // 말걸기 — processWeek가 npcEventPendingThisWeek를 굴린 직후, 친밀도 최상위 met NPC에게.
-    // pending이면 발동 가능한 NPC를 우선 (미니톡 fire 극대화 → tier 도달 측정).
-    if (p.talk) {
-      if (p.talkFocus) {
-        // 집중 측정: 대상 NPC가 met이면 그 NPC에게만 말걸기 (focused ceiling 측정)
-        if (s.npcs.find(n => n.id === p.talkFocus && isNpcInteractable(n, s))) s = deps.talkToNpc(s, p.talkFocus);
-      } else {
-        // 부재(전출·졸업) 친구는 플레이어가 고를 수 없다. met만으로 뽑으면 게이트에 걸려 no-op이 되고
-        // 그 주 말걸기가 통째로 날아가 미니톡·친밀도가 과소 측정된다(특히 ?? candidates[0]가
-        // 친밀도 최고값인 부재 하은을 집으면 Y4·Y7 48주가 전부 유실).
-        const candidates = s.npcs.filter(n => isNpcInteractable(n, s)).sort((a, b) => b.intimacy - a.intimacy);
-        const target = candidates.find(n => n.intimacy >= 30 && getAvailableNpcEvents(s, n.id).length > 0)
-          ?? candidates[0];
-        if (target) s = deps.talkToNpc(s, target.id);
       }
     }
 
@@ -253,7 +270,7 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
     // 다음 주 루틴비를 못 내게 만드는 주가 통째로 안 보였다.
     {
       minMoney = Math.min(minMoney, s.money);
-      // 다음 주 루틴비를 못 낼 상태로 주를 마쳤는가 — UI의 routineTooExpensive와 같은 판정.
+      // 다음 주 루틴비를 못 낼 상태로 주를 마쳤는가 — 다음 주 계획 화면의 routineTooExpensive(①)와 같은 판정.
       if (nextRoutineCost > 0 && s.money < nextRoutineCost) brokeWeeks++;
       moneyByYear[yearBefore] = Math.round(s.money);
     }
@@ -362,7 +379,7 @@ export function runPersona(p: Persona, seed: number, deps: PlaythroughDeps = DEF
   };
 }
 
-// ===== 플레이 페르소나 (31종) — 시드 12개와 곱해 372판. 개수를 바꾸면 이 주석도 고칠 것 =====
+// ===== 플레이 페르소나 (33종) — 시드 12개와 곱해 396판. 개수를 바꾸면 이 주석도 고칠 것 =====
 // (주의: 이 주석은 T30 전까지 "29종/348판"이었는데 배열은 이미 30종이었다 — 실측으로 바로잡았다.)
 //
 // **`invalid: true`(T47) — 제품에서 만들 수 없는 조합 10종.** 부모 강점 동일(TitleScreen toggle이 못 만들고
@@ -392,6 +409,12 @@ export const PERSONAS: Persona[] = [
   { name: 'last-choice', label: '청개구리(항상 마지막 선택)', gender: 'male', parents: ['emotional', 'info'], routineSlot2: 'club', routineSlot3: 'creative', weekend: ['club', 'creative'], vacation: ['rest', 'creative', 'club'], policy: 'last', talk: true },
   { name: 'info-parent', label: '정보형 부모+균형', gender: 'female', parents: ['info', 'wealth'], routineSlot2: 'self-study', routineSlot3: 'club', weekend: ['self-study', 'club'], vacation: ['self-study', 'rest', 'club'], policy: 'balanced', talk: true, tutoringY6: true },
   { name: 'poor-resilience', label: '저자원 회복형(무지출 가정)', gender: 'male', parents: ['resilience', 'freedom'], routineSlot2: 'light-exercise', routineSlot3: 'self-study', weekend: ['self-study', 'rest'], vacation: ['rest', 'self-study', 'rest'], policy: 'balanced', talk: true },
+  // **중간 투입(T54).** 위까지의 유효 페르소나는 루틴 2칸·주말 2칸·방학 3칸을 전부 채우는 '성실'이거나 유료
+  // 고정비를 켠 극단이고, 진짜 최소투입(min-input)은 부모 동일로 위반 표에 있다 — 그 사이(루틴 1칸만 두고
+  // 주말 절반은 쉬는, 제품에서 가장 흔할 법한 플레이)를 유효 표본이 한 판도 안 밟았다. 슬롯3 비움은 제품
+  // 합법(validatePersona: 슬롯2만 필수)이고 나머지도 전부 무료·1칸 활동이라 유효 표에 든다.
+  { name: 'mid-input-study', label: '중간투입(무료루틴 1칸·주말 절반 휴식·공부 쪽)', gender: 'male', parents: ['info', 'resilience'], routineSlot2: 'self-study', routineSlot3: '', weekend: ['self-study', 'rest'], vacation: ['rest', 'self-study', 'rest'], policy: 'balanced', talk: true },
+  { name: 'mid-input-social', label: '중간투입(무료루틴 1칸·주말 절반 휴식·동아리 쪽)', gender: 'female', parents: ['emotional', 'info'], routineSlot2: 'club', routineSlot3: '', weekend: ['club', 'rest'], vacation: ['rest', 'club', 'rest'], policy: 'balanced', talk: true },
   { name: 'social-female-romance', label: '여주 관계+균형(연애루트 노출)', gender: 'female', parents: ['emotional', 'emotional'], routineSlot2: 'club', routineSlot3: 'self-study', weekend: ['club', 'self-study'], vacation: ['club', 'creative', 'rest'], policy: 'social', talk: true, invalid: true },
   // ⓐ 검증용 — 중간 과부하: 열심히 하지만 갈아넣진 않음(휴식 없음). fatigue 45~59 밴드를 노림.
   { name: 'mid-overload-study', label: '중간과부하(공부+동아리, 무휴식)', gender: 'male', parents: ['strict', 'emotional'], routineSlot2: 'self-study', routineSlot3: 'club', weekend: ['self-study', 'club'], vacation: ['self-study', 'club', 'self-study'], policy: 'academic', talk: true },
