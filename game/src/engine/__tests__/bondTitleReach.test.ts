@@ -45,6 +45,8 @@ const UNSUPPORTED_LEVERS = ['talkFocus', 'companionFocus', 'tutoringY6', 'partTi
 
 /**
  * sim-qa-playthrough.runPersona의 축약 미러 — 루틴·주말·방학·동행 분산·말걸기·이벤트 해결·학년 전환.
+ * 주 안의 순서도 그쪽과 같다(말걸기는 계획 화면, 그 다음 확정 → 이벤트 → 학년 전환) — 미러가 제품에
+ * 없는 순서를 쓰면 '실플레이 도달 가능성'이라는 이 파일의 주장이 그 자리에서 무너진다(3자 검수).
  * runPersona를 직접 쓰지 않는 이유: 결과에 GameState가 없어 closeFriends(state)를 못 부르고,
  * 매주 제품 확정 잠금 3종을 재현(predictWeekOutcome = processWeek 한 번 더)하느라 판당 2.2초다.
  * 돈 게이트는 엔진의 스킵 로그('돈이 부족해서')를 세는 것으로 갈음한다 — 0이면 제품도 같은 궤적이다.
@@ -58,6 +60,20 @@ function playSevenYears(p: Persona, rngSeed: number) {
   for (let w = 0; w < 420; w++) {
     s.weekendChoices = p.weekend;
     s.vacationChoices = p.vacation;
+
+    // 말걸기 — **주 계획 화면에서, 주를 확정하기 전에**. 제품에서 `onTalkNpc`를 받는 화면은
+    // MainWeekScreen 하나뿐이고 GameScreen은 currentEvent가 있으면 이벤트 화면을 먼저 고르므로,
+    // 이벤트가 떠 있는 동안에는 말을 걸 수 없다. 이 자리라야 학년 전환 뒤(W1 계획 화면)에도 걸려
+    // 미니톡의 학년 게이트가 제품과 같은 좌표에서 판정된다 — T54가 sim 하네스에서 고친 것과 같은 자리다
+    // (옛 자리는 processWeek 직후라 week=49/phase='year-end'에서 걸려 학년이 한 칸 어긋났다).
+    // 부재(전출·졸업) 친구는 플레이어가 고를 수 없으므로 후보에서 뺀다.
+    if (p.talk) {
+      const candidates = s.npcs.filter(n => isNpcInteractable(n, s)).sort((a, b) => b.intimacy - a.intimacy);
+      const target = candidates.find(n => n.intimacy >= 30 && getAvailableNpcEvents(s, n.id).length > 0)
+        ?? candidates[0];
+      if (target) s = talkToNpcLikeStore(s, target.id);
+    }
+
 
     // 동행(+3, grind 소스) — UI npcActivityMap 미러. 이번 주 실제로 돌 슬롯(학기=주말/방학=방학)의
     // 동행 가능 활동에만, 활동마다 **최저 친밀도 순으로 서로 다른** met NPC를 붙인다(companionSpread).
@@ -74,15 +90,6 @@ function playSevenYears(p: Persona, rngSeed: number) {
 
     s = processWeek(s, npcMap);
     moneySkips += (s.weekLog?.messages ?? []).filter(m => m.includes('돈이 부족해서')).length;
-
-    // 말걸기 — processWeek가 npcEventPendingThisWeek를 굴린 직후, 미니톡이 열린 NPC를 우선하고
-    // 없으면 친밀도 최상위에게. 부재(전출·졸업) 친구는 플레이어가 고를 수 없으므로 후보에서 뺀다.
-    if (p.talk) {
-      const candidates = s.npcs.filter(n => isNpcInteractable(n, s)).sort((a, b) => b.intimacy - a.intimacy);
-      const target = candidates.find(n => n.intimacy >= 30 && getAvailableNpcEvents(s, n.id).length > 0)
-        ?? candidates[0];
-      if (target) s = talkToNpcLikeStore(s, target.id);
-    }
 
     let guard = 0;
     while (s.currentEvent && guard++ < 20) {
