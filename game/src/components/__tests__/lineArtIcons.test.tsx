@@ -41,15 +41,24 @@ import { WeekPlanner } from '../screens/main/WeekPlanner';
 import { GameScreen } from '../GameScreen';
 import { Portrait } from '../Portrait';
 import { useGameStore } from '../../engine/store';
-import { createInitialState } from '../../engine/gameEngine';
+import { createInitialState, processWeek } from '../../engine/gameEngine';
 import { clearArchive } from '../../engine/archive';
 import { ACTIVITIES } from '../../engine/activities';
+import { readFileSync, readdirSync, statSync } from 'fs';
+import { resolve, join } from 'path';
 import { makeState } from '../../test/fixtures';
 import type { GameState, StatKey, Stats } from '../../engine/types';
 
 const STAT_KEYS = Object.keys(STAT_ICONS) as StatKey[];
 
-/** 이번 작업이 걷어낸 이모지 전부. 하나라도 되돌아오면 한 화면에 두 언어가 선다. */
+/**
+ * 이번 작업이 걷어낸 이모지 전부. 하나라도 되돌아오면 한 화면에 두 언어가 선다.
+ *
+ * **풀에 바닥이 필요하다.** 아래 단언들은 전부 `toEqual([])` 부정형이라, 이 배열이 줄어들면
+ * 같이 헐거워진다 — 실측: 18 → 1로 줄이고 슬롯 칸에 `☀️`를 주입하니 2582개가 전부 초록이었다.
+ * 개수를 못 박고, 자기검사도 한 글자가 아니라 **전수**로 돈다(#437: 코퍼스가 0이면
+ * 게이트는 자기가 지워져도 초록이다 — 코퍼스가 줄어도 같은 일이 비례해서 일어난다).
+ */
 const RETIRED_EMOJI = ['🏫', '📚', '❓', '🌙', '🕊️', '🌟', '☀️', '💤', '💪', '👥', '🎨', '😴', '💝', '💼', '⭐', '💡', '🍀', '⚡'] as const;
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────────
@@ -61,9 +70,20 @@ function svgOf(ui: React.ReactElement): SVGSVGElement {
   return svg as unknown as SVGSVGElement;
 }
 
-/** 그린 획의 총 길이 대신 **모양 개수**를 센다 — 빈 `<svg/>`와 진짜 그림을 가른다. */
+/**
+ * **실제로 그려지는** 모양의 개수. 빈 `<svg/>`와 진짜 그림을 가른다.
+ *
+ * 예전엔 요소만 셌다 — 그래서 `<path d="…"/>`를 `<path />`로 바꿔 아이콘이 통째로
+ * 안 보이게 해도 1을 돌려줬다(3자 검수 실측). 그리는 지시가 있는지까지 본다.
+ */
 function shapeCount(svg: Element): number {
-  return svg.querySelectorAll('path, circle, rect, line, polyline, polygon').length;
+  return [...svg.querySelectorAll('path, circle, rect, line, polyline, polygon')]
+    .filter(el => {
+      if (el.tagName.toLowerCase() === 'path') return (el.getAttribute('d') ?? '').trim().length > 3;
+      if (el.tagName.toLowerCase() === 'circle') return Number(el.getAttribute('r')) > 0;
+      if (el.tagName.toLowerCase() === 'rect') return Number(el.getAttribute('width')) > 0;
+      return true;
+    }).length;
 }
 
 function iconIds(root: ParentNode, prefix: string): string[] {
@@ -141,6 +161,19 @@ describe('선화 계약 — 24 viewBox · stroke 1.5 · currentColor', () => {
     expect(svg.getAttribute('aria-hidden'), '라벨을 달면 "학업 학업"이 된다').toBe('true');
     expect(svg.getAttribute('aria-label'), '이름은 옆 글자가 전담한다').toBeNull();
     expect(shapeCount(svg), '빈 svg는 타입이 못 본다').toBeGreaterThanOrEqual(1);
+    // **길이 0짜리 점이 이 속성에 전적으로 의존한다.** butt cap이 되면 `Question`의
+    // 물음표 아래 점 1개와 `Palette`의 물감 구멍 4개(`h.01`)가 통째로 렌더되지 않는다 —
+    // 물음표는 점 없는 갈고리가 되고 팔레트는 민무늬가 된다. shapeCount는 **모양 개수**를
+    // 세므로 여전히 3/2를 돌려준다(실측 MISSED).
+    expect(svg.getAttribute('stroke-linecap'), 'butt cap이 되면 h.01 점 5개가 증발한다').toBe('round');
+    expect(svg.getAttribute('stroke-linejoin')).toBe('round');
+    // 자식이 자기 색을 선언하면 팔레트를 안 탄다 — 루트 속성만 보면 원리상 안 보인다.
+    for (const child of svg.querySelectorAll('path, circle, rect, line, polyline, polygon')) {
+      for (const attr of ['fill', 'stroke', 'stroke-width']) {
+        expect(child.getAttribute(attr), `${id}의 자식이 ${attr}를 따로 선언했다 — 선화가 깨진다`)
+          .toBeNull();
+      }
+    }
     cleanup();
   });
 
@@ -186,6 +219,91 @@ describe('집합 — 키마다 서로 다른 그림이 있다', () => {
     ['weekendFilled', 'weekend'],
   ];
 
+  /**
+   * **어느 키에 어느 그림이 들어갔는지**를 잠근다. 3자 검수가 찾은 가장 큰 구멍이었다.
+   *
+   * 기존 단언은 셋 다 **순열을 보존한다**: `data-icon` 목록 비교는 키의 존재·개수·순서만,
+   * 유일성 단언은 중복만, `shapeCount`는 "비지 않았나"만 본다. 그래서 학업에 번개·체력에
+   * 책·학교 슬롯에 화살표를 넣는 **전면 순열**이 2582개 전부 초록으로 지나갔다(실측).
+   * 이 PR이 막겠다고 한 형태(#381·#397·#431 "맞는 것이 맞는 자리에")의 재판이다.
+   *
+   * 값은 각 그림에만 있는 path 조각이다. 표가 낡거나 모호해지면 아래 자기검사가 먼저 잡는다.
+   */
+  const GLYPH_SIGNATURE: Record<string, string> = {
+    'stat:academic': 'M12 6.5v13',              // 펼친 책 — 책등
+    'stat:social': 'M12 3.5l2.6 5.3',           // 5각 별
+    'stat:talent': 'M9.5 18h5',                 // 전구 — 소켓 줄
+    'stat:mental': 'M12 20.5V10',               // 새싹 — 줄기
+    'stat:health': 'M13 2.5 4.5 13.5h6',        // 번개
+    'slot:school': 'M3.5 20.5h17',              // 학교 — 지면선
+    'slot:plan': 'm8.2 12.2 2.6 2.6 5-5.4',     // 원 안 체크
+    'slot:empty': 'M9.4 9.4a2.7 2.7 0',         // 원 안 물음표
+    'slot:evening': 'M20 14.5A8.5 8.5 0',       // 초승달
+    'slot:free': 'M4 9h12v6.5',                 // 머그 — 몸통
+    'slot:weekend': 'M12 2.6v2.2',              // 해 — 광선
+    'slot:weekendFilled': 'M10.5 4.5c0 4 3.2 7.2', // 4각 반짝임
+    'slot:continued': 'M8 3.5v11a4 4 0',        // 이어짐 꺾쇠
+    'cat:study': 'M12 6.5v13',                  // ← stat:academic과 **같은 책**(의도)
+    'cat:exercise': 'M3 9.5v5M6 7.5v9',         // 덤벨
+    'cat:social': 'M3.5 19.5a5.5 5.5 0',        // 두 사람
+    'cat:talent': 'M12 3.5a8.5 8.5 0',          // 팔레트
+    'cat:rest': 'M2.5 20V9.5',                  // 침대 — 머리판
+    'cat:parent': 'M12 20.3 4.6 13a4.7',        // 하트
+    'cat:work': 'M8.5 7.5V6a2 2 0',             // 서류가방 손잡이
+  };
+
+  /**
+   * 같은 그림을 일부러 공유하는 짝. **공부=책은 학업=책과 같은 뜻이라 맞춘 것**이고
+   * (`icons.tsx` 주석), 두 집합이 한 화면에 동시에 서지 않는다(팝업이 덮고 뜬다).
+   * 이 목록에 없는 두 키가 같은 그림이면 실수다.
+   */
+  const SHARED_GLYPH_GROUPS = [['stat:academic', 'cat:study']];
+
+  function allDrawings(): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const k of STAT_KEYS) out[`stat:${k}`] = drawing(<StatIcon stat={k} />);
+    for (const k of SLOT_ICON_KINDS) out[`slot:${k}`] = drawing(<SlotIcon kind={k} />);
+    for (const c of ACTIVITY_CATEGORIES) out[`cat:${c}`] = drawing(<CategoryIcon category={c} />);
+    return out;
+  }
+
+  it('지문 표가 스무 칸을 빠짐없이 덮는다', () => {
+    // 표가 비면 아래 두 단언이 한 번도 안 돌고 순열 축이 통째로 사라진다(#437).
+    expect(Object.keys(GLYPH_SIGNATURE).sort()).toEqual(Object.keys(allDrawings()).sort());
+    expect(Object.keys(GLYPH_SIGNATURE)).toHaveLength(20);
+  });
+
+  it('키마다 약속된 그림이 들어 있다 (순열 잠금)', () => {
+    const drawn = allDrawings();
+    const wrong = Object.entries(GLYPH_SIGNATURE)
+      .filter(([key, sig]) => !drawn[key].includes(sig))
+      .map(([key, sig]) => `${key} 자리에 '${sig}'가 없다`);
+    expect(wrong, '키와 그림이 어긋났다 — 순열은 목록 비교·유일성 단언을 전부 통과한다').toEqual([]);
+  });
+
+  // 표가 살아 있다는 증거. 지문이 여러 키에 걸리면 위 단언은 어긋난 그림도 통과시킨다.
+  it('지문은 약속된 키(와 공유 짝)에만 있다 (표 자기검사)', () => {
+    const drawn = allDrawings();
+    const groupOf = (k: string) => SHARED_GLYPH_GROUPS.find(g => g.includes(k)) ?? [k];
+    const leaks: string[] = [];
+    for (const [key, sig] of Object.entries(GLYPH_SIGNATURE)) {
+      for (const other of Object.keys(drawn)) {
+        if (groupOf(key).includes(other)) continue;
+        if (drawn[other].includes(sig)) leaks.push(`${key}의 지문 '${sig}'가 ${other}에도 있다`);
+      }
+    }
+    expect(leaks, '지문이 모호하면 표가 잠그는 척만 한다').toEqual([]);
+  });
+
+  // 공유는 **목록에 적힌 것만**. 새로 생긴 중복은 실수다(같은 그림이 두 뜻을 말하게 된다).
+  it('의도하지 않은 그림 공유가 없다', () => {
+    const drawn = allDrawings();
+    const byDrawing = new Map<string, string[]>();
+    for (const [k, d] of Object.entries(drawn)) byDrawing.set(d, [...(byDrawing.get(d) ?? []), k]);
+    const dups = [...byDrawing.values()].filter(ks => ks.length > 1).map(ks => ks.sort().join(' = '));
+    expect(dups.sort()).toEqual(SHARED_GLYPH_GROUPS.map(g => [...g].sort().join(' = ')).sort());
+  });
+
   it('능력치 5축이 서로 다른 그림이다', () => {
     const drawn = STAT_KEYS.map(k => drawing(<StatIcon stat={k} />));
     expect(new Set(drawn).size, '두 축이 같은 그림이면 행을 구별할 수 없다').toBe(STAT_KEYS.length);
@@ -229,9 +347,47 @@ describe('집합 — 키마다 서로 다른 그림이 있다', () => {
 
   // 글자 채널은 **남아 있어야 한다.** 문자열로 이어 붙이는 자리(GameScreen 효과 줄 ·
   // MiniTalkModal · 주간 결산 '잃은 것' 칩)가 JSX를 못 받기 때문이다.
-  it('글자 채널이 살아 있고 실제 호출부가 있다', () => {
+  it('글자 채널의 표가 온전하다', () => {
     expect(Object.keys(STAT_ICONS)).toHaveLength(5);
     for (const k of STAT_KEYS) expect(STAT_ICONS[k]).toMatch(/\p{Extended_Pictographic}/u);
+  });
+
+  /**
+   * **호출부가 실제로 남아 있는지 본다.** 예전 이 단언은 이름만 "실제 호출부가 있다"이고
+   * 본문은 표의 존재만 봤다 — `GameScreen`의 템플릿 조립을 지워도 통과했다(실측 MISSED).
+   *
+   * 글자 채널의 존재 이유가 "JSX를 못 받는 호출부가 있다"는 것이므로, 그 호출부가 0이 되면
+   * 이 표는 죽은 코드다. 숫자를 세서 **사라지는 순간 빨강**이 되게 한다.
+   */
+  it('글자 채널을 쓰는 호출부가 남아 있다', () => {
+    const SRC = resolve(process.cwd(), 'src');
+    const files = (dir: string, acc: string[] = []): string[] => {
+      for (const name of readdirSync(dir)) {
+        const f = join(dir, name);
+        if (statSync(f).isDirectory()) { if (name !== '__tests__') files(f, acc); }
+        else if (/\.tsx?$/.test(name)) acc.push(f);
+      }
+      return acc;
+    };
+    const consumers = files(SRC)
+      .filter(f => !f.endsWith('shared.ts'))
+      .filter(f => /\bSTAT_ICONS\s*\[/.test(readFileSync(f, 'utf8')))
+      .map(f => f.replace(SRC, 'src'));
+    // 탐지기 자기검사 — 정규식이 죽으면 목록이 비고, 그러면 아래 단언이 전부 빨강이 된다.
+    expect(/\bSTAT_ICONS\s*\[/.test("`${STAT_ICONS[k]} …`"), '탐지기가 템플릿 호출을 못 본다').toBe(true);
+    expect(/\bSTAT_ICONS\s*\[/.test('import { STAT_ICONS } from "x"'), '단순 import는 호출부가 아니다').toBe(false);
+    /**
+     * **개수가 아니라 이름으로 잠근다.** 처음엔 `>= 3`이었는데 실사용이 4곳이라
+     * 하나를 지워도 통과했다(실측 MISSED). 글자 채널이 존재하는 **근거 자체**가
+     * 이 자리들이라, 여기서 사라지면 근거가 사라진 것이다 — 그때는 표를 지우든
+     * 주석의 근거를 고치든 해야지, 조용히 통과해서는 안 된다.
+     * (`EndingScreen`도 소비자지만 JSX 자리라 언젠가 그림 채널로 갈 수 있어 뺐다.)
+     */
+    for (const site of ['GameScreen.tsx', 'MiniTalkModal.tsx', 'WeeklyResultScreen.tsx']) {
+      expect(consumers.some(f => f.endsWith(site)),
+        `${site}가 글자 채널을 안 쓴다 — 그러면 shared.ts가 적어둔 근거가 더 이상 사실이 아니다`)
+        .toBe(true);
+    }
   });
 });
 
@@ -302,6 +458,18 @@ describe('일과 슬롯 — 시간대 × 채움 여부', () => {
     expect(ids).toEqual(['slot:weekend', 'slot:weekend']);
     expect(ids, '방학에 학교 아이콘이 뜨면 안 된다').not.toContain('slot:school');
   });
+
+  // **방학도 찬 상태를 봐야 한다.** 빈 상태만 보면 방학 경로의 채움 분기가 통째로
+  // 잠기지 않는다 — 실측: `selectedActivities[i] ? 'weekendFilled' : 'weekend'`를
+  // `'weekend'`로 고정해도 2582개 전부 초록이었다. 방학은 플레이의 23%다.
+  it('방학 슬롯도 채우면 채움 그림으로 바뀐다', () => {
+    const one = ACTIVITIES.find(a => a.slots === 1);
+    expect(one, '전제: 1칸 활동이 있다').toBeTruthy();
+    const { container } = renderPlanner(
+      plannerState({ isVacation: true, week: 21 }), [one!.id, one!.id],
+    );
+    expect(iconIds(container, 'slot')).toEqual(['slot:weekendFilled', 'slot:weekendFilled']);
+  });
 });
 
 // ── 4. 제품 배선 — 진짜 스토어 경로 ───────────────────────────────────────────
@@ -319,8 +487,26 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
 
   it('슬롯 아이콘이 주간 화면에 실제로 그려진다', () => {
     const root = mount();
-    expect(iconIds(root, 'slot').length, '플래너가 화면에 없거나 아이콘이 안 붙었다')
-      .toBeGreaterThanOrEqual(6);
+    const ids = iconIds(root, 'slot');
+    expect(ids.length, '플래너가 화면에 없거나 아이콘이 안 붙었다').toBeGreaterThanOrEqual(6);
+    // 이 상태(학기·루틴 없음·주말 비움)의 정확한 목록. 개수만 보면 **엉뚱한 kind가 6개**여도 통과한다.
+    expect(ids.slice(0, 6)).toEqual([
+      'slot:school', 'slot:school', 'slot:empty', 'slot:free', 'slot:weekend', 'slot:weekend',
+    ]);
+  });
+
+  // 계약 테스트는 **기본값**(16/18/20)만 본다 — 화면에 나가는 건 호출부가 넘기는 값이다.
+  // 실측: 슬롯 호출부를 `size={4}`로 바꿔도 2582개 전부 초록이었다.
+  it('화면에 나가는 아이콘 크기가 읽히는 범위에 있다', () => {
+    const root = mount();
+    const icons = [...root.querySelectorAll<SVGElement>('[data-icon]')];
+    expect(icons.length, '전제: 주간 화면에 아이콘이 있다').toBeGreaterThanOrEqual(6);
+    for (const el of icons) {
+      const w = Number(el.getAttribute('width'));
+      const id = el.getAttribute('data-icon');
+      expect(w, `${id}가 너무 작다 — 1.5px 획이 뭉친다`).toBeGreaterThanOrEqual(12);
+      expect(w, `${id}가 너무 크다 — 글자 줄을 밀어낸다`).toBeLessThanOrEqual(24);
+    }
   });
 
   it('능력치 패널을 펼치면 선화 5개가 뜨고 이모지는 없다', () => {
@@ -339,6 +525,13 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     const cats = iconIds(document.body, 'cat');
     expect(cats.length, '활동 선택이 안 열렸거나 카테고리 아이콘이 안 붙었다')
       .toBeGreaterThanOrEqual(3);
+    // **행마다 자기 아이콘이라야 한다.** 개수만 보면 7줄이 전부 같은 책 그림이어도 통과한다
+    // (실측: `category={cat}` → `category="study"` 고정에 2582개 전부 초록).
+    expect(new Set(cats).size, '카테고리 행들이 같은 아이콘을 쓰고 있다').toBe(cats.length);
+    const known = ACTIVITY_CATEGORIES.map(c => `cat:${c}`);
+    expect(cats.every(c => known.includes(c)), `모르는 카테고리 아이콘: ${cats}`).toBe(true);
+    // 화면에 뜬 순서가 SSOT 배열의 순서를 따른다(해금이 덜 된 해라 부분집합이다).
+    expect(cats).toEqual(known.filter(k => cats.includes(k)));
     // 팝업 안에 **걷어낸 이모지가 하나도** 남아 있으면 안 된다 — 제목 포함.
     // 📚/🌙/☀️는 슬롯 아이콘의 이모지판이라, 제목에 남으면 바로 아래 선화 목록과
     // 같은 그림이 두 언어로 나란히 선다(실제로 그랬다).
@@ -347,7 +540,14 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     expect(title!.textContent, '제목이 사라지면 안 된다').toMatch(/활동$/);
     const dialog = title!.closest('[role="dialog"]');
     expect(dialog, '전제: 팝업이 dialog 역할을 갖는다 — 못 찾으면 범위가 통째로 어긋난다').toBeTruthy();
-    expect(emojiInText(dialog!)).toEqual([]);
+    // **범위는 팝업이 소유한 크롬까지.** 활동 카드의 힌트 칩 문구는 엔진 데이터(`activityHints`)라
+    // 이번 범위 밖인데(예: '🌙 지금 필요함'), 다이얼로그 전체를 훑으면 어떤 활동이 목록에 뜨느냐에
+    // 따라 이 단언이 켜졌다 꺼졌다 한다. 지금 통과하는 건 루틴 팝업이 rest를 걸러내기 때문뿐이라,
+    // 주말 팝업 케이스를 하나 더하는 순간 깨지는 **잠재 flake**였다(3자 검수).
+    expect(emojiInText(title!), '제목에 이모지가 돌아왔다').toEqual([]);
+    for (const head of dialog!.querySelectorAll('button[aria-expanded]')) {
+      expect(emojiInText(head), '카테고리 헤더에 이모지가 돌아왔다').toEqual([]);
+    }
   });
 
   // 자유시간 옵션은 **저녁 슬롯에서만** 뜬다 — 방과후만 열어 보면 원리상 안 보인다.
@@ -361,9 +561,30 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     expect(free, '전제: 자유시간 옵션이 떴다').toBeTruthy();
     expect(free!.querySelector('[data-icon="slot:free"]'),
       '슬롯은 선화인데 이 버튼만 이모지면 같은 상태가 두 얼굴을 갖는다').toBeTruthy();
-    const dialog = document.querySelector('#slot-edit-title')!.closest('[role="dialog"]');
-    expect(dialog).toBeTruthy();
-    expect(emojiInText(dialog!)).toEqual([]);
+    // 자유시간 버튼 자신만 본다 — 이유는 위 단언의 주석과 같다(활동 힌트 칩은 범위 밖).
+    expect(emojiInText(free!), '자유시간 버튼에 이모지가 돌아왔다').toEqual([]);
+  });
+
+  /**
+   * **주간 결산도 그림 채널이다.** `icons.tsx` 주석이 그림 채널을 "StatsPanel · 주간 결산
+   * 스탯 표" 둘이라고 선언했는데, 정작 결산 쪽은 배선 테스트가 0건이었다 — 실측:
+   * `<StatIcon>`을 통째로 지워도 2582개 전부 초록. 이 화면을 바꾼 명분이 "한쪽만 선화로
+   * 바꾸면 매주 두 화면을 오가며 그림이 바뀐다"였으니, 그 한쪽이 잠겨 있어야 말이 된다.
+   */
+  it('주간 결산의 스탯 5행도 선화를 쓴다', () => {
+    let st = createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
+    st = { ...st, year: 3, week: 12, routineSlot2: 'self-study', routineSlot3: 'light-exercise' };
+    st = processWeek(st);
+    // 이벤트가 걸리면 결산이 아니라 이벤트 화면이 뜬다 — 결산만 보고 싶으므로 비운다.
+    useGameStore.setState({ state: { ...st, currentEvent: null, phase: 'result' } });
+    const { container } = render(<GameScreen />);
+    expect(container.textContent, '전제: 결산 화면이다').toMatch(/이번 주의 기록|주차/);
+    expect(iconIds(container, 'stat'), '결산 스탯 표의 선화가 없다')
+      .toEqual(STAT_KEYS.map(k => `stat:${k}`));
+    // 주간 화면과 **같은 막대**라야 한다. 아이콘만 맞추고 막대를 안 맞추면 반쪽이다.
+    const tracks = [...container.querySelectorAll<HTMLElement>('div')]
+      .filter(d => d.style.height === `${STAT_BAR_HEIGHT}px`);
+    expect(tracks.length, '결산 막대가 주간 화면과 다른 높이다').toBe(STAT_KEYS.length);
   });
 
   // HUD 초상과 주간 결산 초상이 같은 처리를 쓴다 — 한쪽만 액자면 매주 그림이 바뀐다.
@@ -396,18 +617,31 @@ describe('자기검사 — 헬퍼가 실제로 잡아낸다', () => {
     expect(iconIds(container, 'nope'), '없는 접두사는 빈 목록이라야 한다').toEqual([]);
   });
 
-  it('emojiInText는 글자로 남은 이모지만 잡는다 (양성·음성)', () => {
-    const { container: pos } = render(<div>📚 방과후</div>);
-    expect(emojiInText(pos)).toEqual(['📚']);
-    cleanup();
-    // 선화만 있는 화면은 깨끗해야 한다 — 여기서 걸리면 과검출이라 게이트가 죽는다.
-    const { container: neg } = render(<SlotIcon kind="plan" />);
-    expect(emojiInText(neg)).toEqual([]);
+  it('걷어낸 이모지 풀이 줄어들지 않았다', () => {
+    // 풀이 줄면 위 부정형 단언들이 비례해서 헐거워진다. 18은 세 집합의 옛 이모지 총수다.
+    expect(RETIRED_EMOJI.length, '풀을 줄이면 그만큼의 이모지가 무검사로 돌아온다').toBe(18);
+    expect(new Set(RETIRED_EMOJI).size, '중복이 있으면 실제 덮는 글자는 더 적다').toBe(18);
   });
 
-  it('shapeCount는 빈 svg와 그림을 가른다 (양성·음성)', () => {
-    const { container } = render(<svg data-icon="fake:empty" />);
-    expect(shapeCount(container.querySelector('svg')!)).toBe(0);
+  // **전수로 돈다.** 한 글자만 양성 대조를 받으면 나머지 17개는 탐지되는지 아무도 모른다.
+  it.each(RETIRED_EMOJI)('emojiInText가 %s 를 잡는다 (양성 전수)', (emoji) => {
+    const { container } = render(<div>{emoji} 무언가</div>);
+    expect(emojiInText(container)).toEqual([emoji]);
+  });
+
+  it('emojiInText는 선화를 이모지로 오인하지 않는다 (음성)', () => {
+    // 여기서 걸리면 과검출이라 게이트가 죽는다.
+    const { container } = render(<SlotIcon kind="plan" />);
+    expect(emojiInText(container)).toEqual([]);
+  });
+
+  it('shapeCount는 빈 svg·빈 path·반지름 0을 전부 0으로 센다 (양성·음성)', () => {
+    const { container: a } = render(<svg data-icon="fake:empty" />);
+    expect(shapeCount(a.querySelector('svg')!), '요소가 없다').toBe(0);
+    cleanup();
+    // **d 없는 path**가 요점이다 — 요소만 세면 아이콘이 안 보이는데 1이 나온다.
+    const { container: b } = render(<svg><path /><circle r="0" /><rect width="0" /></svg>);
+    expect(shapeCount(b.querySelector('svg')!), '그리는 지시가 없으면 0이라야 한다').toBe(0);
     cleanup();
     expect(shapeCount(svgOf(<StatIcon stat="academic" />))).toBeGreaterThanOrEqual(1);
   });

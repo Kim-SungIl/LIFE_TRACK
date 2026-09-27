@@ -217,11 +217,13 @@ const CATEGORY_GLYPHS: Record<ActivityCategory, ReactNode> = {
 };
 
 // ── 컴포넌트 ──────────────────────────────────────────────────────────────────
-// 값 export를 두지 않는다 — `react-refresh/only-export-components`가 막는다.
+// **키 목록을 여기서 export하지 않는다** — `react-refresh/only-export-components`가
+// 컴포넌트 파일의 배열·객체 export를 막는다(실측: `export const X = ["a","b"] as const`는
+// 에러, 스칼라는 `allowConstantExport`로 통과 — 그래서 위 `ICON_STROKE`는 된다).
 // 키 목록이 필요하면 `iconKeys.ts`를 읽을 것.
 
 /** 능력치 축 아이콘. StatsPanel·주간 결산의 5행이 쓴다. */
-export function StatIcon({ stat, size = 16 }: { stat: StatKey; size?: number }) {
+export function StatIcon({ stat, size = 14 }: { stat: StatKey; size?: number }) {
   return <Glyph size={size} id={`stat:${stat}`}>{STAT_GLYPHS[stat]}</Glyph>;
 }
 

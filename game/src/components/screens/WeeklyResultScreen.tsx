@@ -7,6 +7,7 @@ import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { GLASS_BASE, tintedGlass } from './surface';
 import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
 import { StatIcon } from '../icons/icons';
+import { STAT_BAR_HEIGHT } from './main/StatsPanel';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -117,7 +118,9 @@ export function WeeklyResultScreen({
 
         {/* 주인공 + 독백 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          {/* framed — 이 초상만 카드 밖에 맨몸으로 배경 사진 위에 선다(옆 말풍선은 자기 바닥이 있다). */}
+          {/* framed — 주간 화면 HUD의 같은 초상과 **짝**이다. 예전엔 "카드 밖 맨몸일 때만"이
+              근거였는데(그때는 여기만 켜져 있었다), 지금은 "초상을 사진으로 읽히게 한다"로
+              뜻이 넓어졌다. 자세한 전제는 `Portrait.tsx`의 framed 주석에. */}
           <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} framed />
           <div style={{
             flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
@@ -210,8 +213,10 @@ export function WeeklyResultScreen({
                     5행이라, 한쪽만 선화로 바꾸면 매주 두 화면을 오가며 그림이 바뀐다. */}
                 <span style={{ width: 20, display: 'inline-flex', justifyContent: 'center', color: 'var(--text-secondary)' }}><StatIcon stat={key} size={14} /></span>
                 <span style={{ width: 32, fontSize: '0.78rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
-                <div style={{ flex: 1, height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 6, margin: '0 6px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: 6, transition: 'width 0.5s' }} />
+                {/* 주간 화면과 **같은 상수**를 쓴다. 아이콘만 맞추고 막대를 12로 두면
+                    한 번의 클릭 거리에서 같은 5행이 여전히 다르게 보인다(3자 검수). */}
+                <div style={{ flex: 1, height: STAT_BAR_HEIGHT, background: 'rgba(255,255,255,0.08)', borderRadius: STAT_BAR_HEIGHT / 2, margin: '0 6px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: STAT_BAR_HEIGHT / 2, transition: 'width 0.5s' }} />
                 </div>
                 <span style={{ width: 20, fontSize: '0.72rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
                 <span style={{ width: 28, fontSize: '0.68rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(stats[key])}</span>

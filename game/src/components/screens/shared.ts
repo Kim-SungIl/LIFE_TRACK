@@ -16,7 +16,7 @@ import { getExamSchedule } from '../../engine/examSystem';
  *   · 글자 채널 = 문장·칩에 아이콘이 **글자로 섞이는** 자리 — 위 세 곳 + 엔딩 회고 표.
  * 축(StatKey)이 늘면 `Record<StatKey, …>`가 양쪽 모두에서 빠진 항목을 잡는다.
  * 같은 축을 두 채널이 서로 다른 그림으로 말하게 되는 건 타입이 못 막으므로,
- * `statIcons.test.tsx`가 두 채널의 키가 정확히 같은 집합인지 본다.
+ * `lineArtIcons.test.tsx`가 두 채널의 키가 정확히 같은 집합인지 본다.
  */
 export const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
