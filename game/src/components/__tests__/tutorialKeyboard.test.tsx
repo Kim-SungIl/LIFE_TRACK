@@ -182,7 +182,8 @@ describe('튜토리얼 위에 Dialog가 열렸을 때 — 스택을 공유하는
   // 위 케이스는 가드가 아니라 **배선 셋** 위에서만 가드를 본다 — Tutorial이 capture로 먼저 등록되고
   // Dialog가 Escape에서 stopPropagation을 하기 때문에, 가드를 지우면서 리스너를 bubble로 옮기면
   // 10/10 초록이었다(#483 3자 검수 B4). 키 리스너가 아예 없는 레이어를 위에 올리면 stopPropagation도
-  // 등록 순서도 끼어들 수 없어, 남는 건 `isTopLayer` 가드뿐이다.
+  // 등록 순서도 끼어들 수 없어, 남는 건 `isTopLayer` 가드뿐이다. 그 배선 셋 자체(캡처 위상·Escape
+  // stopPropagation)는 오버레이 **아래 화면**이 있어야 보이므로 overlayKeyIsolation.test.tsx가 잠근다.
   it('tutorial_guard_alone: 키 리스너가 없는 레이어가 최상위면 Escape가 튜토리얼을 안 닫는다', () => {
     const { onComplete } = renderTutorial();
     const dummy = document.createElement('div');

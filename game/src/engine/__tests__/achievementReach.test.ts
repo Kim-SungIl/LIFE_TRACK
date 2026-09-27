@@ -23,7 +23,20 @@ import { createInitialState, processWeek } from '../gameEngine';
 import { resolveEventLikeStore } from '../../../scripts/lib/y1-sim-resolve';
 import type { EventChoice, GameState, ParentStrength } from '../types';
 
-const PARENTS: [ParentStrength, ParentStrength] = ['freedom', 'freedom'];
+// 부모는 **제품이 만들 수 있는 조합**이어야 한다 — 같은 강점 두 번은 TitleScreen의 toggle이 못 만들고
+// lastSetup도 거부한다(T47이 sim에서 위반 페르소나로 분리한 조건, qa-persona.ts validatePersona).
+// 예전 ['freedom','freedom']은 그래서 제품에 없는 판이었다.
+//
+// wealth+freedom을 고른 근거(T52): 유효한 순서쌍 30개를 전부 세 플랜×두 시드로 완주시킨 결과, 이 쌍
+// (순서 무관 2개)만 여섯 착지값이 소수점 4자리까지 옛 픽스처와 같다. 이유는 둘로 쪼개진다 —
+//   ① `getParentMods`는 `has()` 불리언이라 **옛 ['freedom','freedom']은 freedom 하나와 동작이 같았다**.
+//      그래서 이번 교체의 실제 델타는 **wealth의 용돈 +2/주뿐**이고, 이 세 플랜은 돈을 쓰지 않는다.
+//   ② freedom의 `vacationSlotBonus`(+1)는 원리상 방학 슬롯을 늘려 성장에 닿을 수 있지만, 이 하네스는
+//      `vacationChoices`에 **고정 길이 배열**을 넣고 엔진은 슬롯 상한을 보지 않는다(weekendPlan.ts).
+// 그래서 이 파일이 재는 건 부모 보정이 아니라 **활동 엔진의 사다리 그대로**다. 나머지 22쌍은
+// 사다리(C·A·S)는 지키되 착지값이 움직이고, emotional+{wealth,resilience,freedom} 6쌍은 무료 성실이
+// 85.2로 S에 올라 사다리 자체가 깨진다(emotional의 초기 멘탈 +10·피로 회복 +2가 시간을 벌어 준다).
+const PARENTS: [ParentStrength, ParentStrength] = ['wealth', 'freedom'];
 
 // 성취에 적대적인 선택 정책 — bestAxis = max(학업, 특기, 생활)을 낮추는 쪽.
 // **'effects 합 최소'로는 안 된다**: 그 정책은 멘탈·사회성에 큰 음수가 붙은 *학업 양수*
