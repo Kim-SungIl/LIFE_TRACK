@@ -4,6 +4,7 @@ import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '.
 import { getActivityReaction } from '../../../engine/dialogues';
 import { assignSlot } from '../../../engine/weekendPlan';
 import { ActivityPicker } from '../../ActivityPicker';
+import { SlotIcon } from '../../icons/icons';
 import { Dialog } from '../../Dialog';
 
 type Props = {
@@ -45,9 +46,13 @@ export function SlotEditPopup({
         }}>
           <div>
             <div id="slot-edit-title" style={{ fontSize: '1.1rem', fontWeight: 700 }}>
-              {editingSlot === 'routine1' ? '📚 방과후 활동' :
-               editingSlot === 'routine2' ? '🌙 저녁 활동' :
-               '☀️ 주말 활동'}
+              {/* 이모지를 뗐다. 📚/🌙/☀️ 셋은 **방금 선화로 바꾼 슬롯 아이콘의 이모지판**이라,
+                  바로 아래 선화 목록(공부=책)과 같은 그림이 두 언어로 나란히 섰다.
+                  일회성 라벨 이모지(📊 능력치 · 💬 가정)는 그대로 두지만 이 셋은 예외다 —
+                  제목을 아이콘으로 바꾸지 않고 **지운다**: 채움 표시(✓)는 제목의 뜻이 아니다. */}
+              {editingSlot === 'routine1' ? '방과후 활동' :
+               editingSlot === 'routine2' ? '저녁 활동' :
+               '주말 활동'}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
               {editingSlot.startsWith('routine') ? '매주 반복되는 루틴을 골라주세요' : '이번 주말에 할 활동을 골라주세요'}
@@ -71,7 +76,12 @@ export function SlotEditPopup({
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.06)',
             }}>
-              <span style={{ fontSize: '1.1rem' }}>🕊️</span>
+              {/* 저녁 슬롯의 `free` 아이콘과 **같은 그림**이라야 한다 — 이 버튼을 누르면
+                  그 슬롯이 정확히 이 상태가 된다. 🕊️였는데, 슬롯은 선화로 바꾸고 여기만
+                  이모지로 두면 같은 상태가 두 얼굴을 갖는다. */}
+              <span style={{ color: 'var(--text-secondary)', display: 'inline-flex' }}>
+                <SlotIcon kind="free" size={20} />
+              </span>
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>자유시간</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>쉬면서 멘탈 회복 + 피로 감소</div>

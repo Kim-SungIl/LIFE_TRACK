@@ -1,6 +1,23 @@
 import { StatKey, GameEvent, GameState, EXAM_TYPE_LABELS } from '../../engine/types';
 import { getExamSchedule } from '../../engine/examSystem';
 
+/**
+ * 능력치 아이콘의 **글자 채널**. 그림 채널(`icons/icons.tsx`의 `StatIcon`)과 일부러 갈라져 있다.
+ *
+ * 왜 하나로 못 합치나 — 아래 두 자리는 아이콘을 **문자열로 이어 붙인다**:
+ *   · `GameScreen.tsx`   `${STAT_ICONS[k]} ${STAT_LABELS[k]} ${fmt(val)}`
+ *   · `MiniTalkModal.tsx` 같은 모양
+ * 둘 다 `{ text, color }` 페이로드를 만들어 리스트로 넘기는 자리라 JSX가 들어갈 수 없다.
+ * `WeeklyResultScreen`의 '잃은 것' 칩도 같은 경우인데(거기선 `'🥱'` 같은 리터럴과 한 배열에
+ * 섞인다), 그래서 이 표를 남긴다.
+ *
+ * **두 채널의 경계**(바꾸려면 둘 다 보라):
+ *   · 그림 채널 = 능력치 5행이 **표로 반복되는** 자리 — StatsPanel · 주간 결산 스탯 표.
+ *   · 글자 채널 = 문장·칩에 아이콘이 **글자로 섞이는** 자리 — 위 세 곳 + 엔딩 회고 표.
+ * 축(StatKey)이 늘면 `Record<StatKey, …>`가 양쪽 모두에서 빠진 항목을 잡는다.
+ * 같은 축을 두 채널이 서로 다른 그림으로 말하게 되는 건 타입이 못 막으므로,
+ * `lineArtIcons.test.tsx`가 두 채널의 키가 정확히 같은 집합인지 본다.
+ */
 export const STAT_ICONS: Record<StatKey, string> = {
   academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
 };

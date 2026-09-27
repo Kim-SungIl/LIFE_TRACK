@@ -165,7 +165,7 @@ describe('SlotEditPopup 헤더·닫기', () => {
         setLastReaction={vi.fn()}
       />,
     );
-    expect(screen.getByText('📚 방과후 활동')).toBeInTheDocument();
+    expect(screen.getByText('방과후 활동')).toBeInTheDocument();
     expect(screen.getByText('매주 반복되는 루틴을 골라주세요')).toBeInTheDocument();
     unmount();
 
@@ -186,12 +186,12 @@ describe('SlotEditPopup 헤더·닫기', () => {
         setLastReaction={vi.fn()}
       />,
     );
-    expect(screen.getByText('🌙 저녁 활동')).toBeInTheDocument();
+    expect(screen.getByText('저녁 활동')).toBeInTheDocument();
     expect(screen.getByText('매주 반복되는 루틴을 골라주세요')).toBeInTheDocument();
     u2();
 
     renderPopup({ editingSlot: 'weekend1' });
-    expect(screen.getByText('☀️ 주말 활동')).toBeInTheDocument();
+    expect(screen.getByText('주말 활동')).toBeInTheDocument();
     expect(screen.getByText('이번 주말에 할 활동을 골라주세요')).toBeInTheDocument();
   });
 

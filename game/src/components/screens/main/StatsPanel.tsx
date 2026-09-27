@@ -1,7 +1,16 @@
 import { memo, useState } from 'react';
 import { Stats, StatKey, STAT_LABELS, getGrade, STAT_FLAVOR_LABELS } from '../../../engine/types';
 import { getStatDescription } from '../../../engine/statDescriptions';
-import { STAT_ICONS } from '../shared';
+import { StatIcon } from '../../icons/icons';
+
+/**
+ * 능력치 막대의 높이. **10이었다** — 아이콘을 선화로 바꾸고 나니 1.5px 획 옆에서
+ * 10px 막대가 실보다 얇은 선처럼 보였다. 14는 캡슐(radius = 높이/2)로 읽히는 하한이다.
+ *
+ * 값을 상수로 뺀 이유: 한쪽 방향만 잠그면 반대쪽 회귀가 통과한다(#438에서 겪은 형태 —
+ * 비율 상한만 있는 게이트가 과축소를 '개선'으로 읽었다). 테스트가 이 값을 양방향으로 본다.
+ */
+export const STAT_BAR_HEIGHT = 14;
 
 type Props = { stats: Stats; year: number };
 
@@ -47,10 +56,12 @@ export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
             return (
               <div key={key}>
                 <button type="button" className="btn-reset" style={{ display: 'flex', alignItems: 'center', padding: '3px 0', cursor: 'pointer', width: '100%', textAlign: 'left' }} onClick={() => setExpandedStat(isExp ? null : key)} aria-expanded={isExp}>
-                  <span style={{ width: 20, fontSize: '0.75rem' }}>{STAT_ICONS[key]}</span>
+                  {/* 선화 아이콘 — 칸 폭(20)은 그대로 두고 그림만 바뀐다. 이모지는
+                      기기 폰트가 그리던 거라 크기가 제각각이었고, 이제 currentColor를 탄다. */}
+                  <span style={{ width: 20, display: 'inline-flex', justifyContent: 'center', color: 'var(--text-secondary)' }}><StatIcon stat={key} size={14} /></span>
                   <span style={{ width: 28, fontSize: '0.72rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
-                  <div style={{ flex: 1, height: 10, background: 'rgba(255,255,255,0.08)', borderRadius: 5, margin: '0 6px', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: 5, transition: 'width 0.3s' }} />
+                  <div style={{ flex: 1, height: STAT_BAR_HEIGHT, background: 'rgba(255,255,255,0.08)', borderRadius: STAT_BAR_HEIGHT / 2, margin: '0 6px', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: STAT_BAR_HEIGHT / 2, transition: 'width 0.3s' }} />
                   </div>
                   <span style={{ width: 16, fontSize: '0.68rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
                   <span style={{ minWidth: 56, fontSize: '0.6rem', color: grade.color, marginLeft: 4 }}>{STAT_FLAVOR_LABELS[key][grade.grade]}</span>

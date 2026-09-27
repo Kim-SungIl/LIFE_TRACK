@@ -8,8 +8,11 @@ import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../../eng
 import { activityHints } from '../../engine/activityHints';
 import { makeState } from '../../test/fixtures';
 import { STAT_LABELS, type Activity, type GameState, type StatKey } from '../../engine/types';
+import { ACTIVITY_CATEGORIES } from '../icons/iconKeys';
 
-const CAT_ORDER = ['study', 'exercise', 'social', 'talent', 'rest', 'parent', 'work'] as const;
+// 순서·멤버의 SSOT는 `icons/iconKeys.ts`다. 여기 같은 목록을 또 적어두면 제품이 바뀌어도
+// 테스트만 옛 목록을 붙들고 통과한다 — 이 리포가 #441에서 겪은 형태다.
+const CAT_ORDER = ACTIVITY_CATEGORIES;
 const CAT_LABEL: Record<(typeof CAT_ORDER)[number], string> = {
   study: '공부',
   exercise: '운동',

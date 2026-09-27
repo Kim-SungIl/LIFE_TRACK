@@ -11,7 +11,6 @@ import {
   type Stats,
   type StatKey,
 } from '../../engine/types';
-import { STAT_ICONS } from '../screens/shared';
 import { getStatDescription } from '../../engine/statDescriptions';
 
 // grade 임계값 손계산: >=80 A / >=60 B / >=40 C / >=20 D / >=0 E
@@ -23,6 +22,20 @@ const STATS_FIXTURE: Stats = {
   health: 10,   // E
 };
 const STAT_KEYS = Object.keys(STATS_FIXTURE) as StatKey[];
+
+/**
+ * 상세 행의 아이콘 목록 — `data-icon`으로 잡는다.
+ *
+ * **예전엔 `queryByText(STAT_ICONS[key])`였다.** 아이콘이 이모지 문자열일 때만 성립하는
+ * 단언이라, 선화로 바꾸는 순간 "접힘/펼침" 세 단언 중 **부정형 둘이 공허해진다** —
+ * 이모지는 어느 상태에서도 없으니 접힘 단언은 `StatsPanel`이 통째로 빈 화면을 그려도
+ * 통과한다. 목록을 그대로 비교해서(`toEqual`) 존재·개수·순서를 한 번에 잠근다.
+ */
+function statIcons(): string[] {
+  return [...document.querySelectorAll('[data-icon^="stat:"]')]
+    .map(e => e.getAttribute('data-icon')!);
+}
+const EXPANDED_ICONS = STAT_KEYS.map(k => `stat:${k}`);
 
 function renderPanel(stats: Stats = STATS_FIXTURE, year = 3) {
   return render(<StatsPanel stats={stats} year={year} />);
@@ -49,10 +62,7 @@ describe('StatsPanel 접힘 기본', () => {
 
   it('접힘 상태에서 상세 행(스탯 아이콘)은 렌더되지 않는다', () => {
     renderPanel();
-    // 상세 행에서만 나타나는 아이콘은 collapsed 시 존재하지 않음
-    for (const key of STAT_KEYS) {
-      expect(screen.queryByText(STAT_ICONS[key])).not.toBeInTheDocument();
-    }
+    expect(statIcons()).toEqual([]);
   });
 });
 
@@ -65,10 +75,11 @@ describe('StatsPanel 헤더 토글', () => {
     fireEvent.click(header);
     expect(header).toHaveAttribute('aria-expanded', 'true');
 
+    // 아이콘 — 5개가 stats 키 순서 그대로. 개수·순서까지 본다(한 축이 빠져도 잡힌다).
+    expect(statIcons()).toEqual(EXPANDED_ICONS);
+
     for (const key of STAT_KEYS) {
       const grade = getGrade(STATS_FIXTURE[key]);
-      // 아이콘
-      expect(screen.getByText(STAT_ICONS[key])).toBeInTheDocument();
       // 레이블
       expect(screen.getAllByText(STAT_LABELS[key]).length).toBeGreaterThanOrEqual(1);
       // 등급 문자
@@ -86,10 +97,8 @@ describe('StatsPanel 헤더 토글', () => {
     fireEvent.click(header);
     fireEvent.click(header);
     expect(header).toHaveAttribute('aria-expanded', 'false');
-    // 상세 행 사라짐
-    for (const key of STAT_KEYS) {
-      expect(screen.queryByText(STAT_ICONS[key])).not.toBeInTheDocument();
-    }
+    // 상세 행 사라짐. 위 토글 단언과 짝이라 "아이콘이 애초에 없었다"와 구별된다.
+    expect(statIcons()).toEqual([]);
   });
 });
 
