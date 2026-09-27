@@ -65,8 +65,14 @@ describe('튜토리얼 타이머 — 언마운트가 전부 거둔다', () => {
     // 자리에서 소진되고, 뒤따르는 언마운트 단언은 "원래 남을 게 없었다"는 이유로
     // 통과한다 — 정리 코드를 통째로 지워도 초록인 공허한 테스트가 된다(실제로 그랬다).
     const alive = renderTutorial();
+    // 32행의 100ms 재측정을 **먼저 소진한다**. 이걸 안 하고 0→400ms를 한 번에 감으면
+    // 100ms 타이머만으로 "늘어났다"가 충족돼, 400ms를 통째로 지워도 대조가 통과한다
+    // (초안에서 실제로 그랬다 — 지우는 뮤테이션이 3종 전부 초록이었다).
+    vi.advanceTimersByTime(150);
     const beforeTick = reads.all().length;
-    vi.advanceTimersByTime(400);
+    // 누적 450ms. 이 창(150→450)에서 재측정하는 건 400ms 타이머 하나뿐이다 —
+    // 후속 3개는 변형이 있어야 뜨고, 500ms 인터벌은 waitFor 스텝에만 있다.
+    vi.advanceTimersByTime(300);
     expect(reads.all().length, '살아 있는 동안 400ms 재측정이 돌아야 한다').toBeGreaterThan(beforeTick);
     alive.unmount();
 
