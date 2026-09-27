@@ -19,7 +19,7 @@
 // 이벤트 몫(store `foldOutcomeIntoWeekLog`)과 주 확정 전 효과(`foldPendingIntoLog`)는 **이미
 // 실제 델타**라 그 줄 뒤에 더해진다 — 순서가 뒤집히면 둘이 지워진다. 아래 마지막 두 describe가
 // 그 순서를 잠근다.
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useGameStore } from '../store';
@@ -337,15 +337,29 @@ describe('피로 로그는 누적하지 않는다 — 쓰기 형태가 계약이
     expect(writesIn('const n = log.fatigueChange ?? 0;')).toEqual([]);
   });
 
-  it.each([
-    ['gameEngine.ts', 'src/engine/gameEngine.ts'],
-    ['store.ts', 'src/engine/store.ts'],
-  ])('%s의 fatigueChange 쓰기는 전부 절대 대입이다', (_label, rel) => {
-    const src = readFileSync(resolve(process.cwd(), rel), 'utf8');
-    const writes = writesIn(src);
-    expect(writes.length, `${rel}에 fatigueChange 쓰기가 0건이면 이 검사는 아무것도 안 본다`)
+  // **검사 대상은 코퍼스에서 파생한다.** 파일 이름을 리터럴로 적어 두면(예전 판: gameEngine·store 둘)
+  // 새 모듈이 `log.fatigueChange +=`를 들고 들어와도 목록 밖이라 안 보인다 — 나열된 파일마다 쓰기가
+  // 있다는 것만 보장하고 "나열 밖에 쓰기가 없다"는 안 보는 구조였다(3자 검수 LOW). src/engine을 훑어
+  // **쓰기가 있는 파일 전부**를 대상으로 삼고, 그 집합이 줄어들면(=훑기가 늙으면) 하한에서 운다.
+  const ENGINE_DIR = resolve(process.cwd(), 'src/engine');
+  const engineSources = readdirSync(ENGINE_DIR, { recursive: true, encoding: 'utf8' })
+    .filter(rel => (rel.endsWith('.ts') || rel.endsWith('.tsx')) && !rel.includes('__tests__'))
+    .map(rel => ({ rel: `src/engine/${rel}`, src: readFileSync(resolve(ENGINE_DIR, rel), 'utf8') }));
+  const writerFiles = engineSources
+    .map(f => ({ ...f, writes: writesIn(f.src) }))
+    .filter(f => f.writes.length > 0);
+
+  it('훑기가 살아 있다 — 쓰기를 가진 파일이 둘 이상 잡힌다', () => {
+    // 0건이면 아래 each가 통째로 안 돌고, 1건이면 한 층만 보던 옛 판으로 되돌아간 것이다.
+    expect(engineSources.length, 'src/engine 훑기가 0파일 — 경로가 바뀌었다').toBeGreaterThan(20);
+    expect(writerFiles.map(f => f.rel).sort(), '쓰기를 가진 파일 집합')
+      .toEqual(['src/engine/gameEngine.ts', 'src/engine/store.ts']);
+  });
+
+  it.each(writerFiles.map(f => [f.rel, f] as const))('%s의 fatigueChange 쓰기는 전부 절대 대입이다', (rel, f) => {
+    expect(f.writes.length, `${rel}에 fatigueChange 쓰기가 0건이면 이 검사는 아무것도 안 본다`)
       .toBeGreaterThan(0);
-    expect(writes.filter(op => op !== '='),
+    expect(f.writes.filter(op => op !== '='),
       '누적(+=/-=)은 클램프를 못 보는 옛 방식이다 — 값은 같아 보여도 대입 위치가 바뀌는 순간 샌다')
       .toEqual([]);
   });
