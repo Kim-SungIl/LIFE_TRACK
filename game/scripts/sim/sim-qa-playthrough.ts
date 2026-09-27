@@ -30,7 +30,7 @@ import { pathToFileURL } from 'url';
 export type { Persona } from './lib/qa-persona';
 
 // 선택지 정책 — effects 를 보고 인덱스 선택. tie 면 첫 번째.
-function pickChoice(choices: EventChoice[], policy: ChoicePolicy): number {
+export function pickChoice(choices: EventChoice[], policy: ChoicePolicy): number {
   if (!choices || choices.length === 0) return 0;
   if (policy === 'first') return 0;
   if (policy === 'last') return choices.length - 1;
