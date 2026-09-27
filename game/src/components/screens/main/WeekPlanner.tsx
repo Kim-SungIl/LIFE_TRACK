@@ -5,6 +5,8 @@ import { getParentMods } from '../../../engine/parentModifiers';
 import { josa } from '../../../engine/korean';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { chipSurface } from '../surface';
+import { SlotIcon } from '../../icons/icons';
+import type { SlotIconKind } from '../../icons/iconKeys';
 
 type Props = {
   state: GameState;
@@ -69,7 +71,7 @@ export function WeekPlanner({
 
   // 슬롯 렌더 헬퍼 — routine 슬롯의 경우 그 슬롯의 카운터를 명시적으로 전달
   const renderSlot = (
-    emoji: string, timeLabel: string, activityName: string | null,
+    icon: SlotIconKind, timeLabel: string, activityName: string | null,
     onClick: (() => void) | null, isFixed = false, isRoutine = false,
     moneyCost?: number, withNpc?: string, slotComboWeeks: number = 0,
   ) => {
@@ -102,7 +104,11 @@ export function WeekPlanner({
         }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 32, flexShrink: 0 }}>
-          <span style={{ fontSize: '1rem' }}>{emoji}</span>
+          {/* 슬롯 아이콘 — 채움/빔이 **그림으로도** 갈린다(📚/❓ · 🌙/🕊️ · 🌟/☀️의 짝을 그대로 옮겼다).
+              빈 칸은 강조색, 찬 칸은 본문색 — 빈 칸을 탭하라는 신호가 이 카드의 주 동선이다. */}
+          <span style={{ color: isEmpty && !isFixed ? 'var(--accent-soft)' : 'var(--text-secondary)' }}>
+            <SlotIcon kind={icon} size={18} />
+          </span>
           <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600, marginTop: 1 }}>{timeLabel}</span>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -190,10 +196,10 @@ export function WeekPlanner({
           {/* 왼쪽: 주중 */}
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 600 }}>주중 (월~금)</div>
-            {renderSlot('🏫', '오전', '학교', null, true)}
-            {renderSlot('🏫', '오후', '학교', null, true)}
+            {renderSlot('school', '오전', '학교', null, true)}
+            {renderSlot('school', '오후', '학교', null, true)}
             {renderSlot(
-              state.routineSlot2 ? '📚' : '❓',
+              state.routineSlot2 ? 'plan' : 'empty',
               '방과후',
               state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name || null : null,
               () => onEditSlot('routine1'),
@@ -203,7 +209,7 @@ export function WeekPlanner({
               slot2ComboWeeks,
             )}
             {renderSlot(
-              state.routineSlot3 ? '🌙' : '🕊️',
+              state.routineSlot3 ? 'evening' : 'free',
               '저녁',
               state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3)?.name || null : (state.routineSlot2 ? '자유시간' : null),
               () => onEditSlot('routine2'),
@@ -218,7 +224,7 @@ export function WeekPlanner({
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 6, fontWeight: 600 }}>주말 (토~일)</div>
             {renderSlot(
-              selectedActivities[0] ? '🌟' : '☀️',
+              selectedActivities[0] ? 'weekendFilled' : 'weekend',
               '토요일',
               selectedActivities[0] ? ACTIVITIES.find(a => a.id === selectedActivities[0])?.name || null : null,
               () => {
@@ -238,7 +244,7 @@ export function WeekPlanner({
               const slot0Act = ACTIVITIES.find(a => a.id === selectedActivities[0]);
               const isSlot0TwoSlot = slot0Act && slot0Act.slots >= 2;
               return renderSlot(
-                isSlot0TwoSlot ? '💤' : selectedActivities[1] ? '🌟' : '☀️',
+                isSlot0TwoSlot ? 'continued' : selectedActivities[1] ? 'weekendFilled' : 'weekend',
                 '일요일',
                 isSlot0TwoSlot ? '(연속 활동)' : selectedActivities[1] ? ACTIVITIES.find(a => a.id === selectedActivities[1])?.name || null : null,
                 isSlot0TwoSlot ? null : () => onEditSlot('weekend2'),
@@ -317,7 +323,7 @@ export function WeekPlanner({
           {Array.from({ length: maxSlots }, (_, i) => (
             <div key={i}>
               {renderSlot(
-                selectedActivities[i] ? '🌟' : '☀️',
+                selectedActivities[i] ? 'weekendFilled' : 'weekend',
                 `활동 ${i + 1}`,
                 selectedActivities[i] ? ACTIVITIES.find(a => a.id === selectedActivities[i])?.name || null : null,
                 () => {

@@ -6,6 +6,7 @@ import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { GLASS_BASE, tintedGlass } from './surface';
 import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
+import { StatIcon } from '../icons/icons';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -205,7 +206,9 @@ export function WeeklyResultScreen({
             const grade = getGrade(stats[key]);
             return (
               <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
-                <span style={{ width: 20, fontSize: '0.8rem' }}>{STAT_ICONS[key]}</span>
+                {/* 메인 화면 StatsPanel과 **같은 목록**이다 — 한 번의 클릭 거리에 있는 같은
+                    5행이라, 한쪽만 선화로 바꾸면 매주 두 화면을 오가며 그림이 바뀐다. */}
+                <span style={{ width: 20, display: 'inline-flex', justifyContent: 'center', color: 'var(--text-secondary)' }}><StatIcon stat={key} size={14} /></span>
                 <span style={{ width: 32, fontSize: '0.78rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
                 <div style={{ flex: 1, height: 12, background: 'rgba(255,255,255,0.08)', borderRadius: 6, margin: '0 6px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: 6, transition: 'width 0.5s' }} />

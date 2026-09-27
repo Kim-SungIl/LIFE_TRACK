@@ -106,7 +106,7 @@ describe('주말 비우고 확정', () => {
     expect(onConfirmWeek).not.toHaveBeenCalled();
     expect(localStorage.getItem(REST_ACK)).toBeNull();
     // 라벨이 "활동 고를래요"이므로 실제로 고를 수 있는 화면이 떠야 한다.
-    expect(screen.getByText('☀️ 주말 활동')).toBeInTheDocument();
+    expect(screen.getByText('주말 활동')).toBeInTheDocument();
   });
 
   it('확인 문구가 쉬는 선택을 실수로 취급하지 않는다', () => {

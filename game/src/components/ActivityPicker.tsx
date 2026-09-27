@@ -4,15 +4,20 @@ import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
 import { activityHints } from '../engine/activityHints';
 import { chipSurface } from './screens/surface';
+import { CategoryIcon } from './icons/icons';
+import { ACTIVITY_CATEGORIES, type ActivityCategory } from './icons/iconKeys';
 
-const CAT_INFO: Record<string, { emoji: string; name: string; desc: string }> = {
-  study:    { emoji: '📚', name: '공부',     desc: '학업 성적을 올린다' },
-  exercise: { emoji: '💪', name: '운동',     desc: '체력과 멘탈을 키운다' },
-  social:   { emoji: '👥', name: '관계',     desc: '친구를 만나고 인기를 올린다' },
-  talent:   { emoji: '🎨', name: '자기계발', desc: '특기와 실력을 키운다' },
-  rest:     { emoji: '😴', name: '휴식',     desc: '피로를 풀고 쉰다' },
-  parent:   { emoji: '💝', name: '가족',     desc: '가족과 함께하는 시간' },
-  work:     { emoji: '💼', name: '알바',     desc: '돈을 벌며 경험을 쌓는다' },
+// 아이콘은 `CategoryIcon`이 그린다 — 여기엔 글자만 남긴다.
+// 키 목록의 SSOT는 `icons/iconKeys.ts`의 ACTIVITY_CATEGORIES다(아래 `categories`가 그걸 쓴다).
+// 예전엔 같은 7개가 이 표의 키와 `categories` 배열 두 곳에 각각 적혀 있었다.
+const CAT_INFO: Record<ActivityCategory, { name: string; desc: string }> = {
+  study:    { name: '공부',     desc: '학업 성적을 올린다' },
+  exercise: { name: '운동',     desc: '체력과 멘탈을 키운다' },
+  social:   { name: '관계',     desc: '친구를 만나고 인기를 올린다' },
+  talent:   { name: '자기계발', desc: '특기와 실력을 키운다' },
+  rest:     { name: '휴식',     desc: '피로를 풀고 쉰다' },
+  parent:   { name: '가족',     desc: '가족과 함께하는 시간' },
+  work:     { name: '알바',     desc: '돈을 벌며 경험을 쌓는다' },
 };
 
 // 수치 → 서술형 변환
@@ -61,7 +66,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
   const [showDetail, setShowDetail] = useState(false);
 
   const money = availableMoney !== undefined ? availableMoney : state.money;
-  const categories = ['study', 'exercise', 'social', 'talent', 'rest', 'parent', 'work'];
+  const categories = ACTIVITY_CATEGORIES;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -92,7 +97,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: '1.2rem' }}>{info.emoji}</span>
+                <span style={{ color: 'var(--accent-soft)', display: 'inline-flex' }}><CategoryIcon category={cat} size={20} /></span>
                 <div>
                   <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{info.name}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{info.desc}</div>
