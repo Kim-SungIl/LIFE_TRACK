@@ -270,9 +270,11 @@ describe('첫 주 결산은 부팅 도입 장면을 포함한다', () => {
     expect(moved.length, '전제: 도입 선택지가 스탯을 실제로 움직였다 — 아니면 이 테스트는 아무것도 못 본다')
       .toBeGreaterThan(0);
 
-    // 피로도 같은 통로를 탄다 — 보류분에 실제 적용값 그대로. (로그의 fatigueChange를 시작값 대비
-    // 실제 차이와 직접 비교하지는 않는다: 도입 장면이 없는 엔진 경로에서도 그 둘은 원래 다르다
-    // (실측 0→7인데 로그 2). 그건 별건이고, 여기서 잠그는 건 도입 장면 몫이 통로에 실리는가다.)
+    // 피로도 같은 통로를 탄다 — 보류분에 실제 적용값 그대로.
+    // (예전엔 "로그의 fatigueChange를 시작값 대비 실제 차이와 직접 비교하지는 않는다 — 도입 장면이
+    //  없는 엔진 경로에서도 그 둘은 원래 다르다(실측 0→7인데 로그 2)"고 적혀 있었다. 그 '별건'이
+    //  T53이다: 이제 processWeek이 클램프 뒤 실제 차이를 한 번에 적으므로 아래에서 직접 비교한다.
+    //  피로 축 본체는 fatigueLogTruth.test.ts가 잠근다.)
     const pending = useGameStore.getState().state!.pendingWeekDelta;
     expect(pending?.fatigue, '도입 장면의 피로가 보류분에 안 실리면 결산이 덜 피곤했다고 말한다')
       .toBe(applied.fatigue ?? 0);
@@ -286,6 +288,11 @@ describe('첫 주 결산은 부팅 도입 장면을 포함한다', () => {
     // 본체: 부팅 시점 스탯 + 로그 = 1주차 끝 스탯. 도입 장면 몫이 빠지면 여기서 어긋난다
     // (실측: social 로그 -0.6, 실제 +1.4).
     expect(logAgreesWithStats(boot, w1), '1주차 결산이 도입 장면 몫을 빼고 말한다').toEqual([]);
+    // 피로도 같은 계약이다(T53): 부팅 시점 피로 + 로그 = 1주차 끝 피로.
+    // 새 줄이 foldPendingIntoLog **뒤**로 가면 도입 장면 몫이 지워져 여기서 어긋난다.
+    expect(round1(w1.weekLog!.fatigueChange),
+      '1주차 결산의 피로가 도입 장면 몫을 빼거나 클램프 전 원값을 말한다')
+      .toBe(round1(w1.fatigue - boot.fatigue));
     for (const k of moved) {
       const actual = round1(w1.stats[k] - boot.stats[k]);
       expect(round1(w1.weekLog!.statChanges[k] ?? 0),

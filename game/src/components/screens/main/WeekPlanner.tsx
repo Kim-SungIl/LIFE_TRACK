@@ -325,7 +325,8 @@ export function WeekPlanner({
                   const cur = selectedActivities[i];
                   const act = cur ? ACTIVITIES.find(a => a.id === cur) : null;
                   if (act && act.slots >= 2) {
-                    setSelectedActivities(selectedActivities.filter(a => a !== cur));
+                    // 빈 칸('')도 같이 떨군다 — 구멍이던 시절 filter가 구멍을 건너뛰던 것과 같은 결과.
+                    setSelectedActivities(selectedActivities.filter(a => a && a !== cur));
                   }
                   onEditSlot(`weekend${i + 1}`);
                 },

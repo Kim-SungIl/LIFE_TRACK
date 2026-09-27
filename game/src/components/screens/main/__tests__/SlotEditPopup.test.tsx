@@ -408,7 +408,12 @@ describe('SlotEditPopup weekend N칸 (collapse 전제)', () => {
   });
 
   // collapseActivityChoices의 인접-동일-id 전제를 잠근다.
-  it('maxSlots=4·weekend4에서 3칸 활동 → startIdx=min(3,1)=1 → [empty,id,id,id]', () => {
+  //
+  // **T53에서 앞 칸의 표현이 바뀌었다**: 예전에는 `const newArr = [...selectedActivities];`에
+  // 인덱스로 대입해 0번이 **배열 구멍**(읽으면 undefined, JSON에선 null)이었다. 지금은
+  // `assignSlot`이 빈 칸을 `''`로 편다 — `captureWeekendPlan`·"지난주처럼"·엔진(falsy=없음)이
+  // 이미 쓰던 표현과 같은 값이다. 그래서 이 단언은 `undefined` → `''`로 갱신됐다(계약 강화).
+  it('maxSlots=4·weekend4에서 3칸 활동 → startIdx=min(3,1)=1 → [\'\',id,id,id]', () => {
     const act = multiSlotVacation(3);
     const state = makeState({ isVacation: true, money: 999 });
     const { setSelectedActivities } = renderPopup({
@@ -421,22 +426,36 @@ describe('SlotEditPopup weekend N칸 (collapse 전제)', () => {
       availableMoney: 999,
     });
     clickActivity(act);
-    const expected = [] as string[];
-    expected[1] = act.id;
-    expected[2] = act.id;
-    expected[3] = act.id;
-    // newArr starts as [...[]] then assigns indices; slice(0,4) keeps length with holes → dense after assign
-    // 실코드: const newArr = [...selectedActivities]; for i fill; slice(0, maxSlots)
-    // selectedActivities=[] → newArr=[], then newArr[1]=id etc → sparse array length 4
     expect(setSelectedActivities).toHaveBeenCalledTimes(1);
     const got = setSelectedActivities.mock.calls[0][0] as string[];
-    expect(got.length).toBe(4);
-    expect(got[0]).toBeUndefined();
-    expect(got[1]).toBe(act.id);
-    expect(got[2]).toBe(act.id);
-    expect(got[3]).toBe(act.id);
-    // collapse는 빈 칸 skip 후 인접 동일 id 1인스턴스
-    expect(collapseActivityChoices(got.filter(Boolean))).toEqual([act.id]);
+    expect(got).toEqual(['', act.id, act.id, act.id]);
+    // 구멍이면 키 수가 길이보다 적다 — `got[0] === ''`만으로는 구멍과 구별되지 않는다.
+    expect(Object.keys(got).length, '앞 칸이 배열 구멍이면 층마다 다른 모양이 된다').toBe(got.length);
+    expect(got.every(v => typeof v === 'string')).toBe(true);
+    // collapse는 빈 칸 skip 후 인접 동일 id 1인스턴스 — 이제 filter(Boolean) 없이도 같다.
+    expect(collapseActivityChoices(got)).toEqual([act.id]);
+  });
+});
+
+// 칸 편집이 `assignSlot`을 **실제로 거치는가**. 순수함수(weekendSlotArray.test.ts)만 잠그면
+// 아무도 안 부르는 상태가 그린이다(#397).
+describe('SlotEditPopup — 앞 칸을 비운 채 고르면 배열에 구멍이 없다', () => {
+  const dense = (arr: string[]) =>
+    Object.keys(arr).length === arr.length && arr.every(v => typeof v === 'string');
+
+  it('1칸 활동을 일요일(weekend2)에만 고르면 [\'\', id]', () => {
+    const act = oneSlotNonRest();
+    const { setSelectedActivities } = renderPopup({
+      editingSlot: 'weekend2',
+      selectedActivities: [],
+      maxSlots: 2,
+      currentSlots: 0,
+      activities: ACTIVITIES,
+    });
+    clickActivity(act);
+    const got = setSelectedActivities.mock.calls[0][0] as string[];
+    expect(dense(got), `구멍이 남았다: ${JSON.stringify(Object.keys(got))}`).toBe(true);
+    expect(got).toEqual(['', act.id]);
   });
 });
 

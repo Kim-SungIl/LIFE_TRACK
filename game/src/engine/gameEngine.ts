@@ -411,8 +411,8 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
       log.parentBonusesApplied?.push({ parent: 'resilience', what: '체질 — 피로 증가 -15%' });
     }
   }
+  // 피로 로그는 여기서 더하지 않는다 — processWeek 끝에서 주 시작 대비 실제 변화로 한 번 적는다(T53).
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
-  log.fatigueChange += fatigueDelta;
 
   // 용돈 적용 (음수 방지) — 학년별 차등 비용 적용
   const cost = getActivityCost(activity, state.year);
@@ -549,7 +549,6 @@ function applyFatigueRecovery(state: GameState, log: WeekLog): void {
   if (state.isVacation) recovery += 2 * mult;
 
   state.fatigue = Math.max(0, state.fatigue - recovery);
-  log.fatigueChange -= recovery;
 
   // 표시는 emotional 보너스가 실효 회복에 기여한 주만 — 피로 0 직전이면 노이즈
   if (emoBonus > 0 && before >= emoBonus * mult) {
@@ -566,7 +565,6 @@ function applySchoolClass(state: GameState, log: WeekLog): void {
   state.stats.academic = Math.min(100, state.stats.academic + academicGain);
   log.statChanges.academic = (log.statChanges.academic || 0) + academicGain;
   state.fatigue = Math.min(100, state.fatigue + 2);
-  log.fatigueChange += 2;
 }
 
 // ===== 마일스톤 체크 =====
@@ -716,7 +714,6 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   if (state.mentalState === 'tired') {
     const fatDrop = state.useReducedRecovery ? 3 : 5;
     state.fatigue = Math.max(0, state.fatigue - fatDrop);
-    log.fatigueChange -= fatDrop;
     // v7.2: 자동 mental 회복 +1 → +2 (임계 완화와 함께 burnout 재진입 차단)
     // QA C4-A: 단 고피로(fatigue>=60)에선 자동 회복을 끊어 '갈아넣기' 루틴이 번아웃 게이트에 닿게 한다.
     //          (12 페르소나 전원 burnoutCount 0 — tired 자가치유가 mental<20 게이트를 영구 차단하던 문제)
@@ -733,7 +730,6 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
     const menUp = state.useReducedRecovery ? 3 : 4;
     state.fatigue = Math.max(0, state.fatigue - fatDrop);
     state.stats.mental = Math.min(100, state.stats.mental + menUp);
-    log.fatigueChange -= fatDrop;
     log.statChanges.mental = (log.statChanges.mental || 0) + menUp;
   }
 }
@@ -1098,6 +1094,10 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
   const newState = migrateLoadedState(cloneGameState(state)) as GameState;
+  // 피로 로그의 기준점 — 주 확정 전 효과(말걸기·상점)는 이미 state에 반영돼 있고 그 몫은
+  // 보류분(pendingWeekDelta)이 따로 실제 델타로 들고 있다. 아래 끝에서 (지금 → 확정 후) 차이를
+  // 적고, 그 뒤에 보류분을 더해야 "주 시작 → 확정 후" 전체가 된다.
+  const fatigueAtWeekStart = newState.fatigue;
 
   // 도달형 페이싱: 주 시작 시점 친밀도 스냅샷. 이번 주 이벤트로 친밀도가 임계를 "방금 넘으면"(fresh)
   // 즉시 발동, 이미 넘어 있었으면(pre-met) 쿨다운으로 분산 — getReachForWeek 가 이 값으로 판별.
@@ -1167,6 +1167,15 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
     newState.stats[key] = Math.max(0, Math.min(100, Math.round(newState.stats[key] * 10) / 10));
   }
   newState.fatigue = Math.max(0, Math.min(100, Math.round(newState.fatigue * 10) / 10));
+
+  // 피로 로그 = 클램프·반올림이 끝난 **실제 변화**(T53). 예전엔 회복·수업·활동·상태전환이 각자
+  // 원값을 더했는데 `state.fatigue`는 0~100으로 잘리므로 피로 0에서 휴식 두 칸을 넣은 주가
+  // 실제 0인데 로그는 -21이었고, 피로 100에서 활동을 얹은 주는 실제 -5인데 로그가 +13이었다
+  // (#448·#453이 잠근 스탯 축과 같은 결함 — 피로 축만 열려 있었다). 장기 tired 자력 탈출의
+  // 피로 -3(checkMentalStateTransition)처럼 로그에 아예 안 적히던 쓰기도 여기서 자동으로 잡힌다.
+  // **이벤트 몫(store foldOutcomeIntoWeekLog)과 보류분(아래 foldPendingIntoLog)은 이미 실제
+  // 델타라 이 줄 뒤에 더해진다** — 이 줄이 그 둘보다 앞이어야 한다(뒤로 가면 둘을 지운다).
+  log.fatigueChange = round1(newState.fatigue - fatigueAtWeekStart);
 
   // 주 확정 **전에** 적용된 효과(말걸기·가정 대화·상점 구매)를 이 주의 로그에 접는다.
   //
