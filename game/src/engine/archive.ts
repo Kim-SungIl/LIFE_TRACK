@@ -33,6 +33,17 @@
 // 세이브가 남아, 이어하기 후 다시 넘기면 runs가 한 번 더 오른다. v1도 같은 순서였으므로 이
 // 구조의 회귀는 아니다. 그 재생 경로에서는 pendingRun이 이미 비워져 있어 "처음 본 이야기"
 // 카운트도 붕괴한다 — 세이브/archive 쓰기를 원자적으로 묶지 않는 한 남는 대가다.
+//
+// **반대 방향이 더 흔하다 (T57, 실측).** 위 문단은 "세이브가 archive보다 먼저 터진다"를
+// 전제로 삼았는데, 자라는 쪽은 반대다: 세이브는 매번 **같은 키를 덮어써서** 총량이 제자리인
+// 반면 archive는 판마다 커진다(events·endings·cgFiles가 전부 단조 증가하는 집합이다).
+// 그래서 한도 근처에서는 **archive 쓰기만 골라 실패하는** 구간이 생긴다. 그 구간에서
+// 예전 코드는 한 마디도 하지 않았다 — persist가 예외를 통째로 삼켰고(반환값조차 없었다),
+// commitRun은 **메모리 객체 a**로 계산한 delta를 그대로 돌려줬고, 엔딩 요약은 그 메모리 값을
+// 디스크보다 우선해서 읽었다. 실측 재현: commitRun 반환 runs 1 / 디스크 runs 0 /
+// 본 게임 세이브 성공 true(그래서 store의 storageSaveFailed도 false) / 예외 없음.
+// 완주 한 판이 어디에도 안 남은 채 화면만 "기록했다"고 말했다.
+// 이제 persist가 성패를 남기고(isArchiveSaveFailed), 화면이 그 사실을 말한다.
 // 나머지 축은 전부 집합이라 몇 번 적립해도 결과가 같다.
 import type { GameState } from './types';
 import { resolveEventCgRelPaths } from './eventCg';
@@ -165,9 +176,39 @@ function migrateArchive(a: RunArchive, from: number): void {
   }
 }
 
-// 저장 실패(용량 초과·프라이빗 모드)는 조용히 삼킨다 — 기록 때문에 플레이가 끊기면 안 된다.
-function persist(a: RunArchive): void {
-  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(a)); } catch { /* 기록은 선택적 기능 */ }
+/**
+ * 기록 쓰기가 실패했나 — **본 게임 세이브 실패(store.isStorageSaveFailed)와 다른 축이다.**
+ *
+ * 둘을 하나로 접으면 안 되는 이유는 도달 경로가 반대이기 때문이다(파일 맨 위 참조):
+ * 세이브는 매번 같은 키를 덮어써서 총량이 제자리인데 기록은 판마다 커진다. 그래서 한도
+ * 근처에서 **기록만 실패하는** 구간이 생기고, 그 구간에서 store 쪽 플래그는 끝까지 false다 —
+ * 화면이 볼 신호가 하나도 없었다. 원인도 문구도 다르다: 세이브가 죽으면 "지금 진행"이
+ * 사라지고, 기록이 죽으면 "지금까지의 모든 판"이 안 쌓인다.
+ *
+ * store.ts의 storageSaveFailed와 **같은 결**로 둔다: 모듈 전역 + 마지막 *시도*의 결과이고,
+ * 성공한 쓰기 한 번으로 내려간다(용량이 확보된 뒤에도 경고가 남으면 그건 그것대로 거짓말이다).
+ * 쓰기 축만 본다 — 읽기 실패(loadArchive)는 빈 기록으로 떨어지는 별개의 규약이다.
+ */
+let archiveSaveFailed = false;
+export function isArchiveSaveFailed(): boolean { return archiveSaveFailed; }
+
+/**
+ * 저장 실패(용량 초과·프라이빗 모드)는 **계속 조용히 삼킨다** — 기록 때문에 플레이가 끊기면
+ * 안 된다. 예외는 위로 안 던진다. 바뀐 것은 하나뿐이다: **삼키되 흔적을 남긴다.**
+ *
+ * 예전엔 반환값도 플래그도 없어서, 실패가 호출부에도 화면에도 도달할 길이 아예 없었다.
+ * 성공 여부를 돌려주는 것은 "이 쓰기가 디스크에 닿았나"를 호출부가 **전역을 다시 읽지 않고**
+ * 물을 수 있게 하기 위해서다(전역은 그 뒤의 다른 쓰기가 덮는다 — 같은 질문이 아니다).
+ */
+function persist(a: RunArchive): boolean {
+  try {
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify(a));
+    archiveSaveFailed = false;
+    return true;
+  } catch {
+    archiveSaveFailed = true;   // 기록은 선택적 기능이라 던지지는 않는다 — 사실만 남긴다
+    return false;
+  }
 }
 
 function addTo(list: string[], id: string | undefined | null): boolean {
@@ -358,6 +399,14 @@ export function beginRun(): void {
  * 아니다 — 즉시 적립이 이미 넣어놨으므로 그렇게 세면 0이 된다). mergeState는 즉시 적립이
  * 빠뜨린 구멍만 메우는 백스톱이고, 거기서 새로 들어간 것도 pendingRun에 합쳐지므로
  * 즉시 적립이 전부 실패한 최악의 경우에도 카운트는 v1과 같은 값이 나온다.
+ *
+ * ⚠️ **돌려주는 RunDelta는 디스크가 아니라 메모리 객체 `a`의 상태다.** 아래 persist가 실패해도
+ * delta는 그대로 나간다 — 그렇게 두는 쪽이 맞다. 플레이어가 그 이야기들을 본 것은 사실이고,
+ * 여기서 요약을 없애면 저장 사고의 벌을 성취 쪽에 물리는 셈이다. 대신 **"기록에 남았다"는
+ * 주장은 못 하므로**, 그 간극을 isArchiveSaveFailed()가 화면까지 들고 간다
+ * (RunArchiveSummary·ArchiveScreen). 반환 타입에 얹지 않은 이유: 디스크에서 되읽는
+ * lastRunDelta 경로에서는 그 필드가 항상 true인 파생 상수가 되고(디스크에 있다는 것 자체가
+ * 쓰기 성공의 증거다), 그러면 스키마에 의미 없는 축이 하나 늘어난다.
  */
 export function commitRun(state: GameState, endingTitle: string): RunDelta {
   const a = loadArchive();
@@ -378,6 +427,11 @@ export function commitRun(state: GameState, endingTitle: string): RunDelta {
   return delta;
 }
 
+/**
+ * 기록 삭제. **archiveSaveFailed는 여기서 안 내린다** — 지우기가 되는 것은 쓰기가 된다는
+ * 증거가 아니다. 용량 초과가 바로 그 모양이다(removeItem은 통과하고 setItem만 터진다).
+ * 플래그는 성공한 **쓰기** 하나로만 내려간다(persist 참조).
+ */
 export function clearArchive(): void {
   try { localStorage.removeItem(ARCHIVE_KEY); } catch { /* noop */ }
 }

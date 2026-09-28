@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { loadArchive } from '../../engine/archive';
+import { isArchiveSaveFailed, loadArchive } from '../../engine/archive';
 import { isBarelyTouched, npcStoryRows, soloStoryRow, SOLO_ROOT } from '../../engine/npcStoryPool';
 import { webpSrc } from '../../engine/assetWebp';
 import { Portrait } from '../Portrait';
 import { NpcAlbumScreen } from './NpcAlbumScreen';
+import { chipSurface } from './surface';
 
 // 관계 패널의 색 언어를 그대로 쓴다 — 많이 본 쪽이 골드.
 function coverageColor(ratio: number): string {
@@ -112,9 +113,28 @@ export function ArchiveScreen({ onBack, onStartNewRun }: { onBack: () => void; o
   return (
     <div className="screen fade-in" style={{ padding: '20px 16px', maxWidth: 420, margin: '0 auto' }}>
       <div style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 4 }}>기록실</div>
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 20 }}>
+      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: isArchiveSaveFailed() ? 10 : 20 }}>
         {archive.runs > 0 ? `지금까지 ${archive.runs}번의 학창시절` : '아직 끝까지 간 학창시절이 없다'}
       </div>
+
+      {/* 이 화면은 **디스크만** 읽으므로 숫자 자체는 늘 정직하다. 거짓말은 침묵 쪽에서 난다 —
+          기록 쓰기가 실패하는 중이면 방금 끝낸 판이 여기 없는데 화면은 아무 말도 안 했고,
+          플레이어는 "3번 했는데 왜 2번이지"를 자기 탓으로 돌린다(두 화면이 서로 다른 말을
+          하는 자리다: 엔딩 요약은 메모리를 읽어 완주를 세고 있었다).
+          신호는 세이브 실패와 별개 축이다 — 같은 한도에서 세이브는 같은 키를 덮어써 살아남고
+          기록만 죽는다. 그래서 store.isStorageSaveFailed가 아니라 기록 전용 플래그를 읽는다. */}
+      {isArchiveSaveFailed() && (
+        <div role="alert" aria-live="assertive" style={{
+          background: chipSurface('rgba(217,100,88,0.15)'), border: '1px solid rgba(217,100,88,0.4)',
+          borderRadius: 10, padding: '8px 12px', marginBottom: 20,
+          fontSize: '0.75rem', fontWeight: 600, color: 'var(--red)', lineHeight: 1.6,
+        }}>
+          ⚠️ 기록이 저장되지 않고 있어요
+          <div style={{ fontWeight: 400, marginTop: 2 }}>
+            방금 지나온 판은 여기 남지 않아요 — 브라우저 저장 공간을 확인해 주세요
+          </div>
+        </div>
+      )}
 
       <section style={{ marginBottom: 22 }}>
         <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 4 }}>👥 함께한 사람들</div>
