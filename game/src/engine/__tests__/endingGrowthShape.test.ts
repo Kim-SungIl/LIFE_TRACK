@@ -118,6 +118,31 @@ describe('growthShapeOf — 경계 양쪽', () => {
   });
 });
 
+// ⚠️ 위 경계 테스트는 문턱을 **상수에서 파생**한다. 그래서 규칙의 모양(경계를 포함하는가,
+// 두 문턱이 겹치지 않는가)은 잠그지만 **값 자체는 원리상 못 잠근다** — 상수를 옮기면
+// 픽스처가 같이 따라 움직인다. 실제로 뮤테이션 6종(12→13/11 · 20→21/19 · 40→41/39)이
+// **전부 초록으로 살아남았다**(실측). 그래서 값은 여기서 리터럴로 못 박는다.
+// 둘 다 있어야 한다: 파생 픽스처는 규칙을, 이 블록은 숫자를 잠근다.
+describe('문턱 값 — 리터럴로 못 박는다 (파생 픽스처가 못 보는 축)', () => {
+  it('세 문턱의 값이 실측 분포의 틈에서 고른 그 값이다', () => {
+    expect(GROWTH_EVEN_SPREAD, '실측 spread 틈: 11.8 │ 14.1').toBe(12);
+    expect(GROWTH_LEAD_GAP, '실측 lead 틈: 15.1 │ 32.2').toBe(20);
+    expect(GROWTH_SHAPE_MIN_TOP, '실측 최고 축 틈: 36.3 │ 79.9').toBe(40);
+  });
+
+  // 착지값을 리터럴 스탯으로 적는다 — 상수를 한 칸 옮기면 이 표가 먼저 빨개진다.
+  it.each([
+    { label: 'spread 12 (경계) → 균형', a: 80, t: 74, l: 68, expected: 'even' },
+    { label: 'spread 13 (한 칸 밖) → 두 갈래', a: 81, t: 74, l: 68, expected: 'twin' },
+    { label: 'lead 20 (경계) → 전문화', a: 80, t: 60, l: 60, expected: 'singular' },
+    { label: 'lead 19 (한 칸 안) → 두 갈래', a: 79, t: 60, l: 60, expected: 'twin' },
+    { label: '최고 축 40 (경계) → 모양 있음', a: 40, t: 20, l: 20, expected: 'singular' },
+    { label: '최고 축 39 (한 칸 아래) → 모양 없음', a: 39, t: 19, l: 19, expected: null },
+  ] as const)('$label', ({ a, t, l, expected }) => {
+    expect(growthShapeOf(axesOf(a, t, l))).toBe(expected);
+  });
+});
+
 describe('growthShapeOf — 어느 갈래도 죽어 있지 않다', () => {
   // 실측 모양(QA 하네스 33페르소나 × 3시드). 손으로 지어낸 극단만 잠그면
   // "제품에서 실제로 나오는 판"이 어디로 떨어지는지는 여전히 아무도 모른다.
