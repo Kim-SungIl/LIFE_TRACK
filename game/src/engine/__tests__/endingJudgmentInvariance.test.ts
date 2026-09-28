@@ -87,6 +87,11 @@ const SCENARIOS: Scenario[] = [
   { label: '행복 B', stats: { academic: 65, talent: 40, social: 35, mental: 45, health: 60 }, track: 'humanities', mockGrade: 4 },
   { label: '행복 C(궤적)', stats: { academic: 70, talent: 40, social: 70, mental: 85, health: 70 }, track: 'humanities', mockGrade: 3, lowMental: 80 },
   { label: '행복 A', stats: { academic: 70, talent: 40, social: 50, mental: 65, health: 60 }, track: 'science', mockGrade: 3 },
+  // ↓ **생활 축이 bestAxis인 판**. 이 두 줄이 없으면 `(mental+health+social)/3`을 `(mental+health)/2`로
+  //   바꾸는 뮤테이션이 이 표를 통째로 통과한다(실측: 22행 전부 초록). 등급이 갈리는 자리에 둔다 —
+  //   75(A)·86.7(S)은 훼손 산식에서 90·80이 되어 등급이 A→S, S→A로 양방향으로 움직인다.
+  { label: '생활 축 최고(A 경계)', stats: { academic: 40, talent: 40, social: 45, mental: 90, health: 90 }, track: 'humanities', mockGrade: 4 },
+  { label: '생활 축 최고(S 경계)', stats: { academic: 55, talent: 50, social: 100, mental: 80, health: 80 }, track: 'science', mockGrade: 3 },
 ];
 
 /** 판정 결과만 뽑는다 — 회상/근황처럼 RNG·기억에 달린 층은 이 락의 대상이 아니다. */
@@ -131,7 +136,9 @@ describe('calculateEnding — 기존 판정 불변 (T58 새 층이 아무것도 
       성취 D | 성취=D | 행복=D | 노트=한 축이 부서진 채로 도착했다. | 진로=잠시 쉼표 | 수능=9 | 총합=40 | 타이틀=잠시 쉼표 | 설명=대학보다 자신을 돌보는 게 먼저였다.
       행복 B | 성취=B | 행복=B | 노트=- | 진로=수도권 대학 | 수능=4 | 총합=245 | 타이틀=수도권 대학 | 설명=수도권 4년제에 합격. 이제 본격적인 시작이다.
       행복 C(궤적) | 성취=A | 행복=C | 노트=- | 진로=인서울 문과 | 수능=3 | 총합=335 | 타이틀=인서울 문과 | 설명=인서울 문과 대학에 합격했다. 나쁘지 않은 결과다.
-      행복 A | 성취=A | 행복=A | 노트=- | 진로=인서울 이과 | 수능=3 | 총합=285 | 타이틀=인서울 이과 | 설명=인서울 4년제 이공계에 합격했다."
+      행복 A | 성취=A | 행복=A | 노트=- | 진로=인서울 이과 | 수능=3 | 총합=285 | 타이틀=인서울 이과 | 설명=인서울 4년제 이공계에 합격했다.
+      생활 축 최고(A 경계) | 성취=A | 행복=A | 노트=- | 진로=수도권 대학 | 수능=4 | 총합=305 | 타이틀=수도권 대학 | 설명=수도권 4년제에 합격. 이제 본격적인 시작이다.
+      생활 축 최고(S 경계) | 성취=S | 행복=S | 노트=- | 진로=인서울 이과 | 수능=3 | 총합=365 | 타이틀=인서울 이과 | 설명=인서울 4년제 이공계에 합격했다."
     `);
   });
 

@@ -216,6 +216,23 @@ describe('growthNoteOf / GROWTH_NOTE — 문장 계약', () => {
     }
   });
 
+  // ⚠️ 배선 테스트는 `GROWTH_NOTE[shape]`로 기대값을 만든다 — 그래서 **문장을 서로 뒤바꾸면
+  // 양쪽이 같이 움직여 초록으로 살아남는다**(뮤테이션 M15 실측: 94개 전부 통과).
+  // 모양↔문장의 짝은 여기서 내용으로 못 박는다.
+  it('모양과 문장의 짝이 고정돼 있다', () => {
+    expect(GROWTH_NOTE.singular, '전문화 = 한 줄로 곧은 7년').toContain('한 줄로 곧았다');
+    expect(GROWTH_NOTE.twin, '두 갈래 = 나란히 쥔 둘').toContain('두 갈래를 나란히');
+    expect(GROWTH_NOTE.even, '균형 = 어느 쪽으로도 안 기운 7년').toContain('어느 한쪽으로도 기울지 않은');
+    // 표식만 보면 나머지 문장은 통째로 바뀌어도 통과한다 — 전문을 함께 굳힌다.
+    expect(GROWTH_NOTE).toMatchInlineSnapshot(`
+      {
+        "even": "어느 한쪽으로도 기울지 않은 7년이었다. 공부도, 좋아하던 것도, 사는 일도 비슷한 무게로 들고 갔다.",
+        "singular": "7년이 한 줄로 곧았다. 하나를 앞세운 뒤로, 나머지는 끝내 그 뒤에서 나오지 못했다.",
+        "twin": "두 갈래를 나란히 쥐고 걸었다. 나머지 하나는 7년 내내 그다음 순서였다.",
+      }
+    `);
+  });
+
   it('growthNoteOf는 분류 결과의 문장을 그대로 돌려준다', () => {
     expect(growthNoteOf(axesOf(90, 40, 40))).toBe(GROWTH_NOTE.singular);
     expect(growthNoteOf(axesOf(90, 88, 40))).toBe(GROWTH_NOTE.twin);
