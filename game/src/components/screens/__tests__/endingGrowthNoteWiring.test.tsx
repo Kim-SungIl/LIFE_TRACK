@@ -84,6 +84,20 @@ describe('EndingScreen — 성장 모양 문장 배선', () => {
     expect(screen.queryByText(ACHIEVEMENT_NOTE.weakness)).toBeNull();
   });
 
+  it('등급 칸 아래, 회상 층 위에 놓인다 — 화면 끝으로 밀려나면 등급 옆 한 줄이 아니다', () => {
+    // 특기 9(<10)라 부서진 축 문장도 함께 뜬다 — 두 줄의 **순서**까지 본다.
+    renderEnding({ academic: 91, talent: 9, mental: 90, health: 88, social: 83 });
+    const grade = screen.getByText('성취 지수');
+    const broken = screen.getByText(ACHIEVEMENT_NOTE.collapse);
+    const growth = screen.getByText(GROWTH_NOTE.twin);
+    const parents = screen.getByText('부모가 남긴 것');
+    const after = (a: Element, b: Element) =>
+      (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+    expect(after(grade, growth), '등급 칸보다 뒤').toBe(true);
+    expect(after(broken, growth), '부서진 축 문장 바로 뒤').toBe(true);
+    expect(after(growth, parents), '부모 에필로그보다 앞').toBe(true);
+  });
+
   it('모양이 없는 판은 세 문장 다 안 그려진다 (음성 짝)', () => {
     const ending = renderEnding({ academic: 35, talent: 5, mental: 20, health: 20, social: 22 });
     expect(ending.growthNote, '전제: 엔진이 null을 냈다').toBeNull();
