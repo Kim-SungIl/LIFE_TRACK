@@ -1,6 +1,6 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
-import { GameState, NpcState, ParentStrength } from './types';
+import { GameState, NpcState, ParentStrength, Stats } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';
 import {
@@ -392,18 +392,104 @@ export const ACHIEVEMENT_NOTE = {
 export const AXIS_COLLAPSE = 10;
 export const AXIS_WEAKNESS = 20;
 
+// ===== 성취 3축 =====
+// 등급(bestAxis)과 성장 모양(growthShapeOf)이 **같은 세 값**을 본다. 두 층이 각자
+// `(mental + health + social) / 3`을 들고 있으면 한쪽만 고쳐도 조용히 갈린다(#441 계열).
+export type AchievementAxes = { academic: number; talent: number; life: number };
+
+export function achievementAxes(stats: Stats): AchievementAxes {
+  return {
+    academic: stats.academic,
+    talent: stats.talent,
+    life: (stats.mental + stats.health + stats.social) / 3,
+  };
+}
+
+// ===== 성장 모양 (T58) =====
+// **등급은 그대로 두고, 그 옆에 "어떻게 거기까지 갔는지"를 한 줄로 얹는다.**
+//
+// 왜 필요했나: 등급은 `bestAxis` = 세 축의 최댓값이라, 학업만 판 판 · 특기만 판 판 ·
+// 셋을 고루 올린 판이 **전부 같은 S**로 도착한다. 그게 잘못된 건 아니다 — 어느 축이든
+// 끝까지 간 것을 인정하는 게 이 등급의 설계다(achievementGradeOf 주석). 문제는 화면이
+// 그 **차이를 한 번도 말하지 않는다**는 것이었다. 외부 검수가 중간 강도 전략 8판을 돌려
+// 전부 S·S를 받은 것이 그 증상이다.
+//
+// 그래서 등급·타이틀·진로는 한 글자도 건드리지 않고, 이 층만 새로 얹는다.
+// 판정이 아니라 관찰이라는 규칙은 ACHIEVEMENT_NOTE·HAPPINESS_LABELS와 같다.
+//
+// **어느 축이 높았는지는 말하지 않는다.** 이미 말하는 층이 셋이나 있기 때문이다:
+//   · 다섯 스탯 막대(EndingScreen)가 축별 값을 등급·숫자까지 그대로 보여준다.
+//   · 관계는 「곁에 남은 이름들」(BOND_TITLE)과 "그리고 그 후"(npcStories)가 이름으로 부른다.
+//   · 마음·몸은 행복 등급이, 성적은 수능 카드·진로가 각각 맡고 있다.
+// 비어 있던 자리는 **모양**이다 — 하나에 몰아줬는가, 둘을 나란히 들었는가, 셋을 고르게 폈는가.
+//
+// 분류는 세 축의 **상대 간격**만 본다(절대 수준은 등급 소관이라 건드리면 난이도 변경이 된다):
+//   spread = 최고 − 최저,  lead = 최고 − 차점.
+export type GrowthShape = 'singular' | 'twin' | 'even';
+
+/** 도달 가능성 단언이 배열을 직접 세도록 SSOT를 둔다(모양 하나를 지우면 테스트가 먼저 안다). */
+export const GROWTH_SHAPES = ['singular', 'twin', 'even'] as const;
+
+// 임계 — QA 하네스 실측(33페르소나 × 3시드 = 99판)의 축 간격 분포에서 **틈**을 골랐다.
+//
+//   spread 정렬:  … 7.8 · 11.0 · 11.7 · 11.8 │ 14.1 · 14.1 · 14.3 …   ← 12~13 사이가 빈다
+//   lead   정렬:  … 13.7 · 14.1 · 15.1 │ 32.2 · 34.2 · 34.6 …         ← 16~32 사이가 통째로 빈다
+//
+// 문턱을 틈 한가운데에 두면 값이 조금 흔들려도 같은 쪽에 떨어진다(경계에 걸터앉지 않는다).
+/** 이 안이면 "셋이 한 뼘 안" — 균형. */
+export const GROWTH_EVEN_SPREAD = 12;
+/** 최고 축이 차점을 이만큼 앞서면 "하나만 앞세웠다" — 전문화. GROWTH_EVEN_SPREAD보다 커서 두 모양은 겹치지 않는다. */
+export const GROWTH_LEAD_GAP = 20;
+/**
+ * 가장 높은 축조차 이 아래면 **모양을 말하지 않는다**(null).
+ *
+ * 상대 간격만 보면 아무것도 쌓지 않은 판까지 "두 갈래를 나란히 쥐고 걸었다"가 된다 —
+ * 실측에서 최소투입 페르소나(최고 축 33.7~36.3)가 정확히 그 거짓말을 받았다. 99판 중
+ * 이 선 아래는 그 3판뿐이고 바로 위는 79.9라, 40은 그 사이 어디에 둬도 같은 판만 거른다.
+ * 등급은 건드리지 않는다 — 이 상수는 **문장을 낼지 말지**만 정한다.
+ */
+export const GROWTH_SHAPE_MIN_TOP = 40;
+
+// 회고의 말투. 수치·등급·퍼센트를 쓰지 않는다(hide-numbers).
+// ACHIEVEMENT_NOTE와 낱말이 겹치지 않게 "축" 대신 "갈래"로 쓴다 — 그쪽은 다섯 스탯 하나를,
+// 이쪽은 성취 세 축을 가리켜서, 같은 낱말을 쓰면 두 줄이 서로 모순처럼 읽힌다.
+export const GROWTH_NOTE: Record<GrowthShape, string> = {
+  singular: '7년이 한 줄로 곧았다. 하나를 앞세운 뒤로, 나머지는 끝내 그 뒤에서 나오지 못했다.',
+  twin: '두 갈래를 나란히 쥐고 걸었다. 나머지 하나는 7년 내내 그다음 순서였다.',
+  even: '어느 한쪽으로도 기울지 않은 7년이었다. 공부도, 좋아하던 것도, 사는 일도 비슷한 무게로 들고 갔다.',
+} as const;
+
+/**
+ * 세 축의 분포 모양. 결정론적이다(같은 입력 → 같은 값, 난수 없음).
+ * 모양이라 부를 게 아직 없는 판은 null — 그때는 화면이 이 줄을 아예 그리지 않는다.
+ */
+export function growthShapeOf(axes: AchievementAxes): GrowthShape | null {
+  const sorted = [axes.academic, axes.talent, axes.life].sort((a, b) => b - a);
+  const [top, second, bottom] = sorted;
+  if (top < GROWTH_SHAPE_MIN_TOP) return null;
+  if (top - bottom <= GROWTH_EVEN_SPREAD) return 'even';
+  if (top - second >= GROWTH_LEAD_GAP) return 'singular';
+  return 'twin';
+}
+
+/** 화면에 나갈 한 줄. 모양이 없으면 null(= 그리지 않음). */
+export function growthNoteOf(axes: AchievementAxes): string | null {
+  const shape = growthShapeOf(axes);
+  return shape ? GROWTH_NOTE[shape] : null;
+}
+
 // ===== 엔딩 산정 =====
 export function calculateEnding(state: GameState) {
   const { academic, social, talent, mental, health } = state.stats;
   const total = academic + social + talent + mental + health;
 
-  // 성취 3축
-  const academicScore = academic;
-  const talentScore = talent;
-  const lifeScore = (mental + health + social) / 3;
-
-  const bestAxis = Math.max(academicScore, talentScore, lifeScore);
+  // 성취 3축 — 등급(bestAxis)과 성장 모양(growthShapeOf)이 같은 값을 본다.
+  const axes = achievementAxes(state.stats);
+  const bestAxis = Math.max(axes.academic, axes.talent, axes.life);
   const achievement = achievementGradeOf(bestAxis);
+  // T58: 등급이 못 말하는 "어떻게 거기까지 갔는지". 등급·타이틀·진로에는 관여하지 않는다.
+  const growthShape = growthShapeOf(axes);
+  const growthNote: string | null = growthShape ? GROWTH_NOTE[growthShape] : null;
 
   const allStats = [academic, social, talent, mental, health];
   const hasCollapse = allStats.some(v => v < AXIS_COLLAPSE);
@@ -505,6 +591,9 @@ export function calculateEnding(state: GameState) {
     description,
     achievement,
     achievementNote,
+    // T58 — 등급 옆에 얹는 "성장 모양" 층. null이면 화면이 그리지 않는다.
+    growthShape,
+    growthNote,
     happiness,
     total,
     career: career.path,
