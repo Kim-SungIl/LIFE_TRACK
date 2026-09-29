@@ -34,8 +34,12 @@ export function installStorage(s: Storage): void {
  * 돌려받은 함수를 부르면 원래 저장소로 되돌아간다(복원이 새면 이후 테스트가 전부
  * "저장이 죽은" 환경을 본다).
  */
+const PROBE = '__failWritesTo_probe__';
+
 export function failWritesTo(key: string): () => void {
   const real = globalThis.localStorage;
+  // 확인용 쓰기가 혹시라도 진짜 저장소에 떨어지면 되돌리기 위해 잡아둔다.
+  const before = real.getItem(key);
   const fake: Storage = {
     get length() { return real.length; },
     key: (i: number) => real.key(i),
@@ -51,12 +55,27 @@ export function failWritesTo(key: string): () => void {
 
   // **여기서 물었는지 확인한다.** 교체가 안 먹은 채로 돌려주면 하네스가 무의미해지는데,
   // 그 상태는 "아무 일도 안 일어남"이라 호출부의 단언으로는 안 잡힌다(CI가 그 모양이었다).
-  // 실패 키로 쏘므로 성공해도 쓰이는 값은 없다.
-  let bit = false;
-  try { globalThis.localStorage.setItem(key, '__probe__'); } catch { bit = true; }
-  if (!bit) {
+  //
+  // 순서가 중요하다. **먼저 동일성을 보고**, 그게 맞을 때만 실제로 쏜다 — 교체가 안 먹은 채로
+  // 쏘면 그 쓰기가 **진짜 저장소에 떨어져 기록을 덮어쓴다**. 초안이 그랬다(주석은 "쓰이는 값은
+  // 없다"고 했는데 사실은 반대였고, 실패 분기는 바인딩만 되돌리고 덮어쓴 값은 그대로 뒀다).
+  //
+  // 아래 두 방어(동일성 검사·되돌리기)는 **이 환경에서 만들 수 없는 상태**를 막는다 —
+  // 전역 교체는 여기선 늘 성공하므로 뮤테이션으로 못 잠근다. 그래도 둔다: 조용히 안 먹는
+  // 교체가 정확히 이 파일이 존재하는 이유이기 때문이다(CI에서 한 번 당했다).
+  if (globalThis.localStorage !== fake) {
     installStorage(real);
     throw new Error('failWritesTo: 전역 localStorage 교체가 안 먹었다 — 하네스가 무의미하다');
+  }
+  let bit = false;
+  try { globalThis.localStorage.setItem(key, PROBE); } catch { bit = true; }
+  if (!bit) {
+    // fake가 그 키를 안 물고 흘려보낸 경우 — 진짜 저장소에 PROBE가 앉았으니 되돌린다.
+    if (real.getItem(key) === PROBE) {
+      if (before === null) real.removeItem(key); else real.setItem(key, before);
+    }
+    installStorage(real);
+    throw new Error(`failWritesTo: '${key}' 쓰기가 안 터졌다 — 하네스가 무의미하다`);
   }
   return () => installStorage(real);
 }

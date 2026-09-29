@@ -104,6 +104,16 @@ describe('하네스 자기검사 — 키 하나만 골라 터뜨린다', () => {
     } finally { installStorage(original); }
   });
 
+  // **하네스가 기록을 건드리면 안 된다.** 초안은 교체가 먹었는지 보려고 실패 키로 한 번
+  // 쐈는데, 교체가 **안 먹은** 경우 그 쓰기가 진짜 저장소에 떨어져 기록 JSON을 덮어썼다
+  // (그리고 실패 분기는 바인딩만 되돌렸다). 정상 경로에서 값이 그대로인지부터 못 박는다.
+  it('하네스는 대상 키의 값을 건드리지 않는다', () => {
+    localStorage.setItem(ARCHIVE_KEY, '{"keep":1}');
+    const restore = failWritesTo(ARCHIVE_KEY);
+    restore();
+    expect(localStorage.getItem(ARCHIVE_KEY), '확인용 쓰기가 기록을 덮어썼다').toBe('{"keep":1}');
+  });
+
   it('기록 키만 던지고 세이브 키는 통과한다', () => {
     const restore = failWritesTo(ARCHIVE_KEY);
     try {
