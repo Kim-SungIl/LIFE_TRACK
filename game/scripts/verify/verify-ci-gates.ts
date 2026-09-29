@@ -25,7 +25,7 @@ import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, basename, join } from 'path';
 import { pathToFileURL } from 'url';
 import { load as loadYaml } from 'js-yaml';
-import { verifyFilesOnDisk, buildJobOnly, nightlyOnly } from './run-chain';
+import { verifyFilesOnDisk, buildJobOnly, nightlyOnly, chainFiles } from './run-chain';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const WORKFLOW_DIR = resolve(ROOT, '../.github/workflows');
@@ -56,7 +56,7 @@ const REQUIRED_NIGHTLY_STEPS = ['npm ci', 'npx playwright install --with-deps ch
 const REQUIRED_NIGHTLY_TRIGGERS = ['schedule'] as const;
 /** **절대 가지면 안 되는** 트리거. 여기에 PR/푸시를 붙이면 곧 required check로 승격되는 길이
  *  열리고(그 순간 모든 PR이 느려진다), "나이틀리 전용"이라는 이 파일의 전제가 거짓이 된다. */
-const FORBIDDEN_NIGHTLY_TRIGGERS = ['pull_request', 'push'] as const;
+const FORBIDDEN_NIGHTLY_TRIGGERS = ['pull_request', 'push', 'workflow_run', 'repository_dispatch'] as const;
 const BUILD_JOB = 'build';
 const CONTENT_JOB = 'content-verify';
 const DEPLOY_JOB = 'deploy';
@@ -492,6 +492,13 @@ export function auditChain(scripts: Record<string, string>, diskFiles: readonly 
       problems.push({ kind: '게이트 미배선', detail: `${f}.ts는 체인에서 제외되는데(build job 전용) build job이 안 부른다 — 아무 데서도 안 돈다` });
     }
   }
+  // 체인이 나이틀리를 안 빼면 그 게이트가 **PR의 content-verify 안에서** 돈다. `run-chain`의
+  // 제외는 파생이라 한 줄만 고쳐도 조용히 뒤집히는데, 배선 검사는 워크플로의 `run:` 줄만 보므로
+  // 체인 실행기(run-chain.ts) 안쪽은 정규식에 안 잡힌다 — 그래서 집합으로 직접 본다(3자 검수 M23).
+  const leaked = chainFiles(diskFiles).filter(f => nightly.has(f));
+  for (const f of leaked) {
+    problems.push({ kind: '나이틀리 오배선', detail: `${f}.ts가 콘텐츠 체인(verify:ci)에 남아 있다 — 나이틀리 전용인데 모든 PR에서 돈다` });
+  }
   for (const f of calledFiles) {
     if (!diskFiles.includes(f)) {
       problems.push({ kind: '고아 참조', detail: `build job이 scripts/verify/${f}.ts를 부르는데 파일이 없다` });
@@ -522,7 +529,8 @@ export function auditChain(scripts: Record<string, string>, diskFiles: readonly 
  */
 export function auditNightly(
   nightlyJobs: readonly Job[], nightlyTriggers: readonly Trigger[],
-  deployJobs: readonly Job[], scripts: Record<string, string>, diskFiles: readonly string[],
+  otherWorkflows: readonly { name: string; jobs: readonly Job[] }[],
+  scripts: Record<string, string>, diskFiles: readonly string[],
 ): Problem[] {
   const gates = nightlyOnly(diskFiles);
   if (gates.length === 0) {
@@ -591,11 +599,15 @@ export function auditNightly(
       problems.push({ kind: '나이틀리 트리거 위반', detail: `${NIGHTLY_WORKFLOW_NAME}의 \`on:\`에 \`${bad}\`가 붙었다 — 모든 PR/푸시에서 돌게 되고 required check로 승격되는 길이 열린다(나이틀리 전용이라는 전제가 깨진다)` });
     }
   }
-  // PR 게이트로 새는 반대 방향 — deploy.yml의 **어느 job이든** 나이틀리 게이트를 부르면 안 된다.
-  for (const j of deployJobs) {
-    for (const f of calledVerifyFiles(scripts, j.runs).keys()) {
-      if (gates.includes(f)) {
-        problems.push({ kind: '나이틀리 오배선', detail: `${WORKFLOW_NAME}의 ${j.name} job이 ${f}.ts를 부른다 — 나이틀리 전용 게이트가 모든 PR에서 돌아 required check가 그만큼 느려진다` });
+  // PR 게이트로 새는 반대 방향 — **나이틀리 워크플로가 아닌 어느 워크플로든** 나이틀리 게이트를
+  // 부르면 안 된다. 예전엔 deploy.yml만 봤는데, 그러면 `on: pull_request`인 **제3의 워크플로**를
+  // 하나 더 만들어 그대로 새울 수 있었다(3자 검수에서 실측: 게이트가 그냥 통과했다).
+  for (const w of otherWorkflows) {
+    for (const j of w.jobs) {
+      for (const f of calledVerifyFiles(scripts, j.runs).keys()) {
+        if (gates.includes(f)) {
+          problems.push({ kind: '나이틀리 오배선', detail: `${w.name}의 ${j.name} job이 ${f}.ts를 부른다 — 나이틀리 전용 게이트가 ${NIGHTLY_WORKFLOW_NAME} 밖에서 돈다(PR 경로면 required check가 그만큼 느려진다)` });
+        }
       }
     }
   }
@@ -656,7 +668,9 @@ export function auditRepo(inputs: RepoInputs = readRepoInputs()): { problems: Pr
     ...auditOtherWorkflows(workflows),
     ...auditScripts(scripts),
     ...auditChain(scripts, diskFiles, buildRuns),
-    ...auditNightly(nightlyJobs, nightlyTriggers, jobs, scripts, diskFiles),
+    ...auditNightly(nightlyJobs, nightlyTriggers,
+      workflows.filter(w => w.name !== NIGHTLY_WORKFLOW_NAME).map(w => ({ name: w.name, jobs: parseWorkflow(w.src) })),
+      scripts, diskFiles),
     ...auditRegistration(testFileExists),
   ];
   if (distGates.length === 0) {
@@ -923,7 +937,7 @@ const SELF_CHECK_COUNT: number = (() => {
 
   // ── 나이틀리 배선 ── 세 번째 실행 층(체인도 build job도 아닌 것)이 조용히 안 도는 구멍.
   const ni = (yaml: string = SELF_NIGHTLY_OK, deploy: string = SELF_OK, disk: readonly string[] = SELF_DISK, scripts = SELF_SCRIPTS) =>
-    auditNightly(parseWorkflow(yaml), parseTriggers(yaml), parseWorkflow(deploy), scripts, disk).map(p => p.kind);
+    auditNightly(parseWorkflow(yaml), parseTriggers(yaml), [{ name: WORKFLOW_NAME, jobs: parseWorkflow(deploy) }], scripts, disk).map(p => p.kind);
   const nsub = (a: string, b: string) => {
     if (!SELF_NIGHTLY_OK.includes(a)) throw new Error(`CI 게이트 자기검사 실패 — 나이틀리 픽스처에 "${a}"가 없다`);
     return SELF_NIGHTLY_OK.replace(a, b);

@@ -301,12 +301,15 @@ type ScenarioKind = typeof SCENARIO_KINDS[number];
 /** 종류 수 — 리터럴 타입이 아니라 number로 두어 아래 `=== 0` 가드가 타입 오류 없이 살아 있게 한다. */
 const SCENARIO_TOTAL: number = SCENARIO_KINDS.length;
 
-const PROBE_KINDS = ['console', 'missing', 'quiet-week', 'not-year-end', 'not-ending', 'no-archive'] as const;
+const PROBE_KINDS = ['console', 'missing', 'quiet-week', 'not-year-end', 'not-ending', 'no-archive',
+  'result-line-lost', 'archive-count-lost'] as const;
 type ProbeKind = typeof PROBE_KINDS[number];
 const SELF_TOTAL: number = PROBE_KINDS.length;
 
 const PROBE_CONSOLE = '__nightly-probe-console__';
 const PROBE_ASSET = '__nightly-probe-missing__.json';
+/** 결산 본문 대조를 겨누는 탐침이 세이브에 심는 줄. 화면은 이 줄을 그릴 수 없다. */
+const PROBE_STORY_LINE = '__nightly-probe-story-line__';
 
 /** 판정 메시지. 자기검사가 이 문자열로 "판정이 말했는가"를 본다 — 바꾸면 SELF_CHECKS도 같이. */
 const MSG = {
@@ -317,6 +320,7 @@ const MSG = {
   yearEndNotAdvanced: '학년말에서 다음 학년으로 못 넘어갔다',
   endingNotReached: '엔딩 화면에 못 닿았다',
   archiveNotReached: '기록실 화면에 못 닿았다',
+  archiveMismatch: '기록실이 주입한 기록과 다르다',
 } as const;
 
 /**
@@ -326,7 +330,7 @@ const MSG = {
  */
 function seedScript(a: {
   save: string; archive: string | null; saveKey: string; archiveKey: string; seenKey: string;
-  probe: ProbeKind | null; missingUrl: string; consoleMarker: string;
+  probe: ProbeKind | null; missingUrl: string; consoleMarker: string; storyLine: string;
 }) {
   try {
     localStorage.setItem(a.seenKey, '1');
@@ -346,6 +350,24 @@ function seedScript(a: {
       Storage.prototype.setItem = function (this: Storage, k: string, v: string) {
         if (k === a.archiveKey) return;
         orig.call(this, k, v);
+      };
+    }
+    // **결산 본문 대조를 겨눈다.** 세이브에 📖 줄을 하나 더 심으면 판정이 읽는 storyLines에는
+    // 있는데 화면은 그릴 수 없다 → `eventNotInResult`가 말해야 한다. 이 대조가 없으면
+    // 본문 비교를 통째로 지워도 게이트가 초록이었다(3자 검수에서 실측).
+    if (a.probe === 'result-line-lost') {
+      const origSet = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (this: Storage, k: string, v: string) {
+        if (k !== a.saveKey) return origSet.call(this, k, v);
+        try {
+          const d = JSON.parse(v) as { state?: { weekLog?: { messages?: string[] } } };
+          const msgs = d?.state?.weekLog?.messages;
+          if (Array.isArray(msgs) && !msgs.some((m) => m.includes(a.storyLine))) {
+            msgs.push(`📖 ${a.storyLine}`);
+            return origSet.call(this, k, JSON.stringify(d));
+          }
+        } catch { /* 모양이 다르면 흘린다 — 그러면 탐침이 안 잡히고 자기검사가 말한다 */ }
+        return origSet.call(this, k, v);
       };
     }
     if (a.probe === 'console') window.addEventListener('DOMContentLoaded', () => { console.error(a.consoleMarker); });
@@ -555,7 +577,7 @@ const SCENARIOS: Readonly<Record<ScenarioKind, { label: string; fixture: (fx: Fi
         // 기대값은 전부 주입한 기록에서 파생한다 — 리터럴 수치를 박지 않는다.
         const want = [`지금까지 ${c.fx.archive.runs}번의 학창시절`, ...c.fx.archive.endings, String(c.fx.archive.events)];
         const missing = want.filter((w) => !body.includes(w));
-        if (missing.length) throw new Error(`기록실이 주입한 기록과 다르다 — 빠진 것: ${missing.join(' / ')}`);
+        if (missing.length) throw new Error(`${MSG.archiveMismatch} — 빠진 것: ${missing.join(' / ')}`);
         return `완주 ${c.fx.archive.runs}회 · 결말 ${c.fx.archive.endings.length}종 · 이야기 ${c.fx.archive.events}종`;
       } },
       { name: '돌아가기 → 타이틀', run: async (c) => {
@@ -594,7 +616,12 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixtures, por
   // 대조군이 다른 코드를 돌면 "판정이 살아 있다"의 증거가 아니다.
   const saveFixture = (probeKind === 'quiet-week' || probeKind === 'not-year-end' || probeKind === 'not-ending')
     ? fx.quietWeek : scenario.fixture(fx);
-  const archiveRaw = (scenario.archive && probeKind !== 'no-archive') ? fx.archiveRaw : null;
+  // 기록실 탐침 둘은 **주입 바이트만** 바꾼다. no-archive는 아예 비우고,
+  // archive-count-lost는 완주 횟수를 하나 올려 화면이 기대값(fx.archive에서 파생)과 어긋나게 한다
+  // — 그러면 4단계의 내용 대조가 말해야 한다. 그 대조에는 탐침이 없어서, 지워도 초록이었다.
+  const archiveRaw = !scenario.archive || probeKind === 'no-archive' ? null
+    : probeKind === 'archive-count-lost' ? tamperArchiveRuns(fx.archiveRaw)
+    : fx.archiveRaw;
 
   let context: BrowserContext | undefined;
   try {
@@ -603,7 +630,7 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixtures, por
     await context.addInitScript(seedScript, {
       save: saveFixture.raw, archive: archiveRaw, saveKey: SAVE_KEY, archiveKey: ARCHIVE_KEY,
       seenKey: TUTORIAL_SEEN_KEY, probe: probeKind,
-      missingUrl: `${origin}${BASE}${PROBE_ASSET}`, consoleMarker: PROBE_CONSOLE,
+      missingUrl: `${origin}${BASE}${PROBE_ASSET}`, consoleMarker: PROBE_CONSOLE, storyLine: PROBE_STORY_LINE,
     });
     const page = await context.newPage();
     page.on('console', (m) => { if (m.type() === 'error') probe.consoleErrors.push(m.text()); });
@@ -705,15 +732,37 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixtures, por
   };
 }
 
+/** 기록의 완주 횟수만 하나 올린다 — 모양이 달라 못 건드리면 원본 그대로(그러면 탐침이 안 잡히고 자기검사가 말한다). */
+function tamperArchiveRuns(raw: string): string {
+  try {
+    const d = JSON.parse(raw) as { runs?: number };
+    if (typeof d.runs !== 'number') return raw;
+    d.runs = d.runs + 1;
+    return JSON.stringify(d);
+  } catch { return raw; }
+}
+
 // ── 자기검사 ──────────────────────────────────────────────────────────────────────────────
 /** 탐침마다 (어느 시나리오에) 심고, 판정이 무엇을 말해야 하는가. 하나라도 빠지면 그 갈래는 죽은 것이다. */
-const SELF_CHECKS: Readonly<Record<ProbeKind, { scenario: ScenarioKind; markers: readonly string[]; msg: string }>> = {
-  console: { scenario: 'midweek-event', markers: [PROBE_CONSOLE], msg: '자기검사: 일부러 낸 콘솔 에러를 판정이 안 담았다 — 위 "콘솔 에러 0건"은 근거가 없다' },
-  missing: { scenario: 'midweek-event', markers: [PROBE_ASSET], msg: '자기검사: 일부러 낸 404를 판정이 안 담았다 — 위 "404 0건"은 근거가 없다' },
-  'quiet-week': { scenario: 'midweek-event', markers: [MSG.noMidweekEvent], msg: '자기검사: 사건이 안 뜨는 주를 주입했는데 판정이 "사건 0건"을 말하지 않았다 — 이 시나리오가 사건을 밟았다는 근거가 없다' },
-  'not-year-end': { scenario: 'year-end', markers: [MSG.yearEndNotReached], msg: '자기검사: 학년말이 아닌 세이브를 주입했는데 판정이 안 잡았다 — "학년말 화면이 떴다"는 근거가 없다' },
-  'not-ending': { scenario: 'ending-archive', markers: [MSG.endingNotReached], msg: '자기검사: 엔딩이 아닌 세이브를 주입했는데 판정이 안 잡았다 — "엔딩 화면이 떴다"는 근거가 없다' },
-  'no-archive': { scenario: 'ending-archive', markers: [MSG.archiveNotReached], msg: '자기검사: 런간 기록을 비웠는데 판정이 안 잡았다 — "기록실이 떴다"는 근거가 없다' },
+/**
+ * 탐침마다 (어느 시나리오에) 심고, 판정이 무엇을 말해야 하며, **몇 번째 단계에서 잡혀야 하는가.**
+ *
+ * `expectStep`이 있는 이유: 탐침이 의도한 단계보다 **앞에서 흡수되면** 뒤 단계의 판정은
+ * 여전히 무방비인데 로그는 `✓ 자기검사 … 통과`를 찍는다. 3자 검수에서 실측된 모양이 그거다 —
+ * `not-ending`은 1단계(타이틀에 "엔딩 다시 보기"가 없음)에서 끝나 2단계의 제목·등급 대조까지
+ * 못 갔고, 그 판정들을 지워도 게이트가 초록이었다. 단계를 값으로 못 박으면 그 표류가 회귀가 된다.
+ */
+const SELF_CHECKS: Readonly<Record<ProbeKind, { scenario: ScenarioKind; markers: readonly string[]; expectStep: number; msg: string }>> = {
+  console: { scenario: 'midweek-event', markers: [PROBE_CONSOLE], expectStep: 1, msg: '자기검사: 일부러 낸 콘솔 에러를 판정이 안 담았다 — 위 "콘솔 에러 0건"은 근거가 없다' },
+  missing: { scenario: 'midweek-event', markers: [PROBE_ASSET], expectStep: 1, msg: '자기검사: 일부러 낸 404를 판정이 안 담았다 — 위 "404 0건"은 근거가 없다' },
+  'quiet-week': { scenario: 'midweek-event', markers: [MSG.noMidweekEvent], expectStep: 3, msg: '자기검사: 사건이 안 뜨는 주를 주입했는데 판정이 "사건 0건"을 말하지 않았다 — 이 시나리오가 사건을 밟았다는 근거가 없다' },
+  'not-year-end': { scenario: 'year-end', markers: [MSG.yearEndNotReached], expectStep: 2, msg: '자기검사: 학년말이 아닌 세이브를 주입했는데 판정이 안 잡았다 — "학년말 화면이 떴다"는 근거가 없다' },
+  'not-ending': { scenario: 'ending-archive', markers: [MSG.endingNotReached], expectStep: 1, msg: '자기검사: 엔딩이 아닌 세이브를 주입했는데 판정이 안 잡았다 — "엔딩 화면이 떴다"는 근거가 없다' },
+  // 여기부터는 **도달이 아니라 내용**을 겨눈다. 위 여섯은 "그 화면에 닿았나"만 보므로,
+  // 닿은 뒤의 대조(결산 본문·기록실 수치)를 지워도 전부 초록이었다.
+  'result-line-lost': { scenario: 'midweek-event', markers: [MSG.eventNotInResult], expectStep: 4, msg: '자기검사: 화면이 그릴 수 없는 📖 줄을 세이브에 심었는데 판정이 안 잡았다 — "결산에 사건 문장이 실렸다"는 근거가 없다' },
+  'archive-count-lost': { scenario: 'ending-archive', markers: [MSG.archiveMismatch], expectStep: 4, msg: '자기검사: 기록의 완주 횟수를 어긋나게 했는데 판정이 안 잡았다 — "기록실이 주입한 기록과 같다"는 근거가 없다' },
+  'no-archive': { scenario: 'ending-archive', markers: [MSG.archiveNotReached], expectStep: 3, msg: '자기검사: 런간 기록을 비웠는데 판정이 안 잡았다 — "기록실이 떴다"는 근거가 없다' },
 };
 
 const problems: string[] = [];
@@ -772,7 +821,10 @@ async function main() {
         const out = await runScenario(browser, served, fx, port, c.scenario, kind);
         const text = out.problems.join('\n');
         const missing = c.markers.filter((m) => !text.includes(m));
-        if (missing.length === 0) {
+        if (missing.length === 0 && out.steps.length !== c.expectStep) {
+          // 말은 했는데 **엉뚱한 단계**에서 했다 — 뒤 단계의 판정은 여전히 무방비다.
+          fail(`자기검사 ${kind}이 ${out.steps.length}단계에서 잡혔다(기대 ${c.expectStep}단계) — 그 사이 단계의 판정에는 대조가 없다`);
+        } else if (missing.length === 0) {
           selfPassed++;
           console.log(`    ✓ 자기검사 ${kind} (${c.scenario}) — ${out.steps.length}단계에서 잡힘 (${fmtMs(Date.now() - t2)})`);
         } else {

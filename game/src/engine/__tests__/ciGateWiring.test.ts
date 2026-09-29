@@ -147,7 +147,7 @@ describe('CI 게이트 배선', () => {
     };
     const DISK = ['verify-a', 'verify-dist-fonts', 'verify-nightly-x'];
     const kinds = (nightlyYaml = NWF, deployYaml = WF, disk: readonly string[] = DISK, scripts = SCRIPTS) =>
-      auditNightly(parseWorkflow(nightlyYaml), parseTriggers(nightlyYaml), parseWorkflow(deployYaml), scripts, disk)
+      auditNightly(parseWorkflow(nightlyYaml), parseTriggers(nightlyYaml), [{ name: 'deploy.yml', jobs: parseWorkflow(deployYaml) }], scripts, disk)
         .map(p => p.kind);
 
     it('전제: 합성 나이틀리 워크플로가 정합이다 (아래 대조군의 기준선)', () => {
