@@ -33,8 +33,19 @@ export function buildJobOnly(files: readonly string[] = verifyFilesOnDisk()): st
   return files.filter(f => f.startsWith('verify-dist-') || f === 'verify-test-floor').sort();
 }
 
+/**
+ * **나이틀리에서만 돌 수 있는** 검증. dist가 필요하다는 점은 `buildJobOnly`와 같지만,
+ * 이쪽은 **PR 게이트에 얹으면 안 되는** 것들이다(한 판을 엔진으로 끝까지 돌리고 브라우저
+ * 컨텍스트를 아홉 번 띄운다). main 브랜치 보호의 required check는 `build`·`content-verify`
+ * 둘뿐이므로, 이 집합은 그 두 job 어디에도 들어가지 않고 `.github/workflows/nightly.yml`의
+ * `schedule`에서만 돈다. 그 배선(그리고 "만들고 안 붙이기")은 `verify-ci-gates`가 잡는다.
+ */
+export function nightlyOnly(files: readonly string[] = verifyFilesOnDisk()): string[] {
+  return files.filter(f => f.startsWith('verify-nightly-')).sort();
+}
+
 export function chainFiles(files: readonly string[] = verifyFilesOnDisk()): string[] {
-  const only = new Set(buildJobOnly(files));
+  const only = new Set([...buildJobOnly(files), ...nightlyOnly(files)]);
   return files.filter(f => !only.has(f));
 }
 

@@ -25,12 +25,16 @@ import { readFileSync, readdirSync, existsSync } from 'fs';
 import { resolve, basename, join } from 'path';
 import { pathToFileURL } from 'url';
 import { load as loadYaml } from 'js-yaml';
-import { verifyFilesOnDisk, buildJobOnly } from './run-chain';
+import { verifyFilesOnDisk, buildJobOnly, nightlyOnly, chainFiles } from './run-chain';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const WORKFLOW_DIR = resolve(ROOT, '../.github/workflows');
 const WORKFLOW_NAME = 'deploy.yml';
 const WORKFLOW = resolve(WORKFLOW_DIR, WORKFLOW_NAME);
+/** 나이틀리 워크플로. **별도 파일인 것 자체가 계약이다** — deploy.yml에 얹으면 그 스텝이
+ *  모든 PR에서 돌고, `build`/`content-verify`가 required check라 그만큼 느려진다. */
+const NIGHTLY_WORKFLOW_NAME = 'nightly.yml';
+const NIGHTLY_JOB = 'nightly-e2e';
 const PKG = resolve(ROOT, 'package.json');
 const TEST_FILE = resolve(ROOT, 'src/engine/__tests__/ciGateWiring.test.ts');
 const REPORT_REL = 'node_modules/.tmp/vitest-report.json';
@@ -46,6 +50,13 @@ const REQUIRED_BUILD_STEPS = [
   'npx playwright install --with-deps chromium',
 ] as const;
 const CONTENT_STEP = 'npm run verify:ci';
+/** 나이틀리 job이 반드시 부르는 것. 게이트가 **dist와 브라우저**를 보므로 셋 다 있어야 한다. */
+const REQUIRED_NIGHTLY_STEPS = ['npm ci', 'npx playwright install --with-deps chromium', BUILD_STEP] as const;
+/** 나이틀리 워크플로가 반드시 갖는 트리거. */
+const REQUIRED_NIGHTLY_TRIGGERS = ['schedule'] as const;
+/** **절대 가지면 안 되는** 트리거. 여기에 PR/푸시를 붙이면 곧 required check로 승격되는 길이
+ *  열리고(그 순간 모든 PR이 느려진다), "나이틀리 전용"이라는 이 파일의 전제가 거짓이 된다. */
+const FORBIDDEN_NIGHTLY_TRIGGERS = ['pull_request', 'push', 'workflow_run', 'repository_dispatch'] as const;
 const BUILD_JOB = 'build';
 const CONTENT_JOB = 'content-verify';
 const DEPLOY_JOB = 'deploy';
@@ -442,25 +453,162 @@ export function resolveVerifyScript(name: string, scripts: Record<string, string
  * 남는 것은 **build job 전용 집합이 실제 배선과 맞는가** — `run-chain`이 빼는 것과 build job이
  * 부르는 것이 어긋나면 그 게이트는 **아무 데서도 안 돈다**.
  */
+/** 이 `run:` 줄들이 (npm 스크립트를 전개해서) 실제로 부르는 `scripts/verify/*.ts` 파일 →
+ *  **처음 불린 스텝 인덱스**. 순서 판정(`build:release`보다 앞이면 볼 dist가 없다)에 쓴다. */
+function calledVerifyFiles(scripts: Record<string, string>, runs: readonly string[]): Map<string, number> {
+  const out = new Map<string, number>();
+  runs.forEach((run, i) => {
+    for (const m of norm(run).matchAll(/\bnpm run ([A-Za-z0-9:_-]+)/g)) {
+      for (const x of expandScript(m[1], scripts).matchAll(/scripts\/verify\/(verify-[A-Za-z0-9-]+)\.ts/g)) {
+        if (!out.has(x[1])) out.set(x[1], i);
+      }
+    }
+  });
+  return out;
+}
+
+/** 파일 → 그 파일을 (전개했을 때) 부르는 package.json 스크립트 이름들. 무력화 검사에서
+ *  "이 스텝이 게이트를 부르는가"를 판단하는 데 쓴다. */
+function verifyScriptNamesByFile(scripts: Record<string, string>): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const name of Object.keys(scripts)) {
+    for (const m of expandScript(name, scripts).matchAll(/scripts\/verify\/(verify-[A-Za-z0-9-]+)\.ts/g)) {
+      out.set(m[1], [...(out.get(m[1]) ?? []), name]);
+    }
+  }
+  return out;
+}
+
 export function auditChain(scripts: Record<string, string>, diskFiles: readonly string[], buildJobRuns: readonly string[]): Problem[] {
   const problems: Problem[] = [];
   if (diskFiles.length === 0) {
     return [{ kind: '커버리지 붕괴', detail: 'scripts/verify에서 verify-*.ts를 하나도 못 찾았다 — 집합 동등성이 공허하게 참이 된다' }];
   }
   const wantBuildOnly = buildJobOnly(diskFiles);
-  const calledFiles = new Set(buildJobRuns.flatMap(run =>
-    [...norm(run).matchAll(/\bnpm run ([A-Za-z0-9:_-]+)/g)]
-      .flatMap(m => [...expandScript(m[1], scripts).matchAll(/scripts\/verify\/(verify-[A-Za-z0-9-]+)\.ts/g)].map(x => x[1]))));
+  const nightly = new Set(nightlyOnly(diskFiles));
+  const calledFiles = new Set(calledVerifyFiles(scripts, buildJobRuns).keys());
   for (const f of wantBuildOnly) {
     if (!calledFiles.has(f)) {
       problems.push({ kind: '게이트 미배선', detail: `${f}.ts는 체인에서 제외되는데(build job 전용) build job이 안 부른다 — 아무 데서도 안 돈다` });
     }
   }
+  // 체인이 나이틀리를 안 빼면 그 게이트가 **PR의 content-verify 안에서** 돈다. `run-chain`의
+  // 제외는 파생이라 한 줄만 고쳐도 조용히 뒤집히는데, 배선 검사는 워크플로의 `run:` 줄만 보므로
+  // 체인 실행기(run-chain.ts) 안쪽은 정규식에 안 잡힌다 — 그래서 집합으로 직접 본다(3자 검수 M23).
+  const leaked = chainFiles(diskFiles).filter(f => nightly.has(f));
+  for (const f of leaked) {
+    problems.push({ kind: '나이틀리 오배선', detail: `${f}.ts가 콘텐츠 체인(verify:ci)에 남아 있다 — 나이틀리 전용인데 모든 PR에서 돈다` });
+  }
   for (const f of calledFiles) {
     if (!diskFiles.includes(f)) {
       problems.push({ kind: '고아 참조', detail: `build job이 scripts/verify/${f}.ts를 부르는데 파일이 없다` });
+    } else if (nightly.has(f)) {
+      // 나이틀리 전용을 PR 게이트에 얹는 편집. **deploy.yml의 모든 job**을 훑는 auditNightly가
+      // 한 자리에서 보고한다 — 여기서도 세면 같은 사실이 두 번 나온다.
+      continue;
     } else if (!wantBuildOnly.includes(f)) {
       problems.push({ kind: '이중 실행', detail: `${f}.ts를 build job이 부르는데 체인에서도 돈다 — run-chain의 제외 규칙과 어긋난다` });
+    }
+  }
+  return problems;
+}
+
+// ── 나이틀리 배선 판정 ────────────────────────────────────────────────────────
+/**
+ * **나이틀리 전용 게이트가 실제로 돌고, PR 게이트로 새지 않는가.**
+ *
+ * 세 번째 실행 층이다. 체인(content-verify)도 build job도 아닌 것을 만들면, 그 순간
+ * `run-chain`의 파생에서 빠지므로 **아무 데서도 안 돌아도 모든 게이트가 초록**이 된다
+ * (`verify-dist-*`가 build job 배선으로 잠기는 것과 정확히 같은 구멍이다).
+ * 그래서 요구 목록을 여기서도 **디스크에서 파생**시킨다 — `verify-nightly-*.ts`를 만들고
+ * 워크플로에 안 붙이면 여기서 걸린다.
+ *
+ * 반대 방향도 같이 잠근다: 나이틀리 게이트를 `deploy.yml`의 아무 job에나 얹으면
+ * **모든 PR이 그만큼 느려진다**(그 두 job이 main 브랜치 보호의 required check다).
+ * 그리고 나이틀리 워크플로 자체에 `pull_request`/`push`를 붙이는 것도 같은 결과라 막는다.
+ */
+export function auditNightly(
+  nightlyJobs: readonly Job[], nightlyTriggers: readonly Trigger[],
+  otherWorkflows: readonly { name: string; jobs: readonly Job[] }[],
+  scripts: Record<string, string>, diskFiles: readonly string[],
+): Problem[] {
+  const gates = nightlyOnly(diskFiles);
+  if (gates.length === 0) {
+    return [{ kind: '커버리지 붕괴', detail: `scripts/verify에 verify-nightly-*.ts가 0개 — 요구가 0이면 나이틀리 배선 검사가 전부 공허하게 참이 된다` }];
+  }
+  const problems: Problem[] = [];
+  const byFile = verifyScriptNamesByFile(scripts);
+  const job = nightlyJobs.find(j => j.name === NIGHTLY_JOB);
+  if (!job) {
+    problems.push({ kind: 'job 소실', detail: `${NIGHTLY_WORKFLOW_NAME}에 ${NIGHTLY_JOB} job이 없다 — 나이틀리 게이트가 아무 데서도 안 돈다(파일이 없거나 job 이름이 바뀌었다)` });
+  } else {
+    for (const step of REQUIRED_NIGHTLY_STEPS) {
+      if (!job.runs.some(r => runsCommand(r, step))) {
+        problems.push({ kind: '필수 스텝 누락', detail: `${NIGHTLY_JOB} job이 \`${step}\`을 부르지 않는다` });
+      }
+    }
+    const buildAt = job.runs.findIndex(r => runsCommand(r, BUILD_STEP));
+    const called = calledVerifyFiles(scripts, job.runs);
+    for (const f of gates) {
+      const at = called.get(f);
+      if (at === undefined) {
+        problems.push({ kind: '게이트 미배선', detail: `${f}.ts는 나이틀리 전용인데 ${NIGHTLY_JOB} job이 안 부른다 — 만들고 워크플로에 안 붙였다(체인에서도 빠져 아무 데서도 안 돈다)` });
+      } else if (buildAt >= 0 && at < buildAt) {
+        problems.push({ kind: '게이트 순서 오류', detail: `${f}.ts가 \`${BUILD_STEP}\`보다 먼저 온다 — 볼 dist가 없다` });
+      }
+    }
+    for (const f of called.keys()) {
+      if (!diskFiles.includes(f)) {
+        problems.push({ kind: '고아 참조', detail: `${NIGHTLY_JOB} job이 scripts/verify/${f}.ts를 부르는데 파일이 없다` });
+      } else if (!gates.includes(f)) {
+        problems.push({ kind: '이중 실행', detail: `${f}.ts를 ${NIGHTLY_JOB} job이 부르는데 나이틀리 전용이 아니다 — 체인이나 build job에서 이미 돈다` });
+      }
+    }
+    // 무력화 — job 레벨. 한 줄로 나이틀리 전체가 죽는다.
+    if (job.if !== undefined) {
+      problems.push({ kind: 'job 무력화', detail: `${NIGHTLY_JOB} job에 \`if: ${job.if}\`가 붙었다 — 게이트 전체가 한 줄로 스킵된다` });
+    }
+    if (job.continueOnError !== undefined) {
+      problems.push({ kind: 'job 무력화', detail: `${NIGHTLY_JOB} job에 \`continue-on-error: ${job.continueOnError}\`가 붙었다 — 붉어도 성공이다` });
+    }
+    if (job.emptyMatrix !== undefined) {
+      problems.push({ kind: 'job 무력화', detail: `${NIGHTLY_JOB} job의 ${job.emptyMatrix} — job이 통째로 스킵될 수 있다` });
+    }
+    // 무력화 — 스텝 레벨.
+    const guarded = [...REQUIRED_NIGHTLY_STEPS, ...gates.flatMap(f => (byFile.get(f) ?? []).map(n => `npm run ${n}`))];
+    for (const step of job.steps) {
+      if (!step.run || !guarded.some(cmd => mentions(step.run!, cmd))) continue;
+      const where = `${NIGHTLY_JOB}/\`${oneLine(step.run)}\``;
+      if (step.if !== undefined) {
+        problems.push({ kind: '스텝 무력화', detail: `${where}에 \`if: ${step.if}\`가 붙었다 — 조건이 거짓이면 스킵인데 job은 성공이다` });
+      }
+      if (step.continueOnError !== undefined) {
+        problems.push({ kind: '스텝 무력화', detail: `${where}에 \`continue-on-error: ${step.continueOnError}\`가 붙었다 — 붉어도 job이 성공한다` });
+      }
+      problems.push(...swallowProblems('종료 코드 무력화', where, step.run));
+    }
+  }
+  // 트리거 — 있어야 하는 것과 **있으면 안 되는 것**.
+  for (const need of REQUIRED_NIGHTLY_TRIGGERS) {
+    if (!nightlyTriggers.some(t => t.name === need)) {
+      problems.push({ kind: '나이틀리 트리거 소실', detail: `${NIGHTLY_WORKFLOW_NAME}의 \`on:\`에 \`${need}\`가 없다 — 이 게이트가 저절로 도는 경로가 사라진다` });
+    }
+  }
+  for (const bad of FORBIDDEN_NIGHTLY_TRIGGERS) {
+    if (nightlyTriggers.some(t => t.name === bad)) {
+      problems.push({ kind: '나이틀리 트리거 위반', detail: `${NIGHTLY_WORKFLOW_NAME}의 \`on:\`에 \`${bad}\`가 붙었다 — 모든 PR/푸시에서 돌게 되고 required check로 승격되는 길이 열린다(나이틀리 전용이라는 전제가 깨진다)` });
+    }
+  }
+  // PR 게이트로 새는 반대 방향 — **나이틀리 워크플로가 아닌 어느 워크플로든** 나이틀리 게이트를
+  // 부르면 안 된다. 예전엔 deploy.yml만 봤는데, 그러면 `on: pull_request`인 **제3의 워크플로**를
+  // 하나 더 만들어 그대로 새울 수 있었다(3자 검수에서 실측: 게이트가 그냥 통과했다).
+  for (const w of otherWorkflows) {
+    for (const j of w.jobs) {
+      for (const f of calledVerifyFiles(scripts, j.runs).keys()) {
+        if (gates.includes(f)) {
+          problems.push({ kind: '나이틀리 오배선', detail: `${w.name}의 ${j.name} job이 ${f}.ts를 부른다 — 나이틀리 전용 게이트가 ${NIGHTLY_WORKFLOW_NAME} 밖에서 돈다(PR 경로면 required check가 그만큼 느려진다)` });
+        }
+      }
     }
   }
   return problems;
@@ -482,6 +630,8 @@ export function auditRegistration(exists: boolean): Problem[] {
 export interface RepoInputs {
   jobs: Job[]; triggers: Trigger[]; scripts: Record<string, string>;
   diskFiles: string[]; workflows: { name: string; src: string }[]; testFileExists: boolean;
+  /** 나이틀리 워크플로(별도 파일). 파일이 없으면 둘 다 빈 배열이고 `auditNightly`가 말한다. */
+  nightlyJobs: Job[]; nightlyTriggers: Trigger[];
 }
 
 export function distGatesOf(scripts: Record<string, string>): string[] {
@@ -492,6 +642,7 @@ export function readRepoInputs(): RepoInputs {
   const workflows = readdirSync(WORKFLOW_DIR).filter(f => /\.ya?ml$/.test(f))
     .map(name => ({ name, src: readFileSync(join(WORKFLOW_DIR, name), 'utf8') }));
   const main = workflows.find(w => w.name === WORKFLOW_NAME)?.src ?? '';
+  const nightly = workflows.find(w => w.name === NIGHTLY_WORKFLOW_NAME)?.src ?? '';
   return {
     jobs: parseWorkflow(main),
     triggers: parseTriggers(main),
@@ -499,14 +650,16 @@ export function readRepoInputs(): RepoInputs {
     diskFiles: verifyFilesOnDisk(),
     workflows,
     testFileExists: existsSync(TEST_FILE),
+    nightlyJobs: parseWorkflow(nightly),
+    nightlyTriggers: parseTriggers(nightly),
   };
 }
 
 /** 실파일을 읽어 판정한다. 테스트도 이 함수를 부른다 — 검사 대상이 갈리면 의미가 없다.
  *  입력을 주입할 수 있게 둔 것은 장식이 아니다: 실워크플로가 상시 정합이라 이 함수의 **반환**을
  *  통째로 비워도 스크립트와 테스트가 둘 다 초록이었다(검수 실측). */
-export function auditRepo(inputs: RepoInputs = readRepoInputs()): { problems: Problem[]; jobs: Job[]; distGates: string[] } {
-  const { jobs, triggers, scripts, diskFiles, workflows, testFileExists } = inputs;
+export function auditRepo(inputs: RepoInputs = readRepoInputs()): { problems: Problem[]; jobs: Job[]; distGates: string[]; nightlyGates: string[] } {
+  const { jobs, triggers, scripts, diskFiles, workflows, testFileExists, nightlyJobs, nightlyTriggers } = inputs;
   const distGates = distGatesOf(scripts);
   const buildRuns = jobs.find(j => j.name === BUILD_JOB)?.runs ?? [];
   const problems = [
@@ -515,12 +668,15 @@ export function auditRepo(inputs: RepoInputs = readRepoInputs()): { problems: Pr
     ...auditOtherWorkflows(workflows),
     ...auditScripts(scripts),
     ...auditChain(scripts, diskFiles, buildRuns),
+    ...auditNightly(nightlyJobs, nightlyTriggers,
+      workflows.filter(w => w.name !== NIGHTLY_WORKFLOW_NAME).map(w => ({ name: w.name, jobs: parseWorkflow(w.src) })),
+      scripts, diskFiles),
     ...auditRegistration(testFileExists),
   ];
   if (distGates.length === 0) {
     problems.push({ kind: '커버리지 붕괴', detail: 'verify:dist-* 스크립트가 0개 — 요구가 0이면 전부 충족으로 통과한다' });
   }
-  return { problems, jobs, distGates };
+  return { problems, jobs, distGates, nightlyGates: nightlyOnly(diskFiles) };
 }
 
 export function exitCodeFor(problems: readonly Problem[]): 0 | 1 {
@@ -583,10 +739,31 @@ const SELF_SCRIPTS: Record<string, string> = {
   'verify:ci': CHAIN_SCRIPT,
   'verify:dist-alpha': 'tsx scripts/verify/verify-dist-alpha.ts',
   'verify:test-floor': 'tsx scripts/verify/verify-test-floor.ts',
+  'verify:nightly-alpha': 'tsx scripts/verify/verify-nightly-alpha.ts',
 };
-const SELF_DISK = ['verify-a', 'verify-b', 'verify-dist-alpha', 'verify-test-floor'];
+const SELF_DISK = ['verify-a', 'verify-b', 'verify-dist-alpha', 'verify-nightly-alpha', 'verify-test-floor'];
 const SELF_BUILD_RUNS = ['npm run build:release', 'npm run verify:dist-alpha', 'npm run verify:test-floor'];
 const SELF_WORKFLOWS = [{ name: WORKFLOW_NAME, src: SELF_OK }];
+/** 나이틀리 워크플로의 합성 픽스처 — 별도 파일이고 `schedule`에서만 돈다. */
+const SELF_NIGHTLY_OK = `
+name: n
+on:
+  schedule:
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+jobs:
+  nightly-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install
+        run: npm ci
+      - name: Browser
+        run: npx playwright install --with-deps chromium
+      - name: Build
+        run: npm run build:release
+      - name: N
+        run: npm run verify:nightly-alpha
+`;
 
 const SELF_CHECK_COUNT: number = (() => {
   let ran = 0;
@@ -758,6 +935,55 @@ const SELF_CHECK_COUNT: number = (() => {
   check('체인에서 도는 걸 build도 부름(이중 실행)', ch(SELF_DISK, [...SELF_BUILD_RUNS, 'npm run verify:a'], { ...SELF_SCRIPTS, 'verify:a': 'tsx scripts/verify/verify-a.ts' }), ['이중 실행']);
   check('corpus 0이면 붕괴', ch([]), ['커버리지 붕괴']);
 
+  // ── 나이틀리 배선 ── 세 번째 실행 층(체인도 build job도 아닌 것)이 조용히 안 도는 구멍.
+  const ni = (yaml: string = SELF_NIGHTLY_OK, deploy: string = SELF_OK, disk: readonly string[] = SELF_DISK, scripts = SELF_SCRIPTS) =>
+    auditNightly(parseWorkflow(yaml), parseTriggers(yaml), [{ name: WORKFLOW_NAME, jobs: parseWorkflow(deploy) }], scripts, disk).map(p => p.kind);
+  const nsub = (a: string, b: string) => {
+    if (!SELF_NIGHTLY_OK.includes(a)) throw new Error(`CI 게이트 자기검사 실패 — 나이틀리 픽스처에 "${a}"가 없다`);
+    return SELF_NIGHTLY_OK.replace(a, b);
+  };
+  const NIGHTLY_GATE_RUN = '      - name: N\n        run: npm run verify:nightly-alpha\n';
+  check('나이틀리 정합', ni(), []);
+  // 파일이 통째로 없으면 job도 트리거도 없다 — 둘 다 말해야 한다(한쪽만 보면 나머지 감시가 죽어도 통과).
+  check('나이틀리 워크플로 파일 소실', ni(''), ['job 소실', '나이틀리 트리거 소실']);
+  check('나이틀리 job 이름 변경', ni(nsub('  nightly-e2e:', '  nightly:')), ['job 소실']);
+  check('나이틀리 게이트 스텝 삭제', ni(nsub(NIGHTLY_GATE_RUN, '')), ['게이트 미배선']);
+  check('나이틀리 게이트를 build 앞으로', ni(nsub('      - name: Build\n        run: npm run build:release\n' + NIGHTLY_GATE_RUN, NIGHTLY_GATE_RUN + '      - name: Build\n        run: npm run build:release\n')), ['게이트 순서 오류']);
+  check('새 나이틀리 게이트를 만들고 안 붙임', ni(SELF_NIGHTLY_OK, SELF_OK, [...SELF_DISK, 'verify-nightly-beta']), ['게이트 미배선']);
+  check('나이틀리 job이 체인 게이트를 부름', ni(nsub(NIGHTLY_GATE_RUN, NIGHTLY_GATE_RUN + '      - name: X\n        run: npm run verify:a\n'), SELF_OK, SELF_DISK, { ...SELF_SCRIPTS, 'verify:a': 'tsx scripts/verify/verify-a.ts' }), ['이중 실행']);
+  check('나이틀리 job이 없는 파일을 부름', ni(nsub(NIGHTLY_GATE_RUN, NIGHTLY_GATE_RUN + '      - name: X\n        run: npm run verify:ghost\n'), SELF_OK, SELF_DISK, { ...SELF_SCRIPTS, 'verify:ghost': 'tsx scripts/verify/verify-ghost.ts' }), ['고아 참조']);
+  check('나이틀리 게이트 0종이면 붕괴', ni(SELF_NIGHTLY_OK, SELF_OK, SELF_DISK.filter(f => !f.startsWith('verify-nightly-'))), ['커버리지 붕괴']);
+  // 필수 스텝은 **원소마다** 지워 본다.
+  for (const step of REQUIRED_NIGHTLY_STEPS) {
+    const line = new RegExp(`^ +- name: .+\\n(?: +[a-z-]+: .+\\n)* +run: ${step.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\n`, 'm');
+    const m = SELF_NIGHTLY_OK.match(line);
+    if (!m) throw new Error(`CI 게이트 자기검사 실패 — 나이틀리 픽스처에 \`${step}\` 스텝이 없다`);
+    check(`나이틀리 필수 스텝 삭제: ${step}`, ni(SELF_NIGHTLY_OK.replace(m[0], '')), ['필수 스텝 누락']);
+  }
+  check('나이틀리 job-level if', ni(nsub('  nightly-e2e:\n    runs-on: ubuntu-latest\n', '  nightly-e2e:\n    if: false\n    runs-on: ubuntu-latest\n')), ['job 무력화']);
+  check('나이틀리 job-level continue-on-error 표현식', ni(nsub('  nightly-e2e:\n    runs-on: ubuntu-latest\n', '  nightly-e2e:\n    continue-on-error: ${{ true }}\n    runs-on: ubuntu-latest\n')), ['job 무력화']);
+  check('나이틀리 job의 빈 matrix', ni(nsub('  nightly-e2e:\n    runs-on: ubuntu-latest\n', '  nightly-e2e:\n    runs-on: ubuntu-latest\n    strategy:\n      matrix:\n        node: []\n')), ['job 무력화']);
+  check('나이틀리 게이트 스텝에 if', ni(nsub(NIGHTLY_GATE_RUN, '      - name: N\n        if: false\n        run: npm run verify:nightly-alpha\n')), ['스텝 무력화']);
+  check('나이틀리 게이트 스텝에 continue-on-error', ni(nsub(NIGHTLY_GATE_RUN, NIGHTLY_GATE_RUN + '        continue-on-error: true\n')), ['스텝 무력화']);
+  // 셸 무력화도 **RC_SWALLOW 원소마다**.
+  for (const [label, body] of swallowSamples) {
+    const kinds = ni(nsub(NIGHTLY_GATE_RUN, `      - name: N\n        run: ${body.replace('verify:dist-alpha', 'verify:nightly-alpha')}\n`));
+    ran++;
+    if (!kinds.includes('종료 코드 무력화')) {
+      throw new Error(`CI 게이트 자기검사 실패 — 나이틀리 게이트 스텝의 "${label}"을 안 잡는다: ${JSON.stringify(kinds)}`);
+    }
+  }
+  // 트리거 — 있어야 하는 것과 **있으면 안 되는 것**을 원소마다.
+  for (const need of REQUIRED_NIGHTLY_TRIGGERS) {
+    check(`나이틀리 ${need} 트리거 삭제`, ni(nsub(`  ${need}:\n    - cron: '0 18 * * *'\n`, '')), ['나이틀리 트리거 소실']);
+  }
+  for (const bad of FORBIDDEN_NIGHTLY_TRIGGERS) {
+    check(`나이틀리에 ${bad} 트리거 추가`, ni(nsub('  workflow_dispatch:\n', `  workflow_dispatch:\n  ${bad}:\n    branches: [main]\n`)), ['나이틀리 트리거 위반']);
+  }
+  // PR 게이트로 새는 반대 방향 — deploy.yml의 **어느 job이든**.
+  check('deploy.yml의 build job이 나이틀리 게이트를 부름', ni(SELF_NIGHTLY_OK, SELF_OK.replace(GATE_RUN, GATE_RUN + '      - name: NN\n        run: npm run verify:nightly-alpha\n')), ['나이틀리 오배선']);
+  check('deploy.yml의 content-verify job이 나이틀리 게이트를 부름', ni(SELF_NIGHTLY_OK, SELF_OK.replace('      - run: npm run verify:ci\n', '      - run: npm run verify:ci\n      - run: npm run verify:nightly-alpha\n')), ['나이틀리 오배선']);
+
   // ── 등록 ──
   check('테스트 파일 존재', auditRegistration(true).map(p => p.kind), []);
   check('테스트 파일 삭제', auditRegistration(false).map(p => p.kind), ['등록 소실']);
@@ -765,7 +991,8 @@ const SELF_CHECK_COUNT: number = (() => {
   // ── 합류 ── 각 판정부의 결과가 실제로 흘러나오는지.
   const repoKinds = (over: Partial<RepoInputs>) => auditRepo({
     jobs: parseWorkflow(SELF_OK), triggers: parseTriggers(SELF_OK), scripts: SELF_SCRIPTS,
-    diskFiles: SELF_DISK, workflows: SELF_WORKFLOWS, testFileExists: true, ...over,
+    diskFiles: SELF_DISK, workflows: SELF_WORKFLOWS, testFileExists: true,
+    nightlyJobs: parseWorkflow(SELF_NIGHTLY_OK), nightlyTriggers: parseTriggers(SELF_NIGHTLY_OK), ...over,
   }).problems.map(p => p.kind);
   check('합류: 정합', repoKinds({}), []);
   check('합류: 배선', repoKinds({ jobs: parseWorkflow(SELF_OK.replace('      - run: npm run verify:ci\n', '')) }), ['게이트 미배선']);
@@ -773,6 +1000,8 @@ const SELF_CHECK_COUNT: number = (() => {
   check('합류: 스크립트', repoKinds({ scripts: { ...SELF_SCRIPTS, lint: 'eslint .' } }), ['스크립트 내용 결손']);
   check('합류: 우회 배포', repoKinds({ workflows: [...SELF_WORKFLOWS, other('actions/deploy-pages@v4')] }), ['우회 배포 경로']);
   check('합류: 체인', repoKinds({ diskFiles: [...SELF_DISK, 'verify-dist-beta'] }), ['게이트 미배선']);
+  check('합류: 나이틀리 job 소실', repoKinds({ nightlyJobs: [] }), ['job 소실']);
+  check('합류: 나이틀리 트리거', repoKinds({ nightlyTriggers: parseTriggers(SELF_NIGHTLY_OK.replace("  schedule:\n    - cron: '0 18 * * *'\n", '')) }), ['나이틀리 트리거 소실']);
   check('합류: 등록', repoKinds({ testFileExists: false }), ['등록 소실']);
   const noDist = { ...SELF_SCRIPTS };
   delete noDist['verify:dist-alpha'];
@@ -791,16 +1020,23 @@ const SELF_CHECK_COUNT: number = (() => {
   try { realNames = parseWorkflow(readFileSync(WORKFLOW, 'utf8')).map(j => j.name); }
   catch (e) { throw new Error(`CI 게이트 자기검사 실패 — 실워크플로를 읽을 수 없다: ${String(e)}`); }
   check('합성 픽스처의 job이 실파일에 전부 있다', parsed.map(j => j.name).filter(n => !realNames.includes(n)), []);
+  // 나이틀리 픽스처도 같은 이유로 실파일을 닮아야 한다 — 안 닮으면 위 케이스가 전부 무의미하다.
+  const nightlyPath = resolve(WORKFLOW_DIR, NIGHTLY_WORKFLOW_NAME);
+  let realNightly: string[];
+  try { realNightly = parseWorkflow(readFileSync(nightlyPath, 'utf8')).map(j => j.name); }
+  catch (e) { throw new Error(`CI 게이트 자기검사 실패 — 나이틀리 워크플로를 읽을 수 없다: ${String(e)}`); }
+  check('합성 나이틀리 픽스처의 job이 실파일에 있다', parseWorkflow(SELF_NIGHTLY_OK).map(j => j.name).filter(n => !realNightly.includes(n)), []);
   return ran;
 })();
 
 // ── 실행 ──────────────────────────────────────────────────────────────────────
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const { problems, jobs, distGates } = auditRepo();
+  const { problems, jobs, distGates, nightlyGates } = auditRepo();
   console.log('CI 게이트 배선 검증 — .github/workflows/');
   console.log(`  job ${jobs.length}개 {${jobs.map(j => `${j.name}:${j.runs.length}스텝`).join(', ')}}`);
   console.log(`  dist 게이트 ${distGates.length}종 (package.json에서 파생) — ${distGates.join(', ')}`);
-  console.log(`  자기검사 ${SELF_CHECK_COUNT}종 통과 (배선·무력화(키/셸)·표기변형·트리거·우회배포·스크립트본문·체인·합류·파서)`);
+  console.log(`  나이틀리 게이트 ${nightlyGates.length}종 (scripts/verify에서 파생) — ${nightlyGates.join(', ') || '(없음)'}`);
+  console.log(`  자기검사 ${SELF_CHECK_COUNT}종 통과 (배선·무력화(키/셸)·표기변형·트리거·우회배포·스크립트본문·체인·나이틀리·합류·파서)`);
   if (problems.length === 0) {
     console.log(`\n✅ PASS — 배선 결손 0건`);
   } else {

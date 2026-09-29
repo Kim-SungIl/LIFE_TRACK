@@ -1,0 +1,58 @@
+name: Nightly E2E
+
+# **PR 게이트를 늘리지 않기 위해 파일을 나눴다.**
+#
+# `deploy.yml`의 `build`/`content-verify`는 main 브랜치 보호의 required check라, 거기에 스텝을
+# 하나 더 얹으면 **모든 PR이 그만큼 느려진다**. 아래 게이트는 엔진으로 한 판(336주)을 돌려
+# 픽스처를 만들고 브라우저 컨텍스트를 아홉 번 띄운다(정상 3 + 자기검사 6) — PR마다 낼 값이 아니다.
+#
+# 그래서 `schedule`에서만 돈다. **`pull_request`·`push` 트리거를 여기에 붙이면 안 된다** —
+# `verify-ci-gates`가 그걸 거부한다(required check로 승격되는 길을 원천 차단).
+# 손으로 돌려 볼 일은 `workflow_dispatch`로 연다.
+on:
+  schedule:
+    # 매일 18:00 UTC = 03:00 KST
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # **이 job은 required check가 아니다.** `deploy`는 이 워크플로를 `needs`하지 않으므로
+  # 여기가 붉어도 배포는 막히지 않는다 — 여기서 잡는 것은 "어제까지 멀쩡하던 후반부 화면이
+  # 오늘 빌드에서 안 뜬다"이고, 그 신호는 PR을 세우는 대신 다음 날 아침에 읽는다.
+  nightly-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install
+        working-directory: ./game
+        run: npm ci
+
+      # 크로미움. devDependency라 `npm ci`가 바이너리를 안 받는다.
+      - name: Install browser
+        working-directory: ./game
+        run: npx playwright install --with-deps chromium
+
+      # dist가 있어야 한다. `build:release`(GEN_WEBP=1)를 쓰는 이유는 deploy.yml과 같다 —
+      # 런타임(webpSrc)은 .webp만 요청하므로 일반 build로는 게이트가 404 더미로 붉어진다.
+      - name: Typecheck & Build (release — webp)
+        working-directory: ./game
+        run: npm run build:release
+
+      # **후반부 화면을 브라우저에서 실제로 지나간다.** PR 게이트(verify:dist-e2e)는 한 주만
+      # 도므로 주중 사건이 0건이고 학년말·엔딩·기록실이 검사 경로 밖이다 — 그 셋을 여기서 본다.
+      - name: Verify dist E2E (nightly — 사건·학년말·엔딩·기록실)
+        working-directory: ./game
+        run: npm run verify:nightly-e2e

@@ -26,6 +26,7 @@
     "verify:dist-cg-thumbs": "tsx scripts/verify/verify-dist-cg-thumbs.ts",
     "verify:dist-boot": "tsx scripts/verify/verify-dist-boot.ts",
     "verify:dist-e2e": "tsx scripts/verify/verify-dist-e2e.ts",
+    "verify:nightly-e2e": "tsx scripts/verify/verify-nightly-e2e.ts",
     "verify:test-floor": "tsx scripts/verify/verify-test-floor.ts"
   },
   "dependencies": {
