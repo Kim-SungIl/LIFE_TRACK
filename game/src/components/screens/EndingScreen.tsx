@@ -177,6 +177,19 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
           </div>
         )}
 
+        {/* 성장 모양(T58) — 등급이 못 말하는 "어떻게 거기까지 갔는지"(ending.ts GROWTH_NOTE 주석).
+            부서진 축 문장 **바로 아래**에 둔다: 그 줄은 이미 결과가 아니라 판의 모양을 말하는
+            자리인데 지금까지 부정적인 모양만 말했다. 모양이 없는 판(null)은 그리지 않는다. */}
+        {ending.growthNote && (
+          <div style={{
+            fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.7,
+            maxWidth: 360, marginLeft: 'auto', marginRight: 'auto',
+            marginTop: -8, marginBottom: 16,
+          }}>
+            {ending.growthNote}
+          </div>
+        )}
+
         <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 16px' }}>
           {(Object.keys(stats) as StatKey[]).map(key => {
             const grade = getGrade(stats[key]);
