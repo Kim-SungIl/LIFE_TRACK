@@ -19,6 +19,7 @@ import {
 import { createInitialState } from '../../../engine/gameEngine';
 import type { GameEvent, GameState, ParentStrength } from '../../../engine/types';
 import type { RunDelta } from '../../../engine/archive';
+import { failWritesTo } from '../../../test/failingStorage';
 
 const ARCHIVE_KEY = 'lifetrack_archive';
 const PARENTS: [ParentStrength, ParentStrength] = ['strict', 'emotional'];
@@ -33,27 +34,9 @@ function runState(overrides: Partial<GameState> = {}): GameState {
   return Object.assign(s, overrides);
 }
 
-/** 기록 키의 쓰기만 터뜨린다 — 왜 own 속성인지는 archiveSaveSignal.test.ts 주석 참조. */
-function failArchiveWrites(): () => void {
-  const target = globalThis.localStorage;
-  const own = Object.getOwnPropertyDescriptor(target, 'setItem');
-  const real = target.setItem.bind(target);
-  Object.defineProperty(target, 'setItem', {
-    configurable: true, writable: true,
-    value: (k: string, v: string) => {
-      if (k === ARCHIVE_KEY) throw new Error('QuotaExceededError');
-      real(k, v);
-    },
-  });
-  return () => {
-    if (own) Object.defineProperty(target, 'setItem', own);
-    else delete (target as unknown as Record<string, unknown>).setItem;
-  };
-}
-
 /** 기록 쓰기를 한 번 실패시켜 신호를 세운다(그 뒤 스토리지는 정상으로 되돌린다). */
 function raiseSignal(): void {
-  const restore = failArchiveWrites();
+  const restore = failWritesTo(ARCHIVE_KEY);
   try { beginRun(); } finally { restore(); }
 }
 
@@ -99,7 +82,7 @@ describe('엔딩 요약 — 기록이 남지 않았다는 사실이 보인다', 
     commitRun(runState({ events: [ev('a')] }), '수도권 대학');   // 1회차 (정상 저장)
     accrueResolvedEvent(runState({ events: [ev('b')] }));        // 판 중 적립도 정상
 
-    const restore = failArchiveWrites();
+    const restore = failWritesTo(ARCHIVE_KEY);
     let delta: RunDelta;
     try {
       delta = commitRun(runState({ events: [ev('b')] }), 'SKY 경영대 합격');

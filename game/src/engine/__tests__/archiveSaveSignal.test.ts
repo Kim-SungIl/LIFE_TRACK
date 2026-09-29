@@ -19,6 +19,7 @@ import {
   beginRun, clearArchive, commitRun, isArchiveSaveFailed, loadArchive,
 } from '../archive';
 import { isStorageSaveFailed, useGameStore } from '../store';
+import { failWritesTo, installStorage } from '../../test/failingStorage';
 import { createInitialState } from '../gameEngine';
 import type { GameEvent, GameState, ParentStrength } from '../types';
 
@@ -36,28 +37,28 @@ function runState(overrides: Partial<GameState> = {}): GameState {
   return Object.assign(s, overrides);
 }
 
+
 /**
- * **그 키의 쓰기만** 터뜨린다. 나머지 키는 그대로 통과한다 — 그게 이 결함의 도달 조건이다.
- *
- * `Storage.prototype.setItem`을 패치하면 안 된다: src/test/setup.ts가 Node의 깨진
- * localStorage를 감지하면 전역을 **평범한 객체**로 갈아끼우므로 프로토타입에 아무것도 없다.
- * own 속성을 바꾸고 서술자로 되돌린다(복원이 새면 이 파일 뒤쪽이 전부 "저장 죽은" 환경을 본다).
+ * jsdom의 Storage와 **같은 성질**을 갖는 스탠드인: `defineProperty`가 JS 속성 정의가 아니라
+ * **항목 저장**으로 처리된다. CI에서 옛 하네스를 무력화시킨 바로 그 성질이다.
  */
-function failWritesTo(key: string): () => void {
-  const target = globalThis.localStorage;
-  const own = Object.getOwnPropertyDescriptor(target, 'setItem');
-  const real = target.setItem.bind(target);
-  Object.defineProperty(target, 'setItem', {
-    configurable: true, writable: true,
-    value: (k: string, v: string) => {
-      if (k === key) throw new Error('QuotaExceededError');
-      real(k, v);
-    },
-  });
-  return () => {
-    if (own) Object.defineProperty(target, 'setItem', own);
-    else delete (target as unknown as Record<string, unknown>).setItem;
+function jsdomLikeStorage(): Storage {
+  const map = new Map<string, string>();
+  const base = {
+    getItem: (k: string) => map.get(k) ?? null,
+    setItem: (k: string, v: string) => { map.set(k, String(v)); },
+    removeItem: (k: string) => { map.delete(k); },
+    clear: () => map.clear(),
+    key: (i: number) => [...map.keys()][i] ?? null,
+    get length() { return map.size; },
   };
+  return new Proxy(base, {
+    defineProperty(_t, prop, desc) {
+      // 메서드를 가리지 않는다 — 이름을 가진 항목으로 삼킨다.
+      map.set(String(prop), String((desc as PropertyDescriptor).value));
+      return true;
+    },
+  }) as unknown as Storage;
 }
 
 /** 본 게임 세이브를 한 번 일으킨다 — store의 subscribe가 state 교체마다 동기로 쓴다. */
@@ -80,6 +81,29 @@ beforeEach(() => {
 describe('하네스 자기검사 — 키 하나만 골라 터뜨린다', () => {
   // 이게 없으면 아래 전부가 "아무것도 안 터진 환경"을 재는 것일 수 있다.
   // 양성(기록 키가 실제로 던진다) + 음성(세이브 키는 멀쩡하다)을 같이 건다.
+  // **CI 모양에서도 무는가.** 로컬(Node 25)은 setup.ts가 localStorage를 평범한 객체로
+  // 갈아끼우지만 CI(Node 22)에는 jsdom의 진짜 Storage(프록시)가 남는다. 그 프록시는
+  // `defineProperty`를 "메서드 가리기"가 아니라 **항목 저장**으로 받는다 — 옛 하네스가
+  // 거기서 조용히 무력화돼 15건이 빨개졌다. 여기서 그 모양을 직접 만들어 재현한다.
+  it('하네스가 환경 모양에 안 기댄다 — jsdom 프록시 모양에서도 문다', () => {
+    const original = globalThis.localStorage;
+    installStorage(jsdomLikeStorage());
+    try {
+      // 옛 방식이 정말로 안 먹는 모양인지 먼저 보인다(이게 거짓이면 이 대조가 공허하다).
+      Object.defineProperty(globalThis.localStorage, 'setItem', {
+        configurable: true, writable: true, value: () => { throw new Error('should not bite'); },
+      });
+      expect(() => localStorage.setItem(ARCHIVE_KEY, 'x'), '이 모양에서 인스턴스 패치가 먹으면 대조가 무의미하다').not.toThrow();
+
+      const restore = failWritesTo(ARCHIVE_KEY);
+      try {
+        expect(() => localStorage.setItem(ARCHIVE_KEY, 'x'), '전역 교체 하네스가 안 물었다').toThrow();
+        expect(() => localStorage.setItem(SAVE_KEY, 'x'), '엉뚱한 키까지 막았다').not.toThrow();
+        expect(localStorage.getItem(SAVE_KEY)).toBe('x');
+      } finally { restore(); }
+    } finally { installStorage(original); }
+  });
+
   it('기록 키만 던지고 세이브 키는 통과한다', () => {
     const restore = failWritesTo(ARCHIVE_KEY);
     try {
