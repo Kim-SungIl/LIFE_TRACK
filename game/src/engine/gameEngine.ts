@@ -1,5 +1,5 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
-import { emptyYearCounts } from './ending';
+import { achievementAxes, emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
 import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
 import { getSchoolLevel } from './backgrounds';
@@ -92,6 +92,7 @@ export function createInitialState(
     lowMentalWeeksByYear: emptyYearCounts(),
     veryLowMentalWeeksByYear: emptyYearCounts(),
     burnoutCountByYear: emptyYearCounts(),
+    axesByYear: [],
     moneySpentByYear: emptyMoneyYears(),
     moneyBlockedWeeksByYear: emptyMoneyYears(),
     burnoutCooldown: 0,
@@ -782,6 +783,13 @@ function applyNpcDecay(state: GameState): void {
 export function applyYearTransition(s: GameState): void {
   // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
   recordMilestoneForYear(s, s.year);
+  // T62: 그 해의 성취 3축을 남긴다 — 엔딩 문구가 "7년"을 주장하려면 7년치 근거가 있어야 한다.
+  // **여기가 유일한 학년 종료 지점**이다(Y7 W48도 year-end를 안 거치고 곧장 여기서 ending으로 간다).
+  // 인덱스 대입이라 같은 해가 두 번 들어와도 덮어쓸 뿐 배열이 밀리지 않는다.
+  if (s.axesByYear) {
+    const ax = achievementAxes(s.stats);
+    s.axesByYear[s.year - 1] = [ax.academic, ax.talent, ax.life];
+  }
   if (s.year >= 7) {
     // Y7 끝 → 바로 엔딩 (엔딩에 이미 7년 전체 회상 포함)
     s.week = 1;
