@@ -3,6 +3,7 @@
 // GAME_EVENTS 와 별개 카탈로그라 selection 로직에서만 직접 참조.
 // 단 ID 가 다른 GAME_EVENTS 와 충돌하면 안 되므로 verify-events-split.ts
 // 가 import 해서 함께 검증한다 (P0-2-fix-B).
+import { MUSIC_DISCOVERY_VARIANTS } from './repeat-variants';
 
 import { GameEvent } from '../types';
 import { isExamPeriod } from '../examSystem';
@@ -171,7 +172,8 @@ export const SCHOOL_LIFE_EVENTS = [
   },
   {
     id: 'music-discovery', title: '새로운 노래',
-    description: '유튜브에서 우연히 들은 노래가 너무 좋다.\n반복 재생이 멈추지 않는다.',
+    description: MUSIC_DISCOVERY_VARIANTS.elementary[0].description,
+    schoolVariants: MUSIC_DISCOVERY_VARIANTS,
     location: 'home',
     background: 'bedroom_night',
     choices: [

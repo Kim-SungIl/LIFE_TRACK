@@ -1,11 +1,15 @@
 import { GameEvent } from '../types';
+import { FATIGUE_WARNING_VARIANTS, GOOD_GRADE_VARIANTS } from './repeat-variants';
 
 export const RANDOM_EVENTS = [
   // ===== 랜덤 이벤트 (조건부) =====
   {
     id: 'fatigue-warning',
     title: '몸이 무겁다',
-    description: '아침에 일어나기가 힘들다. 몸이 천근만근이다.\n"오늘 학교 가기 싫다..."',
+    // description·choices의 문장은 **변이 elementary[0]과 같은 값**이다 — 변이가 비면
+    // 폴백으로 이 값이 나가므로 둘이 갈리면 그 순간 화면 문장이 바뀐다(president와 같은 규약).
+    description: FATIGUE_WARNING_VARIANTS.elementary[0].description,
+    schoolVariants: FATIGUE_WARNING_VARIANTS,
     condition: (s) => s.fatigue >= 60 && s.week > 5,
     location: 'home',
     background: 'bedroom_night',
@@ -129,7 +133,8 @@ export const RANDOM_EVENTS = [
   {
     id: 'good-grade',
     title: '성적 상승!',
-    description: '요즘 공부 흐름이 좋다.\n쉬는 시간에 담임 선생님이 지나가다 "요즘 꽤 열심히 하더라? 이대로만 계속 해" 하고 말씀하셨다.',
+    description: GOOD_GRADE_VARIANTS.elementary[0].description,
+    schoolVariants: GOOD_GRADE_VARIANTS,
     condition: (s) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
