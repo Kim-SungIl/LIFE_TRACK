@@ -98,6 +98,23 @@ export interface GameState {
   // v1.2 기억 슬롯 시스템
   memorySlots: MemorySlot[];        // 최대 12 (카테고리당 2)
   milestoneScenes: MilestoneScene[]; // 학년별 1개, 최대 7
+  /**
+   * 이 판의 신원 — **완주 정산을 정확히 한 번 하기 위한 유일한 근거**다.
+   * 짝은 `archive.lastCommittedRunId`이고, 둘이 다르면 "이 판은 아직 기록층에 안 닿았다"가 된다.
+   *
+   * 왜 필요했나: 완주는 `phase`가 'ending'으로 **넘어가는 순간**에만 존재하는 사건이라,
+   * 그 순간의 쓰기가 실패하면(용량 초과) 되살릴 재료가 state에 없다. 이벤트·잡담·CG는
+   * 집합 의미론이라 `mergeState`가 세이브에서 자가치유하는데, `runs`/`endings`만 영구 유실됐다
+   * (실측: 정상화 후 이어하기 → events 2·talks 1은 복구, runs 0·endings [] 그대로).
+   *
+   * **옵셔널인 이유**: 구세이브에는 없다. 없으면 **복구 대상이 아니다** — 그 판이 이미
+   * 세어졌는지 알 길이 없고, 모르는 채로 재커밋하면 완주 횟수가 부푼다. 구세이브라도
+   * 아직 엔딩에 안 닿았으면 이어하기에서 백필해 이후 판은 보호한다(store.loadSavedGame).
+   *
+   * 결정론에 영향을 주지 않도록 `createInitialState`가 아니라 **startGame에서만** 만든다
+   * (엔진 순수함수는 시드만 보고 값을 낸다 — 시뮬·테스트가 이 필드를 안 본다).
+   */
+  runId?: string;
   rngSeed: number;                  // 결정론적 RNG 시드 (이벤트 선택용)
   talkRngSeed: number;              // 잡담 전용 RNG 시드 (rngSeed와 분리 — 클릭이 진행 굴림에 영향 없게)
   hardCrisisYears: number[];        // 하드위기 발동 연도 (연간 1회 가드)
