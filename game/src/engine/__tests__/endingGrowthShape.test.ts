@@ -8,8 +8,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   achievementAxes, achievementGradeOf, calculateEnding,
-  GROWTH_EVEN_SPREAD, GROWTH_LEAD_GAP, GROWTH_NOTE, GROWTH_SHAPE_MIN_TOP, GROWTH_SHAPES,
-  growthNoteOf, growthShapeOf,
+  GROWTH_EVEN_SPREAD, GROWTH_LEAD_GAP, GROWTH_NOTE, GROWTH_NOTE_FINAL,
+  GROWTH_SHAPE_MIN_TOP, GROWTH_SHAPES,
+  growthClaimHolds, growthNoteOf, growthShapeOf,
   type AchievementAxes, type GrowthShape,
 } from '../ending';
 import { createInitialState } from '../gameEngine';
@@ -233,10 +234,91 @@ describe('growthNoteOf / GROWTH_NOTE — 문장 계약', () => {
     `);
   });
 
-  it('growthNoteOf는 분류 결과의 문장을 그대로 돌려준다', () => {
-    expect(growthNoteOf(axesOf(90, 40, 40))).toBe(GROWTH_NOTE.singular);
-    expect(growthNoteOf(axesOf(90, 88, 40))).toBe(GROWTH_NOTE.twin);
-    expect(growthNoteOf(axesOf(90, 88, 85))).toBe(GROWTH_NOTE.even);
+  // T62 — 판본이 둘이 됐다. 약한 쪽도 같은 계약을 진다(비면 화면이 빈 줄을 그린다).
+  it('최종 상태 판본도 모양마다 하나씩 있고 서로 다르다', () => {
+    expect(Object.keys(GROWTH_NOTE_FINAL).sort()).toEqual([...GROWTH_SHAPES].sort());
+    const notes = GROWTH_SHAPES.map(s => GROWTH_NOTE_FINAL[s]);
+    for (const n of notes) expect(n.length).toBeGreaterThan(0);
+    expect(new Set(notes).size).toBe(GROWTH_SHAPES.length);
+  });
+
+  // 약한 판본의 **존재 이유**가 여기 있다. 한 글자라도 "7년"을 주장하면 이 층은 무의미해진다.
+  it('최종 상태 판본은 7년을 주장하지 않는다', () => {
+    for (const shape of GROWTH_SHAPES) {
+      const note = GROWTH_NOTE_FINAL[shape];
+      expect(note, `${shape}: 약한 판본이 기간을 주장한다`).not.toMatch(/7년|내내|끝내/);
+      expect(note.replace(/7년/g, ''), `${shape}: 숫자 노출`).not.toMatch(/[0-9]/);
+      expect(GROWTH_NOTE[shape], `${shape}: 두 판본이 같은 문장이다`).not.toBe(note);
+    }
+    // 반대쪽 — 강한 판본은 **반드시** 기간을 말한다. 안 그러면 두 판본을 나눈 이유가 없다.
+    for (const shape of GROWTH_SHAPES) {
+      expect(GROWTH_NOTE[shape], `${shape}: 강한 판본이 7년을 안 말한다`).toMatch(/7년|내내|끝내/);
+    }
+  });
+
+  it('growthNoteOf — 궤적이 뒷받침할 때만 7년 문장을 쓴다', () => {
+    // 궤적 없음(구세이브) = 판정 불가 → 최종 상태 문구
+    expect(growthNoteOf(axesOf(90, 40, 40))).toBe(GROWTH_NOTE_FINAL.singular);
+    expect(growthNoteOf(axesOf(90, 88, 40))).toBe(GROWTH_NOTE_FINAL.twin);
+    expect(growthNoteOf(axesOf(90, 88, 85))).toBe(GROWTH_NOTE_FINAL.even);
+
+    // 궤적이 주장을 뒷받침하면 7년 문구
+    expect(growthNoteOf(axesOf(90, 40, 40), [[60, 40, 40], [90, 40, 40]])).toBe(GROWTH_NOTE.singular);
+    expect(growthNoteOf(axesOf(90, 88, 40), [[60, 55, 40], [90, 88, 40]])).toBe(GROWTH_NOTE.twin);
+    expect(growthNoteOf(axesOf(90, 88, 85), [[60, 58, 55], [90, 88, 85]])).toBe(GROWTH_NOTE.even);
+
+    // 궤적이 주장과 어긋나면 다시 최종 상태 문구 — **같은 최종 스탯인데 문장이 갈린다**
+    expect(growthNoteOf(axesOf(90, 40, 40), [[40, 60, 40], [90, 40, 40]])).toBe(GROWTH_NOTE_FINAL.singular);
+    expect(growthNoteOf(axesOf(90, 88, 40), [[60, 40, 55], [90, 88, 40]])).toBe(GROWTH_NOTE_FINAL.twin);
+    expect(growthNoteOf(axesOf(90, 88, 85), [[90, 60, 55], [90, 88, 85]])).toBe(GROWTH_NOTE_FINAL.even);
+  });
+});
+
+describe('growthClaimHolds — 모양마다 다른 것을 묻는다', () => {
+  // 셋을 한 검사로 묶으면 안 된다. 특히 even에 순위 불변을 요구하면 **거의 모든 판이 거짓**이
+  // 된다(셋이 한 뼘 안이라 순위가 흔들리는 게 균형의 정의다) — 초안에서 실제로 밟은 오판이다.
+  it('even은 간격만 본다 — 순위가 뒤집혀도 참이다', () => {
+    const axes = axesOf(85, 84, 83);
+    const swapped: [number, number, number][] = [[60, 65, 62], [70, 68, 72], [85, 84, 83]];
+    expect(growthClaimHolds('even', axes, swapped), '순위 흔들림을 기울었다고 읽었다').toBe(true);
+    const tilted: [number, number, number][] = [[80, 50, 55], [85, 84, 83]];
+    expect(growthClaimHolds('even', axes, tilted), '기운 해를 못 봤다').toBe(false);
+  });
+
+  it('singular은 1위를, twin은 3위를 본다 — 서로 다른 축이다', () => {
+    const axes = axesOf(90, 88, 40);   // 1위 학업 · 3위 생활
+    // 1위는 내내 학업인데 3위가 바뀐 궤적: singular은 참, twin은 거짓이어야 한다.
+    const topStableBottomMoves: [number, number, number][] = [[90, 40, 55], [90, 88, 40]];
+    expect(growthClaimHolds('singular', axes, topStableBottomMoves)).toBe(true);
+    expect(growthClaimHolds('twin', axes, topStableBottomMoves)).toBe(false);
+    // 반대 — 3위는 내내 생활인데 1위가 바뀐 궤적.
+    const bottomStableTopMoves: [number, number, number][] = [[60, 80, 40], [90, 88, 40]];
+    expect(growthClaimHolds('singular', axes, bottomStableTopMoves)).toBe(false);
+    expect(growthClaimHolds('twin', axes, bottomStableTopMoves)).toBe(true);
+  });
+
+  it('근거가 없으면 참도 거짓도 아니다 (null)', () => {
+    const axes = axesOf(90, 88, 40);
+    expect(growthClaimHolds('twin', axes, undefined), '구세이브').toBeNull();
+    expect(growthClaimHolds('twin', axes, []), '빈 배열도 근거가 아니다').toBeNull();
+  });
+
+  it('모양이라 부를 게 없던 해는 안 센다 — 문턱은 GROWTH_SHAPE_MIN_TOP 하나다', () => {
+    const axes = axesOf(90, 88, 40);
+    // 첫 해는 주장과 어긋나지만 최고 축이 문턱 아래라 세지 않는다.
+    const below = GROWTH_SHAPE_MIN_TOP - 1;
+    expect(growthClaimHolds('twin', axes, [[below, below - 20, below - 5], [90, 88, 40]])).toBe(true);
+    // 문턱 위로 한 칸만 올리면 같은 해가 판정에 들어와 거짓이 된다(양방향).
+    const at = GROWTH_SHAPE_MIN_TOP;
+    expect(growthClaimHolds('twin', axes, [[at, at - 20, at - 5], [90, 88, 40]])).toBe(false);
+  });
+
+  it('손상된 궤적 줄은 판정에서 빠진다 (세이브가 낡거나 잘렸을 때)', () => {
+    const axes = axesOf(90, 88, 40);
+    const dirty = [
+      null, [1, 2], [NaN, 50, 60], ['a', 'b', 'c'], [90, 88, 40],
+    ] as unknown as [number, number, number][];
+    expect(growthClaimHolds('twin', axes, dirty), '손상 줄에 걸려 거짓을 냈다').toBe(true);
   });
 });
 

@@ -460,6 +460,74 @@ export const GROWTH_NOTE: Record<GrowthShape, string> = {
 } as const;
 
 /**
+ * 같은 모양이지만 **7년을 주장하지 않는** 판본. 궤적 근거가 없거나(구세이브) 근거가 주장과
+ * 어긋날 때 이쪽을 쓴다.
+ *
+ * 왜 두 벌인가: T58은 문장을 "7년 내내"·"7년이었다"로 썼는데 판정 근거는 **마지막 스냅샷
+ * 하나**였다. 외부 검수가 그 간극을 지적했고, 실측해 보니 셋 중 하나만 실제로 거짓이었다
+ * (유효 페르소나 × 6시드, 완주 138판 — singular 6/6 · twin 108/109 · **even 18/23**).
+ *
+ * 그래서 셋을 다 약하게 고치지 않았다. 96%가 진짜로 7년을 살아낸 문장이고, 그 회고의 무게가
+ * 이 줄의 전부다. **참일 때만 강한 문장을 쓰고, 아니면 여기로 내려온다.**
+ */
+export const GROWTH_NOTE_FINAL: Record<GrowthShape, string> = {
+  singular: '끝에 남은 건 한 줄이었다. 마지막까지 앞에 선 것은 하나뿐이었다.',
+  twin: '끝에 남은 건 두 갈래였다. 나머지 하나는 그 뒤에 서서 학창시절이 끝났다.',
+  even: '끝에 서서 보면 어느 쪽으로도 크게 기울지 않았다. 공부도, 좋아하던 것도, 사는 일도 비슷한 무게로 남았다.',
+} as const;
+
+/** 학년말 성취 3축 스냅샷 한 줄 — `[학업, 특기, 생활]`(types.ts `axesByYear`). */
+export type YearAxes = readonly [number, number, number];
+
+/**
+ * 강한 문장(7년)이 **학년별 기록에서도 참인가**. 근거가 없으면 null = 판정 불가.
+ *
+ * 모양마다 주장하는 바가 달라서 검사도 다르다 — 하나로 묶으면 안 된다:
+ *   · singular "끝내 그 뒤에서 나오지 못했다" → 1위 축이 **내내 1위**였나
+ *   · twin     "7년 내내 그다음 순서였다"     → 3위 축이 **내내 3위**였나
+ *   · even     "어느 한쪽으로도 기울지 않은"   → 간격이 **내내 한 뼘 안**이었나
+ * (even에 순위 불변을 요구하면 안 된다 — 셋이 한 뼘 안이라 순위가 흔들리는 게 균형의 정의다.
+ *  초안에서 그 잣대로 재고 "even 0% 참"이라는 과잉 기소를 냈다.)
+ *
+ * **모양이라 부를 게 없던 해는 세지 않는다**(top < GROWTH_SHAPE_MIN_TOP). 초반은 모든 축이
+ * 시작값 근처라 순위가 의미를 갖지 않고, 그 해까지 세면 거의 모든 판이 거짓이 된다.
+ * 문턱을 따로 만들지 않고 "문장을 낼지 말지"를 정하는 상수를 그대로 쓴다 — 축이 둘이면
+ * 한쪽만 고쳐도 조용히 갈린다(#441 계열).
+ *
+ * ⚠️ **Y1을 빼고 싶어질 것이다. 빼지 말 것.** 시작값이 이미 기울어 있어서(생활 38.3 · 학업 30 ·
+ * 특기 25, 간격 13.3 > GROWTH_EVEN_SPREAD) Y1 학년말 순위는 상당 부분 플레이가 아니라 상수의
+ * 결과다. 실측(완주 138판): 강한 문장이 막힌 twin 31판 중 **30판(97%)이 Y1 하나 때문**이고,
+ * even은 11판 중 6판이다. 그래서 Y1을 빼면 7년 문장이 눈에 띄게 늘어난다 — 그게 유혹이다.
+ *
+ * 그럼에도 넣는 이유는 **틀리는 방향이 다르기 때문**이다. Y1을 세면 참인데 약한 문장을 쓰는
+ * 쪽으로만 틀리고(손해는 회고의 온도), 빼면 "7년 내내"가 실제로 거짓인 판에 강한 문장이
+ * 나간다(손해는 거짓말) — 이 층이 존재하는 이유가 바로 그 거짓말을 없애는 것이다.
+ */
+export function growthClaimHolds(
+  shape: GrowthShape,
+  finalAxes: AchievementAxes,
+  trajectory: readonly YearAxes[] | undefined,
+): boolean | null {
+  if (!trajectory) return null;
+  const years = trajectory.filter(y => Array.isArray(y) && y.length === 3
+    && y.every(v => typeof v === 'number' && Number.isFinite(v))
+    && Math.max(...y) >= GROWTH_SHAPE_MIN_TOP);
+  if (years.length === 0) return null;
+
+  const order = (y: YearAxes | [number, number, number]) =>
+    ([['academic', y[0]], ['talent', y[1]], ['life', y[2]]] as const)
+      .slice().sort((a, b) => b[1] - a[1]);
+  const finalOrder = order([finalAxes.academic, finalAxes.talent, finalAxes.life]);
+
+  if (shape === 'even') {
+    return years.every(y => Math.max(...y) - Math.min(...y) <= GROWTH_EVEN_SPREAD);
+  }
+  const idx = shape === 'singular' ? 0 : 2;   // 1위 / 3위
+  const want = finalOrder[idx][0];
+  return years.every(y => order(y)[idx][0] === want);
+}
+
+/**
  * 세 축의 분포 모양. 결정론적이다(같은 입력 → 같은 값, 난수 없음).
  * 모양이라 부를 게 아직 없는 판은 null — 그때는 화면이 이 줄을 아예 그리지 않는다.
  */
@@ -472,10 +540,21 @@ export function growthShapeOf(axes: AchievementAxes): GrowthShape | null {
   return 'twin';
 }
 
-/** 화면에 나갈 한 줄. 모양이 없으면 null(= 그리지 않음). */
-export function growthNoteOf(axes: AchievementAxes): string | null {
+/**
+ * 화면에 나갈 한 줄. 모양이 없으면 null(= 그리지 않음).
+ *
+ * **궤적이 주장을 뒷받침할 때만 7년 문장을 쓴다.** 근거가 없으면(구세이브) 판정 불가이고,
+ * 근거가 어긋나면 거짓이다 — 둘 다 최종 상태만 말하는 판본으로 내려온다.
+ */
+export function growthNoteOf(
+  axes: AchievementAxes,
+  trajectory?: readonly YearAxes[],
+): string | null {
   const shape = growthShapeOf(axes);
-  return shape ? GROWTH_NOTE[shape] : null;
+  if (!shape) return null;
+  return growthClaimHolds(shape, axes, trajectory) === true
+    ? GROWTH_NOTE[shape]
+    : GROWTH_NOTE_FINAL[shape];
 }
 
 // ===== 엔딩 산정 =====
@@ -489,7 +568,8 @@ export function calculateEnding(state: GameState) {
   const achievement = achievementGradeOf(bestAxis);
   // T58: 등급이 못 말하는 "어떻게 거기까지 갔는지". 등급·타이틀·진로에는 관여하지 않는다.
   const growthShape = growthShapeOf(axes);
-  const growthNote: string | null = growthShape ? GROWTH_NOTE[growthShape] : null;
+  // 궤적이 있으면 주장을 검증하고, 없으면(구세이브) 최종 상태만 말하는 판본으로 내려온다.
+  const growthNote: string | null = growthNoteOf(axes, state.axesByYear);
 
   const allStats = [academic, social, talent, mental, health];
   const hasCollapse = allStats.some(v => v < AXIS_COLLAPSE);
