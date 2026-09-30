@@ -721,14 +721,32 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     expect(container.textContent, '부모 아이콘까지 걷어내면 경계를 넘은 것이다').toContain('⭐');
   });
 
-  // HUD 초상과 주간 결산 초상이 같은 처리를 쓴다 — 한쪽만 액자면 매주 그림이 바뀐다.
-  it('HUD 초상이 액자 처리를 받는다', () => {
+  /**
+   * **테두리는 두 화면이 같고, 그림자는 사진 위에만 있다.**
+   *
+   * 예전 이 단언은 `outline`만 봤다 — 그래서 그림자를 켜든 끄든 통과했고, 실제로 T63 전까지
+   * 카드 안에도 그림자가 돌고 있었다. 실측으로 그 한 줄이 카드 바닥의 초상 둘레 4px을 17%
+   * 어둡게 한다(42.4 vs 51.0). 두 축을 따로 잠근다.
+   */
+  it('HUD 초상은 테두리만, 그림자는 없다', () => {
     const root = mount();
     const hud = root.querySelector('[data-tutorial="hud"]')!;
     const img = hud.querySelector('img');
     expect(img, '전제: HUD에 초상 이미지가 있다').toBeTruthy();
-    expect(img!.getAttribute('style'), '액자가 없으면 파스텔 사각형이 카드에 박힌 것처럼 보인다')
-      .toMatch(/outline/);
+    const style = img!.getAttribute('style') ?? '';
+    expect(style, '액자가 없으면 파스텔 사각형이 카드에 박힌 것처럼 보인다').toMatch(/outline/);
+    expect(style, '카드 안인데 그림자가 돌아왔다 — 초상 둘레가 한 겹 어두워진다')
+      .not.toMatch(/box-shadow/);
+  });
+
+  it('주간 결산 초상은 그림자까지 받는다 (사진 위)', () => {
+    const container = renderResult({ statChanges: {}, fatigueChange: 0 });
+    const img = container.querySelector('img[alt^="player_"]');
+    expect(img, '전제: 결산에 주인공 초상이 있다').toBeTruthy();
+    const style = img!.getAttribute('style') ?? '';
+    expect(style, '사진 위 초상의 테두리가 없다').toMatch(/outline/);
+    expect(style, '그림자까지 끄면 사진 위에서 초상이 바탕에 박힌다 — 카드 안과는 다른 자리다')
+      .toMatch(/box-shadow/);
   });
 });
 
@@ -780,13 +798,31 @@ describe('자기검사 — 헬퍼가 실제로 잡아낸다', () => {
     expect(shapeCount(svgOf(<StatIcon stat="academic" />))).toBeGreaterThanOrEqual(1);
   });
 
-  // Portrait의 framed를 끄면 위 HUD 단언이 잡아야 한다 — 탐지기가 outline을 실제로 본다.
-  it('액자 탐지가 framed 유무를 가른다 (양성·음성)', () => {
-    const { container: on } = render(<Portrait characterId="player_m" size={52} year={3} framed />);
-    const { container: off } = render(<Portrait characterId="player_m" size={52} year={3} />);
+  /**
+   * 위 두 화면 단언은 `outline`과 `box-shadow`라는 **두 탐침**에 얹혀 있다. 탐침이 죽으면
+   * 부정형 쪽("그림자가 없다")은 조용히 통과한다 — 그래서 세 변형을 **각각 따로 렌더해**
+   * 두 탐침이 실제로 값을 가르는지 본다. 한 렌더 안에서 돌리면 대조가 대상을 소진한다(#495).
+   */
+  it('액자 탐지가 frame 세 갈래를 가른다 (양성·음성)', () => {
     const styleOf = (c: HTMLElement) => c.querySelector('img')?.getAttribute('style') ?? '';
-    expect(styleOf(on), '전제: 액자 켠 초상이 이미지로 렌더된다').toMatch(/outline/);
-    expect(styleOf(off), '액자를 꺼도 outline이 남으면 탐지기가 아무것도 안 보는 것이다')
+    const photo = styleOf(render(<Portrait characterId="player_m" size={52} year={3} frame="photo" />).container);
+    const card = styleOf(render(<Portrait characterId="player_m" size={52} year={3} frame="card" />).container);
+    const bare = styleOf(render(<Portrait characterId="player_m" size={52} year={3} />).container);
+
+    expect(photo, '전제: 사진 위 초상이 이미지로 렌더된다').toMatch(/outline/);
+    expect(photo, '전제: 사진 위에는 그림자가 있다').toMatch(/box-shadow/);
+
+    // 카드 변형은 **테두리는 같고 그림자만 없다** — 두 축이 따로 움직이는지 여기서 갈린다.
+    expect(card, '카드 변형이 테두리까지 잃었다 — 두께는 안 건드리기로 했다').toMatch(/outline/);
+    expect(card, 'box-shadow 탐침이 죽었다 — 위 "그림자 없다"는 근거가 없다').not.toMatch(/box-shadow/);
+
+    // 테두리 값 자체가 같아야 한다. 있다/없다만 보면 1px로 낮춰도 통과한다(실측 0.6/255라 눈엔 안 보인다).
+    const outlineOf = (st: string) => /outline:\s*([^;]+)/.exec(st)?.[1]?.trim();
+    expect(outlineOf(card), '두 자리의 테두리가 갈라졌다').toBe(outlineOf(photo));
+    expect(outlineOf(card), '테두리 두께가 바뀌었다').toMatch(/2px/);
+
+    expect(bare, '액자를 안 주면 outline이 없어야 한다 — 남으면 탐지기가 아무것도 안 보는 것이다')
       .not.toMatch(/outline/);
+    expect(bare, '액자를 안 줬는데 그림자가 있다').not.toMatch(/box-shadow/);
   });
 });

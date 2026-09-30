@@ -124,10 +124,10 @@ export function WeeklyResultScreen({
 
         {/* 주인공 + 독백 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          {/* framed — 주간 화면 HUD의 같은 초상과 **짝**이다. 예전엔 "카드 밖 맨몸일 때만"이
-              근거였는데(그때는 여기만 켜져 있었다), 지금은 "초상을 사진으로 읽히게 한다"로
-              뜻이 넓어졌다. 자세한 전제는 `Portrait.tsx`의 framed 주석에. */}
-          <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} framed />
+          {/* frame="photo" — 여기는 카드 밖, **배경 사진 위**에 맨몸으로 선다. 테두리는 HUD와
+              같은 2px이고 그림자는 여기만 켠다. 두 화면이 완전히 같은 처리였던 적이 있는데
+              (#496), 그때 카드 안에서도 그림자가 돌았다. 근거는 `Portrait.tsx`의 frame 주석에. */}
+          <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={stats.mental} mentalState={mentalState} year={year} frame="photo" />
           <div style={{
             flex: 1, background: 'rgba(42,34,48,0.9)', backdropFilter: 'blur(6px)',
             borderRadius: '4px 12px 12px 12px', padding: '10px 14px', fontSize: '0.85rem', fontStyle: 'italic', lineHeight: 1.6,
