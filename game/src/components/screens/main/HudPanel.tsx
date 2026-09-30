@@ -81,11 +81,10 @@ export const HudPanel = memo(function HudPanel({
       borderRadius: 12, padding: '8px 10px',
     }}>
     <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 3vw, 12px)' }}>
-      {/* framed — neutral 초상은 규약상 **불투명 파스텔 배경**이라(누끼 금지), 액자가 없으면
-          유리 바닥 위에서도 분홍 사각형이 카드에 박힌 것처럼 읽힌다. 테두리+그림자를 주면
-          "사진을 세워둔 것"이 된다. 주간 결산이 이미 같은 처리를 쓴다 — 두 화면의 같은 초상이
-          한쪽만 액자였다. */}
-      <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} framed />
+      {/* frame="card" — 여기는 **유리 카드 안**이다. 테두리는 결산과 같은 2px을 준다(누끼 금지
+          규약상 파스텔 사각형이 그냥 박힌 것처럼 보이므로). 그림자만 뺀다 — 실측으로 그 한 줄이
+          카드 바닥의 초상 둘레 4px을 17% 어둡게 한다. 근거는 `Portrait.tsx`의 frame 주석에. */}
+      <Portrait characterId={gender === 'male' ? 'player_m' : 'player_f'} size={52} mental={mentalStat} mentalState={mentalState} year={year} frame="card" />
       {/* minWidth:0 — flex 자식의 기본 min-width:auto는 콘텐츠보다 작아지지 않아
           축소 압력이 전부 우측 블록으로 갔다(320px에서 34px까지 찌그러짐). */}
       <div style={{ flex: 1, minWidth: 0 }}>
