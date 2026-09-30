@@ -36,7 +36,7 @@ vi.mock('../../engine/assetPrefetch', async (importOriginal) => ({
 import { StatIcon, SlotIcon, CategoryIcon, ICON_STROKE } from '../icons/icons';
 import { SLOT_ICON_KINDS, ACTIVITY_CATEGORIES, type SlotIconKind } from '../icons/iconKeys';
 import { STAT_ICONS } from '../screens/shared';
-import { STAT_BAR_HEIGHT, StatsPanel } from '../screens/main/StatsPanel';
+import { STAT_BAR_HEIGHT, STAT_ICON_SIZE, StatsPanel } from '../screens/main/StatsPanel';
 import { WeekPlanner } from '../screens/main/WeekPlanner';
 import { GameScreen } from '../GameScreen';
 import { Portrait } from '../Portrait';
@@ -87,6 +87,25 @@ function shapeCount(svg: Element): number {
       if (el.tagName.toLowerCase() === 'rect') return Number(el.getAttribute('width')) > 0;
       return true;
     }).length;
+}
+
+/**
+ * 능력치 막대 — **높이와 반지름을 같이** 본다. 개수만 세면 `borderRadius`를 0으로 바꿔도
+ * 통과한다(3자 검수 실측: 엔딩·결산 둘 다 MISSED). 캡슐 모양(반지름=높이/2)이
+ * `STAT_BAR_HEIGHT` 주석이 말하는 설계 근거 자체라, 이름이 약속하는 만큼 잠근다.
+ */
+function capsuleBars(root: ParentNode): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>('div')]
+    .filter(d => d.style.height === `${STAT_BAR_HEIGHT}px`
+      && d.style.borderRadius === `${STAT_BAR_HEIGHT / 2}px`);
+}
+
+/** 능력치 아이콘이 들어앉은 칸 — 폭이 고정이고 SVG가 가운데 서야 표의 라벨이 줄을 맞춘다. */
+function iconCells(root: ParentNode): HTMLElement[] {
+  return [...root.querySelectorAll<HTMLElement>('span')]
+    .filter(el => el.querySelector('[data-icon^="stat:"]')
+      && el.style.display === 'inline-flex'
+      && el.style.justifyContent === 'center');
 }
 
 function iconIds(root: ParentNode, prefix: string): string[] {
@@ -350,6 +369,19 @@ describe('집합 — 키마다 서로 다른 그림이 있다', () => {
 
   // 글자 채널은 **남아 있어야 한다.** 문자열로 이어 붙이는 자리(GameScreen 효과 줄 ·
   // MiniTalkModal · 주간 결산 '잃은 것' 칩)가 JSX를 못 받기 때문이다.
+  /**
+   * **값 축도 잠근다.** 그림 채널은 `GLYPH_SIGNATURE` 20칸 지문표가 순열을 막는데, 글자 채널은
+   * 개수와 "이모지처럼 생겼나"만 봤다 — 다섯 값을 전부 `'📚'`로 만들어도 2,715개 전부
+   * 초록이었다(3자 검수 실측). 표가 사는 근거가 둘로 줄어든 만큼, 남은 표에는 같은 대우를 한다.
+   */
+  it('글자 채널의 키마다 약속된 글자가 있다 (순열 잠금)', () => {
+    expect(STAT_ICONS).toEqual({
+      academic: '📚', social: '⭐', talent: '💡', mental: '🍀', health: '⚡',
+    });
+    expect(new Set(Object.values(STAT_ICONS)).size, '두 축이 같은 글자를 쓴다')
+      .toBe(STAT_KEYS.length);
+  });
+
   it('글자 채널의 표가 온전하다', () => {
     expect(Object.keys(STAT_ICONS)).toHaveLength(5);
     for (const k of STAT_KEYS) expect(STAT_ICONS[k]).toMatch(/\p{Extended_Pictographic}/u);
@@ -379,19 +411,44 @@ describe('집합 — 키마다 서로 다른 그림이 있다', () => {
      * 남겨도 통과한다는 뜻이다 — 코드에서 주석을 걷어낸 뒤에 본다.
      */
     const stripComments = (src: string) =>
-      src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
-    const usesTextChannel = (src: string) => /\bSTAT_ICONS\s*\[/.test(stripComments(src));
+      src.replace(
+        // 문자열 리터럴을 **먼저** 먹는다. 안 그러면 `'https://x'`의 `//`가 줄 주석으로 읽혀
+        // 같은 줄 뒤의 진짜 호출까지 지워지고, 반대로 `"STAT_ICONS[k]"` 같은 문자열이
+        // 가짜 소비자가 된다(3자 검수에서 양방향 실측). 템플릿(`)은 **건드리지 않는다** —
+        // `${STAT_ICONS[k]}` 안이 진짜 코드이고, 그게 바로 이 표가 사는 이유다.
+        /(['"])(?:\\[\s\S]|(?!\1)[^\n])*?\1|\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,
+        m => (m[0] === "'" || m[0] === '"') ? ' ' : '',
+      );
+    /**
+     * **대괄호만 보면 이모지가 조용히 돌아온다.** 예전 정규식은 `STAT_ICONS\s*\[`였는데
+     * `STAT_ICONS.academic`도 `Object.values(STAT_ICONS)`도 소비자다(둘 다 실측 MISSED).
+     * 이름이 나오면 소비자로 보고, **import 줄만** 뺀다.
+     */
+    const stripImports = (src: string) => src.replace(/^\s*import\b[\s\S]*?(?:;|$)/gm, '');
+    const usesTextChannel = (src: string) =>
+      /\bSTAT_ICONS\b/.test(stripImports(stripComments(src)));
     const consumers = files(SRC)
       .filter(f => !f.endsWith('shared.ts'))
       .filter(f => usesTextChannel(readFileSync(f, 'utf8')))
       .map(f => f.replace(SRC, 'src'));
     // 탐지기 자기검사 — 정규식이 죽으면 목록이 비고, 그러면 아래 단언이 전부 빨강이 된다.
-    expect(usesTextChannel('const a = `${STAT_ICONS[k]} …`;'), '탐지기가 템플릿 호출을 못 본다').toBe(true);
-    expect(usesTextChannel('import { STAT_ICONS } from "x"'), '단순 import는 호출부가 아니다').toBe(false);
-    expect(usesTextChannel('// 예전엔 STAT_ICONS[k]를 담았다'), '줄 주석이 호출부로 세어진다').toBe(false);
-    expect(usesTextChannel('/** 예전엔 `STAT_ICONS[k]`를 담았다 */'), '블록 주석이 호출부로 세어진다').toBe(false);
-    // 주석 제거가 **코드까지** 먹으면 목록이 비어 아래가 빨강이 되지만, 이유가 엉뚱해진다.
-    expect(usesTextChannel('/* 주석 */ push(STAT_ICONS[k]);'), '주석 제거가 뒤따르는 코드를 먹는다').toBe(true);
+    // 표의 **양쪽 방향**을 다 둔다: 놓치는 쪽(false negative)과 헛짚는 쪽(false positive).
+    const PROBES: readonly [string, boolean, string][] = [
+      ['const a = `${STAT_ICONS[k as StatKey]} x`;', true, '템플릿 안의 대괄호 호출'],
+      ['const a = `${STAT_ICONS.academic} x`;', true, '점 접근'],
+      ["const a = Object.values(STAT_ICONS).join(' ');", true, 'Object.values'],
+      ['import { STAT_ICONS } from "./shared";', false, '단순 import'],
+      ['// 예전엔 STAT_ICONS[k]를 담았다', false, '줄 주석'],
+      ['/** 예전엔 `STAT_ICONS[k]`를 담았다 */', false, '블록 주석'],
+      ['/* 주석 */ push(STAT_ICONS[k]);', true, '주석 뒤 같은 줄의 코드'],
+      ["const u = 'https://x'; push(STAT_ICONS[k]);", true, '문자열 속 // 뒤의 진짜 호출'],
+      ['const s = "STAT_ICONS[k]";', false, '문자열 속 가짜 호출'],
+      ["/* don't STAT_ICONS[k] */ ok();", false, '아포스트로피 든 블록 주석'],
+      ['const s = "/*"; push(STAT_ICONS[k]);', true, '문자열 속 /* 뒤의 진짜 호출'],
+    ];
+    for (const [src, want, why] of PROBES) {
+      expect(usesTextChannel(src), `탐지기가 "${why}"를 ${want ? '못 본다' : '헛짚는다'}`).toBe(want);
+    }
 
     /**
      * **개수가 아니라 이름으로, 그리고 집합 전체로 잠근다.** 처음엔 `>= 3`이었는데 실사용이
@@ -427,6 +484,13 @@ describe('능력치 패널 — 접힘/펼침이 아이콘으로 갈린다', () =
   it('막대 높이가 캡슐로 읽히는 범위에 있고, 반지름이 높이의 절반이다', () => {
     expect(STAT_BAR_HEIGHT).toBeGreaterThanOrEqual(12);
     expect(STAT_BAR_HEIGHT).toBeLessThanOrEqual(18);
+    /**
+     * 아이콘 치수도 **값 자체**를 본다. 네 자리가 같은 상수를 쓰는지는 각 화면 단언이 보지만,
+     * 그건 전부 `STAT_ICON_SIZE` 기준이라 **상수가 움직이면 같이 움직인다** — 30으로 키워도
+     * 78개 전부 초록이었다(3자 검수 실측). 읽히는 범위는 집합 기본값과 같은 12~24다.
+     */
+    expect(STAT_ICON_SIZE).toBeGreaterThanOrEqual(12);
+    expect(STAT_ICON_SIZE).toBeLessThanOrEqual(24);
     const { container } = render(<StatsPanel stats={STATS_FIXTURE} year={3} />);
     fireEvent.click(screen.getByRole('button', { name: /능력치/ }));
     const tracks = [...container.querySelectorAll<HTMLElement>('div')]
@@ -610,9 +674,13 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     expect(iconIds(container, 'stat'), '결산 스탯 표의 선화가 없다')
       .toEqual(STAT_KEYS.map(k => `stat:${k}`));
     // 주간 화면과 **같은 막대**라야 한다. 아이콘만 맞추고 막대를 안 맞추면 반쪽이다.
-    const tracks = [...container.querySelectorAll<HTMLElement>('div')]
-      .filter(d => d.style.height === `${STAT_BAR_HEIGHT}px`);
-    expect(tracks.length, '결산 막대가 주간 화면과 다른 높이다').toBe(STAT_KEYS.length);
+    expect(capsuleBars(container).length, '결산 막대가 주간 화면과 다른 높이·반지름이다')
+      .toBe(STAT_KEYS.length);
+    // 아이콘 치수도 같은 상수다 — 리터럴로 두면 한 자리만 커져도 아무도 못 본다.
+    for (const svg of container.querySelectorAll('[data-icon^="stat:"]')) {
+      expect(svg.getAttribute('width'), '결산 스탯 아이콘 크기가 다른 화면과 어긋났다')
+        .toBe(String(STAT_ICON_SIZE));
+    }
   });
 
   /**
@@ -627,9 +695,14 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     });
 
     // 칩은 자식이 둘(아이콘·문구)이고, 표 행은 여섯이다 — 그래서 텍스트가 겹쳐도 안 섞인다.
+    // 칩은 **span 둘**(아이콘·문구)이고 표 행은 span·div 여섯이다. `children.length === 2`만
+    // 보면 칩이 정확히 2개일 때 **칩 래퍼**도 자식 2개라 같이 걸린다 — 3자 검수에서 뮤테이션의
+    // 실패 메시지가 엉뚱한 곳을 가리켰다. 자식이 전부 span인지까지 본다.
     const chipByText = (text: string): HTMLElement => {
       const hits = [...container.querySelectorAll<HTMLElement>('div')]
-        .filter(d => d.children.length === 2 && (d.textContent ?? '').includes(text));
+        .filter(d => d.children.length === 2
+          && [...d.children].every(c => c.tagName === 'SPAN')
+          && (d.textContent ?? '').includes(text));
       expect(hits.length, `'${text}' 칩을 하나로 못 집었다`).toBe(1);
       return hits[0];
     };
@@ -679,6 +752,27 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     // (뮤테이션 MISSED). 25와 5 **사이**를 하나 둔다. 위쪽은 30을 쓰는 칩 단언이 잡는다.
     const byFatigue = renderResult({ statChanges: { academic: -2.4 }, fatigueChange: 10 });
     expect(byFatigue.textContent, '피로 문턱 아래인데 칩이 떴다').not.toContain('피로 누적');
+
+    /**
+     * **정렬이 없어도 위 세 판은 전부 통과한다.** 셋 다 `statChanges`의 삽입 순서가 이미
+     * 크기 내림차순이라 `sort`가 아무것도 안 바꾼다 — `.sort(...)` 한 줄을 통째로 지워도
+     * 2,715개가 전부 초록이었다(3자 검수 실측). 제품에서는 엔진의 스탯 키 순서
+     * (academic→social→talent→mental→health)로 오므로 정렬이 빠지면 **다른 칩이 뜬다.**
+     * 삽입 순서와 크기 순서가 **어긋나는** 판을 하나 둔다.
+     */
+    const bySort = renderResult({ statChanges: { social: -0.6, academic: -2.4, mental: -1.5 }, fatigueChange: 0 });
+    expect(iconIds(bySort, 'stat'), '정렬이 빠졌다 — 삽입 순서대로 인기·학업이 떴을 것이다')
+      .toEqual(['stat:academic', 'stat:mental', ...STAT_KEYS.map(k => `stat:${k}`)]);
+
+    /**
+     * **경계가 포함인지 배제인지도 잠근다.** 위 판들은 문턱에서 떨어져 있어 `<= -0.5`를
+     * `< -0.5`로, `>= 25`를 `> 25`로 바꿔도 전부 통과했다(실측 MISSED 2건). 딱 그 값을 쓴다.
+     */
+    const atEdge = renderResult({ statChanges: { academic: -2.4, social: -0.5 }, fatigueChange: 25 });
+    expect(atEdge.textContent, '문턱 **위**(-0.5)가 칩에서 빠졌다 — 경계가 배제로 바뀌었다')
+      .toContain('인기 -0.5');
+    expect(atEdge.textContent, '피로 문턱 **위**(25)가 칩에서 빠졌다 — 경계가 배제로 바뀌었다')
+      .toContain('피로 누적');
   });
 
   /**
@@ -708,14 +802,23 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     const first = container.querySelector('[data-icon^="stat:"]');
     expect(first, '엔딩 스탯 표에 선화가 없다').toBeTruthy();
     const table = first!.closest('div')!.parentElement!;   // svg → span → 행 → 표
+    // **집은 게 정말 그 표인지 먼저 말한다.** 구조가 한 겹 바뀌면 엉뚱한 컨테이너를 재게 되는데,
+    // 그때 아래 부정형 단언("이모지가 없다")은 조용히 통과할 수 있다.
+    expect(table.children.length, '엔딩 표를 못 집었다 — 5행이 아닌 컨테이너를 재고 있다')
+      .toBe(STAT_KEYS.length);
     expect(iconIds(table, 'stat'), '엔딩 표의 축 순서가 다르다')
       .toEqual(STAT_KEYS.map(k => `stat:${k}`));
     expect(emojiInText(table), '엔딩 표에 이모지가 돌아왔다').toEqual([]);
 
     // 막대도 같은 상수다 — 아이콘만 맞추고 막대를 두면 반쪽이다(결산에서 실제로 그랬다).
-    const tracks = [...table.querySelectorAll<HTMLElement>('div')]
-      .filter(d => d.style.height === `${STAT_BAR_HEIGHT}px`);
-    expect(tracks.length, '엔딩 막대가 주간 화면과 다른 높이다').toBe(STAT_KEYS.length);
+    expect(capsuleBars(table).length, '엔딩 막대가 주간 화면과 다른 높이·반지름이다')
+      .toBe(STAT_KEYS.length);
+    // 이모지는 글자라 24px 칸에서 저절로 가운데였다. SVG는 블록이라 이 칸이 없으면 왼쪽에 붙는다.
+    expect(iconCells(table).length, '엔딩 아이콘이 가운데 정렬 칸을 잃었다').toBe(STAT_KEYS.length);
+    for (const svg of table.querySelectorAll('[data-icon^="stat:"]')) {
+      expect(svg.getAttribute('width'), '엔딩 스탯 아이콘 크기가 다른 화면과 어긋났다')
+        .toBe(String(STAT_ICON_SIZE));
+    }
 
     // 범위 가드 — 부모 ⭐는 이번 경계 밖이라 남아 있어야 한다.
     expect(container.textContent, '부모 아이콘까지 걷어내면 경계를 넘은 것이다').toContain('⭐');
@@ -734,7 +837,9 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     const img = hud.querySelector('img');
     expect(img, '전제: HUD에 초상 이미지가 있다').toBeTruthy();
     const style = img!.getAttribute('style') ?? '';
-    expect(style, '액자가 없으면 파스텔 사각형이 카드에 박힌 것처럼 보인다').toMatch(/outline/);
+    // **콜론까지 본다.** `/outline/`만 두면 `outline-offset: -2px`에 걸려, 테두리 선언을
+    // 통째로 지워도 이 단언이 초록이었다(3자 검수 실측 — 자기검사 하나만 빨개졌다).
+    expect(style, '액자가 없으면 파스텔 사각형이 카드에 박힌 것처럼 보인다').toMatch(/outline:/);
     expect(style, '카드 안인데 그림자가 돌아왔다 — 초상 둘레가 한 겹 어두워진다')
       .not.toMatch(/box-shadow/);
   });
@@ -744,7 +849,7 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     const img = container.querySelector('img[alt^="player_"]');
     expect(img, '전제: 결산에 주인공 초상이 있다').toBeTruthy();
     const style = img!.getAttribute('style') ?? '';
-    expect(style, '사진 위 초상의 테두리가 없다').toMatch(/outline/);
+    expect(style, '사진 위 초상의 테두리가 없다').toMatch(/outline:/);
     expect(style, '그림자까지 끄면 사진 위에서 초상이 바탕에 박힌다 — 카드 안과는 다른 자리다')
       .toMatch(/box-shadow/);
   });
@@ -816,10 +921,23 @@ describe('자기검사 — 헬퍼가 실제로 잡아낸다', () => {
     expect(card, '카드 변형이 테두리까지 잃었다 — 두께는 안 건드리기로 했다').toMatch(/outline/);
     expect(card, 'box-shadow 탐침이 죽었다 — 위 "그림자 없다"는 근거가 없다').not.toMatch(/box-shadow/);
 
-    // 테두리 값 자체가 같아야 한다. 있다/없다만 보면 1px로 낮춰도 통과한다(실측 0.6/255라 눈엔 안 보인다).
-    const outlineOf = (st: string) => /outline:\s*([^;]+)/.exec(st)?.[1]?.trim();
-    expect(outlineOf(card), '두 자리의 테두리가 갈라졌다').toBe(outlineOf(photo));
-    expect(outlineOf(card), '테두리 두께가 바뀌었다').toMatch(/2px/);
+    /**
+     * 테두리는 **세 축**이다: 값(두께·색·알파) · 위치(offset) · 두 자리의 일치.
+     * 있다/없다만 보면 1px로 낮춰도 통과하고(실측 0.6/255라 눈엔 안 보인다), 두 자리의
+     * 일치만 보면 **둘이 함께 움직이는** 드리프트가 안 잡힌다(색을 빨강으로 바꿔도 초록이었다).
+     * offset은 액자를 그림 **안쪽**에 그리게 하는 축인데, 지우면 52px 초상 바깥으로 삐져나오고
+     * `borderRadius: size*0.15`와의 맞물림도 달라진다 — 그것도 전 스위트 초록이었다.
+     * 값은 **원시 style 속성**에서 읽는다 — jsdom CSSOM은 단축 속성을 재직렬화하지만
+     * `getAttribute('style')`은 React가 쓴 문자열 그대로다(실브라우저 CSSOM은
+     * `rgba(255, 255, 255, 0.18) solid 2px`로 순서를 바꿔 내놓는다).
+     */
+    const decl = (st: string, prop: string) =>
+      new RegExp(`(?:^|;)\\s*${prop}:\\s*([^;]+)`).exec(st)?.[1]?.trim().replace(/\s+/g, ' ');
+    expect(decl(card, 'outline'), '두 자리의 테두리가 갈라졌다').toBe(decl(photo, 'outline'));
+    expect(decl(card, 'outline'), '테두리 값이 드리프트했다(두께·색·알파)')
+      .toBe('2px solid rgba(255,255,255,0.18)');
+    expect(decl(card, 'outline-offset'), '액자가 그림 바깥으로 나갔다').toBe('-2px');
+    expect(decl(photo, 'outline-offset'), '두 자리의 액자 위치가 갈라졌다').toBe('-2px');
 
     expect(bare, '액자를 안 주면 outline이 없어야 한다 — 남으면 탐지기가 아무것도 안 보는 것이다')
       .not.toMatch(/outline/);

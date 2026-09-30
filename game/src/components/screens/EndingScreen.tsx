@@ -9,7 +9,7 @@ import { resolveEventCgUrl } from '../../engine/eventCg';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { BG_IMAGE_OPACITY_UNTREATED } from './surface';
 import { StatIcon } from '../icons/icons';
-import { STAT_BAR_HEIGHT } from './main/StatsPanel';
+import { STAT_BAR_HEIGHT, STAT_ICON_SIZE } from './main/StatsPanel';
 import { RunArchiveSummary } from './RunArchiveSummary';
 import { CgItem, catOf } from './memoryTokens';
 import { HeroGallery, MemoryThumb } from './memoryVisuals';
@@ -200,7 +200,7 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
                     width는 24를 유지하되 inline-flex로 가운데 세운다: 이모지는 글자라 칸 안에서 저절로
                     가운데였지만 SVG는 블록이라 그냥 두면 왼쪽에 붙는다. */}
                 <span style={{ width: 24, display: 'inline-flex', justifyContent: 'center', color: 'var(--text-secondary)' }}>
-                  <StatIcon stat={key} size={14} />
+                  <StatIcon stat={key} size={STAT_ICON_SIZE} />
                 </span>
                 <span style={{ width: 32, fontSize: '0.8rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
                 {/* 막대 높이는 StatsPanel의 SSOT를 쓴다 — 지금 값이 14/7이라 화면은 그대로이고,
