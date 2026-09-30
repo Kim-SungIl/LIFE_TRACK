@@ -5,7 +5,7 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { GLASS_BASE, tintedGlass } from './surface';
-import { STAT_ICONS, PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
+import { PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
 import { StatIcon } from '../icons/icons';
 import { STAT_BAR_HEIGHT } from './main/StatsPanel';
 
@@ -67,15 +67,21 @@ export function WeeklyResultScreen({
     : (weekLog.milestoneMessages || []);
 
   // 잃은 것 칩 — 큰 음수 스탯 변화(절댓값 ≥ 0.5) 상위 2개 + 피로 누적
-  const losses: { icon: string; text: string }[] = [];
+  //
+  // **아이콘을 문자열 한 필드로 섞지 않는다.** 예전엔 `icon: string`에 `STAT_ICONS[k]`와 `'🥱'`가
+  // 같이 들어갔고, 그래서 이 칩은 20줄 아래 스탯 표가 선화로 바뀐 뒤에도 이모지로 남았다 —
+  // 같은 화면에서 학업이 책 선화와 📚로 한 번씩 나왔다. 데이터는 **무엇인지**(스탯이냐 피로냐)만
+  // 들고, 어떤 그림으로 그릴지는 렌더가 정한다. 피로는 스탯 축이 아니라 이모지가 맞다.
+  type Loss = { kind: 'stat'; stat: StatKey; text: string } | { kind: 'fatigue'; text: string };
+  const losses: Loss[] = [];
   const negativeChanges = (Object.entries(weekLog.statChanges) as [StatKey, number | undefined][])
     .filter(([, v]) => (v ?? 0) <= -0.5)
     .sort((a, b) => (a[1] ?? 0) - (b[1] ?? 0))
     .slice(0, 2);
   for (const [k, v] of negativeChanges) {
-    losses.push({ icon: STAT_ICONS[k], text: `${STAT_LABELS[k]} ${Math.round((v ?? 0) * 10) / 10}` });
+    losses.push({ kind: 'stat', stat: k, text: `${STAT_LABELS[k]} ${Math.round((v ?? 0) * 10) / 10}` });
   }
-  if ((weekLog.fatigueChange ?? 0) >= 25) losses.push({ icon: '🥱', text: '피로 누적' });
+  if ((weekLog.fatigueChange ?? 0) >= 25) losses.push({ kind: 'fatigue', text: '피로 누적' });
 
   // 피로 라벨/색 단일 SSOT — HUD와 동일하게 getFatigueDisplay 사용 (color는 부모가 이미 같은 함수로 계산해 prop 주입).
   const resultFatigueLabel = getFatigueDisplay(fatigue).label;
@@ -195,7 +201,9 @@ export function WeeklyResultScreen({
                 fontSize: '0.72rem', color: 'var(--text-secondary)',
                 background: 'rgba(255,255,255,0.04)', padding: '3px 8px', borderRadius: 8,
               }}>
-                <span style={{ fontSize: '0.85rem' }}>{loss.icon}</span>
+                {loss.kind === 'stat'
+                  ? <span style={{ display: 'inline-flex', color: 'var(--text-secondary)' }}><StatIcon stat={loss.stat} size={14} /></span>
+                  : <span style={{ fontSize: '0.85rem' }}>🥱</span>}
                 <span>{loss.text}</span>
               </div>
             ))}

@@ -47,6 +47,9 @@ import { ACTIVITIES } from '../../engine/activities';
 import { readFileSync, readdirSync, statSync } from 'fs';
 import { resolve, join } from 'path';
 import { makeState } from '../../test/fixtures';
+import { EndingScreen } from '../screens/EndingScreen';
+import { calculateEnding } from '../../engine/ending';
+import { getBackground } from '../../engine/backgrounds';
 import type { GameState, StatKey, Stats } from '../../engine/types';
 
 const STAT_KEYS = Object.keys(STAT_ICONS) as StatKey[];
@@ -369,25 +372,41 @@ describe('집합 — 키마다 서로 다른 그림이 있다', () => {
       }
       return acc;
     };
+    /**
+     * **주석은 호출부가 아니다.** T63 실측: `WeeklyResultScreen`의 스탯 칩을 그림 채널로
+     * 옮겨 이 파일이 진짜 소비자가 아니게 됐는데, "예전엔 `STAT_ICONS[k]`를 담았다"고 적어둔
+     * **주석 한 줄 때문에** 이 단언이 그대로 초록이었다. 실호출을 전부 지우고 설명 주석만
+     * 남겨도 통과한다는 뜻이다 — 코드에서 주석을 걷어낸 뒤에 본다.
+     */
+    const stripComments = (src: string) =>
+      src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+    const usesTextChannel = (src: string) => /\bSTAT_ICONS\s*\[/.test(stripComments(src));
     const consumers = files(SRC)
       .filter(f => !f.endsWith('shared.ts'))
-      .filter(f => /\bSTAT_ICONS\s*\[/.test(readFileSync(f, 'utf8')))
+      .filter(f => usesTextChannel(readFileSync(f, 'utf8')))
       .map(f => f.replace(SRC, 'src'));
     // 탐지기 자기검사 — 정규식이 죽으면 목록이 비고, 그러면 아래 단언이 전부 빨강이 된다.
-    expect(/\bSTAT_ICONS\s*\[/.test("`${STAT_ICONS[k]} …`"), '탐지기가 템플릿 호출을 못 본다').toBe(true);
-    expect(/\bSTAT_ICONS\s*\[/.test('import { STAT_ICONS } from "x"'), '단순 import는 호출부가 아니다').toBe(false);
+    expect(usesTextChannel('const a = `${STAT_ICONS[k]} …`;'), '탐지기가 템플릿 호출을 못 본다').toBe(true);
+    expect(usesTextChannel('import { STAT_ICONS } from "x"'), '단순 import는 호출부가 아니다').toBe(false);
+    expect(usesTextChannel('// 예전엔 STAT_ICONS[k]를 담았다'), '줄 주석이 호출부로 세어진다').toBe(false);
+    expect(usesTextChannel('/** 예전엔 `STAT_ICONS[k]`를 담았다 */'), '블록 주석이 호출부로 세어진다').toBe(false);
+    // 주석 제거가 **코드까지** 먹으면 목록이 비어 아래가 빨강이 되지만, 이유가 엉뚱해진다.
+    expect(usesTextChannel('/* 주석 */ push(STAT_ICONS[k]);'), '주석 제거가 뒤따르는 코드를 먹는다').toBe(true);
+
     /**
-     * **개수가 아니라 이름으로 잠근다.** 처음엔 `>= 3`이었는데 실사용이 4곳이라
-     * 하나를 지워도 통과했다(실측 MISSED). 글자 채널이 존재하는 **근거 자체**가
-     * 이 자리들이라, 여기서 사라지면 근거가 사라진 것이다 — 그때는 표를 지우든
-     * 주석의 근거를 고치든 해야지, 조용히 통과해서는 안 된다.
-     * (`EndingScreen`도 소비자지만 JSX 자리라 언젠가 그림 채널로 갈 수 있어 뺐다.)
+     * **개수가 아니라 이름으로, 그리고 집합 전체로 잠근다.** 처음엔 `>= 3`이었는데 실사용이
+     * 4곳이라 하나를 지워도 통과했다(실측 MISSED).
+     *
+     * T63에서 근거가 둘 줄었다 — `WeeklyResultScreen`의 칩은 판별 유니온으로 나뉘어,
+     * `EndingScreen`의 표는 반복 표라서 그림 채널로 갔다. **필수 이름이 3에서 2로 줄었으니
+     * 아래쪽(존재) 잠금은 그만큼 약해졌다.** 그 대신 위쪽을 막는다: 소비자 집합이 정확히
+     * 이 둘이어야 한다. 새 자리가 글자 채널을 쓰기 시작하면 — 즉 이모지가 조용히 돌아오면 —
+     * 여기서 빨강이 나고, `shared.ts`의 근거 목록을 같이 고치게 된다.
      */
-    for (const site of ['GameScreen.tsx', 'MiniTalkModal.tsx', 'WeeklyResultScreen.tsx']) {
-      expect(consumers.some(f => f.endsWith(site)),
-        `${site}가 글자 채널을 안 쓴다 — 그러면 shared.ts가 적어둔 근거가 더 이상 사실이 아니다`)
-        .toBe(true);
-    }
+    expect(consumers.sort(), '글자 채널 소비자 집합이 shared.ts가 적어둔 근거와 다르다').toEqual([
+      'src/components/GameScreen.tsx',
+      'src/components/screens/main/MiniTalkModal.tsx',
+    ]);
   });
 });
 
@@ -571,20 +590,135 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
    * `<StatIcon>`을 통째로 지워도 2582개 전부 초록. 이 화면을 바꾼 명분이 "한쪽만 선화로
    * 바꾸면 매주 두 화면을 오가며 그림이 바뀐다"였으니, 그 한쪽이 잠겨 있어야 말이 된다.
    */
-  it('주간 결산의 스탯 5행도 선화를 쓴다', () => {
+  /** 결산 화면을 원하는 주간 로그로 띄운다 — 칩 유무를 픽스처로 정하기 위해서다. */
+  function renderResult(patch: Partial<import('../../engine/types').WeekLog>) {
     let st = createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
     st = { ...st, year: 3, week: 12, routineSlot2: 'self-study', routineSlot3: 'light-exercise' };
     st = processWeek(st);
+    const weekLog = { ...st.weekLog!, ...patch };
     // 이벤트가 걸리면 결산이 아니라 이벤트 화면이 뜬다 — 결산만 보고 싶으므로 비운다.
-    useGameStore.setState({ state: { ...st, currentEvent: null, phase: 'result' } });
+    useGameStore.setState({ state: { ...st, weekLog, currentEvent: null, phase: 'result' } });
     const { container } = render(<GameScreen />);
     expect(container.textContent, '전제: 결산 화면이다').toMatch(/이번 주의 기록|주차/);
+    return container;
+  }
+
+  it('주간 결산의 스탯 5행도 선화를 쓴다', () => {
+    // **칩이 없는 주로 고정한다.** 이 단언의 대상은 표 5행인데 '잃은 것' 칩도 이제 같은
+    // `stat:` 선화라 한 화면에 섞인다(실측: 손 안 댄 픽스처에서 6개였다). 칩은 아래 전용 단언이 본다.
+    const container = renderResult({ statChanges: {}, fatigueChange: 0 });
     expect(iconIds(container, 'stat'), '결산 스탯 표의 선화가 없다')
       .toEqual(STAT_KEYS.map(k => `stat:${k}`));
     // 주간 화면과 **같은 막대**라야 한다. 아이콘만 맞추고 막대를 안 맞추면 반쪽이다.
     const tracks = [...container.querySelectorAll<HTMLElement>('div')]
       .filter(d => d.style.height === `${STAT_BAR_HEIGHT}px`);
     expect(tracks.length, '결산 막대가 주간 화면과 다른 높이다').toBe(STAT_KEYS.length);
+  });
+
+  /**
+   * **같은 화면에서 학업이 두 그림이었다.** 표 20줄 위의 '잃은 것' 칩은 `icon: string` 한 필드에
+   * `STAT_ICONS[k]`와 `'🥱'`를 같이 담고 있어서, 표가 선화로 바뀐 뒤에도 📚로 남았다.
+   * 데이터를 판별 유니온으로 나눈 뒤의 계약을 잠근다 — 스탯은 선화, 피로만 이모지.
+   */
+  it('결산 "잃은 것" 칩도 표와 같은 선화를 쓴다 — 피로만 이모지', () => {
+    const container = renderResult({
+      statChanges: { academic: -2.4, mental: -0.8 },
+      fatigueChange: 30,
+    });
+
+    // 칩은 자식이 둘(아이콘·문구)이고, 표 행은 여섯이다 — 그래서 텍스트가 겹쳐도 안 섞인다.
+    const chipByText = (text: string): HTMLElement => {
+      const hits = [...container.querySelectorAll<HTMLElement>('div')]
+        .filter(d => d.children.length === 2 && (d.textContent ?? '').includes(text));
+      expect(hits.length, `'${text}' 칩을 하나로 못 집었다`).toBe(1);
+      return hits[0];
+    };
+
+    const academic = chipByText('학업 -2.4');
+    expect(academic.querySelector('[data-icon="stat:academic"]'),
+      '칩이 표와 다른 그림을 쓴다 — 한 화면에서 학업이 두 얼굴이 된다').toBeTruthy();
+    expect(emojiInText(academic), '칩에 이모지가 돌아왔다').toEqual([]);
+
+    expect(chipByText('멘탈 -0.8').querySelector('[data-icon="stat:mental"]'),
+      '두 번째 칩이 선화가 아니다').toBeTruthy();
+
+    // 피로는 스탯 축이 아니다 — 여기만 이모지로 남는 게 맞다.
+    const fatigue = chipByText('피로 누적');
+    expect(fatigue.textContent, '피로 이모지까지 걷어내면 범위를 넘은 것이다').toContain('🥱');
+    expect(fatigue.querySelector('[data-icon]'), '피로에 스탯 선화가 붙었다').toBeFalsy();
+
+    // 칩 2 + 표 5. 칩이 표보다 앞이다 — 개수만 세면 칩이 표에서 새어 나온 경우도 통과한다.
+    expect(iconIds(container, 'stat'), '칩과 표의 구성이 바뀌었다').toEqual([
+      'stat:academic', 'stat:mental', ...STAT_KEYS.map(k => `stat:${k}`),
+    ]);
+  });
+
+  /**
+   * **칩 선택 규칙은 이번에 안 건드렸다 — 그걸 잠근다.**
+   *
+   * 실측으로 한 번 헛짚었다. 처음엔 `{academic:-2.4, mental:-0.8, social:-0.2}` 한 판에서
+   * "인기 -0.2 칩이 없다"로 문턱을 보려 했는데, 그 판은 **상위 2개 자르기만으로도** 인기가
+   * 빠진다. 문턱을 0.5에서 0.1로 풀어도 칩 목록이 그대로라 단언이 공허했다(뮤테이션 MISSED).
+   * 두 규칙은 서로를 가리므로, 각각 **혼자 결과를 가르는** 판에서 따로 본다.
+   */
+  it('칩 선택 규칙(문턱 0.5 · 상위 2개)이 그대로다', () => {
+    // 문턱만 가른다 — 후보가 둘뿐이라 자르기는 아무것도 안 뺀다.
+    // 문턱을 풀면(≤ -0.1) 인기가 칩이 된다.
+    const byThreshold = renderResult({ statChanges: { academic: -2.4, social: -0.2 }, fatigueChange: 0 });
+    expect(byThreshold.textContent, '문턱 아래 변화까지 칩이 됐다').not.toContain('인기 -0.2');
+    expect(iconIds(byThreshold, 'stat'), '문턱 판의 칩은 학업 하나여야 한다')
+      .toEqual(['stat:academic', ...STAT_KEYS.map(k => `stat:${k}`)]);
+
+    // 자르기만 가른다 — 셋 다 문턱을 넘으니 빠지는 이유가 상위 2개뿐이다.
+    const bySlice = renderResult({ statChanges: { academic: -2.4, mental: -1.5, health: -0.9 }, fatigueChange: 0 });
+    expect(bySlice.textContent, '셋째 칩까지 나왔다 — 상위 2개 자르기가 풀렸다').not.toContain('체력 -0.9');
+    expect(iconIds(bySlice, 'stat'), '자르기 판의 칩은 학업·멘탈 둘이어야 한다')
+      .toEqual(['stat:academic', 'stat:mental', ...STAT_KEYS.map(k => `stat:${k}`)]);
+
+    // 피로 문턱(25)도 같은 함정에 있었다 — 위 두 판은 30과 0이라 5로 낮춰도 결과가 같았다
+    // (뮤테이션 MISSED). 25와 5 **사이**를 하나 둔다. 위쪽은 30을 쓰는 칩 단언이 잡는다.
+    const byFatigue = renderResult({ statChanges: { academic: -2.4 }, fatigueChange: 10 });
+    expect(byFatigue.textContent, '피로 문턱 아래인데 칩이 떴다').not.toContain('피로 누적');
+  });
+
+  /**
+   * **엔딩 표도 반복 5행이다.** 주간 화면·결산과 한 규칙인데 #496의 범위 밖이라 이모지로 남아
+   * 있었다. 화면 전체가 아니라 **표로 좁혀서** 이모지를 본다 — 엔딩에는 `PARENT_RECALL_MAP`의
+   * `resilience: '⭐'`가 있고, 그건 `STAT_ICONS.social`과 **같은 글자**다. 화면 전체를 훑으면
+   * 전환 뒤에도 빨갛고, 잘못 고치면 보호 대상인 부모 아이콘을 지우게 된다.
+   */
+  it('엔딩 스탯 5행도 같은 선화를 쓴다 (부모 ⭐는 그대로)', () => {
+    const state = makeState({ year: 8, week: 1, parents: ['resilience', 'freedom'] });
+    const { container } = render(
+      <EndingScreen
+        ending={calculateEnding(state)}
+        track={state.track}
+        stats={state.stats}
+        parents={state.parents}
+        burnoutCount={0}
+        money={0}
+        bgProps={{ bg: getBackground(1, false, 'normal', 8), bgImgError: true, onImgError: () => {} }}
+        runDelta={null}
+        gender="male"
+        onRestartSameHome={null}
+        onExitToTitle={() => {}}
+      />,
+    );
+
+    const first = container.querySelector('[data-icon^="stat:"]');
+    expect(first, '엔딩 스탯 표에 선화가 없다').toBeTruthy();
+    const table = first!.closest('div')!.parentElement!;   // svg → span → 행 → 표
+    expect(iconIds(table, 'stat'), '엔딩 표의 축 순서가 다르다')
+      .toEqual(STAT_KEYS.map(k => `stat:${k}`));
+    expect(emojiInText(table), '엔딩 표에 이모지가 돌아왔다').toEqual([]);
+
+    // 막대도 같은 상수다 — 아이콘만 맞추고 막대를 두면 반쪽이다(결산에서 실제로 그랬다).
+    const tracks = [...table.querySelectorAll<HTMLElement>('div')]
+      .filter(d => d.style.height === `${STAT_BAR_HEIGHT}px`);
+    expect(tracks.length, '엔딩 막대가 주간 화면과 다른 높이다').toBe(STAT_KEYS.length);
+
+    // 범위 가드 — 부모 ⭐는 이번 경계 밖이라 남아 있어야 한다.
+    expect(container.textContent, '부모 아이콘까지 걷어내면 경계를 넘은 것이다').toContain('⭐');
   });
 
   // HUD 초상과 주간 결산 초상이 같은 처리를 쓴다 — 한쪽만 액자면 매주 그림이 바뀐다.
