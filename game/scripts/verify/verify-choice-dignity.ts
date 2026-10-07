@@ -33,6 +33,9 @@ import { NPC_MINI_EVENTS, PARENT_MINI_EVENTS, PARENT_CLIMAX_EVENTS } from '../..
 import type { MiniTalkEvent } from '../../src/engine/talkData';
 import type { GameEvent } from '../../src/engine/types';
 
+// 기본은 **실패**다. 맨 아래 성공 블록(표지 0건일 때만 도는)만 0으로 내린다.
+process.exitCode = 1;
+
 // ── 코퍼스 펼치기 ─────────────────────────────────────────────────────────────
 
 type TextKind = 'label' | 'result';
@@ -222,9 +225,14 @@ if (short.length > 0) {
   throw new Error(`커버리지 하한 미달 — ${short.join(', ')}. 펼치기가 좁아졌거나 풀이 사라졌다.`);
 }
 
+// 실패를 삼키려면 **두 군데**를 고쳐야 하게 짠다. throw 한 줄만 지우면 아래 성공 블록이
+// 조건(problems.length === 0)에 막혀 안 돌고, 맨 위의 기본값 exitCode=1이 그대로 남는다.
+// (throw만 둔 초판은 throw 줄 삭제 + 표지 주입에 "✅ PASS"·rc=0이었다 — 뮤테이션 실측.)
 if (problems.length > 0) {
   for (const p of problems) console.log(`  [${p.rule}] ${p.where}: ${p.text}`);
-  // process.exit가 아니라 throw — 종료 코드 한 줄을 지워서 실패를 삼키는 길을 없앤다.
   throw new Error(`❌ FAIL — 표지 ${problems.length}건. 고른 선택이 지키는 가치를 말하게 고칠 것(수치는 건드리지 말 것)`);
 }
-console.log(`\n✅ PASS — 표지 0건 (결과 문장 ${resultTexts} · 라벨 ${labelTexts})`);
+if (problems.length === 0) {
+  console.log(`\n✅ PASS — 표지 0건 (결과 문장 ${resultTexts} · 라벨 ${labelTexts})`);
+  process.exitCode = 0;
+}
