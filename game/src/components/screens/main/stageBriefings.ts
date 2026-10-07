@@ -2,7 +2,7 @@ import type { ExamType } from '../../../engine/types';
 
 // 진학 브리핑 문구 SSOT — 문장마다 "엔진의 어떤 규칙 변화를 주장하는가"를 같이 적는다.
 // 수치는 비공개(존재와 방향만)라 문장엔 값이 없지만, 주장은 값으로 검증할 수 있어야 한다.
-// 계약 테스트(__tests__/stageBriefingClaims.test.ts)가
+// 계약 테스트(__tests__/stageBriefingClaims.test.tsx)가
 //   ① 각 claim을 엔진 값과 대조하고(예: payRises → 이 학년 수입이 직전 학년보다 큰가)
 //   ② 문장 속 표현이 claim으로 뒷받침되는지 본다(예: "올랐"이 있으면 rises claim, "학원"이 있으면 academy).
 // T64: "학원비도 한 단계 더 올랐다"는 academy yearlyCost가 중·고 3만 동일이라 거짓이었다.
