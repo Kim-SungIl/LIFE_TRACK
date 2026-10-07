@@ -51,7 +51,7 @@ export const DOYUN_FIRST_MEET_M = [
         text: '"오늘은 좀..." — 사양한다',
         effects: { mental: -1 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 1 }],
-        message: '"아 그래? 다음에 같이 하자!" 도윤이가 별로 신경 안 쓰는 표정으로 운동장 쪽으로 갔다. 같이 뛸 걸, 좀 아쉬웠다.',
+        message: '"아 그래? 다음에 같이 하자!" 도윤이가 별로 신경 안 쓰는 표정으로 운동장 쪽으로 갔다. 창가에 앉아 운동장 소리만 들었다. 오늘은 그냥 쉬고 싶은 날이었다.',
       },
     ],
   },
