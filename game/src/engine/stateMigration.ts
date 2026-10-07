@@ -11,6 +11,7 @@ import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
 import { presentEvent } from './eventPresentation';
+import { buildCareerChoiceEvent, CAREER_CHOICE_EVENT_ID } from './careerChoice';
 import { STAT_KEYS } from './saveIntegrity';
 
 // ===== 1) 단계형 마이그레이션 =====
@@ -190,8 +191,11 @@ export function migrateLoadedState(state: GameState): GameState {
     // SCHOOL_LIFE_EVENTS 는 별도 풀(GAME_EVENTS 미포함)이지만 selection 에서 currentEvent 로
     // 반환되는 가장 흔한 이벤트군 — 함께 조회하지 않으면 학교생활 랜덤 이벤트 도중 새로고침 시
     // currentEvent 유실(null) + phase='event' 유지로 soft-lock 발생.
+    // T66 진로 갈림길은 카탈로그 밖에서 그 판의 상태로 굽는 장면이다(careerChoice.ts) — 같은 함수로
+    // 다시 굽는다. 갈래가 닫혀 null이면 아래 "사라진 ID" 경로로 떨어진다.
     const fresh = GAME_EVENTS.find(e => e.id === cur.id)
-      ?? SCHOOL_LIFE_EVENTS.find(e => e.id === cur.id);
+      ?? SCHOOL_LIFE_EVENTS.find(e => e.id === cur.id)
+      ?? (cur.id === CAREER_CHOICE_EVENT_ID ? buildCareerChoiceEvent(result) : null);
     if (fresh) {
       // 발생주(cur.week)는 보존 — result.week 는 week++(gameEngine) 이후 값이라 덮어쓰면
       // 기억(memory)의 발생주가 +1 어긋난다(W48 이벤트 → 49).

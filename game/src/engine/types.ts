@@ -17,11 +17,28 @@ export type StatKey = keyof Stats;
 
 export type Track = 'humanities' | 'science';
 
+/**
+ * T66: 진로가 갈리는 판에서 플레이어가 고르는 갈래.
+ *  · 'specialist' = 특기로 간다(예술/체육 특기자 · 예체능 진학)
+ *  · 'general'    = 수능·학업으로 간다(determineCareer의 일반 진로)
+ * 어느 갈래가 열렸는지는 ending.ts `careerBranchesOf` 하나가 정한다.
+ */
+export type CareerBranch = 'specialist' | 'general';
+
 export interface GameState {
   week: number;             // 1~48 (1년)
   year: number;             // 1~7 (Y1=초6, Y7=고3)
   phase: 'setup' | 'weekday' | 'weekend' | 'vacation' | 'result' | 'event' | 'semester-end' | 'year-end' | 'ending';
   track: Track | null;      // 문과/이과 (Y6 고2 시작 때 선택)
+  /**
+   * T66: 진로 갈림길(`career-crossroads`)에서 플레이어가 고른 갈래.
+   *
+   * **옵셔널인 이유**: 구세이브와 갈림이 없는 판(대부분)에는 없다. 없으면 엔딩은 예전 자동 판정을
+   * 그대로 쓴다. 기본값을 백필하면 "골랐다"는 없는 사실이 생기고, 그 값이 자동 판정과 다를 때
+   * 진로가 조용히 바뀐다 — undefined가 곧 "자동 판정"이다.
+   * 값이 있어도 **엔딩 시점에 그 갈래가 열려 있을 때만** 쓴다(careerBranchesOf). 손상값·닫힌 갈래는 무시.
+   */
+  careerChoice?: CareerBranch;
   gender: Gender;
   stats: Stats;
   fatigue: number;          // 피로 0~100
@@ -356,6 +373,7 @@ export interface EventChoice {
   message: string;
   timeCost?: 1 | 2; // 시간 소모: 1=루틴/주말 1슬롯, 2=루틴/주말 2슬롯
   trackSelect?: Track; // 문과/이과 선택 (Y6 W1 이벤트 전용)
+  careerSelect?: CareerBranch; // T66: 진로 갈림길 선택 (career-crossroads 전용)
   // 선택지 노출 조건 — 만족 안 하면 UI에서 숨김 (예: 돈/스탯 게이팅)
   condition?: (state: GameState) => boolean;
   // v1.2: 이 선택을 고르면 엔딩 회상 슬롯 생성 후보 (importance ≥3만 실제 생성)

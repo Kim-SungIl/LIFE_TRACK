@@ -191,6 +191,19 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
           </div>
         )}
 
+        {/* 회복(T66) — 행복 등급의 궤적 캡은 한 번 무너진 판을 A 위로 못 올린다(의도된 설계). 등급은
+            그대로 두고, 학년별 궤적이 "무너졌다가 다시 일어나 끝났다"를 뒷받침할 때만 그 사실을 말한다
+            (ending.ts recoveryClaimOf). 근거가 없는 판(null)은 그리지 않는다. */}
+        {ending.recoveryNote && (
+          <div data-testid="ending-recovery-note" style={{
+            fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.7,
+            maxWidth: 360, marginLeft: 'auto', marginRight: 'auto',
+            marginTop: -8, marginBottom: 16,
+          }}>
+            {ending.recoveryNote}
+          </div>
+        )}
+
         <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 16px' }}>
           {(Object.keys(stats) as StatKey[]).map(key => {
             const grade = getGrade(stats[key]);
