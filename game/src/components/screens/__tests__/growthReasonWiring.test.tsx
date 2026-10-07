@@ -18,7 +18,9 @@ import { useGameStore } from '../../../engine/store';
 import { createInitialState, processWeek } from '../../../engine/gameEngine';
 import { clearArchive } from '../../../engine/archive';
 import { growthReasonLine, growthReasonLines } from '../../../engine/growthReasonText';
-import type { GameState } from '../../../engine/types';
+import { SCHOOL_LIFE_EVENTS } from '../../../engine/events/school-life';
+import type { GameEvent, GameState } from '../../../engine/types';
+import type { GrowthReason } from '../../../engine/growthDrag';
 
 /** 지친 채로 한 주를 진짜로 처리한 결산 직전 상태 */
 function resultAfter(over: Partial<GameState>): GameState {
@@ -48,7 +50,7 @@ describe('성장 둔화 한 줄 배선', () => {
     useGameStore.setState({ state: s });
     render(<GameScreen />);
     const box = screen.getByTestId('growth-reason');
-    const line = growthReasonLine(reason!, s.weekLog!.year!);
+    const line = growthReasonLine(reason!, s.weekLog!.year!)!;
     // breakSentences가 문장 사이 공백을 줄바꿈으로 바꾸므로 공백 정규화 후 비교한다.
     expect(box.textContent!.replace(/\s+/g, ' ')).toContain(line.replace(/\s+/g, ' '));
   });
@@ -81,4 +83,65 @@ describe('성장 둔화 한 줄 배선', () => {
     expect(screen.getByText('이번 주의 기록')).toBeTruthy();
     expect(screen.queryByTestId('growth-reason')).toBeNull();
   });
+
+  // 3자 검수 G: 화면이 variant를 0으로 고정해도 위 단언은 초록이다(첫 판정은 variant 0이니까).
+  it('회전 위치(variant)를 화면이 그대로 쓴다 — 두 번째 문장', () => {
+    const s = resultAfter({ fatigue: 92 });
+    const reason = s.weekLog!.growthReason!;
+    const lines = growthReasonLines(reason.factor, reason.axis, s.weekLog!.year!);
+    expect(lines.length, '전제: 칸에 문장이 둘 이상').toBeGreaterThan(1);
+    useGameStore.setState({ state: { ...s, weekLog: { ...s.weekLog!, growthReason: { ...reason, variant: 1 } } } });
+    render(<GameScreen />);
+    const text = screen.getByTestId('growth-reason').textContent!.replace(/\s+/g, ' ');
+    expect(text).toContain(lines[1].replace(/\s+/g, ' '));
+    expect(text).not.toContain(lines[0].replace(/\s+/g, ' '));
+  });
+
+  // 3자 검수 D: 손상된 판정이 결산을 터뜨리면 안 된다.
+  it('손상된 판정(모르는 요인·축)이면 줄 없이 결산이 뜬다', () => {
+    const s = resultAfter({ fatigue: 92 });
+    const broken = { factor: 'nope', axis: 'mental', variant: 'x' } as unknown as GrowthReason;
+    useGameStore.setState({ state: { ...s, weekLog: { ...s.weekLog!, growthReason: broken } } });
+    render(<GameScreen />);
+    expect(screen.getByText('이번 주의 기록')).toBeTruthy();
+    expect(screen.queryByTestId('growth-reason')).toBeNull();
+  });
 });
+
+// 3자 검수 B: 판정은 processWeek에서 박히는데, 같은 주의 이벤트 몫은 그 **뒤에** resolveEvent가
+// 로그에 접는다. 변화량 표가 큰 상승을 보여 주는 주에 "피곤해서 집중 못 했다"가 남으면 안 된다.
+describe('이벤트가 접힌 뒤의 결산 (store 경로)', () => {
+  function withBoostEvent(s: GameState, academic: number): GameState {
+    const base = SCHOOL_LIFE_EVENTS[0];
+    const ev: GameEvent = {
+      ...base, week: 10, femaleChoices: undefined,
+      choices: [{ text: '해 본다', effects: { academic }, message: '생각보다 잘 풀렸다.' }],
+    };
+    return { ...s, currentEvent: ev, phase: 'event' as GameState['phase'] };
+  }
+
+  it('이벤트로 축이 크게 오른 주에는 둔화 줄이 물러선다', () => {
+    const s = resultAfter({ fatigue: 92 });
+    expect(s.weekLog!.growthReason?.factor, '전제: 엔진은 피로 원인을 박았다').toBe('fatigue');
+    useGameStore.setState({ state: withBoostEvent(s, 6) });
+    useGameStore.getState().resolveEvent(0);
+    const after = useGameStore.getState().state!;
+    expect(after.weekLog!.statChanges.academic ?? 0, '전제: 이벤트 몫이 접혀 잘 는 주가 됐다').toBeGreaterThanOrEqual(1.5);
+    expect(after.weekLog!.growthReason, '엔진 판정 자체는 남아 있다 — 화면이 최종값으로 다시 묻는다').toBeDefined();
+    useGameStore.setState({ state: { ...after, currentEvent: null, phase: 'result' as GameState['phase'] } });
+    render(<GameScreen />);
+    expect(screen.getByText('이번 주의 기록')).toBeTruthy();
+    expect(screen.queryByTestId('growth-reason')).toBeNull();
+  });
+
+  it('이벤트 몫이 작으면 줄은 그대로 뜬다 (양성 대조)', () => {
+    const s = resultAfter({ fatigue: 92 });
+    useGameStore.setState({ state: withBoostEvent(s, 0) });
+    useGameStore.getState().resolveEvent(0);
+    const after = useGameStore.getState().state!;
+    useGameStore.setState({ state: { ...after, currentEvent: null, phase: 'result' as GameState['phase'] } });
+    render(<GameScreen />);
+    expect(screen.getByTestId('growth-reason')).toBeTruthy();
+  });
+});
+

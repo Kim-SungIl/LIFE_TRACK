@@ -12,6 +12,7 @@ import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
 import { presentEvent } from './eventPresentation';
 import { STAT_KEYS } from './saveIntegrity';
+import { sanitizeGrowthReason, sanitizeGrowthReasonMemo } from './growthDrag';
 
 // ===== 1) 단계형 마이그레이션 =====
 // 과거엔 store가 version !== SAVE_VERSION이면 세이브를 통째로 버렸다(격상 = 전 세이브 증발).
@@ -180,7 +181,20 @@ export function migrateLoadedState(state: GameState): GameState {
     // Phase 4B: 강점별 절정 발동 가드 + 긍정 태그 누적(구버전 세이브는 0부터 — 절정은 조건 충족 시 발동)
     parentClimaxFired: state.parentClimaxFired ?? [],
     parentPositiveTags: state.parentPositiveTags ?? {},
+    // T67: 손상된 둔화 문장 기억은 매주 TypeError(주 확정 불가)·영구 침묵·"11" 이어붙이기를 낸다.
+    // 보류분과 같은 원칙으로 정규화한다(growthDrag.ts 손상값 절 참조).
+    growthReasonMemo: sanitizeGrowthReasonMemo(state.growthReasonMemo, state.totalWeeksPlayed),
   };
+  // 결산 로그에 박힌 판정도 같은 정규화 — 모르는 요인·축이면 판정을 지운다(렌더 크래시 방지).
+  // 정상 판정이면 로그 객체를 그대로 둔다(결산 독백 useMemo가 로그 동일성을 키로 쓴다).
+  if (result.weekLog && result.weekLog.growthReason !== undefined) {
+    const clean = sanitizeGrowthReason(result.weekLog.growthReason);
+    const same = clean !== undefined
+      && clean.factor === result.weekLog.growthReason.factor
+      && clean.axis === result.weekLog.growthReason.axis
+      && clean.variant === result.weekLog.growthReason.variant;
+    if (!same) result.weekLog = { ...result.weekLog, growthReason: clean };
+  }
 
   // 직렬화/clone에서 손실된 currentEvent의 함수 필드(condition 등) 복원
   // EventChoice.condition이 살아 있어야 EventScene 선택지 게이팅이 정상 동작 —

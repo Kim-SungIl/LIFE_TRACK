@@ -9,6 +9,7 @@ import { PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, typ
 import { StatIcon } from '../icons/icons';
 import { STAT_BAR_HEIGHT, STAT_ICON_SIZE } from './main/StatsPanel';
 import { growthReasonLine } from '../../engine/growthReasonText';
+import { visibleGrowthReason } from '../../engine/growthDrag';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -84,11 +85,11 @@ export function WeeklyResultScreen({
   }
   if ((weekLog.fatigueChange ?? 0) >= 25) losses.push({ kind: 'fatigue', text: '피로 누적' });
 
-  // T67 성장 둔화 한 줄 — 원인 판정은 엔진이 로그에 박았다(pickGrowthReason). 여기서는 말로 바꾸기만
-  // 한다. 학교급은 로그가 박은 학년을 쓴다(결산 시점 state.year와 다를 수 있다 — 제목과 같은 이유).
-  const growthReason = weekLog.growthReason
-    ? growthReasonLine(weekLog.growthReason, weekLog.year ?? year)
-    : null;
+  // T67 성장 둔화 한 줄 — 원인 판정은 엔진이 로그에 박았다(pickGrowthReason). 보일지 말지는
+  // visibleGrowthReason 하나가 정한다(같은 주 이벤트 몫이 접힌 **최종** 변화량으로 잘 는 주를 다시 묻는다
+  // — 결산 독백도 같은 함수를 쓴다). 학교급은 로그가 박은 학년을 쓴다(제목과 같은 이유).
+  const visibleReason = visibleGrowthReason(weekLog);
+  const growthReason = visibleReason ? growthReasonLine(visibleReason, weekLog.year ?? year) : null;
 
   // 피로 라벨/색 단일 SSOT — HUD와 동일하게 getFatigueDisplay 사용 (color는 부모가 이미 같은 함수로 계산해 prop 주입).
   const resultFatigueLabel = getFatigueDisplay(fatigue).label;

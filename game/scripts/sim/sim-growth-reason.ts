@@ -18,9 +18,9 @@ import { hashInitialState } from '../../src/engine/rng';
 import {
   GROWTH_DRAG_FACTORS, GROWTH_REASON_GAP_WEEKS, GROWTH_REASON_MIN_LOSS,
   GROWTH_REASON_SITUATIONAL_REPEAT_WEEKS, GROWTH_REASON_STRUCTURAL_REPEAT_WEEKS, GOOD_WEEK_AXIS_GAIN,
-  dominantGrowthDrag, sumDrag, type GrowthDragFactor,
+  dominantGrowthDrag, sumDrag, visibleGrowthReason, type GrowthDragFactor,
 } from '../../src/engine/growthDrag';
-import type { GameState } from '../../src/engine/types';
+import type { GameState, WeekLog } from '../../src/engine/types';
 import { PERSONAS, runPersona, DEFAULT_DEPS } from './sim-qa-playthrough';
 
 const seeds = Number(process.argv[2]) || 3;
@@ -39,6 +39,7 @@ interface WeekRow {
   perFactor: Record<GrowthDragFactor, number>;
 }
 const rows: WeekRow[] = [];
+let foldSuppressed = 0;
 
 for (const p of valid) {
   for (let k = 0; k < seeds; k++) {
@@ -57,12 +58,41 @@ for (const p of valid) {
         loss: top?.loss ?? 0,
         ideal: ledger?.ideal ?? 0,
         applied: ledger?.applied ?? 0,
-        shown: log?.growthReason?.factor ?? null,
+        shown: visibleGrowthReason(log)?.factor ?? null,
         perFactor,
       });
       return next;
     };
-    runPersona(p, seed, { ...DEFAULT_DEPS, processWeek: wrapped });
+    // 같은 주 이벤트 몫은 processWeek **뒤에** 로그로 접힌다(store foldOutcomeIntoWeekLog) — 결산에
+    // 실제로 보이는지는 접힌 뒤의 로그로 다시 묻는다(visibleGrowthReason, 화면과 같은 함수).
+    // ⚠ 하네스의 resolveEventLikeStore는 그 접기를 **안 한다** — 그래서 여기서 이벤트 전후 스탯 차이를
+    // 로그 사본에 더해 재현한다(안 하면 접기 후 물러섬이 0건으로 잡힌다 — 첫 측정이 그랬다).
+    let pendingFold: Partial<Record<string, number>> = {};
+    let foldLog: WeekLog | null = null;
+    const wrappedWithReset: typeof processWeek = (st, map) => {
+      const next = wrapped(st, map);
+      pendingFold = {};
+      foldLog = next.weekLog;
+      return next;
+    };
+    const resolveWrapped: typeof DEFAULT_DEPS.resolveEvent = (st, idx) => {
+      const next = DEFAULT_DEPS.resolveEvent(st, idx);
+      const last = rows[rows.length - 1];
+      if (last && foldLog) {
+        for (const k of Object.keys(next.stats) as (keyof typeof next.stats)[]) {
+          pendingFold[k] = (pendingFold[k] ?? 0) + (next.stats[k] - st.stats[k]);
+        }
+        const changes = { ...foldLog.statChanges };
+        for (const [k, d] of Object.entries(pendingFold)) {
+          changes[k as keyof typeof changes] = (changes[k as keyof typeof changes] ?? 0) + (d ?? 0);
+        }
+        const before = last.shown;
+        last.shown = visibleGrowthReason({ ...foldLog, statChanges: changes })?.factor ?? null;
+        if (before && !last.shown) foldSuppressed++;
+      }
+      return next;
+    };
+    runPersona(p, seed, { ...DEFAULT_DEPS, processWeek: wrappedWithReset, resolveEvent: resolveWrapped });
   }
 }
 
@@ -99,6 +129,7 @@ for (const t of [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]) {
 
 console.log('\n## ② 출력 빈도 (제품 판정 = 임계 + 쿨다운)');
 const shown = rows.filter(r => r.shown);
+console.log(`이벤트 몫이 접힌 뒤 잘 는 주가 돼 물러선 판정: ${foldSuppressed}건`);
 console.log(`문장이 뜬 주: ${shown.length}/${N} (${pct(shown.length)}) — 대략 ${(N / Math.max(1, shown.length)).toFixed(1)}주에 한 번`);
 console.log('| 요인 | 뜬 횟수 | 뜬 문장 중 몫 |');
 console.log('|---|---|---|');

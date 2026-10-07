@@ -25,11 +25,15 @@ import {
   dominantGrowthDrag,
   growthReasonCell,
   pickGrowthReason,
+  sanitizeGrowthReasonMemo,
   sumDrag,
+  visibleGrowthReason,
   type GrowthDragFactor,
+  type GrowthReason,
   type GrowthLedger,
   type GrowthReasonMemo,
 } from '../growthDrag';
+import { migrateLoadedState } from '../stateMigration';
 import type { GameState, StatKey, WeekLog } from '../types';
 
 function emptyLog(): WeekLog {
@@ -325,9 +329,21 @@ describe('② 판정 — 잘 는 주', () => {
 });
 
 describe('② 판정 — 문장 회전 칸', () => {
-  it('지형 요인은 (요인, 축) 칸으로, 날씨 요인은 요인 칸으로 센다', () => {
+  it('축별 문장 요인은 (요인, 축) 칸으로, 축 중립 요인은 요인 칸으로 센다', () => {
     expect(growthReasonCell('familiar', 'academic')).not.toBe(growthReasonCell('familiar', 'talent'));
-    expect(growthReasonCell('fatigue', 'academic')).toBe(growthReasonCell('fatigue', 'talent'));
+    expect(growthReasonCell('fatigue', 'academic')).not.toBe(growthReasonCell('fatigue', 'talent'));
+    expect(growthReasonCell('crowded', 'academic')).toBe(growthReasonCell('crowded', 'talent'));
+  });
+
+  // 3자 검수 G: lastShownAt을 첫 값으로 고정해도(전체 간격이 첫 문장 기준으로 굳는다) 초록이었다.
+  it('advance는 lastShownAt·요인별 마지막 주를 매번 새 주로 옮기고 카운트를 쌓는다', () => {
+    const r = { factor: 'fatigue' as const, axis: 'academic' as const, variant: 0 };
+    const m1 = advanceGrowthReasonMemo(undefined, r, 10);
+    const m2 = advanceGrowthReasonMemo(m1, { ...r, variant: 1 }, 30);
+    expect(m2.lastShownAt).toBe(30);
+    expect(m2.lastByFactor.fatigue).toBe(30);
+    expect(m2.shown[growthReasonCell('fatigue', 'academic')]).toBe(2);
+    expect(m1.lastShownAt, '이전 기억은 바꾸지 않는다').toBe(10);
   });
 
   it('축이 번갈아 나와도 각 칸의 variant는 0,1,2… 로 1씩 오른다 (모듈로 퇴화 방지)', () => {
@@ -384,5 +400,62 @@ describe('③ processWeek 배선', () => {
   it('스탯 키 전부가 성장 축 또는 mental이다 (축 목록 드리프트 가드)', () => {
     const keys = Object.keys(baseState().stats) as StatKey[];
     expect(keys.filter(k => k !== 'mental').sort()).toEqual(['academic', 'health', 'social', 'talent']);
+  });
+});
+
+// ===== 손상값 (3자 검수 C·D) =====
+// 손상된 memo로 매주 TypeError가 나서 주 확정이 불가했다(`{}`·`{lastShownAt:0}`·문자열·`shown:null`).
+// 거대값·문자열 lastShownAt은 영구 침묵, 문자열 shown은 "11" 이어붙이기. 보류분 정규화(#453/#454)와
+// 같은 원칙 — migrateLoadedState(로드 + 매주 processWeek 첫머리)가 정규화한다.
+describe('손상된 기억·판정 정규화', () => {
+  const CORRUPT_MEMOS: unknown[] = [
+    {}, { lastShownAt: 0 }, 'corrupt', { lastShownAt: 0, lastByFactor: {}, shown: null },
+    { lastShownAt: '5', lastByFactor: {}, shown: {} }, { lastShownAt: 1e12, lastByFactor: {}, shown: {} },
+    { lastShownAt: 0, lastByFactor: { fatigue: 'x' }, shown: { fatigue: '1' } }, null, [1, 2],
+    { lastShownAt: NaN, lastByFactor: {}, shown: {} },
+  ];
+
+  for (const memo of CORRUPT_MEMOS) {
+    it(`손상 memo ${JSON.stringify(memo)} 로도 주가 진행되고 문장이 다시 뜬다`, () => {
+      const s = baseState({ fatigue: 92, totalWeeksPlayed: 50 });
+      s.routineSlot2 = 'self-study'; s.routineSlot3 = 'school-sports';
+      s.weekendChoices = ['club', 'self-study'];
+      (s as unknown as { growthReasonMemo: unknown }).growthReasonMemo = memo;
+      const next = processWeek(s);
+      expect(next.weekLog!.growthReason?.factor, '영구 침묵이 아니어야 한다').toBe('fatigue');
+      const m = next.growthReasonMemo!;
+      expect(typeof m.lastShownAt).toBe('number');
+      for (const v of Object.values(m.shown)) expect(typeof v).toBe('number');
+      for (const v of Object.values(m.lastByFactor)) expect(typeof v).toBe('number');
+    });
+  }
+
+  it('정상 memo는 그대로 살아남는다 (정규화가 기억을 지우면 회전·간격이 매주 초기화된다)', () => {
+    const good: GrowthReasonMemo = { lastShownAt: 40, lastByFactor: { fatigue: 40, familiar: 12 }, shown: { 'fatigue:academic': 3, 'familiar:talent': 1, crowded: 2 } };
+    expect(sanitizeGrowthReasonMemo(good, 50)).toEqual(good);
+  });
+
+  it('모르는 칸·요인은 버리고 나머지는 지킨다', () => {
+    const m = sanitizeGrowthReasonMemo({ lastShownAt: 3, lastByFactor: { fatigue: 3, wisdom: 2 }, shown: { crowded: 2, 'familiar:mental': 4, weeklyCap: '9' } }, 10)!;
+    expect(m).toEqual({ lastShownAt: 3, lastByFactor: { fatigue: 3 }, shown: { crowded: 2 } });
+  });
+
+  it('로그의 손상 판정은 로드 때 지워지고, 정상 판정은 로그 객체째 보존된다', () => {
+    const s = processWeek(baseState({ fatigue: 92, routineSlot2: 'self-study', routineSlot3: 'school-sports', weekendChoices: ['club', 'self-study'] }));
+    expect(s.weekLog!.growthReason).toBeDefined();
+    const kept = migrateLoadedState(s);
+    expect(kept.weekLog, '정상이면 같은 객체(결산 독백 memo 키)').toBe(s.weekLog);
+    const broken = { ...s, weekLog: { ...s.weekLog!, growthReason: { factor: 'nope', axis: 'x', variant: -1 } as unknown as GrowthReason } };
+    expect(migrateLoadedState(broken).weekLog!.growthReason).toBeUndefined();
+  });
+
+  it('visibleGrowthReason — 최종 변화량이 잘 는 주면 물러서고, 손상 판정이면 null', () => {
+    const r: GrowthReason = { factor: 'fatigue', axis: 'academic', variant: 0 };
+    const base = { statChanges: {}, fatigueChange: 0, moneyChange: 0, messages: [], skipped: [], milestoneMessages: [] } as WeekLog;
+    expect(visibleGrowthReason({ ...base, growthReason: r })).toEqual(r);
+    expect(visibleGrowthReason({ ...base, statChanges: { health: GOOD_WEEK_AXIS_GAIN }, growthReason: r })).toBeNull();
+    expect(visibleGrowthReason({ ...base, statChanges: { health: GOOD_WEEK_AXIS_GAIN }, growthReason: { ...r, factor: 'weeklyCap' } })?.factor).toBe('weeklyCap');
+    expect(visibleGrowthReason({ ...base, growthReason: { ...r, axis: 'mental' } as unknown as GrowthReason })).toBeNull();
+    expect(visibleGrowthReason(null)).toBeNull();
   });
 });

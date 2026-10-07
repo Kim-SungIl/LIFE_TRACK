@@ -104,14 +104,15 @@ export function recordGrowthDrag(
   add('weeklyCap', afterFloor - afterCap);
   add('familiar', afterCap - applied);   // 100 클램프로 잘린 몫
 
-  ledger.ideal += Math.max(ideal, afterFloor);
+  // ideal ≥ afterFloor는 항상 성립한다(바닥 = base×0.1 이하, ideal = base×가속·보너스 이상).
+  ledger.ideal += ideal;
   ledger.applied += applied;
 }
 
 
 // ===== 판정 =====
 //
-// **실측이 판정 모양을 정했다**(scripts/sim/sim-growth-reason.ts, 유효 페르소나 23종 × 3시드 = 23,342주).
+// **실측이 판정 모양을 정했다**(scripts/sim/sim-growth-reason.ts, 유효 페르소나 23종 × 5시드 = 38,913주).
 // 원시 "가장 많이 깎은 요인"은 구간 감쇠(familiar)가 56.5%, 무료 소프트캡(freeCeiling)이 38.4%였다 —
 // 둘은 **지형**이다. 스탯이 높으면 매주, 무료 활동을 쓰면 매주 걸린다(무료 소프트캡이 걸린 주 91%).
 // 그대로 내면 7년 내내 같은 두 문장이 4주마다 돈다(같은 요인 연속 최장 83회). 그래서 요인을 둘로 나눈다:
@@ -124,11 +125,13 @@ export function recordGrowthDrag(
 export const STRUCTURAL_GROWTH_DRAGS: ReadonlySet<GrowthDragFactor> = new Set<GrowthDragFactor>(['familiar', 'freeCeiling']);
 
 /**
- * 문장이 축마다 다른 요인 — "이미 익숙하다"는 공부와 운동에서 다른 말이다. 문장 회전 카운터도
+ * 문장이 축마다 다른 요인 — "이미 익숙하다"는 공부와 운동에서 다른 말이다. 피로·마음도 마찬가지다:
+ * 피로 문장의 주 축이 학업인 주는 1,226건 중 212건뿐이었고, 학업 손실이 0인 주가 피로 21%·mood
+ * 40%였다 — 그 주에 "책상 앞에 앉아 있어도"라고 말하면 거짓이다(3자 검수). 문장 회전 카운터도
  * (요인, 축) 칸 단위로 센다. 요인 단위로 세면 축이 번갈아 나올 때 한 칸이 짝수 번째만 받아
  * 2문장짜리 칸이 영영 첫 문장만 내는 모듈로 퇴화가 생긴다(project_modular_axis_degeneracy).
  */
-export const AXIS_SPECIFIC_GROWTH_DRAGS: ReadonlySet<GrowthDragFactor> = STRUCTURAL_GROWTH_DRAGS;
+export const AXIS_SPECIFIC_GROWTH_DRAGS: ReadonlySet<GrowthDragFactor> = new Set<GrowthDragFactor>(['fatigue', 'mood', 'freeCeiling', 'familiar']);
 
 /**
  * 문장을 낼 만큼 컸는가 — 그 요인이 이번 주에 깎은 양(스탯 단위, 4축 합).
@@ -261,4 +264,78 @@ export function advanceGrowthReasonMemo(
     lastByFactor: { ...(memo?.lastByFactor ?? {}), [reason.factor]: weekIndex },
     shown: { ...(memo?.shown ?? {}), [cell]: (memo?.shown[cell] ?? 0) + 1 },
   };
+}
+
+// ===== 손상값 정규화 · 표시 판정 =====
+//
+// memo와 로그의 판정은 세이브에 실린다. 손상된 값이 들어오면(실측, 3자 검수) `{}`·`shown: null`은
+// 매주 TypeError로 주 확정을 막고, `lastShownAt`이 거대값·문자열이면 영원히 침묵하고, `shown`이
+// 문자열이면 "1"+1 = "11"로 이어 붙는다. 보류분(sanitizePendingWeekDelta, #453/#454)과 같은 원칙 —
+// 거부가 아니라 정규화: 숫자 아닌 값은 버리고, 구조가 안 맞으면 memo를 통째로 지운다(잃는 건 문장
+// 회전 위치뿐이다).
+
+const isFiniteNum = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+const isPlainObject = (x: unknown): x is Record<string, unknown> =>
+  typeof x === 'object' && x !== null && !Array.isArray(x);
+const isFactor = (x: unknown): x is GrowthDragFactor =>
+  typeof x === 'string' && (GROWTH_DRAG_FACTORS as readonly string[]).includes(x);
+const isAxis = (x: unknown): x is GrowthAxis =>
+  typeof x === 'string' && (AXES as readonly string[]).includes(x);
+
+/** 유효한 문장 칸 키 전부 — `shown`의 키는 이 안에 있어야 한다. */
+const VALID_CELLS: ReadonlySet<string> = new Set(
+  GROWTH_DRAG_FACTORS.flatMap(f => AXES.map(a => growthReasonCell(f, a))),
+);
+
+/**
+ * @param now 그 판의 totalWeeksPlayed — 미래 좌표(lastShownAt > now)는 영구 침묵을 만드는 손상값이다.
+ */
+export function sanitizeGrowthReasonMemo(v: unknown, now: unknown): GrowthReasonMemo | undefined {
+  if (!isPlainObject(v)) return undefined;
+  const ceiling = isFiniteNum(now) ? now : Infinity;
+  const inRange = (x: unknown): x is number => isFiniteNum(x) && x >= 0 && x <= ceiling;
+  if (!inRange(v.lastShownAt)) return undefined;
+  const lastByFactor: GrowthReasonMemo['lastByFactor'] = {};
+  if (isPlainObject(v.lastByFactor)) {
+    for (const [k, x] of Object.entries(v.lastByFactor)) if (isFactor(k) && inRange(x)) lastByFactor[k] = x;
+  }
+  const shown: GrowthReasonMemo['shown'] = {};
+  if (isPlainObject(v.shown)) {
+    for (const [k, x] of Object.entries(v.shown)) {
+      if (VALID_CELLS.has(k) && isFiniteNum(x) && x >= 0) shown[k] = Math.floor(x);
+    }
+  }
+  return { lastShownAt: v.lastShownAt, lastByFactor, shown };
+}
+
+/** 로그에 박힌 판정의 정규화 — 모르는 요인·축, 정수 아닌 variant면 판정이 없는 것으로 본다. */
+export function sanitizeGrowthReason(v: unknown): GrowthReason | undefined {
+  if (!isPlainObject(v)) return undefined;
+  if (!isFactor(v.factor) || !isAxis(v.axis)) return undefined;
+  if (!isFiniteNum(v.variant) || v.variant < 0 || !Number.isInteger(v.variant)) return undefined;
+  return { factor: v.factor, axis: v.axis, variant: v.variant };
+}
+
+/**
+ * 결산에 **실제로 보일** 둔화 판정 — 화면과 결산 독백이 함께 쓰는 유일한 판정(SSOT).
+ *
+ * 엔진 판정은 processWeek 시점의 statChanges로 했다. 그런데 같은 주의 이벤트 몫이 결산 **뒤에**
+ * 로그로 접힌다(store foldOutcomeIntoWeekLog). 그 몫으로 축이 크게 올랐다면 변화량 표는 큰 상승을
+ * 보여 주는데 줄은 "피곤해서 집중 못 했다"가 된다. 그래서 **최종** statChanges로 잘 는 주인지 다시
+ * 묻고, 잘 는 주면 물러선다(주당 상한만 예외 — compatibleWithGoodWeek).
+ */
+export function visibleGrowthReason(log: WeekLog | null | undefined): GrowthReason | null {
+  if (!log) return null;
+  const reason = sanitizeGrowthReason(log.growthReason);
+  if (!reason) return null;
+  const changes = isPlainObject(log.statChanges) ? log.statChanges as WeekLog['statChanges'] : {};
+  const goodWeek = AXES.some(axis => { const v = changes[axis]; return isFiniteNum(v) && v >= GOOD_WEEK_AXIS_GAIN; });
+  if (goodWeek && !compatibleWithGoodWeek(reason.factor)) return null;
+  return reason;
+}
+
+/** 이 주 결산에 "좋았다"와 반대로 말하는 둔화 줄이 보이는가 — 결산 독백이 물러설지 정한다. */
+export function slowdownShown(log: WeekLog | null | undefined): boolean {
+  const r = visibleGrowthReason(log);
+  return r != null && !compatibleWithGoodWeek(r.factor);
 }
