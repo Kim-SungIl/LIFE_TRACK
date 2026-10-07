@@ -40,7 +40,7 @@ export const RANDOM_EVENTS = [
       {
         text: '괜찮아, 혼자가 편해',
         effects: { mental: 1 },
-        message: '혼자만의 시간도 나쁘지 않다. ... 정말?',
+        message: '혼자 먹는 점심도 나쁘지 않다. 누구 눈치 안 보고, 내 속도로. 오늘은 이게 편하다.',
       },
       {
         text: '같은 반 애에게 말을 걸어본다',
