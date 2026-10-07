@@ -1,4 +1,5 @@
-import { GameState, Stats, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, Track, WeekLog, getGrade } from '../../engine/types';
+import { GameState, Stats, StatKey, STAT_LABELS, SubjectKey, SUBJECT_LABELS, Track, WeekLog, getGrade, SemesterGoalRecord } from '../../engine/types';
+import { goalOutcomeLine, goalTitle, OUTCOME_SHORT } from '../../engine/semesterGoal';
 import { useEffect, useRef } from 'react';
 import { playSfx } from '../../audio/sfx';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
@@ -24,13 +25,15 @@ interface WeeklyResultScreenProps {
   resultDialogue: string;
   fatigueColor: string;
   upcomingEvents: UpcomingEvent[];
+  /** T68 — 학기 마지막 주면 그 학기 목표의 판정(GameScreen이 goalRecordForWeekLog로 만든다). 아니면 null/생략. */
+  goalRecord?: SemesterGoalRecord | null;
   onContinue: () => void;
 }
 
 // 주말 활동 처리 후 보여주는 한 주 결산 일기 화면
 export function WeeklyResultScreen({
   weekLog, stats, fatigue, money, gender, year, mentalState, track,
-  bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, onContinue,
+  bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, goalRecord, onContinue,
 }: WeeklyResultScreenProps) {
   const reducedMotion = usePrefersReducedMotion();
 
@@ -136,6 +139,30 @@ export function WeeklyResultScreen({
             {`"${breakSentences(resultDialogue)}"`}
           </div>
         </div>
+
+        {/* T68 학기 목표 돌아보기 — 학기 마지막 주 결산에만. 보상 없이 문장이 목표의 끝이다. */}
+        {goalRecord && (
+          <div data-testid="semester-goal-result" style={{
+            background: GLASS_BASE, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+            border: '1px solid rgba(229,192,123,0.25)', borderRadius: 12,
+            padding: '12px 14px', marginBottom: 12,
+          }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>🎯 이번 학기 목표</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 600, wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{goalTitle(goalRecord)}</span>
+              <span style={{
+                fontSize: '0.75rem', fontWeight: 700, flexShrink: 0,
+                color: goalRecord.outcome === 'achieved' ? 'var(--green)' : 'var(--text-secondary)',
+              }}>{OUTCOME_SHORT[goalRecord.outcome]}</span>
+            </div>
+            <div style={{
+              fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginTop: 6,
+              whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word',
+            }}>
+              {breakSentences(goalOutcomeLine(goalRecord))}
+            </div>
+          </div>
+        )}
 
         {/* 이번 주에 있었던 일 — 이벤트 내레이션 (hero에 올라간 한 줄은 제외) */}
         {narrationToShow.map((msg, i) => (

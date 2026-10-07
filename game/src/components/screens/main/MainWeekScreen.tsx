@@ -29,6 +29,8 @@ import { MiniTalkModal } from './MiniTalkModal';
 import { WeekPlanner } from './WeekPlanner';
 import { SlotEditPopup } from './SlotEditPopup';
 import { NpcRelationPanel } from './NpcRelationPanel';
+import { SemesterGoalChip } from './SemesterGoalChip';
+import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
   state: GameState;
@@ -49,9 +51,11 @@ type Props = {
   saveFailed?: boolean;
   // 시스템 메뉴 열기 — HUD의 보이는 진입점. 뒤로가기 제스처와 같은 것을 연다(#445).
   onOpenMenu?: () => void;
+  // T68 학기 목표 고르기 — 없으면 칩을 그리지 않는다(테스트·구 호출부 호환).
+  onChooseGoal?: (offer: GoalOffer) => boolean;
 };
 
-export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu }: Props) {
+export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal }: Props) {
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
@@ -373,6 +377,9 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
 
       {/* 스탯 (접기/펼치기) */}
       <StatsPanel stats={state.stats} year={state.year} />
+
+      {/* T68 학기 목표 — 플래너 바로 위. 주말을 짜기 직전에 눈에 걸리는 자리다. */}
+      {onChooseGoal && <SemesterGoalChip state={state} onChoose={onChooseGoal} />}
 
       {/* ===== 주간 플래너 ===== */}
       <WeekPlanner

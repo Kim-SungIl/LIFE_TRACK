@@ -12,6 +12,7 @@ import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
 import { presentEvent } from './eventPresentation';
 import { STAT_KEYS } from './saveIntegrity';
+import { sanitizeSemesterGoal, sanitizeSemesterGoalLog } from './semesterGoal';
 
 // ===== 1) 단계형 마이그레이션 =====
 // 과거엔 store가 version !== SAVE_VERSION이면 세이브를 통째로 버렸다(격상 = 전 세이브 증발).
@@ -180,6 +181,9 @@ export function migrateLoadedState(state: GameState): GameState {
     // Phase 4B: 강점별 절정 발동 가드 + 긍정 태그 누적(구버전 세이브는 0부터 — 절정은 조건 충족 시 발동)
     parentClimaxFired: state.parentClimaxFired ?? [],
     parentPositiveTags: state.parentPositiveTags ?? {},
+    // T68 학기 목표 — **백필하지 않는다**(undefined = 목표 없음·기록 없음이 그대로 참). 손상값만 버린다.
+    semesterGoal: sanitizeSemesterGoal(state.semesterGoal),
+    semesterGoalLog: sanitizeSemesterGoalLog(state.semesterGoalLog),
   };
 
   // 직렬화/clone에서 손실된 currentEvent의 함수 필드(condition 등) 복원
