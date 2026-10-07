@@ -20,6 +20,7 @@ import { calculateEnding } from './ending';
 import { recordMoneySpent, recordMoneyBlockedWeek } from './moneyTrajectory';
 import { captureWeekendPlan } from './weekendPlan';
 import { saveLastSetup } from './lastSetup';
+import { pickSemesterGoal, type GoalOffer } from './semesterGoal';
 
 /** 가시 효과의 "적용 전" 스냅샷 — 실제로 얼마가 먹혔는지는 클램프 뒤에만 알 수 있다. */
 function visibleSnapshot(s: GameState): { stats: GameState['stats']; fatigue: number; money: number } {
@@ -220,6 +221,11 @@ interface GameStore {
   // T25 — 계획 화면의 확정 버튼이 **돈 때문에** 잠긴 주를 알린다.
   // 판정 주체가 UI인 이유: 그 주는 확정되지 않으므로 processWeek에 도달하지 않는다.
   markMoneyBlockedWeek: () => void;
+  /**
+   * T68 — 이번 학기 목표를 고른다. 판정(고를 수 있는 때·후보)은 `semesterGoal.ts` 하나다.
+   * 제시된 후보가 아니거나 고를 수 없는 때면 아무것도 안 하고 false. 스탯·rng 무관(기록만).
+   */
+  chooseSemesterGoal: (offer: GoalOffer) => boolean;
 }
 
 // ===== resolveEvent 단계 헬퍼 (순수 추출 — state 직접 mutate, 동작 보존) =====
@@ -814,6 +820,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.parentEventPendingThisWeek = false;
     accrueParentEvent(newState, ev.id);
     set({ state: newState });
+  },
+
+  chooseSemesterGoal: (offer) => {
+    const s = get().state;
+    if (!s) return false;
+    const next = cloneGameState(s);
+    if (!pickSemesterGoal(next, offer)) return false;
+    set({ state: next });
+    return true;
   },
 
   // ===== 디버그 메서드 (DebugPanel에서 호출, import.meta.env.DEV 가드는 컴포넌트 쪽에서) =====
