@@ -43,7 +43,7 @@ export const HAEUN_EVENTS = [
         message: '하은 선배가 노트를 쓱 훑더니 "이거 이렇게 묶으면 외우기 쉬워" 하고 정리해줬다. 확실히 1년 먼저 산 사람이다.' },
       { text: '"괜찮아요, 혼자 해볼게요" — 사양한다', effects: { mental: 1 },
         npcEffects: [{ npcId: 'haeun', intimacyChange: 1 }],
-        message: '"그래? 막히면 말해." 선배가 자기 자리로 돌아갔다. 도움 받을걸 그랬나.' },
+        message: '"그래? 막히면 말해." 선배가 자기 자리로 돌아갔다. 시간은 더 걸렸지만, 끝까지 내 힘으로 정리했다.' },
     ],
   },
   {

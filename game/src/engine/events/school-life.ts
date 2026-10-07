@@ -68,7 +68,7 @@ export const SCHOOL_LIFE_EVENTS = [
     background: 'classroom_{school}_afternoon',
     choices: [
       { text: '"고마워!" — 감동받는다', effects: { social: 1, mental: 2 }, message: '작은 친절이 큰 감동이 됐다. 시험도 잘 본 것 같다.' },
-      { text: '안 쓰고 그냥 시험 본다 (자존심)', effects: { academic: -1, mental: -1 }, message: '지우개 없이 시험 봤다. 아... 실수 고칠 걸.' },
+      { text: '안 쓰고 그냥 시험 본다 (자존심)', effects: { academic: -1, mental: -1 }, message: '지우개 없이 시험 봤다. 틀린 데를 고치진 못했지만, 끝까지 내 힘으로 풀었다.' },
     ],
     // 지문·선택지·결과가 모두 "시험 중"이라 시험 기간 게이트가 필요하다.
     // study-cafe와 같은 처방 — !isVacation만 두면 시험 아닌 주에도 "시험 중에"가 나온다.
@@ -155,7 +155,7 @@ export const SCHOOL_LIFE_EVENTS = [
     background: 'classroom_{school}_afternoon',
     choices: [
       { text: '중재를 시도한다', effects: { social: 3, mental: -1 }, message: '양쪽 이야기를 듣고 화해시켰다. 피곤하지만 뿌듯하다.' },
-      { text: '안 끼어든다 (조용히 나간다)', effects: { mental: 1 }, message: '현명한 선택. 남의 싸움에 끼면 안 된다.' },
+      { text: '안 끼어든다 (조용히 나간다)', effects: { mental: 1 }, message: '조용히 자리를 떴다. 모든 싸움을 다 떠안을 수는 없다. 오늘은 내 하루를 지키기로 했다.' },
     ],
     condition: (s) => !s.isVacation && s.stats.social >= 20,
   },

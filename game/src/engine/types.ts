@@ -1,5 +1,5 @@
 // ===== LIFE TRACK: 선택의 결과 — Core Types =====
-
+import type { GrowthLedger, GrowthReason, GrowthReasonMemo } from './growthDrag';
 import type { ParentEffect } from './parentIntimacy';
 
 export type Gender = 'male' | 'female';
@@ -89,6 +89,11 @@ export interface GameState {
    * 구세이브에는 없다(undefined = 보류분 없음).
    */
   pendingWeekDelta?: PendingWeekDelta;
+  /**
+   * T67: 성장 둔화 문장의 쿨다운·문장 회전 기억. 구세이브에는 없다(= 아직 한 번도 안 냄).
+   * 성장 계산은 이 값을 읽지 않는다 — 문장을 낼지 말지만 가른다.
+   */
+  growthReasonMemo?: GrowthReasonMemo;
   npcs: NpcState[];
   events: GameEvent[];
   currentEvent: GameEvent | null;
@@ -148,6 +153,46 @@ export interface GameState {
   // parentPositiveTags = 긍정 부모 태그 누적 횟수(절정 트리거 자격). applyParentIntimacyDelta 단일 진입점에서 적립.
   parentClimaxFired?: ParentStrength[];
   parentPositiveTags?: Partial<Record<string, number>>;
+  /**
+   * T68 학기 목표 — 지금 학기에 플레이어가 고른 작은 목표 하나. 판정·문장은 전부 `semesterGoal.ts`.
+   *
+   * **옵셔널인 이유**: 구세이브에는 없다. undefined = "이번 학기엔 목표가 없다"이고, 그건 실제로
+   * 성립하는 상태라 백필이 필요 없다. 빈 객체나 0 표시로 채우면 고른 적 없는 목표가 생긴다.
+   * 학기 마지막 주(processWeek)에 판정되면 `semesterGoalLog`로 옮겨지고 여기서 지워진다.
+   */
+  semesterGoal?: ActiveSemesterGoal;
+  /**
+   * 판정이 끝난 학기 목표의 기록 — 학기말 결산·학년말 회고가 읽는다.
+   * 구세이브엔 없다(undefined = 기록 없음 → 화면이 줄을 그리지 않는다). 빈 배열 백필도 같은 뜻이라 무해하지만
+   * 굳이 쓰지 않는다 — "없음"을 두 모양으로 두지 않기 위해 읽는 쪽이 `?? []`로 접는다.
+   */
+  semesterGoalLog?: SemesterGoalRecord[];
+}
+
+// ===== T68 학기 목표 =====
+/** 목표의 종류 — 주말 활동 계열 셋 + 친구 하나. 문장·판정 표는 `semesterGoal.ts`가 SSOT. */
+export type SemesterGoalKind = 'exercise' | 'study' | 'craft' | 'friend';
+
+export interface ActiveSemesterGoal {
+  kind: SemesterGoalKind;
+  /** 고른 학년·학기 — 다른 학기에 남아 있으면 낡은 목표다(첫 processWeek이 정산한다). */
+  year: number;
+  semester: 1 | 2;
+  /** kind === 'friend'일 때만. 고른 순간의 친구로 고정한다. */
+  npcId?: string;
+  /** 조건을 채운 주의 절대주차(absWeek). 같은 주를 두 번 세지 않으려고 개수가 아니라 스탬프로 둔다. */
+  markedWeeks: number[];
+}
+
+/** achieved=해냈다 · partial=몇 번은 했다 · missed=잊고 지나갔다 · lapsed=사정이 바뀌어 접었다(친구가 떠남) */
+export type SemesterGoalOutcome = 'achieved' | 'partial' | 'missed' | 'lapsed';
+
+export interface SemesterGoalRecord {
+  kind: SemesterGoalKind;
+  year: number;
+  semester: 1 | 2;
+  npcId?: string;
+  outcome: SemesterGoalOutcome;
 }
 
 // 활성 버프 (shopSystem에서도 사용)
@@ -227,6 +272,17 @@ export interface WeekLog {
    */
   year?: number;
   week?: number;
+  /**
+   * T67: 이번 주 활동 성장의 장부 — 막히지 않았다면 오를 몫, 실제 오른 몫, 요인별로 깎인 양.
+   * applyActivity가 이미 쓰는 배율을 받아 적기만 한다(성장값 불변). 분해 규칙은 growthDrag.ts.
+   * 구세이브 로그에는 없다(undefined = 기록 없음 → 문장도 없음).
+   */
+  growthLedger?: GrowthLedger;
+  /**
+   * T67: 그 주 결과를 가장 크게 깎은 원인 — **엔진이 판정해 박는다**(pickGrowthReason). 결산 화면은
+   * 이 값을 생활 문장으로 바꾸기만 한다. 임계 미달·쿨다운이면 없다.
+   */
+  growthReason?: GrowthReason;
 }
 
 // 시험 시스템
