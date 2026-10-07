@@ -6,7 +6,8 @@ import type { ExamType } from '../../../engine/types';
 //   ① 각 claim을 엔진 값과 대조하고(예: payRises → 이 학년 수입이 직전 학년보다 큰가)
 //   ② 문장 속 표현이 claim으로 뒷받침되는지 본다(예: "올랐"이 있으면 rises claim, "학원"이 있으면 academy).
 // T64: "학원비도 한 단계 더 올랐다"는 academy yearlyCost가 중·고 3만 동일이라 거짓이었다.
-//      문장에 근거를 붙이게 하면 같은 종류의 거짓은 claim을 적는 순간 테스트에서 걸린다.
+//      문장에 근거를 붙이게 하면 같은 종류의 거짓은 claim을 적는 순간 테스트에서 걸린다 — 단 ②는 원문 어휘
+//      기준의 tripwire다(극성 반전·한글 수사 같은 어휘 변형은 못 본다, 3자 검수 확인).
 export type BriefingClaim =
   /** 이 학년 시험 수(getExamSchedule). byType은 종류별 수까지 주장할 때 */
   | { kind: 'examCount'; count: number; byType?: Partial<Record<ExamType, number>> }
