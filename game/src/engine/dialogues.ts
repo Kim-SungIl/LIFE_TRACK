@@ -1,6 +1,7 @@
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
 import { GameState, WeekLog } from './types';
 import { isExamPeriod } from './examSystem';
+import { GOOD_WEEK_AXIS_GAIN, compatibleWithGoodWeek } from './growthDrag';
 
 interface DialoguePool {
   condition: (s: GameState) => boolean;
@@ -566,6 +567,11 @@ interface ResultDialoguePool {
 
 // 5개 스탯 변화의 합. 양성/음성 풀 매칭 시 "혼재 주차" 오발동을 막는 보조 가드.
 // 예: 학업+1.9 / 멘탈-1.7인 주에 멘탈 한 스탯만으로 "어긋난 한 주"가 뜨던 문제 회피.
+/** 이 주에 "잘 늘었다"와 반대로 말하는 둔화 줄(T67)이 떠 있는가 */
+function contradictsGoodWeek(w: WeekLog): boolean {
+  return w.growthReason != null && !compatibleWithGoodWeek(w.growthReason.factor);
+}
+
 function netStatChange(w: WeekLog): number {
   return Object.values(w.statChanges).reduce<number>((sum, v) => sum + (v ?? 0), 0);
 }
@@ -616,16 +622,19 @@ const RESULT_POOLS: ResultDialoguePool[] = [
     ],
   },
   // 큰 양수 변화 — stat 임계 + net 양성 가드 (혼재 주차에선 fallback으로 빠지도록)
+  // 임계는 성장 둔화 줄(T67)과 **같은 상수**다 — 엔진은 이 임계를 넘은 주에 둔화 줄을 안 낸다.
+  // 그래도 이벤트 몫이 결산 뒤에 로그로 접히면(store foldOutcomeIntoWeekLog) 둘이 겹칠 수 있어서,
+  // 그와 반대로 말하는 둔화 줄이 있는 주에는 "잘 늘었다" 독백을 고르지 않는다(두 화자가 반대로 말하지 않게).
   { priority: 60,
-    condition: (_, w) => (w.statChanges.academic ?? 0) >= 1.5 && netStatChange(w) >= 1,
+    condition: (_, w) => !contradictsGoodWeek(w) && (w.statChanges.academic ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['공부가 손에 잡힌 한 주였다.', '머리가 잘 돌아간 느낌이야.', '문제집 한 권을 끝낸 기분.'],
   },
   { priority: 60,
-    condition: (_, w) => (w.statChanges.social ?? 0) >= 1.5 && netStatChange(w) >= 1,
+    condition: (_, w) => !contradictsGoodWeek(w) && (w.statChanges.social ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['친구들과 가까워진 느낌이다.', '이번 주는 사람 사이의 온도가 좋았어.', '단톡방 알림이 많아진 게 좋다.'],
   },
   { priority: 60,
-    condition: (_, w) => (w.statChanges.talent ?? 0) >= 1.5 && netStatChange(w) >= 1,
+    condition: (_, w) => !contradictsGoodWeek(w) && (w.statChanges.talent ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['내가 좋아하는 게 손에 익는다.', '이거 진짜 내 길인지도 모르겠다.', '연습한 만큼 늘었다.'],
   },
   { priority: 55,
@@ -633,7 +642,7 @@ const RESULT_POOLS: ResultDialoguePool[] = [
     lines: ['마음이 한결 가볍다.', '오랜만에 숨이 잘 쉬어진다.', '괜찮은 한 주였다.'],
   },
   { priority: 55,
-    condition: (_, w) => (w.statChanges.health ?? 0) >= 1.5 && netStatChange(w) >= 1,
+    condition: (_, w) => !contradictsGoodWeek(w) && (w.statChanges.health ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['몸이 가벼워졌다.', '체력이 붙는 게 느껴진다.', '계단을 올라가는 게 덜 힘들다.'],
   },
   // 큰 음수 변화 — 어느 스탯이든 -1.5 이하 + net도 음성일 때만 (양성 우세 주차에서 오발동 방지)
