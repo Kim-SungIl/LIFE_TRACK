@@ -155,7 +155,7 @@ export const SCHOOL_LIFE_EVENTS = [
     background: 'classroom_{school}_afternoon',
     choices: [
       { text: '중재를 시도한다', effects: { social: 3, mental: -1 }, message: '양쪽 이야기를 듣고 화해시켰다. 피곤하지만 뿌듯하다.' },
-      { text: '안 끼어든다 (조용히 나간다)', effects: { mental: 1 }, message: '현명한 선택. 남의 싸움에 끼면 안 된다.' },
+      { text: '안 끼어든다 (조용히 나간다)', effects: { mental: 1 }, message: '조용히 자리를 떴다. 모든 싸움을 다 떠안을 수는 없다. 오늘은 내 하루를 지키기로 했다.' },
     ],
     condition: (s) => !s.isVacation && s.stats.social >= 20,
   },
