@@ -1,6 +1,6 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
-import { GameState, NpcState, ParentStrength, Stats } from './types';
+import { CareerBranch, GameState, NpcState, ParentStrength, Stats } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';
 import {
@@ -36,6 +36,21 @@ export function padYearCounts(arr: number[] | undefined): number[] {
     out[i] = typeof v === 'number' && Number.isFinite(v) ? Math.max(0, v) : 0;
   }
   return out;
+}
+
+/**
+ * T66: 학년별 배열이 **그대로 믿을 수 있는 기록인가** — padYearCounts가 아무것도 지어내지 않는 모양인가.
+ * 아니면(없음·짧음·숫자 아닌 칸·음수) 로드가 0으로 메운 칸이 생기고, 그 0은 "그 해는 멀쩡했다"는
+ * 근거 없는 주장이 된다. 행복 등급은 T21 이래 그 0을 스냅샷과 같다고 보고 받아들이지만(강등만 하므로
+ * 안전), 회복 문장은 "그 뒤 단단했다"를 **주장**하므로 받아들이면 안 된다(stateMigration이 이 판정을 남긴다).
+ */
+export function yearCountsIntact(arr: unknown): boolean {
+  if (!Array.isArray(arr) || arr.length < HAPPINESS_YEAR_SLOTS) return false;
+  for (let i = 0; i < HAPPINESS_YEAR_SLOTS; i++) {
+    const v: unknown = arr[i];
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return false;
+  }
+  return true;
 }
 
 const GRADE_RANK: Record<HappinessGrade, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
@@ -130,6 +145,92 @@ export const HAPPINESS_LABELS: Record<HappinessGrade, { title: string; desc: str
   D: { title: '😔 힘들었던 한 해', desc: '돌아보면 버티는 것만으로 벅찼다.' },
 };
 
+// ===== T66: 회복을 인정하는 한 줄 (등급 불변) =====
+// 행복 등급의 궤적 캡(trajectoryCap)은 번아웃 1회·저멘탈 1주만 있어도 최고 A다 — 의도된 설계이고
+// 이 층은 **등급·타이틀·진로를 한 글자도 바꾸지 않는다.** 대신 등급이 못 말하는 사실 하나를 말한다:
+// 무너졌던 해가 있었고, 거기서 다시 일어나 끝까지 걸어 나왔다는 것.
+//
+// **판정 근거는 학년별 궤적이다(마지막 스냅샷이 아니다).** 학년마다 학년말 카드와 같은 산식
+// (happinessTrajectoryForYear → trajectoryCap)으로 그 해의 궤적 등급을 낸다:
+//   · 무너진 해 = C·D (저멘탈 20%+ · 바닥 3%+ · 번아웃 3+ — 학년말 카드가 "그늘진/힘들었던 한 해"라 부른 해)
+//   · 단단한 해 = S·A (저멘탈 3주 이하 · 바닥 0 · 번아웃 0)
+//   · B(흔들린 해)는 어느 쪽도 아니다 — 회복 구간을 끊는다.
+// 졸업까지 이어진 단단한 해가 RECOVERY_MIN_CLEAN_YEARS 이상이고, 그 앞에 무너진 해가 있을 때만 쓴다.
+// 학년말 카드와 같은 함수를 쓰는 이유: 플레이어가 그 해 카드에서 본 "그늘진 한 해"와 이 줄이
+// 말하는 "무너졌던 해"가 같은 해여야 한다(두 근거가 갈리면 라벨이 거짓말한다, #441).
+//
+// 마지막 스냅샷(mental ≥ 40)은 **보조 조건**일 뿐이다 — 궤적이 회복을 말해도 졸업 순간 다시
+// 가라앉아 있으면 "회복해 끝났다"는 거짓이 된다. 스냅샷만으로 회복을 주장하는 경로는 없다.
+
+/**
+ * 졸업까지 이어진 단단한 해가 몇 해 이상이어야 "회복했다"고 말하나.
+ *
+ * 실측(QA 하네스 33페르소나 × 12시드 = 396판, 전략을 바꾸지 않는 판). 무너진 해가 있는 84판의
+ * "졸업까지 이어진 단단한 해" 꼬리 길이: 0해 82판 · **1해 1판** · 3해 1판 — **2해는 0판**이다.
+ *   · 1해짜리는 talent-max(유효) 한 판이 Y6 C → Y7 S로 **우연히 한 해 쉬어 간 것**이다. 같은 페르소나
+ *     나머지 11판은 Y7도 B·C였다 — 전략이 그대로인 판의 노이즈지 회복이 아니다.
+ *   · 3해짜리는 social-female-romance(위반 페르소나) 한 판 — Y4 한 해 크게 흔들리고 Y5~Y7을 내리 단단하게 보냈다.
+ * 그래서 문턱은 그 틈(1 | 3)에 둔다: 한 해 쉬어 간 판에는 말하지 않고, 두 해 이상 내리 단단했던 판에만 말한다.
+ * 전략을 중간에 바꾸는 판(k학년까지 갈아넣고 그 뒤 회복형, 2페르소나 × k=1..7 × 6시드 = 84판)에서는 꼬리가
+ * 정확히 7−k해로 연속 분포해 틈이 없으므로 문턱 근거로 쓰지 않았다. 문턱 2에서 그 표본은 무너진 해가 있는
+ * 65판 중 41판(꼬리 2~6해 전부)이 출력, 꼬리 0·1해 24판(k=6·7)이 미출력이다.
+ */
+export const RECOVERY_MIN_CLEAN_YEARS = 2;
+/** 회복 판정의 졸업 순간 보조 조건 — 저멘탈 주를 세는 선(gameEngine recordHappinessWeek, mental<40)과 같은 선. */
+export const RECOVERY_FINAL_MENTAL = 40;
+
+// hide-numbers: 수치·등급·학년 수를 쓰지 않는다. 등급 칸 옆에서 등급과 다투지 않게 "얼마나 행복했나"가
+// 아니라 "무엇을 지나왔나"만 말한다.
+export const RECOVERY_NOTE = '무너졌던 해가 있었다. 그래도 거기서 다시 일어나, 마지막 몇 해는 흔들리지 않고 끝까지 걸어 나왔다.';
+
+export interface RecoveryClaim {
+  /** 마지막으로 무너졌던 학년(1~7). */
+  lastFallenYear: number;
+  /** 졸업까지 이어진 단단한 해의 수. */
+  cleanTailYears: number;
+}
+
+/**
+ * 궤적이 "무너졌다가 회복해 끝났다"를 뒷받침하는가. 아니면 null.
+ *
+ * **근거가 없으면 말하지 않는다.** 로드(migrateLoadedState)는 빠지거나 깨진 학년별 배열을 0으로 메우므로
+ * 배열 모양만 봐서는 근거가 있었는지 알 수 없다. 그래서 마이그레이션이 **메우기 전 원본**을 보고
+ * `happinessTrajectoryBackfilled`를 남기고, 그 표시가 있는 판은 판정 불가로 null이다.
+ *   · T21 이전 세이브(세 배열 모두 없음) → 표시됨 → null.
+ *   · 일부 배열만 손상된 세이브(예: 번아웃 배열만 있고 저멘탈 배열 없음) → 표시됨 → null.
+ *     표시가 없으면 남은 번아웃 배열의 "무너진 해" + 메운 0의 "단단한 해"로 근거 없는 문장이 나갔다(3자 검수).
+ *   · 표시는 다음 마이그레이션에서도 유지된다(이미 메운 배열은 멀쩡해 보이므로).
+ */
+export function recoveryClaimOf(state: {
+  lowMentalWeeksByYear?: number[];
+  veryLowMentalWeeksByYear?: number[];
+  burnoutCountByYear?: number[];
+  happinessTrajectoryBackfilled?: true;
+  stats: Stats;
+}): RecoveryClaim | null {
+  // 마이그레이션을 안 거친 호출(테스트·도구)도 같은 규칙을 받도록 원본 모양도 직접 본다.
+  if (state.happinessTrajectoryBackfilled || !yearCountsIntact(state.lowMentalWeeksByYear)
+    || !yearCountsIntact(state.veryLowMentalWeeksByYear) || !yearCountsIntact(state.burnoutCountByYear)) return null;
+  if (!(state.stats.mental >= RECOVERY_FINAL_MENTAL)) return null;
+  const caps: HappinessGrade[] = [];
+  for (let year = 1; year <= HAPPINESS_YEAR_SLOTS; year++) {
+    caps.push(trajectoryCap(happinessTrajectoryForYear(state, year)));
+  }
+  let tail = 0;
+  for (let i = caps.length - 1; i >= 0 && (caps[i] === 'S' || caps[i] === 'A'); i--) tail++;
+  if (tail < RECOVERY_MIN_CLEAN_YEARS) return null;
+  const before = caps.slice(0, caps.length - tail);
+  let lastFallen = -1;
+  before.forEach((g, i) => { if (g === 'C' || g === 'D') lastFallen = i; });
+  if (lastFallen < 0) return null;
+  return { lastFallenYear: lastFallen + 1, cleanTailYears: tail };
+}
+
+/** 화면에 나갈 한 줄. 회복을 뒷받침하는 궤적이 없으면 null(= 그리지 않음). */
+export function recoveryNoteOf(state: Parameters<typeof recoveryClaimOf>[0]): string | null {
+  return recoveryClaimOf(state) ? RECOVERY_NOTE : null;
+}
+
 // ===== 부모 에필로그 (Phase 4A) =====
 // 진로 결과(대학)는 stats/수능으로만 결정하고 친밀도로 바꾸지 않는다("스탯 퍼주기" 회피).
 // 친밀도는 "내 이야기의 결말"로만 남긴다 — 같은 결과를 부모와 함께(warm) 맞느냐,
@@ -205,23 +306,116 @@ function buildParentEpilogue(state: GameState): ParentEpilogue {
 }
 
 // ===== 진로 판정 =====
-// 수능 등급 + 문이과 + 특기를 기반으로 "진로" 결정
-function determineCareer(state: GameState): { path: string; detail: string } {
+// 수능 등급 + 문이과 + 특기를 기반으로 "진로" 결정.
+//
+// ===== T66: 진로 갈림길 =====
+// talent≥85 구간에는 두 갈래가 있다 — 특기로 가는 길(specialist)과 수능·학업으로 가는 길(general).
+// QA C5-A 전에는 talent≥90이면 무조건 특기자라 겸비 빌드가 상위 학업 엔딩을 빼앗겼고, C5-A 뒤로는
+// 겸비 빌드가 무조건 일반 진로라 **예체능을 원하는 겸비 플레이어가 막혔다**. 자동 판정을 어느 쪽으로
+// 기울여도 누군가는 빼앗기므로, 두 갈래가 **실제로 열린 판에서만** 플레이어에게 묻는다.
+//
+//   talent      | academic            | 열린 갈래                 | 자동(선택 없음)
+//   ------------+---------------------+---------------------------+----------------
+//   < 85        | -                   | general                   | general
+//   85~89       | < 70                | specialist(예체능 진학)   | specialist
+//   85~89       | ≥ 70                | general + specialist      | general
+//   ≥ 90        | < 80                | specialist(특기자)        | specialist
+//   ≥ 90        | ≥ 80                | general + specialist      | general
+//   (두 갈래 행이라도 general이 강제 루트면 general 하나로 닫는다 — 아래 CAREER_FORCED 주석)
+//
+// 문턱(70·80)은 새로 만든 게 아니라 C5-A가 이미 쓰던 "일반 진로로 넘길 만큼 학업이 충분한가"의 선을
+// 그대로 읽는다. 그래서 **자동 판정 열은 T66 이전 determineCareer와 칸마다 같다** — 선택이 없으면
+// (구세이브·갈림 없는 판) 결과가 바이트 단위로 동일하다(careerChoice.test.ts가 표로 잠근다).
+//
+// **SSOT**: 엔딩 판정(determineCareer)과 갈림길 장면(careerChoice.ts)이 둘 다 `careerBranchesOf`만 본다.
+// 두 층이 각자 계산하면 장면은 "특기로 간다"를 보여 주고 엔딩은 다른 갈래를 적는다(#441 계열).
+
+/** 일반 진로의 결과. forced = 진로가 아니라 몸·마음 상태가 정한 결말(재수 결심·잠시 쉼표). */
+type CareerOutcome = { path: string; detail: string };
+type GeneralOutcome = CareerOutcome & { forced: boolean };
+
+export interface CareerBranches {
+  /** 선택이 없을 때의 결과 = T66 이전 자동 판정. */
+  auto: CareerBranch;
+  /** 이 판에서 실제로 열린 갈래. 길이 2일 때만 갈림길 장면이 뜬다. 순서 = 장면의 선택지 순서(자동이 먼저). */
+  open: readonly CareerBranch[];
+  outcomes: Partial<Record<CareerBranch, CareerOutcome>>;
+}
+
+/** 특기 갈래의 결과 — talent 수준이 라벨을 정한다. talent<85면 특기 갈래가 없다. */
+function specialistOutcome(talent: number): CareerOutcome | null {
+  if (talent >= 90) return { path: '예술/체육 특기자', detail: '특기로 명문 예술대학·체대에 진학했다.' };
+  if (talent >= 85) return { path: '예체능 진학', detail: '특기를 살려 예체능 계열 대학에 진학했다.' };
+  return null;
+}
+
+/** 특기 구간에서 일반 진로로도 갈 만큼 학업이 충분한가의 선(QA C5-A의 70·80 그대로). */
+function generalAcademicFloor(talent: number): number {
+  return talent >= 90 ? 80 : 70;
+}
+
+export function careerBranchesOf(state: GameState): CareerBranches {
+  const { academic, talent } = state.stats;
+  const specialist = specialistOutcome(talent);
+  if (!specialist) {
+    return { auto: 'general', open: ['general'], outcomes: { general: generalCareer(state) } };
+  }
+  // 예체능 특기자 최우선 (수능 등급과 무관하게 talent 우위이면 특기자 루트)
+  // academic 낮아도 특기로 대학 가는 실제 진로 반영
+  if (academic < generalAcademicFloor(talent)) {
+    return { auto: 'specialist', open: ['specialist'], outcomes: { specialist } };
+  }
+  // QA C5-A: talent≥90이라도 academic이 충분히 높으면 특기자로 강제하지 않고 일반 진로(의대/SKY 등)로 보낸다.
+  //          이전엔 talent≥90이 수능·학업 무관 최우선 return이라 학업·특기 겸비(talent95/academic92)도
+  //          「예술/체육 특기자」로 덮어써져 상위 학업 엔딩을 강탈당하던 hard cliff였다.
+  const general = generalCareer(state);
+  // **CAREER_FORCED — 강제 루트가 걸린 판에는 갈림길을 열지 않는다.**
+  // 재수 결심·잠시 쉼표(번아웃·멘탈·만성 탈진 게이트)는 진로 선호가 아니라 "몸/마음이 먼저 멈췄다"는
+  // 결말이다. 여기서 "특기로 간다"를 메뉴로 내밀면 7년의 대가가 버튼 하나로 빠져나가는 출구가 되고,
+  // 그 대가를 말하는 타이틀(고독한/대가를 치른 승리자·불꽃)도 함께 벗겨진다. 그래서 강제 루트 판은
+  // 예전처럼 일반 진로(=강제 루트) 하나만 연다 — 자동 판정과 같으니 결과도 그대로다.
+  // ('전문대 / 재수'는 강제가 아니라 수능 결과다 — 특기로 가는 길이 실제로 열려 있으므로 묻는다.)
+  // ⚠️ 비대칭: 학업이 문턱 아래인 특기 판(위 return)은 예전부터 이 게이트들보다 먼저 특기자로 빠진다.
+  //    T66은 그 순서를 건드리지 않는다(바꾸면 그 판들의 결과가 달라진다 — 범위 밖, 보고에 남김).
+  if (general.forced) {
+    return { auto: 'general', open: ['general'], outcomes: { general } };
+  }
+  return { auto: 'general', open: ['general', 'specialist'], outcomes: { general, specialist } };
+}
+
+/**
+ * 저장된 선택값이 **유효한 갈래 값**인가 — 갈림길 장면(careerChoicePending)이 "이미 골랐나"를 이걸로 묻는다.
+ * 예전엔 장면이 "값이 있나"(`!== undefined`)만 봐서 손상값('foo'·null)에서 엔딩과 갈렸다: 엔딩은 무시하는데
+ * 장면은 "이미 골랐다"며 안 열려, 겸비 판이 묻지도 않고 자동 판정으로 끝났다(3자 검수).
+ * 엔딩 판정(determineCareer)은 `open.includes`로 거르는데, `open`엔 이 함수가 참인 값만 들어 있어 같은 결론이다.
+ */
+export function isCareerBranch(v: unknown): v is CareerBranch {
+  return v === 'specialist' || v === 'general';
+}
+
+function determineCareer(state: GameState): CareerOutcome {
+  const b = careerBranchesOf(state);
+  // 선택은 **엔딩 시점에 열린 갈래 중에서만** 유효하다 — 진로는 졸업 시점 라이브 스탯을 읽는 설계라,
+  // 열린 집합도 같은 순간의 값으로 다시 계산한다. 손상값('foo')·닫힌 갈래는 자동 판정.
+  // (갈래가 하나뿐인 판은 그 하나가 곧 자동이라 `open.length >= 2`를 따로 볼 필요가 없다 — 두면 지워도
+  //  동작이 같은 중복 조건이 된다. 뮤테이션으로 확인.)
+  const chosen = state.careerChoice;
+  // 열린 갈래 목록에 있는지만 보면 손상값도 함께 걸러진다(`open`엔 유효한 갈래 값만 들어 있다) —
+  // isCareerBranch를 겹쳐 쓰면 지워도 동작이 같은 중복 조건이 된다(뮤테이션 확인). 장면 쪽
+  // (careerChoicePending)은 "값이 유효한가"를 따로 물어야 해서 isCareerBranch를 쓴다.
+  const pick: CareerBranch = b.open.includes(chosen as CareerBranch) ? chosen as CareerBranch : b.auto;
+  const o = b.outcomes[pick]!;
+  return { path: o.path, detail: o.detail };
+}
+
+/** talent 구간을 지난 뒤의 일반 진로(T66 이전 determineCareer의 나머지 그대로). */
+function generalCareer(state: GameState): GeneralOutcome {
   const suneung = state.examResults.find(e => e.examType === 'suneung');
   const mockGrade = suneung?.mockGrade ?? 9; // 수능 없으면 9등급 취급
-  const { academic, talent, mental } = state.stats;
+  const { academic, mental } = state.stats;
   const track = state.track;
-
-  // 예체능 특기자 최우선 체크 (수능 등급과 무관하게 talent 우위이면 특기자 루트)
-  // academic 낮아도 특기로 대학 가는 실제 진로 반영
-  if (talent >= 85) {
-    // QA C5-A: talent≥90이라도 academic이 충분히 높으면 특기자로 강제하지 않고 아래 일반 진로(의대/SKY 등)로 보낸다.
-    //          이전엔 talent≥90이 수능·학업 무관 최우선 return이라 학업·특기 겸비(talent95/academic92)도
-    //          「예술/체육 특기자」로 덮어써져 상위 학업 엔딩을 강탈당하던 hard cliff였다.
-    if (talent >= 90 && academic < 80) return { path: '예술/체육 특기자', detail: '특기로 명문 예술대학·체대에 진학했다.' };
-    if (academic < 70) return { path: '예체능 진학', detail: '특기를 살려 예체능 계열 대학에 진학했다.' };
-    // talent 85~89 (또는 talent 90+ & academic 80+) → 특기 + 학업 균형 → 아래 일반 진로 로직에서 결정
-  }
+  const forced = (o: CareerOutcome): GeneralOutcome => ({ ...o, forced: true });
+  const normal = (o: CareerOutcome): GeneralOutcome => ({ ...o, forced: false });
 
   // 번아웃 심각 AND 멘탈 현재 상태도 바닥일 때 방황 — 또는 극단 갈아넣기는 회복했어도 재수.
   // M5 Phase 2: OR → AND. 이전엔 burnoutCount≥4만으로 재수 확정되어 모든 패턴이 재수로 수렴.
@@ -229,10 +423,10 @@ function determineCareer(state: GameState): { path: string; detail: string } {
   // QA ⓕ: burnoutCount≥6 단독 OR 추가. 12회 갈아넣고 mental만 회복한 빌드도 「재수」로 — 대가의 서사.
   //        ≥6은 그 자체로 극단이라 '모두 재수 수렴'(과거 버그) 재발 없음.
   if ((state.burnoutCount >= 4 && mental < 30) || state.burnoutCount >= 6) {
-    return { path: '재수 결심', detail: '올해는 결과가 좋지 않았다. 1년 더 해보기로 했다.' };
+    return forced({ path: '재수 결심', detail: '올해는 결과가 좋지 않았다. 1년 더 해보기로 했다.' });
   }
   if (mental < 15) {
-    return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
+    return forced({ path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' });
   }
 
   // QA C5: 만성 탈진 라우팅. burnoutCount는 쿨다운 면역(8주)에 막혀 갈아넣기 빌드에서도 2~3회로
@@ -243,52 +437,52 @@ function determineCareer(state: GameState): { path: string; detail: string } {
   //   균형 빌드까지 쉼표로 끌려와 과교정(과거 '재수 수렴' 버그 류). tiredRate 단독 라우팅 금지.
   if ((state.totalTiredWeeks ?? 0) >= 235) {
     if (state.stats.health < 20) {
-      return { path: '잠시 쉼표', detail: '합격 통지서를 받아 든 손이 떨렸다. 그런데 몸이 먼저 멈춰 섰다. 대학은, 1년 미루기로 했다.' };
+      return forced({ path: '잠시 쉼표', detail: '합격 통지서를 받아 든 손이 떨렸다. 그런데 몸이 먼저 멈춰 섰다. 대학은, 1년 미루기로 했다.' });
     }
     if (mental < 40) {
-      return { path: '재수 결심', detail: '버텨내긴 했다. 텅 빈 채로. 1년, 이번엔 다르게 해보기로 했다.' };
+      return forced({ path: '재수 결심', detail: '버텨내긴 했다. 텅 빈 채로. 1년, 이번엔 다르게 해보기로 했다.' });
     }
   }
 
   // 수능 7등급 이하 — 입시 실패 루트
   if (mockGrade >= 7) {
-    if (state.burnoutCount >= 2) return { path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' };
-    return { path: '전문대 / 재수', detail: '원하는 곳은 못 갔다. 다른 길을 찾아야 한다.' };
+    if (state.burnoutCount >= 2) return forced({ path: '잠시 쉼표', detail: '대학보다 자신을 돌보는 게 먼저였다.' });
+    return normal({ path: '전문대 / 재수', detail: '원하는 곳은 못 갔다. 다른 길을 찾아야 한다.' });
   }
 
   // M5 Phase 2: mockGrade 5~6 분기 추가 (이전엔 ≥7 또는 ≤4만 있고 5~6은 track 경로에서 지방국립대로 떨어짐)
   // 5~6등급은 실제로 지방 4년제 or 전문대 중간 지대
   if (mockGrade >= 5 && !track) {
-    return { path: '지방 4년제', detail: '지방 4년제에 합격했다. 여기서 다시 시작이다.' };
+    return normal({ path: '지방 4년제', detail: '지방 4년제에 합격했다. 여기서 다시 시작이다.' });
   }
 
   // 문과 진로
   if (track === 'humanities') {
     if (mockGrade <= 1) {
-      if (academic >= 85 && mental >= 50) return { path: 'SKY 경영대 합격', detail: '전국 수석권. 원하는 대학 어디든 갈 수 있다.' };
-      return { path: 'SKY 인문대 합격', detail: '오랜 노력의 결실. 명문대 합격 통지서를 받았다.' };
+      if (academic >= 85 && mental >= 50) return normal({ path: 'SKY 경영대 합격', detail: '전국 수석권. 원하는 대학 어디든 갈 수 있다.' });
+      return normal({ path: 'SKY 인문대 합격', detail: '오랜 노력의 결실. 명문대 합격 통지서를 받았다.' });
     }
-    if (mockGrade === 2) return { path: '인서울 상위권 대학', detail: '중앙대·경희대 수준의 문과 상위권에 합격했다.' };
-    if (mockGrade === 3) return { path: '인서울 문과', detail: '인서울 문과 대학에 합격했다. 나쁘지 않은 결과다.' };
-    if (mockGrade === 4) return { path: '수도권 대학', detail: '수도권 4년제에 합격. 이제 본격적인 시작이다.' };
-    return { path: '지방 국립대', detail: '지방 국립대 문과에 합격했다. 길은 여기서부터다.' };
+    if (mockGrade === 2) return normal({ path: '인서울 상위권 대학', detail: '중앙대·경희대 수준의 문과 상위권에 합격했다.' });
+    if (mockGrade === 3) return normal({ path: '인서울 문과', detail: '인서울 문과 대학에 합격했다. 나쁘지 않은 결과다.' });
+    if (mockGrade === 4) return normal({ path: '수도권 대학', detail: '수도권 4년제에 합격. 이제 본격적인 시작이다.' });
+    return normal({ path: '지방 국립대', detail: '지방 국립대 문과에 합격했다. 길은 여기서부터다.' });
   }
 
   // 이과 진로
   if (track === 'science') {
     if (mockGrade <= 1) {
-      if (academic >= 88) return { path: '의대 합격', detail: '최고의 성적. 의과대학 합격 통지서를 받았다.' };
-      return { path: 'SKY 공대 합격', detail: '최상위권 공대에 합격. 공학도의 길이 시작된다.' };
+      if (academic >= 88) return normal({ path: '의대 합격', detail: '최고의 성적. 의과대학 합격 통지서를 받았다.' });
+      return normal({ path: 'SKY 공대 합격', detail: '최상위권 공대에 합격. 공학도의 길이 시작된다.' });
     }
-    if (mockGrade === 2) return { path: '인서울 상위권 공대', detail: '한양·성균관 수준 공대에 합격했다.' };
-    if (mockGrade === 3) return { path: '인서울 이과', detail: '인서울 4년제 이공계에 합격했다.' };
-    if (mockGrade === 4) return { path: '수도권 이공계', detail: '수도권 이공계 대학에 합격했다.' };
-    return { path: '지방 국립대 이공계', detail: '지방 국립대 이공계에 합격했다. 길은 여기서부터다.' };
+    if (mockGrade === 2) return normal({ path: '인서울 상위권 공대', detail: '한양·성균관 수준 공대에 합격했다.' });
+    if (mockGrade === 3) return normal({ path: '인서울 이과', detail: '인서울 4년제 이공계에 합격했다.' });
+    if (mockGrade === 4) return normal({ path: '수도권 이공계', detail: '수도권 이공계 대학에 합격했다.' });
+    return normal({ path: '지방 국립대 이공계', detail: '지방 국립대 이공계에 합격했다. 길은 여기서부터다.' });
   }
 
   // track 미선택 fallback. mockGrade ≥5 && !track은 위에서 지방 4년제로 이미 처리됨.
-  if (mockGrade <= 2) return { path: '상위권 대학', detail: '좋은 성적으로 상위권 대학에 합격했다.' };
-  return { path: '인서울 대학', detail: '인서울 대학에 합격했다.' };
+  if (mockGrade <= 2) return normal({ path: '상위권 대학', detail: '좋은 성적으로 상위권 대학에 합격했다.' });
+  return normal({ path: '인서울 대학', detail: '인서울 대학에 합격했다.' });
 }
 
 // ===== 주요 NPC 근황 =====
@@ -507,6 +701,8 @@ export function calculateEnding(state: GameState) {
 
   // 행복 지수 — 7년 전체 궤적. 학년말은 happinessTrajectoryForYear(그 해).
   const happiness = calculateHappinessGrade(mental, social, health, happinessTrajectoryLifetime(state));
+  // T66: 회복을 인정하는 관찰 문장. 등급·타이틀·진로에는 관여하지 않는다(위 행복 등급은 그대로).
+  const recoveryNote = recoveryNoteOf(state);
 
   // 관계 타이틀(T30) 게이트의 재료 — 근황 레인과 같은 모집단에서 절친만 추린다.
   const friends = closeFriends(state);
@@ -595,6 +791,8 @@ export function calculateEnding(state: GameState) {
     growthShape,
     growthNote,
     happiness,
+    // T66 — 행복 등급 옆의 "회복" 층. null이면 화면이 그리지 않는다.
+    recoveryNote,
     total,
     career: career.path,
     careerDetail: career.detail,

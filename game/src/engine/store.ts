@@ -17,6 +17,7 @@ import {
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
+import { CAREER_CHOICE_EVENT_ID } from './careerChoice';
 import { recordMoneySpent, recordMoneyBlockedWeek } from './moneyTrajectory';
 import { captureWeekendPlan } from './weekendPlan';
 import { saveLastSetup } from './lastSetup';
@@ -315,6 +316,10 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
   // 문/이과 선택 (Y6 W1 이벤트 전용)
   if (choice.trackSelect) {
     state.track = choice.trackSelect;
+  }
+  // T66: 진로 갈림길 선택 (career-crossroads 전용). 엔딩은 이 값을 열린 갈래 안에서만 쓴다.
+  if (choice.careerSelect) {
+    state.careerChoice = choice.careerSelect;
   }
   // Phase 4C: 이벤트 선택의 부모 친밀도 반응 — 단일 진입점. 그 주는 평균회귀 면제.
   if (choice.parentEffect) {
@@ -635,7 +640,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.currentEvent = null;
 
     // followup/conditional/milestone chain + 학년 전환·결산 분기 (location은 clone 이전 원본)
-    resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
+    if (event.id === CAREER_CHOICE_EVENT_ID) {
+      // T66: 갈림길 뒤에는 아무것도 끼우지 않고 곧장 엔딩으로 — 체인 사건이 스탯을 움직이면
+      // 방금 고른 갈래가 엔딩 시점에 닫힐 수 있다(careerChoice.ts 헤더).
+      applyYearTransition(newState);
+    } else {
+      resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
+    }
 
     const runDelta = commitOnEnding(s, newState);
     set({ state: newState, ...(runDelta ? { runDelta } : {}) });

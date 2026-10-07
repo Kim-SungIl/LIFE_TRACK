@@ -5,6 +5,7 @@ import { ACTIVITIES, getActivityCost, collapseActivityChoicesWithSlots, canApply
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { assignCurrentEvent } from './eventPresentation';
+import { buildCareerChoiceEvent, careerChoicePending } from './careerChoice';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
 import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
 import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
@@ -795,6 +796,17 @@ function applyNpcDecay(state: GameState): void {
 // processWeek와 resolveEvent 양쪽에서 호출된다: W48에 이벤트가 대기 중이면 전환을
 // 이벤트 resolve 시점까지 미뤄, 학년말/졸업 주 이벤트가 year-end 화면에 묻혀 유실되는 걸 막는다.
 export function applyYearTransition(s: GameState): void {
+  // T66: 진로 갈림길 — 두 갈래가 열린 판은 엔딩 직전에 한 번 묻고, 닫히면 다시 여기로 온다.
+  // **여기가 유일한 엔딩 전환 지점**이라(W48 이벤트 유무와 무관하게 두 경로가 모두 이 함수를 거친다)
+  // 장면이 보는 스탯 = 엔딩이 읽는 스탯이다. 학년 기록(milestone 등)보다 먼저 빠져야 두 번 적히지 않는다.
+  if (careerChoicePending(s)) {   // Y7 판정은 pending 안에 있다(year < 7이면 거짓)
+    const ev = buildCareerChoiceEvent(s);
+    if (ev) {
+      assignCurrentEvent(s, ev, 48);
+      return;
+    }
+  }
+
   // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
   recordMilestoneForYear(s, s.year);
   if (s.year >= 7) {

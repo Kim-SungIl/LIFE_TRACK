@@ -5,12 +5,15 @@
 //     store 로드와 processWeek 양쪽에서 매번 실행 — 반드시 멱등·저비용. 단순 필드 추가는 전부 이쪽.
 // gameEngine.ts 에서 추출 (P2-6). 새 필드 추가 시 migrateLoadedState 한 곳만 수정.
 import { GameState, ParentStrength, PendingWeekDelta, StatKey } from './types';
-import { padYearCounts } from './ending';
+import { padYearCounts, yearCountsIntact } from './ending';
 import { hashInitialState, deriveTalkSeed } from './rng';
 import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
 import { presentEvent } from './eventPresentation';
+import { buildCareerChoiceEvent, CAREER_CHOICE_EVENT_ID } from './careerChoice';
+// 순환 import(gameEngine → stateMigration)지만 함수 선언을 호출 시점에만 쓰므로 안전하다.
+import { applyYearTransition } from './gameEngine';
 import { STAT_KEYS } from './saveIntegrity';
 import { sanitizeSemesterGoal, sanitizeSemesterGoalLog } from './semesterGoal';
 import { sanitizeGrowthReason, sanitizeGrowthReasonMemo } from './growthDrag';
@@ -138,6 +141,12 @@ export function migrateLoadedState(state: GameState): GameState {
     lowMentalWeeksByYear: padYearCounts(state.lowMentalWeeksByYear),
     veryLowMentalWeeksByYear: padYearCounts(state.veryLowMentalWeeksByYear),
     burnoutCountByYear: padYearCounts(state.burnoutCountByYear),
+    // T66: 위 세 배열 중 하나라도 메웠다면(없음·손상) 그 사실을 남긴다 — 메운 뒤엔 모양으로 구분할 수 없다.
+    // 회복 문장(ending.ts recoveryClaimOf)이 이 표시를 보고 판정 불가로 처리한다. 한 번 서면 유지된다 —
+    // 위 `...state`가 이미 선 표시를 싣고 오고, 여기는 새로 메운 경우에만 더한다(지우는 경로 없음).
+    ...((!yearCountsIntact(state.lowMentalWeeksByYear)
+      || !yearCountsIntact(state.veryLowMentalWeeksByYear) || !yearCountsIntact(state.burnoutCountByYear))
+      ? { happinessTrajectoryBackfilled: true as const } : {}),
     // T25: 돈 궤적은 **백필하지 않는다**. 0 배열을 채우면 "한 푼도 안 썼다"가 되어
     // 구세이브가 곧장 '지갑을 안 연 한 해'로 오독된다(T21 0 백필은 스냅샷과 같아 안전했지만
     // 여기선 0이 곧 결론이라 다르다). undefined로 두면 화면이 줄 자체를 생략한다.
@@ -208,8 +217,11 @@ export function migrateLoadedState(state: GameState): GameState {
     // SCHOOL_LIFE_EVENTS 는 별도 풀(GAME_EVENTS 미포함)이지만 selection 에서 currentEvent 로
     // 반환되는 가장 흔한 이벤트군 — 함께 조회하지 않으면 학교생활 랜덤 이벤트 도중 새로고침 시
     // currentEvent 유실(null) + phase='event' 유지로 soft-lock 발생.
+    // T66 진로 갈림길은 카탈로그 밖에서 그 판의 상태로 굽는 장면이다(careerChoice.ts) — 같은 함수로
+    // 다시 굽는다. 갈래가 닫혀 null이면 아래 "사라진 ID" 경로로 떨어진다.
     const fresh = GAME_EVENTS.find(e => e.id === cur.id)
-      ?? SCHOOL_LIFE_EVENTS.find(e => e.id === cur.id);
+      ?? SCHOOL_LIFE_EVENTS.find(e => e.id === cur.id)
+      ?? (cur.id === CAREER_CHOICE_EVENT_ID ? buildCareerChoiceEvent(result) : null);
     if (fresh) {
       // 발생주(cur.week)는 보존 — result.week 는 week++(gameEngine) 이후 값이라 덮어쓰면
       // 기억(memory)의 발생주가 +1 어긋난다(W48 이벤트 → 49).
@@ -219,6 +231,13 @@ export function migrateLoadedState(state: GameState): GameState {
       // resolveEvent(store)와 GameScreen 결과 문구가 방금 읽은 장면과 다른 문장을 집는다.
       // 굽는 좌표는 EventScene과 같아야 한다: 발생주(cur.week) + 현재 학년.
       result.currentEvent = presentEvent({ ...fresh, week: cur.week ?? result.week }, result);
+    } else if (cur.id === CAREER_CHOICE_EVENT_ID) {
+      // 갈림길 장면인데 다시 구울 수 없다 = 그 사이 갈래가 하나로 닫혔다(손상·외부 편집 — 장면 뒤엔
+      // 스탯을 바꾸는 단계가 없어 정상 플레이로는 안 온다). 이 장면은 엔딩 전환 **직전**에만 뜨므로
+      // 아래 "사라진 ID" 경로로 떨어뜨리면 W49에서 결산/계획 화면으로 돌아가 유령 주를 돌거나
+      // 진행이 멈춘다. 장면이 막고 있던 전환을 그대로 이어서 엔딩으로 보낸다(선택 없음 = 자동 판정).
+      result.currentEvent = null;
+      applyYearTransition(result);
     } else {
       // 카탈로그에서 사라진 ID(구세이브 리네임/삭제) → currentEvent 제거 + phase 복구로 soft-lock 차단.
       // weekLog 가 있으면 주간 결산(result)으로, 없으면 일상(weekday)으로 떨어뜨려 진행 가능 상태 보장.
