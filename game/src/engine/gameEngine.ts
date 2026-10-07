@@ -442,19 +442,21 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
 
 // ===== 자연 감소 =====
 // v5.1: 학년별 학업 감소 + 고학업 추가 감소 + 피로→멘탈 침식
+// 학업: 학년별 자연 감소 (높을수록 유지 비용 증가) — v7: 감쇠 완화로 85+ 달성 가능하게
+// 초등(Y1): 학기 -0.1 / 방학 -0.3
+// 중등(Y2~4): 학기 -0.15 / 방학 -0.4
+// 고등(Y5~7): 학기 -0.3 / 방학 -0.7
+// 학년·계절 기본값만 — 95+ 추가 감소는 applyNaturalDecay가 얹는다.
+// export 이유: 진학 브리핑("손을 놓으면 더 빨리 잊는다", "특히 방학이 무섭다")이 이 값을 근거로 삼고,
+// 계약 테스트(stageBriefingClaims)가 문구↔값을 대조한다.
+export function getAcademicDecay(year: number, isVacation: boolean): number {
+  if (year <= 1) return isVacation ? -0.3 : -0.1;
+  if (year <= 4) return isVacation ? -0.4 : -0.15;
+  return isVacation ? -0.7 : -0.3;
+}
+
 function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean): void {
-  // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가) — v7: 감쇠 완화로 85+ 달성 가능하게
-  // 초등(Y1): 학기 -0.1 / 방학 -0.3
-  // 중등(Y2~4): 학기 -0.15 / 방학 -0.4
-  // 고등(Y5~7): 학기 -0.3 / 방학 -0.7
-  let academicDecay = 0;
-  if (state.year <= 1) {
-    academicDecay = isVacation ? -0.3 : -0.1;
-  } else if (state.year <= 4) {
-    academicDecay = isVacation ? -0.4 : -0.15;
-  } else {
-    academicDecay = isVacation ? -0.7 : -0.3;
-  }
+  let academicDecay = getAcademicDecay(state.year, isVacation);
   // 고학업 추가 감소: 95+ → -0.5 추가 (90+는 삭제 — 90대 진입 자체가 어려워지는 문제)
   if (state.stats.academic >= 95) academicDecay -= 0.5;
 
