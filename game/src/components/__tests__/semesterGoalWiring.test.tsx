@@ -150,3 +150,31 @@ describe('학년말 회고', () => {
     expect(text).not.toContain('내 것 만들기');   // 다른 학년 기록은 안 나온다
   });
 });
+
+describe('3자 검수 반영 — 잠금', () => {
+  it('A. 기록장(지난 학년 열람)도 그 해 목표를 보여 준다 — HUD 버튼 → albumOverlay 배선', async () => {
+    put(weekdayState({
+      year: 2, week: 5,
+      semesterGoalLog: [
+        { kind: 'study', year: 1, semester: 1, outcome: 'achieved' },
+        { kind: 'exercise', year: 2, semester: 1, outcome: 'missed' },
+      ],
+    }));
+    render(<GameScreen />);
+    expect(screen.queryByTestId('year-end-goals')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /기록장/ }));
+    const block = await screen.findByTestId('year-end-goals');
+    expect(block.textContent).toContain("1학기 '주말에 혼자 공부해 보기'");
+    expect(block.textContent).toContain('해냈다');
+    expect(block.textContent).not.toContain('땀 흘리기');   // 지금 학년(Y2) 기록은 지난 학년 장에 안 나온다
+  });
+
+  it('B. 고른 직후 세이브(localStorage)에 목표가 실린다 — 자동저장 구독은 state 참조가 바뀌어야 돈다', () => {
+    put(weekdayState());
+    render(<GameScreen />);
+    fireEvent.click(screen.getByTestId('semester-goal-chip'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByTestId('semester-goal-offer-craft'));
+    const saved = JSON.parse(localStorage.getItem('lifetrack_save')!);
+    expect(saved.state.semesterGoal).toEqual({ kind: 'craft', year: 1, semester: 1, markedWeeks: [] });
+  });
+});

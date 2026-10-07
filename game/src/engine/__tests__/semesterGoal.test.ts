@@ -369,3 +369,39 @@ describe('불변 — 목표는 기록일 뿐 판을 바꾸지 않는다', () => 
     }
   });
 });
+
+describe('3자 검수 반영 — 손상·드문 경로', () => {
+  it('C. 손상 markedWeeks는 그 목표 학기 범위의 절대주차만 남는다 (음수 6칸이 즉시 해냈다가 되지 않는다)', () => {
+    const g = sanitizeSemesterGoal({ kind: 'study', year: 2, semester: 2, markedWeeks: [-6, -5, -4, -3, -2, -1] });
+    expect(g!.markedWeeks).toEqual([]);
+    expect(outcomeOf(g!, semState({ year: 2, week: 30 }))).toBe('missed');
+    // 경계: 학기 첫 주·마지막 주는 남고, 바로 바깥(앞 방학·뒤 방학·다른 학년)은 버린다
+    const lo = absWeek(2, SEMESTER_BOUNDS[2].start);
+    const hi = absWeek(2, SEMESTER_BOUNDS[2].end);
+    expect(sanitizeSemesterGoal({ kind: 'study', year: 2, semester: 2, markedWeeks: [lo - 1, lo, hi, hi + 1, absWeek(1, 30)] })!
+      .markedWeeks).toEqual([lo, hi]);
+    // 로드 경로에서도
+    const m = migrateLoadedState(semState({
+      year: 2, week: 26,
+      semesterGoal: { kind: 'study', year: 2, semester: 2, markedWeeks: [-6, -5, -4, -3, -2, -1] },
+    }));
+    expect(m.semesterGoal!.markedWeeks).toEqual([]);
+  });
+
+  it('D. 이전 학기 목표가 남은 채로 고르면 먼저 정산하고 새 목표를 세운다 (기록이 사라지지 않는다)', () => {
+    const s = semState({ year: 1, week: 25, semester: 2, semesterGoal: goal({ markedWeeks: marks(6) }) });
+    expect(pickSemesterGoal(s, { kind: 'study' })).toBe(true);
+    expect(s.semesterGoalLog).toEqual([{ kind: 'exercise', year: 1, semester: 1, outcome: 'achieved' }]);
+    expect(s.semesterGoal).toEqual({ kind: 'study', year: 1, semester: 2, markedWeeks: [] });
+  });
+
+  it('E. 친구 동행은 실제 실행된 칸으로 맞춘다 — 같은 활동 두 칸 중 동행 칸만 잘리면 안 센다', () => {
+    const base = { semesterGoal: goal({ kind: 'friend', npcId: 'jihun' }), weekendChoices: ['club', 'club'] };
+    // timeCost 1 = 둘째 칸(동행 칸) 잘림 → 첫 칸 club은 실행됐지만 지훈과의 동행은 아니다
+    expect(processWeek(semState({ ...base, eventTimeCost: 1 }), { 'club:1': 'jihun' }).semesterGoal!.markedWeeks).toHaveLength(0);
+    // 잘리지 않으면 센다 (양성 대조)
+    expect(processWeek(semState(base), { 'club:1': 'jihun' }).semesterGoal!.markedWeeks).toHaveLength(1);
+    // 동행이 남은 칸(첫 칸)에 있으면 센다
+    expect(processWeek(semState({ ...base, eventTimeCost: 1 }), { 'club:0': 'jihun' }).semesterGoal!.markedWeeks).toHaveLength(1);
+  });
+});

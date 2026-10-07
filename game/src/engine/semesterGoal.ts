@@ -28,7 +28,7 @@ import type {
   ActiveSemesterGoal, GameState, SemesterGoalKind, SemesterGoalOutcome, SemesterGoalRecord,
   Activity,
 } from './types';
-import { ACTIVITIES } from './activities';
+import { ACTIVITIES, type ActivityInstance } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { isNpcEnrolled } from './relationshipSignals';
 import { absWeek, getWeekInfo } from './weekMath';
@@ -93,6 +93,8 @@ function semesterOfWeek(week: number): 1 | 2 | null {
   return info.isVacation ? null : info.semester;
 }
 
+// 학년 비교(`goal.year === state.year`)는 정상 흐름에선 갈리는 일이 없다 — 목표는 학기 마지막 주에 정산되고
+// 학년을 넘기기 전에 사라진다. 다른 학년의 목표를 품은 **손상 세이브**의 방어선으로 남겨 둔다.
 function isCurrentGoal(goal: ActiveSemesterGoal, state: Pick<GameState, 'year' | 'week'>): boolean {
   return goal.year === state.year && semesterOfWeek(state.week) === goal.semester;
 }
@@ -103,7 +105,11 @@ export interface GoalOffer {
   npcId?: string;
 }
 
-/** 친구 목표 후보 — 동행 후보(MainWeekScreen companionNpcs)와 같은 조건 + 떠나기로 정해진 친구 제외. */
+/**
+ * 친구 목표 후보 — 동행 후보(MainWeekScreen companionNpcs: 만남·재적)와 같은 조건에, **목표 후보에서만**
+ * 떠나기로 정해진 친구를 더 뺀다. 동행 UI는 도윤을 그대로 보여 준다(Y2 W1 한 주 동행은 성립한다) —
+ * 여기서 빼는 이유는 '학기 목표'로는 한 번도 못 채우기 때문이고, 동행 후보 정책을 바꾸려는 게 아니다.
+ */
 export function friendGoalCandidate(state: GameState): string | undefined {
   const pool = state.npcs.filter(n =>
     n.met && isNpcEnrolled(n, state)
@@ -129,6 +135,8 @@ export function canPickSemesterGoal(state: GameState): boolean {
   const sem = semesterOfWeek(state.week);
   if (sem === null) return false;
   if (state.week - SEMESTER_BOUNDS[sem].start + 1 > GOAL_PICK_WINDOW) return false;
+  // 이번 학기 기록이 이미 있으면 못 고른다. 기록은 학기 마지막 주(창 밖)에야 생기므로 정상 흐름에선 안 닿는다 —
+  // 같은 학기 기록과 창 안 주차를 함께 품은 **손상 세이브**의 방어선이다.
   if ((state.semesterGoalLog ?? []).some(r => r.year === state.year && r.semester === sem)) return false;
   const g = state.semesterGoal;
   if (g && isCurrentGoal(g, state) && g.markedWeeks.length > 0) return false;
@@ -145,6 +153,10 @@ export function offerSemesterGoals(state: GameState): GoalOffer[] {
 
 /** 고른 목표를 state에 세운다(mutate). 제시된 후보가 아니면 아무것도 안 하고 false. */
 export function pickSemesterGoal(state: GameState, offer: GoalOffer): boolean {
+  // 다른 학기에서 끌려온 목표(손상·편집 세이브)를 정산 없이 덮으면 그 학기 기록이 사라진다(T68 검수).
+  // 정상 흐름에선 학기 마지막 주에 이미 정산돼 no-op이다. 고르기가 실패해도 정산은 남는다 — 낡은 목표는
+  // 어차피 다음 processWeek 첫머리에서 같은 결과로 정산되므로 순서만 당긴 것이다.
+  settleStaleSemesterGoal(state);
   const valid = offerSemesterGoals(state).find(o => o.kind === offer.kind && o.npcId === offer.npcId);
   const sem = semesterOfWeek(state.week);
   if (!valid || sem === null) return false;
@@ -161,12 +173,14 @@ export function pickSemesterGoal(state: GameState, offer: GoalOffer): boolean {
 /**
  * 이번 주가 목표 조건을 채웠으면 표시한다(mutate). processWeek이 주말 활동 실행 **직후** 부른다.
  *
- * @param appliedChoices 이번 주 주말/방학 선택 슬롯에서 **실제로 실행된** 활동 id(엔진이 돌린 것만)
- * @param npcActivityMap UI가 고른 동행 — 키는 `${activityId}:${slotIdx}` 또는 레거시 `activityId`
+ * @param appliedChoices 이번 주 주말/방학 선택 슬롯에서 **실제로 실행된** 활동 인스턴스(엔진이 돌린 것만,
+ *        원래 슬롯 인덱스 포함)
+ * @param npcActivityMap UI가 고른 동행 — 키는 `${activityId}:${slotIdx}` 또는 레거시 `activityId`.
+ *        슬롯 키는 **그 칸이 실행됐을 때만** 맞는다 — 같은 활동이 두 칸에 있고 동행 칸만 잘렸으면 안 센다.
  */
 export function markSemesterGoalWeek(
   state: GameState,
-  appliedChoices: readonly string[],
+  appliedChoices: readonly ActivityInstance[],
   npcActivityMap: Record<string, string> | undefined,
 ): void {
   const goal = state.semesterGoal;
@@ -176,12 +190,17 @@ export function markSemesterGoalWeek(
   let hit = false;
   if (goal.kind === 'friend') {
     if (goal.npcId && npcActivityMap) {
-      hit = Object.entries(npcActivityMap).some(([key, npcId]) =>
-        npcId === goal.npcId && appliedChoices.includes(key.split(':')[0]));
+      hit = Object.entries(npcActivityMap).some(([key, npcId]) => {
+        if (npcId !== goal.npcId) return false;
+        const [activityId, slotRaw] = key.split(':');
+        const slot = slotRaw === undefined ? null : Number(slotRaw);
+        return appliedChoices.some(inst => inst.id === activityId
+          && (slot === null || inst.slots.includes(slot)));
+      });
     }
   } else {
     const cat = GOAL_ACTIVITY_CATEGORY[goal.kind];
-    hit = appliedChoices.some(id => ACTIVITIES.find(a => a.id === id)?.category === cat);
+    hit = appliedChoices.some(inst => ACTIVITIES.find(a => a.id === inst.id)?.category === cat);
   }
   if (hit) goal.markedWeeks.push(stamp);
 }
@@ -353,7 +372,12 @@ export function sanitizeSemesterGoal(v: unknown): ActiveSemesterGoal | undefined
   if (!Array.isArray(v.markedWeeks)) return undefined;
   const kind = v.kind as SemesterGoalKind;
   if (kind === 'friend' && typeof v.npcId !== 'string') return undefined;
-  const marked = [...new Set(v.markedWeeks.filter((w): w is number => typeof w === 'number' && Number.isInteger(w)))];
+  // 그 목표의 학기 안 절대주차만 남긴다(T68 검수). 정수만 보면 `[-6..-1]` 같은 손상값이 6칸으로 살아남아
+  // 고른 순간 '해냈다'가 된다. 범위는 SEMESTER_BOUNDS(학기 중 주)에서 파생한다.
+  const lo = absWeek(v.year, SEMESTER_BOUNDS[v.semester].start);
+  const hi = absWeek(v.year, SEMESTER_BOUNDS[v.semester].end);
+  const marked = [...new Set(v.markedWeeks.filter((w): w is number =>
+    typeof w === 'number' && Number.isInteger(w) && w >= lo && w <= hi))];
   return {
     kind, year: v.year, semester: v.semester,
     ...(kind === 'friend' ? { npcId: v.npcId as string } : {}),

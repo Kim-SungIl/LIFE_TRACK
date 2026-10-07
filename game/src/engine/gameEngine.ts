@@ -1,7 +1,7 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
 import { emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
-import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
+import { ACTIVITIES, getActivityCost, collapseActivityChoicesWithSlots, canApplyActivity, type ActivityInstance } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { assignCurrentEvent } from './eventPresentation';
@@ -951,16 +951,18 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
 }
 
 // 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 뒤에서부터 슬롯 감소.
-// 반환값 = **실제로 실행된** 선택 활동 id(스킵·꼬리 잘림 제외) — 학기 목표 기록(T68)이 읽는다. 동작 불변.
-function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number): string[] {
+// 반환값 = **실제로 실행된** 선택 활동 인스턴스(스킵·꼬리 잘림 제외, 원래 슬롯 인덱스 포함)
+// — 학기 목표 기록(T68)이 읽는다. 동작 불변.
+function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number): ActivityInstance[] {
   const rawChoices = state.isVacation ? state.vacationChoices : state.weekendChoices;
   // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개, 2=마지막 2개) → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push
   const slicedChoices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
   // 2칸 활동의 같은 id 인접 중복을 1 인스턴스로 collapse
-  const choices = collapseActivityChoices(slicedChoices);
+  const instances = collapseActivityChoicesWithSlots(slicedChoices);
+  const choices = instances.map(inst => inst.id);
   const allActivities = [...choices];
-  const applied: string[] = [];
-  for (const choice of choices) {
+  const applied: ActivityInstance[] = [];
+  for (const [idx, choice] of choices.entries()) {
     const act = ACTIVITIES.find(a => a.id === choice);
     const actCost = act ? getActivityCost(act, state.year) : 0;
     if (act && actCost > 0 && state.money < actCost) {
@@ -975,7 +977,7 @@ function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number
       continue;
     }
     applyActivity(state, choice, log);
-    applied.push(choice);
+    applied.push(instances[idx]);
   }
   // 루틴 활동도 포함 (allActivities는 idle 페널티가 자체 재계산하므로 현재 읽는 곳 없음 — 원본 보존)
   if (state.routineSlot2) allActivities.push(state.routineSlot2);
