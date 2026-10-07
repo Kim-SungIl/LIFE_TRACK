@@ -19,6 +19,7 @@ import { MainWeekScreen } from './screens/main/MainWeekScreen';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 import { SystemMenu } from './SystemMenu';
+import { goalRecordForWeekLog } from '../engine/semesterGoal';
 
 // 비-부팅 화면만 lazy — MainWeekScreen / WeeklyResultScreen / TitleScreen 은 첫 페인트·고빈도라 eager 유지.
 const EventScene = lazy(() =>
@@ -54,7 +55,7 @@ export function GameScreen() {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
     resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, recordWeekendPlan,
-    startGame, exitToTitle,
+    startGame, exitToTitle, chooseSemesterGoal,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
@@ -72,6 +73,7 @@ export function GameScreen() {
     resolveParentTalkChoice: s.resolveParentTalkChoice,
     setPhase: s.setPhase,
     markMoneyBlockedWeek: s.markMoneyBlockedWeek,
+    chooseSemesterGoal: s.chooseSemesterGoal,
     // 엔딩 화면의 다회차 입구용. startGame은 새 판의 유일한 진입점이고,
     // exitToTitle은 **세이브를 남긴 채** 타이틀로 나간다(resetGame과의 차이).
     startGame: s.startGame,
@@ -235,6 +237,7 @@ export function GameScreen() {
           burnoutCountByYear={state.burnoutCountByYear}
           moneySpentByYear={state.moneySpentByYear}
           moneyBlockedWeeksByYear={state.moneyBlockedWeeksByYear}
+          semesterGoalLog={state.semesterGoalLog}
           bgProps={bgProps}
           onAdvance={() => {}}
           readonly
@@ -290,6 +293,7 @@ export function GameScreen() {
         burnoutCountByYear={state.burnoutCountByYear}
         moneySpentByYear={state.moneySpentByYear}
         moneyBlockedWeeksByYear={state.moneyBlockedWeeksByYear}
+        semesterGoalLog={state.semesterGoalLog}
         bgProps={bgProps}
         onAdvance={advanceFromYearEnd}
       />
@@ -435,6 +439,8 @@ export function GameScreen() {
         resultDialogue={resultDialogue}
         fatigueColor={fatigueColor}
         upcomingEvents={getUpcomingEvents(state)}
+        // T68 — 학기 마지막 주 결산이면 그 학기 목표의 판정. 사건을 거쳐 왔든 곧장 왔든 같은 로그를 읽는다.
+        goalRecord={goalRecordForWeekLog(state)}
         onContinue={() => setPhase('weekday')}
       />
     );
@@ -452,6 +458,7 @@ export function GameScreen() {
           onOpenMenu={() => setMenuOpen(true)}
           onOpenAlbum={() => setAlbumYear(state.year - 1)}
           onMoneyBlocked={markMoneyBlockedWeek}
+          onChooseGoal={chooseSemesterGoal}
           onSetRoutine={setRoutine}
           onTalkNpc={talkToNpc}
           onTalkHome={talkToHome}

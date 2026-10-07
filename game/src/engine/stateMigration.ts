@@ -12,6 +12,7 @@ import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
 import { presentEvent } from './eventPresentation';
 import { STAT_KEYS } from './saveIntegrity';
+import { sanitizeSemesterGoal, sanitizeSemesterGoalLog } from './semesterGoal';
 import { sanitizeGrowthReason, sanitizeGrowthReasonMemo } from './growthDrag';
 
 // ===== 1) 단계형 마이그레이션 =====
@@ -181,6 +182,9 @@ export function migrateLoadedState(state: GameState): GameState {
     // Phase 4B: 강점별 절정 발동 가드 + 긍정 태그 누적(구버전 세이브는 0부터 — 절정은 조건 충족 시 발동)
     parentClimaxFired: state.parentClimaxFired ?? [],
     parentPositiveTags: state.parentPositiveTags ?? {},
+    // T68 학기 목표 — **백필하지 않는다**(undefined = 목표 없음·기록 없음이 그대로 참). 손상값만 버린다.
+    semesterGoal: sanitizeSemesterGoal(state.semesterGoal),
+    semesterGoalLog: sanitizeSemesterGoalLog(state.semesterGoalLog),
     // T67: 손상된 둔화 문장 기억은 매주 TypeError(주 확정 불가)·영구 침묵·"11" 이어붙이기를 낸다.
     // 보류분과 같은 원칙으로 정규화한다(growthDrag.ts 손상값 절 참조).
     growthReasonMemo: sanitizeGrowthReasonMemo(state.growthReasonMemo, state.totalWeeksPlayed),

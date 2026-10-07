@@ -1,7 +1,7 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
 import { emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
-import { ACTIVITIES, getActivityCost, collapseActivityChoices, canApplyActivity } from './activities';
+import { ACTIVITIES, getActivityCost, collapseActivityChoicesWithSlots, canApplyActivity, type ActivityInstance } from './activities';
 import { getSchoolLevel } from './backgrounds';
 import { getEventForWeek } from './events';
 import { assignCurrentEvent } from './eventPresentation';
@@ -18,6 +18,7 @@ import { absWeek } from './relationshipSignals';
 import { getWeekInfo } from './weekMath';
 import { recordGrowthDrag, pickGrowthReason, advanceGrowthReasonMemo, type GrowthMultipliers } from './growthDrag';
 import { createInitialNpcs } from './npcRoster';
+import { markSemesterGoalWeek, settleSemesterGoalIfDue, settleStaleSemesterGoal } from './semesterGoal';
 
 // rng utility re-export (하위 호환)
 export { seededRandom, hashInitialState } from './rng';
@@ -454,19 +455,21 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
 
 // ===== 자연 감소 =====
 // v5.1: 학년별 학업 감소 + 고학업 추가 감소 + 피로→멘탈 침식
+// 학업: 학년별 자연 감소 (높을수록 유지 비용 증가) — v7: 감쇠 완화로 85+ 달성 가능하게
+// 초등(Y1): 학기 -0.1 / 방학 -0.3
+// 중등(Y2~4): 학기 -0.15 / 방학 -0.4
+// 고등(Y5~7): 학기 -0.3 / 방학 -0.7
+// 학년·계절 기본값만 — 95+ 추가 감소는 applyNaturalDecay가 얹는다.
+// export 이유: 진학 브리핑("손을 놓으면 더 빨리 잊는다", "특히 방학이 무섭다")이 이 값을 근거로 삼고,
+// 계약 테스트(stageBriefingClaims)가 문구↔값을 대조한다.
+export function getAcademicDecay(year: number, isVacation: boolean): number {
+  if (year <= 1) return isVacation ? -0.3 : -0.1;
+  if (year <= 4) return isVacation ? -0.4 : -0.15;
+  return isVacation ? -0.7 : -0.3;
+}
+
 function applyNaturalDecay(state: GameState, log: WeekLog, isVacation: boolean): void {
-  // 학업: 학년별 자연 감소 (높을수록 유지 비용 증가) — v7: 감쇠 완화로 85+ 달성 가능하게
-  // 초등(Y1): 학기 -0.1 / 방학 -0.3
-  // 중등(Y2~4): 학기 -0.15 / 방학 -0.4
-  // 고등(Y5~7): 학기 -0.3 / 방학 -0.7
-  let academicDecay = 0;
-  if (state.year <= 1) {
-    academicDecay = isVacation ? -0.3 : -0.1;
-  } else if (state.year <= 4) {
-    academicDecay = isVacation ? -0.4 : -0.15;
-  } else {
-    academicDecay = isVacation ? -0.7 : -0.3;
-  }
+  let academicDecay = getAcademicDecay(state.year, isVacation);
   // 고학업 추가 감소: 95+ → -0.5 추가 (90+는 삭제 — 90대 진입 자체가 어려워지는 문제)
   if (state.stats.academic >= 95) academicDecay -= 0.5;
 
@@ -962,14 +965,18 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
 }
 
 // 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 뒤에서부터 슬롯 감소.
-function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number): void {
+// 반환값 = **실제로 실행된** 선택 활동 인스턴스(스킵·꼬리 잘림 제외, 원래 슬롯 인덱스 포함)
+// — 학기 목표 기록(T68)이 읽는다. 동작 불변.
+function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number): ActivityInstance[] {
   const rawChoices = state.isVacation ? state.vacationChoices : state.weekendChoices;
   // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개, 2=마지막 2개) → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push
   const slicedChoices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
   // 2칸 활동의 같은 id 인접 중복을 1 인스턴스로 collapse
-  const choices = collapseActivityChoices(slicedChoices);
+  const instances = collapseActivityChoicesWithSlots(slicedChoices);
+  const choices = instances.map(inst => inst.id);
   const allActivities = [...choices];
-  for (const choice of choices) {
+  const applied: ActivityInstance[] = [];
+  for (const [idx, choice] of choices.entries()) {
     const act = ACTIVITIES.find(a => a.id === choice);
     const actCost = act ? getActivityCost(act, state.year) : 0;
     if (act && actCost > 0 && state.money < actCost) {
@@ -984,10 +991,12 @@ function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number
       continue;
     }
     applyActivity(state, choice, log);
+    applied.push(instances[idx]);
   }
   // 루틴 활동도 포함 (allActivities는 idle 페널티가 자체 재계산하므로 현재 읽는 곳 없음 — 원본 보존)
   if (state.routineSlot2) allActivities.push(state.routineSlot2);
   if (state.routineSlot3) allActivities.push(state.routineSlot3);
+  return applied;
 }
 
 // 시험 주 처리 — 결과 생성(수능/모의/일반), 멘탈 후처리, 부모 친밀도 약연동 + strict 칭찬.
@@ -1120,6 +1129,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정
   prepareWeekContext(newState);
+  // T68: 다른 학기에서 끌려온 목표는 여기서 정산한다(정상 흐름에선 학기 마지막 주에 이미 끝나 no-op).
+  settleStaleSemesterGoal(newState);
 
   // 부모 친밀도 자연 변화는 더 이상 강점 자동 드리프트가 아니다(결정론 제거).
   // actedWithParentThisWeek 플래그는 talkToHome(processWeek 이전) + 부모 활동(아래)에서 누적되고,
@@ -1148,7 +1159,9 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   applyRoutineActivities(newState, log, timeCost);
 
   // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 슬롯 감소
-  applyWeekendActivities(newState, log, timeCost);
+  const appliedChoices = applyWeekendActivities(newState, log, timeCost);
+  // T68 학기 목표 — 이번 주 주말 실행·동행을 기록만 한다(스탯·rng 무관). 판정은 아래 week++ 직전.
+  markSemesterGoalWeek(newState, appliedChoices, npcActivityMap);
 
   // 5b. 부모 친밀도 평균 회귀 — 이번 주 부모 행동(활동/대화)이 없었으면 50으로 천천히 수렴.
   //     (talkToHome은 processWeek 이전에, 부모 활동은 위에서 actedWithParentThisWeek를 세팅)
@@ -1221,6 +1234,11 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 12. 버프 틱다운 + 주간 구매 리셋
   tickBuffsAndResetPurchases(newState);
+
+  // T68 학기 목표 판정 — 학기 마지막 주(W19·W42)면 기록으로 옮긴다. **week++ 전이어야 한다**:
+  // 결산 화면이 이 주의 로그(log.year/week)와 기록의 학기를 맞춰 보므로 같은 좌표에서 판정한다.
+  // 재료(주말 실행·동행)가 전부 위에서 정해졌으니 이 주에 이벤트가 떠도 결과는 같다.
+  settleSemesterGoalIfDue(newState);
 
   // 주 진행 + 학년 전환 판정 + 다음 주 학기/방학 상태
   advanceWeekCounter(newState);

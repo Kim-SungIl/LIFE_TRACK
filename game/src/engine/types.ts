@@ -129,6 +129,46 @@ export interface GameState {
   // parentPositiveTags = 긍정 부모 태그 누적 횟수(절정 트리거 자격). applyParentIntimacyDelta 단일 진입점에서 적립.
   parentClimaxFired?: ParentStrength[];
   parentPositiveTags?: Partial<Record<string, number>>;
+  /**
+   * T68 학기 목표 — 지금 학기에 플레이어가 고른 작은 목표 하나. 판정·문장은 전부 `semesterGoal.ts`.
+   *
+   * **옵셔널인 이유**: 구세이브에는 없다. undefined = "이번 학기엔 목표가 없다"이고, 그건 실제로
+   * 성립하는 상태라 백필이 필요 없다. 빈 객체나 0 표시로 채우면 고른 적 없는 목표가 생긴다.
+   * 학기 마지막 주(processWeek)에 판정되면 `semesterGoalLog`로 옮겨지고 여기서 지워진다.
+   */
+  semesterGoal?: ActiveSemesterGoal;
+  /**
+   * 판정이 끝난 학기 목표의 기록 — 학기말 결산·학년말 회고가 읽는다.
+   * 구세이브엔 없다(undefined = 기록 없음 → 화면이 줄을 그리지 않는다). 빈 배열 백필도 같은 뜻이라 무해하지만
+   * 굳이 쓰지 않는다 — "없음"을 두 모양으로 두지 않기 위해 읽는 쪽이 `?? []`로 접는다.
+   */
+  semesterGoalLog?: SemesterGoalRecord[];
+}
+
+// ===== T68 학기 목표 =====
+/** 목표의 종류 — 주말 활동 계열 셋 + 친구 하나. 문장·판정 표는 `semesterGoal.ts`가 SSOT. */
+export type SemesterGoalKind = 'exercise' | 'study' | 'craft' | 'friend';
+
+export interface ActiveSemesterGoal {
+  kind: SemesterGoalKind;
+  /** 고른 학년·학기 — 다른 학기에 남아 있으면 낡은 목표다(첫 processWeek이 정산한다). */
+  year: number;
+  semester: 1 | 2;
+  /** kind === 'friend'일 때만. 고른 순간의 친구로 고정한다. */
+  npcId?: string;
+  /** 조건을 채운 주의 절대주차(absWeek). 같은 주를 두 번 세지 않으려고 개수가 아니라 스탬프로 둔다. */
+  markedWeeks: number[];
+}
+
+/** achieved=해냈다 · partial=몇 번은 했다 · missed=잊고 지나갔다 · lapsed=사정이 바뀌어 접었다(친구가 떠남) */
+export type SemesterGoalOutcome = 'achieved' | 'partial' | 'missed' | 'lapsed';
+
+export interface SemesterGoalRecord {
+  kind: SemesterGoalKind;
+  year: number;
+  semester: 1 | 2;
+  npcId?: string;
+  outcome: SemesterGoalOutcome;
 }
 
 // 활성 버프 (shopSystem에서도 사용)

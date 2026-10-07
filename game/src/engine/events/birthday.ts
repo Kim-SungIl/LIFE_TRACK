@@ -21,7 +21,7 @@ export const BIRTHDAY_EVENTS = [
         message: '지훈이가 신발끈을 보더니 입이 쩍 벌어졌다. "야, 이거 비싼 거잖아. 너 친구 하나는 진짜 잘 뒀다, 인마." 씩 웃으며 어깨를 친다.' },
       { text: '카톡으로 축하만 한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
-        message: '"축하해~" 보냈다. 지훈이가 "고마워~" 했다. 좀 성의없었나?' },
+        message: '"축하해~" 보냈다. 지훈이가 "고마워~" 하고 웃는 이모티콘을 붙였다. 오래 본 사이라 이 정도로도 통한다.' },
     ],
     femaleChoices: [
       { text: '선물을 사서 준다 (-2만원)', effects: { social: 3, mental: 2 }, moneyEffect: -2,
@@ -32,7 +32,7 @@ export const BIRTHDAY_EVENTS = [
         message: '지훈이가 그립테이프를 보더니 입이 쩍 벌어졌다. "야, 이거... 너 진짜 나랑 오래 칠 생각인가 보네." 웃으며 말했지만 진지한 눈이었다.' },
       { text: '카톡으로 축하만 한다', effects: { social: 1 },
         npcEffects: [{ npcId: 'jihun', intimacyChange: 1 }],
-        message: '"축하해~" 보냈다. 지훈이가 "고마워~" 했다. 좀 성의없었나?' },
+        message: '"축하해~" 보냈다. 지훈이가 "고마워~" 하고 웃는 이모티콘을 붙였다. 오래 본 사이라 이 정도로도 통한다.' },
     ],
   },
   {
