@@ -784,7 +784,7 @@ export function applyYearTransition(s: GameState): void {
   // T66: 진로 갈림길 — 두 갈래가 열린 판은 엔딩 직전에 한 번 묻고, 닫히면 다시 여기로 온다.
   // **여기가 유일한 엔딩 전환 지점**이라(W48 이벤트 유무와 무관하게 두 경로가 모두 이 함수를 거친다)
   // 장면이 보는 스탯 = 엔딩이 읽는 스탯이다. 학년 기록(milestone 등)보다 먼저 빠져야 두 번 적히지 않는다.
-  if (s.year >= 7 && careerChoicePending(s)) {
+  if (careerChoicePending(s)) {   // Y7 판정은 pending 안에 있다(year < 7이면 거짓)
     const ev = buildCareerChoiceEvent(s);
     if (ev) {
       assignCurrentEvent(s, ev, 48);

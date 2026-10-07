@@ -4,8 +4,8 @@
 // 둘 다 calculateEnding 본문을 건드리므로 "안 바뀌었다"를 말이 아니라 값으로 증명한다.
 //
 // 증명 방식: 결정론적 격자 4,000판(endingStateGrid — 진로·행복 문턱 근처에 몰리도록 고른 값)의
-// 판정 층(타이틀·설명·등급·노트·성장 모양·행복·총합·진로·진로 설명·수능)을 한 줄씩 뽑아 FNV 해시로
-// 접었다. 기대값 `60035cfc`는 **origin/main(9b44f48)의 ending.ts 사본**으로 같은 격자를 돌려 뜬 값이고,
+// 판정 층(타이틀·설명·등급·노트·성장 모양·행복·총합·진로·진로 설명·수능 — 성장 문장은 제외, endingStateGrid 주석)을 한 줄씩 뽑아 FNV 해시로
+// 접었다. 기대값 `c98a21a3`는 **origin/main(9b44f48)의 ending.ts 사본**으로 같은 격자를 돌려 뜬 값이고,
 // 같은 실행에서 새 코드와 줄 단위로 비교해 0줄 차이를 확인했다.
 // (해시를 다시 뜨고 싶어진다면 그건 기존 판정이 달라졌다는 뜻이다 — 해시가 아니라 변경을 되돌릴 것.)
 //
@@ -22,7 +22,7 @@ const ENDINGS = GRID.map(s => calculateEnding(s));
 
 describe('T66 — 선택이 없는 판의 엔딩 판정 불변', () => {
   it('격자 4,000판의 판정 층이 T66 이전과 한 글자도 다르지 않다', () => {
-    expect(digest(ENDINGS.map(judgmentLine))).toBe('60035cfc');
+    expect(digest(ENDINGS.map(judgmentLine))).toBe('c98a21a3');
   });
 
   it('갈림 없는 판은 선택값이 무엇이든(손상값 포함) 결과가 같다', () => {

@@ -15,7 +15,7 @@
 // 뽑히거나 체인으로 끼어들 수 있다. 저장/로드 시 함수 필드 복원은 stateMigration이 여기
 // `buildCareerChoiceEvent`로 다시 굽는다(카탈로그 조회와 같은 자리).
 import type { CareerBranch, GameEvent, GameState } from './types';
-import { careerBranchesOf } from './ending';
+import { careerBranchesOf, isCareerBranch } from './ending';
 
 export const CAREER_CHOICE_EVENT_ID = 'career-crossroads';
 
@@ -27,7 +27,8 @@ export const CAREER_CHOICE_EVENT_ID = 'career-crossroads';
  */
 export function careerChoicePending(state: GameState): boolean {
   if (state.year < 7) return false;
-  if (state.careerChoice !== undefined) return false;
+  // 유효한 갈래 값일 때만 "이미 골랐다" — 손상값('foo'·null)은 엔딩도 무시하므로 장면은 다시 연다.
+  if (isCareerBranch(state.careerChoice)) return false;
   if (state.events.some(e => e.id === CAREER_CHOICE_EVENT_ID)) return false;
   return careerBranchesOf(state).open.length >= 2;
 }
@@ -59,7 +60,6 @@ export function buildCareerChoiceEvent(state: GameState): GameEvent | null {
     description: '등록 마감이 코앞이다.\n책상 위에 서류 두 묶음이 나란히 놓여 있다.\n'
       + '하나는 7년 동안 쌓아 온 공부로 가는 길, 하나는 7년 동안 놓지 않은 좋아하는 일로 가는 길.\n\n'
       + '어느 쪽도 틀리지 않았다. 다만, 하나만 고를 수 있다.',
-    week: 48,
     location: 'home',
     background: 'bedroom_night',
     choices: b.open.map(branch => ({

@@ -39,6 +39,13 @@ export interface GameState {
    * 값이 있어도 **엔딩 시점에 그 갈래가 열려 있을 때만** 쓴다(careerBranchesOf). 손상값·닫힌 갈래는 무시.
    */
   careerChoice?: CareerBranch;
+  /**
+   * T66: 로드 때 학년별 행복 궤적 배열(저멘탈·바닥·번아웃) 중 하나라도 **0으로 메워졌다**는 표시.
+   * 메운 뒤엔 배열 모양으로 구분할 수 없어서 마이그레이션이 메우기 전 원본을 보고 남긴다.
+   * 회복 문장(ending.ts recoveryClaimOf)만 읽는다 — 행복 등급은 예전처럼 메운 0을 그대로 쓴다.
+   * 새 판에는 없다(undefined = 기록이 처음부터 온전함).
+   */
+  happinessTrajectoryBackfilled?: true;
   gender: Gender;
   stats: Stats;
   fatigue: number;          // 피로 0~100

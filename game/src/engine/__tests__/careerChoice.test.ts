@@ -13,6 +13,8 @@ import { buildCareerChoiceEvent, careerChoicePending, CAREER_CHOICE_EVENT_ID } f
 import { applyYearTransition, createInitialState } from '../gameEngine';
 import { migrateLoadedState } from '../stateMigration';
 import { useGameStore } from '../store';
+import { assignCurrentEvent } from '../eventPresentation';
+import { DIRECT_SEQUEL_IDS, FOLLOWUP_EVENT_IDS } from '../events/constants';
 import { clearArchive, loadArchive } from '../archive';
 import type { CareerBranch, ExamResult, GameEvent, GameState, ParentStrength, Stats, Track } from '../types';
 
@@ -170,6 +172,9 @@ describe('갈림길 장면 — careerBranchesOf와 같은 값을 본다', () => 
     expect(careerChoicePending(y7())).toBe(true);
     expect(careerChoicePending({ ...y7(), year: 6 })).toBe(false);
     expect(careerChoicePending(y7({ careerChoice: 'general' }))).toBe(false);
+    // 손상값은 "이미 골랐다"가 아니다 — 엔딩도 무시하는 값이라 장면을 다시 열어야 두 층이 안 갈린다.
+    expect(careerChoicePending(y7({ careerChoice: 'foo' }))).toBe(true);
+    expect(careerChoicePending({ ...y7(), careerChoice: null as unknown as CareerBranch })).toBe(true);
     const seen = y7();
     seen.events = [{ id: CAREER_CHOICE_EVENT_ID, title: '', description: '', choices: [], resolvedChoice: -1 } as GameEvent];
     expect(careerChoicePending(seen)).toBe(false);
@@ -199,6 +204,21 @@ describe('갈림길 장면 — careerBranchesOf와 같은 값을 본다', () => 
     expect(loaded.phase).toBe('event');
     expect(loaded.currentEvent?.id).toBe(CAREER_CHOICE_EVENT_ID);
     expect(loaded.currentEvent?.choices.map(c => c.text)).toEqual(s.currentEvent!.choices.map(c => c.text));
+  });
+
+  it('장면 도중 세이브가 손상돼 갈래가 닫혔으면, 로드는 장면을 버리고 곧장 엔딩으로 보낸다(유령 주·정지 없음)', () => {
+    const s = y7();
+    s.weekLog = { statChanges: {}, fatigueChange: 0, moneyChange: 0, messages: [], skipped: [], milestoneMessages: [], year: 7, week: 48 };
+    applyYearTransition(s);
+    expect(s.currentEvent?.id, '전제: 장면이 열렸다').toBe(CAREER_CHOICE_EVENT_ID);
+    const raw = JSON.parse(JSON.stringify(s)) as GameState;
+    raw.stats.talent = 60;   // 외부 편집·손상 — 정상 흐름에선 장면 뒤 스탯 변화가 없다
+    const loaded = migrateLoadedState(raw);
+    expect(loaded.currentEvent).toBeNull();
+    expect(loaded.phase, '"사라진 ID" 경로(result/weekday)로 떨어지면 W49 유령 주를 돈다').toBe('ending');
+    expect(loaded.year).toBe(8);
+    expect(loaded.milestoneScenes.some(m => m.year === 7), 'Y7 학년 기록은 한 번 적힌다').toBe(true);
+    expect(calculateEnding(loaded).career).toBe('의대 합격');
   });
 
   it('구세이브(careerChoice 없음)는 로드 후에도 값이 없다 — 백필하지 않는다', () => {
@@ -264,6 +284,35 @@ describe('store 배선 — 장면이 뜨고, 고른 갈래가 엔딩·기록실�
     expect(playLastWeek({ stats: { talent: 60 } }).sawCrossroads).toBe(false);
     expect(useGameStore.getState().state!.phase).toBe('ending');
     expect(useGameStore.getState().state!.careerChoice).toBeUndefined();
+  });
+
+  // **두 번째 입구.** W48에 다른 사건이 대기 중이면 엔딩 전환은 processWeek가 아니라 그 사건을 닫는
+  // resolveEvent(resolveEventChain)에서 일어난다 — 실플레이 갈림길의 절반 이상이 이 입구다(3자 검수 실측).
+  // 이 입구가 게이트를 우회해도(예전식 인라인 전환) 위 테스트들은 processWeek 입구만 지나 초록이었다.
+  it('W48 대기 사건을 닫는 입구(resolveEventChain)에서도 갈림길이 뜬다', () => {
+    const s = y7();
+    s.week = 49;
+    s.weekLog = { statChanges: {}, fatigueChange: 0, moneyChange: 0, messages: [], skipped: [], milestoneMessages: [], year: 7, week: 48 };
+    // 체인을 막는다 — 같은 주 followup(직접 후속 아님)이 이미 있고 이벤트가 3건 이상이면 체인 픽이 없다.
+    const followup = [...FOLLOWUP_EVENT_IDS].find(id => !DIRECT_SEQUEL_IDS.has(id))!;
+    const rec = (id: string) => ({ id, title: id, description: '', choices: [], resolvedChoice: 0, week: 48, year: 7 }) as GameEvent;
+    s.events = [rec(followup), rec('__filler-1')];
+    assignCurrentEvent(s, { id: '__w48-pending', title: 't', description: 'd', choices: [{ text: 'ok', effects: {}, message: 'm' }] }, 48);
+    useGameStore.setState({ state: s });
+
+    useGameStore.getState().resolveEvent(0);
+    const after = useGameStore.getState().state!;
+    expect(after.phase, '대기 사건을 닫자 엔딩으로 직행했다 — 두 번째 입구가 게이트를 우회한다').toBe('event');
+    expect(after.currentEvent?.id).toBe(CAREER_CHOICE_EVENT_ID);
+    expect(after.year).toBe(7);
+  });
+
+  it('손상된 careerChoice(\'foo\')가 남은 겸비 판도 장면이 뜨고, 고른 값으로 덮인다', () => {
+    const { sawCrossroads } = playLastWeek({ careerChoice: 'foo' });
+    expect(sawCrossroads).toBe(true);
+    const idx = useGameStore.getState().state!.currentEvent!.choices.findIndex(c => c.careerSelect === 'specialist');
+    useGameStore.getState().resolveEvent(idx);
+    expect(calculateEnding(useGameStore.getState().state!).career).toBe('예술/체육 특기자');
   });
 
   it('모든 선택지가 잠긴 sentinel(-1)로 닫혀도 장면이 다시 뜨지 않고 엔딩(자동 판정)으로 간다', () => {

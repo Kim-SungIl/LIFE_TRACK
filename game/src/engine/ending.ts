@@ -38,6 +38,21 @@ export function padYearCounts(arr: number[] | undefined): number[] {
   return out;
 }
 
+/**
+ * T66: 학년별 배열이 **그대로 믿을 수 있는 기록인가** — padYearCounts가 아무것도 지어내지 않는 모양인가.
+ * 아니면(없음·짧음·숫자 아닌 칸·음수) 로드가 0으로 메운 칸이 생기고, 그 0은 "그 해는 멀쩡했다"는
+ * 근거 없는 주장이 된다. 행복 등급은 T21 이래 그 0을 스냅샷과 같다고 보고 받아들이지만(강등만 하므로
+ * 안전), 회복 문장은 "그 뒤 단단했다"를 **주장**하므로 받아들이면 안 된다(stateMigration이 이 판정을 남긴다).
+ */
+export function yearCountsIntact(arr: unknown): boolean {
+  if (!Array.isArray(arr) || arr.length < HAPPINESS_YEAR_SLOTS) return false;
+  for (let i = 0; i < HAPPINESS_YEAR_SLOTS; i++) {
+    const v: unknown = arr[i];
+    if (typeof v !== 'number' || !Number.isFinite(v) || v < 0) return false;
+  }
+  return true;
+}
+
 const GRADE_RANK: Record<HappinessGrade, number> = { S: 0, A: 1, B: 2, C: 3, D: 4 };
 
 function worseGrade(a: HappinessGrade, b: HappinessGrade): HappinessGrade {
@@ -178,19 +193,24 @@ export interface RecoveryClaim {
 /**
  * 궤적이 "무너졌다가 회복해 끝났다"를 뒷받침하는가. 아니면 null.
  *
- * **근거가 없으면 말하지 않는다.** 학년별 배열이 없는 상태(배열 아님)는 null이고, T21 이전 구세이브처럼
- * 0으로 백필된 배열은 무너진 해를 찾지 못해 역시 null이 된다 — 없는 회복을 지어내지 않는 쪽으로만 틀린다.
- * (중도에 T21을 맞은 세이브는 앞 학년만 0이다. 회복 판정에 쓰이는 "무너진 해"와 "그 뒤 단단한 해"는
- *  둘 다 기록이 시작된 뒤의 값이라 거짓 주장이 생기지 않는다.)
+ * **근거가 없으면 말하지 않는다.** 로드(migrateLoadedState)는 빠지거나 깨진 학년별 배열을 0으로 메우므로
+ * 배열 모양만 봐서는 근거가 있었는지 알 수 없다. 그래서 마이그레이션이 **메우기 전 원본**을 보고
+ * `happinessTrajectoryBackfilled`를 남기고, 그 표시가 있는 판은 판정 불가로 null이다.
+ *   · T21 이전 세이브(세 배열 모두 없음) → 표시됨 → null.
+ *   · 일부 배열만 손상된 세이브(예: 번아웃 배열만 있고 저멘탈 배열 없음) → 표시됨 → null.
+ *     표시가 없으면 남은 번아웃 배열의 "무너진 해" + 메운 0의 "단단한 해"로 근거 없는 문장이 나갔다(3자 검수).
+ *   · 표시는 다음 마이그레이션에서도 유지된다(이미 메운 배열은 멀쩡해 보이므로).
  */
 export function recoveryClaimOf(state: {
   lowMentalWeeksByYear?: number[];
   veryLowMentalWeeksByYear?: number[];
   burnoutCountByYear?: number[];
+  happinessTrajectoryBackfilled?: true;
   stats: Stats;
 }): RecoveryClaim | null {
-  if (!Array.isArray(state.lowMentalWeeksByYear) || !Array.isArray(state.veryLowMentalWeeksByYear)
-    || !Array.isArray(state.burnoutCountByYear)) return null;
+  // 마이그레이션을 안 거친 호출(테스트·도구)도 같은 규칙을 받도록 원본 모양도 직접 본다.
+  if (state.happinessTrajectoryBackfilled || !yearCountsIntact(state.lowMentalWeeksByYear)
+    || !yearCountsIntact(state.veryLowMentalWeeksByYear) || !yearCountsIntact(state.burnoutCountByYear)) return null;
   if (!(state.stats.mental >= RECOVERY_FINAL_MENTAL)) return null;
   const caps: HappinessGrade[] = [];
   for (let year = 1; year <= HAPPINESS_YEAR_SLOTS; year++) {
@@ -363,6 +383,16 @@ export function careerBranchesOf(state: GameState): CareerBranches {
   return { auto: 'general', open: ['general', 'specialist'], outcomes: { general, specialist } };
 }
 
+/**
+ * 저장된 선택값이 **유효한 갈래 값**인가 — 갈림길 장면(careerChoicePending)이 "이미 골랐나"를 이걸로 묻는다.
+ * 예전엔 장면이 "값이 있나"(`!== undefined`)만 봐서 손상값('foo'·null)에서 엔딩과 갈렸다: 엔딩은 무시하는데
+ * 장면은 "이미 골랐다"며 안 열려, 겸비 판이 묻지도 않고 자동 판정으로 끝났다(3자 검수).
+ * 엔딩 판정(determineCareer)은 `open.includes`로 거르는데, `open`엔 이 함수가 참인 값만 들어 있어 같은 결론이다.
+ */
+export function isCareerBranch(v: unknown): v is CareerBranch {
+  return v === 'specialist' || v === 'general';
+}
+
 function determineCareer(state: GameState): CareerOutcome {
   const b = careerBranchesOf(state);
   // 선택은 **엔딩 시점에 열린 갈래 중에서만** 유효하다 — 진로는 졸업 시점 라이브 스탯을 읽는 설계라,
@@ -370,7 +400,10 @@ function determineCareer(state: GameState): CareerOutcome {
   // (갈래가 하나뿐인 판은 그 하나가 곧 자동이라 `open.length >= 2`를 따로 볼 필요가 없다 — 두면 지워도
   //  동작이 같은 중복 조건이 된다. 뮤테이션으로 확인.)
   const chosen = state.careerChoice;
-  const pick: CareerBranch = chosen && b.open.includes(chosen) ? chosen : b.auto;
+  // 열린 갈래 목록에 있는지만 보면 손상값도 함께 걸러진다(`open`엔 유효한 갈래 값만 들어 있다) —
+  // isCareerBranch를 겹쳐 쓰면 지워도 동작이 같은 중복 조건이 된다(뮤테이션 확인). 장면 쪽
+  // (careerChoicePending)은 "값이 유효한가"를 따로 물어야 해서 isCareerBranch를 쓴다.
+  const pick: CareerBranch = b.open.includes(chosen as CareerBranch) ? chosen as CareerBranch : b.auto;
   const o = b.outcomes[pick]!;
   return { path: o.path, detail: o.detail };
 }

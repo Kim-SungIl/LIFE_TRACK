@@ -5,13 +5,14 @@
 //   · 근거는 학년별 궤적이다 — 마지막 스냅샷이 좋아도 궤적이 회복을 말하지 않으면 미출력.
 //   · 문턱 양방향: 단단한 꼬리 1해/2해, 무너진 해 C/B 경계(저멘탈 10주/9주, 바닥 2주/1주, 번아웃 3/2),
 //     단단한 해 A/B 경계(저멘탈 3주/4주), 졸업 순간 mental 40/39.9.
-//   · 근거 없는 구세이브(배열 없음·0 백필)는 미출력.
+//   · 근거 없는 구세이브(로드가 배열을 메운 판 — 전부 없음·일부 없음·칸 손상)는 미출력. 제품 경로(migrateLoadedState)로 본다.
 //   · 등급·타이틀·진로 불변 — 회복 판과 같은 판에서 회복 근거만 지운 판의 판정 층이 같다.
 import { describe, expect, it } from 'vitest';
 import {
   calculateEnding, recoveryClaimOf, recoveryNoteOf, RECOVERY_FINAL_MENTAL, RECOVERY_MIN_CLEAN_YEARS, RECOVERY_NOTE,
 } from '../ending';
-import { createInitialState } from '../gameEngine';
+import { createInitialState, processWeek } from '../gameEngine';
+import { migrateLoadedState } from '../stateMigration';
 import { judgmentLine } from './endingStateGrid';
 import type { GameState, ParentStrength } from '../types';
 
@@ -83,18 +84,51 @@ describe('recoveryClaimOf — 궤적이 회복을 뒷받침할 때만', () => {
     expect(recoveryClaimOf(st({ mental: 100 }))).toBeNull();
   });
 
-  it('구세이브: 학년별 배열 중 하나라도 없으면 판정 불가 — 남은 배열이 무너진 해를 말해도 미출력', () => {
-    // 번아웃 배열은 Y2 C(번아웃 3)를 말하지만 저멘탈 배열이 없다 — 없는 배열을 0으로 읽으면
-    // "그 뒤 단단한 해"를 지어내게 된다(저멘탈 주가 실제로 있었는지 모른다).
-    const s = st({ bo: [0, 3, 0, 0, 0, 0, 0] }) as Partial<GameState> & GameState;
-    expect(recoveryClaimOf(s), '전제: 배열이 다 있으면 출력되는 판').not.toBeNull();
-    delete (s as Partial<GameState>).lowMentalWeeksByYear;
-    expect(recoveryClaimOf(s)).toBeNull();
-    expect(calculateEnding(s).recoveryNote).toBeNull();
+  // ↓ 구세이브는 **제품 경로(migrateLoadedState)를 거쳐** 본다. 로드는 빠진 배열을 0으로 메우므로
+  //   recoveryClaimOf에 원본을 직접 넣는 테스트로는 제품에서 실제로 무슨 일이 나는지 못 본다(3자 검수).
+  const roundTrip = (s: GameState, drop: (keyof GameState)[]) => {
+    const raw = JSON.parse(JSON.stringify(s)) as Record<string, unknown>;
+    for (const k of drop) delete raw[k];
+    return migrateLoadedState(raw as unknown as GameState);
+  };
+
+  it('전제(양성 대조): 배열이 다 있는 세이브는 로드 뒤에도 회복 문장이 나온다', () => {
+    const loaded = roundTrip(st({ bo: [0, 3, 0, 0, 0, 0, 0] }), []);
+    expect(loaded.happinessTrajectoryBackfilled).toBeUndefined();
+    expect(calculateEnding(loaded).recoveryNote).toBe(RECOVERY_NOTE);
   });
 
-  it('구세이브: T21 이전처럼 0 백필된 배열은 무너진 해를 못 찾아 미출력', () => {
-    expect(recoveryClaimOf(st({ low: [...Z], vlow: [...Z], bo: [...Z] }))).toBeNull();
+  it('일부 배열만 있는 손상 세이브: 번아웃 배열이 무너진 해를 말해도, 메운 저멘탈 0으로 "그 뒤 단단했다"를 지어내지 않는다', () => {
+    const loaded = roundTrip(st({ bo: [0, 3, 0, 0, 0, 0, 0] }), ['lowMentalWeeksByYear', 'veryLowMentalWeeksByYear']);
+    expect(loaded.lowMentalWeeksByYear, '전제: 로드가 0으로 메웠다').toEqual(Z);
+    expect(loaded.happinessTrajectoryBackfilled).toBe(true);
+    expect(calculateEnding(loaded).recoveryNote).toBeNull();
+  });
+
+  it('칸이 깨진 배열(숫자 아님)도 메운 것으로 본다', () => {
+    const s = st({ bo: [0, 3, 0, 0, 0, 0, 0] });
+    (s.lowMentalWeeksByYear as unknown[])[5] = 'x';
+    const loaded = roundTrip(s, []);
+    expect(loaded.happinessTrajectoryBackfilled).toBe(true);
+    expect(calculateEnding(loaded).recoveryNote).toBeNull();
+  });
+
+  it('T21 이전 세이브(세 배열 모두 없음)는 미출력', () => {
+    const loaded = roundTrip(st({ bo: [0, 3, 0, 0, 0, 0, 0] }), ['lowMentalWeeksByYear', 'veryLowMentalWeeksByYear', 'burnoutCountByYear']);
+    expect(loaded.happinessTrajectoryBackfilled).toBe(true);
+    expect(calculateEnding(loaded).recoveryNote).toBeNull();
+  });
+
+  it('메운 표시는 다음 마이그레이션(매주 processWeek)에서도 유지된다 — 메운 배열은 멀쩡해 보이므로', () => {
+    const once = roundTrip(st({ bo: [0, 3, 0, 0, 0, 0, 0] }), ['lowMentalWeeksByYear']);
+    const twice = migrateLoadedState(JSON.parse(JSON.stringify(once)) as GameState);
+    expect(twice.happinessTrajectoryBackfilled).toBe(true);
+    expect(calculateEnding(twice).recoveryNote).toBeNull();
+  });
+
+  it('새 판은 표시가 없다(processWeek를 거쳐도)', () => {
+    const s = processWeek(createInitialState('female', PARENTS, { rngSeed: 5 }));
+    expect(s.happinessTrajectoryBackfilled).toBeUndefined();
   });
 });
 

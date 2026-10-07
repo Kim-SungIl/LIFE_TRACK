@@ -68,14 +68,19 @@ export function endingStateGrid(n: number, seed = 20261007): GameState[] {
   return out;
 }
 
-/** 판정 층만 — 회상·근황(기억·RNG 의존)과 T66이 **새로** 얹은 recoveryNote는 뺀다. */
+/**
+ * 판정 층만 — 회상·근황(기억·RNG 의존)과 T66이 **새로** 얹은 recoveryNote는 뺀다.
+ * **성장 문장(growthNote)도 뺀다.** T66은 그 층을 건드리지 않고, 다른 PR(#502 T62)이 궤적 근거로
+ * 문장을 고르는 중이라 넣어 두면 그 PR과 합치는 순간 이 해시가 이유 없이 빨개진다(실제로 재현됨).
+ * 이 해시가 지키는 건 "T66이 판정을 안 바꿨다"이지 "아무도 엔딩 문장을 안 바꿨다"가 아니다.
+ */
 export function judgmentLine(e: {
   title: string; description: string; achievement: string; achievementNote: string | null;
-  growthShape: string | null; growthNote: string | null; happiness: string; total: number;
+  growthShape: string | null; happiness: string; total: number;
   career: string; careerDetail: string; suneungGrade: number | null;
 }): string {
   return [e.title, e.description, e.achievement, e.achievementNote ?? '-', e.growthShape ?? '-',
-    e.growthNote ?? '-', e.happiness, e.total, e.career, e.careerDetail, e.suneungGrade ?? '-'].join('|');
+    e.happiness, e.total, e.career, e.careerDetail, e.suneungGrade ?? '-'].join('|');
 }
 
 /** FNV-1a 32bit — 수천 줄을 인라인 기대값 하나로 접는다. */
