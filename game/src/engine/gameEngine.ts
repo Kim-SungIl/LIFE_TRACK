@@ -16,6 +16,7 @@ import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { absWeek } from './relationshipSignals';
 import { getWeekInfo } from './weekMath';
+import { recordGrowthDrag, pickGrowthReason, advanceGrowthReasonMemo, type GrowthMultipliers } from './growthDrag';
 import { createInitialNpcs } from './npcRoster';
 import { markSemesterGoalWeek, settleSemesterGoalIfDue, settleStaleSemesterGoal } from './semesterGoal';
 
@@ -319,6 +320,8 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
   for (const [key, baseValue] of Object.entries(activity.effects)) {
     const statKey = key as StatKey;
     let value = baseValue as number;
+    // T67 성장 둔화 기록용 — 아래 식이 **이미 쓰는 배율을 그대로** 받아 둔다. 식 자체는 그대로다.
+    let drag: GrowthMultipliers | null = null;
 
     if (statKey === 'mental') {
       // 멘탈은 전용 감쇠
@@ -329,18 +332,22 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
       }
     } else if (value > 0) {
       // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
-      value *= getDiminishingReturn(state.stats[statKey]) * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus + parentEfficiencyBonus) * efficiency;
+      const diminishing = getDiminishingReturn(state.stats[statKey]);
+      value *= diminishing * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus + parentEfficiencyBonus) * efficiency;
+      drag = { diminishing, fatigue: fatiguemod, mood: mentalPenalty, crowded: 1, freeCeiling: 1 };
 
       // v6.1: 동일 축 중복 효율 감소 — 3단계 (2회 70%, 3회+ 45%)
       const priorGain = log.statChanges[statKey] || 0;
-      if (priorGain > 2) value *= 0.45;       // 3회째+ → 45%
-      else if (priorGain > 0.5) value *= 0.7;  // 2회째 → 70%
+      if (priorGain > 2) { value *= 0.45; drag.crowded = 0.45; }       // 3회째+ → 45%
+      else if (priorGain > 0.5) { value *= 0.7; drag.crowded = 0.7; }  // 2회째 → 70%
 
       // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감 (유·무료 갈림의 핵심)
       if (getActivityCost(activity, state.year) === 0 && state.stats[statKey] >= FREE_SOFTCAP_STAT) {
         value *= FREE_SOFTCAP_FACTOR;
+        drag.freeCeiling = FREE_SOFTCAP_FACTOR;
       }
     }
+    const valueBeforeFloor = value;
 
     // 최저 보장 — v6.2는 85에서 **절벽으로** 끊었다("고구간은 진짜 어려워야 함"). 방향은 맞았지만
     // 절벽이라 85 바로 아래에서는 보장이 감쇠·소프트캡을 전부 이기고(무료 3슬롯 0.45/주 > 고등
@@ -352,6 +359,7 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
     if (baseValue > 0 && value < floorValue) {
       value = floorValue;
     }
+    const valueAfterFloor = value;
 
     // v6.2: 주당 스탯 성장 상한 (+2/주) — 활동값 하향과 함께 조정
     const weeklyGainSoFar = log.statChanges[statKey] || 0;
@@ -359,7 +367,11 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
       value = Math.max(0, 2 - weeklyGainSoFar);
     }
 
+    const statBefore = state.stats[statKey];
     state.stats[statKey] = Math.max(0, Math.min(100, state.stats[statKey] + value));
+    if (drag && statKey !== 'mental') {
+      recordGrowthDrag(log, statKey, drag, valueBeforeFloor, valueAfterFloor, value, state.stats[statKey] - statBefore);
+    }
     if (!log.statChanges[statKey]) log.statChanges[statKey] = 0;
     log.statChanges[statKey]! += value;
   }
@@ -1196,6 +1208,14 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   // 깎는다(applyActivity). 보류분을 그 앞에서 접으면 말을 한 번 건 주에 활동 효율이 조용히
   // 떨어져 밸런스가 바뀐다 — 그래서 캡 계산이 전부 끝난 여기서 한 번만 접는다.
   foldPendingIntoLog(newState, log);
+
+  // T67: 그 주 성장을 가장 크게 깎은 원인 하나 — 판정은 여기 한 곳(SSOT). 결산 화면은 읽기만 한다.
+  // 장부는 활동 적용 중에 이미 다 찼고 성장값엔 손대지 않는다. totalWeeksPlayed++ 전이라 이 주의 좌표다.
+  const growthReason = pickGrowthReason(log.growthLedger, log.statChanges, newState.growthReasonMemo, newState.totalWeeksPlayed);
+  if (growthReason) {
+    log.growthReason = growthReason;
+    newState.growthReasonMemo = advanceGrowthReasonMemo(newState.growthReasonMemo, growthReason, newState.totalWeeksPlayed);
+  }
 
   // 이 로그가 어느 주의 것인지 박는다 — week++ 전이라 여기가 유일하게 정확한 지점이다.
   log.year = newState.year;

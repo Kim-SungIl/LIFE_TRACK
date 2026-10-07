@@ -1,5 +1,5 @@
 // ===== LIFE TRACK: 선택의 결과 — Core Types =====
-
+import type { GrowthLedger, GrowthReason, GrowthReasonMemo } from './growthDrag';
 import type { ParentEffect } from './parentIntimacy';
 
 export type Gender = 'male' | 'female';
@@ -65,6 +65,11 @@ export interface GameState {
    * 구세이브에는 없다(undefined = 보류분 없음).
    */
   pendingWeekDelta?: PendingWeekDelta;
+  /**
+   * T67: 성장 둔화 문장의 쿨다운·문장 회전 기억. 구세이브에는 없다(= 아직 한 번도 안 냄).
+   * 성장 계산은 이 값을 읽지 않는다 — 문장을 낼지 말지만 가른다.
+   */
+  growthReasonMemo?: GrowthReasonMemo;
   npcs: NpcState[];
   events: GameEvent[];
   currentEvent: GameEvent | null;
@@ -243,6 +248,17 @@ export interface WeekLog {
    */
   year?: number;
   week?: number;
+  /**
+   * T67: 이번 주 활동 성장의 장부 — 막히지 않았다면 오를 몫, 실제 오른 몫, 요인별로 깎인 양.
+   * applyActivity가 이미 쓰는 배율을 받아 적기만 한다(성장값 불변). 분해 규칙은 growthDrag.ts.
+   * 구세이브 로그에는 없다(undefined = 기록 없음 → 문장도 없음).
+   */
+  growthLedger?: GrowthLedger;
+  /**
+   * T67: 그 주 결과를 가장 크게 깎은 원인 — **엔진이 판정해 박는다**(pickGrowthReason). 결산 화면은
+   * 이 값을 생활 문장으로 바꾸기만 한다. 임계 미달·쿨다운이면 없다.
+   */
+  growthReason?: GrowthReason;
 }
 
 // 시험 시스템

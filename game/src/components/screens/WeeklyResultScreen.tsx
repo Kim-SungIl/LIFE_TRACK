@@ -5,10 +5,12 @@ import { playSfx } from '../../audio/sfx';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
-import { GLASS_BASE, tintedGlass } from './surface';
+import { GLASS_BASE, chipSurface, tintedGlass } from './surface';
 import { PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
 import { StatIcon } from '../icons/icons';
 import { STAT_BAR_HEIGHT, STAT_ICON_SIZE } from './main/StatsPanel';
+import { growthReasonLine } from '../../engine/growthReasonText';
+import { visibleGrowthReason } from '../../engine/growthDrag';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -85,6 +87,12 @@ export function WeeklyResultScreen({
     losses.push({ kind: 'stat', stat: k, text: `${STAT_LABELS[k]} ${Math.round((v ?? 0) * 10) / 10}` });
   }
   if ((weekLog.fatigueChange ?? 0) >= 25) losses.push({ kind: 'fatigue', text: '피로 누적' });
+
+  // T67 성장 둔화 한 줄 — 원인 판정은 엔진이 로그에 박았다(pickGrowthReason). 보일지 말지는
+  // visibleGrowthReason 하나가 정한다(같은 주 이벤트 몫이 접힌 **최종** 변화량으로 잘 는 주를 다시 묻는다
+  // — 결산 독백도 같은 함수를 쓴다). 학교급은 로그가 박은 학년을 쓴다(제목과 같은 이유).
+  const visibleReason = visibleGrowthReason(weekLog);
+  const growthReason = visibleReason ? growthReasonLine(visibleReason, weekLog.year ?? year) : null;
 
   // 피로 라벨/색 단일 SSOT — HUD와 동일하게 getFatigueDisplay 사용 (color는 부모가 이미 같은 함수로 계산해 prop 주입).
   const resultFatigueLabel = getFatigueDisplay(fatigue).label;
@@ -234,6 +242,23 @@ export function WeeklyResultScreen({
                 <span>{loss.text}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* 왜 덜 늘었나 — 그 주 성장을 가장 크게 깎은 원인 한 줄(T67). 숫자는 안 쓴다(hide-numbers).
+            바로 아래 변화량 표의 **해설**이라 표 바로 위에 붙인다 — 변화 신호는 또렷이. 잃은 것 칩이
+            "무엇이 내려갔나"라면 이 줄은 "왜 덜 올랐나"다. 사진 위에 서고 글자와 배경이 한 객체라
+            불투명 바닥(chipSurface)을 깐다 — tintedGlass는 0.85라 대비 게이트가 판정을 못 한다. */}
+        {growthReason && (
+          <div data-testid="growth-reason" style={{
+            display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 10,
+            padding: '8px 12px', borderRadius: 10,
+            background: chipSurface('rgba(125,163,217,0.08)'), border: '1px solid rgba(125,163,217,0.28)',
+            fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--text-secondary)',
+            whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'break-word',
+          }}>
+            <span aria-hidden="true" style={{ fontSize: '0.9rem' }}>💭</span>
+            <span>{breakSentences(growthReason)}</span>
           </div>
         )}
 
