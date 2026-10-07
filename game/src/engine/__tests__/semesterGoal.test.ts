@@ -21,7 +21,7 @@ import type { ActiveSemesterGoal, GameState, SemesterGoalKind } from '../types';
 
 function semState(patch: Partial<GameState> = {}): GameState {
   return makeState({
-    phase: 'weekday', year: 1, week: 3, isVacation: false, semester: 1, money: 10,
+    phase: 'weekday', year: 1, week: 2, isVacation: false, semester: 1, money: 10,
     routineSlot2: 'self-study', routineSlot3: 'self-study', currentEvent: null,
     ...patch,
   });
@@ -37,9 +37,9 @@ function marks(n: number, year = 1, start = 1): number[] {
 }
 
 describe('상수 — 착지값을 먼저 박는다', () => {
-  it('임계 6주 · 창 8주 · 학기 경계는 getWeekInfo에서 파생된 W1~19 / W25~42', () => {
+  it('임계 6주 · 창 2주 · 학기 경계는 getWeekInfo에서 파생된 W1~19 / W25~42', () => {
     expect(GOAL_TARGET_WEEKS).toBe(6);
-    expect(GOAL_PICK_WINDOW).toBe(8);
+    expect(GOAL_PICK_WINDOW).toBe(2);
     expect(SEMESTER_BOUNDS).toEqual({ 1: { start: 1, end: 19 }, 2: { start: 25, end: 42 } });
   });
 
@@ -69,14 +69,14 @@ describe('상수 — 착지값을 먼저 박는다', () => {
 });
 
 describe('고를 수 있는 때', () => {
-  it('학기 1~8주차만 — 9주차·방학·다음 학기 9주차는 못 고른다', () => {
+  it('학기 1~2주차만 — 3주차·방학·다음 학기 3주차는 못 고른다', () => {
     expect(canPickSemesterGoal(semState({ week: 1 }))).toBe(true);
-    expect(canPickSemesterGoal(semState({ week: 8 }))).toBe(true);
-    expect(canPickSemesterGoal(semState({ week: 9 }))).toBe(false);
+    expect(canPickSemesterGoal(semState({ week: 2 }))).toBe(true);
+    expect(canPickSemesterGoal(semState({ week: 3 }))).toBe(false);
     expect(canPickSemesterGoal(semState({ week: 20, isVacation: true }))).toBe(false);
     expect(canPickSemesterGoal(semState({ week: 25 }))).toBe(true);
-    expect(canPickSemesterGoal(semState({ week: 32 }))).toBe(true);
-    expect(canPickSemesterGoal(semState({ week: 33 }))).toBe(false);
+    expect(canPickSemesterGoal(semState({ week: 26 }))).toBe(true);
+    expect(canPickSemesterGoal(semState({ week: 27 }))).toBe(false);
   });
 
   it('결산·사건·학년말 화면 중엔 못 고른다', () => {
@@ -115,7 +115,7 @@ describe('무엇을 세는가 — processWeek 배선', () => {
 
   it('주말에 실행된 그 계열 활동이 있으면 그 주를 표시한다', () => {
     const after = run(semState({ semesterGoal: goal(), weekendChoices: ['light-exercise', 'rest'] }));
-    expect(after.semesterGoal!.markedWeeks).toEqual([absWeek(1, 3)]);
+    expect(after.semesterGoal!.markedWeeks).toEqual([absWeek(1, 2)]);
   });
 
   it('루틴(방과후)의 같은 계열은 세지 않는다 — 세면 고르는 순간 달성이다', () => {
@@ -150,8 +150,8 @@ describe('무엇을 세는가 — processWeek 배선', () => {
   });
 
   it('같은 주를 두 번 세지 않는다 (스탬프)', () => {
-    const s = semState({ semesterGoal: goal({ markedWeeks: [absWeek(1, 3)] }), weekendChoices: ['light-exercise'] });
-    expect(run(s).semesterGoal!.markedWeeks).toEqual([absWeek(1, 3)]);
+    const s = semState({ semesterGoal: goal({ markedWeeks: [absWeek(1, 2)] }), weekendChoices: ['light-exercise'] });
+    expect(run(s).semesterGoal!.markedWeeks).toEqual([absWeek(1, 2)]);
   });
 
   it('방학 주는 세지 않는다', () => {

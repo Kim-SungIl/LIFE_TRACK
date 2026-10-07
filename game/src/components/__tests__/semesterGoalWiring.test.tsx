@@ -21,7 +21,7 @@ import type { GameState } from '../../engine/types';
 function weekdayState(patch: Partial<GameState> = {}): GameState {
   const s = createInitialState('male', ['emotional', 'info'], { rngSeed: 4242 });
   return Object.assign(s, {
-    phase: 'weekday' as const, year: 1, week: 3, money: 10,
+    phase: 'weekday' as const, year: 1, week: 2, money: 10,
     routineSlot2: 'self-study', routineSlot3: 'self-study', currentEvent: null,
   }, patch);
 }
@@ -53,8 +53,8 @@ describe('주간 화면 칩 → store', () => {
     expect(screen.getByTestId('semester-goal-chip').textContent).not.toMatch(/\d/);
   });
 
-  it('창 밖(9주차)이고 목표가 없으면 칩이 없다', () => {
-    put(weekdayState({ week: 9 }));
+  it('창 밖(3주차 — 첫 2주가 지나면)이고 목표가 없으면 칩이 없다', () => {
+    put(weekdayState({ week: 3 }));
     render(<GameScreen />);
     expect(screen.queryByTestId('semester-goal-chip')).toBeNull();
   });

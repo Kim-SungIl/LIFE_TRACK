@@ -37,8 +37,13 @@ import { INITIAL_NPCS } from './npcRoster';
 
 /** 해냈다로 치는 주 수. 고를 수 있는 마지막 주에 골라도 남은 학기 주가 이보다 넉넉하다(아래 검사). */
 export const GOAL_TARGET_WEEKS = 6;
-/** 학기 시작부터 몇 번째 주까지 고를 수 있나(학기 상대 주차, 1부터). */
-export const GOAL_PICK_WINDOW = 8;
+/**
+ * 학기 시작부터 몇 번째 주까지 고를 수 있나(학기 상대 주차, 1부터).
+ * 2주인 이유: 칩은 목표가 없으면 이 창 동안 "정하기"로 서 있는다. 8주였을 땐 안 고른 플레이어에게
+ * 두 달 내내 같은 권유가 떴다(사용자 판정 — 학기 첫 2주만). 고른 목표의 진행 칩은 창과 무관하게 학기 내내 남는다.
+ * Y1 W1은 튜토리얼 오버레이가 칩을 덮지만 튜토리얼은 W1 안에서 끝나므로 W1 후반·W2가 남는다.
+ */
+export const GOAL_PICK_WINDOW = 2;
 
 /** 활동 계열 목표 → 활동 category. 친구 목표는 category가 아니라 동행으로 센다. */
 export const GOAL_ACTIVITY_CATEGORY: Record<Exclude<SemesterGoalKind, 'friend'>, Activity['category']> = {
