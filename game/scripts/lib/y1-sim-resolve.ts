@@ -10,7 +10,8 @@ import {
   type GameEvent,
 } from '../../src/engine/events';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from '../../src/engine/memorySystem';
-import { scaleStatChange, scaleIntimacyChange } from '../../src/engine/gameEngine';
+import { scaleStatChange, scaleIntimacyChange, applyYearTransition } from '../../src/engine/gameEngine';
+import { CAREER_CHOICE_EVENT_ID } from '../../src/engine/careerChoice';
 import { applyParentIntimacyDelta } from '../../src/engine/parentIntimacy';
 import { absWeek } from '../../src/engine/weekMath';
 import { isNpcInteractable } from '../../src/engine/relationshipSignals';
@@ -92,6 +93,8 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
 
   if (choice.timeCost) newState.eventTimeCost = choice.timeCost;
   if (choice.trackSelect) newState.track = choice.trackSelect;
+  // T66: store.applyChoiceOutcome와 동일 — 진로 갈림길 선택.
+  if (choice.careerSelect) newState.careerChoice = choice.careerSelect;
 
   // store.applyChoiceOutcome와 동일: 이벤트 선택의 부모 친밀도 반응 + 그 주 평균회귀 면제 플래그.
   if (choice.parentEffect) {
@@ -128,7 +131,14 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     newState.weekLog.messages.push(`📖 ${choice.message}`);
   }
 
+  const resolvedId = newState.currentEvent!.id;
   newState.currentEvent = null;
+
+  // T66: store.resolveEvent와 동일 — 진로 갈림길 뒤에는 체인 없이 곧장 엔딩 전환.
+  if (resolvedId === CAREER_CHOICE_EVENT_ID) {
+    applyYearTransition(newState);
+    return newState;
+  }
 
   const followupFiredThisWeek = newState.events.some(
     prev => prev.week === occurrenceWeek && prev.year === newState.year

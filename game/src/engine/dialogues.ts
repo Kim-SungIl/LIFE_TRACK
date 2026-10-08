@@ -1,6 +1,7 @@
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
 import { GameState, WeekLog } from './types';
 import { isExamPeriod } from './examSystem';
+import { GOOD_WEEK_AXIS_GAIN, slowdownShown } from './growthDrag';
 
 interface DialoguePool {
   condition: (s: GameState) => boolean;
@@ -558,10 +559,17 @@ export function getNpcDialogue(npcId: string, intimacy: number, state: GameState
 // getCharacterDialogue는 상태 풀(피로/멘탈/방학 등)에서 무작위로 뽑기 때문에
 // 선거 당선 같은 강한 이벤트 직후에도 "날씨가 좋다"가 나올 수 있어 결산에서는 위화감이 큼.
 // 우선순위: 시험 결과 > 마일스톤 > 큰 변화 > 이벤트 발생 → 그래도 안 잡히면 기본 풀로 fallback.
-interface ResultDialoguePool {
+export interface ResultDialoguePool {
   condition: (s: GameState, w: WeekLog) => boolean;
   lines: string[];
   priority: number;
+  /**
+   * "좋았다" 계열 — 잘 본 시험·마일스톤·잘 는 축. 결산에 성장 둔화 줄(T67)이 보이는 주에는 이 풀은
+   * **전부** 물러선다(slowdownShown). 풀마다 따로 가드를 달면 하나가 빠져도 아무도 모른다(검수에서
+   * 멘탈 풀이 빠져 mood 문장 326건 중 171건이 "마음이 한결 가볍다"와 함께 떴다). 그래서 표지는 풀에,
+   * 판정은 getResultDialogue 한 곳에 둔다.
+   */
+  upbeat?: true;
 }
 
 // 5개 스탯 변화의 합. 양성/음성 풀 매칭 시 "혼재 주차" 오발동을 막는 보조 가드.
@@ -570,9 +578,10 @@ function netStatChange(w: WeekLog): number {
   return Object.values(w.statChanges).reduce<number>((sum, v) => sum + (v ?? 0), 0);
 }
 
-const RESULT_POOLS: ResultDialoguePool[] = [
+/** 결산 독백 풀 — export는 테스트용(긍정 풀 전수 순회, growthReasonDialogue.test.ts). */
+export const RESULT_POOLS: readonly ResultDialoguePool[] = [
   // 모의/수능 — 등급 기반
-  { priority: 100,
+  { upbeat: true, priority: 100,
     condition: (_, w) => w.examResult?.mockGrade != null && w.examResult.mockGrade <= 2,
     lines: [
       '...해냈다. 진짜로.',
@@ -589,7 +598,7 @@ const RESULT_POOLS: ResultDialoguePool[] = [
     ],
   },
   // 내신 시험 — 평균 기반
-  { priority: 95,
+  { upbeat: true, priority: 95,
     condition: (_, w) => w.examResult != null && w.examResult.mockGrade == null && w.examResult.average >= 85,
     lines: [
       '이번엔 정말 잘 본 것 같다.',
@@ -606,7 +615,7 @@ const RESULT_POOLS: ResultDialoguePool[] = [
     ],
   },
   // 성장 마일스톤
-  { priority: 80,
+  { upbeat: true, priority: 80,
     condition: (_, w) => (w.milestoneMessages?.length ?? 0) > 0,
     lines: [
       '뭔가 한 단계 올라간 기분이다.',
@@ -616,24 +625,25 @@ const RESULT_POOLS: ResultDialoguePool[] = [
     ],
   },
   // 큰 양수 변화 — stat 임계 + net 양성 가드 (혼재 주차에선 fallback으로 빠지도록)
-  { priority: 60,
-    condition: (_, w) => (w.statChanges.academic ?? 0) >= 1.5 && netStatChange(w) >= 1,
+  // 임계는 성장 둔화 줄(T67)과 **같은 상수**다 — 엔진은 이 임계를 넘은 주에 둔화 줄을 안 낸다.
+  { upbeat: true, priority: 60,
+    condition: (_, w) => (w.statChanges.academic ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['공부가 손에 잡힌 한 주였다.', '머리가 잘 돌아간 느낌이야.', '문제집 한 권을 끝낸 기분.'],
   },
-  { priority: 60,
-    condition: (_, w) => (w.statChanges.social ?? 0) >= 1.5 && netStatChange(w) >= 1,
+  { upbeat: true, priority: 60,
+    condition: (_, w) => (w.statChanges.social ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['친구들과 가까워진 느낌이다.', '이번 주는 사람 사이의 온도가 좋았어.', '단톡방 알림이 많아진 게 좋다.'],
   },
-  { priority: 60,
-    condition: (_, w) => (w.statChanges.talent ?? 0) >= 1.5 && netStatChange(w) >= 1,
+  { upbeat: true, priority: 60,
+    condition: (_, w) => (w.statChanges.talent ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['내가 좋아하는 게 손에 익는다.', '이거 진짜 내 길인지도 모르겠다.', '연습한 만큼 늘었다.'],
   },
-  { priority: 55,
+  { upbeat: true, priority: 55,
     condition: (_, w) => (w.statChanges.mental ?? 0) >= 2 && netStatChange(w) >= 1,
     lines: ['마음이 한결 가볍다.', '오랜만에 숨이 잘 쉬어진다.', '괜찮은 한 주였다.'],
   },
-  { priority: 55,
-    condition: (_, w) => (w.statChanges.health ?? 0) >= 1.5 && netStatChange(w) >= 1,
+  { upbeat: true, priority: 55,
+    condition: (_, w) => (w.statChanges.health ?? 0) >= GOOD_WEEK_AXIS_GAIN && netStatChange(w) >= 1,
     lines: ['몸이 가벼워졌다.', '체력이 붙는 게 느껴진다.', '계단을 올라가는 게 덜 힘들다.'],
   },
   // 큰 음수 변화 — 어느 스탯이든 -1.5 이하 + net도 음성일 때만 (양성 우세 주차에서 오발동 방지)
@@ -659,7 +669,10 @@ const RESULT_POOLS: ResultDialoguePool[] = [
 
 export function getResultDialogue(state: GameState, weekLog: WeekLog): string {
   const sorted = [...RESULT_POOLS].sort((a, b) => b.priority - a.priority);
+  // 둔화 줄이 보이는 주에는 "좋았다" 계열이 전부 물러선다 — 판정은 결산 화면과 같은 함수(T67).
+  const quiet = slowdownShown(weekLog);
   for (const pool of sorted) {
+    if (quiet && pool.upbeat) continue;
     if (pool.condition(state, weekLog)) {
       return pool.lines[Math.floor(Math.random() * pool.lines.length)];
     }

@@ -17,9 +17,11 @@ import {
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
+import { CAREER_CHOICE_EVENT_ID } from './careerChoice';
 import { recordMoneySpent, recordMoneyBlockedWeek } from './moneyTrajectory';
 import { captureWeekendPlan } from './weekendPlan';
 import { saveLastSetup } from './lastSetup';
+import { pickSemesterGoal, type GoalOffer } from './semesterGoal';
 
 /** 가시 효과의 "적용 전" 스냅샷 — 실제로 얼마가 먹혔는지는 클램프 뒤에만 알 수 있다. */
 function visibleSnapshot(s: GameState): { stats: GameState['stats']; fatigue: number; money: number } {
@@ -220,6 +222,11 @@ interface GameStore {
   // T25 — 계획 화면의 확정 버튼이 **돈 때문에** 잠긴 주를 알린다.
   // 판정 주체가 UI인 이유: 그 주는 확정되지 않으므로 processWeek에 도달하지 않는다.
   markMoneyBlockedWeek: () => void;
+  /**
+   * T68 — 이번 학기 목표를 고른다. 판정(고를 수 있는 때·후보)은 `semesterGoal.ts` 하나다.
+   * 제시된 후보가 아니거나 고를 수 없는 때면 아무것도 안 하고 false. 스탯·rng 무관(기록만).
+   */
+  chooseSemesterGoal: (offer: GoalOffer) => boolean;
 }
 
 // ===== resolveEvent 단계 헬퍼 (순수 추출 — state 직접 mutate, 동작 보존) =====
@@ -309,6 +316,10 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
   // 문/이과 선택 (Y6 W1 이벤트 전용)
   if (choice.trackSelect) {
     state.track = choice.trackSelect;
+  }
+  // T66: 진로 갈림길 선택 (career-crossroads 전용). 엔딩은 이 값을 열린 갈래 안에서만 쓴다.
+  if (choice.careerSelect) {
+    state.careerChoice = choice.careerSelect;
   }
   // Phase 4C: 이벤트 선택의 부모 친밀도 반응 — 단일 진입점. 그 주는 평균회귀 면제.
   if (choice.parentEffect) {
@@ -629,7 +640,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.currentEvent = null;
 
     // followup/conditional/milestone chain + 학년 전환·결산 분기 (location은 clone 이전 원본)
-    resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
+    if (event.id === CAREER_CHOICE_EVENT_ID) {
+      // T66: 갈림길 뒤에는 아무것도 끼우지 않고 곧장 엔딩으로 — 체인 사건이 스탯을 움직이면
+      // 방금 고른 갈래가 엔딩 시점에 닫힐 수 있다(careerChoice.ts 헤더).
+      applyYearTransition(newState);
+    } else {
+      resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
+    }
 
     const runDelta = commitOnEnding(s, newState);
     set({ state: newState, ...(runDelta ? { runDelta } : {}) });
@@ -814,6 +831,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.parentEventPendingThisWeek = false;
     accrueParentEvent(newState, ev.id);
     set({ state: newState });
+  },
+
+  chooseSemesterGoal: (offer) => {
+    const s = get().state;
+    if (!s) return false;
+    const next = cloneGameState(s);
+    if (!pickSemesterGoal(next, offer)) return false;
+    set({ state: next });
+    return true;
   },
 
   // ===== 디버그 메서드 (DebugPanel에서 호출, import.meta.env.DEV 가드는 컴포넌트 쪽에서) =====

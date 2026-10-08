@@ -781,7 +781,7 @@ export const PARENT_MINI_EVENTS: MiniTalkEvent[] = [
         },
       },
       {
-        label: '"뭘 해야 할지 모르겠어요." 떠넘긴다',
+        label: '"뭘 해야 할지 모르겠어요." 엄마에게 기대 본다',
         parentEffect: { baseDelta: -1.0, tag: 'ignoreAdvice' },
         effects: { fatigue: -1 },
         message: '결정을 미뤘다 — 피로 -1',

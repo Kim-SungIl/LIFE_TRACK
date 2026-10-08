@@ -8,7 +8,8 @@ import { Stats, StatKey, STAT_LABELS, Track, ParentStrength, Gender, MemorySlot,
 import { resolveEventCgUrl } from '../../engine/eventCg';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { BG_IMAGE_OPACITY_UNTREATED } from './surface';
-import { STAT_ICONS } from './shared';
+import { StatIcon } from '../icons/icons';
+import { STAT_BAR_HEIGHT, STAT_ICON_SIZE } from './main/StatsPanel';
 import { RunArchiveSummary } from './RunArchiveSummary';
 import { CgItem, catOf } from './memoryTokens';
 import { HeroGallery, MemoryThumb } from './memoryVisuals';
@@ -190,15 +191,35 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
           </div>
         )}
 
+        {/* 회복(T66) — 행복 등급의 궤적 캡은 한 번 무너진 판을 A 위로 못 올린다(의도된 설계). 등급은
+            그대로 두고, 학년별 궤적이 "무너졌다가 다시 일어나 끝났다"를 뒷받침할 때만 그 사실을 말한다
+            (ending.ts recoveryClaimOf). 근거가 없는 판(null)은 그리지 않는다. */}
+        {ending.recoveryNote && (
+          <div data-testid="ending-recovery-note" style={{
+            fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: 1.7,
+            maxWidth: 360, marginLeft: 'auto', marginRight: 'auto',
+            marginTop: -8, marginBottom: 16,
+          }}>
+            {ending.recoveryNote}
+          </div>
+        )}
+
         <div style={{ width: '100%', maxWidth: 360, margin: '0 auto 16px' }}>
           {(Object.keys(stats) as StatKey[]).map(key => {
             const grade = getGrade(stats[key]);
             return (
               <div key={key} style={{ display: 'flex', alignItems: 'center', padding: '4px 0' }}>
-                <span style={{ width: 24 }}>{STAT_ICONS[key]}</span>
+                {/* 그림 채널 — 능력치 5행이 **표로 반복되는** 자리는 선화다(StatsPanel · 주간 결산과 같은 규칙).
+                    width는 24를 유지하되 inline-flex로 가운데 세운다: 이모지는 글자라 칸 안에서 저절로
+                    가운데였지만 SVG는 블록이라 그냥 두면 왼쪽에 붙는다. */}
+                <span style={{ width: 24, display: 'inline-flex', justifyContent: 'center', color: 'var(--text-secondary)' }}>
+                  <StatIcon stat={key} size={STAT_ICON_SIZE} />
+                </span>
                 <span style={{ width: 32, fontSize: '0.8rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
-                <div style={{ flex: 1, height: 14, background: 'rgba(255,255,255,0.1)', borderRadius: 7, margin: '0 8px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${stats[key]}%`, background: grade.color, borderRadius: 7 }} />
+                {/* 막대 높이는 StatsPanel의 SSOT를 쓴다 — 지금 값이 14/7이라 화면은 그대로이고,
+                    주간 화면이 바뀔 때 엔딩만 남는 일이 없어진다. */}
+                <div style={{ flex: 1, height: STAT_BAR_HEIGHT, background: 'rgba(255,255,255,0.1)', borderRadius: STAT_BAR_HEIGHT / 2, margin: '0 8px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${stats[key]}%`, background: grade.color, borderRadius: STAT_BAR_HEIGHT / 2 }} />
                 </div>
                 <span style={{ fontSize: '0.8rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
                 <span style={{ width: 28, fontSize: '0.72rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(stats[key])}</span>
