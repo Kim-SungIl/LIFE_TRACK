@@ -607,16 +607,32 @@ export const ACTIVITIES: Activity[] = [
  *   [trip, trip] timeCost=1 후 [trip] → [trip] (꼬리 잘림 1회만)
  */
 export function collapseActivityChoices(ids: string[]): string[] {
-  const result: string[] = [];
+  return collapseActivityChoicesWithSlots(ids).map(inst => inst.id);
+}
+
+/** 활동 인스턴스 하나와 그것이 차지한 **슬롯 인덱스**들. 동행 키(`${activityId}:${slotIdx}`)를 실행분과 맞출 때 쓴다. */
+export interface ActivityInstance {
+  id: string;
+  slots: number[];
+}
+
+/**
+ * `collapseActivityChoices`와 같은 접기 규칙에 **원래 슬롯 인덱스**를 붙여 돌려준다(접기 규칙은 이 함수 하나).
+ * 왜 필요한가(T68 검수): 주말 `['club','club']`에 동행이 `club:1`인데 timeCost로 둘째 칸이 잘리면,
+ * id만 보면 첫 칸 club이 실행됐으니 "그 친구와 동행했다"로 오판한다. 인스턴스가 덮은 칸을 알아야 한다.
+ */
+export function collapseActivityChoicesWithSlots(ids: string[]): ActivityInstance[] {
+  const result: ActivityInstance[] = [];
   for (let i = 0; i < ids.length; i++) {
     const id = ids[i];
     if (!id) continue;
     const act = ACTIVITIES.find(a => a.id === id);
     if (!act) continue;
-    result.push(id);
+    const inst: ActivityInstance = { id, slots: [i] };
+    result.push(inst);
     if (act.slots >= 2) {
       let skip = 0;
-      for (let k = 1; k < act.slots && ids[i + k] === id; k++) skip++;
+      for (let k = 1; k < act.slots && ids[i + k] === id; k++) { skip++; inst.slots.push(i + k); }
       i += skip;
     }
   }

@@ -12,6 +12,17 @@ import { StatIcon } from '../../icons/icons';
  */
 export const STAT_BAR_HEIGHT = 14;
 
+/**
+ * 같은 5행이 쓰는 아이콘 치수. 막대 높이와 **값이 같지만 뜻이 다르다** — 우연히 겹친 것이라
+ * 한쪽을 바꾼다고 다른 쪽이 따라가면 안 된다. 그래서 별도 상수다.
+ *
+ * 왜 상수인가: 이 5행은 StatsPanel · 주간 결산 표 · 결산 칩 · 엔딩 표 **네 자리**에 같은 모양으로
+ * 반복된다. 리터럴로 흩어 두면 한 자리만 커져도 아무도 못 본다(실측: 엔딩만 30으로 키워도
+ * 77개 전부 초록이었다). 막대 높이를 SSOT로 뽑으면서 같은 행의 짝 치수를 리터럴로 두면
+ * 절반만 봉합한 것이다.
+ */
+export const STAT_ICON_SIZE = 14;
+
 type Props = { stats: Stats; year: number };
 
 // 능력치 패널 — 접기/펼치기 + 스탯별 설명 토글. 로컬 UI state(showStats/expandedStat)는 이 패널 전용.
@@ -58,7 +69,7 @@ export const StatsPanel = memo(function StatsPanel({ stats, year }: Props) {
                 <button type="button" className="btn-reset" style={{ display: 'flex', alignItems: 'center', padding: '3px 0', cursor: 'pointer', width: '100%', textAlign: 'left' }} onClick={() => setExpandedStat(isExp ? null : key)} aria-expanded={isExp}>
                   {/* 선화 아이콘 — 칸 폭(20)은 그대로 두고 그림만 바뀐다. 이모지는
                       기기 폰트가 그리던 거라 크기가 제각각이었고, 이제 currentColor를 탄다. */}
-                  <span style={{ width: 20, display: 'inline-flex', justifyContent: 'center', color: 'var(--text-secondary)' }}><StatIcon stat={key} size={14} /></span>
+                  <span style={{ width: 20, display: 'inline-flex', justifyContent: 'center', color: 'var(--text-secondary)' }}><StatIcon stat={key} size={STAT_ICON_SIZE} /></span>
                   <span style={{ width: 28, fontSize: '0.72rem', fontWeight: 600 }}>{STAT_LABELS[key]}</span>
                   <div style={{ flex: 1, height: STAT_BAR_HEIGHT, background: 'rgba(255,255,255,0.08)', borderRadius: STAT_BAR_HEIGHT / 2, margin: '0 6px', position: 'relative', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: STAT_BAR_HEIGHT / 2, transition: 'width 0.3s' }} />

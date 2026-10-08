@@ -12,21 +12,30 @@ interface Props {
   mental?: number;
   mentalState?: string;
   year?: number;
-  /** 액자 처리 — 테두리(outline)와 그림자.
-   *  neutral 초상은 **투명 누끼가 아니라 불투명 파스텔 배경**이 규약이라(누끼 금지),
-   *  아무 처리 없이 두면 파스텔 사각형이 바탕에 박힌 것처럼 보인다. 테두리와 그림자를
-   *  줘서 "사진을 세워둔 것"으로 읽히게 한다.
+  /**
+   * 액자 처리 — **놓이는 자리**로 고른다. `'card'`는 유리 카드 안, `'photo'`는 배경 사진 위.
    *
-   *  **전제가 바뀌었다.** 예전엔 "배경 사진 위에 맨몸으로 놓일 때만" 필요하다고 적혀 있었고
-   *  (#455), 그래서 유리 바닥을 받은 HUD 초상은 제외였다. 맞는 말이었지만 그 규칙은 대비만
-   *  본 것이다 — 주간 결산의 같은 초상은 액자이고 HUD의 초상은 아니어서, 매 주 오가는 두
-   *  화면에서 같은 그림이 다른 처리로 보였다. 지금은 **초상을 사진으로 읽히게 하는 처리**로
-   *  뜻을 넓혔고, 주간 화면·결산 둘 다 켠다. (카드 안이면 그림자가 과한데, 0.38 알파에
-   *  10px 블러라 52px 초상에서는 가장자리에만 닿는다 — 실측이 아니라 값의 성질이다.) */
-  framed?: boolean;
+   * 왜 액자가 필요한가: neutral 초상은 **투명 누끼가 아니라 불투명 파스텔 배경**이 규약이라
+   * (누끼 금지), 아무 처리 없이 두면 파스텔 사각형이 바탕에 박힌 것처럼 보인다. 테두리를 줘서
+   * "사진을 세워둔 것"으로 읽히게 한다.
+   *
+   * **테두리는 두 자리가 같고, 그림자만 다르다.** 예전엔 `framed` 불리언 하나였고 둘 다
+   * 테두리+그림자였다. #455는 "배경 사진 위에 맨몸일 때만"이라 HUD를 제외했었고, #496은
+   * "매주 오가는 두 화면에서 같은 초상이 한쪽만 액자"라는 이유로 HUD도 켰다. 둘 다 근거가
+   * 있었지만 어느 쪽도 실측이 아니었다.
+   *
+   * **실측(T63).** 배포본을 390×844·DPR 3으로 띄워 같은 주차의 두 처리를 픽셀로 쟀다:
+   *   · 그림자는 초상 바깥 **1~4px**에서 카드 바닥을 42.4 vs 51.0으로 만든다 — 상대 17%.
+   *     4~10px에서는 −2.7로 떨어지고 그 밖은 0이다. "가장자리에만 닿는다"는 맞았지만,
+   *     그 가장자리 안에서는 카드 위에 테두리가 한 겹 더 있는 것처럼 읽힐 만큼은 한다.
+   *   · 테두리를 2px에서 1px로 낮추면 **0.6/255**밖에 안 바뀐다. 그래서 두께는 안 건드린다 —
+   *     효과 없는 변경으로 두 화면을 갈라놓을 이유가 없다.
+   * 그래서 카드 안에서는 **그림자만** 끈다. 사진 위(주간 결산)는 바탕이 사진이라 그대로 둔다.
+   */
+  frame?: 'card' | 'photo';
 }
 
-export function Portrait({ characterId, expression, size = 80, label, mental, mentalState, year, framed }: Props) {
+export function Portrait({ characterId, expression, size = 80, label, mental, mentalState, year, frame }: Props) {
   // `?? 'neutral'`이 필요하다 — mentalToExpression의 반환 타입이 `AvatarExpression | undefined`라
   // (CharacterAvatar Props의 expression이 optional) 이대로 두면 `string | undefined`가 된다.
   // 예전엔 템플릿 문자열에 바로 꽂아서 타입이 안 걸렸다.
@@ -75,10 +84,11 @@ export function Portrait({ characterId, expression, size = 80, label, mental, me
             borderRadius: size * 0.15,
             // outline은 레이아웃을 안 건드린다 — border를 쓰면 box-sizing:border-box라
             // 그림이 들어갈 자리가 줄고, #443이 잠근 aspectRatio 계산에도 끼어든다.
-            ...(framed ? {
+            ...(frame ? {
               outline: '2px solid rgba(255,255,255,0.18)',
               outlineOffset: '-2px',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.38)',
+              // 사진 위에서만 띄운다 — 카드 안에서는 이 한 줄이 초상 둘레 4px을 17% 어둡게 한다.
+              ...(frame === 'photo' ? { boxShadow: '0 2px 10px rgba(0,0,0,0.38)' } : {}),
             } : {}),
           }}
           onError={() => setIdx(i => i + 1)}
