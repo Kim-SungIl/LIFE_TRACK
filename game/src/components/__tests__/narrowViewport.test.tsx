@@ -107,6 +107,12 @@ describe('#444 HUD — 우측 블록이 찌그러지지 않는다', () => {
     return { hud, row1: hud.children[0] as HTMLElement, controls: hud.children[1] as HTMLElement };
   };
 
+  it('피로는 라벨만 낸다 — 수치 없음 (hide-numbers)', () => {
+    renderHud();
+    expect(screen.getByText('피로 · 좋음')).toBeTruthy();
+    expect(screen.queryByText(/피로\s*\d/), 'HUD에 피로 수치가 돌아왔다').toBeNull();
+  });
+
   it('우측 블록은 줄어들지도 줄바꿈하지도 않는다', () => {
     const { container } = renderHud();
     const { row1 } = rows(container);
