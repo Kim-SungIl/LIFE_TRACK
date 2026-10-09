@@ -141,8 +141,7 @@ export function loadArchive(): RunArchive {
       lastRunDelta: readDelta(parsed.lastRunDelta),
       // 안 읽으면 **매 로드마다 조용히 지워진다**(이 리더는 화이트리스트다) → 재커밋이 매번 돌아
       // 완주가 부푼다. 빈 문자열은 신원이 아니므로 undefined로 접는다.
-      lastCommittedRunId: typeof parsed.lastCommittedRunId === 'string' && parsed.lastCommittedRunId
-        ? parsed.lastCommittedRunId : undefined,
+      lastCommittedRunId: isRunId(parsed.lastCommittedRunId) ? parsed.lastCommittedRunId : undefined,
     };
 
     migrateArchive(a, from);
@@ -441,10 +440,32 @@ export function commitRun(state: GameState, endingTitle: string): RunDelta {
   a.pendingRun = { events: [], talks: [] };
   // 이 판이 디스크에 닿았다는 표식 — runs와 **같은 persist**에 실어야 둘이 안 갈라진다.
   // runId 없는 판(구세이브·시뮬)은 남길 신원이 없으므로 직전 값을 지우지 않고 둔다.
-  if (state.runId) a.lastCommittedRunId = state.runId;
+  if (isRunId(state.runId)) a.lastCommittedRunId = state.runId;
 
   persist(a);
   return delta;
+}
+
+/**
+ * 판 신원으로 인정하는 모양 — **비어 있지 않은 문자열만.** 신원 판정의 유일한 근거(SSOT)다.
+ *
+ * 왜 한 함수인가: 신원을 읽는 곳이 셋(세이브 정규화·needsRecommit·commitRun의 원장 쓰기)이고
+ * 기록 리더가 넷째다. 한쪽은 truthy만 보고 다른 쪽은 문자열만 받으면, 세이브의 `runId: 123`이
+ * 재커밋 판정은 통과하는데 원장에는 끝내 안 남아 **이어하기마다 완주가 하나씩 부푼다**(실측 1→2→3).
+ */
+export function isRunId(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0;
+}
+
+/**
+ * 이 판의 완주가 **이미 기록층에 닿았나** — 원장의 신원과 같으면 닿은 것이다.
+ *
+ * 두 경로가 쓴다: 이어하기의 재커밋 판정(needsRecommit)과 엔딩 전이의 커밋(store.commitOnEnding).
+ * 후자가 필요한 이유: 세이브 키만 쓰기가 실패한 채 완주하면 기록은 닿았는데 디스크 세이브는
+ * 엔딩 직전 주에 남는다. 이어하기로 다시 엔딩에 들어서면 전이 감지가 또 걸려 **같은 판을 두 번 센다.**
+ */
+export function alreadyCommitted(state: GameState): boolean {
+  return isRunId(state.runId) && loadArchive().lastCommittedRunId === state.runId;
 }
 
 /**
@@ -470,8 +491,8 @@ export function newRunId(): string {
  *     (weekday 경로의 근거는 store.commitOnEnding의 phase 전이 감지다).
  */
 export function needsRecommit(state: GameState): boolean {
-  if (state.phase !== 'ending' || !state.runId) return false;
-  return loadArchive().lastCommittedRunId !== state.runId;
+  if (state.phase !== 'ending' || !isRunId(state.runId)) return false;
+  return !alreadyCommitted(state);
 }
 
 /**

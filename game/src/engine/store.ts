@@ -14,7 +14,7 @@ import { applyParentIntimacyDelta } from './parentIntimacy';
 import { absWeek, isNpcInteractable } from './relationshipSignals';
 import {
   commitRun, beginRun, accrueFromState, accrueResolvedEvent, accrueTalk, accrueParentEvent,
-  newRunId, needsRecommit,
+  newRunId, needsRecommit, alreadyCommitted, isRunId,
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
@@ -447,6 +447,10 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
 function commitOnEnding(prev: GameState, next: GameState): RunDelta | null {
   if (next.phase !== 'ending' || prev.phase === 'ending') return null;
   try {
+    // 같은 판을 두 번 세지 않는다 — 기록은 닿았는데 세이브가 엔딩 전에 머문 판(세이브 키만
+    // 쓰기 실패)을 이어하기로 다시 끝내면 이 전이가 또 걸린다(archive.alreadyCommitted 참조).
+    // 요약은 기록층의 lastRunDelta가 이미 들고 있다.
+    if (alreadyCommitted(next)) return null;
     return commitRun(next, calculateEnding(next).title);
   } catch {
     return null;   // 기록 실패가 엔딩을 막지 않는다
@@ -522,6 +526,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       accrueFromState(loaded);
       // 신원 백필 — **아직 엔딩에 안 닿은 구세이브만.** 엔딩에 앉은 구세이브에 신원을 주면
       // 이미 세어진 판이 "안 닿은 판"으로 보여 완주가 부푼다(types.ts runId 참조).
+      // 문자열이 아닌 신원(손상·수동 편집)은 **신원 없음**으로 접는다 — 남겨 두면 재커밋 판정은
+      // 통과하는데 원장에는 안 남아 이어하기마다 완주가 부푼다(archive.isRunId 참조).
+      if (!isRunId(loaded.runId)) loaded.runId = undefined;
       if (!loaded.runId && loaded.phase !== 'ending') loaded.runId = newRunId();
       // 완주 재커밋 — 기록 쓰기가 실패한 판이 세이브에 남아 있으면 여기서 되살린다.
       // accrueFromState가 events·talks·CG를 이미 자가치유했지만 runs·endings는 state에
