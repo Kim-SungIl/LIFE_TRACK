@@ -78,6 +78,19 @@ export interface RunArchive {
   // 마지막으로 정산된 RunDelta. 엔딩 화면에서 새로고침해도 요약이 유지되게 하는 유일한 근거다
   // (store의 runDelta는 메모리라 새로고침에 사라진다).
   lastRunDelta: RunDelta | null;
+  /**
+   * 마지막으로 **디스크에 닿은** 완주의 판 신원(state.runId와 짝). 재커밋 판정의 유일한 근거다.
+   *
+   * 왜 한 칸이면 충분한가: 세이브 슬롯이 하나라 'ending'에 앉아 있을 수 있는 판도 하나뿐이다.
+   * 목록으로 쌓으면 판마다 커지는데, 이 필드가 필요해지는 상황이 바로 **용량이 모자란 때**라
+   * 원장이 문제를 키운다.
+   *
+   * ⚠️ **`runs`와 같은 persist에 실린다** — 둘이 갈라지면 재커밋이 중복 계상이 된다.
+   * 옵셔널: 이 필드가 없던 기록에서 온 값은 undefined이고, 그러면 runId를 가진 세이브는
+   * "아직 안 닿았다"로 읽힌다(맞는 판정이다 — runId는 이 빌드부터 생기고, 이 빌드의 성공한
+   * 커밋은 반드시 이 필드를 같이 쓴다). 그래서 스키마 버전은 올리지 않는다.
+   */
+  lastCommittedRunId?: string;
 }
 
 export function emptyArchive(): RunArchive {
@@ -126,6 +139,9 @@ export function loadArchive(): RunArchive {
         talks: arr(parsed.pendingRun?.talks),
       },
       lastRunDelta: readDelta(parsed.lastRunDelta),
+      // 안 읽으면 **매 로드마다 조용히 지워진다**(이 리더는 화이트리스트다) → 재커밋이 매번 돌아
+      // 완주가 부푼다. 빈 문자열은 신원이 아니므로 undefined로 접는다.
+      lastCommittedRunId: isRunId(parsed.lastCommittedRunId) ? parsed.lastCommittedRunId : undefined,
     };
 
     migrateArchive(a, from);
@@ -422,9 +438,61 @@ export function commitRun(state: GameState, endingTitle: string): RunDelta {
   };
   a.lastRunDelta = delta;
   a.pendingRun = { events: [], talks: [] };
+  // 이 판이 디스크에 닿았다는 표식 — runs와 **같은 persist**에 실어야 둘이 안 갈라진다.
+  // runId 없는 판(구세이브·시뮬)은 남길 신원이 없으므로 직전 값을 지우지 않고 둔다.
+  if (isRunId(state.runId)) a.lastCommittedRunId = state.runId;
 
   persist(a);
   return delta;
+}
+
+/**
+ * 판 신원으로 인정하는 모양 — **비어 있지 않은 문자열만.** 신원 판정의 유일한 근거(SSOT)다.
+ *
+ * 왜 한 함수인가: 신원을 읽는 곳이 셋(세이브 정규화·needsRecommit·commitRun의 원장 쓰기)이고
+ * 기록 리더가 넷째다. 한쪽은 truthy만 보고 다른 쪽은 문자열만 받으면, 세이브의 `runId: 123`이
+ * 재커밋 판정은 통과하는데 원장에는 끝내 안 남아 **이어하기마다 완주가 하나씩 부푼다**(실측 1→2→3).
+ */
+export function isRunId(v: unknown): v is string {
+  return typeof v === 'string' && v.length > 0;
+}
+
+/**
+ * 이 판의 완주가 **이미 기록층에 닿았나** — 원장의 신원과 같으면 닿은 것이다.
+ *
+ * 두 경로가 쓴다: 이어하기의 재커밋 판정(needsRecommit)과 엔딩 전이의 커밋(store.commitOnEnding).
+ * 후자가 필요한 이유: 세이브 키만 쓰기가 실패한 채 완주하면 기록은 닿았는데 디스크 세이브는
+ * 엔딩 직전 주에 남는다. 이어하기로 다시 엔딩에 들어서면 전이 감지가 또 걸려 **같은 판을 두 번 센다.**
+ */
+export function alreadyCommitted(state: GameState): boolean {
+  return isRunId(state.runId) && loadArchive().lastCommittedRunId === state.runId;
+}
+
+/**
+ * 새 판의 신원. 충돌하면 그 판의 완주가 **통째로 스킵**되므로 시각 + 난수 둘 다 쓴다.
+ *
+ * 시각만으로는 부족하다(같은 밀리초에 두 판을 시작할 수 있다). 난수만으로도 부족하다
+ * (Math.random은 시드가 같으면 같은 값을 낸다 — 자동화 환경에서 실제로 겹친다).
+ * `crypto.randomUUID`를 안 쓰는 이유는 비보안 컨텍스트·구형 웹뷰에서 없기 때문이다.
+ */
+export function newRunId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * 이 세이브의 완주가 기록층에 **안 닿았나** — 이어하기에서 재커밋할지의 유일한 판정.
+ *
+ * 세 조건이 전부 필요하다:
+ *   · `phase === 'ending'` — 완주한 판만 대상이다.
+ *   · `runId`가 있다 — 구세이브는 이미 세어졌는지 알 길이 없다. **모르면 안 센다**
+ *     (재커밋 실패는 기록 한 줄이 없는 것이고, 중복 계상은 없던 완주를 만들어낸다).
+ *   · 기록층의 마지막 신원과 다르다 — 같으면 이미 닿은 판이라 두 번 세면 안 된다.
+ *     이 한 줄이 "한 판에 정확히 한 번"을 이어하기 경로에서도 지킨다
+ *     (weekday 경로의 근거는 store.commitOnEnding의 phase 전이 감지다).
+ */
+export function needsRecommit(state: GameState): boolean {
+  if (state.phase !== 'ending' || !isRunId(state.runId)) return false;
+  return !alreadyCommitted(state);
 }
 
 /**

@@ -14,6 +14,7 @@ import { applyParentIntimacyDelta } from './parentIntimacy';
 import { absWeek, isNpcInteractable } from './relationshipSignals';
 import {
   commitRun, beginRun, accrueFromState, accrueResolvedEvent, accrueTalk, accrueParentEvent,
+  newRunId, needsRecommit, alreadyCommitted, isRunId,
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
@@ -446,6 +447,10 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
 function commitOnEnding(prev: GameState, next: GameState): RunDelta | null {
   if (next.phase !== 'ending' || prev.phase === 'ending') return null;
   try {
+    // 같은 판을 두 번 세지 않는다 — 기록은 닿았는데 세이브가 엔딩 전에 머문 판(세이브 키만
+    // 쓰기 실패)을 이어하기로 다시 끝내면 이 전이가 또 걸린다(archive.alreadyCommitted 참조).
+    // 요약은 기록층의 lastRunDelta가 이미 들고 있다.
+    if (alreadyCommitted(next)) return null;
     return commitRun(next, calculateEnding(next).title);
   } catch {
     return null;   // 기록 실패가 엔딩을 막지 않는다
@@ -459,6 +464,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   startGame: (gender, parents, options) => {
     const initial = createInitialState(gender, parents, options);
+    // 판 신원 — **엔진이 아니라 여기서** 붙인다(types.ts runId 참조: 순수함수의 결정론을 안 깬다).
+    // 아래 saveToStorage보다 먼저여야 세이브가 신원을 들고 간다.
+    initial.runId = newRunId();
     // 튜토리얼 지연 — 시스템 설명보다 첫 장면(first-week, 지훈 재회)이 먼저 오도록 phase='event'로 부팅.
     // MainWeekScreen이 이벤트 동안 마운트되지 않아 튜토리얼 게이트는 장면 종료 후 첫 계획 화면에서 열리고,
     // week:1로 기록되므로 첫 주 결산의 fixed 선택에서 중복 발동하지 않는다.
@@ -516,6 +524,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 즉시 적립이 배포되기 전에 만들어진 세이브는 이 판의 이벤트가 archive를 한 번도 지나지
       // 않았다 — 여기서만 구제된다. 멱등이고, 이미 다 적립된 세이브면 쓰기 없이 끝난다.
       accrueFromState(loaded);
+      // 신원 백필 — **아직 엔딩에 안 닿은 구세이브만.** 엔딩에 앉은 구세이브에 신원을 주면
+      // 이미 세어진 판이 "안 닿은 판"으로 보여 완주가 부푼다(types.ts runId 참조).
+      // 문자열이 아닌 신원(손상·수동 편집)은 **신원 없음**으로 접는다 — 남겨 두면 재커밋 판정은
+      // 통과하는데 원장에는 안 남아 이어하기마다 완주가 부푼다(archive.isRunId 참조).
+      if (!isRunId(loaded.runId)) loaded.runId = undefined;
+      if (!loaded.runId && loaded.phase !== 'ending') loaded.runId = newRunId();
+      // 완주 재커밋 — 기록 쓰기가 실패한 판이 세이브에 남아 있으면 여기서 되살린다.
+      // accrueFromState가 events·talks·CG를 이미 자가치유했지만 runs·endings는 state에
+      // 근거가 없어 이 호출이 유일한 복구 경로다. 판정·멱등의 근거는 archive.needsRecommit.
+      if (needsRecommit(loaded)) commitRun(loaded, calculateEnding(loaded).title);
       set({ state: loaded, runDelta: null });
       return true;
     } catch (e) {
