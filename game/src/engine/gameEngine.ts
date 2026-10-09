@@ -1,5 +1,5 @@
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
-import { emptyYearCounts } from './ending';
+import { achievementAxes, emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
 import { ACTIVITIES, getActivityCost, collapseActivityChoicesWithSlots, canApplyActivity, type ActivityInstance } from './activities';
 import { getSchoolLevel } from './backgrounds';
@@ -95,6 +95,7 @@ export function createInitialState(
     lowMentalWeeksByYear: emptyYearCounts(),
     veryLowMentalWeeksByYear: emptyYearCounts(),
     burnoutCountByYear: emptyYearCounts(),
+    axesByYear: [],
     moneySpentByYear: emptyMoneyYears(),
     moneyBlockedWeeksByYear: emptyMoneyYears(),
     burnoutCooldown: 0,
@@ -809,6 +810,17 @@ export function applyYearTransition(s: GameState): void {
 
   // v1.2: 학년 전환 직전에 해당 학년의 milestoneScene 기록
   recordMilestoneForYear(s, s.year);
+  // T62: 그 해의 성취 3축을 남긴다 — 엔딩 문구가 "7년"을 주장하려면 7년치 근거가 있어야 한다.
+  // **여기가 유일한 학년 종료 지점**이다(Y7 W48도 year-end를 안 거치고 곧장 여기서 ending으로 간다).
+  // 인덱스 대입이라 같은 해가 두 번 들어와도 덮어쓸 뿐 배열이 밀리지 않는다.
+  // **배열일 때만 쓴다.** 손상값(`"abc"`·`5`·`true`)에 인덱스 대입하면 TypeError로 학년 전환이 통째로
+  // 멈추고, `{}`면 조용히 키가 생겨 엔딩에서 터진다 — 비배열은 "기록 없음"과 같이 취급한다.
+  // 없으면 만들지도 않는다(`??= []` 금지): 구세이브를 중간 학년에서 이으면 앞 학년이 빈 칸인
+  // 부분 궤적이 생긴다. 판정은 일곱 칸 검사로 null이 되지만, 근거를 지어내지 않는 게 먼저다.
+  if (Array.isArray(s.axesByYear)) {
+    const ax = achievementAxes(s.stats);
+    s.axesByYear[s.year - 1] = [ax.academic, ax.talent, ax.life];
+  }
   if (s.year >= 7) {
     // Y7 끝 → 바로 엔딩 (엔딩에 이미 7년 전체 회상 포함)
     s.week = 1;

@@ -153,6 +153,10 @@ export function migrateLoadedState(state: GameState): GameState {
     moneySpentByYear: state.moneySpentByYear,
     moneyBlockedWeeksByYear: state.moneyBlockedWeeksByYear,
     moneyBlockedStamp: state.moneyBlockedStamp,
+    // T62: 성장 궤적도 **백필하지 않는다**(위 돈 궤적과 같은 규칙 — undefined = 판정 불가). 비배열 손상값만
+    // 없는 것으로 접는다: 남겨 두면 학년 전환(인덱스 대입)이 TypeError를 내거나 `{}`에 키가 붙는다.
+    // 칸 단위 손상은 고치지 않는다 — 판정(ending.ts isGrowthTrajectoryComplete)이 null로 받는다.
+    axesByYear: Array.isArray(state.axesByYear) ? state.axesByYear : undefined,
     burnoutCooldown: state.burnoutCooldown ?? 0,
     eventTimeCost: state.eventTimeCost ?? 0,
     idleWeeks: state.idleWeeks ?? 0,
