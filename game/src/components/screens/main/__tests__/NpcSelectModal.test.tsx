@@ -48,13 +48,14 @@ describe('NpcSelectModal', () => {
     expect(screen.getByText('누구와 활동할까?')).toBeInTheDocument();
   });
 
-  it('전달받은 후보를 이름·설명·반올림된 친밀도와 함께 나열한다', () => {
+  it('전달받은 후보를 이름·설명·친밀도 티어와 함께 나열한다', () => {
     renderModal();
     expect(screen.getByText('지훈')).toBeInTheDocument();
     expect(screen.getByText('소꿉친구')).toBeInTheDocument();
-    // 55.6 → 56 (소수 노출 금지)
-    expect(screen.getByText('친밀 56')).toBeInTheDocument();
-    expect(screen.getByText('친밀 20')).toBeInTheDocument();
+    // 원시 친밀도는 내지 않는다(hide-numbers) — 55.6은 친구, 20은 아는 사이.
+    expect(screen.getByText('친구')).toBeInTheDocument();
+    expect(screen.getByText('아는 사이')).toBeInTheDocument();
+    expect(screen.queryByText(/친밀\s*\d/), '원시 친밀도가 돌아왔다').toBeNull();
   });
 
   it('후보 클릭 시 onSelect(npcId)를 호출한다', () => {

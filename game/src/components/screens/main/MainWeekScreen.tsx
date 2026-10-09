@@ -299,7 +299,6 @@ export function MainWeekScreen({ state, bgProps, onSetRoutine, onTalkNpc, onTalk
         mentalStat={state.stats.mental}
         mentalState={state.mentalState}
         year={state.year}
-        fatigue={state.fatigue}
         money={state.money}
         isVacation={state.isVacation}
         parentBonusesApplied={state.weekLog?.parentBonusesApplied}

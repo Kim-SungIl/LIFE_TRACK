@@ -21,6 +21,7 @@ import { createInitialState, processWeek } from '../../../engine/gameEngine';
 import { clearArchive } from '../../../engine/archive';
 import { SHOP_ITEMS, canBuyItem } from '../../../engine/shopSystem';
 import { STAT_LABELS, type GameState, type StatKey } from '../../../engine/types';
+import { statChangeMark, STAT_CHANGE_FAINT, STAT_CHANGE_BIG } from '../shared';
 
 /** N주차를 실제로 처리해 결산 직전 상태를 만든다(로그·스탬프 전부 진짜 경로로). */
 function stateAfterResolving(week: number, year = 1): GameState {
@@ -130,7 +131,7 @@ describe('손실 칩은 실제로 내려간 축만 가리킨다', () => {
   // 원래 증상: 이벤트로 **얻은** 인기·멘탈이 로그에는 음수로 남아 손실 칩에 올라갔다.
   // 칩 조건은 `statChanges[k] <= -0.5`(WeeklyResultScreen:69)이므로, 로그가 정확해야만
   // 칩도 정확해진다 — 여기서는 그 연결을 화면에서 확인한다.
-  const chip = (label: string) => screen.queryByText(new RegExp(`${label}\\s-`));
+  const chip = (label: string) => screen.queryByText(new RegExp(`${label}\\s▼`));
 
   it('전부 오른 주에는 손실 칩이 하나도 없다', () => {
     const s = stateAfterResolving(4);
@@ -167,12 +168,12 @@ describe('손실 칩은 실제로 내려간 축만 가리킨다', () => {
 // (시작 25 → 26.4, 실제 +1.4). 엔진 단언(weeklyResultTruth)만 두면 화면이 딴 값을 읽어도 통과하므로
 // 진짜 부팅 → 도입 해결 → 진짜 주 확정 → 렌더까지 전 구간을 잇는다.
 describe('첫 주 결산 배선 — 도입 장면이 준 것을 잃은 것으로 그리지 않는다', () => {
-  const chip = (label: string) => screen.queryByText(new RegExp(`${label}\\s-`));
+  const chip = (label: string) => screen.queryByText(new RegExp(`${label}\\s▼`));
   /** 스탯 행의 변화량 셀(행의 마지막 칸) 텍스트. 라벨이 다른 곳에도 있을 수 있어 행 구조로 고른다. */
   function changeCellOf(label: string): string {
     const cells = screen.getAllByText(label)
       .map(el => el.parentElement!.lastElementChild!.textContent ?? '')
-      .filter(t => /^[+-]?\d/.test(t));
+      .filter(t => /^[▲▼]/.test(t));
     expect(cells.length, `${label} 행의 변화량 셀이 정확히 하나여야 한다`).toBe(1);
     return cells[0];
   }
@@ -204,9 +205,9 @@ describe('첫 주 결산 배선 — 도입 장면이 준 것을 잃은 것으로
       const label = STAT_LABELS[k];
       expect(chip(label), `${label}: 도입 장면으로 얻은 축이 손실 칩에 올라갔다(실측 "인기 -0.6")`).toBeNull();
       const cell = changeCellOf(label);
-      expect(cell.startsWith('+'), `${label}: 변화량 "${cell}" — 시작값보다 올랐는데 +가 아니다`).toBe(true);
-      expect(Number(cell), `${label}: 변화량은 시작값 대비 실제 차이다`)
-        .toBe(Math.round((after.stats[k] - boot.stats[k]) * 10) / 10);
+      expect(cell.startsWith('▲'), `${label}: 변화량 "${cell}" — 시작값보다 올랐는데 ▲가 아니다`).toBe(true);
+      expect(cell, `${label}: 변화 표시는 시작값 대비 실제 차이에서 나온다`)
+        .toBe(statChangeMark(after.stats[k] - boot.stats[k]));
     }
   });
 });
@@ -249,5 +250,55 @@ describe('피로 누적 칩은 실제로 피로가 쌓인 주만 가리킨다', 
     render(<GameScreen />);
     expect(screen.getByText('피로 누적'),
       '실제로 쌓인 주에 칩이 없으면 이 축은 아무것도 구별 못 한다').toBeTruthy();
+  });
+});
+
+// hide-numbers — 결산은 등급·막대·방향만 낸다. 원시 스탯·소수 증감·피로 수치가 돌아오면 빨개진다.
+// 값은 주차·날짜와 안 겹치게 고른다(77·66 같은 값이 제목에 섞이면 부재 단언이 공허해진다).
+describe('결산 스탯 표는 숫자를 내지 않는다 (hide-numbers)', () => {
+  it('스탯 행에 원시 값·소수 증감이 없고 방향 표시만 있다', () => {
+    const s = stateAfterResolving(4);
+    const changes = { academic: 0.8, social: 1.6, talent: -0.1, mental: -1.7, health: -0.3 };
+    useGameStore.setState({ state: {
+      ...s,
+      stats: { academic: 77.4, social: 66.2, talent: 55.1, mental: 44.6, health: 33.3 },
+      fatigue: 37,
+      weekLog: { ...s.weekLog!, statChanges: changes, fatigueChange: 0 },
+    } });
+    const { container } = render(<GameScreen />);
+    for (const k of Object.keys(changes) as StatKey[]) {
+      const cell = container.querySelector(`[data-testid="stat-change-${k}"]`);
+      expect(cell, `${k}: 변화 칸이 사라졌다 — 아래 부재 단언이 공허해진다`).toBeTruthy();
+      expect(cell!.textContent, `${k}: 변화 칸`).toBe(statChangeMark(changes[k]));
+      expect(cell!.parentElement!.textContent, `${k}: 스탯 행에 숫자가 돌아왔다`).not.toMatch(/\d/);
+    }
+    // 방향 표시가 실제로 갈리는지(전부 빈칸이면 위 단언은 장식이다).
+    expect(container.querySelector('[data-testid="stat-change-social"]')!.textContent).toBe('▲▲');
+    expect(container.querySelector('[data-testid="stat-change-academic"]')!.textContent).toBe('▲');
+    expect(container.querySelector('[data-testid="stat-change-mental"]')!.textContent).toBe('▼▼');
+    expect(container.querySelector('[data-testid="stat-change-talent"]')!.textContent).toBe('');
+    expect(screen.getByText(/^피로 · /), '피로는 라벨로 남는다').toBeTruthy();
+    expect(screen.queryByText(/피로\s*\d/), '피로 수치가 돌아왔다').toBeNull();
+  });
+});
+
+// 문턱은 양방향으로 잠근다 — 경계값 바로 위/아래를 둘 다 본다.
+describe('statChangeMark 문턱', () => {
+  it('잡음 문턱(0.15) 아래는 비우고, 그 위부터 화살표 하나', () => {
+    expect(statChangeMark(0)).toBe('');
+    expect(statChangeMark(STAT_CHANGE_FAINT - 0.01)).toBe('');
+    expect(statChangeMark(-(STAT_CHANGE_FAINT - 0.01))).toBe('');
+    expect(statChangeMark(STAT_CHANGE_FAINT)).toBe('▲');
+    expect(statChangeMark(-STAT_CHANGE_FAINT)).toBe('▼');
+    // 실측 잡음: 특기 자연 감소 −0.1이 매주 찍혔다.
+    expect(statChangeMark(-0.1)).toBe('');
+  });
+  it('큰 변화(1.5) 이상은 화살표 둘', () => {
+    expect(statChangeMark(STAT_CHANGE_BIG - 0.01)).toBe('▲');
+    expect(statChangeMark(STAT_CHANGE_BIG)).toBe('▲▲');
+    expect(statChangeMark(-(STAT_CHANGE_BIG - 0.01))).toBe('▼');
+    expect(statChangeMark(-STAT_CHANGE_BIG)).toBe('▼▼');
+    expect(STAT_CHANGE_FAINT).toBe(0.15);
+    expect(STAT_CHANGE_BIG).toBe(1.5);
   });
 });

@@ -76,6 +76,18 @@ export function pickStatDirection(statChanges: Partial<Record<string, number>>):
   return dirs.has(1) ? 'up' : 'down';
 }
 
+// 주간 스탯 변화 → 방향 표시(hide-numbers). 소수 증감 대신 화살표 개수로 크기만 전한다.
+// 축당 주간 상한이 +2라 1.5 이상이면 "크게"다. 0.15 미만(표시상 ±0.1, 특기 자연 감소 등)은
+// 매주 찍히는 잡음이라 내지 않는다.
+export const STAT_CHANGE_FAINT = 0.15;
+export const STAT_CHANGE_BIG = 1.5;
+export function statChangeMark(change: number): string {
+  const mag = Math.abs(change);
+  if (mag < STAT_CHANGE_FAINT) return '';
+  const arrow = change > 0 ? '▲' : '▼';
+  return mag >= STAT_CHANGE_BIG ? arrow + arrow : arrow;
+}
+
 // 결과 메시지 자동 줄바꿈 — 문장 끝(`.` `?` `!`, 따옴표 포함) 다음 공백에서 줄바꿈.
 // 말줄임표(`...`)는 문장 경계가 아니므로 앞이 `[.!?]`인 경우 분할 제외.
 export function breakSentences(text: string): string {

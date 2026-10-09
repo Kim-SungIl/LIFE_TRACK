@@ -3,6 +3,7 @@ import { SHOP_ITEMS, SHOP_CATEGORIES, canBuyItem, limitKey, ItemCategory, ShopIt
 import { josa } from '../engine/korean';
 import { GameState, STAT_LABELS, StatKey } from '../engine/types';
 import { isNpcInteractable } from '../engine/relationshipSignals';
+import { INTIMACY_TIER_LABEL, intimacyTier } from '../engine/npcRoster';
 import { Dialog } from './Dialog';
 import { chipSurface } from './screens/surface';
 
@@ -226,7 +227,7 @@ export function Shop({ state, onBuy, onClose }: Props) {
                 <span style={{ fontSize: '1.2rem' }}>{npc.emoji}</span>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>{npc.name}</div>
-                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>친밀도 {Math.round(npc.intimacy)}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{INTIMACY_TIER_LABEL[intimacyTier(npc.intimacy, npc.met)]}</div>
                 </div>
               </button>
             ))}
