@@ -1,3 +1,4 @@
+import { romanceClosure } from './romance';
 // NPC 엔딩 클로저 — "그리고 그 후"의 NPC별 전용 문장 + 결정적 선택(resolvedChoice) 해석.
 // ending.ts getTopNpcStories 에서 소비. 설계·3자 리뷰 판정: tmp/npc-ending-motif-design.md (v2).
 //
@@ -154,6 +155,8 @@ export type ResolvedClosure = { text: string; excludeEventIds: Set<string> };
 
 // 등록 NPC 의 프레임 결정: variant 첫 매치 > 균일 티어. 미등록 id 는 null(호출부 범용 폴백).
 export function resolveNpcClosure(state: GameState, npcId: string, intimacy: number): ResolvedClosure | null {
+  const romance = romanceClosure(state, npcId);
+  if (romance) return romance;
   const closure = NPC_CLOSURES[npcId];
   if (!closure) return null;
   for (const v of closure.variants ?? []) {

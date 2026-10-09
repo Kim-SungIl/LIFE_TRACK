@@ -246,8 +246,8 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // 경로(테스트·디버그 패널)에서 변이를 보장하는 것이 여기다.
   const presented = useMemo(() => {
     const week = event.week ?? state?.week ?? 1;
-    return presentEvent(event, { year, week, gender });
-  }, [event, year, gender, state?.week]);
+    return presentEvent(event, { year, week, gender, relationship: state?.relationship });
+  }, [event, year, gender, state?.week, state?.relationship]);
 
   // Inject keyframes on mount
   useEffect(() => {

@@ -1,3 +1,4 @@
+import { applyRelationshipChoice } from './romance';
 import { create } from 'zustand';
 import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
@@ -247,6 +248,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 // 선택 결과 적용: 스탯(구간감쇠)/피로/용돈 + 이벤트 등장 NPC met + timeCost/문이과/부모 친밀도.
 // 반환값 = 실제 적용된 델타 모음 (표시용 — 게임 로직은 여전히 state mutate가 본체).
 function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice, occurrenceWeek: number): AppliedEventOutcome {
+  applyRelationshipChoice(state, event, choice, occurrenceWeek);
   const outcome: AppliedEventOutcome = { stats: {}, npcs: [] };
   // 적용 전 스냅샷 — 아래 끝에서 이번 주 로그가 아직 없을 때(부팅 도입 장면) 보류분으로 적는 데 쓴다.
   const atEntry = visibleSnapshot(state);

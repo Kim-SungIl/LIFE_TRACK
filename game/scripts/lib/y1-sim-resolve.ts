@@ -1,3 +1,4 @@
+import { applyRelationshipChoice } from '../../src/engine/romance';
 /**
  * Y1 시뮬·QA 스크립트 공용 — store.resolveEvent 와 동일한 이벤트 해결
  */
@@ -38,6 +39,8 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   // 이벤트 발생 주(occurrence week). processWeek가 currentEvent.week=N을 박은 뒤 week++(→N+1)이라
   // newState.week은 이미 다음 주다. store.resolveEvent가 occurrenceWeek로 기록·체인캡·냉각을 하는 것과 맞춘다.
   const occurrenceWeek = newState.currentEvent!.week ?? newState.week;
+
+  applyRelationshipChoice(newState, newState.currentEvent!, choice, occurrenceWeek);
 
   // 스탯 효과 — store.applyChoiceOutcome와 동일하게 구간감쇠(scaleStatChange) 적용 (게임 본체 일치).
   for (const [key, val] of Object.entries(choice.effects)) {

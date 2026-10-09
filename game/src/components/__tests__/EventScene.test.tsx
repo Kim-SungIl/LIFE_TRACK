@@ -217,3 +217,22 @@ describe('EventScene 학교급 변이 소비', () => {
     expect(screen.getByText(/손짓으로/, { exact: false })).toBeInTheDocument();
   });
 });
+
+
+describe('연애 선택 표시', () => {
+  for (const [gender, npcId, id] of [['male', 'subin', 'subin-hs-studyboard'], ['female', 'jihun', 'jihun-hs-unsaid']] as const) {
+    it(`${npcId}: 친구와 연애를 명확히 구분하고 원래 선택 인덱스로 보낸다`, () => {
+      const state = makeState({ gender, year: 6, week: 10 });
+      const { onChoice } = renderScene({ event: GAME_EVENTS.find(e => e.id === id)!, gender, year: 6, state });
+      // 긴 장면은 끝까지 읽은 뒤 선택한다.
+      for (let i = 0; i < 10; i++) {
+        const next = screen.queryByRole('button', { name: /다음/ });
+        if (!next) break;
+        fireEvent.click(next);
+      }
+      expect(screen.getByText(/나는 친구로 지내고 싶어/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText(/나도 좋아해. 우리 사귀자/));
+      expect(onChoice).toHaveBeenCalledWith(1);
+    });
+  }
+});

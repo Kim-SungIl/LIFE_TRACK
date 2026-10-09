@@ -1,3 +1,4 @@
+import { romanceLines } from './romance';
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
 import { GameState, WeekLog } from './types';
 import { isExamPeriod } from './examSystem';
@@ -542,6 +543,8 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
 };
 
 export function getNpcDialogue(npcId: string, intimacy: number, state: GameState): string {
+  const romance = romanceLines(state, npcId);
+  if (romance) return romance[(state.week + state.year) % romance.length];
   const pools = NPC_DIALOGUES[npcId];
   if (!pools) return '...';
   const sorted = [...pools].sort((a, b) => b.priority - a.priority);

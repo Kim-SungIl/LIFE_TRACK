@@ -1,3 +1,4 @@
+import { sanitizeRelationship } from './romance';
 // 구세이브 호환 — 두 레이어로 나뉜다:
 //  1) 단계형(versioned) 마이그레이션: 세이브에 찍힌 version → 현재 version까지 step을 순차 적용.
 //     필드 의미가 바뀌는 breaking 변경만 step으로 쓴다. 로드 시 1회 실행.
@@ -130,6 +131,7 @@ export function migrateLoadedState(state: GameState): GameState {
   const result: GameState = {
     ...state,
     parents: migratedParents,
+    relationship: sanitizeRelationship(state.relationship, state.gender),
     npcs: migratedNpcs,
     vacationChoices: migratedVacationChoices,
     examResults: state.examResults || [],

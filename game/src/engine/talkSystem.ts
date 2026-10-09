@@ -1,3 +1,4 @@
+import { romanceLines } from './romance';
 // ===== Phase 2.1 말걸기 미니 이벤트 — 로직 모듈 =====
 // NPC/부모 모달에서 "말 걸기" 시 발동되는 가벼운 미니 이벤트 픽업/필터/RNG.
 // 누적 확률(pressure) 시스템 — 안 만나면 점점 차오르고, 한 번 발동하면 0으로 리셋.
@@ -34,6 +35,8 @@ function pickRandomLine(state: GameState, pool: string[]): string {
 }
 
 export function getNpcSmalltalk(state: GameState, npcId: string): string {
+  const romance = romanceLines(state, npcId);
+  if (romance) return pickRandomLine(state, romance);
   const entry = NPC_SMALLTALK[npcId];
   if (!entry) return pickRandomLine(state, []);
   const intimacy = state.npcs.find(n => n.id === npcId)?.intimacy ?? 0;
