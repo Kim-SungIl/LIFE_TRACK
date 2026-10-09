@@ -673,6 +673,24 @@ export const GROWTH_NOTE_FINAL: Record<GrowthShape, string> = {
 /** 학년말 성취 3축 스냅샷 한 줄 — `[학업, 특기, 생활]`(types.ts `axesByYear`). */
 export type YearAxes = readonly [number, number, number];
 
+/** 궤적이 "7년"을 말할 자격이 되는 칸 수 — Y1..Y7. */
+export const GROWTH_TRAJECTORY_YEARS = 7;
+
+/** 한 칸이 유효한가 — 배열 · 길이 3 · 세 값 모두 유한한 숫자(`'90'`·NaN·Infinity는 손상). */
+function isYearAxes(y: unknown): y is YearAxes {
+  return Array.isArray(y) && y.length === 3
+    && y.every(v => typeof v === 'number' && Number.isFinite(v));
+}
+
+/**
+ * 궤적이 **일곱 칸 전부 유효**한가. 하나라도 빠지거나(구세이브 중간 로드·잘린 세이브) 손상이면 거짓.
+ * 성긴 배열의 빈 칸(`[, , x]`)도 `Array.from`이 undefined로 펼쳐 여기서 걸린다(filter/every는 건너뛴다).
+ */
+export function isGrowthTrajectoryComplete(t: unknown): t is YearAxes[] {
+  return Array.isArray(t) && t.length === GROWTH_TRAJECTORY_YEARS
+    && Array.from(t).every(isYearAxes);
+}
+
 /**
  * 강한 문장(7년)이 **학년별 기록에서도 참인가**. 근거가 없으면 null = 판정 불가.
  *
@@ -700,13 +718,29 @@ export type YearAxes = readonly [number, number, number];
 export function growthClaimHolds(
   shape: GrowthShape,
   finalAxes: AchievementAxes,
-  trajectory: readonly YearAxes[] | undefined,
+  trajectory: unknown,
 ): boolean | null {
-  if (!trajectory) return null;
-  const years = trajectory.filter(y => Array.isArray(y) && y.length === 3
-    && y.every(v => typeof v === 'number' && Number.isFinite(v))
-    && Math.max(...y) >= GROWTH_SHAPE_MIN_TOP);
+  // ① **근거의 자격** — 일곱 칸이 전부 있어야 "7년"을 말할 수 있다. 한 칸이라도 없거나 손상이면
+  //    판정 불가(null). 예전엔 유효한 줄만 골라 남겨서 한 줄(또는 Y7 하나, 손상 6 + 정상 1)만
+  //    있어도 "7년 내내"가 나갔다 — 1년치 근거로 7년을 주장한 것이다(3자 검수 실측).
+  //    길이가 7이 아닌 배열도 거부한다: 정상 판은 정확히 Y1..Y7 일곱 칸이고(applyYearTransition만
+  //    쓴다), 그 밖의 모양은 낡았거나 손상된 세이브다 — 틀리면 약한 문장 쪽으로 틀린다.
+  //    (비배열 손상값 `"abc"`·`5`·`{}`도 여기서 걸러진다 — calculateEnding이 그대로 넘긴다.)
+  if (!isGrowthTrajectoryComplete(trajectory)) return null;
+
+  // ② **센 해의 선택** — 칸은 유효한데 모양이라 부를 게 없던 해(top < MIN_TOP)는 판정에서 뺀다.
+  //    ①과 다른 축이다: ①은 "근거가 있는가", ②는 "그 해가 주장의 대상인가". 초반엔 모든 축이
+  //    시작값 근처라 순위가 뜻을 갖지 않는다(위 헤더 주석). 유지하는 이유 — 이 해들을 세면
+  //    판정은 상수(시작값 기울기)의 결과가 되고, 빼도 ①이 있어 "근거 없는 7년"은 다시 열리지 않는다.
+  //    Y7 칸은 정상 판에서 엔딩 스탯과 같아(아래 SSOT 주석) 문장이 나갈 판이면 반드시 세진다.
+  const years = trajectory.filter(y => Math.max(...y) >= GROWTH_SHAPE_MIN_TOP);
   if (years.length === 0) return null;
+  // **finalAxes를 Y7 칸으로 갈아끼우지 않는 이유(SSOT 검토).** 정상 판에선 둘이 같은 값이다 —
+  // Y7 칸은 applyYearTransition이 엔딩 전환 직전에 `achievementAxes(s.stats)`로 쓰고, 그 뒤 스탯을
+  // 바꾸는 단계가 없다(갈림길 장면은 효과가 비어 있다). 그런데 **모양(shape)은 라이브 스탯에서**
+  // 분류된다(growthShapeOf(axes) — 등급과 같은 값). 기준 순위를 Y7 칸에서 뽑으면 "분류는 라이브,
+  // 검증 기준은 스냅샷"으로 근거가 둘이 된다(#441). 지금 구조에선 Y7 칸도 ②의 검사 대상이라
+  // 둘이 어긋난 손상 세이브는 검사에서 떨어져 약한 문장으로 간다 — 어긋남이 안전한 쪽으로만 난다.
 
   const order = (y: YearAxes | [number, number, number]) =>
     ([['academic', y[0]], ['talent', y[1]], ['life', y[2]]] as const)
@@ -742,7 +776,7 @@ export function growthShapeOf(axes: AchievementAxes): GrowthShape | null {
  */
 export function growthNoteOf(
   axes: AchievementAxes,
-  trajectory?: readonly YearAxes[],
+  trajectory?: unknown,   // 손상 세이브의 비배열 값도 받는다 — growthClaimHolds가 null로 접는다
 ): string | null {
   const shape = growthShapeOf(axes);
   if (!shape) return null;

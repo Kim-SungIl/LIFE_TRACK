@@ -9,17 +9,24 @@
 // 값이 아니라 **배선**을 잠그는 게 목적이라 `ending`은 손으로 만들지 않고
 // `calculateEnding(state)`에서 뽑는다 — 엔진이 안 내보내거나 필드 이름이 갈라지면 여기서 걸린다
 // (prop을 손으로 만들면 그 prop을 만드는 층의 누락을 원리상 못 잡는다 — #431).
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { EndingScreen } from '../EndingScreen';
 import { ACHIEVEMENT_NOTE, calculateEnding, GROWTH_NOTE, GROWTH_NOTE_FINAL, GROWTH_SHAPES } from '../../../engine/ending';
 import { getBackground } from '../../../engine/backgrounds';
 import { createInitialState } from '../../../engine/gameEngine';
+import { GameScreen } from '../../GameScreen';
+import { useGameStore } from '../../../engine/store';
+import { clearArchive } from '../../../engine/archive';
 import type { GameState, ParentStrength, Stats } from '../../../engine/types';
 
 vi.mock('../../../engine/assetWebp', () => ({ webpSrc: (p: string) => p }));
 vi.mock('../../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
 vi.mock('../../../audio/sfx', () => ({ playSfx: vi.fn() }));
+vi.mock('../../../engine/assetPrefetch', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../engine/assetPrefetch')>()),
+  runWhenIdle: () => () => {},
+}));
 
 const PARENTS: [ParentStrength, ParentStrength] = ['strict', 'emotional'];
 
@@ -141,5 +148,41 @@ describe('EndingScreen — 성장 모양 문장 배선', () => {
     // 화면이 통째로 안 그려진 걸 통과로 오독하지 않게 — 등급 칸은 여전히 있다.
     expect(screen.getByText('성취 지수')).toBeTruthy();
     expect(screen.getByText('행복 지수')).toBeTruthy();
+  });
+});
+
+// T62 3자 검수(M8) — 위 테스트들은 EndingScreen에 `calculateEnding(st)`를 **손으로** 넣는다. 그래서
+// 제품에서 그 값을 만드는 GameScreen이 궤적을 떼고 부르면(예: `calculateEnding({ ...state, axesByYear:
+// undefined })`) 화면은 늘 약한 문장인데 위 테스트는 전부 초록이다(#431). 여기선 스토어의 state 하나만
+// 세우고 GameScreen을 렌더해 **같은 스탯, 다른 궤적 → 다른 문장**이 화면까지 가는지 본다.
+describe('GameScreen 경로 — 엔딩 문장이 스토어의 궤적을 읽는다', () => {
+  beforeEach(() => {
+    clearArchive();
+    localStorage.clear();
+    localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+    useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
+  });
+
+  function seedEnded(axesByYear: [number, number, number][] | undefined) {
+    const s = createInitialState('male', PARENTS, { rngSeed: 42 });
+    // 엔딩 시점의 실제 좌표 — applyYearTransition이 Y7 마감에서 year++ 후 phase='ending'.
+    s.year = 8; s.week = 1; s.phase = 'ending';
+    s.stats = { academic: 91, talent: 9, mental: 90, health: 88, social: 83 };
+    s.axesByYear = axesByYear;
+    useGameStore.setState({ state: s, runDelta: null, npcActivityMap: {} });
+  }
+
+  it('뒷받침하는 일곱 칸이면 7년 문장이 그려진다', async () => {
+    seedEnded(TRAJ_TWIN);
+    render(<GameScreen />);
+    expect(await screen.findByText(GROWTH_NOTE.twin), 'GameScreen이 궤적을 엔딩 산정에 안 넘겼다').toBeTruthy();
+    expectOnlyNote(GROWTH_NOTE.twin);
+  });
+
+  it('같은 스탯이라도 궤적이 없으면 최종 상태 문장이 그려진다 (음성 짝)', async () => {
+    seedEnded(undefined);
+    render(<GameScreen />);
+    expect(await screen.findByText(GROWTH_NOTE_FINAL.twin)).toBeTruthy();
+    expectOnlyNote(GROWTH_NOTE_FINAL.twin);
   });
 });

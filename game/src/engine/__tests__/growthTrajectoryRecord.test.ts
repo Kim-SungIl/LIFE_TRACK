@@ -5,11 +5,15 @@
 // 한 번도 안 나온다 — 그리고 그쪽 테스트는 전부 초록이다(#431: prop을 손으로 만든 테스트는
 // 그 prop을 만드는 층의 누락을 원리상 못 잡는다).
 import { describe, expect, it, beforeEach } from 'vitest';
-import { achievementAxes, growthClaimHolds } from '../ending';
+import {
+  achievementAxes, calculateEnding, GROWTH_NOTE, GROWTH_NOTE_FINAL, growthClaimHolds, isGrowthTrajectoryComplete,
+} from '../ending';
+import { CAREER_CHOICE_EVENT_ID } from '../careerChoice';
+import { clearArchive } from '../archive';
 import { applyYearTransition, createInitialState, processWeek } from '../gameEngine';
 import { migrateLoadedState } from '../stateMigration';
 import { useGameStore } from '../store';
-import type { GameState, ParentStrength, Stats } from '../types';
+import type { ExamResult, GameState, ParentStrength, Stats } from '../types';
 
 const PARENTS: [ParentStrength, ParentStrength] = ['strict', 'emotional'];
 
@@ -103,8 +107,8 @@ describe('도달 가능성 — 제품의 두 입구가 모두 채운다', () => 
     expect(covered, 'W48에 이벤트가 걸리는 해가 하나도 없었다 — 이 테스트가 공허하다').toBeGreaterThan(0);
   });
 
-  // 7칸이 다 차야 "7년"을 말할 자격이 생긴다 — 한 해라도 비면 그 해는 판정에서 빠지고
-  // 주장은 6년치 근거로 서게 된다. 두 입구를 섞어 일곱 해를 끝까지 민다.
+  // 7칸이 다 차야 "7년"을 말할 자격이 생긴다 — 한 해라도 비면 판정 자체가 null이 되어(일곱 칸 검사)
+  // 그 판은 7년 문장을 잃는다. 두 입구를 섞어 일곱 해를 끝까지 민다.
   it('일곱 해를 이어 지나면 일곱 칸이 연속으로 찬다', () => {
     let s = createInitialState('male', PARENTS, { rngSeed: 7 });
     for (let year = 1; year <= 7; year++) {
@@ -127,9 +131,9 @@ describe('도달 가능성 — 제품의 두 입구가 모두 채운다', () => 
 });
 
 describe('구세이브 — 백필하지 않는다', () => {
-  it('궤적 없는 세이브는 undefined로 남는다 (빈 배열로 채우면 거짓 회고가 된다)', () => {
-    // T25 돈 궤적과 같은 규칙. 빈 배열을 넣으면 "기록은 있는데 전부 0"이 되어 판정이
-    // 거짓을 낸다 — undefined는 "판정 불가"라 최종 상태 문구로 안전하게 떨어진다.
+  it('궤적 없는 세이브는 undefined로 남는다 (지어내지 않는다)', () => {
+    // T25 돈 궤적과 같은 규칙. `[]` 자체는 판정 불가라 무해하지만, 배열을 만들어 주면 이어지는 학년만
+    // 찬 **부분 궤적**이 자란다(아래 "중간 로드" 테스트) — undefined는 끝까지 "판정 불가"로 남는다.
     const old = createInitialState('male', PARENTS, { rngSeed: 3 }) as GameState;
     delete (old as { axesByYear?: unknown }).axesByYear;
     const loaded = migrateLoadedState(old);
@@ -141,5 +145,152 @@ describe('구세이브 — 백필하지 않는다', () => {
     const s = createInitialState('male', PARENTS, { rngSeed: 3 });
     s.axesByYear = [[50, 30, 40], [60, 32, 45]];
     expect(migrateLoadedState(s).axesByYear).toEqual([[50, 30, 40], [60, 32, 45]]);
+  });
+});
+
+/** 스토어로 대기 사건을 닫는다(제품에서 플레이어가 하는 일). 갈림길은 `stopAt`이면 닫지 않고 멈춘다. */
+function closeEvents(stopAt?: string): void {
+  for (let guard = 0; guard < 10; guard++) {
+    const cur = useGameStore.getState().state;
+    if (!cur?.currentEvent || cur.phase !== 'event') return;
+    if (stopAt && cur.currentEvent.id === stopAt) return;
+    useGameStore.getState().resolveEvent(0);
+  }
+}
+
+/** 일곱 해를 W48마다 밀어 끝까지 간다(위 "일곱 해" 테스트와 같은 두 입구 경로). `from`부터 시작. */
+function playYears(s0: GameState, from: number): GameState {
+  let s = s0;
+  for (let year = from; year <= 7; year++) {
+    s.year = year; s.week = 48; s.phase = 'weekday'; s.currentEvent = null;
+    s.stats = { ...s.stats, academic: 40 + year * 5 };
+    s = processWeek(s);
+    if (s.phase === 'event') {
+      useGameStore.setState({ state: s, runDelta: null, npcActivityMap: {} });
+      closeEvents();
+      s = useGameStore.getState().state!;
+    }
+  }
+  return s;
+}
+
+describe('T62 3자 검수 — 갈림길 입구 (Y7 칸은 장면이 닫힌 뒤에 찬다)', () => {
+  // 진로 갈림길이 열리는 판은 applyYearTransition이 **적립 전에** 장면을 걸고 빠진다. 그 뒤 엔딩
+  // 전환은 store.resolveEvent의 갈림길 분기가 다시 applyYearTransition을 불러 수행한다 — 그 분기가
+  // 전환을 인라인으로 하면(적립 생략) Y7 칸이 영영 비고, 그 판은 일곱 칸 검사에 걸려 7년 문장을
+  // 잃는다. 위 두 입구 테스트는 갈림길이 안 열리는 스탯이라 이 경로를 지나지 않았다(검수 M2).
+  beforeEach(() => {
+    clearArchive();
+    localStorage.clear();
+    useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
+  });
+
+  function suneung(mockGrade: number): ExamResult {
+    const blank = { score: 0, grade: 'C' as const, delta: 0 };
+    return {
+      subjects: { korean: blank, english: blank, math: blank, socialScience: blank, artsPhysical: blank },
+      average: 0, rank: null, prevRank: null, comment: '', parentReaction: '', teacherReaction: '',
+      examType: 'suneung', schoolLevel: 'high', year: 7, semester: 2, mockGrade,
+    };
+  }
+
+  it('겸비 판: 장면이 열린 동안 Y7은 비어 있고, 닫으면 한 번 차서 일곱 칸이 된다', () => {
+    const s = createInitialState('female', PARENTS, { rngSeed: 7 });
+    s.year = 7; s.week = 48; s.phase = 'weekday'; s.currentEvent = null;
+    // careerChoice.test의 겸비 판(특기 95 · 학업 92 · 이과 · 수능 1) — 두 갈래가 열린다.
+    s.stats = { academic: 92, talent: 95, social: 70, mental: 80, health: 70 };
+    s.track = 'science';
+    s.examResults = [suneung(1)];
+    s.burnoutCount = 0;
+    s.totalTiredWeeks = 0;
+    // Y1~Y6은 이미 찼다(정상 판). 특기 1위 · 학업 2위 · 생활 3위로 내내 같은 순서.
+    s.axesByYear = Array.from({ length: 6 }, (_, i) => [60 + i * 4, 65 + i * 4, 50 + i] as [number, number, number]);
+    useGameStore.setState({ state: s, runDelta: null, npcActivityMap: {} });
+    useGameStore.getState().advanceWeek();
+    closeEvents(CAREER_CHOICE_EVENT_ID);
+
+    const open = useGameStore.getState().state!;
+    expect(open.currentEvent?.id, '전제: 갈림길 장면이 떠야 이 경로를 지난다').toBe(CAREER_CHOICE_EVENT_ID);
+    expect(open.axesByYear?.[6], '장면이 열리기 전에 Y7을 적었다(장면 뒤 스탯과 갈릴 수 있다)').toBeUndefined();
+    expect(open.axesByYear?.length, '앞 여섯 칸은 그대로').toBe(6);
+
+    useGameStore.getState().resolveEvent(0);
+    const after = useGameStore.getState().state!;
+    expect(after.phase, '전제: 장면 뒤 곧장 엔딩').toBe('ending');
+    const ax = achievementAxes(after.stats);
+    expect(after.axesByYear?.[6], '갈림길 분기가 Y7 적립을 건너뛰었다').toEqual([ax.academic, ax.talent, ax.life]);
+    expect(after.axesByYear?.length, '한 번만 — 칸이 밀리거나 더 생기지 않는다').toBe(7);
+    expect(isGrowthTrajectoryComplete(after.axesByYear), '일곱 칸이 꽉 차야 7년을 말한다').toBe(true);
+    // 그리고 엔딩이 그 근거로 판정을 세운다(null이 아니다).
+    const ending = calculateEnding(after);
+    expect(ending.growthShape, '전제: 모양이 있는 판').not.toBeNull();
+    expect(growthClaimHolds(ending.growthShape!, achievementAxes(after.stats), after.axesByYear)).not.toBeNull();
+  });
+});
+
+describe('T62 3자 검수 — 구세이브 중간 로드는 궤적을 지어내지 않는다', () => {
+  beforeEach(() => {
+    clearArchive();
+    localStorage.clear();
+    useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
+  });
+
+  it('Y4에서 이은 구세이브는 끝까지 궤적이 없고, 엔딩은 7년을 말하지 않는다', () => {
+    // `applyYearTransition`이 없는 배열을 만들어 주면(`??= []`) Y4~Y7 네 칸만 찬 부분 궤적이 생긴다.
+    // 일곱 칸 검사가 판정은 null로 막지만, 근거를 지어내지 않는 것 자체를 잠근다(검수 M13).
+    const old = createInitialState('male', PARENTS, { rngSeed: 11 }) as GameState;
+    delete (old as { axesByYear?: unknown }).axesByYear;
+    old.year = 4;
+    old.stats = { academic: 60, social: 30, talent: 20, mental: 35, health: 30 };
+    const loaded = migrateLoadedState(old);
+    const end = playYears(loaded, 4);
+    expect(end.phase, '전제: 엔딩까지 갔다').toBe('ending');
+    expect(end.axesByYear, '구세이브에 궤적이 생겼다').toBeUndefined();
+    const ending = calculateEnding(end);
+    expect(ending.growthShape, '전제: 모양이 있는 판(문장이 나간다)').not.toBeNull();
+    expect(ending.growthNote).toBe(GROWTH_NOTE_FINAL[ending.growthShape!]);
+  });
+
+  it('부분 궤적(앞 학년이 빈 성긴 배열)이 실려 와도 엔딩은 7년을 말하지 않는다', () => {
+    const s = createInitialState('male', PARENTS, { rngSeed: 11 });
+    s.axesByYear = [];
+    s.stats = { academic: 60, social: 30, talent: 20, mental: 35, health: 30 };
+    const end = playYears(s, 4);
+    expect(end.axesByYear?.length, '전제: Y4~Y7을 적어 길이는 7').toBe(7);
+    expect(isGrowthTrajectoryComplete(end.axesByYear)).toBe(false);
+    const ending = calculateEnding(end);
+    expect(ending.growthShape).not.toBeNull();
+    expect(ending.growthNote, '네 해 근거로 7년을 말했다').toBe(GROWTH_NOTE_FINAL[ending.growthShape!]);
+    expect(ending.growthNote).not.toBe(GROWTH_NOTE[ending.growthShape!]);
+  });
+});
+
+describe('T62 3자 검수 — 비배열 손상값', () => {
+  const BAD: unknown[] = ['abc', 5, true, {}];
+
+  it('학년 전환이 터지지 않고, 손상값에 칸을 붙이지도 않는다', () => {
+    for (const bad of BAD) {
+      const s = stateAt(3);
+      (s as unknown as { axesByYear: unknown }).axesByYear = bad;
+      expect(() => applyYearTransition(s), `${JSON.stringify(bad)}에서 학년 전환이 터졌다`).not.toThrow();
+      expect(s.phase, '전환은 그대로 진행된다').toBe('year-end');
+      expect(s.axesByYear, '손상값을 고쳐 쓰거나 키를 붙였다').toStrictEqual(bad);
+    }
+  });
+
+  it('엔딩이 터지지 않는다', () => {
+    for (const bad of BAD) {
+      const s = stateAt(8, { academic: 90, talent: 88, mental: 40, health: 40, social: 40 });
+      (s as unknown as { axesByYear: unknown }).axesByYear = bad;
+      expect(() => calculateEnding(s), `${JSON.stringify(bad)}에서 엔딩이 터졌다`).not.toThrow();
+    }
+  });
+
+  it('로드는 비배열을 없는 것으로 접는다 (빈 배열·0으로 메우지 않는다)', () => {
+    for (const bad of BAD) {
+      const s = createInitialState('male', PARENTS, { rngSeed: 3 });
+      (s as unknown as { axesByYear: unknown }).axesByYear = bad;
+      expect(migrateLoadedState(s).axesByYear, `${JSON.stringify(bad)}`).toBeUndefined();
+    }
   });
 });
