@@ -1,5 +1,6 @@
 {
-  "sourceCommit": "6cccad461bd52f709cf1a67431a1d32264a67377",
+  "sourceCommit": "35dcaa33cda4c76373fb2dd3179ca345935ba7b8",
+  "runsNote": "runs는 main 35dcaa3 + PR #511(good-grade 방학 가드 W24·W48)로 재생성. scenes·closures는 6cccad4 생성분 그대로(내용 불변).",
   "scenes": {
     "jihun-hs-unsaid": {
       "id": "jihun-hs-unsaid",
@@ -452,104 +453,104 @@
       "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 84.1,
-        "social": 85.2,
-        "talent": 80.3,
-        "mental": 88.8,
-        "health": 72.6
+        "academic": 82.6,
+        "social": 88.8,
+        "talent": 80.8,
+        "mental": 86.1,
+        "health": 71.3
       },
-      "endingHash": "cfe8b72e26d4bf71877f6001ff9c18889440ddc83abd6d7eb8b338152ce60865"
+      "endingHash": "4ce50e3724e9722c204b85544b37d39dba02377263c243320b54dc840accc002"
     },
     {
       "gender": "male",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 84.3,
-        "social": 85.9,
-        "talent": 80.3,
-        "mental": 88.9,
-        "health": 72.1
+        "academic": 85.8,
+        "social": 86.8,
+        "talent": 81.1,
+        "mental": 88.2,
+        "health": 72.5
       },
-      "endingHash": "9da7002d272d4d9f3157c08c5ae5d81cb8f8ec296773d066e28e34e81f9bc299"
+      "endingHash": "8d36828f8730235899bfa3e5dde16e64490aa21104cfaf8ac740b0821f2a80ba"
     },
     {
       "gender": "male",
       "plan": "paid",
       "seed": 1,
       "stats": {
-        "academic": 90.2,
-        "social": 90,
-        "talent": 80.8,
-        "mental": 88.9,
-        "health": 77.8
-      },
-      "endingHash": "c992b5cea452b0ae260b398a0a1237c71e3d393ce55cbe5f6b8f79216f3c9b32"
-    },
-    {
-      "gender": "male",
-      "plan": "paid",
-      "seed": 7,
-      "stats": {
-        "academic": 89.7,
-        "social": 87.4,
-        "talent": 80.2,
-        "mental": 89,
+        "academic": 89.5,
+        "social": 90.4,
+        "talent": 80.4,
+        "mental": 88.7,
         "health": 77.9
       },
-      "endingHash": "3288064246f7051736541e9e0842806a9aa9d46fa64d2677f6c24ce3aab6af33"
+      "endingHash": "8689c7b50f1abf7b68bd690a9011a8f2428e49fab7faf5d12a11dae29af00693"
     },
     {
-      "gender": "female",
-      "plan": "free",
-      "seed": 1,
-      "stats": {
-        "academic": 84.1,
-        "social": 85.2,
-        "talent": 80.3,
-        "mental": 88.8,
-        "health": 72.6
-      },
-      "endingHash": "f9d0162695a578a0a13a78f206160089f049877a3034896220724097f62ee3c0"
-    },
-    {
-      "gender": "female",
-      "plan": "free",
+      "gender": "male",
+      "plan": "paid",
       "seed": 7,
       "stats": {
-        "academic": 84.3,
-        "social": 85.9,
+        "academic": 90,
+        "social": 89.6,
         "talent": 80.3,
-        "mental": 88.9,
-        "health": 72.1
+        "mental": 88.7,
+        "health": 78.2
       },
-      "endingHash": "93e91de99d16bb7d9ad4bac2a055e0e7da3e8dcbd30ba508c5b8b9f2542c9093"
+      "endingHash": "79217d6c359cab1ca7ab87dbae52043d91f9962e0913a6e6ba897719942f9f9f"
     },
     {
       "gender": "female",
-      "plan": "paid",
+      "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 90.2,
-        "social": 90,
+        "academic": 82.6,
+        "social": 88.9,
         "talent": 80.8,
-        "mental": 88.9,
-        "health": 77.8
+        "mental": 86.1,
+        "health": 71.3
       },
-      "endingHash": "e6e0d3e3c34e7e508460f15ec27a72387aba2481b7f2473c2510539a63309aca"
+      "endingHash": "d8e4743050636b3f15b29bf4ba26ee3e053aa311782360963467dcff8e351e6a"
+    },
+    {
+      "gender": "female",
+      "plan": "free",
+      "seed": 7,
+      "stats": {
+        "academic": 85.4,
+        "social": 86.8,
+        "talent": 81.1,
+        "mental": 88.2,
+        "health": 72.3
+      },
+      "endingHash": "209fef67d3ba920292ea63d30081d7c9e35ac114ded750ff54f485407989d10b"
+    },
+    {
+      "gender": "female",
+      "plan": "paid",
+      "seed": 1,
+      "stats": {
+        "academic": 89.5,
+        "social": 90.4,
+        "talent": 80.4,
+        "mental": 88.7,
+        "health": 77.9
+      },
+      "endingHash": "a2fafc9d2fe94014dfcf2d37d64fa750dbfc89a25a9441bd7e4aa17fb7b11303"
     },
     {
       "gender": "female",
       "plan": "paid",
       "seed": 7,
       "stats": {
-        "academic": 89.9,
-        "social": 87.2,
+        "academic": 90,
+        "social": 90.4,
         "talent": 80.3,
-        "mental": 89.1,
-        "health": 77.6
+        "mental": 88.7,
+        "health": 78.2
       },
-      "endingHash": "a7e26ccdbb02285dad9110ee07879e169ff65edbdca0da342f340bd422c55182"
+      "endingHash": "dd744a02c65528078fe6df0e7a4a44e73f8f1bf548a7a7f199cc6fda6d3e2245"
     }
   ]
 }
