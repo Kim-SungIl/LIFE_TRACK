@@ -6,7 +6,7 @@ import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../Portrait';
 import { BgWrapper, ScreenBgProps } from './BgWrapper';
 import { GLASS_BASE, chipSurface, tintedGlass } from './surface';
-import { PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, type UpcomingEvent } from './shared';
+import { PARENT_ICONS, breakSentences, getFatigueDisplay, pickStatDirection, statChangeMark, type UpcomingEvent } from './shared';
 import { StatIcon } from '../icons/icons';
 import { STAT_BAR_HEIGHT, STAT_ICON_SIZE } from './main/StatsPanel';
 import { growthReasonLine } from '../../engine/growthReasonText';
@@ -84,7 +84,7 @@ export function WeeklyResultScreen({
     .sort((a, b) => (a[1] ?? 0) - (b[1] ?? 0))
     .slice(0, 2);
   for (const [k, v] of negativeChanges) {
-    losses.push({ kind: 'stat', stat: k, text: `${STAT_LABELS[k]} ${Math.round((v ?? 0) * 10) / 10}` });
+    losses.push({ kind: 'stat', stat: k, text: `${STAT_LABELS[k]} ${statChangeMark(v ?? 0)}` });
   }
   if ((weekLog.fatigueChange ?? 0) >= 25) losses.push({ kind: 'fatigue', text: '피로 누적' });
 
@@ -262,7 +262,7 @@ export function WeeklyResultScreen({
           </div>
         )}
 
-        {/* 스탯 변화 — 정확한 수치 */}
+        {/* 스탯 변화 — 등급과 방향만(hide-numbers). 정확한 값·소수 증감은 내지 않는다. */}
         <div style={{ background: 'rgba(42,34,48,0.88)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '12px 14px', marginBottom: 16 }}>
           {(Object.keys(stats) as StatKey[]).map(key => {
             const change = weekLog.statChanges[key] || 0;
@@ -279,16 +279,15 @@ export function WeeklyResultScreen({
                   <div style={{ height: '100%', width: `${Math.round(stats[key])}%`, background: grade.color, borderRadius: STAT_BAR_HEIGHT / 2, transition: 'width 0.5s' }} />
                 </div>
                 <span style={{ width: 20, fontSize: '0.72rem', fontWeight: 700, color: grade.color }}>{grade.grade}</span>
-                <span style={{ width: 28, fontSize: '0.68rem', color: 'var(--text-secondary)', textAlign: 'right' }}>{Math.round(stats[key])}</span>
-                <span style={{ width: 40, fontSize: '0.68rem', fontWeight: 600, textAlign: 'right',
-                  color: change > 0.1 ? 'var(--green)' : change < -0.1 ? 'var(--red)' : 'var(--text-muted)' }}>
-                  {change > 0 ? '+' : ''}{Math.round(change * 10) / 10}
+                <span data-testid={`stat-change-${key}`} style={{ width: 28, fontSize: '0.68rem', fontWeight: 600, textAlign: 'right',
+                  color: change > 0 ? 'var(--green)' : 'var(--red)' }}>
+                  {statChangeMark(change)}
                 </span>
               </div>
             );
           })}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: '0.72rem', paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-            <span style={{ color: fatigueColor }}>피로 {Math.round(fatigue)} · {resultFatigueLabel}</span>
+            <span style={{ color: fatigueColor }}>피로 · {resultFatigueLabel}</span>
             <span>
               💰 {Number.isInteger(money) ? money : money.toFixed(1)}만원
               {(() => {

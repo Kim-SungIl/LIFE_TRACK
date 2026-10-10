@@ -121,6 +121,9 @@ describe('Shop gift 라우팅', () => {
       .map(i => screen.queryByRole('dialog', { name: `${i.emoji} ${i.name} — 누구에게 줄까?` }))
       .find(Boolean);
     expect(modal).toBeTruthy();
+    // 선물 대상 목록도 원시 친밀도 대신 티어 라벨만 낸다(hide-numbers).
+    expect(within(modal!).queryByText(/친밀도?\s*\d/), '선물 대상에 원시 친밀도가 돌아왔다').toBeNull();
+    expect(within(modal!).getAllByText(/^(아는 사이|친구|절친)$/).length).toBeGreaterThan(0);
 
     fireEvent.click(within(modal!).getByRole('button', { name: new RegExp(met.name) }));
     expect(onBuy).toHaveBeenCalledTimes(1);

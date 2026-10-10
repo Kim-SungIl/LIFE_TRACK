@@ -93,7 +93,7 @@ describe('#444 HUD — 우측 블록이 찌그러지지 않는다', () => {
     return render(
       <HudPanel
         gender="male" mood="☀️" weekInfo="중2 1학기 12주차" month="5월"
-        isVacation={false} fatigue={0} fatigueColor="var(--green)" fatigueLabel="좋음"
+        isVacation={false} fatigueColor="var(--green)" fatigueLabel="좋음"
         money={4} parents={['strict', 'emotional']} year={3}
         mentalStat={60} mentalState="normal" weeklyActivityCost={0} weeklyOverBudget={false}
         onOpenHome={() => {}} onOpenAlbum={() => {}}
@@ -106,6 +106,12 @@ describe('#444 HUD — 우측 블록이 찌그러지지 않는다', () => {
     const hud = container.querySelector('[data-tutorial="hud"]') as HTMLElement;
     return { hud, row1: hud.children[0] as HTMLElement, controls: hud.children[1] as HTMLElement };
   };
+
+  it('피로는 라벨만 낸다 — 수치 없음 (hide-numbers)', () => {
+    renderHud();
+    expect(screen.getByText('피로 · 좋음')).toBeTruthy();
+    expect(screen.queryByText(/피로\s*\d/), 'HUD에 피로 수치가 돌아왔다').toBeNull();
+  });
 
   it('우측 블록은 줄어들지도 줄바꿈하지도 않는다', () => {
     const { container } = renderHud();
@@ -148,7 +154,7 @@ describe('#445 후속 HUD — 컨트롤 행이 가운데 칼럼 안으로 돌아
     return render(
       <HudPanel
         gender="male" mood="☀️" weekInfo="중2 1학기 12주차" month="5월"
-        isVacation={false} fatigue={0} fatigueColor="var(--green)" fatigueLabel="좋음"
+        isVacation={false} fatigueColor="var(--green)" fatigueLabel="좋음"
         money={1569} parents={['strict', 'emotional']} year={3}
         mentalStat={60} mentalState="normal" weeklyActivityCost={0} weeklyOverBudget={false}
         onOpenHome={() => {}} onOpenAlbum={() => {}} onOpenMenu={() => {}}

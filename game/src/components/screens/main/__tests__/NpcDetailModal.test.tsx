@@ -33,7 +33,9 @@ describe('NpcDetailModal — 재적 중', () => {
     state.npcs = withNpc(state.npcs, 'jihun', { met: true, intimacy: 60 });
     renderModal(state, 'jihun');
     expect(screen.getByRole('button', { name: '말 걸기' })).toBeTruthy();
-    expect(screen.getByText(/친밀도 60/)).toBeTruthy();
+    // 티어 라벨만 보이고 원시 친밀도는 내지 않는다(hide-numbers).
+    expect(screen.getByText('친구')).toBeTruthy();
+    expect(screen.queryByText(/친밀도?\s*\d/), '원시 친밀도가 돌아왔다').toBeNull();
   });
 });
 

@@ -14,7 +14,6 @@ type Props = {
   mentalStat: number;
   mentalState: GameState['mentalState'];
   year: number;
-  fatigue: number;
   money: number;
   isVacation: boolean;
   // 부모 보너스가 이번 주 발동했는지(칩 펄스) — null/undefined 면 발동 없음
@@ -54,7 +53,7 @@ const PARENT_TIP_DESC: Record<string, string> = {
 };
 
 export const HudPanel = memo(function HudPanel({
-  parents, gender, mentalStat, mentalState, year, fatigue, money, isVacation,
+  parents, gender, mentalStat, mentalState, year, money, isVacation,
   parentBonusesApplied, mood, weekInfo, month, fatigueColor, fatigueLabel,
   weeklyActivityCost, weeklyOverBudget, suneungWeeksLeft, onOpenHome, onOpenAlbum, onOpenMenu }: Props) {
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글. HUD 전용 로컬 state.
@@ -110,7 +109,7 @@ export const HudPanel = memo(function HudPanel({
           끊기므로(word-break:keep-all, game.css:52) 글자가 찢어지지는 않는다.
           우측 폰트를 줄이면 5px을 벌지만 가장 작은 화면의 글자가 10.2px가 되어 되돌렸다. */}
       <div style={{ textAlign: 'right', fontSize: '0.72rem', lineHeight: 1.6, flexShrink: 0, whiteSpace: 'nowrap' }}>
-        <div style={{ color: fatigueColor }}>피로 {Math.round(fatigue)} · {fatigueLabel}</div>
+        <div style={{ color: fatigueColor }}>피로 · {fatigueLabel}</div>
         <div>
           💰 {Number.isInteger(money) ? money : money.toFixed(1)}만원
           {weeklyActivityCost > 0 && (

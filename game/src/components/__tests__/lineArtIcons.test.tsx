@@ -707,12 +707,12 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
       return hits[0];
     };
 
-    const academic = chipByText('학업 -2.4');
+    const academic = chipByText('학업 ▼▼');
     expect(academic.querySelector('[data-icon="stat:academic"]'),
       '칩이 표와 다른 그림을 쓴다 — 한 화면에서 학업이 두 얼굴이 된다').toBeTruthy();
     expect(emojiInText(academic), '칩에 이모지가 돌아왔다').toEqual([]);
 
-    expect(chipByText('멘탈 -0.8').querySelector('[data-icon="stat:mental"]'),
+    expect(chipByText('멘탈 ▼').querySelector('[data-icon="stat:mental"]'),
       '두 번째 칩이 선화가 아니다').toBeTruthy();
 
     // 피로는 스탯 축이 아니다 — 여기만 이모지로 남는 게 맞다.
@@ -738,13 +738,13 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
     // 문턱만 가른다 — 후보가 둘뿐이라 자르기는 아무것도 안 뺀다.
     // 문턱을 풀면(≤ -0.1) 인기가 칩이 된다.
     const byThreshold = renderResult({ statChanges: { academic: -2.4, social: -0.2 }, fatigueChange: 0 });
-    expect(byThreshold.textContent, '문턱 아래 변화까지 칩이 됐다').not.toContain('인기 -0.2');
+    expect(byThreshold.textContent, '문턱 아래 변화까지 칩이 됐다').not.toContain('인기 ▼');
     expect(iconIds(byThreshold, 'stat'), '문턱 판의 칩은 학업 하나여야 한다')
       .toEqual(['stat:academic', ...STAT_KEYS.map(k => `stat:${k}`)]);
 
     // 자르기만 가른다 — 셋 다 문턱을 넘으니 빠지는 이유가 상위 2개뿐이다.
     const bySlice = renderResult({ statChanges: { academic: -2.4, mental: -1.5, health: -0.9 }, fatigueChange: 0 });
-    expect(bySlice.textContent, '셋째 칩까지 나왔다 — 상위 2개 자르기가 풀렸다').not.toContain('체력 -0.9');
+    expect(bySlice.textContent, '셋째 칩까지 나왔다 — 상위 2개 자르기가 풀렸다').not.toContain('체력 ▼');
     expect(iconIds(bySlice, 'stat'), '자르기 판의 칩은 학업·멘탈 둘이어야 한다')
       .toEqual(['stat:academic', 'stat:mental', ...STAT_KEYS.map(k => `stat:${k}`)]);
 
@@ -770,7 +770,7 @@ describe('주간 화면 전체 — 실제 경로로 아이콘이 닿는다', () 
      */
     const atEdge = renderResult({ statChanges: { academic: -2.4, social: -0.5 }, fatigueChange: 25 });
     expect(atEdge.textContent, '문턱 **위**(-0.5)가 칩에서 빠졌다 — 경계가 배제로 바뀌었다')
-      .toContain('인기 -0.5');
+      .toContain('인기 ▼');
     expect(atEdge.textContent, '피로 문턱 **위**(25)가 칩에서 빠졌다 — 경계가 배제로 바뀌었다')
       .toContain('피로 누적');
   });

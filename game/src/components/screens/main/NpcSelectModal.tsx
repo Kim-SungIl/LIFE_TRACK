@@ -1,4 +1,5 @@
 import { NpcState } from '../../../engine/types';
+import { INTIMACY_TIER_LABEL, intimacyTier } from '../../../engine/npcRoster';
 import { Portrait } from '../../Portrait';
 import { Dialog } from '../../Dialog';
 
@@ -32,7 +33,7 @@ export function NpcSelectModal({ metNpcs, year, npcSelectFor, onSelect, onCancel
             <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{npc.name}</div>
             <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)' }}>{npc.description}</div>
           </div>
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>친밀 {Math.round(npc.intimacy)}</span>
+          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{INTIMACY_TIER_LABEL[intimacyTier(npc.intimacy, npc.met)]}</span>
         </button>
       ))}
       <button className="btn btn-secondary" style={{ marginTop: 8 }} onClick={onCancel}>취소</button>

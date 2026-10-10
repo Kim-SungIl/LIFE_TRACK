@@ -86,8 +86,9 @@ describe('StatsPanel 헤더 토글', () => {
       expect(screen.getAllByText(grade.grade).length).toBeGreaterThanOrEqual(1);
       // 플레이버 라벨
       expect(screen.getByText(STAT_FLAVOR_LABELS[key][grade.grade])).toBeInTheDocument();
-      // 수치(Math.round)
-      expect(screen.getByText(String(Math.round(STATS_FIXTURE[key])))).toBeInTheDocument();
+      // 수치는 내지 않는다(hide-numbers) — 등급·플레이버·막대만.
+      expect(screen.queryByText(String(Math.round(STATS_FIXTURE[key]))),
+        `${STAT_LABELS[key]}: 펼친 패널에 원시 수치가 돌아왔다`).toBeNull();
     }
   });
 
