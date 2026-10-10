@@ -5,6 +5,7 @@
 //   2) 같은 학교급 안 로테이션 — (absWeek(year, week) + YEAR_MIX * year) % variants.length
 //      (학년 항을 섞지 않으면 48의 배수라 상쇄돼 축이 죽는다 — pickVariantIndex 주석 참조)
 //   3) 계절 — 변이의 season 태그. 로테이션 전에 계절이 안 맞는 변이를 뺀다(seasonVariants).
+//      변이가 없는 장면(도달형)은 vacationText — 방학 주에 바꿀 칸만 덮는다(withVacationText).
 //
 // 난수를 쓰지 않는 이유: seededRandom(state)는 rngSeed를 mutate한다(rng.ts).
 // 변이 뽑기에 쓰면 이후 모든 굴림이 한 칸씩 밀려 시드 재현·sim 수치가 같이 흔들린다.
@@ -16,7 +17,7 @@
 //   기본 장면용 여성 문장을 다른 학교급 장면에 얹으면 축이 섞인다).
 //   schoolVariants가 없으면 기존 femaleDescription/femaleChoices.
 
-import type { EventChoice, EventTextVariant, GameEvent, GameState, SchoolBand } from './types';
+import type { EventChoice, EventTextVariant, GameEvent, GameState, SchoolBand, VacationText } from './types';
 import { getSchoolLevel } from './backgrounds';
 import { presentRomanceEvent } from './romance';
 import { absWeek, getSeason } from './weekMath';
@@ -75,6 +76,36 @@ function withGenderFallback(event: GameEvent, isFemale: boolean): GameEvent {
   };
 }
 
+// 방학 판본 — 성별 판본을 고른 **뒤에** 적힌 칸(문장)만 덮는다. 효과·조건은 건드리지 않고 femaleChoices의 유무도 그대로라
+// resolvedFemale(엔딩 해시)도 학기와 같은 길로 정해진다.
+// 카탈로그에 femaleDescription이 있는데 방학 판본엔 남성 지문만 있으면 여성은 학기 지문을 본다 —
+// 남성 지문을 여성에게 얹지 않는다(presentEvent 머리 주석의 '축이 섞인다'와 같은 이유).
+// 그 상태 자체는 schoolSceneVacationGate.test.ts가 막는다.
+function withVacationText(shown: GameEvent, vt: VacationText, isFemale: boolean, hasFemaleDesc: boolean): GameEvent {
+  const description = isFemale
+    ? (vt.femaleDescription ?? (hasFemaleDesc ? undefined : vt.description) ?? shown.description)
+    : (vt.description ?? shown.description);
+  const overlay = (list: EventChoice[]) => list.map((c, i) => {
+    const v = vt.choices?.[i];
+    if (!v) return c;
+    return {
+      ...c,
+      text: (isFemale ? v.femaleText : undefined) ?? v.text ?? c.text,
+      message: (isFemale ? v.femaleMessage : undefined) ?? v.message ?? c.message,
+    };
+  });
+  return {
+    ...shown,
+    description,
+    choices: overlay(shown.choices),
+    // 여성 경로는 resolveEvent·GameScreen이 femaleChoices를, EventScene이 femaleDescription을 직접 집는다 —
+    // 거기에도 같은 문장을 둬야 방학 판본이 화면과 기록에 닿는다. femaleChoices는 **자기 원본 위에** 덮는다:
+    // femaleDescription 없이 femaleChoices만 있는 사건은 choices가 남성 판본이라, 그걸 복사하면 여성 효과가 바뀐다.
+    ...(isFemale && shown.femaleDescription !== undefined ? { femaleDescription: description } : {}),
+    ...(isFemale && shown.femaleChoices ? { femaleChoices: overlay(shown.femaleChoices) } : {}),
+  };
+}
+
 // 계절이 안 맞는 변이를 뺀다. 학기에는 'vacation' 변이만 빠지고 나머지는 원래 순서라
 // **방학 판본을 더해도 학기 문장은 인덱스까지 그대로다**.
 // 거른 뒤 비면 원래 목록을 쓴다 — 빈 칸이 카탈로그 폴백으로 새는 것보다 낫다.
@@ -92,7 +123,10 @@ export function presentEvent(event: GameEvent, ctx: EventPresentationCtx): GameE
   const isFemale = ctx.gender === 'female';
 
   if (!event.schoolVariants) {
-    return withGenderFallback(event, isFemale);
+    const shown = withGenderFallback(event, isFemale);
+    return event.vacationText && getSeason(week) === 'vacation'
+      ? withVacationText(shown, event.vacationText, isFemale, !!event.femaleDescription)
+      : shown;
   }
 
   const band = schoolBandForYear(ctx.year);

@@ -32,7 +32,8 @@ export const RANDOM_EVENTS = [
     id: 'mental-low',
     title: '혼자인 점심시간',
     description: '점심시간. 친구들이 다 어디 갔는지 주변에 아무도 없다.\n혼자 밥을 먹으며 핸드폰을 본다.',
-    condition: (s) => s.stats.social < 30 && s.week > 8,
+    // 점심시간 교실 — 학교의 시간·장소가 소재라 학기 전용(방학 효과가 따로 필요한 사건이 아니다).
+    condition: (s) => s.stats.social < 30 && s.week > 8 && !s.isVacation,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     // speakers 제거 — description에는 아직 아무도 등장하지 않음 (choices에서만 등장)
