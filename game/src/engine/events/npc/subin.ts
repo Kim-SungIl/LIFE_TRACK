@@ -1,3 +1,4 @@
+import { isDating } from '../../romance';
 import { GameEvent } from '../../types';
 import { absWeek } from '../../weekMath';
 
@@ -147,7 +148,7 @@ export const SUBIN_EVENTS = [
     speakers: ['subin'],
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
-      return !!subin?.met && subin.intimacy >= 70 && s.week >= 40 && !s.isVacation && s.year === 7;
+      return !!subin?.met && (subin.intimacy >= 70 || isDating(s, 'subin')) && s.week >= 40 && !s.isVacation && s.year === 7;
     },
     choices: [
       {

@@ -2,6 +2,7 @@
 // 친밀도 바(숫자)만으로 안 보이는 관계의 온도(방치/최근/임박)를 한 줄 신호로 노출한다.
 // 밸런스 불변: 읽기만 하고 seededRandom 미호출. 설계: docs/strategy-signals-design.md (#4),
 // 신호-2(정밀판): docs/cast-restoration-master-plan.md Wave 5.
+import { romanceEventEligibility } from './romance';
 import { GameState, NpcState } from './types';
 import { GAME_EVENTS } from './events/data';
 import { NPC_MINI_EVENTS, miniEventFitsContext } from './talkData/miniEvents';
@@ -35,7 +36,8 @@ export function nextIntimacyThreshold(npc: NpcState, state: GameState): number |
   // reach 후보: 친밀도를 그 tier로 올린 가상(probe) state로 condition을 직접 평가한다.
   // year·isVacation·week 등 비-친밀도 게이트를 condition(SSOT) 그대로 반영 → 메타 재현 없이 정합.
   // (예: 방학 중 학기-전용 !isVacation 컷, 다른 학년 컷을 "곧 열린다"로 잘못 띄우지 않는다.)
-  for (const e of GAME_EVENTS) {
+  for (const original of GAME_EVENTS) {
+    const e = romanceEventEligibility(original, state);
     if (!e.reach || e.reach.npc !== npc.id || e.reach.tier <= npc.intimacy || firedReach.has(e.id) || !e.condition) continue;
     const tier = e.reach.tier;
     const probe: GameState = { ...state, npcs: state.npcs.map(n => n.id === npc.id ? { ...n, intimacy: tier } : n) };

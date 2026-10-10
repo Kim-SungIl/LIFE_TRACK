@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } from './romance';
 import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
@@ -247,6 +248,7 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 // 선택 결과 적용: 스탯(구간감쇠)/피로/용돈 + 이벤트 등장 NPC met + timeCost/문이과/부모 친밀도.
 // 반환값 = 실제 적용된 델타 모음 (표시용 — 게임 로직은 여전히 state mutate가 본체).
 function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventChoice, occurrenceWeek: number): AppliedEventOutcome {
+  applyRelationshipChoice(state, event, choice, occurrenceWeek);
   const outcome: AppliedEventOutcome = { stats: {}, npcs: [] };
   // 적용 전 스냅샷 — 아래 끝에서 이번 주 로그가 아직 없을 때(부팅 도입 장면) 보류분으로 적는 데 쓴다.
   const atEntry = visibleSnapshot(state);
@@ -408,7 +410,7 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
   } else {
     // chain cap: 일반 누적 2개, milestone(도달형) 잔여 있으면 3개까지 (졸업 직전 누락 방지).
     const eventsThisWeek = state.events.filter(
-      prev => prev.week === occurrenceWeek && prev.year === state.year,
+      prev => prev.week === occurrenceWeek && prev.year === state.year && prev.id !== ROMANCE_ROUTES.subin.opening,
     ).length;
     let chainPick: ReturnType<typeof getConditionalForWeek> = null;
     if (eventsThisWeek < 2) {
@@ -658,7 +660,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.currentEvent = null;
 
     // followup/conditional/milestone chain + 학년 전환·결산 분기 (location은 clone 이전 원본)
-    if (event.id === CAREER_CHOICE_EVENT_ID) {
+    const continuation = relationshipContinuation(newState, event, choice);
+    if (continuation) {
+      assignCurrentEvent(newState, continuation, occurrenceWeek);
+    } else if (event.id === CAREER_CHOICE_EVENT_ID) {
       // T66: 갈림길 뒤에는 아무것도 끼우지 않고 곧장 엔딩으로 — 체인 사건이 스탯을 움직이면
       // 방금 고른 갈래가 엔딩 시점에 닫힐 수 있다(careerChoice.ts 헤더).
       applyYearTransition(newState);

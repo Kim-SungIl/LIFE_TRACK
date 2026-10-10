@@ -1,6 +1,7 @@
 /**
  * Y1 시뮬·QA 스크립트 공용 — store.resolveEvent 와 동일한 이벤트 해결
  */
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } from '../../src/engine/romance';
 import {
   getFollowupForWeek,
   getConditionalForWeek,
@@ -38,6 +39,8 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   // 이벤트 발생 주(occurrence week). processWeek가 currentEvent.week=N을 박은 뒤 week++(→N+1)이라
   // newState.week은 이미 다음 주다. store.resolveEvent가 occurrenceWeek로 기록·체인캡·냉각을 하는 것과 맞춘다.
   const occurrenceWeek = newState.currentEvent!.week ?? newState.week;
+
+  applyRelationshipChoice(newState, newState.currentEvent!, choice, occurrenceWeek);
 
   // 스탯 효과 — store.applyChoiceOutcome와 동일하게 구간감쇠(scaleStatChange) 적용 (게임 본체 일치).
   for (const [key, val] of Object.entries(choice.effects)) {
@@ -131,8 +134,15 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     newState.weekLog.messages.push(`📖 ${choice.message}`);
   }
 
-  const resolvedId = newState.currentEvent!.id;
+  const resolvedEvent = newState.currentEvent!;
+  const resolvedId = resolvedEvent.id;
   newState.currentEvent = null;
+
+  const continuation = relationshipContinuation(newState, resolvedEvent, choice);
+  if (continuation) {
+    assignCurrentEvent(newState, continuation, occurrenceWeek);
+    return newState;
+  }
 
   // T66: store.resolveEvent와 동일 — 진로 갈림길 뒤에는 체인 없이 곧장 엔딩 전환.
   if (resolvedId === CAREER_CHOICE_EVENT_ID) {
@@ -153,7 +163,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     // followup 없으면 conditional chain 시도 — store.resolveEvent와 동일 로직
     // cap=2 (일반) / cap=3 (milestone 잔여 시) — 학년 한정 도달형 누락 방지
     const eventsThisWeek = newState.events.filter(
-      prev => prev.week === occurrenceWeek && prev.year === newState.year,
+      prev => prev.week === occurrenceWeek && prev.year === newState.year && prev.id !== ROMANCE_ROUTES.subin.opening,
     ).length;
     let chainPick: GameEvent | null = null;
     if (eventsThisWeek < 2) {

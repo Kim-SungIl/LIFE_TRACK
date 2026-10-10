@@ -1,3 +1,4 @@
+import { romanceEventEligibility } from '../romance';
 import { GameEvent, GameState } from '../types';
 import { seededRandom } from '../rng';
 // 재발동 여부만 본다 — 기억 슬롯 금지 셋(ANNUAL_EVENT_IDS)과는 다른 축이다.
@@ -89,7 +90,7 @@ export function getReachForWeek(state: GameState): GameEvent | null {
   // ③ 주당 1개: 이번 주에 이미 reach 발동했으면 중단
   if (state.events.some(e => e.reach && e.year === state.year && e.week === state.week)) return null;
 
-  const cands = (GAME_EVENTS as GameEvent[]).filter(e =>
+  const cands = (GAME_EVENTS as GameEvent[]).map(e => romanceEventEligibility(e, state)).filter(e =>
     e.reach && !firedIds.has(e.id) && e.condition && e.condition(state),
   );
   if (cands.length === 0) return null;

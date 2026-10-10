@@ -6,6 +6,7 @@
 // 데이터 풀(NPC_MINI_EVENTS, PARENT_MINI_EVENTS, 잡담/정적 대사)은 talkData.ts.
 // 데이터/로직 분리 P3-9 (2026-05-29).
 
+import { isDating } from './romance';
 import { GameState } from './types';
 import { seededRandomTalk } from './rng';
 import { getSchoolLevel } from './backgrounds';
@@ -55,6 +56,7 @@ export function getNpcSmalltalk(state: GameState, npcId: string): string {
   ] : [];
   const pool = [
     ...spread(entry),
+    ...(isDating(state, npcId) ? spread(entry.romance) : []),
     ...spread(isVacation ? entry.vacationOnly : entry.schoolOnly),
   ];
   return pickRandomLine(state, pool);
