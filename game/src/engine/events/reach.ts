@@ -316,6 +316,10 @@ export const REACH_EVENTS = [
     description: '단톡 창이 밤늦게 떴다. 수빈이다.\n"너 아직 깨어 있어? …괜찮으면 잠깐만."\n잠깐 뒤 메시지가 이어진다.\n"우리 집 거실 불, 밤새 켜두는 날이 있어. 그냥."',
     speakers: ['subin'],
     location: 'home',
+    // 집 장면이라 방학에도 뜨는 게 맞다 — 「내일 학교에서」만 방학엔 거짓말이 된다(남녀 같은 문장).
+    vacationText: {
+      choices: [null, { text: '"힘들면 내일 만나서 말해" — 적는다' }],
+    },
     condition: (s) => {
       const subin = s.npcs.find(n => n.id === 'subin');
       return !!subin?.met && subin.intimacy >= 70 && s.year === 1;

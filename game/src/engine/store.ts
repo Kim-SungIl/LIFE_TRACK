@@ -380,6 +380,7 @@ function recordResolvedEvent(state: GameState, event: GameEvent, choiceIndex: nu
   // (7년 완주 실측: 332개 항목 중 62개에 중복 적재되어 105.6KB, 세이브의 29%).
   // condition을 지우는 것과 같은 위생이다: 기록은 "무엇을 골랐나"만 남긴다.
   delete recordedEvent.schoolVariants;
+  delete recordedEvent.vacationText;
   // presentedFemaleChoices는 바로 아래 resolvedFemale로 접어 넣으므로 원본은 남기지 않는다.
   delete recordedEvent.presentedFemaleChoices;
   state.events.push({
