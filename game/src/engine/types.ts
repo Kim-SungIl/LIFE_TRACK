@@ -416,6 +416,11 @@ export type SchoolBand = 'elementary' | 'middle' | 'high';
 export interface EventTextVariant {
   description: string;
   femaleDescription?: string;
+  // 계절 축 — 말걸기와 같은 기준(talkSeasonGate): **학교의 장소·시간·일과가 소재면 학기 전용.**
+  // 없으면 두 계절 다. 사건 자체는 방학에도 뜨는데(집 장면) 문장만 학교를 말하는 경우에 쓴다 —
+  // condition에 방학 가드를 걸면 그 사건의 효과(피로 회복 등)까지 방학에서 사라져 밸런스가 움직인다.
+  // 거르는 곳은 presentEvent 하나(getSeason(week)).
+  season?: 'semester' | 'vacation';
   choices: Array<{
     text: string;
     message: string;

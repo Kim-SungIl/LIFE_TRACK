@@ -135,7 +135,9 @@ export const RANDOM_EVENTS = [
     title: '성적 상승!',
     description: GOOD_GRADE_VARIANTS.elementary[0].description,
     schoolVariants: GOOD_GRADE_VARIANTS,
-    condition: (s) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1,
+    // 8주 주기는 방학을 모른다 — W24·W48이 방학 주라 교실·선생님 장면이 방학에 떴다.
+    // 교실이 소재인 장면은 방학 가드 필수(schoolSceneVacationGate.test.ts가 전수로 잡는다).
+    condition: (s) => s.stats.academic >= 60 && s.week % 8 === 0 && s.week > 1 && !s.isVacation,
     location: 'classroom',
     background: 'classroom_{school}_afternoon',
     choices: [

@@ -14,11 +14,12 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_EVENTS } from '../events';
 import { SCHOOL_LIFE_EVENTS } from '../events/school-life';
-import { MIN_VARIANTS_PER_BAND } from '../events/president';
+import { MIN_VARIANTS_PER_BAND, WATCHING_PRESIDENT_VARIANTS } from '../events/president';
 import {
   FATIGUE_WARNING_VARIANTS, GOOD_GRADE_VARIANTS, MUSIC_DISCOVERY_VARIANTS,
 } from '../events/repeat-variants';
 import { createInitialState, getWeekInfo, processWeek } from '../gameEngine';
+import { presentEvent } from '../eventPresentation';
 import { resolveEventLikeStore } from '../../../scripts/lib/y1-sim-resolve';
 import { PERSONAS, pickChoice } from '../../../scripts/sim/sim-qa-playthrough';
 import type { GameEvent, GameState, SchoolVariants } from '../types';
@@ -29,6 +30,8 @@ const TARGETS = [
   { id: 'fatigue-warning', variants: FATIGUE_WARNING_VARIANTS },
   { id: 'good-grade', variants: GOOD_GRADE_VARIANTS },
   { id: 'music-discovery', variants: MUSIC_DISCOVERY_VARIANTS },
+  // 넷째: 비반장 관찰. 한 해 4회까지 같은 장면이었고, 결과 문장 "…처음 느꼈다"가 반복에서 어긋났다.
+  { id: 'watching-president', variants: WATCHING_PRESIDENT_VARIANTS },
 ] as const;
 
 /** 카탈로그는 두 풀로 갈린다 — school-life는 GAME_EVENTS에 없다(selection.ts가 따로 뽑는다). */
@@ -106,6 +109,39 @@ describe('반복 사건 문장 변이 — 데이터 계약', () => {
   });
 });
 
+describe('반복 사건 문장 변이 — 반복을 모르는 문장', () => {
+  // 로테이션은 (절대주차 + 13·학년) % length라 **몇 번째 발동인지 모른다**. "처음"류 문장은
+  // 첫 발동에만 참인데, 어느 변이가 첫 발동에 걸릴지 정해져 있지 않으니 변이 어디에도 쓰면 안 된다.
+  // (watching-president는 Y1에 4회 뜨면서 "…처음 느꼈다"를 매번 읽혔다.)
+  const FIRST_TIME = /처음|난생/;
+
+  it('watching-president — 카탈로그·변이 어디에도 "처음"이 없다', () => {
+    const e = catalogEvent('watching-president');
+    const texts = [
+      e.description, ...e.choices.flatMap(c => [c.text, c.message]),
+      ...BANDS.flatMap(b => WATCHING_PRESIDENT_VARIANTS[b].flatMap(v => [
+        v.description, ...v.choices.flatMap(c => [c.text, c.message]),
+      ])),
+    ];
+    // 모수 하한 — 변이를 통째로 지우면 검사할 문장이 0이 돼 공허하게 통과한다.
+    expect(texts.length, '검사한 문장 수').toBeGreaterThanOrEqual(1 + 4 + BANDS.length * MIN_VARIANTS_PER_BAND * 5);
+    expect(texts.filter(t => FIRST_TIME.test(t)), '"처음"이 남은 문장').toEqual([]);
+  });
+
+  it('양성 대조 — 탐지식이 고치기 전 문장을 실제로 잡는다', () => {
+    expect(FIRST_TIME.test('민재도 버거운 거구나. 전교 1등이 쉬운 게 아니라는 걸 처음 느꼈다.')).toBe(true);
+  });
+
+  it('Y1 학기 주에 네 변이가 모두 돈다 — 데이터만 넷이고 축이 죽으면 화면은 한 장면이다', () => {
+    const seen = new Set<string>();
+    for (let week = 7; week <= 42; week++) {
+      if (getWeekInfo(week).isVacation) continue;
+      seen.add(presentEvent(catalogEvent('watching-president'), { year: 1, week, gender: 'male' }).description);
+    }
+    expect(seen.size).toBe(WATCHING_PRESIDENT_VARIANTS.elementary.length);
+  });
+});
+
 describe('반복 사건 문장 변이 — 수치 불변', () => {
   // 변이는 text·message만 덮는다. 이 표가 흔들리면 밸런스가 움직인 것이다.
   const EFFECTS: Record<string, { effects: Record<string, number>; fatigueEffect?: number }[]> = {
@@ -121,9 +157,13 @@ describe('반복 사건 문장 변이 — 수치 불변', () => {
       { effects: { mental: 2, talent: 1 } },
       { effects: { social: 2, mental: 1 } },
     ],
+    'watching-president': [
+      { effects: { social: 3, mental: 2 } },
+      { effects: { mental: 1 } },
+    ],
   };
 
-  it('세 사건의 효과·피로가 변이 도입 전과 같다', () => {
+  it('사건의 효과·피로가 변이 도입 전과 같다', () => {
     for (const t of TARGETS) {
       const e = catalogEvent(t.id);
       const want = EFFECTS[t.id];
@@ -182,14 +222,19 @@ describe('반복 사건 문장 변이 — 실플레이 도달', () => {
     const a = playAndCollect(1);
     const b = playAndCollect(2);
     const merged: Record<string, number> = {};
-    for (const t of TARGETS) {
+    // watching-president는 이 하네스(balanced, 루틴 미설정)에서 조건(인기 35+)에 안 닿아 0이다 —
+    // 축 생존은 위 'Y1 학기 주에 네 변이가 모두 돈다'가 같은 presentEvent 경로로 잡는다.
+    for (const t of TARGETS.filter(t => t.id !== 'watching-president')) {
       merged[t.id] = new Set([...(a[t.id] ?? []), ...(b[t.id] ?? [])]).size;
     }
     // 착지값을 먼저 못 박는다 — "1보다 크다"만 두면 축이 반쯤 죽어도 통과한다.
+    // good-grade 10 → 6: 방학 주(W24·W48) 발동이 빠졌다(교실 장면 방학 가드).
+    // music-discovery 10 → 8: 방학엔 학교 소재 변이가 빠지고(계절 축, 가드만 되돌리면 9) 그 위에
+    // good-grade 발동이 줄며 굴림이 밀린 몫이 겹쳤다. 두 판 모두 방학 판본 문장이 실제로 나온다.
     expect(merged, '2판에서 화면에 나간 서로 다른 문장 수').toEqual({
       'fatigue-warning': 8,
-      'good-grade': 10,
-      'music-discovery': 10,
+      'good-grade': 6,
+      'music-discovery': 8,
     });
     // 변이 도입 전에는 셋 다 정확히 1이었다.
     for (const [id, n] of Object.entries(merged)) {

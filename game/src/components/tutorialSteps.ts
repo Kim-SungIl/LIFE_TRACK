@@ -37,7 +37,7 @@ export const STEPS: TutorialStep[] = [
   {
     target: 'routine',
     title: '평일 일과',
-    desc: '이게 이번 주 시간표예요!\n주중엔 학교가 끝나면 방과후·저녁 시간이 있어요.\n\n왼쪽 빈 칸을 터치해서 방과후 활동을 골라 보세요!',
+    desc: '이게 이번 주 시간표예요!\n주중엔 학교가 끝나면 방과후·저녁 시간이 있어요.\n\n방과후 빈 칸을 터치해서 활동을 골라 보세요!',
     position: 'bottom',
     interactive: true,
     waitFor: 'routine-done',
@@ -46,7 +46,7 @@ export const STEPS: TutorialStep[] = [
   {
     target: 'routine',
     title: '주말 활동',
-    desc: '이번엔 주말이에요!\n오른쪽 토요일·일요일 빈 칸을 터치해서\n주말에 할 활동도 골라 보세요!',
+    desc: '이번엔 주말이에요!\n토요일·일요일 빈 칸을 터치해서\n주말에 할 활동도 골라 보세요!',
     position: 'bottom',
     interactive: true,
   },
