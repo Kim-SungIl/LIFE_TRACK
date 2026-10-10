@@ -1,5 +1,6 @@
 // ===== LIFE TRACK: 선택의 결과 — Core Types =====
 import type { GrowthLedger, GrowthReason, GrowthReasonMemo } from './growthDrag';
+import type { RomanceNpc, RomanceDecision, RomanceRelationship } from './romance';
 import type { ParentEffect } from './parentIntimacy';
 
 export type Gender = 'male' | 'female';
@@ -39,6 +40,8 @@ export interface GameState {
    * 값이 있어도 **엔딩 시점에 그 갈래가 열려 있을 때만** 쓴다(careerBranchesOf). 손상값·닫힌 갈래는 무시.
    */
   careerChoice?: CareerBranch;
+  /** 명시적으로 선택한 관계만 기록. 친밀도 하락으로 자동 이별하지 않는다. */
+  relationship?: RomanceRelationship;
   /**
    * T66: 로드 때 학년별 행복 궤적 배열(저멘탈·바닥·번아웃) 중 하나라도 **0으로 메워졌다**는 표시.
    * 메운 뒤엔 배열 모양으로 구분할 수 없어서 마이그레이션이 메우기 전 원본을 보고 남긴다.
@@ -469,6 +472,9 @@ export interface GameEvent {
 }
 
 export interface EventChoice {
+  /** 자동 사건을 늘리지 않는 명시적 후속 대화 진입. */
+  romanceConversation?: 'subin';
+  relationshipSelect?: { npcId: RomanceNpc; decision: RomanceDecision };
   text: string;
   effects: Partial<Stats>;
   fatigueEffect?: number;

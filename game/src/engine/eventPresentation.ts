@@ -18,9 +18,10 @@
 
 import type { EventChoice, EventTextVariant, GameEvent, GameState, SchoolBand } from './types';
 import { getSchoolLevel } from './backgrounds';
+import { presentRomanceEvent } from './romance';
 import { absWeek, getSeason } from './weekMath';
 
-export type EventPresentationCtx = Pick<GameState, 'year' | 'gender'> & {
+export type EventPresentationCtx = Pick<GameState, 'year' | 'gender'> & Partial<Pick<GameState, 'relationship'>> & {
   week: number;
 };
 
@@ -86,6 +87,7 @@ function seasonVariants(list: EventTextVariant[] | undefined, week: number): Eve
 }
 
 export function presentEvent(event: GameEvent, ctx: EventPresentationCtx): GameEvent {
+  event = presentRomanceEvent(event, ctx);
   const week = event.week ?? ctx.week;
   const isFemale = ctx.gender === 'female';
 

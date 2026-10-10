@@ -1,5 +1,6 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
+import { romanceClosure } from './romance';
 import { CareerBranch, GameState, NpcState, ParentStrength, Stats } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';
@@ -537,7 +538,10 @@ export const BOND_TITLE = '곁에 남은 이름들';
 // NPC별 전용 클로저(endingNpc.ts) 우선, 미등록 id만 범용 티어 템플릿 폴백.
 // 도윤은 전출 후 친밀도가 항상 바닥이라 티어 흐름에서 빼고, 이력 게이트 별도 레인으로 끝에 1줄.
 function getTopNpcStories(state: GameState, excludeTexts: Set<string> = new Set(), limit = 3): string[] {
-  const sorted = connectedNpcs(state).slice(0, limit);
+  // 명시한 관계의 결말은 친밀도 순위 밖으로 밀어내지 않는다. 칭호의 친구 수는 그대로.
+  const partner = state.npcs.find(n => n.met && romanceClosure(state, n.id));
+  const others = connectedNpcs(state).filter(n => n.id !== partner?.id);
+  const sorted = (partner ? [partner, ...others] : others).slice(0, limit);
 
   const stories: string[] = [];
   for (const npc of sorted) {

@@ -98,3 +98,13 @@ describe('NpcRelationPanel 관계 신호', () => {
     expect(screen.queryByText(/최근 함께함|요즘 뜸하다/)).not.toBeInTheDocument();
   });
 });
+
+it('연애는 친밀도와 별개로 기존 라벨 자리에 표시한다', () => {
+  const state = makeState({ gender: 'male', year: 7, week: 10,
+    relationship: { npcId: 'subin', status: 'dating', year: 6, week: 10 } });
+  state.npcs = withNpc(state.npcs, 'subin', { met: true, intimacy: 20 });
+  const view = render(<NpcRelationPanel state={state} onSelect={() => {}} />);
+  expect(screen.getByRole('button', { name: '수빈 상세 보기' })).toHaveTextContent('연인');
+  view.rerender(<NpcRelationPanel state={{ ...state, relationship: { ...state.relationship!, status: 'ended', graduation: 'apart' } }} onSelect={() => {}} />);
+  expect(screen.queryByText('연인')).not.toBeInTheDocument();
+});

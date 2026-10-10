@@ -10,6 +10,7 @@
 // - 도윤은 전출 후 상호작용 불가(말 걸기·선물 게이트 = relationshipSignals.isNpcInteractable) +
 //   주간 자연 감쇠(floor 20)로 엔딩 시점 친밀도가 항상 20대라 티어 흐름으로는 영구 사문 —
 //   친밀도 무관 이력 게이트의 별도 레인(departed)으로 회수한다.
+import { romanceClosure } from './romance';
 import { GameState } from './types';
 
 // ===== 이벤트 이력 조회 — resolvedChoice 해석의 단일 진입점 =====
@@ -156,11 +157,13 @@ export type ResolvedClosure = { text: string; excludeEventIds: Set<string> };
 export function resolveNpcClosure(state: GameState, npcId: string, intimacy: number): ResolvedClosure | null {
   const closure = NPC_CLOSURES[npcId];
   if (!closure) return null;
-  for (const v of closure.variants ?? []) {
-    if (v.match(state)) return { text: v.text, excludeEventIds: new Set(v.sourceEvents) };
-  }
-  const text = intimacy >= BEST_TIER ? closure.best : intimacy >= GOOD_TIER ? closure.good : closure.faint;
-  return { text, excludeEventIds: new Set() };
+  const variant = closure.variants?.find(v => v.match(state));
+  const baseText = variant?.text ?? (intimacy >= BEST_TIER ? closure.best : intimacy >= GOOD_TIER ? closure.good : closure.faint);
+  const romance = romanceClosure(state, npcId);
+  return {
+    text: romance ? `${baseText} ${romance.text}` : baseText,
+    excludeEventIds: new Set([...(variant?.sourceEvents ?? []), ...(romance?.excludeEventIds ?? [])]),
+  };
 }
 
 export function isClosureExcluded(state: GameState, npcId: string): boolean {

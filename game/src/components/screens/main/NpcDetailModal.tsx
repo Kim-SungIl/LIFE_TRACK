@@ -1,3 +1,4 @@
+import { isDating } from '../../../engine/romance';
 import { GameState, NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { Dialog } from '../../Dialog';
@@ -27,7 +28,7 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
   const recall = absent ? bestNpcRecall(state, npc.id) : null;
   const tier = intimacyTier(npc.intimacy);
   const intimacyColor = tier === 'best' ? 'var(--accent-soft)' : tier === 'friend' ? 'var(--yellow)' : 'var(--text-muted)';
-  const intimacyLabel = INTIMACY_TIER_LABEL[tier];
+  const intimacyLabel = isDating(state, npc.id) ? '연인' : INTIMACY_TIER_LABEL[tier];
   const signal = relationshipSignal(npc, state);
   return (
     <Dialog onClose={onClose} labelledBy="npc-detail-name" maxWidth={340}

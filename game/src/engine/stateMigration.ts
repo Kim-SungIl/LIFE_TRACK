@@ -4,6 +4,7 @@
 //  2) 버전 무관 정규화(migrateLoadedState): 누락 필드 백필 + 리네임 + 직렬화 손실 함수 복원.
 //     store 로드와 processWeek 양쪽에서 매번 실행 — 반드시 멱등·저비용. 단순 필드 추가는 전부 이쪽.
 // gameEngine.ts 에서 추출 (P2-6). 새 필드 추가 시 migrateLoadedState 한 곳만 수정.
+import { buildSubinConfession, ROMANCE_ROUTES, sanitizeRelationship } from './romance';
 import { GameState, ParentStrength, PendingWeekDelta, StatKey } from './types';
 import { padYearCounts, yearCountsIntact } from './ending';
 import { hashInitialState, deriveTalkSeed } from './rng';
@@ -130,6 +131,7 @@ export function migrateLoadedState(state: GameState): GameState {
   const result: GameState = {
     ...state,
     parents: migratedParents,
+    relationship: sanitizeRelationship(state.relationship, state.gender),
     npcs: migratedNpcs,
     vacationChoices: migratedVacationChoices,
     examResults: state.examResults || [],
@@ -225,7 +227,8 @@ export function migrateLoadedState(state: GameState): GameState {
     // 다시 굽는다. 갈래가 닫혀 null이면 아래 "사라진 ID" 경로로 떨어진다.
     const fresh = GAME_EVENTS.find(e => e.id === cur.id)
       ?? SCHOOL_LIFE_EVENTS.find(e => e.id === cur.id)
-      ?? (cur.id === CAREER_CHOICE_EVENT_ID ? buildCareerChoiceEvent(result) : null);
+      ?? (cur.id === CAREER_CHOICE_EVENT_ID ? buildCareerChoiceEvent(result) : null)
+      ?? (cur.id === ROMANCE_ROUTES.subin.opening ? buildSubinConfession(result) : null);
     if (fresh) {
       // 발생주(cur.week)는 보존 — result.week 는 week++(gameEngine) 이후 값이라 덮어쓰면
       // 기억(memory)의 발생주가 +1 어긋난다(W48 이벤트 → 49).
