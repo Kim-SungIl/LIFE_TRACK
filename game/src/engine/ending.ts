@@ -1,6 +1,6 @@
-import { romanceClosure } from './romance';
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
+import { romanceClosure } from './romance';
 import { CareerBranch, GameState, NpcState, ParentStrength, Stats } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';

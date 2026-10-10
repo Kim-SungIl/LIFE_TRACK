@@ -1,5 +1,5 @@
-import { romanceLines } from './romance';
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
+import { isDating } from './romance';
 import { GameState, WeekLog } from './types';
 import { isExamPeriod } from './examSystem';
 import { GOOD_WEEK_AXIS_GAIN, slowdownShown } from './growthDrag';
@@ -140,6 +140,7 @@ export function getCharacterDialogue(state: GameState): string {
 
 // NPC 대사 — 친밀도/상태에 따라 다양한 대사
 interface NpcDialoguePool {
+  additive?: boolean;
   condition: (intimacy: number, state: GameState) => boolean;
   lines: string[];
   priority: number;
@@ -147,6 +148,16 @@ interface NpcDialoguePool {
 
 export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
   jihun: [
+    { additive: true, priority: 100, condition: (_, s) => isDating(s, 'jihun'), lines: [
+      '운동화 끈 묶는 동안만 기다려 줘. 같이 걷고 싶어서.',
+      '사진첩에 네 얼굴 나오면 나도 모르게 웃게 되더라.',
+      '체대 준비 힘들어도 네 얘기 듣는 시간은 좋더라.',
+      '손 내밀 때마다 아직 조금 떨리는 거, 비밀이다.',
+      '기록 재는 것보다 네 답장 기다리는 게 더 긴장돼.',
+      '스트레칭하다 네 생각나서 웃었어. 혼자 좀 웃겼지.',
+      '농구공 놓고 왔어. 오늘은 너랑 천천히 걷고 싶어서.',
+      '새 사진 찍을 때마다 네 옆자리는 내가 찜해도 돼?',
+    ]},
     { priority: 100, condition: (int) => int >= 80, lines: [
       '야, 너 오늘 뭐해? 같이 놀자!',
       '너 아니면 누구한테 말하겠어. 들어봐.',
@@ -185,6 +196,16 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
     ]},
   ],
   subin: [
+    { additive: true, priority: 100, condition: (_, s) => isDating(s, 'subin'), lines: [
+      '비행기 구름 보다가 네 생각났어. 같이 봤으면 해서.',
+      '영어 발음 연습한 거 들어줄래? 끝나면 네 얘기 듣자.',
+      '단어장 챙기듯 네 생각도 챙겨 왔지. 좀 오글거려?',
+      '승무원 꿈도, 너 좋아하는 마음도 내가 고른 거야.',
+      '데이트라고 말하니까 평소 가던 카페도 좀 달라 보여.',
+      '발음 메모 옆에 낙서한 거 봤어? 네 이름은 비밀인데.',
+      '하늘 사진 찍으면 누구한테 보내고 싶은지 알겠더라.',
+      '연습 끝내고 제일 먼저 보고 싶었던 사람이 왔네.',
+    ]},
     { priority: 100, condition: (int) => int >= 80, lines: [
       '있잖아... 나 사실 어디에도 완전히 속한 적이 없는 것 같아.',
       '너한테는 솔직해도 될 것 같아. 나 엄마아빠 이혼했어.',
@@ -543,16 +564,16 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
 };
 
 export function getNpcDialogue(npcId: string, intimacy: number, state: GameState): string {
-  const romance = romanceLines(state, npcId);
-  if (romance) return romance[(state.week + state.year) % romance.length];
   const pools = NPC_DIALOGUES[npcId];
   if (!pools) return '...';
   const sorted = [...pools].sort((a, b) => b.priority - a.priority);
   for (const pool of sorted) {
     // 빈 풀은 건너뛴다 — lines[Math.floor(Math.random() * 0)]는 undefined를 string으로 흘려보내
     // 말풍선이 빈 채로 뜨고, `!== '...'` 단언은 그걸 통과시킨다.
-    if (pool.lines.length > 0 && pool.condition(intimacy, state)) {
-      return pool.lines[Math.floor(Math.random() * pool.lines.length)];
+    if (!pool.additive && pool.lines.length > 0 && pool.condition(intimacy, state)) {
+      const additions = pools.filter(p => p.additive && p.condition(intimacy, state)).flatMap(p => p.lines);
+      const lines = additions.length ? [...pool.lines, ...additions] : pool.lines;
+      return lines[Math.floor(Math.random() * lines.length)];
     }
   }
   return '...';

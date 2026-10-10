@@ -1,5 +1,5 @@
-import { applyRelationshipChoice } from './romance';
 import { create } from 'zustand';
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } from './romance';
 import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
@@ -410,7 +410,7 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
   } else {
     // chain cap: 일반 누적 2개, milestone(도달형) 잔여 있으면 3개까지 (졸업 직전 누락 방지).
     const eventsThisWeek = state.events.filter(
-      prev => prev.week === occurrenceWeek && prev.year === state.year,
+      prev => prev.week === occurrenceWeek && prev.year === state.year && prev.id !== ROMANCE_ROUTES.subin.opening,
     ).length;
     let chainPick: ReturnType<typeof getConditionalForWeek> = null;
     if (eventsThisWeek < 2) {
@@ -660,7 +660,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.currentEvent = null;
 
     // followup/conditional/milestone chain + 학년 전환·결산 분기 (location은 clone 이전 원본)
-    if (event.id === CAREER_CHOICE_EVENT_ID) {
+    const continuation = relationshipContinuation(newState, event, choice);
+    if (continuation) {
+      assignCurrentEvent(newState, continuation, occurrenceWeek);
+    } else if (event.id === CAREER_CHOICE_EVENT_ID) {
       // T66: 갈림길 뒤에는 아무것도 끼우지 않고 곧장 엔딩으로 — 체인 사건이 스탯을 움직이면
       // 방금 고른 갈래가 엔딩 시점에 닫힐 수 있다(careerChoice.ts 헤더).
       applyYearTransition(newState);

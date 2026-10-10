@@ -1,8 +1,8 @@
-import { romanceEventEligibility } from './romance';
 // 관계 UI "신호" — 표시 레이어 전용 순수 함수.
 // 친밀도 바(숫자)만으로 안 보이는 관계의 온도(방치/최근/임박)를 한 줄 신호로 노출한다.
 // 밸런스 불변: 읽기만 하고 seededRandom 미호출. 설계: docs/strategy-signals-design.md (#4),
 // 신호-2(정밀판): docs/cast-restoration-master-plan.md Wave 5.
+import { romanceEventEligibility } from './romance';
 import { GameState, NpcState } from './types';
 import { GAME_EVENTS } from './events/data';
 import { NPC_MINI_EVENTS, miniEventFitsContext } from './talkData/miniEvents';

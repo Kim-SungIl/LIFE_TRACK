@@ -467,6 +467,8 @@ export interface GameEvent {
 }
 
 export interface EventChoice {
+  /** 자동 사건을 늘리지 않는 명시적 후속 대화 진입. */
+  romanceConversation?: 'subin';
   relationshipSelect?: { npcId: RomanceNpc; decision: RomanceDecision };
   text: string;
   effects: Partial<Stats>;

@@ -220,19 +220,23 @@ describe('EventScene 학교급 변이 소비', () => {
 
 
 describe('연애 선택 표시', () => {
-  for (const [gender, npcId, id] of [['male', 'subin', 'subin-hs-studyboard'], ['female', 'jihun', 'jihun-hs-unsaid']] as const) {
-    it(`${npcId}: 친구와 연애를 명확히 구분하고 원래 선택 인덱스로 보낸다`, () => {
+  for (const [gender, npcId, id, label] of [
+    ['male', 'subin', 'subin-hs-studyboard', '연습 끝나면 우리 얘기도'],
+    ['female', 'jihun', 'jihun-hs-unsaid', '나도 너 좋아해. 우리 사귈까?'],
+  ] as const) {
+    it(`${npcId}: 기존 선택 뒤의 네 번째 선택을 원래 인덱스로 보낸다`, () => {
       const state = makeState({ gender, year: 6, week: 10 });
-      const { onChoice } = renderScene({ event: GAME_EVENTS.find(e => e.id === id)!, gender, year: 6, state });
-      // 긴 장면은 끝까지 읽은 뒤 선택한다.
+      const original = GAME_EVENTS.find(e => e.id === id)!;
+      const { onChoice } = renderScene({ event: original, gender, year: 6, state });
       for (let i = 0; i < 10; i++) {
         const next = screen.queryByRole('button', { name: /다음/ });
         if (!next) break;
         fireEvent.click(next);
       }
-      expect(screen.getByText(/나는 친구로 지내고 싶어/)).toBeInTheDocument();
-      fireEvent.click(screen.getByText(/나도 좋아해. 우리 사귀자/));
-      expect(onChoice).toHaveBeenCalledWith(1);
+      const legacy = gender === 'female' ? original.femaleChoices! : original.choices;
+      for (const c of legacy) expect(screen.getByText(c.text)).toBeInTheDocument();
+      fireEvent.click(screen.getByText(text => text.includes(label)));
+      expect(onChoice).toHaveBeenCalledWith(3);
     });
   }
 });

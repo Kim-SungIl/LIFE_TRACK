@@ -1,4 +1,4 @@
-import { isDating, ROMANCE_ROUTES, romanceEventEligibility } from '../romance';
+import { romanceEventEligibility } from '../romance';
 import { GameEvent, GameState } from '../types';
 import { seededRandom } from '../rng';
 // 재발동 여부만 본다 — 기억 슬롯 금지 셋(ANNUAL_EVENT_IDS)과는 다른 축이다.
@@ -92,17 +92,8 @@ export function getReachForWeek(state: GameState): GameEvent | null {
 
   const cands = (GAME_EVENTS as GameEvent[]).map(e => romanceEventEligibility(e, state)).filter(e =>
     e.reach && !firedIds.has(e.id) && e.condition && e.condition(state),
-  ).filter(e => {
-    const opening = Object.values(ROMANCE_ROUTES).some(r => r.opening === e.id && r.gender === state.gender);
-    if (!opening) return true;
-    const last = lastReachAbsWeek(state, e.reach!.npc);
-    return last === null || absWeek(state.year, state.week) - last >= 4;
-  });
+  );
   if (cands.length === 0) return null;
-  // 연애를 선택했다면 졸업 대화는 높은 친밀도나 직전 경기의 24주 쿨다운 때문에 유실하지 않는다.
-  // 기존 reach 슬롯 한 개를 쓰며, 위의 주당 1개 제한은 그대로 적용한다.
-  const closing = cands.find(e => e.id === ROMANCE_ROUTES.jihun.closing && isDating(state, 'jihun'));
-  if (closing) return closing;
   const npcOf = (e: GameEvent) => state.npcs.find(n => n.id === e.reach!.npc);
 
   // ① fresh: 주 시작 친밀도 < 임계 <= 현재 친밀도 (이번 주에 막 넘음) → 쿨다운 면제, 즉시
@@ -118,11 +109,7 @@ export function getReachForWeek(state: GameState): GameEvent | null {
     const n = npcOf(e);
     if (!n || (n.weekStartIntimacy ?? n.intimacy) < e.reach!.tier) return false;
     const last = lastReachAbsWeek(state, e.reach!.npc);
-    const route = Object.values(ROMANCE_ROUTES).find(r => r.opening === e.id && r.gender === state.gender);
-    // 수빈의 앞 장면이 늦게 열려도 24주 대기로 고2 전체를 넘기지 않는다.
-    // 두 연애 입구 모두 기존 관계 장면과 최소 4주 간격을 둔다.
-    const cooldown = route ? 4 : reachCooldown(e.reach!.npc, e.reach!.year);
-    return last === null || (cur - last) >= cooldown;
+    return last === null || (cur - last) >= reachCooldown(e.reach!.npc, e.reach!.year);
   });
   if (eligible.length === 0) return null;
   return eligible.sort((a, b) => a.reach!.tier - b.reach!.tier)[0];
