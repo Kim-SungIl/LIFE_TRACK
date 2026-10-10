@@ -4,6 +4,7 @@
 //   1) 학교급(초/중/고) — getSchoolLevel(year). 배경 classroom_{school}과 같은 뼈대.
 //   2) 같은 학교급 안 로테이션 — (absWeek(year, week) + YEAR_MIX * year) % variants.length
 //      (학년 항을 섞지 않으면 48의 배수라 상쇄돼 축이 죽는다 — pickVariantIndex 주석 참조)
+//   3) 계절 — 변이의 season 태그. 로테이션 전에 계절이 안 맞는 변이를 뺀다(seasonVariants).
 //
 // 난수를 쓰지 않는 이유: seededRandom(state)는 rngSeed를 mutate한다(rng.ts).
 // 변이 뽑기에 쓰면 이후 모든 굴림이 한 칸씩 밀려 시드 재현·sim 수치가 같이 흔들린다.
@@ -17,7 +18,7 @@
 
 import type { EventChoice, EventTextVariant, GameEvent, GameState, SchoolBand } from './types';
 import { getSchoolLevel } from './backgrounds';
-import { absWeek } from './weekMath';
+import { absWeek, getSeason } from './weekMath';
 
 export type EventPresentationCtx = Pick<GameState, 'year' | 'gender'> & {
   week: number;
@@ -73,6 +74,17 @@ function withGenderFallback(event: GameEvent, isFemale: boolean): GameEvent {
   };
 }
 
+// 계절이 안 맞는 변이를 뺀다. 학기에는 'vacation' 변이만 빠지고 나머지는 원래 순서라
+// **방학 판본을 더해도 학기 문장은 인덱스까지 그대로다**.
+// 거른 뒤 비면 원래 목록을 쓴다 — 빈 칸이 카탈로그 폴백으로 새는 것보다 낫다.
+// 그 상태 자체는 schoolSceneVacationGate.test.ts가 데이터 층에서 막는다.
+function seasonVariants(list: EventTextVariant[] | undefined, week: number): EventTextVariant[] | undefined {
+  if (!list) return list;
+  const season = getSeason(week);
+  const fit = list.filter(v => !v.season || v.season === season);
+  return fit.length > 0 ? fit : list;
+}
+
 export function presentEvent(event: GameEvent, ctx: EventPresentationCtx): GameEvent {
   const week = event.week ?? ctx.week;
   const isFemale = ctx.gender === 'female';
@@ -82,7 +94,7 @@ export function presentEvent(event: GameEvent, ctx: EventPresentationCtx): GameE
   }
 
   const band = schoolBandForYear(ctx.year);
-  const list = event.schoolVariants[band];
+  const list = seasonVariants(event.schoolVariants[band], week);
   if (!list || list.length === 0) {
     return withGenderFallback(event, isFemale);
   }

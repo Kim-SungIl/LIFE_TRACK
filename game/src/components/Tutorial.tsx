@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import { STEPS } from './tutorialSteps';
 import { focusFirst, isTopLayer, popLayer, pushLayer, trapTab } from './focusTrap';
+import { CARD_FALLBACK_HEIGHT, HIGHLIGHT_PAD, placeTooltip, scrollPlan } from './tutorialPlacement';
 
 interface Props {
   onComplete: () => void;
@@ -13,6 +14,9 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [waitDone, setWaitDone] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
+  // 말풍선 실측 높이 — 배치(placeTooltip)와 스크롤(scrollPlan)이 같은 값을 쓴다.
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [cardH, setCardH] = useState(0);
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
@@ -76,16 +80,34 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
     };
   }, [updateRect, current.target, current.interactive]);
 
-  // 타겟으로 스크롤
+  // 말풍선 높이를 페인트 전에 잰다 — 본문(스텝·doneDesc)과 안내 줄(waitDone)이 높이를 바꾼다.
+  // jsdom은 0이라 폴백을 쓴다.
+  const hasRect = rect !== null;
+  useLayoutEffect(() => {
+    const h = cardRef.current?.offsetHeight ?? 0;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- DOM 측정값(말풍선 높이) 동기화
+    if (h > 0 && h !== cardH) setCardH(h);
+  }, [step, waitDone, hasRect, cardH]);
+
+  // 타겟으로 스크롤. 타깃이 길어 가운데 정렬로는 말풍선이 안 들어가면 말풍선 쪽 가장자리에 붙인다
+  // (tutorialPlacement 머리 주석 — 주말 단계 「다음」이 화면 밖이던 결함).
   useEffect(() => {
-    const el = document.querySelector(`[data-tutorial="${current.target}"]`);
+    const el = document.querySelector<HTMLElement>(`[data-tutorial="${current.target}"]`);
     if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const measured = cardRef.current?.offsetHeight || CARD_FALLBACK_HEIGHT;
+    const plan = scrollPlan(el.getBoundingClientRect().height, measured, window.innerHeight, current.position);
+    const marginProp = current.position === 'bottom' ? 'scrollMarginBottom' : 'scrollMarginTop';
+    const prevMargin = el.style[marginProp];
+    if (plan.margin) el.style[marginProp] = `${plan.margin}px`;
+    el.scrollIntoView({ behavior: 'smooth', block: plan.block });
     // 부드러운 스크롤이 끝난 뒤 한 번 더 잰다. **스텝이 바뀌거나 언마운트되면 거둔다** —
     // 안 거두면 이전 스텝의 타이머가 이전 타겟을 읽는다(선택자가 이미 갈렸다).
     const timer = setTimeout(updateRect, 400);
-    return () => clearTimeout(timer);
-  }, [current.target, updateRect]);
+    return () => {
+      clearTimeout(timer);
+      el.style[marginProp] = prevMargin;
+    };
+  }, [current.target, current.position, step, updateRect]);
 
   // 인터랙티브 스텝에서 DOM 변화 감지 (루틴 설정 등)
   useEffect(() => {
@@ -125,7 +147,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
     }
   }, [routineSet, current.waitFor, updateRect, step]);
 
-  const pad = 8;
+  const pad = HIGHLIGHT_PAD;
   const isInteractive = current.interactive && !waitDone;
 
   // ===== 키보드 접근성 =====
@@ -239,13 +261,11 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
 
       {/* 말풍선 툴팁 */}
       {rect && (
-        <div style={{
+        <div ref={cardRef} data-tutorial-card="" style={{
           position: 'absolute',
           left: '50%', transform: 'translateX(-50%)',
-          ...(current.position === 'bottom'
-            ? { top: rect.bottom + pad + 16 }
-            : { bottom: window.innerHeight - rect.top + pad + 16 }
-          ),
+          // 원하는 쪽 → 반대쪽 → 화면 안으로 밀기. 「다음」이 화면 밖인 배치는 만들지 않는다.
+          top: placeTooltip(rect, cardH || CARD_FALLBACK_HEIGHT, window.innerHeight, current.position),
           width: 'calc(100% - 40px)', maxWidth: 360,
           background: 'linear-gradient(135deg, rgba(42,34,48,0.98), rgba(23,21,28,0.98))',
           borderRadius: 16, padding: '18px 20px',
