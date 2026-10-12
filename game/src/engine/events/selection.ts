@@ -29,7 +29,7 @@ export const EVENT_DENSITY = {
 export function getFollowupForWeek(state: GameState, excludeLocation?: string): GameEvent | null {
   // getEventForWeek 내부 followup 경로와 동일하게 pickByPriority(speakers tiebreak 없음)로 통일.
   // 복수 followup 동시 적격 시 selectionPriority 존중 — priority 미부여 시 stable sort라 기존 find와 동일.
-  return pickByPriority(GAME_EVENTS.filter(e =>
+  return pickByPriority(GAME_EVENTS.map(e => romanceEventEligibility(e, state)).filter(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
     (ANNUAL_REFIRE_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id)) &&
@@ -171,7 +171,7 @@ export function getEventForWeek(state: GameState): EventSelection {
 
   // 1. 후속 이벤트 체크 (100% 발동) — ANNUAL은 매년 재발동 허용
   // 복수 매칭 시 pickByPriority(speakers tiebreak 없음) — priority 미부여 시 기존 find와 완전 동일.
-  const followup = pickByPriority(GAME_EVENTS.filter(e =>
+  const followup = pickByPriority(GAME_EVENTS.map(e => romanceEventEligibility(e, state)).filter(e =>
     FOLLOWUP_EVENT_IDS.has(e.id) &&
     e.condition && e.condition(state) &&
     (ANNUAL_REFIRE_IDS.has(e.id) || !state.events.some(prev => prev.id === e.id))

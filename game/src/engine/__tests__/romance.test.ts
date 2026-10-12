@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { createInitialState } from '../gameEngine';
 import { GAME_EVENTS } from '../events';
-import { getReachForWeek } from '../events/selection';
+import { getEventForWeek, getFollowupForWeek, getReachForWeek } from '../events/selection';
 import { assignCurrentEvent, presentEvent } from '../eventPresentation';
 import { migrateLoadedState } from '../stateMigration';
 import { cloneGameState } from '../stateClone';
@@ -267,4 +267,45 @@ it('지훈 졸업의 방학·초반 주차는 기존 조건대로 열리고 메�
   const adjusted = romanceEventEligibility(event('jihun-hs-graduation'), s);
   expect(adjusted.reach!.tier).toBe(0);
   expect(adjusted.condition!(s)).toBe(true);
+});
+
+describe('수빈 졸업은 Y7 40~42주 후속 경합에 밀리지 않는다', () => {
+  // 열리는 주가 셋뿐인데, 배열에서 앞선 지훈 후속 셋이 함께 남아 있으면 세 주를 다 가져간다.
+  function contested(datingSubin: boolean): GameState {
+    const s = datingSubin ? dating('subin') : ready('subin');
+    Object.assign(s, { year: 7, week: 40, isVacation: false, phase: 'weekday', currentEvent: null });
+    Object.assign(s.npcs.find(n => n.id === 'jihun')!, { met: true, intimacy: 70, weekStartIntimacy: 70 });
+    // 정상 플레이라면 몇 해 전에 끝났을 앞 순번 후속은 발동 처리한다.
+    for (const id of ['jihun-basketball', 'jihun-secret', 'subin-bridge', 'subin-lonely', 'subin-divorce', 'subin-dream']) {
+      s.events.push({ ...event(id), year: 5, week: 10, resolvedChoice: 0 });
+    }
+    return s;
+  }
+  function runWindow(s: GameState): string[] {
+    const picked: string[] = [];
+    for (const week of [40, 41, 42]) {
+      s.week = week;
+      const e = getEventForWeek(s).event!;
+      picked.push(e.id);
+      s.events.push({ ...e, year: 7, week, resolvedChoice: 0 });
+    }
+    return picked;
+  }
+
+  it('연애가 아닌 판은 기존 배열 순서 그대로 — 지훈 후속 셋이 창을 채운다(경합이 실재한다는 대조군)', () => {
+    const s = contested(false);
+    expect(getEventForWeek(s).event!.id).toBe('jihun-fight');
+    expect(runWindow(s)).toEqual(['jihun-fight', 'jihun-support', 'jihun-promise']);
+  });
+
+  it('연인이면 40주 첫 칸에 졸업 대화가 오고 이별·지속 선택지가 붙는다', () => {
+    const s = contested(true);
+    expect(isDating(s, 'subin')).toBe(true);
+    expect(getFollowupForWeek(s)!.id).toBe('subin-farewell');
+    const picked = runWindow(contested(true));
+    expect(picked[0]).toBe('subin-farewell');
+    expect(picked.slice(1)).toEqual(['jihun-fight', 'jihun-support']);
+    assignCurrentEvent(s, getEventForWeek(s).event!, 40);
+    expect(s.currentEvent!.choices.map(c => c.relationshipSelect?.decision).filter(Boolean)).toEqual(['together', 'apart']);
+  });
 });

@@ -36,7 +36,13 @@ export function isDating(state: RomanceContext, npcId: string): boolean {
 }
 
 // 연인의 졸업 장면만 친밀도를 우회한다. 주차·방학·만남·학년 조건은 원본이 판단한다.
+// 수빈 졸업은 후속 풀(우선순위 0·배열 순서)에 있어 열리는 주가 Y7 40~42주 셋뿐이다. 앞 순번 후속
+// (jihun-fight/support/promise)이 함께 남아 있으면 세 주를 다 빼앗겨 선택 없이 엔딩으로 간다 —
+// 연인일 때만 순위를 한 칸 올린다. 연애가 아닌 판의 경합은 그대로 둔다.
 export function romanceEventEligibility(event: GameEvent, state: GameState): GameEvent {
+  if (event.id === ROMANCE_ROUTES.subin.closing && isDating(state, 'subin')) {
+    return { ...event, selectionPriority: Math.max(event.selectionPriority ?? 0, 1) };
+  }
   if (event.id !== ROMANCE_ROUTES.jihun.closing || !isDating(state, 'jihun')) return event;
   return { ...event, reach: { ...event.reach!, tier: 0 }, condition: s => !!event.condition?.({
     ...s, npcs: s.npcs.map(n => n.id === 'jihun' ? { ...n, intimacy: Math.max(n.intimacy, event.reach!.tier) } : n),
