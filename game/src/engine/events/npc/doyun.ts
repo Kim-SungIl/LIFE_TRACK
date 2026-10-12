@@ -116,7 +116,8 @@ export const DOYUN_DAILY = [
     // Phase 2.2: 고정 주차(W22) → 도달형(intimacy >= 30) 변환
     condition: (s) => {
       const doyun = s.npcs.find(n => n.id === 'doyun');
-      return s.year === 1 && !!doyun?.met && doyun.intimacy >= 30;
+      // 쉬는 시간 교실 — 학기 전용. 도달형이 아니라(reach 없음) 가드가 fresh 창을 닫지 않는다.
+      return s.year === 1 && !!doyun?.met && doyun.intimacy >= 30 && !s.isVacation;
     },
     location: 'classroom',
     background: 'classroom_elementary',

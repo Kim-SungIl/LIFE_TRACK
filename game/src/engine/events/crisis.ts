@@ -99,7 +99,8 @@ export const CRISIS_EVENTS = [
     id: 'identity-crisis',
     title: '내가 뭘 하고 싶은 거지',
     description: '야자 끝나고 옥상에 혼자 올라왔다.\n친구들은 다 꿈을 말하는데, 나는 아무것도 떠오르지 않는다.\n"...나 뭐 하고 있는 거지."\n하늘이 이상하게 멀어 보였다.',
-    condition: (s) => (s.year === 5 || s.year === 6) && s.stats.mental <= 55 && !s.events.some(e => e.id === 'identity-crisis'),
+    // 야자 끝난 옥상·담임 — 학교의 일과가 소재라 학기 전용(같은 파일의 다른 위기들과 같은 가드).
+    condition: (s) => (s.year === 5 || s.year === 6) && s.stats.mental <= 55 && !s.events.some(e => e.id === 'identity-crisis') && !s.isVacation,
     location: 'rooftop',
     background: 'rooftop_sunset',
     choices: [

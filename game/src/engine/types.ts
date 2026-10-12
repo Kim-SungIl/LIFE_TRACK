@@ -431,6 +431,14 @@ export interface EventTextVariant {
 
 export type SchoolVariants = Record<SchoolBand, EventTextVariant[]>;
 
+// GameEvent.vacationText — 방학 주에 **바꿀 칸만** 적는다. 비운 칸은 성별 판본(femaleDescription/femaleChoices)을
+// 고른 뒤의 원래 문장이 그대로 나간다. 선택지는 인덱스로 짝짓고, 효과·조건은 늘 원본이다.
+export interface VacationText {
+  description?: string;
+  femaleDescription?: string;
+  choices?: Array<{ text?: string; message?: string; femaleText?: string; femaleMessage?: string } | null>;
+}
+
 export interface GameEvent {
   id: string;
   title: string;
@@ -457,6 +465,12 @@ export interface GameEvent {
   // 학교급 × (year, week) 로테이션 변이. 고르기는 eventPresentation.presentEvent.
   // 난수를 쓰지 않는다 — seededRandom은 rngSeed를 mutate해서 이후 이벤트 열이 밀린다.
   schoolVariants?: SchoolVariants;
+  // 방학 주에 보여줄 문장 한 벌 — 로테이션 없는 학교 장면(도달형)용. 효과는 원본 그대로, 문장만 갈아 끼운다.
+  // 조건에 방학 가드를 걸지 않는 이유: 도달형은 임계를 넘은 주에만 쿨다운을 면제받아서, 겨울방학(W43~48)에
+  // 넘은 판은 그 해 학기 주가 안 남아 컷을 영영 잃는다(scripts/sim/probe-reach-vacation-crossing.ts).
+  // 그래서 방학에도 뜨게 두고, 문장이 "방학인데 왜 학교·교복인가"를 말한다(CG가 교복이라 장소를 옮기지 않는다).
+  // schoolVariants가 있으면 쓰지 않는다(그쪽은 변이의 season 태그). 거르는 곳은 presentEvent 하나.
+  vacationText?: VacationText;
   resolvedChoice?: number; // 저장된 선택 인덱스 (이벤트 해결 후 기록)
   resolvedFemale?: boolean; // v1.2: femaleChoices 경로로 해결되었는지 (엔딩 해시 구분용)
   // presentEvent가 변이 경로에서 여성 문장을 적용한 **선택지 인덱스**. schoolVariants가 있으면

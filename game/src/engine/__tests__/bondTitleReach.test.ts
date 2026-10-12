@@ -145,10 +145,12 @@ describe('관계 타이틀 도달 가능성 (7년 완주)', () => {
     expect(BOND_BUILD.vacation.some(a => NPC_COMPANION_ACTIVITIES.includes(a)), '방학에 동행 가능 활동').toBe(true);
   });
 
-  it('(i) 동행 분산 + 매주 말걸기는 절친 8~9명으로 「곁에 남은 이름들」에 착지한다', { timeout: 30_000 }, () => {
+  it('(i) 동행 분산 + 매주 말걸기는 절친 8명 안팎으로 「곁에 남은 이름들」에 착지한다', { timeout: 30_000 }, () => {
     // 시드마다 절친 수를 먼저 못박는다 — 타이틀만 단언하면 9 → 5로 무너져도(문턱 위) 통과하고,
     // BEST_TIER가 조용히 오르거나 감쇠가 세진 것을 놓친다.
-    const landings: Record<number, number> = { 1: 9, 7: 8 };
+    // seed 1: 9 → 8 (2026-10, doyun-comic-share 방학 가드). Y1W47 쉬는 시간 장면 한 번이 빠져 RNG 흐름이 바뀌었고,
+    // 9번째였던 서아가 90.6 → 81.05로 BEST_TIER(82) 아래가 됐다. 도윤 친밀도는 79.85로 같다 — 도윤 축 유실이 아니다.
+    const landings: Record<number, number> = { 1: 8, 7: 8 };
     for (const [seed, count] of Object.entries(landings)) {
       const r = playSevenYears(BOND_BUILD, Number(seed));
       expectCompleted(r, `seed ${seed}`);

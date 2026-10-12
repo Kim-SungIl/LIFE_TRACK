@@ -21,7 +21,7 @@ import { GAME_EVENTS } from '../events';
 import { SCHOOL_LIFE_EVENTS } from '../events/school-life';
 import { pickVariantIndex, presentEvent, schoolBandForYear } from '../eventPresentation';
 import { createInitialState } from '../gameEngine';
-import { getWeekInfo } from '../weekMath';
+import { getSeason, getWeekInfo } from '../weekMath';
 import type { EventTextVariant, GameEvent, GameState, SchoolBand } from '../types';
 
 const POOL = [...GAME_EVENTS, ...SCHOOL_LIFE_EVENTS] as readonly GameEvent[];
@@ -81,11 +81,20 @@ function firesInWeeks(e: GameEvent, weeks: number[]): boolean {
   return YEARS.some(y => weeks.some(w => firesAt(e, y, w)));
 }
 
-// 방학에 조건을 통과하는 학교 장면 — **판정이 끝난 것과 안 끝난 것을 섞지 않는다.**
-//   calendar: 달력이 방학 쪽에 걸친 학교 행사(졸업식·졸업 준비·방학식·졸업 앞둔 겨울 교실). 의도.
-//   pending : 이번 범위 밖. 학교 장면인데 가드가 없다 — 문장·성격을 보고 판단할 후속(PR 본문 목록).
-// good-grade는 여기 없다 — 이번에 가드를 넣었다. 다시 생기면 A가 빨강이 된다.
-const VACATION_SCHOOL_SCENE_LEDGER: Record<string, 'calendar' | 'pending'> = {
+// 방학에 조건을 통과하는 학교 장면 — 판정이 끝난 것만 둔다(2026-10 #511 pending 13건 정리).
+//   calendar      : 달력이 방학 쪽에 걸친 학교 행사(졸업식·졸업 준비·방학식). 주차·시점 조건이 방학에 묶여 있다. 의도.
+//   vacation-text : 방학에도 뜨는 게 맞고(아래 이유), 방학 판본 지문이 "방학인데 왜 학교·교복인가"를 말한다(C가 잠근다).
+//   timing-backlog: 졸업·합격 문장인데 학년 게이트만 있고 주차 게이트가 없다. 방학 축으로는 무해하나(실측 방학 발동 0)
+//                   문장이 학기 초·중에 뜨는 **시점 문제**다 — 하은 졸업식 Y6W1 144/144판. 주차 게이트는 도달형
+//                   컷 유실 함정(아래)이라 별건으로 다룬다. calendar가 아니다.
+//
+// **도달형(reach)에는 조건 가드를 걸지 말 것.** 도달형은 임계를 넘은 주(fresh)에만 쿨다운을 면제받는다.
+// 겨울방학(W43~48)에 넘은 판은 가드가 fresh 창을 닫고, 그 해 남은 학기 주가 없어 컷을 영영 잃는다 —
+// scripts/sim/probe-reach-vacation-crossing.ts: 장부의 도달형 10건 전부 교차주 6/48에서 유실(쿨다운 진행 중이면 11/48).
+// 그래서 등교일 장면은 vacation-text, 졸업·합격 장면은 timing-backlog다. 가드를 걸면 A가 "장부에서 지우라"고
+// 빨개지는데, 지우지 말고 가드를 되돌릴 것.
+// good-grade·mental-low·doyun-comic-share·identity-crisis는 여기 없다 — 비도달형이라 가드를 넣었다.
+const VACATION_SCHOOL_SCENE_LEDGER: Record<string, 'calendar' | 'vacation-text' | 'timing-backlog'> = {
   'elementary-graduation': 'calendar',
   'middle-school-graduation': 'calendar',
   'high-school-graduation': 'calendar',
@@ -97,19 +106,19 @@ const VACATION_SCHOOL_SCENE_LEDGER: Record<string, 'calendar' | 'pending'> = {
   'yuna-window-promise': 'calendar',
   'subin-paper-airplane': 'calendar',
   'junha-hs-farewell': 'calendar',
-  'mental-low': 'pending',
-  'doyun-comic-share': 'pending',
-  'identity-crisis': 'pending',
-  'haeun-brothers-book': 'pending',
-  'haeun-hs-leaving': 'pending',
-  'jihun-new-shoes': 'pending',
-  'minjae-dawn-on-hand': 'pending',
-  'subin-hs-after': 'pending',
-  'seoa-torn-endless-line': 'pending',
-  'seoa-ending-page': 'pending',
-  'siwoo-demolished-ground': 'pending',
-  'siwoo-where-you-stood': 'pending',
-  'yerin-not-a-trade': 'pending',
+  // 도달형 졸업·합격 문장 — 하은 졸업식(Y6)·중학 졸업식(Y4)·고교 졸업식(Y7)·졸업 직전 옥상·합격자 발표 시즌.
+  // 실측은 전부 학기(Y6W1·Y4W1/W30·Y7W26~29). 방학엔 무해하지만 시점이 틀렸다 — 주차 게이트는 별건.
+  'haeun-hs-leaving': 'timing-backlog',
+  'seoa-torn-endless-line': 'timing-backlog',
+  'seoa-ending-page': 'timing-backlog',
+  'siwoo-where-you-stood': 'timing-backlog',
+  'yerin-not-a-trade': 'timing-backlog',
+  'subin-hs-after': 'timing-backlog',
+  // 도달형 등교일 장면 — CG가 교복이라 장소를 옮기지 않는다. 방학엔 방과후·보충·도서관 개방일로 나온 날.
+  'haeun-brothers-book': 'vacation-text',
+  'jihun-new-shoes': 'vacation-text',
+  'minjae-dawn-on-hand': 'vacation-text',
+  'siwoo-demolished-ground': 'vacation-text',
 };
 
 describe('A. 학교 장면(장소·배경) — 방학 주 조건', () => {
@@ -226,5 +235,198 @@ describe('B. 방학에 뜨는 변이 사건 — 화면에 나가는 문장', () 
         }
       }
     }
+  });
+});
+
+// ===== C. 방학 판본(vacationText) — 로테이션 없는 장면의 계절 축 =====
+// school: 학교 장면(장부 vacation-text + 탐지기 밖의 정류장 장면). 방학 지문이 학교에 나온 사유를 말한다.
+// home  : 집 장면. 방학에 화면에 나가는 문장에 학교 어휘가 없다(B와 같은 기준).
+const VACATION_TEXT: Record<string, 'school' | 'home'> = {
+  'haeun-brothers-book': 'school',
+  'jihun-new-shoes': 'school',
+  'minjae-dawn-on-hand': 'school',
+  'siwoo-demolished-ground': 'school',
+  // 배경(bus_stop_evening)이 탐지기에 안 걸리지만 「하굣길」·명찰·교복 CG — 등교일 장면이다.
+  'subin-name-or-school': 'school',
+  // 집 장면 — 선택지 「내일 학교에서 말해」만 방학엔 거짓이었다.
+  'subin-night-light': 'home',
+};
+// 학기 일과 — 방학 판본이 남기면 안 되는 말(SCHOOL_LEX보다 좁다: 방학 판본은 '학교'·'수업'을 정당하게 쓴다).
+const SEMESTER_ROUTINE = /등굣길|하굣길|등교|하교|쉬는 시간|점심시간|야자|종례|내일 학교/;
+
+function shownTexts(e: GameEvent, gender: 'male' | 'female'): string[] {
+  const choices = gender === 'female' && e.femaleChoices ? e.femaleChoices : e.choices;
+  const desc = gender === 'female' && e.femaleDescription ? e.femaleDescription : e.description;
+  return [desc, ...choices.flatMap(c => [c.text, c.message])].filter(Boolean);
+}
+
+function choiceSkeleton(c: GameEvent['choices'][number]): unknown {
+  const { text: _t, message: _m, ...rest } = c;
+  void _t; void _m;
+  return JSON.parse(JSON.stringify(rest));
+}
+
+describe('C. 방학 판본(vacationText)', () => {
+  const withText = POOL.filter(e => e.vacationText);
+  // 효과 불변의 기대값 — **수집 시점(어떤 it보다 먼저)에** 떠 둔다. 카탈로그는 프로세스 전역이라, 앞선 it이
+  // presentEvent를 부르며 원본을 제자리에서 바꾸면 it 안에서 뜬 스냅샷은 이미 오염돼 회귀가 통과한다(#512 검수 N6).
+  const PRISTINE = new Map(withText.map(e => [e.id, {
+    male: e.choices.map(choiceSkeleton),
+    female: (e.femaleChoices ?? e.choices).map(choiceSkeleton),
+    maleTexts: shownTexts(e, 'male'),
+    femaleTexts: shownTexts(e, 'female'),
+  }]));
+  // 방학 주 좌표 — **비면 단언으로 실패한다.** 빈 배열을 구조분해하면 TypeError로 터져서, 뮤테이션 검수에서
+  // '어느 단언이 걸렸나'가 거짓이 된다(#512 검수: M4가 단언이 아니라 예외로 빨개졌다).
+  const vacWeeksOf = (e: GameEvent) => {
+    const coords = YEARS.flatMap(y => VACATION_WEEKS.filter(w => firesAt(e, y, w)).map(w => [y, w] as const));
+    expect(coords, `${e.id} 방학 주 도달 — 0이면 방학에 안 뜬다(가드가 붙었나?)`).not.toHaveLength(0);
+    return coords;
+  };
+
+  it('방학 판본을 단 사건 = 목록, 장부의 vacation-text는 전부 학교 장면으로 들어 있다', () => {
+    expect(withText.map(e => e.id).sort()).toEqual(Object.keys(VACATION_TEXT).sort());
+    for (const [id, kind] of Object.entries(VACATION_SCHOOL_SCENE_LEDGER)) {
+      if (kind === 'vacation-text') expect(VACATION_TEXT[id], `${id}`).toBe('school');
+    }
+  });
+
+  it('양성 대조 — 학기 일과 탐지가 고치기 전 문장을 잡는다', () => {
+    for (const t of ['아침 등굣길, 민재가', '하굣길 시내버스 정류장', '"힘들면 내일 학교에서 말해" — 적는다']) {
+      expect(SEMESTER_ROUTINE.test(t), t).toBe(true);
+    }
+  });
+
+  it('방학 주 전수 — 화면에 나가는 문장이 방학 판본이다(학교 장면은 사유를, 집 장면은 학교 어휘 없음)', () => {
+    const bad: string[] = [];
+    let checked = 0;
+    for (const e of withText) {
+      for (const [year, week] of vacWeeksOf(e)) {
+        for (const gender of ['male', 'female'] as const) {
+          checked++;
+          const texts = shownTexts(presentEvent(e, { year, week, gender }), gender);
+          const at = `${e.id} Y${year}W${week} ${gender}`;
+          for (const t of texts) {
+            const m = t.match(SEMESTER_ROUTINE);
+            if (m) bad.push(`${at} 학기 일과 「${m[0]}」`);
+            if (VACATION_TEXT[e.id] === 'home' && SCHOOL_LEX.test(t)) bad.push(`${at} 집 장면에 학교 어휘 「${t.match(SCHOOL_LEX)![0]}」`);
+          }
+          if (VACATION_TEXT[e.id] === 'school' && !/방학/.test(texts[0])) bad.push(`${at} 지문이 방학을 말하지 않는다`);
+        }
+      }
+    }
+    // 6건 × 각자의 학년 1개 × 방학 11주 × 2성별 = 132. 적으면 탐침이 그 학년·주에 못 닿은 것이다.
+    expect(checked, '검사한 (사건·주·성별) 수').toBeGreaterThanOrEqual(132);
+    expect(bad.slice(0, 10), `방학 판본 위반 ${bad.length}건`).toEqual([]);
+  });
+
+  it('학기 주 문장은 원본 그대로 — 방학 판본이 학기에 새지 않는다', () => {
+    let checked = 0;
+    for (const e of withText) {
+      for (const year of YEARS) {
+        for (const week of SEMESTER_WEEKS) {
+          if (!firesAt(e, year, week)) continue;
+          for (const gender of ['male', 'female'] as const) {
+            checked++;
+            const { vacationText: _vt, ...plain } = e;
+            void _vt;
+            expect(shownTexts(presentEvent(e, { year, week, gender }), gender), `${e.id} Y${year}W${week} ${gender}`)
+              .toEqual(shownTexts(presentEvent(plain as GameEvent, { year, week, gender }), gender));
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThanOrEqual(6 * 37 * 2);
+  });
+
+  it('효과 불변 — 방학 판본은 문장만 바꾼다(선택지의 효과·조건·기억은 원본)', () => {
+    for (const e of withText) {
+      const [year, week] = vacWeeksOf(e)[0];
+      expect(getSeason(week)).toBe('vacation');
+      for (const gender of ['male', 'female'] as const) {
+        const pristine = PRISTINE.get(e.id)!;
+        const src = pristine[gender];
+        const srcTexts = gender === 'female' ? pristine.femaleTexts : pristine.maleTexts;
+        const shown = presentEvent(e, { year, week, gender });
+        const got = gender === 'female' && shown.femaleChoices ? shown.femaleChoices : shown.choices;
+        expect(got.map(choiceSkeleton), `${e.id} ${gender}`).toEqual(src);
+        expect(shownTexts(e, gender), `${e.id} ${gender} 카탈로그 원본이 그대로다`).toEqual(srcTexts);
+      }
+    }
+  });
+
+  it('계절은 사건의 발생주(event.week)로 판정한다 — 화면의 주(ctx.week)가 아니다', () => {
+    // 체인·학년말 경로에선 currentEvent.week(발생주)와 state.week가 갈린다. W24(방학)에 발생한 사건을
+    // W25(학기) 화면에서 다시 그려도 방학 판본이어야 하고, 그 반대도 같다.
+    const e = POOL.find(x => x.id === 'jihun-new-shoes')!;
+    const vt = e.vacationText!.description!;
+    expect(presentEvent({ ...e, week: 24 }, { year: 3, week: 25, gender: 'male' }).description, 'W24 발생 / W25 화면').toBe(vt);
+    expect(presentEvent({ ...e, week: 42 }, { year: 3, week: 43, gender: 'male' }).description, 'W42 발생 / W43 화면').toBe(e.description);
+  });
+
+  it('여성 경로 — store가 집는 femaleChoices에도 방학 문장이 닿는다', () => {
+    // GameScreen·resolveEvent는 여성일 때 femaleChoices를 직접 읽는다. choices만 덮으면 화면은 학기 문장이다.
+    const e = POOL.find(x => x.id === 'subin-night-light')!;
+    expect(e.femaleChoices, 'subin-night-light femaleChoices 전제').toBeDefined();
+    const shown = presentEvent(e, { year: 1, week: 22, gender: 'female' });
+    expect(shown.femaleChoices![1].text).toBe(shown.choices[1].text);
+    expect(shown.femaleChoices![1].text).not.toMatch(/학교/);
+  });
+
+  it('카탈로그에 여성 지문이 있으면 방학 판본도 여성 지문을 갖는다', () => {
+    let applicable = 0;
+    for (const e of withText) {
+      if (e.femaleDescription && e.vacationText!.description) {
+        applicable++;
+        expect(e.vacationText!.femaleDescription, `${e.id} 방학 판본 여성 지문`).toBeDefined();
+      }
+    }
+    // 지금 카탈로그엔 해당 사건이 0건이라 이 루프는 공허하다 — 분기 자체는 아래 합성 픽스처가 잠근다.
+    // 1건 이상이 되면 이 수를 고치고(루프가 실제로 돈다) 픽스처는 그대로 둘 것.
+    expect(applicable, '여성 지문 + 방학 지문을 함께 가진 카탈로그 사건 수').toBe(0);
+  });
+
+  describe('합성 픽스처 — withVacationText의 성별 분기', () => {
+    const choice = (text: string, message: string) => ({ text, message, effects: { mental: 1 } });
+    const base = {
+      id: 'fixture-vacation-text', title: 't', location: 'street' as const,
+      description: '학기 남', choices: [choice('학기 남 c0', '학기 남 m0'), choice('학기 남 c1', '학기 남 m1')],
+    };
+    const vac = { year: 3, week: 22 };
+    const sem = { year: 3, week: 10 };
+
+    it('여성 지문 있음 + 방학 여성 지문 있음 → 여성은 방학 여성 지문·femaleText·femaleMessage를, femaleChoices에도 같이', () => {
+      const e: GameEvent = {
+        ...base,
+        femaleDescription: '학기 여',
+        femaleChoices: [choice('학기 여 c0', '학기 여 m0'), choice('학기 여 c1', '학기 여 m1')],
+        vacationText: {
+          description: '방학 남', femaleDescription: '방학 여',
+          choices: [null, { text: '방학 남 c1', message: '방학 남 m1', femaleText: '방학 여 c1', femaleMessage: '방학 여 m1' }],
+        },
+      };
+      const m = presentEvent(e, { ...vac, gender: 'male' });
+      expect(m.description).toBe('방학 남');
+      expect(m.choices.map(c => [c.text, c.message])).toEqual([['학기 남 c0', '학기 남 m0'], ['방학 남 c1', '방학 남 m1']]);
+      const f = presentEvent(e, { ...vac, gender: 'female' });
+      expect(f.description).toBe('방학 여');
+      expect(f.femaleDescription, 'EventScene이 집는 여성 지문 필드').toBe('방학 여');
+      expect(f.choices.map(c => [c.text, c.message])).toEqual([['학기 여 c0', '학기 여 m0'], ['방학 여 c1', '방학 여 m1']]);
+      expect(f.femaleChoices!.map(c => [c.text, c.message]), 'store가 집는 femaleChoices').toEqual([['학기 여 c0', '학기 여 m0'], ['방학 여 c1', '방학 여 m1']]);
+      // 학기엔 하나도 안 바뀐다.
+      expect(presentEvent(e, { ...sem, gender: 'female' }).description).toBe('학기 여');
+      expect(presentEvent(e, { ...sem, gender: 'male' }).choices[1].text).toBe('학기 남 c1');
+    });
+
+    it('여성 지문 있음 + 방학 판본엔 남성 지문만 → 여성은 학기 여성 지문(남성 지문을 얹지 않는다)', () => {
+      const e: GameEvent = { ...base, femaleDescription: '학기 여', vacationText: { description: '방학 남' } };
+      expect(presentEvent(e, { ...vac, gender: 'female' }).description).toBe('학기 여');
+      expect(presentEvent(e, { ...vac, gender: 'male' }).description).toBe('방학 남');
+    });
+
+    it('여성 지문 없음 → 여성도 방학 지문을 본다', () => {
+      const e: GameEvent = { ...base, vacationText: { description: '방학 남' } };
+      expect(presentEvent(e, { ...vac, gender: 'female' }).description).toBe('방학 남');
+    });
   });
 });

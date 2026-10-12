@@ -82,6 +82,10 @@ export const MID_REACH_EVENTS = [
     speakers: ['jihun'],
     location: 'street',
     background: 'school_road_morning',
+    // CG가 교복 등교일이라 장소는 두고, 방학엔 학교에 나온 사유를 지문이 말한다(가드는 겨울 임계 컷을 잃는다).
+    vacationText: {
+      description: '방학 방과후 수업이 있는 아침, 새로 산 운동화를 신고 나온 지훈이 웅덩이를 피하다 결국 흙을 묻히고 만다. "에이…" 평소답지 않게 한참 닦는다.\n"새로 산 거라 괜히 아까워서. 더 깨끗이 신고 싶었나 봐."',
+    },
     condition: (s) => { const n = s.npcs.find(x => x.id === 'jihun'); return !!n?.met && n.intimacy >= 76 && s.year === 3; },
     choices: [
       { text: '"흙 좀 묻으면 어때, 네 신발인데"', effects: { mental: 1 }, npcEffects: [{ npcId: 'jihun', intimacyChange: 4 }], message: '"하긴 그러네." 지훈이 휴지를 구겨 넣고 씩 웃는다.', timeCost: 1 },
@@ -237,6 +241,10 @@ export const MID_REACH_EVENTS = [
     speakers: ['subin'],
     location: 'street',
     background: 'bus_stop_evening',
+    // 명찰·교복 차림의 정류장(CG도 교복) — 「하굣길」이 학교의 일과라 방학엔 방과후 수업이 끝난 길로.
+    vacationText: {
+      description: '방학 방과후 수업이 끝난 저녁 시내버스 정류장, 학원 가는 여러 학교 애들이 수빈을 "어, ○○중 걔!" 하고 부른다. 익숙하게 받아주다가,\n버스가 떠난 뒤 "쟤들 내 이름은 모르더라. 맨날 ○○중 걔, 이래" 하고 명찰을 만지작거린다.',
+    },
     condition: (s) => { const n = s.npcs.find(x => x.id === 'subin'); return !!n?.met && n.intimacy >= 82 && s.year === 3; },
     choices: [
       { text: '"난 네 이름부터 알았는데" 하고 또박또박 부른다', effects: { social: 1 }, npcEffects: [{ npcId: 'subin', intimacyChange: 4 }], message: '수빈이 명찰에서 손을 뗀다. "…너는 그러네."', timeCost: 1 },
@@ -359,6 +367,10 @@ export const MID_REACH_EVENTS = [
     speakers: ['minjae'],
     location: 'school_gate',
     background: 'school_road_morning',
+    // CG가 교복 등교일이라 장소는 두고, 방학엔 학교에 나온 사유를 지문이 말한다(가드는 겨울 임계 컷을 잃는다).
+    vacationText: {
+      description: '방학 방과후 수업에 나가는 아침길, 민재가 평소처럼 태연하게 단어장을 내민다. 받으려는데—표지가 새까맣게 닳아 반질거리고, 귀퉁이는 다 해졌고, 페이지 사이로 색색의 인덱스가 삐죽하다. 표지 맨 위엔 "3:40"이라고 작게 적힌 새벽 시각.\n"아, 그거… 오래 봐서 그래." 민재가 슬쩍 손을 들어 가린다.',
+    },
     condition: (s) => { const n = s.npcs.find(x => x.id === 'minjae'); return !!n?.met && n.intimacy >= 70 && s.year === 3; },
     choices: [
       { text: '"그렇게 안 숨겨도 돼. 이만큼 본 건데"', effects: { social: 1 }, npcEffects: [{ npcId: 'minjae', intimacyChange: 3 }], message: '"…숨긴 건 아니고." 그러면서도 든 손으로 표지 위를 슬쩍 덮는다.', timeCost: 1 },
@@ -640,6 +652,10 @@ export const MID_REACH_EVENTS = [
     speakers: ['haeun'],
     location: 'cafe',
     background: 'school_bench',
+    // CG가 교복 등교일이라 장소는 두고, 방학엔 학교에 나온 사유를 지문이 말한다(가드는 겨울 임계 컷을 잃는다).
+    vacationText: {
+      description: '방학인데도 학교 도서관이 문을 연 날, 교복 차림으로 나온 하은이 벤치에서 참고서를 펼치며 "이거 이 선배가 물려받은 비기야~ 후배 너도 보여줄까?" 하고 으스댄다.\n그러다 표지 안쪽 다른 이름—오빠 이름—에서 손가락이 멈추고, 으스대던 웃음이 슬며시 옅어진다.',
+    },
     condition: (s) => { const n = s.npcs.find(x => x.id === 'haeun'); return !!n?.met && n.intimacy >= 62 && s.year === 3; },
     choices: [
       { text: '"오빠는 지금 뭐 해요?" 가볍게 묻기', effects: { social: 1 }, npcEffects: [{ npcId: 'haeun', intimacyChange: 2 }], message: '"…뭐, 그냥 지내." 하은이 표지를 덮는다.', timeCost: 1 },
