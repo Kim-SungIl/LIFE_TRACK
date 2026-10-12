@@ -43,6 +43,9 @@ const ANCHORS: Record<string, number> = {
 };
 const TARGETS = Object.keys(ANCHORS);
 const CROSS_WEEKS = [1, 10, 19, 22, 30, 38, 44];
+// 앵커 경계 양쪽 — 앵커−1에 골린 컷은 예약(미표시), 앵커에 골린 컷은 그 주 표시. 이게 없으면
+// `occurrenceWeek >= anchor - 1` 같은 한 칸 완화가 살아남는다(3자 검수 m5c).
+const crossWeeksFor = (id: string) => [...new Set([...CROSS_WEEKS, ANCHORS[id] - 1, ANCHORS[id]])].sort((a, b) => a - b);
 
 function setWeek(s: GameState, year: number, week: number): void {
   s.year = year;
@@ -104,7 +107,7 @@ describe('A·B. 졸업·합격 문장은 앵커 이후에만 — 페이싱은 �
   for (const id of TARGETS) {
     it(`${id} — 교차주 7종 × hold/free`, { timeout: 30_000 }, () => {
       let earlyInBase = 0;
-      for (const cross of CROSS_WEEKS) {
+      for (const cross of crossWeeksFor(id)) {
         for (const hold of [true, false]) {
           const base = withoutAnchors(() => playTargetYear(id, cross, hold));
           const run = playTargetYear(id, cross, hold);
@@ -153,6 +156,84 @@ describe('C. 표시 때 친밀도를 다시 보지 않는다', () => {
     setWeek(s, 7, 11);
     expect(pickReachForWeek(s)).toEqual({ event: null, reserve: [] });
   });
+});
+
+describe('A2. 제품 store 경로(advanceWeek → resolveEvent → resolveEventChain)', () => {
+  // A·B는 sim 미러(scripts/lib/y1-sim-resolve)로 돈다 — 미러가 같은 pickChainForWeek를 쓰더라도 store의
+  // 호출(발생주 전달·예약 기록)을 바꾸면 그쪽은 모른다(3자 검수: store만 고친 m7·m8·m9가 전부 초록이었다).
+  // 그래서 같은 계약을 진짜 store로 한 번 더 잠근다. 친밀도는 이벤트 국면에서 올려 chain에서 fresh가 되게 한다
+  // (예약이 chain 경로에서 일어나야 store 배선이 걸린다).
+  beforeEach(() => {
+    localStorage.clear();
+    useGameStore.setState({ state: null });
+  });
+
+  function playStoreYear(id: string, cross: number, seed = 7): { shown: number | null; reserved: number | null } {
+    const target = byId(id);
+    const { npc, tier, year } = target.reach!;
+    const s0 = createInitialState('male', ['wealth', 'freedom'], { rngSeed: seed });
+    s0.routineSlot2 = 'self-study';
+    s0.routineSlot3 = 'light-exercise';
+    setWeek(s0, year, 1);
+    s0.phase = 'weekday';
+    s0.events = ALL.filter(e => e.reach?.npc === npc && e.reach.year === year && e.id !== id && e.reach.tier < tier)
+      .map(e => ({ ...e, condition: undefined, year: year - 1, week: 1 }));
+    useGameStore.setState({ state: s0 });
+    let crossed = false;
+    for (let guard = 0; guard < 400; guard++) {
+      let st = useGameStore.getState().state!;
+      if (st.year !== year || st.phase === 'ending' || st.phase === 'year-end') break;
+      if (st.phase === 'weekday' || st.phase === 'event') {
+        const npcs = st.npcs.map(n => ({ ...n }));
+        const n = npcs.find(x => x.id === npc)!;
+        n.met = true;
+        if (!crossed && (st.week > cross || (st.week === cross && st.phase === 'event'))) { n.intimacy = tier + 1; crossed = true; }
+        else if (!crossed) n.intimacy = Math.min(n.intimacy, tier - 12);
+        else n.intimacy = Math.max(n.intimacy, tier);
+        useGameStore.setState({ state: { ...st, npcs } });
+        st = useGameStore.getState().state!;
+      }
+      const api = useGameStore.getState();
+      if (st.phase === 'weekday') {
+        api.setWeekendChoices(['self-study', 'club']);
+        api.setVacationChoices(['self-study', 'creative', 'rest']);
+        api.advanceWeek();
+      } else if (st.phase === 'event') {
+        const ev = st.currentEvent!;
+        const list = st.gender === 'female' && ev.femaleChoices ? ev.femaleChoices : ev.choices;
+        api.resolveEvent(Math.max(0, list.findIndex(c => !c.relationshipSelect && !c.romanceConversation)));
+      } else if (st.phase === 'result') api.setPhase('weekday');
+      else break;
+    }
+    const f = useGameStore.getState().state!;
+    const h = f.events.find(e => e.id === id && e.year === year);
+    return { shown: h?.week ?? null, reserved: f.reachReservations?.[id]?.week ?? null };
+  }
+
+  for (const id of TARGETS) {
+    it(`${id} — store 실경로, 경계 포함 교차주`, { timeout: 60_000 }, () => {
+      const a = ANCHORS[id];
+      let reservedCases = 0;
+      for (const cross of [1, 22, a - 1, a, a + 1]) {
+        const base = withoutAnchors(() => playStoreYear(id, cross));
+        const run = playStoreYear(id, cross);
+        const where = `C=${cross}`;
+        expect(base.shown, `${where}: 기준선이 띄워야 이 칸이 의미가 있다`).not.toBeNull();
+        expect(run.shown, `${where}: 유실`).not.toBeNull();
+        expect(run.shown!, `${where}: 앵커 전 표시`).toBeGreaterThanOrEqual(a);
+        if (base.shown! < a) {
+          reservedCases++;
+          expect(run.reserved, `${where}: 예약 주 = 기준선 표시 주(원래 뜰 주)`).toBe(base.shown);
+        } else {
+          expect(run.reserved, `${where}: 앵커 이후 픽은 예약 없이`).toBeNull();
+          expect(run.shown, `${where}: 앵커 이후 픽은 기준선 주 그대로`).toBe(base.shown);
+        }
+      }
+      // 양성 대조 — 앵커 전 교차가 실제로 예약 경로를 탔다(최소 C=1·22). 앵커 46짜리는 경계 칸(45~47)의
+      // 기준선 표시가 W45 이벤트 유무에 따라 이미 W46이라 2칸, 나머지는 앵커−1 칸까지 3칸이다.
+      expect(reservedCases, '예약 경로를 탄 칸 수').toBeGreaterThanOrEqual(a === 46 ? 2 : 3);
+    });
+  }
 });
 
 describe('B2. 예약해도 그 주의 다른 컷은 기준선처럼 소화된다', () => {
@@ -304,15 +385,26 @@ describe('G. 세이브 — 구세이브 폴백·이어하기 왕복·손상 칸 
     expect(pickReachForWeek(loaded).reserve, '빈 예약 = 그 주에 정상 예약').toEqual(['seoa-ending-page']);
   });
 
-  it('이어하기 왕복 — 저장된 예약이 그대로 돌아오고 앵커 주에 뜬다', () => {
-    const res = { 'haeun-hs-leaving': { year: 6, week: 1 } };
-    seed(st => { st.year = 6; st.week = 46; st.semester = 2; st.isVacation = true; st.reachReservations = res; });
+  it('이어하기 왕복 — 제품 자동저장(saveToStorage) → loadSavedGame이 예약을 그대로 돌려주고 앵커 주에 뜬다', () => {
+    const res = { 'haeun-hs-leaving': { year: 6, week: 1 }, 'seoa-ending-page': { year: 7, week: 20 } };
+    const s = createInitialState('male', ['wealth', 'freedom'], { rngSeed: 9 });
+    setWeek(s, 6, 46);
+    s.phase = 'weekday';
+    s.reachReservations = res;
+    // setState가 store의 자동저장 구독(saveToStorage)을 탄다 — 디스크에 손으로 JSON을 쓰지 않는다.
+    useGameStore.setState({ state: s });
+    const raw = JSON.parse(localStorage.getItem(SAVE_KEY)!) as { state: GameState };
+    expect(raw.state.reachReservations, '디스크에 실제로 적혔다').toEqual(res);
+    useGameStore.setState({ state: null });
     expect(useGameStore.getState().loadSavedGame()).toBe(true);
     const loaded = useGameStore.getState().state!;
     expect(loaded.reachReservations).toEqual(res);
     expect(pickReachForWeek(loaded).event?.id).toBe('haeun-hs-leaving');
-    // 다시 저장 → 다시 로드(자동저장 경로)도 같다.
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ version: 1, state: loaded }));
+    // 한 주 진행(자동저장) → 다시 로드해도 같다.
+    useGameStore.getState().advanceWeek();
+    expect(useGameStore.getState().state!.currentEvent?.id, '앵커 주에 화면에 떴다').toBe('haeun-hs-leaving');
+    useGameStore.getState().resolveEvent(0);
+    expect(useGameStore.getState().state!.events.find(e => e.id === 'haeun-hs-leaving')?.week, '기록 발생주').toBe(46);
     useGameStore.setState({ state: null });
     expect(useGameStore.getState().loadSavedGame()).toBe(true);
     expect(useGameStore.getState().state!.reachReservations).toEqual(res);

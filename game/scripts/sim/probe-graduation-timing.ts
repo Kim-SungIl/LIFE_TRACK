@@ -175,11 +175,20 @@ function compare(dir: string): void {
       console.log(`| ${t} | ${offN} | ${onN} | ${lost} | ${gained} | ${pairs.filter(([a]) => fit(a.shown[t])).length} | ${pairs.filter(([, b]) => fit(b.shown[t])).length} | ${Object.entries(hist).map(([w, n]) => `W${w}×${n}`).join(' ') || '-'} |`);
     }
     // 비대상 도달형 — 표시 주를 옮겨 다른 컷이 밀려 죽지 않았나(학년 넘는 쿨다운 연쇄 포함).
-    const count = (rs: Run[]) => { const c: Record<string, number> = {}; for (const r of rs) for (const x of r.seq) { const id = x.split('@')[0]; if (REACH_IDS.has(id) && !TARGETS.includes(id)) c[id] = (c[id] ?? 0) + 1; } return c; };
-    const co = count(pairs.map(p => p[0])), cn = count(pairs.map(p => p[1]));
-    const diff = [...new Set([...Object.keys(co), ...Object.keys(cn)])].map(id => [id, (cn[id] ?? 0) - (co[id] ?? 0)] as const).filter(([, d]) => d !== 0).sort((a, b) => a[1] - b[1]);
-    const tot = (c: Record<string, number>) => Object.values(c).reduce((a, b) => a + b, 0);
-    console.log(`\n비대상 도달형 총 발동 ${tot(co)} → ${tot(cn)} · 개별 Δ: ${diff.map(([id, d]) => `${id} ${d > 0 ? '+' : ''}${d}`).join(', ') || '없음'}`);
+    // **판 단위 짝 비교**다: id별 총수만 맞추면 한 판에서 잃고 다른 판에서 얻은 것이 서로 지워진다.
+    const reachSet = (r: Run) => new Set(r.seq.map(x => x.split('@')[0]).filter(id => REACH_IDS.has(id) && !TARGETS.includes(id)));
+    const lostBy: Record<string, number> = {}, gainedBy: Record<string, number> = {};
+    let lostPairs = 0, gainedPairs = 0;
+    for (const [a, b] of pairs) {
+      const sa = reachSet(a), sb = reachSet(b);
+      const lost = [...sa].filter(id => !sb.has(id)), gained = [...sb].filter(id => !sa.has(id));
+      if (lost.length) lostPairs++;
+      if (gained.length) gainedPairs++;
+      for (const id of lost) lostBy[id] = (lostBy[id] ?? 0) + 1;
+      for (const id of gained) gainedBy[id] = (gainedBy[id] ?? 0) + 1;
+    }
+    const fmt = (c: Record<string, number>) => Object.entries(c).sort((x, y) => y[1] - x[1]).map(([id, n]) => `${id}×${n}`).join(', ') || '없음';
+    console.log(`\n비대상 도달형(판 단위 짝) — 잃은 판 ${lostPairs}/${pairs.length} [${fmt(lostBy)}] · 얻은 판 ${gainedPairs}/${pairs.length} [${fmt(gainedBy)}]`);
     const strip = (r: Run) => r.seq.filter(x => !TARGETS.includes(x.split('@')[0]));
     console.log(`비대상 사건 열 분기 ${pairs.filter(([a, b]) => strip(a).join() !== strip(b).join()).length}/${pairs.length}판 · 판당 사건 수 Δ ${mean(pairs.map(([a, b]) => b.seq.length - a.seq.length)).toFixed(2)} (기준 ${mean(pairs.map(([a]) => a.seq.length)).toFixed(1)})`);
     console.log('최종 스탯 부호 Δ(on−off ± SE): ' + ['academic', 'social', 'mental', 'talent', 'health'].map(k => { const d = pairs.map(([a, b]) => b.stats[k] - a.stats[k]); return `${k} ${mean(d) >= 0 ? '+' : ''}${mean(d).toFixed(2)}±${se(d).toFixed(2)}`; }).join(' · '));
