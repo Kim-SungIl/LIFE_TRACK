@@ -196,6 +196,10 @@ export const NEW_NPC_REACH_EVENTS = [
     speakers: ['siwoo'],
     location: 'street',
     background: 'school_entrance_rain',
+    // CG가 교복 등교일이라 장소는 두고, 방학엔 학교에 나온 사유를 지문이 말한다(가드는 겨울 임계 컷을 잃는다).
+    vacationText: {
+      description: '방학 보충수업이 끝난 비 오는 날, 시우가 데려간 곳은 그가 어릴 때 살던 골목이다. 절반이 펜스로 막혀 철거 중. 그는 펜스 틈으로 한 집의 빈터를 본다. 평소보다 오래, 시선을 안 옮긴다. 텀블러는 비었는데 든 손만 만지작거린다. 빗물이 빈터 한쪽으로만 안 흐르고 고인다.\n시우: "저기, 우리 집 있던 자리. 마당에 평상 하나 있었어. 비 오면 평상으로 물 안 가게, 누가 흙으로 턱을 높여놨더라. 손으로. 지금도 거기만 물이 안 가. …막을 사람이 없어진 자린데, 막아둔 손만 남았어."',
+    },
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 75 && s.year === 6; },
     choices: [
       { text: '"그 평상, 네 기억엔 아직 안 헐렸잖아" 머무름을 허락한다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 빈터를 오래 본다. "…여긴 아직 펜스가 없네." 안 헐렸다고도 안 헐린다고도 안 한다. 다음 만남에도 그는 자꾸 헐린 자리로 데려간다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '막을 사람은 없는데, 턱 높여 비를 막아둔 빈터.', npcIds: ['siwoo'] } },
