@@ -1,5 +1,5 @@
 // verify-reach-pacing.ts — 중학 도달형 페이싱(burst 방지) 검증
-// getReachForWeek를 Y2~Y4 전 주차에 호출해(= reach 발동 상한) 측정:
+// 제품 도달형 판정(pickReachForWeek + 예약 반영)을 Y2~Y4 전 주차에 호출해(= reach 발동 상한) 측정:
 //  ① NPC별 연속 발동 간격 >= 쿨다운(16주, pre-met) — burst 없음
 //  ② 주당 reach <= 1
 //  ③ 이벤트 영구 1회성(중복 발동 없음)
@@ -21,7 +21,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { GAME_EVENTS } from '../../src/engine/events/data';
-import { getReachForWeek } from '../../src/engine/events/selection';
+import { applyReachReservation, pickReachForWeek } from '../../src/engine/events/selection';
 import type { GameEvent, GameState } from '../../src/engine/types';
 
 const MID_NPCS = ['jihun', 'subin', 'minjae', 'yuna', 'haeun'];
@@ -142,11 +142,20 @@ interface SimNpc { id: string; met: boolean; intimacy: number; weekStartIntimacy
 /** 주차별 도달형 선택기. 기본은 제품 함수, 자기검사에서는 합성 구현을 주입한다. */
 export type ReachPicker = (state: GameState) => GameEvent | null;
 
+// 제품 경로 그대로 — 앵커 컷(reach.anchorWeek)은 앵커 전엔 예약만 되고 앵커 주부터 뜬다. 예약을 state에
+// 적어야 그 컷이 소비된 것으로 보이고 같은 NPC 쿨다운이 예약 주로 흐른다(표시만 돌려주는 getReachForWeek를
+// 쓰면 예약이 버려져 그 컷이 영영 안 뜬다 — 서아 Y4 컷이 이 게이트에서 조용히 빠졌었다).
+const productPick: ReachPicker = (state) => {
+  const p = pickReachForWeek(state);
+  applyReachReservation(state, p.reserve, state.week);
+  return p.event;
+};
+
 // npcIntim: NPC별 시작 친밀도. growthPerWeek: 주당 친밀도 상승(fresh 경로 테스트용, 0이면 전부 pre-met).
 function runScenario(
   npcIntim: Record<string, number>,
   growthPerWeek = 0,
-  pick: ReachPicker = getReachForWeek,
+  pick: ReachPicker = productPick,
   cd: (npc: string, year: number) => number = cooldown,
 ) {
   const npcs: SimNpc[] = ALL_NPCS.map((id) => ({ id, met: true, intimacy: npcIntim[id] ?? 0, weekStartIntimacy: npcIntim[id] ?? 0 }));
@@ -342,7 +351,7 @@ function report(name: string, npcIntim: Record<string, number>, growth = 0): Sce
   return { name, firedIds: fires.map((f) => f.id), problems };
 }
 
-console.log(`중학 도달형(${midIds.length}개) 페이싱 burst 검증 — getReachForWeek 주차별 상한 호출`);
+console.log(`중학 도달형(${midIds.length}개) 페이싱 burst 검증 — pickReachForWeek 주차별 상한 호출`);
 console.log(`코퍼스: 런타임 도달형 ${runtimeReach}개 = 디스크 \`reach:\` 선언 ${diskDecls}개 / 자기검사 ${selfPassed}종 통과`);
 console.log(`쿨다운: 중학 NPC 학년당 ${reachCountOf(GAME_EVENTS, 'yuna', 2)}개 → ${cooldown('yuna', 2)}주 / 하은 Y2 ${reachCountOf(GAME_EVENTS, 'haeun', 2)}개 → ${cooldown('haeun', 2)}주`);
 

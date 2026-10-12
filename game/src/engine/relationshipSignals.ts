@@ -5,6 +5,7 @@
 import { romanceEventEligibility } from './romance';
 import { GameState, NpcState } from './types';
 import { GAME_EVENTS } from './events/data';
+import { consumedReachIds } from './events/selection';
 import { NPC_MINI_EVENTS, miniEventFitsContext } from './talkData/miniEvents';
 import { absWeek } from './weekMath';
 
@@ -30,7 +31,8 @@ export function nextIntimacyThreshold(npc: NpcState, state: GameState): number |
   const consider = (t: number) => { if (t > npc.intimacy && (best === null || t < best)) best = t; };
 
   // 발동 기록 — selection.getReachForWeek와 동일 SSOT(state.events의 reach id, state.talkEventsFired)를 읽는다.
-  const firedReach = new Set(state.events.filter(e => e.reach).map(e => e.id));
+  // 예약된 앵커 컷도 '이미 얻은 컷'이다 — 그 뒤 친밀도가 식어도 "곧 열린다"를 다시 약속하지 않는다.
+  const firedReach = consumedReachIds(state);
   const firedMini = new Set(state.talkEventsFired);
 
   // reach 후보: 친밀도를 그 tier로 올린 가상(probe) state로 condition을 직접 평가한다.

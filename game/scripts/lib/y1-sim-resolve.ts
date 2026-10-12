@@ -4,8 +4,8 @@
 import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } from '../../src/engine/romance';
 import {
   getFollowupForWeek,
-  getConditionalForWeek,
-  getMilestoneForWeek,
+  pickChainForWeek,
+  applyReachReservation,
   FOLLOWUP_EVENT_IDS,
   DIRECT_SEQUEL_IDS,
   type GameEvent,
@@ -165,12 +165,9 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     const eventsThisWeek = newState.events.filter(
       prev => prev.week === occurrenceWeek && prev.year === newState.year && prev.id !== ROMANCE_ROUTES.subin.opening,
     ).length;
-    let chainPick: GameEvent | null = null;
-    if (eventsThisWeek < 2) {
-      chainPick = getConditionalForWeek(newState);
-    } else if (eventsThisWeek < 3) {
-      chainPick = getMilestoneForWeek(newState);
-    }
+    const pick = pickChainForWeek(newState, occurrenceWeek, eventsThisWeek);
+    applyReachReservation(newState, pick.reserve, occurrenceWeek);
+    const chainPick: GameEvent | null = pick.event;
     if (chainPick) {
       assignCurrentEvent(newState, chainPick, occurrenceWeek); // phase='event'도 여기서 선다
     } else {

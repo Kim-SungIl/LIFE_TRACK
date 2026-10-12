@@ -225,7 +225,7 @@ export const HIGH_REACH_EVENTS = [
   },
   {
     id: 'subin-hs-after',
-    reach: { npc: 'subin', tier: 72, year: 7 },
+    reach: { npc: 'subin', tier: 72, year: 7, anchorWeek: 42 }, // 「합격자 발표가 끝난 며칠 뒤」 — 2학기 마지막 주(교실)
     title: '합격 후',
     description: '합격자 발표가 끝난 며칠 뒤. 수빈이 음료 두 개를 들고 와 하나를 내민다. 예전처럼 들뜬 게 아니라, 조용하다.\n"나 사실 몇 번이나 접으려고 했거든. 엄마 말 들을까, 하고. 근데 네가 한 명은 응원한다고 했잖아. 그 한 명 때문에 못 접겠더라."',
     speakers: ['subin'],
@@ -449,7 +449,7 @@ export const HIGH_REACH_EVENTS = [
   },
   {
     id: 'haeun-hs-leaving',
-    reach: { npc: 'haeun', tier: 40, year: 6 },
+    reach: { npc: 'haeun', tier: 40, year: 6, anchorWeek: 46 }, // 하은(1년 위) 고교 졸업식 — haeun-graduation(Y3 W46)과 같은 달력
     title: '마지막 줄',
     description: '하은 선배의 졸업식. 후배들 틈에서 너를 찾아 다가온다. 손에 낡은 방송부 대본이 들려 있다.\n"이거, 내가 쓰던 대본. 마지막 줄은 네가 채우라고 비워뒀어." 늘 마지막 줄을 비워두던 사람이, 이번엔 그걸 너한테 건넨다. "잘 지내. 연락하고."',
     speakers: ['haeun'],

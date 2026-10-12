@@ -231,10 +231,12 @@ describe('반복 사건 문장 변이 — 실플레이 도달', () => {
     // good-grade 10 → 6: 방학 주(W24·W48) 발동이 빠졌다(교실 장면 방학 가드).
     // music-discovery 10 → 8: 방학엔 학교 소재 변이가 빠지고(계절 축, 가드만 되돌리면 9) 그 위에
     // good-grade 발동이 줄며 굴림이 밀린 몫이 겹쳤다. 두 판 모두 방학 판본 문장이 실제로 나온다.
+    // fatigue-warning·music-discovery 8 → 7: 앵커 도달형 예약(2026-10)으로 하은·수빈 장면의 표시 주가 옮겨
+    // 굴림이 밀린 몫이다(앵커만 떼면 8·8). 문장 축은 그대로 살아 있다(7종이 실제로 나간다).
     expect(merged, '2판에서 화면에 나간 서로 다른 문장 수').toEqual({
-      'fatigue-warning': 8,
+      'fatigue-warning': 7,
       'good-grade': 6,
-      'music-discovery': 8,
+      'music-discovery': 7,
     });
     // 변이 도입 전에는 셋 다 정확히 1이었다.
     for (const [id, n] of Object.entries(merged)) {

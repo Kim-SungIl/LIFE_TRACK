@@ -84,17 +84,18 @@ function firesInWeeks(e: GameEvent, weeks: number[]): boolean {
 // 방학에 조건을 통과하는 학교 장면 — 판정이 끝난 것만 둔다(2026-10 #511 pending 13건 정리).
 //   calendar      : 달력이 방학 쪽에 걸친 학교 행사(졸업식·졸업 준비·방학식). 주차·시점 조건이 방학에 묶여 있다. 의도.
 //   vacation-text : 방학에도 뜨는 게 맞고(아래 이유), 방학 판본 지문이 "방학인데 왜 학교·교복인가"를 말한다(C가 잠근다).
-//   timing-backlog: 졸업·합격 문장인데 학년 게이트만 있고 주차 게이트가 없다. 방학 축으로는 무해하나(실측 방학 발동 0)
-//                   문장이 학기 초·중에 뜨는 **시점 문제**다 — 하은 졸업식 Y6W1 144/144판. 주차 게이트는 도달형
-//                   컷 유실 함정(아래)이라 별건으로 다룬다. calendar가 아니다.
+//   anchored      : 졸업·합격 문장의 도달형 — 조건엔 학년만 있지만 **표시는 reach.anchorWeek 이후**(예약, events/selection.ts).
+//                   졸업 무렵(W41~46 이후)만 화면에 나오고 그중 겨울방학(W43~) 표시는 졸업식 달력이라 의도다.
+//                   표시 시점 자체는 reachAnchorReservation.test.ts가 실제 루프로 잠근다. 2026-10 이전 분류는
+//                   timing-backlog(학년만 있어 학기 초·중에 떴다 — 하은 졸업식 Y6W1 144/144판).
 //
 // **도달형(reach)에는 조건 가드를 걸지 말 것.** 도달형은 임계를 넘은 주(fresh)에만 쿨다운을 면제받는다.
 // 겨울방학(W43~48)에 넘은 판은 가드가 fresh 창을 닫고, 그 해 남은 학기 주가 없어 컷을 영영 잃는다 —
 // scripts/sim/probe-reach-vacation-crossing.ts: 장부의 도달형 10건 전부 교차주 6/48에서 유실(쿨다운 진행 중이면 11/48).
-// 그래서 등교일 장면은 vacation-text, 졸업·합격 장면은 timing-backlog다. 가드를 걸면 A가 "장부에서 지우라"고
+// 그래서 등교일 장면은 vacation-text, 졸업·합격 장면은 anchored(주차 게이트 대신 표시 예약)다. 가드를 걸면 A가 "장부에서 지우라"고
 // 빨개지는데, 지우지 말고 가드를 되돌릴 것.
 // good-grade·mental-low·doyun-comic-share·identity-crisis는 여기 없다 — 비도달형이라 가드를 넣었다.
-const VACATION_SCHOOL_SCENE_LEDGER: Record<string, 'calendar' | 'vacation-text' | 'timing-backlog'> = {
+const VACATION_SCHOOL_SCENE_LEDGER: Record<string, 'calendar' | 'vacation-text' | 'anchored'> = {
   'elementary-graduation': 'calendar',
   'middle-school-graduation': 'calendar',
   'high-school-graduation': 'calendar',
@@ -107,13 +108,13 @@ const VACATION_SCHOOL_SCENE_LEDGER: Record<string, 'calendar' | 'vacation-text' 
   'subin-paper-airplane': 'calendar',
   'junha-hs-farewell': 'calendar',
   // 도달형 졸업·합격 문장 — 하은 졸업식(Y6)·중학 졸업식(Y4)·고교 졸업식(Y7)·졸업 직전 옥상·합격자 발표 시즌.
-  // 실측은 전부 학기(Y6W1·Y4W1/W30·Y7W26~29). 방학엔 무해하지만 시점이 틀렸다 — 주차 게이트는 별건.
-  'haeun-hs-leaving': 'timing-backlog',
-  'seoa-torn-endless-line': 'timing-backlog',
-  'seoa-ending-page': 'timing-backlog',
-  'siwoo-where-you-stood': 'timing-backlog',
-  'yerin-not-a-trade': 'timing-backlog',
-  'subin-hs-after': 'timing-backlog',
+  // 표시는 앵커 이후(예약) — 학기 초·중에 뜨던 시점 문제를 주차 게이트 없이 풀었다.
+  'haeun-hs-leaving': 'anchored',
+  'seoa-torn-endless-line': 'anchored',
+  'seoa-ending-page': 'anchored',
+  'siwoo-where-you-stood': 'anchored',
+  'yerin-not-a-trade': 'anchored',
+  'subin-hs-after': 'anchored',
   // 도달형 등교일 장면 — CG가 교복이라 장소를 옮기지 않는다. 방학엔 방과후·보충·도서관 개방일로 나온 날.
   'haeun-brothers-book': 'vacation-text',
   'jihun-new-shoes': 'vacation-text',
@@ -140,6 +141,15 @@ describe('A. 학교 장면(장소·배경) — 방학 주 조건', () => {
       for (const w of [24, 48]) {
         expect(firesAt(e, y, w), `good-grade Y${y}W${w}`).toBe(false);
       }
+    }
+  });
+
+  it('anchored 분류는 실제로 앵커가 달린 도달형이다(헛분류면 학기 초에 졸업식이 다시 뜬다)', () => {
+    const anchored = Object.entries(VACATION_SCHOOL_SCENE_LEDGER).filter(([, k]) => k === 'anchored').map(([id]) => id);
+    expect(anchored.length, 'anchored 모수').toBe(6);
+    for (const id of anchored) {
+      const e = POOL.find(x => x.id === id);
+      expect(e?.reach?.anchorWeek, `${id} anchorWeek`).toBeGreaterThanOrEqual(41);
     }
   });
 

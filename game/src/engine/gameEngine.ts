@@ -911,9 +911,8 @@ function applyIdlePenalty(state: GameState, log: WeekLog, econMods: ReturnType<t
 // 이번 주 이벤트 선택 (getEventForWeek는 순수 — patch는 호출자가 명시 적용).
 function selectEventForWeek(state: GameState): void {
   const selection = getEventForWeek(state);
-  if (selection.patch) {
-    state.hardCrisisYears = selection.patch.hardCrisisYears;
-  }
+  if (selection.patch?.hardCrisisYears) state.hardCrisisYears = selection.patch.hardCrisisYears;
+  if (selection.patch?.reachReservations) state.reachReservations = selection.patch.reachReservations;
   if (selection.event) {
     assignCurrentEvent(state, selection.event, state.week);
   }

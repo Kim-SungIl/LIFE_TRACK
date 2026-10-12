@@ -93,6 +93,25 @@ export function normalizeParentStrength(p: string): string {
  * 이 함수는 `migrateLoadedState`를 통해 **로드할 때와 매주 `processWeek` 첫머리**에서 돈다.
  * 그래서 정상 보류분은 반드시 그대로 살아남아야 한다(안 그러면 #453이 통째로 죽는다).
  */
+/**
+ * 앵커 도달형 예약(GameState.reachReservations) 정규화. 없으면 undefined(= 예약 없음, 백필 안 함).
+ * 판정할 수 없는 칸은 **버린다**(접어서 고치지 않는다): 모르는 id·앵커 없는 컷·학년이 그 컷의 학년과
+ * 다른 칸·주가 1~48 밖인 칸. 남겨 두면 쿨다운 스탬프가 엉뚱한 주로 흐르거나 다른 학년 컷이 소비된다.
+ * 칸 하나가 버려지면 그 컷은 "아직 안 골림"으로 돌아가 다음 주부터 정상 예약된다.
+ */
+export function sanitizeReachReservations(v: unknown): GameState['reachReservations'] {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const out: NonNullable<GameState['reachReservations']> = {};
+  for (const [id, r] of Object.entries(v as Record<string, unknown>)) {
+    const reach = GAME_EVENTS.find(e => e.id === id)?.reach;
+    if (!reach || reach.anchorWeek === undefined || !r || typeof r !== 'object') continue;
+    const { year, week } = r as { year?: unknown; week?: unknown };
+    if (year !== reach.year || !Number.isInteger(week) || (week as number) < 1 || (week as number) > 48) continue;
+    out[id] = { year, week: week as number };
+  }
+  return out;
+}
+
 export function sanitizePendingWeekDelta(v: unknown): PendingWeekDelta | undefined {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return undefined;
   const p = v as Record<string, unknown>;
@@ -178,6 +197,7 @@ export function migrateLoadedState(state: GameState): GameState {
             : hashInitialState({ gender: state.gender, parents: migratedParents }),
         ),
     hardCrisisYears: state.hardCrisisYears || [],
+    reachReservations: sanitizeReachReservations(state.reachReservations),
     // 슬롯별 루틴 카운터 — 구세이브의 단일 routineWeeks 값을 양 슬롯에 복제 (호환)
     routineSlot2Weeks: state.routineSlot2Weeks
       ?? (state as unknown as { routineWeeks?: number }).routineWeeks ?? 0,

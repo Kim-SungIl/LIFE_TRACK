@@ -6,7 +6,7 @@ import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './s
 import { cloneGameState } from './stateClone';
 import { describeUnplayable } from './saveIntegrity';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
-import { getFollowupForWeek, getConditionalForWeek, getMilestoneForWeek, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
+import { getFollowupForWeek, pickChainForWeek, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
 import { assignCurrentEvent } from './eventPresentation';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
@@ -410,15 +410,13 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
     assignCurrentEvent(state, followup, occurrenceWeek);
   } else {
     // chain cap: 일반 누적 2개, milestone(도달형) 잔여 있으면 3개까지 (졸업 직전 누락 방지).
+    // 앵커 컷 예약·학년 마지막 주 예약 비우기도 pickChainForWeek 안에 있다(sim 미러와 같은 함수).
     const eventsThisWeek = state.events.filter(
       prev => prev.week === occurrenceWeek && prev.year === state.year && prev.id !== ROMANCE_ROUTES.subin.opening,
     ).length;
-    let chainPick: ReturnType<typeof getConditionalForWeek> = null;
-    if (eventsThisWeek < 2) {
-      chainPick = getConditionalForWeek(state);
-    } else if (eventsThisWeek < 3) {
-      chainPick = getMilestoneForWeek(state);
-    }
+    const pick = pickChainForWeek(state, occurrenceWeek, eventsThisWeek);
+    applyReachReservation(state, pick.reserve, occurrenceWeek);
+    const chainPick = pick.event;
     if (chainPick) {
       assignCurrentEvent(state, chainPick, occurrenceWeek);
     } else if (state.week > 48) {

@@ -150,7 +150,9 @@ describe('관계 타이틀 도달 가능성 (7년 완주)', () => {
     // BEST_TIER가 조용히 오르거나 감쇠가 세진 것을 놓친다.
     // seed 1: 9 → 8 (2026-10, doyun-comic-share 방학 가드). Y1W47 쉬는 시간 장면 한 번이 빠져 RNG 흐름이 바뀌었고,
     // 9번째였던 서아가 90.6 → 81.05로 BEST_TIER(82) 아래가 됐다. 도윤 친밀도는 79.85로 같다 — 도윤 축 유실이 아니다.
-    const landings: Record<number, number> = { 1: 8, 7: 8 };
+    // seed 1·7: 8 → 9 (2026-10, 앵커 도달형 예약 — 졸업·합격 6건을 앵커 주에 표시). 앵커만 떼면 8 그대로다.
+    // 표시 주가 옮겨 RNG 흐름이 바뀐 몫이고(효과 수치 불변), 절친이 늘어난 쪽이라 타이틀 계약과 같은 방향이다.
+    const landings: Record<number, number> = { 1: 9, 7: 9 };
     for (const [seed, count] of Object.entries(landings)) {
       const r = playSevenYears(BOND_BUILD, Number(seed));
       expectCompleted(r, `seed ${seed}`);
