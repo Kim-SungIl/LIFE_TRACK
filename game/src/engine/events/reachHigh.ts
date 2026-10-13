@@ -371,12 +371,10 @@ export const HIGH_REACH_EVENTS = [
     // 재고백으로 읽힌다.
     // 4주 간격: 순서만 맞추면 cook이 그 주 followup으로 뜬 뒤 체인의 reach 추가 픽이 같은 주에
     //   이 컷을 붙일 수 있다(subin-dream 선례와 같은 함정). 심화가 심화로 읽히려면 사이가 벌어져야 한다.
-    //   ⚠️ 4가 실제로 몇 주인지는 **이 컷이 어느 경로로 뽑혔는지에 달렸다.** 스탬프는 항상
-    //   엔진주 W인데(`gameEngine.ts` selectEventForWeek 가 `week: state.week`), 조건을 평가하는
-    //   좌표가 경로마다 다르다: 메인 경로는 advanceWeekCounter 이전이라 W에서 평가 → 진짜 4주가
-    //   필요하고, 체인 경로(`store.ts` resolveEventChain)는 processWeek 이후라 W+1에서 평가 →
-    //   3주도 통과한다. 실측 메인 라인이 체인 경로라 cook 스탬프 W7 → recipe 스탬프 W10(3주)로
-    //   떴다. 서사적으로 3·4는 둘 다 무해하지만, 이 값을 "정확히 4주"로 믿고 계산하지 말 것.
+    //   4는 이제 경로와 무관하게 **정확히 4주**다. 예전엔 체인 경로(`store.ts` resolveEventChain)가
+    //   week++ 뒤 W+1 좌표로 조건을 봐서 3주도 통과했다(실측: cook W7 → 체인 recipe W10). 연쇄 판정을
+    //   발생주 좌표로 통일(2026-10, events/selection.ts atOccurrence)하면서 그 판은 W11 이후로 밀린다 —
+    //   의도된 변화다(심화가 심화로 읽히려면 사이가 벌어져야 한다는 이 게이트의 원래 뜻에 맞다).
     // 안전판을 두지 않는다 — cook의 문턱(38)이 이 컷(42)보다 **낮아서** t42에 닿은 런은 이미
     //   cook **적격**이다. (엄밀히는 적격 ≠ 발동이다. cook이 W39 이후에야 발동하면 이 컷은
     //   `week>=43`을 요구받고 W43~48은 전부 방학이라 원천 불가 — 다만 실플레이 스윕에서 cook
