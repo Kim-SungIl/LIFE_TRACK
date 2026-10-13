@@ -187,7 +187,9 @@ describe('A2. 제품 store 경로(advanceWeek → resolveEvent → resolveEventC
         const npcs = st.npcs.map(n => ({ ...n }));
         const n = npcs.find(x => x.id === npc)!;
         n.met = true;
-        if (!crossed && (st.week > cross || (st.week === cross && st.phase === 'event'))) { n.intimacy = tier + 1; crossed = true; }
+        // 교차는 늦어도 C주 메인 슬롯 전에 — 발생주 C−1의 사건 국면(chain 경로)이 있으면 거기서, 없으면 C주 주중.
+        // (예전 규칙 `st.week > cross`는 C−1에 사건이 없으면 C+1로 밀려, 앵커−1 칸이 RNG 흐름에 따라 앵커 칸이 됐다.)
+        if (!crossed && st.week >= cross) { n.intimacy = tier + 1; crossed = true; }
         else if (!crossed) n.intimacy = Math.min(n.intimacy, tier - 12);
         else n.intimacy = Math.max(n.intimacy, tier);
         useGameStore.setState({ state: { ...st, npcs } });
@@ -298,8 +300,9 @@ describe('D. 쿨다운 스탬프 = 예약 주 — 학년을 넘는 연쇄 유실
     const run = earphonesWeek();
     // 픽스처 착지값 먼저 — 기준선이 실제로 Y4 W10에 띄우고 Y5 학기에 이어 붙는지.
     expect(base.y4Shown, '기준선 서아 Y4 표시 주').toBe(10);
-    // 9인 이유: Y4 W10 스탬프 + 48주 쿨다운이 이 픽스처의 학년 전환(49주째에 Y5 W1로 넘김) 좌표에서 Y5 W9에 열린다.
-    expect(base.y5, '기준선 Y5 표시 주(학기)').toBe(9);
+    // 10인 이유: Y4 W10 스탬프 + 48주 쿨다운 = Y5 W10. 예전엔 9였다 — chain이 week++ 뒤 좌표로 쿨다운을 재서
+    // 실효 간격이 47주(N−1)였다. 연쇄 판정을 발생주 좌표로 통일(atOccurrence)하면서 메인 경로와 같은 N이 됐다.
+    expect(base.y5, '기준선 Y5 표시 주(학기)').toBe(10);
     expect(run.y4Shown, '앵커: 서아 Y4 표시 주').toBe(46);
     expect(run.y5, '앵커: Y5 컷이 같은 주에 뜬다(스탬프가 표시 주면 Y5 W46 = 방학이라 영구 유실)').toBe(base.y5);
   });

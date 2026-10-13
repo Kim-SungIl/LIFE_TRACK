@@ -8,7 +8,7 @@ import {
 } from './constants';
 import { GAME_EVENTS } from './data';
 import { SCHOOL_LIFE_EVENTS } from './school-life';
-import { absWeek } from '../weekMath';
+import { absWeek, getWeekInfo } from '../weekMath';
 
 // ===== 사건 예산 (선택 풀 발화율) =====
 // 학기 사건 주율을 ~79% → 65~70%로 낮추는 2차 감축 (1차: school-life 0.7→0.5).
@@ -37,6 +37,34 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
     // DIRECT_SEQUEL_IDS는 자연스러운 직접 후속이라 같은 장소도 허용 (선거→결과 등)
     (!excludeLocation || e.location !== excludeLocation || DIRECT_SEQUEL_IDS.has(e.id))
   ), false) || null;
+}
+
+// ===== 연쇄 판정 좌표 = 발생주 =====
+// 메인 슬롯(processWeek)은 week++ 전에 고르지만 연쇄(store.resolveEventChain)는 week++ **뒤** state로 돈다.
+// 그대로 조건을 보면 W24(여름방학 마지막 주)의 연쇄가 W25 학기 좌표로 평가돼 `!s.isVacation` 가드가 새고
+// (기록·화면은 "여름방학 5주차"), W19·W42는 반대로 학기 주인데 방학으로 막혔다. 쿨다운(`weeksSince`·도달형
+// `cur − last`)도 연쇄에서만 1주 짧았다(실효 간격 N−1).
+// 그래서 연쇄 판정은 week·semester·isVacation을 **발생주**로 잠시 되돌려 본다. year는 연쇄 시점에도 발생 학년
+// 그대로이고(학년 전환은 연쇄가 끝난 뒤), weekStartIntimacy는 그 주 처음 찍은 값 그대로라 fresh 판정도 같다.
+// RNG는 같은 state 객체에서 굴러 rngSeed 흐름이 이어진다(복제 뷰를 쓰면 굴림이 버려진다).
+export function atOccurrence<T>(state: GameState, occurrenceWeek: number, fn: () => T): T {
+  const { week, semester, isVacation } = state;
+  const info = getWeekInfo(occurrenceWeek);
+  state.week = occurrenceWeek;
+  state.semester = info.semester;
+  state.isVacation = info.isVacation;
+  try {
+    return fn();
+  } finally {
+    state.week = week;
+    state.semester = semester;
+    state.isVacation = isVacation;
+  }
+}
+
+/** 연쇄 followup — 발생주 좌표로 판정한다(store.resolveEventChain과 sim 미러가 같이 쓴다). */
+export function getChainFollowup(state: GameState, occurrenceWeek: number, excludeLocation?: string): GameEvent | null {
+  return atOccurrence(state, occurrenceWeek, () => getFollowupForWeek(state, excludeLocation));
 }
 
 // 절대 주차 (학년 경계에서 음수가 안 나오도록) — 쿨다운 비교용
@@ -110,9 +138,11 @@ function lastReachAbsWeek(state: GameState, npc: string): number | null {
   return last;
 }
 
-// ③ 주당 1개 — 기록의 발생주를 `state.week`와 비교하는 기존 규칙 그대로. 예약은 여기에 따로 넣지 않는다:
-// 제품 좌표에선 메인 슬롯이 주마다 한 번 돌고 chain은 week++ 뒤라 같은 주 재호출이 없어서, 예약을 넣어도
-// 동작이 같은 등가 변이였다(뮤테이션 확인). 이 가드가 실제로 걸리는 건 같은 state로 거듭 부르는 진단 스크립트뿐이다.
+// ③ 주당 1개 — **메인 슬롯 전용**. 기록의 발생주를 `state.week`와 비교한다. 예약은 여기에 따로 넣지 않는다:
+// 메인 슬롯은 주마다 한 번, 그 주 사건이 생기기 전에 돌아서 예약을 넣어도 동작이 같은 등가 변이였다(뮤테이션 확인).
+// 연쇄는 이 가드를 안 본다(`slotGuard=false`) — 연쇄의 주당 상한은 chain cap(2·도달형 3)이다. 예전엔 연쇄가
+// week++ 뒤 좌표라 이 비교가 우연히 늘 거짓이었고, 발생주 좌표(atOccurrence)로 바꾸면서 그 우연을 명시로 옮겼다.
+// (가드를 연쇄에도 걸면 같은 주 두 번째 도달형이 막혀 milestone 픽과 예약 뒤 이어 고르기가 죽는다.)
 function reachSlotTaken(state: GameState): boolean {
   return state.events.some(e => e.reach && e.year === state.year && e.week === state.week);
 }
@@ -145,9 +175,9 @@ const LAST_OCCURRENCE_WEEK = 48;
  */
 export interface ReachPick { event: GameEvent | null; reserve: string[] }
 
-export function pickReachForWeek(state: GameState, occurrenceWeek: number = state.week): ReachPick {
+export function pickReachForWeek(state: GameState, occurrenceWeek: number = state.week, slotGuard = true): ReachPick {
   const reserve: string[] = [];
-  const slotTaken = reachSlotTaken(state);
+  const slotTaken = slotGuard && reachSlotTaken(state);
   if (!slotTaken) {
     let probe = state;
     for (let winner = pickPacedReach(probe); winner; winner = pickPacedReach(probe)) {
@@ -175,6 +205,64 @@ export function applyReachReservation(state: GameState, ids: readonly string[], 
   state.reachReservations = next;
 }
 
+// ===== 여름방학 임계 통과 이월 =====
+// 방학 가드(`!s.isVacation`)가 달린 도달형(교내 장면 69건)은 방학 중에 임계를 넘으면 그 주의 fresh 창(쿨다운 면제)이
+// 가드에 닫힌다. 2학기에 열리면 이미 pre-met이라 같은 NPC 앞 컷의 쿨다운(48 ÷ 그 해 컷 수)에 걸려 그 해 안에 못
+// 뜨는 판이 생긴다. 그래서 **2학기 첫 VACATION_CARRY_WEEKS주에 한해** 그 컷들의 fresh 기준점을 방학 직전
+// 친밀도(`summerIntimacySnapshot`, 방학 첫 주 시작에 찍음)로 본다 — 방학 동안 넘은 임계를 학기 첫 주의 fresh로 이월.
+//   · "방학 동안 넘었다"는 **방학 마지막 주가 끝났을 때**(W24 결산 직전, recordSummerVacationEnd) 이미 임계 이상인
+//     것만이다. 개학 뒤 W25·W26 주중(processWeek 전)에 처음 오른 친밀도는 학기 규칙대로 pre-met이다 — 시작 스냅샷만
+//     보면 이 칸까지 쿨다운이 면제됐다(3자 검수 codex·cursor 독립 지적).
+//   · 창이 2주인 이유: W25는 매년 2학기 반장 선거(고정 사건 + 연설·결과 followup)가 메인 슬롯과 chain cap을 다
+//     써서 도달형 판정이 아예 안 도는 판이 많다. 1주면 이월 끔과 집계가 전부 같았고(주입 6,445짝), 2주에서 회복이
+//     포화했다(3·4주는 대상 컷 동일). docs/chain-occurrence-vacation-carry-2026-10-13.md.
+//   · 방학 가드가 없는 컷은 건드리지 않는다(방학 중에 이미 fresh로 떴거나, 다른 이유로 놓친 것이라 이 장치 몫이 아니다).
+//   · 친밀도는 이월 주에 다시 본다(조건 통과가 전제) — 방학에 넘었다가 식은 컷은 이월하지 않는다.
+//   · 겨울방학(W43~48)은 이월하지 않는다. 다음 학기가 다음 학년이라 `year === N` 컷은 원래 그 해로 끝난다
+//     (학년 한정은 의도된 설계 — 한 판에 다 보는 게임이 아니다).
+export const VACATION_CARRY_WEEKS = 2;
+// 여름방학 첫 주와 2학기 첫 주 — 달력 SSOT(getWeekInfo)에서 파생한다.
+const SUMMER_START_WEEK = Array.from({ length: 48 }, (_, i) => i + 1)
+  .find(w => getWeekInfo(w).isVacation && getWeekInfo(w).semester === 1)!;
+const SUMMER_RESUME_WEEK = Array.from({ length: 48 }, (_, i) => i + 1)
+  .find(w => w > SUMMER_START_WEEK && !getWeekInfo(w).isVacation)!;
+
+/** 여름방학 첫 주인가 — processWeek가 이 주 시작에 친밀도 스냅샷을 찍는다. */
+export function isSummerVacationStart(week: number): boolean {
+  return week === SUMMER_START_WEEK;
+}
+
+/**
+ * 여름방학 마지막 주가 끝나는 지점 — 그 주의 마지막 사건(연쇄 끝)이 닫히거나 사건 없이 결산으로 넘어갈 때 부른다
+ * (store.resolveEventChain · processWeek · sim 미러). 주 확정 전(주중) 변화가 섞이지 않는 유일한 좌표다.
+ */
+export function recordSummerVacationEnd(state: GameState, occurrenceWeek: number): void {
+  const snap = state.summerIntimacySnapshot;
+  if (occurrenceWeek !== SUMMER_RESUME_WEEK - 1 || !snap || snap.year !== state.year) return;
+  state.summerIntimacySnapshot = { ...snap, endByNpc: Object.fromEntries(state.npcs.map(n => [n.id, n.intimacy])) };
+}
+
+/** 이월 창 안인가(2학기 첫 VACATION_CARRY_WEEKS주 = W25·W26). */
+export function inVacationCarryWindow(week: number): boolean {
+  return week >= SUMMER_RESUME_WEEK && week < SUMMER_RESUME_WEEK + VACATION_CARRY_WEEKS;
+}
+
+// 방학 가드 컷 — 지금(학기) 조건은 통과하고, 같은 state를 방학으로만 바꾸면 막힌다.
+function isVacationGuarded(e: GameEvent, state: GameState): boolean {
+  return !!e.condition && !e.condition({ ...state, isVacation: true });
+}
+
+function freshBaseline(state: GameState, e: GameEvent, n: GameState['npcs'][number]): number {
+  const base = n.weekStartIntimacy ?? n.intimacy;
+  const snap = state.summerIntimacySnapshot;
+  if (!snap || snap.year !== state.year || !inVacationCarryWindow(state.week)) return base;
+  const pre = snap.byNpc[n.id];
+  const end = snap.endByNpc?.[n.id];
+  // 방학 시작엔 아래, 방학 끝엔 이미 임계 이상 — 방학 동안 넘은 컷만.
+  if (pre === undefined || end === undefined || end < e.reach!.tier || pre >= base || !isVacationGuarded(e, state)) return base;
+  return pre;
+}
+
 // 페이싱 규칙(①~④) — 예약 여부와 무관하게 "이번 주 고를 컷". 예약된 컷은 소비된 것으로 본다(④).
 function pickPacedReach(state: GameState): GameEvent | null {
   const firedIds = consumedReachIds(state);
@@ -184,10 +272,11 @@ function pickPacedReach(state: GameState): GameEvent | null {
   if (cands.length === 0) return null;
   const npcOf = (e: GameEvent) => state.npcs.find(n => n.id === e.reach!.npc);
 
-  // ① fresh: 주 시작 친밀도 < 임계 <= 현재 친밀도 (이번 주에 막 넘음) → 쿨다운 면제, 즉시
+  // ① fresh: 주 시작 친밀도 < 임계 <= 현재 친밀도 (이번 주에 막 넘음) → 쿨다운 면제, 즉시.
+  //    여름방학 이월: 방학 가드 컷은 2학기 첫 주(들)에 한해 기준점을 방학 직전 친밀도로 본다(freshBaseline).
   const fresh = cands.filter(e => {
     const n = npcOf(e);
-    return n && (n.weekStartIntimacy ?? n.intimacy) < e.reach!.tier && n.intimacy >= e.reach!.tier;
+    return n && freshBaseline(state, e, n) < e.reach!.tier && n.intimacy >= e.reach!.tier;
   });
   if (fresh.length > 0) return fresh.sort((a, b) => a.reach!.tier - b.reach!.tier)[0];
 
@@ -220,10 +309,14 @@ export function getReachForWeek(state: GameState): GameEvent | null {
  * 호출자는 늘 applyReachReservation(state, pick.reserve, occurrenceWeek)를 부른다(비어 있으면 아무 일 없음).
  */
 export function pickChainForWeek(state: GameState, occurrenceWeek: number, eventsThisWeek: number): ReachPick {
+  return atOccurrence(state, occurrenceWeek, () => pickChainAtOccurrence(state, occurrenceWeek, eventsThisWeek));
+}
+
+function pickChainAtOccurrence(state: GameState, occurrenceWeek: number, eventsThisWeek: number): ReachPick {
   if (eventsThisWeek >= 3) {
     return { event: occurrenceWeek >= LAST_OCCURRENCE_WEEK ? getDueReservedReach(state, occurrenceWeek) : null, reserve: [] };
   }
-  const reach = pickReachForWeek(state, occurrenceWeek);
+  const reach = pickReachForWeek(state, occurrenceWeek, false);
   if (reach.event || eventsThisWeek >= 2) return reach;
 
   const candidates = pickConditionalCandidates(state);

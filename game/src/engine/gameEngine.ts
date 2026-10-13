@@ -3,7 +3,7 @@ import { achievementAxes, emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
 import { ACTIVITIES, getActivityCost, collapseActivityChoicesWithSlots, canApplyActivity, type ActivityInstance } from './activities';
 import { getSchoolLevel } from './backgrounds';
-import { getEventForWeek } from './events';
+import { getEventForWeek, isSummerVacationStart, recordSummerVacationEnd } from './events';
 import { assignCurrentEvent } from './eventPresentation';
 import { buildCareerChoiceEvent, careerChoicePending } from './careerChoice';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
@@ -1146,6 +1146,13 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   // 도달형 페이싱: 주 시작 시점 친밀도 스냅샷. 이번 주 이벤트로 친밀도가 임계를 "방금 넘으면"(fresh)
   // 즉시 발동, 이미 넘어 있었으면(pre-met) 쿨다운으로 분산 — getReachForWeek 가 이 값으로 판별.
   for (const npc of newState.npcs) npc.weekStartIntimacy = npc.intimacy;
+  // 여름방학 첫 주 시작 = 방학 가드 도달형 이월의 기준점(events/selection.ts freshBaseline). rng 무관.
+  if (isSummerVacationStart(newState.week)) {
+    newState.summerIntimacySnapshot = {
+      year: newState.year,
+      byNpc: Object.fromEntries(newState.npcs.map(n => [n.id, n.intimacy])),
+    };
+  }
 
   // NPC 선택(activity→npc 매핑)에 따른 친밀도 적용
   applyNpcActivitySelection(newState, npcActivityMap);
@@ -1254,6 +1261,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 11. 이벤트 체크 — getEventForWeek는 순수 함수, patch는 selectEventForWeek 내부에서 명시 적용
   selectEventForWeek(newState);
+  // 사건 없이 결산으로 가는 주면 여기가 주의 끝이다(사건이 있으면 resolveEventChain의 연쇄 끝에서 찍는다).
+  if (!newState.currentEvent) recordSummerVacationEnd(newState, newState.week);
 
   // 12. 버프 틱다운 + 주간 구매 리셋
   tickBuffsAndResetPurchases(newState);

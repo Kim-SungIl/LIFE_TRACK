@@ -3,8 +3,9 @@
  */
 import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } from '../../src/engine/romance';
 import {
-  getFollowupForWeek,
+  getChainFollowup,
   pickChainForWeek,
+  recordSummerVacationEnd,
   applyReachReservation,
   FOLLOWUP_EVENT_IDS,
   DIRECT_SEQUEL_IDS,
@@ -154,7 +155,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     prev => prev.week === occurrenceWeek && prev.year === newState.year
       && FOLLOWUP_EVENT_IDS.has(prev.id) && !DIRECT_SEQUEL_IDS.has(prev.id),
   );
-  const followup = followupFiredThisWeek ? null : getFollowupForWeek(newState, resolvedLocation);
+  const followup = followupFiredThisWeek ? null : getChainFollowup(newState, occurrenceWeek, resolvedLocation);
   if (followup) {
     // 체인 이벤트도 occurrenceWeek 유지 — store.resolveEventChain과 같이 assignCurrentEvent를
     // 통과시킨다(직접 대입하면 학교급 변이가 안 구워져 시뮬이 카탈로그 문장만 본다).
@@ -171,6 +172,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     if (chainPick) {
       assignCurrentEvent(newState, chainPick, occurrenceWeek); // phase='event'도 여기서 선다
     } else {
+      recordSummerVacationEnd(newState, occurrenceWeek); // store.resolveEventChain과 같은 지점
       newState.phase = 'weekday';
     }
   }

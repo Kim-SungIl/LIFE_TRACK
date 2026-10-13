@@ -112,6 +112,28 @@ export function sanitizeReachReservations(v: unknown): GameState['reachReservati
   return out;
 }
 
+/**
+ * 여름방학 친밀도 스냅샷 정규화. 판정할 수 없으면 **버린다**(= 그해 이월 없음): 객체가 아니거나, 학년이 1~7 정수가
+ * 아니거나, 칸이 유한수가 아니면 그 칸을 뺀다. 남겨 두면 엉뚱한 기준점으로 fresh가 생겨 쿨다운 면제가 샌다.
+ */
+export function sanitizeSummerIntimacySnapshot(v: unknown): GameState['summerIntimacySnapshot'] {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
+  const { year, byNpc } = v as { year?: unknown; byNpc?: unknown };
+  if (!Number.isInteger(year) || (year as number) < 1 || (year as number) > 7) return undefined;
+  const nums = (m: unknown): Record<string, number> | undefined => {
+    if (!m || typeof m !== 'object' || Array.isArray(m)) return undefined;
+    const out: Record<string, number> = {};
+    for (const [id, x] of Object.entries(m as Record<string, unknown>)) {
+      if (typeof x === 'number' && Number.isFinite(x)) out[id] = x;
+    }
+    return out;
+  };
+  const start = nums(byNpc);
+  if (!start) return undefined;
+  const end = nums((v as { endByNpc?: unknown }).endByNpc);
+  return end ? { year: year as number, byNpc: start, endByNpc: end } : { year: year as number, byNpc: start };
+}
+
 export function sanitizePendingWeekDelta(v: unknown): PendingWeekDelta | undefined {
   if (typeof v !== 'object' || v === null || Array.isArray(v)) return undefined;
   const p = v as Record<string, unknown>;
@@ -198,6 +220,7 @@ export function migrateLoadedState(state: GameState): GameState {
         ),
     hardCrisisYears: state.hardCrisisYears || [],
     reachReservations: sanitizeReachReservations(state.reachReservations),
+    summerIntimacySnapshot: sanitizeSummerIntimacySnapshot(state.summerIntimacySnapshot),
     // 슬롯별 루틴 카운터 — 구세이브의 단일 routineWeeks 값을 양 슬롯에 복제 (호환)
     routineSlot2Weeks: state.routineSlot2Weeks
       ?? (state as unknown as { routineWeeks?: number }).routineWeeks ?? 0,

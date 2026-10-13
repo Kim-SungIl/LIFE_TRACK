@@ -13,7 +13,10 @@ export {
 } from './constants';
 export {
   getFollowupForWeek,
+  getChainFollowup,
   pickChainForWeek,
+  isSummerVacationStart,
+  recordSummerVacationEnd,
   applyReachReservation,
   getEventForWeek,
 } from './selection';
