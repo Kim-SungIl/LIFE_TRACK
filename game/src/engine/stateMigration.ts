@@ -120,12 +120,18 @@ export function sanitizeSummerIntimacySnapshot(v: unknown): GameState['summerInt
   if (!v || typeof v !== 'object' || Array.isArray(v)) return undefined;
   const { year, byNpc } = v as { year?: unknown; byNpc?: unknown };
   if (!Number.isInteger(year) || (year as number) < 1 || (year as number) > 7) return undefined;
-  if (!byNpc || typeof byNpc !== 'object' || Array.isArray(byNpc)) return undefined;
-  const out: Record<string, number> = {};
-  for (const [id, x] of Object.entries(byNpc as Record<string, unknown>)) {
-    if (typeof x === 'number' && Number.isFinite(x)) out[id] = x;
-  }
-  return { year: year as number, byNpc: out };
+  const nums = (m: unknown): Record<string, number> | undefined => {
+    if (!m || typeof m !== 'object' || Array.isArray(m)) return undefined;
+    const out: Record<string, number> = {};
+    for (const [id, x] of Object.entries(m as Record<string, unknown>)) {
+      if (typeof x === 'number' && Number.isFinite(x)) out[id] = x;
+    }
+    return out;
+  };
+  const start = nums(byNpc);
+  if (!start) return undefined;
+  const end = nums((v as { endByNpc?: unknown }).endByNpc);
+  return end ? { year: year as number, byNpc: start, endByNpc: end } : { year: year as number, byNpc: start };
 }
 
 export function sanitizePendingWeekDelta(v: unknown): PendingWeekDelta | undefined {

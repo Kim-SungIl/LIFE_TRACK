@@ -151,6 +151,8 @@ describe('S1. W24 연쇄 — 방학 가드가 새지 않고, 넘은 임계는 2�
     // 스냅샷은 여름방학 첫 주 시작에 찍힌다(이월의 기준점).
     expect(r.final.summerIntimacySnapshot?.year).toBe(1);
     expect(r.final.summerIntimacySnapshot?.byNpc.doyun).toBe(45);
+    // 방학 끝 기록은 W24 연쇄가 닫힐 때 찍힌다(연쇄 안에서 넘긴 61이 들어가 있다).
+    expect(r.final.summerIntimacySnapshot?.endByNpc?.doyun).toBeGreaterThanOrEqual(61);
   });
 });
 
@@ -180,6 +182,18 @@ describe('S3. 방학 중 메인 슬롯 교차도 같은 창으로 이월된다',
     expect(r.final.summerIntimacySnapshot?.byNpc.doyun).toBe(61);
     expect(r.shown.has(HIGH), '도윤 60').toBe(false);
   });
+});
+
+describe('S3b. 개학 뒤 주중 교차는 이월하지 않는다 — 학기 규칙대로 pre-met 쿨다운', () => {
+  // 3자 검수 지적: 기준점이 방학 시작 스냅샷뿐이면 W25·W26 주중(processWeek 전)에 처음 오른 친밀도까지 fresh가 됐다.
+  // 학기 중이었다면 그 주 시작 스냅샷에 들어가 pre-met — 같은 NPC 앞 컷(W19) 쿨다운 24주로 W43(방학)까지 막혀 그 해 없음.
+  for (const w of [25, 26]) {
+    it(`W${w} 주중에 도윤 60을 넘기면 Y1 안에 안 뜬다`, { timeout: 30_000 }, () => {
+      const r = playStore({ start: 20, until: 48, raiseAt: w, path: 'main', lo: 45, hi: 61, history: [{ id: LOW, week: 19 }] });
+      expect(r.final.summerIntimacySnapshot?.endByNpc?.doyun, '방학 끝 기록 = 아직 임계 아래').toBeLessThan(60);
+      expect(r.shown.has(HIGH), '도윤 60').toBe(false);
+    });
+  }
 });
 
 describe('S4. 겨울방학 교차는 이월하지 않는다 — 학년 한정 컷의 의도된 끝', () => {
@@ -229,6 +243,44 @@ describe('S6. 이어하기 — 방학 중 저장·로드해도 이월된다', ()
   });
 });
 
+describe('S7. 손상된 스냅샷 세이브 — 로드가 버린다', () => {
+  // 3자 검수 실측: stateMigration의 sanitize 배선 줄을 지워도(원값 통과) 전부 초록이었다. 손상값 null·'45'는
+  // freshBaseline에서 `null < 60`·`'45' < 60`이 참이라 가짜 fresh가 된다. 저장 → 로드 실경로로 잠근다.
+  function playLoaded(byNpcDoyun: unknown): boolean {
+    const s = createInitialState('male', ['wealth', 'freedom'], { rngSeed: 7 });
+    s.routineSlot2 = 'self-study';
+    s.routineSlot3 = 'light-exercise';
+    setWeek(s, 1, 26);
+    s.phase = 'weekday';
+    const d = s.npcs.find(n => n.id === 'doyun')!;
+    d.met = true;
+    d.intimacy = 61; // 주 시작 전부터 61 — 스냅샷이 없으면 pre-met(쿨다운 진행 중)
+    s.events = [{ ...byId(LOW), condition: undefined, year: 1, week: 19 }];
+    (s as unknown as { summerIntimacySnapshot: unknown }).summerIntimacySnapshot = { year: 1, byNpc: { doyun: byNpcDoyun }, endByNpc: { doyun: 61 } };
+    useGameStore.setState({ state: s }); // 자동저장 구독이 localStorage에 쓴다
+    useGameStore.setState({ state: null });
+    expect(useGameStore.getState().loadSavedGame(), '이어하기 로드').toBe(true);
+    const api = useGameStore.getState();
+    api.setWeekendChoices(['self-study', 'club']);
+    api.advanceWeek();
+    for (let g = 0; g < 20; g++) {
+      const st = useGameStore.getState().state!;
+      if (st.phase !== 'event') break;
+      useGameStore.getState().resolveEvent(0);
+    }
+    return useGameStore.getState().state!.events.some(e => e.id === HIGH);
+  }
+
+  it('null·문자열 기준점은 버려져 이월이 안 생긴다', { timeout: 30_000 }, () => {
+    expect(playLoaded(null), 'null').toBe(false);
+    expect(playLoaded('45'), "'45'").toBe(false);
+  });
+
+  it('양성 짝 — 정상 기준점(45)이면 같은 판에서 W26에 뜬다', { timeout: 30_000 }, () => {
+    expect(playLoaded(45)).toBe(true);
+  });
+});
+
 describe('U. 이월 창·대상·스냅샷 학년 (페이싱 엔진 직접)', () => {
   /** 방학 동안 넘었고(스냅샷 < tier ≤ 주 시작) 쿨다운 진행 중인 W 상태. */
   function carried(id: string, week: number, snapYearOffset = 0): GameState {
@@ -243,7 +295,8 @@ describe('U. 이월 창·대상·스냅샷 학년 (페이싱 엔진 직접)', ()
     // 같은 NPC 같은 학년 다른 컷은 W19에 본 것으로 — 쿨다운 진행 중(pre-met은 막힌다).
     s.events = ALL.filter(x => x.reach?.npc === npc && x.reach.year === year && x.id !== id)
       .map(x => ({ ...x, condition: undefined, year, week: 19 }));
-    s.summerIntimacySnapshot = { year: year + snapYearOffset, byNpc: { [npc]: tier - 5 } };
+    // 방학 시작엔 tier−5, 방학 끝(W24 결산 직전)엔 tier+1 — 방학 동안 넘었다.
+    s.summerIntimacySnapshot = { year: year + snapYearOffset, byNpc: { [npc]: tier - 5 }, endByNpc: { [npc]: tier + 1 } };
     return s;
   }
 
@@ -269,8 +322,21 @@ describe('U. 이월 창·대상·스냅샷 학년 (페이싱 엔진 직접)', ()
   });
 
   it('학년이 다른 스냅샷은 읽지 않는다', () => {
-    expect(pickReachForWeek(carried(HIGH, 25, 1)).event, '작년 스냅샷').toBeNull();
+    // Y2 컷을 Y1 스냅샷으로(작년), Y1 컷을 Y2 스냅샷으로(내년) — 양쪽 다 막혀야 `year ± 1` 허용 회귀가 잡힌다.
+    // jihun-locker-code(Y2 45)는 방학 가드 컷 — 양성 짝(올해 스냅샷)으로 픽스처가 닿는지 먼저 본다.
+    expect(pickReachForWeek(carried('jihun-locker-code', 25, 0)).event?.id, 'Y2 양성 짝').toBe('jihun-locker-code');
+    expect(pickReachForWeek(carried('jihun-locker-code', 25, -1)).event, '작년 스냅샷').toBeNull();
+    expect(pickReachForWeek(carried(HIGH, 25, 1)).event, '내년 스냅샷').toBeNull();
     expect(pickReachForWeek(carried(HIGH, 25, 0)).event?.id, '양성 짝 — 올해 스냅샷').toBe(HIGH);
+  });
+
+  it('방학 끝에 임계 아래였으면 이월하지 않는다 — 개학 뒤 주중에 오른 친밀도는 pre-met', () => {
+    const s = carried(HIGH, 25);
+    s.summerIntimacySnapshot!.endByNpc = { doyun: 59 };
+    expect(pickReachForWeek(s).event).toBeNull();
+    const t = carried(HIGH, 25);
+    delete t.summerIntimacySnapshot!.endByNpc;
+    expect(pickReachForWeek(t).event, '방학 끝 기록이 없으면(구세이브·방학 중 시작) 이월 없음').toBeNull();
   });
 
   it('sanitize — 판정할 수 없는 스냅샷은 버린다', () => {
@@ -280,6 +346,9 @@ describe('U. 이월 창·대상·스냅샷 학년 (페이싱 엔진 직접)', ()
     expect(sanitizeSummerIntimacySnapshot({ year: 1.5, byNpc: {} })).toBeUndefined();
     expect(sanitizeSummerIntimacySnapshot({ year: 2, byNpc: null })).toBeUndefined();
     expect(sanitizeSummerIntimacySnapshot({ year: 2, byNpc: { a: 3, b: 'x', c: Number.NaN } })).toEqual({ year: 2, byNpc: { a: 3 } });
+    expect(sanitizeSummerIntimacySnapshot({ year: 2, byNpc: { a: 3 }, endByNpc: { a: null, b: '45', c: 61 } }))
+      .toEqual({ year: 2, byNpc: { a: 3 }, endByNpc: { c: 61 } });
+    expect(sanitizeSummerIntimacySnapshot({ year: 2, byNpc: { a: 3 }, endByNpc: [1] })).toEqual({ year: 2, byNpc: { a: 3 } });
   });
 });
 
@@ -290,6 +359,15 @@ describe('atOccurrence — 좌표만 잠시 바꾸고 RNG는 같은 state에서 
     const seed0 = s.rngSeed;
     const seen = atOccurrence(s, 24, () => { seededRandom(s); return [s.week, s.isVacation, s.semester] as const; });
     expect(seen).toEqual([24, true, 1]);
+    expect([s.week, s.isVacation, s.semester]).toEqual([25, false, 2]);
+    expect(s.rngSeed).not.toBe(seed0);
+  });
+
+  it('콜백이 던져도 예외는 그대로 나가고, 좌표는 되돌아오고, 그 전에 굴린 rngSeed는 남는다', () => {
+    const s = createInitialState('male', ['wealth', 'freedom'], { rngSeed: 9 });
+    setWeek(s, 1, 25);
+    const seed0 = s.rngSeed;
+    expect(() => atOccurrence(s, 24, () => { seededRandom(s); throw new Error('boom'); })).toThrow('boom');
     expect([s.week, s.isVacation, s.semester]).toEqual([25, false, 2]);
     expect(s.rngSeed).not.toBe(seed0);
   });

@@ -3,7 +3,7 @@ import { achievementAxes, emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
 import { ACTIVITIES, getActivityCost, collapseActivityChoicesWithSlots, canApplyActivity, type ActivityInstance } from './activities';
 import { getSchoolLevel } from './backgrounds';
-import { getEventForWeek, isSummerVacationStart } from './events';
+import { getEventForWeek, isSummerVacationStart, recordSummerVacationEnd } from './events';
 import { assignCurrentEvent } from './eventPresentation';
 import { buildCareerChoiceEvent, careerChoicePending } from './careerChoice';
 import { generateExamResult, generateMockExamResult, generateSuneungResult, getExamSchedule } from './examSystem';
@@ -1261,6 +1261,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 11. 이벤트 체크 — getEventForWeek는 순수 함수, patch는 selectEventForWeek 내부에서 명시 적용
   selectEventForWeek(newState);
+  // 사건 없이 결산으로 가는 주면 여기가 주의 끝이다(사건이 있으면 resolveEventChain의 연쇄 끝에서 찍는다).
+  if (!newState.currentEvent) recordSummerVacationEnd(newState, newState.week);
 
   // 12. 버프 틱다운 + 주간 구매 리셋
   tickBuffsAndResetPurchases(newState);

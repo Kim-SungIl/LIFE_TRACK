@@ -6,7 +6,7 @@ import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './s
 import { cloneGameState } from './stateClone';
 import { describeUnplayable } from './saveIntegrity';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
-import { getChainFollowup, pickChainForWeek, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
+import { getChainFollowup, pickChainForWeek, recordSummerVacationEnd, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
 import { assignCurrentEvent } from './eventPresentation';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
@@ -420,7 +420,11 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
     const chainPick = pick.event;
     if (chainPick) {
       assignCurrentEvent(state, chainPick, occurrenceWeek);
-    } else if (state.week > 48) {
+      return;
+    }
+    // 이 주의 사건이 다 닫혔다 — 여름방학 마지막 주면 이월 판정용 친밀도를 찍는다.
+    recordSummerVacationEnd(state, occurrenceWeek);
+    if (state.week > 48) {
       // W48 학년말/졸업 주 이벤트 종료 → processWeek가 미뤄둔 학년 전환을 지금 수행.
       applyYearTransition(state);
     } else {

@@ -210,6 +210,9 @@ export function applyReachReservation(state: GameState, ids: readonly string[], 
 // 가드에 닫힌다. 2학기에 열리면 이미 pre-met이라 같은 NPC 앞 컷의 쿨다운(48 ÷ 그 해 컷 수)에 걸려 그 해 안에 못
 // 뜨는 판이 생긴다. 그래서 **2학기 첫 VACATION_CARRY_WEEKS주에 한해** 그 컷들의 fresh 기준점을 방학 직전
 // 친밀도(`summerIntimacySnapshot`, 방학 첫 주 시작에 찍음)로 본다 — 방학 동안 넘은 임계를 학기 첫 주의 fresh로 이월.
+//   · "방학 동안 넘었다"는 **방학 마지막 주가 끝났을 때**(W24 결산 직전, recordSummerVacationEnd) 이미 임계 이상인
+//     것만이다. 개학 뒤 W25·W26 주중(processWeek 전)에 처음 오른 친밀도는 학기 규칙대로 pre-met이다 — 시작 스냅샷만
+//     보면 이 칸까지 쿨다운이 면제됐다(3자 검수 codex·cursor 독립 지적).
 //   · 창이 2주인 이유: W25는 매년 2학기 반장 선거(고정 사건 + 연설·결과 followup)가 메인 슬롯과 chain cap을 다
 //     써서 도달형 판정이 아예 안 도는 판이 많다. 1주면 이월 끔과 집계가 전부 같았고(주입 6,445짝), 2주에서 회복이
 //     포화했다(3·4주는 대상 컷 동일). docs/chain-occurrence-vacation-carry-2026-10-13.md.
@@ -229,6 +232,16 @@ export function isSummerVacationStart(week: number): boolean {
   return week === SUMMER_START_WEEK;
 }
 
+/**
+ * 여름방학 마지막 주가 끝나는 지점 — 그 주의 마지막 사건(연쇄 끝)이 닫히거나 사건 없이 결산으로 넘어갈 때 부른다
+ * (store.resolveEventChain · processWeek · sim 미러). 주 확정 전(주중) 변화가 섞이지 않는 유일한 좌표다.
+ */
+export function recordSummerVacationEnd(state: GameState, occurrenceWeek: number): void {
+  const snap = state.summerIntimacySnapshot;
+  if (occurrenceWeek !== SUMMER_RESUME_WEEK - 1 || !snap || snap.year !== state.year) return;
+  state.summerIntimacySnapshot = { ...snap, endByNpc: Object.fromEntries(state.npcs.map(n => [n.id, n.intimacy])) };
+}
+
 /** 이월 창 안인가(2학기 첫 VACATION_CARRY_WEEKS주 = W25·W26). */
 export function inVacationCarryWindow(week: number): boolean {
   return week >= SUMMER_RESUME_WEEK && week < SUMMER_RESUME_WEEK + VACATION_CARRY_WEEKS;
@@ -244,7 +257,9 @@ function freshBaseline(state: GameState, e: GameEvent, n: GameState['npcs'][numb
   const snap = state.summerIntimacySnapshot;
   if (!snap || snap.year !== state.year || !inVacationCarryWindow(state.week)) return base;
   const pre = snap.byNpc[n.id];
-  if (pre === undefined || pre >= base || !isVacationGuarded(e, state)) return base;
+  const end = snap.endByNpc?.[n.id];
+  // 방학 시작엔 아래, 방학 끝엔 이미 임계 이상 — 방학 동안 넘은 컷만.
+  if (pre === undefined || end === undefined || end < e.reach!.tier || pre >= base || !isVacationGuarded(e, state)) return base;
   return pre;
 }
 

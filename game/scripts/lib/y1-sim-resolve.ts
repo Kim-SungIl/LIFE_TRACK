@@ -5,6 +5,7 @@ import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } fro
 import {
   getChainFollowup,
   pickChainForWeek,
+  recordSummerVacationEnd,
   applyReachReservation,
   FOLLOWUP_EVENT_IDS,
   DIRECT_SEQUEL_IDS,
@@ -171,6 +172,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     if (chainPick) {
       assignCurrentEvent(newState, chainPick, occurrenceWeek); // phase='event'도 여기서 선다
     } else {
+      recordSummerVacationEnd(newState, occurrenceWeek); // store.resolveEventChain과 같은 지점
       newState.phase = 'weekday';
     }
   }

@@ -16,6 +16,7 @@ export {
   getChainFollowup,
   pickChainForWeek,
   isSummerVacationStart,
+  recordSummerVacationEnd,
   applyReachReservation,
   getEventForWeek,
 } from './selection';
