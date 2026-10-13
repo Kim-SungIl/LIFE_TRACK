@@ -11,6 +11,7 @@ import { StatIcon } from '../icons/icons';
 import { STAT_BAR_HEIGHT, STAT_ICON_SIZE } from './main/StatsPanel';
 import { growthReasonLine } from '../../engine/growthReasonText';
 import { visibleGrowthReason } from '../../engine/growthDrag';
+import type { SemesterGoalMoment } from '../../engine/semesterGoalMoments';
 
 interface WeeklyResultScreenProps {
   // 부모(GameScreen)가 phase==='result' && state.weekLog 가드로 non-null 보장 후 주입.
@@ -29,13 +30,14 @@ interface WeeklyResultScreenProps {
   upcomingEvents: UpcomingEvent[];
   /** T68 — 학기 마지막 주면 그 학기 목표의 판정(GameScreen이 goalRecordForWeekLog로 만든다). 아니면 null/생략. */
   goalRecord?: SemesterGoalRecord | null;
+  goalMoment?: SemesterGoalMoment | null;
   onContinue: () => void;
 }
 
 // 주말 활동 처리 후 보여주는 한 주 결산 일기 화면
 export function WeeklyResultScreen({
   weekLog, stats, fatigue, money, gender, year, mentalState, track,
-  bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, goalRecord, onContinue,
+  bgProps, weekInfo, resultDialogue, fatigueColor, upcomingEvents, goalRecord, goalMoment, onContinue,
 }: WeeklyResultScreenProps) {
   const reducedMotion = usePrefersReducedMotion();
 
@@ -147,6 +149,23 @@ export function WeeklyResultScreen({
             {`"${breakSentences(resultDialogue)}"`}
           </div>
         </div>
+
+        {/* 목표의 첫 실천·중간·달성한 주에만. 추가 클릭 없이 결산 안에서 읽는다. */}
+        {goalMoment && !goalRecord && (
+          <section aria-label="이번 주 목표 이야기" data-testid="semester-goal-moment" style={{
+            background: GLASS_BASE, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+            borderLeft: '3px solid var(--accent-soft)', borderRadius: 12,
+            padding: '12px 14px', marginBottom: 12,
+          }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', overflowWrap: 'anywhere' }}>{goalMoment.title}</div>
+            <div style={{ fontSize: '0.88rem', fontWeight: 600, marginTop: 4, wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+              {goalMoment.label}
+            </div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.7, marginTop: 6, whiteSpace: 'pre-line', wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>
+              {breakSentences(goalMoment.text)}
+            </div>
+          </section>
+        )}
 
         {/* T68 학기 목표 돌아보기 — 학기 마지막 주 결산에만. 보상 없이 문장이 목표의 끝이다. */}
         {goalRecord && (

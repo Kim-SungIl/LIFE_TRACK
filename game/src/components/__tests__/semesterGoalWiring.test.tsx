@@ -151,6 +151,35 @@ describe('학년말 회고', () => {
   });
 });
 
+describe('목표 실천의 주간 장면', () => {
+  it('실제 주말 실행 뒤 결산에 장면이 나타나고, 다음 주에는 지난 장면이 따라오지 않는다', () => {
+    put(weekdayState({
+      semesterGoal: { kind: 'exercise', year: 1, semester: 1, markedWeeks: [] },
+    }));
+    const st = useGameStore.getState();
+    st.setWeekendChoices(['light-exercise']);
+    st.advanceWeek();
+    let guard = 0;
+    while (current().phase === 'event' && guard++ < 10) useGameStore.getState().resolveEvent(0);
+    expect(current().phase).toBe('result');
+    render(<GameScreen />);
+    const moment = screen.getByRole('region', { name: '이번 주 목표 이야기' });
+    expect(moment.textContent).toContain('마음먹은 대로 보낸 주말');
+    expect(moment.textContent).toContain('이번 주말엔 생각만 하지 않았다');
+    expect(screen.queryByTestId('semester-goal-result')).toBeNull();
+
+    cleanup();
+    useGameStore.getState().setPhase('weekday');
+    useGameStore.getState().setWeekendChoices(['reading']);
+    useGameStore.getState().advanceWeek();
+    guard = 0;
+    while (current().phase === 'event' && guard++ < 10) useGameStore.getState().resolveEvent(0);
+    expect(current().phase).toBe('result');
+    render(<GameScreen />);
+    expect(screen.queryByTestId('semester-goal-moment')).toBeNull();
+  });
+});
+
 describe('3자 검수 반영 — 잠금', () => {
   it('A. 기록장(지난 학년 열람)도 그 해 목표를 보여 준다 — HUD 버튼 → albumOverlay 배선', async () => {
     put(weekdayState({
