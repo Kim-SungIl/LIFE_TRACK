@@ -2,7 +2,7 @@
 // 게임이 매주 호출하는 selection.getReachForWeek를 그대로 태운다(단위테스트 아님 — 실제 루프 함수).
 // 각 컷을 fresh 조건(weekStartIntimacy < tier <= intimacy, year===Y, !vacation)으로 만들고 픽 여부 확인.
 import { createInitialState } from '../../src/engine/gameEngine';
-import { getReachForWeek } from '../../src/engine/events/selection';
+import { pickReachForWeek } from '../../src/engine/events/selection';
 import { GAME_EVENTS } from '../../src/engine/events';
 import { HIGH_REACH_EVENTS } from '../../src/engine/events/reachHigh';
 import { NEW_NPC_REACH_EVENTS } from '../../src/engine/events/reachNew';
@@ -57,9 +57,14 @@ for (const c of cuts) {
   target.met = true;
   target.weekStartIntimacy = c.tier - 1;  // 직전 주엔 tier 미만 → 이번 주 fresh 진입
   target.intimacy = c.tier;               // 이번 주 tier 도달
-  const picked = getReachForWeek(s);
-  if (picked?.id === c.id) pass++;
-  else fails.push(`${c.id} (${c.npc} t${c.tier} Y${c.year}) → ${picked?.id ?? 'null'}`);
+  // 앵커 컷(reach.anchorWeek — 졸업·합격 문장)은 앵커 전 주엔 **예약**이 픽이다(표시는 앵커 주부터).
+  // 그 경우 표시까지 되면 오히려 실패다 — 학기 중에 졸업식이 뜬다는 뜻이다.
+  const def = GAME_EVENTS.find(e => e.id === c.id);
+  const anchored = def?.reach?.anchorWeek !== undefined && s.week < def.reach.anchorWeek;
+  const pick = pickReachForWeek(s);
+  const ok = anchored ? (pick.reserve.includes(c.id) && pick.event?.id !== c.id) : pick.event?.id === c.id;
+  if (ok) pass++;
+  else fails.push(`${c.id} (${c.npc} t${c.tier} Y${c.year}${anchored ? ' 앵커' : ''}) → 표시 ${pick.event?.id ?? 'null'} · 예약 [${pick.reserve.join(',')}]`);
 }
 
 console.log(`\n=== Wave 1·2 reach 발동 검증 ===`);

@@ -146,7 +146,10 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // 평균 83.77 → 83.31, 85 이상 5/60 → **1/60**. 그 하나가 하필 고정 시드 7(84.3 → 85.8)이라
     // 7을 시드 2로 바꿨다 — 2는 이동 전 S였다가(위 문단의 2·8·25) 이제 A(83.4)인 시드다.
     // 시드 1은 84.1 → 82.6. 시드 7을 지운 게 아니라 분포를 보고 바꾼 것임을 남긴다.
-    const landings: Record<number, number> = { 1: 82.6, 2: 83.4 };
+    // 앵커 도달형 예약(2026-10, 졸업·합격 6건을 앵커 주에 표시)으로 82.6/83.4 → 83.5/82.5. 원인 귀속: 앵커만
+    // 떼면 두 값 그대로다. 이 판에선 하은 졸업식이 Y6 W1 → W46, 수빈 합격 후가 Y7 W31 → W42로 옮겨 RNG 흐름이
+    // 바뀐 몫이다(효과 수치 불변). 시드 1~60 분포: 평균 83.31 → 83.32, 85 이상 1/60 → 0/60.
+    const landings: Record<number, number> = { 1: 83.5, 2: 82.5 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_FREE, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);
@@ -171,7 +174,8 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // 그 주의 주간 맥락이 달라지고, 비워진 W20엔 도달형(jihun-basketball 등)이 대신 들어온다.
     // 두 시드 모두 움직였다. 등급 밴드는 셋 다 그대로다.
     // good-grade 방학 가드(2026-10)로 90.2/89.7 → 89.5/90.0. 시드 1~60 전부 S 유지(60/60, 평균 89.98 → 89.81).
-    const landings: Record<number, number> = { 1: 89.5, 7: 90.0 };
+    // 앵커 도달형 예약(2026-10)으로 시드 1이 89.5 → 89.8(위와 같은 귀속, 시드 7은 90.0 그대로). 시드 1~60 전부 S 유지(60/60, 평균 89.81 → 89.92).
+    const landings: Record<number, number> = { 1: 89.8, 7: 90.0 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_PAID, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);

@@ -453,91 +453,91 @@
       "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 82.6,
-        "social": 88.8,
-        "talent": 80.8,
-        "mental": 86.1,
-        "health": 71.3
+        "academic": 83.5,
+        "social": 88.2,
+        "talent": 81.3,
+        "mental": 86.2,
+        "health": 70.6
       },
-      "endingHash": "4ce50e3724e9722c204b85544b37d39dba02377263c243320b54dc840accc002"
+      "endingHash": "523654a29012fdc55be573466b601d240db8c7f4e49bb55218e148bd12ec85ce"
     },
     {
       "gender": "male",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 85.8,
-        "social": 86.8,
-        "talent": 81.1,
-        "mental": 88.2,
-        "health": 72.5
-      },
-      "endingHash": "8d36828f8730235899bfa3e5dde16e64490aa21104cfaf8ac740b0821f2a80ba"
-    },
-    {
-      "gender": "male",
-      "plan": "paid",
-      "seed": 1,
-      "stats": {
-        "academic": 89.5,
-        "social": 90.4,
-        "talent": 80.4,
-        "mental": 88.7,
-        "health": 77.9
-      },
-      "endingHash": "8689c7b50f1abf7b68bd690a9011a8f2428e49fab7faf5d12a11dae29af00693"
-    },
-    {
-      "gender": "male",
-      "plan": "paid",
-      "seed": 7,
-      "stats": {
-        "academic": 90,
-        "social": 89.6,
-        "talent": 80.3,
-        "mental": 88.7,
-        "health": 78.2
-      },
-      "endingHash": "79217d6c359cab1ca7ab87dbae52043d91f9962e0913a6e6ba897719942f9f9f"
-    },
-    {
-      "gender": "female",
-      "plan": "free",
-      "seed": 1,
-      "stats": {
-        "academic": 82.6,
+        "academic": 84.5,
         "social": 88.9,
-        "talent": 80.8,
-        "mental": 86.1,
-        "health": 71.3
+        "talent": 80.7,
+        "mental": 85.9,
+        "health": 72.9
       },
-      "endingHash": "d8e4743050636b3f15b29bf4ba26ee3e053aa311782360963467dcff8e351e6a"
+      "endingHash": "11385f00a450d6ae10c0d24907c155df91a3ea52e0179042326ffdc119f35058"
+    },
+    {
+      "gender": "male",
+      "plan": "paid",
+      "seed": 1,
+      "stats": {
+        "academic": 89.8,
+        "social": 90.5,
+        "talent": 81.5,
+        "mental": 88.4,
+        "health": 78.1
+      },
+      "endingHash": "bc4b1cd6766432cbfb513e56e34b3476aeaf899927bc4ba04d51296339af557b"
+    },
+    {
+      "gender": "male",
+      "plan": "paid",
+      "seed": 7,
+      "stats": {
+        "academic": 90,
+        "social": 90.3,
+        "talent": 80.2,
+        "mental": 85.9,
+        "health": 78.5
+      },
+      "endingHash": "b4f9ee75a60d684901ffe0a8b4ff429c2123c2a7850e2e5a95ca0f3f6d378e86"
+    },
+    {
+      "gender": "female",
+      "plan": "free",
+      "seed": 1,
+      "stats": {
+        "academic": 83.5,
+        "social": 88.3,
+        "talent": 81.3,
+        "mental": 86.2,
+        "health": 70.6
+      },
+      "endingHash": "975ced48d1d2033b8a730623ab4df2f1c7c4572b70e9fc7ad26111e69798c8a3"
     },
     {
       "gender": "female",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 85.4,
-        "social": 86.8,
-        "talent": 81.1,
-        "mental": 88.2,
-        "health": 72.3
+        "academic": 84.1,
+        "social": 88.9,
+        "talent": 80.7,
+        "mental": 85.9,
+        "health": 72.9
       },
-      "endingHash": "209fef67d3ba920292ea63d30081d7c9e35ac114ded750ff54f485407989d10b"
+      "endingHash": "d0c175049ce6fb62a04a2bdf67c82c1879a8ea556f889c0609fea3c54017beb0"
     },
     {
       "gender": "female",
       "plan": "paid",
       "seed": 1,
       "stats": {
-        "academic": 89.5,
-        "social": 90.4,
-        "talent": 80.4,
-        "mental": 88.7,
-        "health": 77.9
+        "academic": 89.8,
+        "social": 90.5,
+        "talent": 81.5,
+        "mental": 88.4,
+        "health": 78.1
       },
-      "endingHash": "a2fafc9d2fe94014dfcf2d37d64fa750dbfc89a25a9441bd7e4aa17fb7b11303"
+      "endingHash": "1210cfd103170a7a91ded834bbfc0686d157d838fad621e8218ac5e058d088cc"
     },
     {
       "gender": "female",
@@ -545,12 +545,12 @@
       "seed": 7,
       "stats": {
         "academic": 90,
-        "social": 90.4,
-        "talent": 80.3,
-        "mental": 88.7,
-        "health": 78.2
+        "social": 90.3,
+        "talent": 80.2,
+        "mental": 85.9,
+        "health": 78.5
       },
-      "endingHash": "dd744a02c65528078fe6df0e7a4a44e73f8f1bf548a7a7f199cc6fda6d3e2245"
+      "endingHash": "6774377044f7ba782ad7ccd8b97a73efbdcb7b6de729f955d686b4651304be33"
     }
   ]
 }

@@ -169,6 +169,13 @@ export interface GameState {
   rngSeed: number;                  // 결정론적 RNG 시드 (이벤트 선택용)
   talkRngSeed: number;              // 잡담 전용 RNG 시드 (rngSeed와 분리 — 클릭이 진행 굴림에 영향 없게)
   hardCrisisYears: number[];        // 하드위기 발동 연도 (연간 1회 가드)
+  /**
+   * 앵커 도달형(`reach.anchorWeek`)의 예약 — id → 페이싱 엔진이 그 컷을 고른 **발생주**(학년·주).
+   * 표시 뒤에도 지우지 않는다: 같은 NPC의 쿨다운이 표시 주가 아니라 이 주를 기준으로 흘러야 다음 학년
+   * 컷이 밀려 죽지 않는다(서아 Y4 → Y5). **옵셔널인 이유**: 구세이브에는 없고, 없으면 "예약 없음"이
+   * 그대로 참이다(앵커 컷이 아직 안 골렸으면 다음 주부터 정상 예약된다). 손상값은 stateMigration이 버린다.
+   */
+  reachReservations?: Record<string, { year: number; week: number }>;
   // M6: 자연 회복 감소 모드 (도전 모드) — 상점 의존성·의사결정 부담 강화
   useReducedRecovery?: boolean;
   // Phase 1 방학 시스템 — 활동별 방학 내 사용 횟수 (방학 진입 시 리셋)
@@ -482,7 +489,12 @@ export interface GameEvent {
   year?: number;           // 저장된 발생 연차 (ANNUAL 재발동 판정용)
   // 도달형(reach) 메타데이터 — 페이싱 엔진용. 있으면 이 이벤트는 도달형으로 취급.
   // npc: 대상 NPC, tier: 친밀도 임계, year: 게이트된 학년(쿨다운 = 48 ÷ 그 NPC·그 해 reach 수).
-  reach?: { npc: string; tier: number; year: number };
+  // anchorWeek: 문장이 달력의 한 시점(졸업식·합격자 발표)을 전제하는 컷 — **발생주 기준** 이 주부터 보여 준다.
+  //   페이싱 엔진이 이 컷을 고르는 주는 그대로다(쿨다운 스탬프도 그 주). 앵커 전이면 그 주에 예약
+  //   (`GameState.reachReservations`)만 하고, 앵커 주부터 친밀도를 다시 보지 않고 띄운다. events/selection.ts 참조.
+  //   주차 게이트(`s.week >= N`)를 대신 쓰지 말 것 — fresh 창이 닫히고 쿨다운이 게이트 창을 덮어 컷이 죽는다
+  //   (docs/reach-graduation-timing-options-2026-10-12.md: 1,008 기회 중 176~210 유실).
+  reach?: { npc: string; tier: number; year: number; anchorWeek?: number };
 }
 
 export interface EventChoice {

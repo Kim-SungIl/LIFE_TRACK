@@ -13,7 +13,7 @@ export {
 } from './constants';
 export {
   getFollowupForWeek,
-  getConditionalForWeek,
-  getMilestoneForWeek,
+  pickChainForWeek,
+  applyReachReservation,
   getEventForWeek,
 } from './selection';
