@@ -176,6 +176,12 @@ export interface GameState {
    * 그대로 참이다(앵커 컷이 아직 안 골렸으면 다음 주부터 정상 예약된다). 손상값은 stateMigration이 버린다.
    */
   reachReservations?: Record<string, { year: number; week: number }>;
+  /**
+   * 여름방학 첫 주 시작의 NPC 친밀도 — 방학 가드 도달형의 임계 통과를 2학기 첫 주 fresh로 이월하는 기준점
+   * (events/selection.ts `freshBaseline`). 학년을 박아 두고 그 해에만 읽는다. **옵셔널**: 구세이브엔 없고,
+   * 없으면 그해 여름은 이월이 없을 뿐이다(다음 여름부터 정상). 손상값은 stateMigration이 버린다.
+   */
+  summerIntimacySnapshot?: { year: number; byNpc: Record<string, number> };
   // M6: 자연 회복 감소 모드 (도전 모드) — 상점 의존성·의사결정 부담 강화
   useReducedRecovery?: boolean;
   // Phase 1 방학 시스템 — 활동별 방학 내 사용 횟수 (방학 진입 시 리셋)

@@ -6,7 +6,7 @@ import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './s
 import { cloneGameState } from './stateClone';
 import { describeUnplayable } from './saveIntegrity';
 import { ShopItem, applyItemEffects, canBuyItem, limitKey } from './shopSystem';
-import { getFollowupForWeek, pickChainForWeek, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
+import { getChainFollowup, pickChainForWeek, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS, GAME_EVENTS } from './events';
 import { assignCurrentEvent } from './eventPresentation';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk, recordMilestoneForYear } from './memorySystem';
 import { MiniTalkEvent, getAvailableNpcEvents, getAvailableHomeEvents, getEligibleParentClimax, getNpcSmalltalk, getHomeSmalltalk } from './talkSystem';
@@ -405,7 +405,8 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
     prev => prev.week === occurrenceWeek && prev.year === state.year
       && FOLLOWUP_EVENT_IDS.has(prev.id) && !DIRECT_SEQUEL_IDS.has(prev.id),
   );
-  const followup = followupFiredThisWeek ? null : getFollowupForWeek(state, location);
+  // 연쇄 판정은 발생주 좌표로(atOccurrence) — week++ 뒤 좌표로 보면 W24 연쇄가 학기로 새고 W19·W42가 막힌다.
+  const followup = followupFiredThisWeek ? null : getChainFollowup(state, occurrenceWeek, location);
   if (followup) {
     assignCurrentEvent(state, followup, occurrenceWeek);
   } else {
