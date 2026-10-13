@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { createInitialState } from '../gameEngine';
 import { GAME_EVENTS } from '../events';
-import { getReachForWeek } from '../events/selection';
+import { getEventForWeek, getFollowupForWeek, getReachForWeek } from '../events/selection';
 import { assignCurrentEvent, presentEvent } from '../eventPresentation';
 import { migrateLoadedState } from '../stateMigration';
 import { cloneGameState } from '../stateClone';
@@ -267,4 +267,57 @@ it('지훈 졸업의 방학·초반 주차는 기존 조건대로 열리고 메�
   const adjusted = romanceEventEligibility(event('jihun-hs-graduation'), s);
   expect(adjusted.reach!.tier).toBe(0);
   expect(adjusted.condition!(s)).toBe(true);
+});
+
+describe('수빈 졸업은 Y7 40~42주 후속 경합에 밀리지 않는다', () => {
+  // 열리는 주가 셋뿐인데, 배열에서 앞선 지훈 후속 셋이 함께 남아 있으면 세 주를 다 가져간다.
+  function contested(datingSubin: boolean): GameState {
+    const s = datingSubin ? dating('subin') : ready('subin');
+    Object.assign(s, { year: 7, week: 40, isVacation: false, phase: 'weekday', currentEvent: null });
+    Object.assign(s.npcs.find(n => n.id === 'jihun')!, { met: true, intimacy: 70, weekStartIntimacy: 70 });
+    // 정상 플레이라면 몇 해 전에 끝났을 앞 순번 후속은 발동 처리한다.
+    for (const id of ['jihun-basketball', 'jihun-secret', 'subin-bridge', 'subin-lonely', 'subin-divorce', 'subin-dream']) {
+      s.events.push({ ...event(id), year: 5, week: 10, resolvedChoice: 0 });
+    }
+    return s;
+  }
+  function runWindow(s: GameState): string[] {
+    const picked: string[] = [];
+    for (const week of [40, 41, 42]) {
+      s.week = week;
+      const e = getEventForWeek(s).event!;
+      picked.push(e.id);
+      s.events.push({ ...e, year: 7, week, resolvedChoice: 0 });
+    }
+    return picked;
+  }
+
+  it('연애가 아닌 판은 기존 배열 순서 그대로 — 지훈 후속 셋이 창을 채운다(경합이 실재한다는 대조군)', () => {
+    const s = contested(false);
+    expect(getEventForWeek(s).event!.id).toBe('jihun-fight');
+    expect(runWindow(s)).toEqual(['jihun-fight', 'jihun-support', 'jihun-promise']);
+  });
+
+  // 맞교환: 3주에 4개라 하나는 빠진다. 연인 판에서는 우정 장면(jihun-promise)을 내주고 졸업 선택을 살린다.
+  // 정상 플레이에선 fight·support가 이전 해에 지나가 promise도 41·42주에 들어간다.
+  it('연인이면 40주 첫 칸에 졸업 대화가 오고 이별·지속 선택지가 붙는다 — 창이 꽉 차면 jihun-promise를 내준다', () => {
+    const s = contested(true);
+    expect(isDating(s, 'subin')).toBe(true);
+    expect(getFollowupForWeek(s)!.id).toBe('subin-farewell');
+    const picked = runWindow(contested(true));
+    expect(picked[0]).toBe('subin-farewell');
+    expect(picked.slice(1)).toEqual(['jihun-fight', 'jihun-support']);
+    assignCurrentEvent(s, getEventForWeek(s).event!, 40);
+    expect(s.currentEvent!.choices.map(c => c.relationshipSelect?.decision).filter(Boolean)).toEqual(['together', 'apart']);
+    // 순위 상향은 복사본에만 — 카탈로그 원본을 고치면 연애가 아닌 판까지 졸업이 앞선다.
+    expect(event('subin-farewell').selectionPriority).toBeUndefined();
+    expect(getEventForWeek(contested(false)).event!.id).toBe('jihun-fight');
+  });
+
+  it('상향은 한 칸뿐 — 반장 선거 후속(20·21)이 함께 남아 있으면 반장이 먼저다', () => {
+    const s = contested(true);
+    s.events.push({ ...event('class-president-2'), year: 7, week: 25, resolvedChoice: 0 });
+    expect(getEventForWeek(s).event!.id).toBe('class-president-2-speech');
+    expect(getFollowupForWeek(s)!.id).toBe('class-president-2-speech');
+  });
 });
