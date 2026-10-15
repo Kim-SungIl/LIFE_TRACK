@@ -9,6 +9,9 @@
 // Y1 W14에서 갈린다. 예전엔 W14 연쇄가 W15 좌표로 평가돼 `s.week === 15` 조건(parent-pressure)이 W14에 떴고(기준선
 // 6판에서 parent-pressure 31회 중 13회·good-grade 36회 중 13회가 조건 주보다 한 주 일찍 기록), 이제 W15에 뜬다.
 // 여름방학 이월 장치를 꺼도 8판 값이 같다(이월 몫 0). 연애 분기와 무관한 의도된 변화.
+// 지훈 졸업식 앵커(2026-10, `jihun-hs-graduation`에 reach.anchorWeek 46)에서는 runs가 **그대로였다** — 8판 모두
+// 지훈 친밀도가 97에 안 닿아 그 컷이 한 번도 안 떴다. 대신 scenes의 그 컷 `reach`에 `anchorWeek: 46` 한 칸을 넣었다
+// (본문·선택지는 그대로 — 표시 시점 메타만 바뀐 의도된 변경, 같은 장면을 romance.test.ts가 스냅샷으로 비교한다).
 // 재생성 절차: 이 하네스를 그대로 돌려 stats·endingHash만 갈아 끼운다(scenes·closures는 손대지 않는다).
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';

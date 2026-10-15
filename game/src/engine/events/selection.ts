@@ -263,6 +263,12 @@ function freshBaseline(state: GameState, e: GameEvent, n: GameState['npcs'][numb
   return pre;
 }
 
+/** ① fresh — 이번 주에 막 임계를 넘었다(주 시작 < 임계 <= 지금). 쿨다운 면제의 유일한 판정이다. */
+function isFreshReach(state: GameState, e: GameEvent): boolean {
+  const n = state.npcs.find(x => x.id === e.reach!.npc);
+  return !!n && freshBaseline(state, e, n) < e.reach!.tier && n.intimacy >= e.reach!.tier;
+}
+
 // 페이싱 규칙(①~④) — 예약 여부와 무관하게 "이번 주 고를 컷". 예약된 컷은 소비된 것으로 본다(④).
 function pickPacedReach(state: GameState): GameEvent | null {
   const firedIds = consumedReachIds(state);
@@ -274,10 +280,7 @@ function pickPacedReach(state: GameState): GameEvent | null {
 
   // ① fresh: 주 시작 친밀도 < 임계 <= 현재 친밀도 (이번 주에 막 넘음) → 쿨다운 면제, 즉시.
   //    여름방학 이월: 방학 가드 컷은 2학기 첫 주(들)에 한해 기준점을 방학 직전 친밀도로 본다(freshBaseline).
-  const fresh = cands.filter(e => {
-    const n = npcOf(e);
-    return n && freshBaseline(state, e, n) < e.reach!.tier && n.intimacy >= e.reach!.tier;
-  });
+  const fresh = cands.filter(e => isFreshReach(state, e));
   if (fresh.length > 0) return fresh.sort((a, b) => a.reach!.tier - b.reach!.tier)[0];
 
   // ② pre-met: 이미 임계를 넘어 있던 것 → NPC별 쿨다운 경과분만, 낮은 tier 우선
@@ -312,9 +315,37 @@ export function pickChainForWeek(state: GameState, occurrenceWeek: number, event
   return atOccurrence(state, occurrenceWeek, () => pickChainAtOccurrence(state, occurrenceWeek, eventsThisWeek));
 }
 
+// ===== 상한이 찬 주의 앵커 컷 =====
+// **예약은 사건을 만들지 않으므로 주당 사건 상한(chain cap 3)의 대상이 아니다.** 그 주에 사건이 이미 셋이면 연쇄가 멈추는데,
+// 바로 그 세 번째 사건이 NPC를 앵커 컷의 임계 위로 올리면 fresh 창(이번 주에 막 넘음 = 쿨다운 면제)이 그 주와 함께 닫힌다.
+// 다음 주엔 주 시작 친밀도가 이미 임계 위라 pre-met이고, 방금 뜬 같은 NPC 컷의 쿨다운에 막힌 채 감쇠로 임계 아래로
+// 내려간다 — 그 해 안에 영영 안 뜬다(학년 한정이라 다음 해도 없다).
+//
+// 실측(main b14c44c, QA 하네스 유효 23종 × 6시드 138판): 상한이 찬 주의 fresh 교차 163건 중 155건은 나중에 뜨고,
+// 유실 8건은 **전부 앵커 컷**(seoa-ending-page)이었다 — 일반 컷은 0. 일반 컷은 쿨다운이 지나면 다시 pre-met으로
+// 돌아오지만, 앵커 컷은 고티어·졸업 학년이라 감쇠가 먼저 온다. 그래서 여기서는 **앵커 컷만** 예약한다(표시는 원래도
+// 앵커로 미뤄지니, 상한이 막는 "그 주 화면"과 무관하다). 일반 컷은 상한 그대로 — 표시를 늘리지 않는다.
+// 지훈 졸업식(T64)에 앵커를 달자 W1 배치가 바뀌어 서아가 정확히 이 함정에 빠졌다(절친 빌드 13/40판 유실).
+function reserveCappedAnchors(state: GameState): string[] {
+  const consumed = consumedReachIds(state);
+  return (GAME_EVENTS as GameEvent[])
+    .map(e => romanceEventEligibility(e, state))
+    .filter(e => e.reach?.anchorWeek !== undefined && !consumed.has(e.id)
+      && !!e.condition?.(state) && isFreshReach(state, e))
+    .sort((a, b) => a.reach!.tier - b.reach!.tier)
+    .map(e => e.id);
+}
+
 function pickChainAtOccurrence(state: GameState, occurrenceWeek: number, eventsThisWeek: number): ReachPick {
   if (eventsThisWeek >= 3) {
-    return { event: occurrenceWeek >= LAST_OCCURRENCE_WEEK ? getDueReservedReach(state, occurrenceWeek) : null, reserve: [] };
+    const reserve = reserveCappedAnchors(state);
+    if (occurrenceWeek < LAST_OCCURRENCE_WEEK) return { event: null, reserve };
+    // 학년 마지막 발생주 — 방금 예약한 것까지 포함해 비운다. 여기서 안 띄우면 학년 전환이 예약을 묻는다.
+    const probe: GameState = reserve.length === 0 ? state : {
+      ...state,
+      reachReservations: { ...reservationsOf(state), ...Object.fromEntries(reserve.map(id => [id, { year: state.year, week: occurrenceWeek }])) },
+    };
+    return { event: getDueReservedReach(probe, occurrenceWeek), reserve };
   }
   const reach = pickReachForWeek(state, occurrenceWeek, false);
   if (reach.event || eventsThisWeek >= 2) return reach;

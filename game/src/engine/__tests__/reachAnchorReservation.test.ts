@@ -6,7 +6,7 @@
 // 주차 게이트는 컷을 죽이므로(1,008 기회 중 176~210 유실) 페이싱은 그대로 두고 **표시만 앵커로 미룬다**.
 //
 // 잠그는 계약:
-//   A. 6건은 발생주 >= 앵커에만 화면에 나온다 — 주입 탐침(교차주 7종)으로 실제 루프를 돌려 행위로 본다.
+//   A. 앵커 컷(6건 + 지훈 졸업식)은 발생주 >= 앵커에만 화면에 나온다 — 주입 탐침(교차주 7종)으로 실제 루프를 돌려 행위로 본다.
 //      양성 대조: 앵커를 떼면 같은 픽스처가 앵커 전에 띄운다(픽스처가 이른 픽에 실제로 닿는다).
 //   B. 예약 주 = 앵커가 없을 때 떴을 주(바이트 동일 경로). 유실 0: 기준선이 띄운 판은 전부 띄운다.
 //   C. 표시 때 친밀도를 다시 보지 않는다(얻은 컷은 지킨다). 예약이 없으면 앵커 주에 아무것도 안 뜬다.
@@ -15,6 +15,7 @@
 //   F. 학년 마지막 주엔 chain cap을 넘어서라도 남은 예약을 다 띄운다(학년 전환이 예약을 묻지 않는다).
 //   G. 세이브: 구세이브(필드 없음)는 빈 예약, 이어하기 왕복은 보존, 판정 불가 칸은 버린다.
 //   H. 관계 신호는 예약된 컷을 "곧 열린다"로 다시 약속하지 않는다.
+//   I. 사건 상한(3)이 찬 주에 막 임계를 넘은 앵커 컷은 그 자리에서 예약된다 — 예약은 사건을 안 만들어 상한의 대상이 아니다.
 import { beforeEach, describe, expect, it } from 'vitest';
 import { GAME_EVENTS } from '../events';
 import { getDueReservedReach, getEventForWeek, pickChainForWeek, pickReachForWeek } from '../events/selection';
@@ -40,6 +41,8 @@ const ANCHORS: Record<string, number> = {
   'siwoo-where-you-stood': 44,
   'subin-hs-after': 42,
   'yerin-not-a-trade': 41,
+  // 2026-10 추가 — 지훈 고교 졸업식. 연애 판본에선 문턱 우회로 Y7 초에 졸업식이 떴다(romance.test.ts).
+  'jihun-hs-graduation': 46,
 };
 const TARGETS = Object.keys(ANCHORS);
 const CROSS_WEEKS = [1, 10, 19, 22, 30, 38, 44];
@@ -448,5 +451,61 @@ describe('H. 관계 신호 — 예약된 컷은 "곧 열린다"가 아니다', (
     expect(nextIntimacyThreshold(subin, s), '예약 전엔 72가 다음 임계(양성 대조)').toBe(72);
     s.reachReservations = { 'subin-hs-after': { year: 7, week: 20 } };
     expect(nextIntimacyThreshold(subin, s)).not.toBe(72);
+  });
+});
+
+describe('I. 상한이 찬 주 — 막 넘은 앵커 컷은 그 자리에서 예약된다', () => {
+  // 결함(2026-10, T64): 그 주 세 번째 사건이 NPC를 앵커 컷 임계 위로 올리면 연쇄가 이미 멈춰 fresh 창이 그 주와 함께
+  // 닫혔다. 다음 주엔 주 시작 친밀도가 임계 위라 pre-met → 방금 뜬 같은 NPC 컷의 쿨다운에 막히고 감쇠로 임계 아래로.
+  // 실측: main QA 138판 중 8판에서 seoa-ending-page가 이렇게 사라졌고(일반 컷 0), 지훈 졸업식에 앵커를 달자 절친 빌드
+  // 13/40판으로 늘었다. 예약은 사건을 안 만드니 주당 사건 상한의 대상이 아니다.
+  const SEOA_END = 'seoa-ending-page';
+
+  function cappedWeek(week: number, seoaStart: number, seoaNow: number): GameState {
+    const s = createInitialState('male', ['wealth', 'freedom'], { rngSeed: 3 });
+    setWeek(s, 7, week);
+    Object.assign(s, { phase: 'weekday', currentEvent: null });
+    for (const n of s.npcs) { n.met = false; n.intimacy = 0; n.weekStartIntimacy = 0; }
+    const seoa = s.npcs.find(n => n.id === 'seoa')!;
+    Object.assign(seoa, { met: true, weekStartIntimacy: seoaStart, intimacy: seoaNow });
+    // 서아의 다른 Y7 컷은 이번 주(그 세 번째 사건)에 이미 떴다 — 쿨다운이 바로 이 컷에서 시작한다.
+    s.events = ALL.filter(e => e.reach?.npc === 'seoa' && e.reach.year === 7 && e.id !== SEOA_END)
+      .map(e => ({ ...e, year: 7, week }));
+    return s;
+  }
+
+  it('상한이 찬 주에 막 넘었다 → 예약된다(화면엔 아무것도 안 띄운다)', () => {
+    const pick = pickChainForWeek(cappedWeek(10, 85, 90.5), 10, 3);
+    expect(pick.event, '상한을 넘어 화면에 띄웠다').toBeNull();
+    expect(pick.reserve).toEqual([SEOA_END]);
+  });
+
+  it('대조 — 그 주에 예약하지 않으면 다음 주엔 fresh가 아니고 막힌다(이 장치가 유일한 구제다)', () => {
+    // 다음 주 좌표: 주 시작 친밀도가 이미 임계 위(감쇠 한 주 뒤). 같은 NPC 컷이 지난주에 떠서 쿨다운 안이다.
+    const next = cappedWeek(11, 90.3, 90.3);
+    next.events = next.events.map(e => ({ ...e, week: 10 }));
+    expect(byId(SEOA_END).condition!(next), '전제: 조건은 여전히 통과한다').toBe(true);
+    const later = pickReachForWeek(next);
+    expect(later.event?.id, '다음 주에 떴다 — 대조가 공허하다').not.toBe(SEOA_END);
+    expect(later.reserve, '다음 주에 예약됐다 — 대조가 공허하다').not.toContain(SEOA_END);
+  });
+
+  it('상한이 지키는 것은 그대로 — pre-met 컷과 일반(비앵커) 컷은 예약하지 않는다', () => {
+    // pre-met: 주 시작부터 임계 위였다 → 이번 주에 창을 잃는 게 아니다.
+    expect(pickChainForWeek(cappedWeek(10, 91, 91), 10, 3).reserve, 'pre-met을 예약했다').toEqual([]);
+    // 일반 컷: 표시가 미뤄지지 않는 컷이라 예약하면 화면 사건이 는다 — 상한 그대로.
+    const s = cappedWeek(10, 0, 0);
+    const jihun = s.npcs.find(n => n.id === 'jihun')!;
+    Object.assign(jihun, { met: true, weekStartIntimacy: 95, intimacy: 96.5 });
+    const lastgame = byId('jihun-hs-lastgame');
+    expect(lastgame.reach?.anchorWeek, '전제: 비앵커 컷').toBeUndefined();
+    expect(lastgame.condition!(s), '전제: 조건 통과').toBe(true);
+    expect(pickChainForWeek(s, 10, 3).reserve, '일반 컷을 예약했다').not.toContain('jihun-hs-lastgame');
+  });
+
+  it('학년 마지막 주에 상한이 찼으면 방금 예약한 것까지 그 자리에서 띄운다(학년 전환이 묻지 않게)', () => {
+    const pick = pickChainForWeek(cappedWeek(48, 85, 90.5), 48, 3);
+    expect(pick.reserve).toEqual([SEOA_END]);
+    expect(pick.event?.id, 'W48에 예약만 하고 안 띄웠다 — 그대로 학년이 넘어가면 사라진다').toBe(SEOA_END);
   });
 });

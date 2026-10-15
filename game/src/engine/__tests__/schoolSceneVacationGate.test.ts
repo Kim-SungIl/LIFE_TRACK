@@ -43,7 +43,9 @@ const SCHOOL_LEX = /학교|교실|쉬는 시간|짝꿍|체육 시간|수업|교�
 
 function probeStates(year: number, week: number): GameState[] {
   const out: GameState[] = [];
-  for (const v of [10, 50, 95]) {
+  // 100까지 본다 — 95가 상한이던 동안 문턱 97짜리 지훈 졸업식이 이 장부에 원리상 안 잡혀 #513 앵커 검토에서 빠졌다.
+  // 100을 넣어 새로 잡힌 학교 장면은 그 1건뿐이었다(2026-10 실측).
+  for (const v of [10, 50, 95, 100]) {
     for (const fatigue of [0, 90]) {
       for (const gender of ['male', 'female'] as const) {
         const s = createInitialState(gender, ['wealth', 'freedom'], { rngSeed: 1 });
@@ -115,6 +117,7 @@ const VACATION_SCHOOL_SCENE_LEDGER: Record<string, 'calendar' | 'vacation-text' 
   'siwoo-where-you-stood': 'anchored',
   'yerin-not-a-trade': 'anchored',
   'subin-hs-after': 'anchored',
+  'jihun-hs-graduation': 'anchored',
   // 도달형 등교일 장면 — CG가 교복이라 장소를 옮기지 않는다. 방학엔 방과후·보충·도서관 개방일로 나온 날.
   'haeun-brothers-book': 'vacation-text',
   'jihun-new-shoes': 'vacation-text',
@@ -146,7 +149,7 @@ describe('A. 학교 장면(장소·배경) — 방학 주 조건', () => {
 
   it('anchored 분류는 실제로 앵커가 달린 도달형이다(헛분류면 학기 초에 졸업식이 다시 뜬다)', () => {
     const anchored = Object.entries(VACATION_SCHOOL_SCENE_LEDGER).filter(([, k]) => k === 'anchored').map(([id]) => id);
-    expect(anchored.length, 'anchored 모수').toBe(6);
+    expect(anchored.length, 'anchored 모수').toBe(7);
     for (const id of anchored) {
       const e = POOL.find(x => x.id === id);
       expect(e?.reach?.anchorWeek, `${id} anchorWeek`).toBeGreaterThanOrEqual(41);

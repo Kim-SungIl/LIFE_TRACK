@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
-import { createInitialState } from '../gameEngine';
+import { createInitialState, processWeek } from '../gameEngine';
 import { GAME_EVENTS } from '../events';
 import { getEventForWeek, getFollowupForWeek, getReachForWeek } from '../events/selection';
 import { assignCurrentEvent, presentEvent } from '../eventPresentation';
@@ -261,12 +261,82 @@ for (const npcId of ['subin', 'jihun'] as const) describe(`${npcId} 졸업·저�
   });
 });
 
+// 적격(페이싱이 고를 수 있는가)만 본다 — 화면 시점은 아래 '연인 지훈의 졸업식' 블록이 실제 루프로 잠근다.
 it('지훈 졸업의 방학·초반 주차는 기존 조건대로 열리고 메타 임계도 우회한다', () => {
   const s = dating('jihun'); Object.assign(s, { year: 7, week: 1, isVacation: true });
   s.npcs.find(n => n.id === 'jihun')!.intimacy = 20;
   const adjusted = romanceEventEligibility(event('jihun-hs-graduation'), s);
   expect(adjusted.reach!.tier).toBe(0);
   expect(adjusted.condition!(s)).toBe(true);
+});
+
+// 위 테스트가 보는 건 **적격**이다(페이싱이 고를 수 있다). 화면 시점은 별개다 — 연애 판본이 문턱을 0으로 내리면
+// 조건이 Y7 첫 주부터 참이라, 앵커가 없던 동안 「졸업식. 식이 끝나고…」와 졸업 뒤 관계 결정이 Y7 W2~22에 떴다.
+// 표시는 reach.anchorWeek(46, 고교 졸업식)로 미룬다 — 페이싱·조건은 그대로다(reachAnchorReservation.test.ts 계약 A).
+describe('연인 지훈의 졸업식은 졸업식 주에 온다', () => {
+  const GRAD = 'jihun-hs-graduation';
+  const ANCHOR = 46;
+
+  /** 고백을 Y6 openWeek에 받아들인 판의 Y7을 실제 루프로 산다. 졸업 장면이 뜬 주와 결정 결과를 돌려준다. */
+  function liveY7(openWeek: number): { shownWeek: number | null; hasDecision: boolean; graduation: string | undefined } {
+    let s = createInitialState('female', ['emotional', 'info'], { rngSeed: 7000 + openWeek });
+    Object.assign(s, { year: 7, week: 1, phase: 'weekday', currentEvent: null });
+    const j = s.npcs.find(n => n.id === 'jihun')!;
+    j.met = true; j.intimacy = 80;
+    s.events = [{ ...event(ROMANCE_ROUTES.jihun.opening), year: 6, week: openWeek, resolvedChoice: 3 }];
+    s.relationship = { npcId: 'jihun', status: 'dating', year: 6, week: openWeek };
+    let shownWeek: number | null = null;
+    let hasDecision = false;
+    for (let guard = 0; guard < 400 && s.phase !== 'ending'; guard++) {
+      if (s.phase === 'event' && s.currentEvent) {
+        const choices = s.currentEvent.femaleChoices ?? s.currentEvent.choices;
+        let pick = choices.findIndex(c => !c.relationshipSelect && !c.romanceConversation);
+        if (s.currentEvent.id === GRAD) {
+          const together = choices.findIndex(c => c.relationshipSelect?.decision === 'together');
+          hasDecision = together >= 0;
+          if (together >= 0) pick = together;
+        }
+        s = resolveEventLikeStore(s, Math.max(0, pick));
+        continue;
+      }
+      if (s.phase === 'result' || s.phase === 'year-end') { s.phase = 'weekday'; continue; }
+      s = processWeek(s);
+    }
+    // 화면의 state.week가 아니라 **기록된 발생주**로 본다. 연쇄는 week++ 뒤에 돌아서 state.week가 발생주+1이다 —
+    // 그걸로 비교하면 발생주 45에 뜬 컷도 46으로 보여 "앵커 이후"를 통과한다(chain N−1 착지 함정).
+    const rec = s.events.find(e => e.id === GRAD && e.year === 7);
+    shownWeek = rec?.week ?? null;
+    return { shownWeek, hasDecision, graduation: s.relationship?.graduation };
+  }
+
+  /** 앵커를 잠시 떼고 돌린다 — 픽스처가 정말 이른 픽에 닿는지 보는 양성 대조. */
+  function withoutAnchor<T>(fn: () => T): T {
+    const e = event(GRAD);
+    const saved = e.reach!.anchorWeek;
+    e.reach!.anchorWeek = undefined;
+    try { return fn(); } finally { e.reach!.anchorWeek = saved; }
+  }
+
+  const OPEN_WEEKS = [10, 30, 45];
+
+  it('양성 대조 — 앵커가 없으면 같은 판에서 졸업식이 졸업 전에 뜬다', () => {
+    // 이게 거짓이면 아래 "46주 이후"는 픽스처가 원래 늦게 뜨는 판이라서 초록일 뿐이다.
+    for (const w of OPEN_WEEKS) {
+      const base = withoutAnchor(() => liveY7(w));
+      expect(base.shownWeek, `Y6 W${w} 고백: 대조군에서 안 떴다`).not.toBeNull();
+      expect(base.shownWeek!, `Y6 W${w} 고백: 대조군이 이미 졸업 무렵이다 — 대조가 공허하다`).toBeLessThan(ANCHOR);
+    }
+  });
+
+  it('고백 시점과 무관하게 졸업식 주(46) 이후에만 뜨고, 결정이 붙고, 기록된다', () => {
+    for (const w of OPEN_WEEKS) {
+      const run = liveY7(w);
+      expect(run.shownWeek, `Y6 W${w} 고백: 졸업 장면이 아예 안 떴다(예약 유실)`).not.toBeNull();
+      expect(run.shownWeek!, `Y6 W${w} 고백: 졸업식 전에 떴다`).toBeGreaterThanOrEqual(ANCHOR);
+      expect(run.hasDecision, `Y6 W${w} 고백: 졸업 뒤 관계 결정이 안 붙었다`).toBe(true);
+      expect(run.graduation, `Y6 W${w} 고백: 결정이 엔딩까지 안 갔다`).toBe('together');
+    }
+  });
 });
 
 describe('수빈 졸업은 Y7 40~42주 후속 경합에 밀리지 않는다', () => {
