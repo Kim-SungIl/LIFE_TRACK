@@ -33,9 +33,11 @@ import { absWeek } from '../../engine/weekMath';
 
 const CSS_PATH = resolve(process.cwd(), 'src/styles/game.css');
 
-/** rgba(...)/rgb(...)의 알파. 불투명(rgb, hex)은 1. 못 읽으면 null. */
+/** rgba(...)/rgb(...)의 알파. 불투명(rgb, hex, 색 이름)은 1. `transparent`·`none`은 바닥이 없으니 0.
+ *  못 읽으면 null. (예전엔 키워드를 전부 1로 세서 `background: 'transparent'`가 바닥으로 통과했다.) */
 function alphaOf(css: string): number | null {
   if (!css) return null;
+  if (/^(transparent|none)$/i.test(css.trim())) return 0;
   const m = /rgba?\(([^)]+)\)/.exec(css);
   if (!m) return /^#|^[a-z]+$/i.test(css.trim()) ? 1 : null;
   const parts = m[1].split(',').map(v => v.trim());
@@ -208,7 +210,10 @@ describe('사진을 올린 화면만 올린다 — 짝을 안 맞춘 화면은 �
       useGameStore.setState({ state: { ...processWeek(s), currentEvent: null, phase: 'result' as GameState['phase'] } });
       const { unmount } = render(<GameScreen />);
       const card = screen.getByTestId(testId);
-      expect(baseAlpha(rawBackground(card))!, `${testId}에 바닥이 없다`).toBeGreaterThanOrEqual(0.7);
+      // null을 먼저 단언한다 — 바닥을 지우면 null이 되어, 바로 비교하면 TypeError로만 빨개진다.
+      const alpha = baseAlpha(rawBackground(card));
+      expect(alpha, `${testId}에 바닥이 없다(배경을 못 읽음)`).not.toBeNull();
+      expect(alpha!, `${testId}에 바닥이 없다`).toBeGreaterThanOrEqual(0.7);
       unmount();
     }
   });
