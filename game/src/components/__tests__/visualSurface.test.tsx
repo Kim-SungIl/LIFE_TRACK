@@ -29,6 +29,7 @@ import { useGameStore } from '../../engine/store';
 import { createInitialState, processWeek } from '../../engine/gameEngine';
 import { clearArchive } from '../../engine/archive';
 import type { GameState } from '../../engine/types';
+import { absWeek } from '../../engine/weekMath';
 
 const CSS_PATH = resolve(process.cwd(), 'src/styles/game.css');
 
@@ -194,6 +195,21 @@ describe('사진을 올린 화면만 올린다 — 짝을 안 맞춘 화면은 �
         .find(el => rawBackground(el).includes(tint));
       expect(panel, `전제: ${label} 패널이 렌더된다`).toBeTruthy();
       expect(baseAlpha(rawBackground(panel!))!, `${label}에 바닥이 없다`).toBeGreaterThanOrEqual(0.7);
+    }
+  });
+
+  // 목표 카드 둘도 조건부라 위 스캔이 못 본다 — 첫 실천 주(장면)와 학기 마지막 주(회고)를 실제로 처리해 그린다.
+  it('학기 목표 장면·회고 카드도 바닥을 갖는다', () => {
+    for (const [week, marks, testId] of [[2, [], 'semester-goal-moment'], [19, [2, 3, 4, 5, 6], 'semester-goal-result']] as const) {
+      let s = createInitialState('male', ['emotional', 'info'], { rngSeed: 4242 });
+      s = { ...s, phase: 'weekday', currentEvent: null, week, money: 100,
+        routineSlot2: 'reading', routineSlot3: 'light-exercise', weekendChoices: ['light-exercise'],
+        semesterGoal: { kind: 'exercise', year: 1, semester: 1, markedWeeks: marks.map(w => absWeek(1, w)) } } as GameState;
+      useGameStore.setState({ state: { ...processWeek(s), currentEvent: null, phase: 'result' as GameState['phase'] } });
+      const { unmount } = render(<GameScreen />);
+      const card = screen.getByTestId(testId);
+      expect(baseAlpha(rawBackground(card))!, `${testId}에 바닥이 없다`).toBeGreaterThanOrEqual(0.7);
+      unmount();
     }
   });
 

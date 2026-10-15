@@ -22,6 +22,8 @@ const LABELS: Record<MomentStage, string> = {
 
 // 실행한 활동의 세부 종류나 능력치 상승을 지어내지 않는다. 같은 계열 안에서도
 // 산책/수영, 독서/독학, 코딩/미술이 가능하므로 장면은 주인공의 선택과 감각에 머문다.
+// 같은 계열에 학원 수업·입시 실기 레슨도 들어가므로 "스스로"·"입시 사이에서도"처럼 활동의
+// 동기나 처지를 단정하지 않는다. 고1(Y5)도 고교 문장을 읽으니 시점(성적표·결과 대기)도 걸지 않는다.
 const LINES: Record<Exclude<SemesterGoalKind, 'friend'>, Record<SchoolLevel, Record<MomentStage, string>>> = {
   exercise: {
     elementary: {
@@ -37,12 +39,12 @@ const LINES: Record<Exclude<SemesterGoalKind, 'friend'>, Record<SchoolLevel, Rec
     high: {
       first: '할 일 사이에 몸을 움직일 시간을 냈다. 이 시간도 내 주말에 넣기로 했으니까.',
       habit: '바쁜 주말에도 몸을 움직이는 시간을 남겼다. 이제는 계획에서 쉽게 지우고 싶지 않다.',
-      achieved: '늘 바빴지만, 몸을 움직이겠다는 약속을 여러 번 지켰다. 그 시간만큼은 내가 골랐다.',
+      achieved: '몸을 움직이겠다는 약속을 여러 번 지켰다. 그 시간만큼은 내가 골랐다.',
     },
   },
   study: {
     elementary: {
-      first: '주말에도 스스로 공부해 봤다. 누가 시킨 게 아니라 내가 정했던 일이다.',
+      first: '주말에도 공부할 시간을 냈다. 학기 초에 내가 정했던 일이다.',
       habit: '주말 계획에 공부할 시간을 적었다. 처음 적었을 때보다는 덜 낯설다.',
       achieved: '해 보겠다고 정한 뒤로 여러 번 해냈다. 이번엔 내가 나를 조금 믿어도 될 것 같다.',
     },
@@ -53,8 +55,8 @@ const LINES: Record<Exclude<SemesterGoalKind, 'friend'>, Record<SchoolLevel, Rec
     },
     high: {
       first: '주말의 한 자리를 공부에 썼다. 남들이 하니까가 아니라, 이번 학기에 내가 정한 일이었다.',
-      habit: '계획대로 공부한 주말이 쌓였다. 결과를 기다리는 동안 내가 할 수 있는 일을 했다.',
-      achieved: '성적표가 나오기 전에도 아는 게 하나 있다. 마음먹었던 공부 시간을 여러 번 지켰다는 것.',
+      habit: '계획대로 공부한 주말이 쌓였다. 정해 둔 시간을 지키는 일이 조금 덜 어렵다.',
+      achieved: '어떤 결과가 나오든 아는 게 하나 있다. 마음먹었던 공부 시간을 여러 번 지켰다는 것.',
     },
   },
   craft: {
@@ -65,13 +67,13 @@ const LINES: Record<Exclude<SemesterGoalKind, 'friend'>, Record<SchoolLevel, Rec
     },
     middle: {
       first: '내가 좋아하는 일에 주말 한 칸을 썼다. 아직 보여 줄 게 없어도 시작은 했다.',
-      habit: '다시 해 보고, 마음에 안 들어도 조금 더 붙잡았다. 좋아하는 일에도 이런 시간이 있구나.',
+      habit: '이번 주에도 좋아하는 일에 시간을 썼다. 다음 주말이 조금 기다려진다.',
       achieved: '완성했다고 부르기엔 아직일지 모른다. 그래도 계속해 보겠다는 약속은 지켰다.',
     },
     high: {
       first: '해야 할 일 옆에, 내가 하고 싶은 일도 놓았다. 이번 주말에는 그쪽에 시간을 썼다.',
-      habit: '좋아하는 일을 할 시간을 또 남겼다. 진로가 될지는 몰라도, 지금의 나에게는 필요한 시간이다.',
-      achieved: '입시 사이에서도 좋아하는 일을 놓지 않은 주말들이 있었다. 이 학기를 그렇게도 기억하고 싶다.',
+      habit: '하고 싶은 일에 쓸 시간을 또 남겼다. 바쁜 학기에도 이 시간은 지키고 싶다.',
+      achieved: '하고 싶다고 정한 일에 시간을 쓴 주말들이 있었다. 이 학기를 그렇게도 기억하고 싶다.',
     },
   },
 };
