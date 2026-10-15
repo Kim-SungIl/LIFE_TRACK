@@ -1,4 +1,5 @@
 // 명시적인 선택만 관계로 저장한다. 기존 이야기와 선택 번호는 보존한다.
+import { absWeek } from './weekMath';
 import type { EventChoice, GameEvent, GameState, Gender } from './types';
 
 export type RomanceNpc = 'subin' | 'jihun';
@@ -23,7 +24,7 @@ export function sanitizeRelationship(value: unknown, gender: Gender): RomanceRel
   const r = value as RomanceRelationship;
   if ((r.npcId !== 'subin' && r.npcId !== 'jihun') || ROMANCE_ROUTES[r.npcId].gender !== gender
       || !['dating', 'ended'].includes(r.status)
-      || r.year !== ROMANCE_ROUTES[r.npcId].openingYear || !Number.isInteger(r.week) || r.week < 1 || r.week > 48) return undefined;
+      || (!Number.isInteger(r.year) || r.year < ROMANCE_ROUTES[r.npcId].openingYear || r.year > ROMANCE_ROUTES[r.npcId].closingYear) || !Number.isInteger(r.week) || r.week < 1 || r.week > 48) return undefined;
   if (r.graduation !== undefined && r.graduation !== 'together' && r.graduation !== 'apart') return undefined;
   if ((r.status === 'ended') !== (r.graduation === 'apart')) return undefined;
   return { npcId: r.npcId, status: r.status, year: r.year, week: r.week,
@@ -120,13 +121,88 @@ export function relationshipContinuation(state: GameState, event: GameEvent, cho
     ? buildSubinConfession(state) : null;
 }
 
+// Eligibility and consumption live in the existing saved event history. Old saves need no
+// inferred relationship state; original choice indices and outcomes remain untouched.
+export const ROMANCE_RETRY_IDS = { subin: 'subin-romance-revisit', jihun: 'jihun-romance-revisit' } as const;
+export const ROMANCE_RETRY_DELAY = 4;
+export type RomanceReturnPhase = 'weekday' | 'weekend' | 'vacation';
+const planningPhase = (phase: unknown): phase is RomanceReturnPhase =>
+  phase === 'weekday' || phase === 'weekend' || phase === 'vacation';
+export function romanceRetryNpc(id: string): RomanceNpc | undefined {
+  return (Object.keys(ROMANCE_RETRY_IDS) as RomanceNpc[]).find(npc => ROMANCE_RETRY_IDS[npc] === id);
+}
+function retryEligible(state: GameState, npcId: RomanceNpc): boolean {
+  const route = ROMANCE_ROUTES[npcId];
+  if (state.gender !== route.gender || state.relationship || !Number.isInteger(state.week)
+      || state.week < 1 || state.week > 48 || !Number.isInteger(state.year) || state.year < route.openingYear || state.year > route.closingYear
+      || state.events.some(e => e.id === route.closing || e.id === ROMANCE_RETRY_IDS[npcId])
+      || !state.npcs.some(n => n.id === npcId && n.met && n.intimacy >= route.tier)) return false;
+  const opening = state.events.find(e => e.id === route.opening && e.year === route.openingYear);
+  if (!opening || !Number.isInteger(opening.week) || opening.week! < 1 || opening.week! > 48
+      || opening.resolvedChoice === undefined
+      || !(npcId === 'subin' ? [1, 2] : [0, 1, 2]).includes(opening.resolvedChoice)) return false;
+  return absWeek(state.year, state.week) - absWeek(opening.year!, opening.week!) >= ROMANCE_RETRY_DELAY;
+}
+export function canStartRomanceRetry(state: GameState, npcId: string): boolean {
+  return (npcId === 'subin' || npcId === 'jihun') && planningPhase(state.phase)
+    && !state.currentEvent && retryEligible(state, npcId);
+}
+export function buildRomanceRetry(state: GameState, npcId: RomanceNpc,
+  returnPhase: RomanceReturnPhase): GameEvent | null {
+  if (!planningPhase(returnPhase) || !retryEligible(state, npcId)) return null;
+  return {
+    id: ROMANCE_RETRY_IDS[npcId], week: state.week, romanceReturnPhase: returnPhase,
+    title: '그때 하지 못한 말', speakers: [npcId], location: 'cafe', background: 'cafe_study',
+    description: npcId === 'subin'
+      ? '수빈이가 단어장에 책갈피를 끼운다. 나는 잠깐 숨을 고르고 말을 꺼낸다.\n"그때 네가 했던 말, 계속 생각했어."\n수빈이가 내 쪽으로 몸을 돌린다. "응. 듣고 있어."'
+      : '지훈이가 운동 가방을 옆에 내려놓는다. 나는 그날 교실에서 미처 꺼내지 못한 이야기를 시작한다.\n"그때 말이야. 나도 너한테 하고 싶은 말이 있었어."\n지훈이가 고개를 든다. "…응. 천천히 말해."',
+    choices: [
+      relationshipChoice({ text: '', effects: {}, npcEffects: [], message: '' }, npcId, 'date',
+        '"좋아해. 우리 사귈래?" 내 마음을 전한다',
+        npcId === 'subin' ? '수빈이가 천천히 웃었다. "나도 아직 같은 마음이야." 서두르지 않고 돌아온 말이, 이번엔 서로에게 닿았다.'
+          : '지훈이가 한참 웃다가 고개를 끄덕였다. "나도 좋아해." 미뤄 두었던 말 끝에서, 둘은 연인이 되었다.',
+        npcId === 'subin' ? '다시 꺼낸 이야기 끝에 수빈이와 서로의 마음을 확인했다.' : '미처 하지 못한 말을 전하고 지훈이와 연인이 되었다.'),
+      { text: '"소중한 친구로 지내고 싶어." 내 마음을 분명히 전한다', effects: {}, npcEffects: [],
+        message: npcId === 'subin' ? '수빈이가 고개를 끄덕였다. "솔직하게 말해줘서 고마워." 서로의 마음을 확인한 뒤, 친구로 함께하기로 했다.'
+          : '지훈이가 잠시 생각하다 고개를 끄덕였다. "알겠어. 말해줘서 고마워." 둘은 친구로 지내기로 했다.' },
+    ],
+  };
+}
+// 대화 도중 새로고침해도 미확정 주간 계획을 되살린다. 해결 기록에도 같은 스냅샷이 남는다.
+export type RomancePlan = NonNullable<GameEvent['romancePlan']>;
+export function readRomancePlan(raw: unknown): RomancePlan | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const p = raw as RomancePlan;
+  if (!Array.isArray(p.activities) || p.activities.length > 10
+      || !Array.from(p.activities).every(a => typeof a === 'string')
+      || !p.npcChoices || typeof p.npcChoices !== 'object' || Array.isArray(p.npcChoices)
+      || !Object.values(p.npcChoices).every(id => typeof id === 'string')) return undefined;
+  return { activities: [...p.activities], npcChoices: { ...p.npcChoices } };
+}
+export function resumedRomancePlan(state: GameState): RomancePlan | undefined {
+  const event = [...state.events].reverse().find(e => romanceRetryNpc(e.id)
+    && e.year === state.year && e.week === state.week && e.resolvedChoice !== undefined);
+  return readRomancePlan(event?.romancePlan);
+}
+export function restoreRomanceRetry(state: GameState): GameEvent | null {
+  const event = state.currentEvent;
+  const npcId = event && romanceRetryNpc(event.id);
+  if (!event || !npcId || state.phase !== 'event' || event.week !== state.week
+      || !planningPhase(event.romanceReturnPhase)) return null;
+  const fresh = buildRomanceRetry(state, npcId, event.romanceReturnPhase);
+  const plan = readRomancePlan(event.romancePlan);
+  return fresh && plan ? { ...fresh, romancePlan: plan } : fresh;
+}
+
 export function applyRelationshipChoice(state: GameState, event: GameEvent, choice: EventChoice, week: number): void {
   const selection = choice.relationshipSelect;
   if (!selection) return;
   const route = ROMANCE_ROUTES[selection.npcId];
   if (!route || route.gender !== state.gender) return;
   const { npcId, decision } = selection;
-  if (event.id === route.opening && state.year === route.openingYear && !state.relationship && decision === 'date'
+  if (event.id === ROMANCE_RETRY_IDS[npcId] && decision === 'date' && restoreRomanceRetry(state)) {
+    state.relationship = { npcId, status: 'dating', year: state.year, week };
+  } else if (event.id === route.opening && state.year === route.openingYear && !state.relationship && decision === 'date'
       && state.npcs.some(n => n.id === npcId && n.met && n.intimacy >= route.tier)
       && (npcId !== 'subin' || buildSubinConfession(state) !== null)) {
     state.relationship = { npcId, status: 'dating', year: state.year, week };
@@ -146,5 +222,7 @@ export function romanceClosure(state: GameState, npcId: string): { text: string;
     : r.status === 'ended' ? '지훈이와 연인으로서는 작별했지만, 함께 찍은 사진 속 웃음까지 지우지는 않았다.'
       : r.graduation === 'together' ? '지훈이와는 연인으로도 계속 만나며, 운동과 각자의 일상 사이에 둘의 사진을 더하고 있다.'
       : '지훈이와는 머뭇거리던 말의 끝에서 서로의 마음을 확인하고 연인이 되었다.';
-  return { text, excludeEventIds: new Set([ROMANCE_ROUTES[r.npcId].opening, ROMANCE_ROUTES[r.npcId].closing]) };
+  const retrySources = state.events.some(e => e.id === ROMANCE_RETRY_IDS[r.npcId]
+    && e.resolvedChoice === 0 && e.year === r.year && e.week === r.week) ? [ROMANCE_RETRY_IDS[r.npcId]] : [];
+  return { text, excludeEventIds: new Set([ROMANCE_ROUTES[r.npcId].opening, ROMANCE_ROUTES[r.npcId].closing, ...retrySources]) };
 }

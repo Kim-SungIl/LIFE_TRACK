@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef, lazy, Suspense, type ReactNode } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useGameStore, isStorageSaveFailed } from '../engine/store';
+import { resumedRomancePlan } from '../engine/romance';
 import { josa } from '../engine/korean';
 import { getWeekLabel, getWeekLabelAt } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
@@ -55,7 +56,7 @@ export function GameScreen() {
     state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
     advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
     resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, recordWeekendPlan,
-    startGame, exitToTitle, chooseSemesterGoal,
+    startGame, exitToTitle, chooseSemesterGoal, startRomanceRetry,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
@@ -74,6 +75,7 @@ export function GameScreen() {
     setPhase: s.setPhase,
     markMoneyBlockedWeek: s.markMoneyBlockedWeek,
     chooseSemesterGoal: s.chooseSemesterGoal,
+    startRomanceRetry: s.startRomanceRetry,
     // 엔딩 화면의 다회차 입구용. startGame은 새 판의 유일한 진입점이고,
     // exitToTitle은 **세이브를 남긴 채** 타이틀로 나간다(resetGame과의 차이).
     startGame: s.startGame,
@@ -461,6 +463,10 @@ export function GameScreen() {
           onChooseGoal={chooseSemesterGoal}
           onSetRoutine={setRoutine}
           onTalkNpc={talkToNpc}
+          initialPlan={resumedRomancePlan(state)}
+          onRetryRomance={(npcId, activities, npcChoices) => {
+            return startRomanceRetry(npcId, { activities, npcChoices });
+          }}
           onTalkHome={talkToHome}
           onResolveParentChoice={resolveParentTalkChoice}
           onBuyItem={buyItem}

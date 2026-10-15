@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } from './romance';
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, buildRomanceRetry, canStartRomanceRetry, romanceRetryNpc, restoreRomanceRetry, type RomanceNpc, type RomancePlan, readRomancePlan } from './romance';
 import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
@@ -213,6 +213,7 @@ interface GameStore {
   // Phase 2.1 말걸기 — 결과(event/smalltalk) 반환, 효과는 즉시 적용
   // 무한 클릭 가능 — 사전 결정에 따라 이벤트가 떨어지거나 잡담 한 줄
   talkToNpc: (npcId: string) => TalkActionResult;
+  startRomanceRetry: (npcId: string, plan?: RomancePlan) => boolean;
   talkToHome: () => TalkActionResult;
   // Phase 2A — 부모 ±선택지 이벤트의 선택 적용 (talkToHome이 띄운 choice 이벤트에 대해 호출)
   resolveParentTalkChoice: (eventId: string, choiceIdx: number) => void;
@@ -329,7 +330,9 @@ function applyChoiceOutcome(state: GameState, event: GameEvent, choice: EventCho
     applyParentIntimacyDelta(state, choice.parentEffect.baseDelta, choice.parentEffect.tag);
     state.actedWithParentThisWeek = true;
   }
-  if (state.weekLog) {
+  if (romanceRetryNpc(event.id)) {
+    // This optional conversation belongs to the current planning week, not the previous log.
+  } else if (state.weekLog) {
     foldOutcomeIntoWeekLog(state, outcome);
   } else {
     // **이번 주 로그가 아직 없는 이벤트** = 부팅 도입 장면(first-week)과 그 뒤에 붙는 체인.
@@ -413,7 +416,7 @@ function resolveEventChain(state: GameState, location: string | undefined, occur
     // chain cap: 일반 누적 2개, milestone(도달형) 잔여 있으면 3개까지 (졸업 직전 누락 방지).
     // 앵커 컷 예약·학년 마지막 주 예약 비우기도 pickChainForWeek 안에 있다(sim 미러와 같은 함수).
     const eventsThisWeek = state.events.filter(
-      prev => prev.week === occurrenceWeek && prev.year === state.year && prev.id !== ROMANCE_ROUTES.subin.opening,
+      prev => prev.week === occurrenceWeek && prev.year === state.year && prev.id !== ROMANCE_ROUTES.subin.opening && !romanceRetryNpc(prev.id),
     ).length;
     const pick = pickChainForWeek(state, occurrenceWeek, eventsThisWeek);
     applyReachReservation(state, pick.reserve, occurrenceWeek);
@@ -613,9 +616,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ state: newState, npcActivityMap: {}, ...(runDelta ? { runDelta } : {}) });
   },
 
+  startRomanceRetry: (npcId, plan) => {
+    const s = get().state;
+    if (!s || !canStartRomanceRetry(s, npcId)) return false;
+    const event = buildRomanceRetry(s, npcId as RomanceNpc, s.phase as 'weekday' | 'weekend' | 'vacation');
+    if (!event) return false;
+    const next = cloneGameState(s);
+    const savedPlan = readRomancePlan(plan);
+    assignCurrentEvent(next, savedPlan ? { ...event, romancePlan: savedPlan } : event, s.week);
+    set({ state: next });
+    return true;
+  },
+
   resolveEvent: (choiceIndex) => {
     const s = get().state;
     if (!s || !s.currentEvent) return;
+    // A malformed/replayed manual scene must not create or consume a relationship.
+    if (romanceRetryNpc(s.currentEvent.id) && (!restoreRomanceRetry(s)
+        || !Number.isInteger(choiceIndex) || !s.currentEvent.choices[choiceIndex])) return;
     // 성별 분기 적용
     const isFemale = s.gender === 'female';
     const choices = (isFemale && s.currentEvent.femaleChoices) ? s.currentEvent.femaleChoices : s.currentEvent.choices;
@@ -658,14 +676,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     accrueResolvedEvent(newState);
 
     // weekLog 메시지 + 이벤트 닫기
-    if (newState.weekLog) {
+    if (newState.weekLog && !romanceRetryNpc(event.id)) {
       newState.weekLog.messages.push(`📖 ${choice.message}`);
     }
     newState.currentEvent = null;
 
     // followup/conditional/milestone chain + 학년 전환·결산 분기 (location은 clone 이전 원본)
     const continuation = relationshipContinuation(newState, event, choice);
-    if (continuation) {
+    if (romanceRetryNpc(event.id) && event.romanceReturnPhase) {
+      newState.phase = event.romanceReturnPhase;
+    } else if (continuation) {
       assignCurrentEvent(newState, continuation, occurrenceWeek);
     } else if (event.id === CAREER_CHOICE_EVENT_ID) {
       // T66: 갈림길 뒤에는 아무것도 끼우지 않고 곧장 엔딩으로 — 체인 사건이 스탯을 움직이면

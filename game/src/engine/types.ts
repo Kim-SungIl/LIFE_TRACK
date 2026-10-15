@@ -1,6 +1,6 @@
 // ===== LIFE TRACK: 선택의 결과 — Core Types =====
 import type { GrowthLedger, GrowthReason, GrowthReasonMemo } from './growthDrag';
-import type { RomanceNpc, RomanceDecision, RomanceRelationship } from './romance';
+import type { RomanceNpc, RomanceDecision, RomanceRelationship, RomanceReturnPhase } from './romance';
 import type { ParentEffect } from './parentIntimacy';
 
 export type Gender = 'male' | 'female';
@@ -454,6 +454,9 @@ export interface VacationText {
 }
 
 export interface GameEvent {
+  // Player-initiated romance revisit resumes its planning phase without a weekly chain.
+  romanceReturnPhase?: RomanceReturnPhase;
+  romancePlan?: { activities: string[]; npcChoices: Record<string, string> };
   id: string;
   title: string;
   description: string;
