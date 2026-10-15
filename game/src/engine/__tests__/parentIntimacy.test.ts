@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../gameEngine';
+import { calculateEnding } from '../ending';
 import {
+  getParentIntimacyTone, PARENT_TONE_DISTANT_BELOW, PARENT_TONE_WARM_FROM,
   applyParentIntimacyDelta,
   applyParentMeanReversion,
   examParentEffect,
@@ -273,5 +275,31 @@ describe('applyParentMeanReversion', () => {
     });
     applyParentMeanReversion(mid);
     expect(mid.parentIntimacy).toBe(50);
+  });
+});
+
+// ===== 부모 친밀도 톤 — 경계는 한곳, 엔딩은 그 한곳을 읽는다 =====
+// 예전엔 talkSystem의 함수(호출 0곳)와 ending.ts의 리터럴이 같은 경계를 따로 들고 있었고, 엔딩 테스트는 픽스처
+// 하나("normal")만 봐서 경계를 한 칸 옮겨도 초록이었다. 두 가지를 **따로** 잠근다:
+//   ① 경계 자체 — 리터럴 기대값(상수에서 읽으면 상수를 옮겨도 같이 움직여 통과한다).
+//   ② 엔딩이 그 함수를 쓴다 — 엔딩 값 = 함수 값. 엔딩에 리터럴을 다시 박으면 경계 근처에서 갈린다.
+describe('getParentIntimacyTone — 30 미만 distant · 70 이상 warm', () => {
+  it('경계 양쪽', () => {
+    const cases: [number, string][] = [
+      [0, 'distant'], [29.9, 'distant'], [30, 'normal'], [50, 'normal'],
+      [69.9, 'normal'], [70, 'warm'], [100, 'warm'],
+    ];
+    for (const [pi, tone] of cases) expect(getParentIntimacyTone(pi), `pi=${pi}`).toBe(tone);
+    expect([PARENT_TONE_DISTANT_BELOW, PARENT_TONE_WARM_FROM], '경계 상수').toEqual([30, 70]);
+  });
+
+  it('엔딩 「부모가 남긴 것」은 같은 함수로 갈린다 — 경계 근처에서도', () => {
+    for (const pi of [0, 29.9, 30, 30.1, 69.9, 70, 70.1, 100]) {
+      const tier = calculateEnding(fixture(NEUTRAL_PARENTS, { parentIntimacy: pi })).parentEpilogue.tier;
+      expect(tier, `pi=${pi}`).toBe(getParentIntimacyTone(pi));
+    }
+    // 위가 "둘 다 늘 normal" 같은 공허한 일치가 아니라는 대조 — 세 갈래가 실제로 다 나온다.
+    const tiers = new Set([10, 50, 90].map(pi => calculateEnding(fixture(NEUTRAL_PARENTS, { parentIntimacy: pi })).parentEpilogue.tier));
+    expect(tiers).toEqual(new Set(['distant', 'normal', 'warm']));
   });
 });

@@ -110,3 +110,20 @@ export function applyParentMeanReversion(state: GameState): void {
   const k = pi < 50 ? 0.006 : 0.01; // 반감기 ≈ 1.4년(상) / 회복 더딤(하)
   state.parentIntimacy = Math.max(0, Math.min(100, pi + (50 - pi) * k));
 }
+
+// ===== 부모 친밀도 톤 — 경계·구현의 유일한 자리 =====
+// 엔딩 「부모가 남긴 것」(ending.ts buildParentEpilogue)이 이 세 구간으로 갈린다 — 같은 결과를 부모와 함께(warm)
+// 맞느냐, 끝내 못 한 말로(distant) 맞느냐. 예전엔 talkSystem.getParentIntimacyTone(호출 0곳)과 ending.ts의 리터럴
+// `pi < 30 ? … : pi >= 70 ? …`이 같은 경계를 따로 들고 있었다 — 한쪽만 고치면 주석은 "동일"이라 말하고 값은 갈린다.
+// 경계는 바꾸지 않았다: 30 미만 distant, 70 이상 warm, 그 사이 normal.
+export type ParentIntimacyTone = 'distant' | 'normal' | 'warm';
+/** 이 값 **미만**이면 distant. */
+export const PARENT_TONE_DISTANT_BELOW = 30;
+/** 이 값 **이상**이면 warm. */
+export const PARENT_TONE_WARM_FROM = 70;
+
+export function getParentIntimacyTone(parentIntimacy: number): ParentIntimacyTone {
+  if (parentIntimacy < PARENT_TONE_DISTANT_BELOW) return 'distant';
+  if (parentIntimacy >= PARENT_TONE_WARM_FROM) return 'warm';
+  return 'normal';
+}

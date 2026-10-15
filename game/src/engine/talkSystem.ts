@@ -168,9 +168,3 @@ export function getEligibleParentClimax(state: GameState): ParentClimaxEvent | n
   return null;
 }
 
-// ===== 부모 친밀도 회고 톤 (학년말 일기장 변주) =====
-export function getParentIntimacyTone(parentIntimacy: number): 'distant' | 'normal' | 'warm' {
-  if (parentIntimacy < 30) return 'distant';
-  if (parentIntimacy >= 70) return 'warm';
-  return 'normal';
-}
