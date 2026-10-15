@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, buildRomanceRetry, canStartRomanceRetry, romanceRetryNpc, restoreRomanceRetry, type RomanceNpc, type RomancePlan, readRomancePlan } from './romance';
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, buildRomanceRetry, canStartRomanceRetry, romanceRetryNpc, restoreRomanceRetry, type RomanceNpc, type RomancePlan, readRomancePlan, resumedRomancePlan } from './romance';
 import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
@@ -214,6 +214,7 @@ interface GameStore {
   // 무한 클릭 가능 — 사전 결정에 따라 이벤트가 떨어지거나 잡담 한 줄
   talkToNpc: (npcId: string) => TalkActionResult;
   startRomanceRetry: (npcId: string, plan?: RomancePlan) => boolean;
+  consumeRomancePlan: () => void;
   talkToHome: () => TalkActionResult;
   // Phase 2A — 부모 ±선택지 이벤트의 선택 적용 (talkToHome이 띄운 choice 이벤트에 대해 호출)
   resolveParentTalkChoice: (eventId: string, choiceIdx: number) => void;
@@ -614,6 +615,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     const runDelta = commitOnEnding(s, newState);
     set({ state: newState, npcActivityMap: {}, ...(runDelta ? { runDelta } : {}) });
+  },
+
+  consumeRomancePlan: () => {
+    const s = get().state;
+    if (!s || s.currentEvent || !resumedRomancePlan(s)) return;
+    const next = cloneGameState(s);
+    for (const event of next.events) {
+      if (romanceRetryNpc(event.id) && event.year === s.year && event.week === s.week
+          && event.romanceReturnPhase === s.phase && event.resolvedChoice !== undefined) {
+        delete event.romancePlan;
+      }
+    }
+    set({ state: next });
   },
 
   startRomanceRetry: (npcId, plan) => {

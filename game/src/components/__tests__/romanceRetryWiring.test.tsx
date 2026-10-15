@@ -9,6 +9,7 @@ import { useGameStore } from '../../engine/store';
 import { createInitialState } from '../../engine/gameEngine';
 import { GAME_EVENTS } from '../../engine/events';
 import { ACTIVITIES } from '../../engine/activities';
+import { ROMANCE_RETRY_IDS, resumedRomancePlan } from '../../engine/romance';
 import { assignCurrentEvent } from '../../engine/eventPresentation';
 
 beforeEach(() => {
@@ -50,8 +51,11 @@ it.each([false, true])('재대화 왕복/새로고침(%s) 후 계획과 연인 �
   const accept = screen.getAllByRole('button').find(b => /사귈/.test(b.textContent ?? ''));
   expect(accept).toBeTruthy();
   fireEvent.click(accept!);
+  expect(useGameStore.getState().state!.events.find(e => e.id === ROMANCE_RETRY_IDS.jihun)?.romancePlan).toBeDefined();
   fireEvent.click(await screen.findByRole('button', { name: '계속 →' }));
   await screen.findByRole('button', { name: /확정/ });
+  expect(useGameStore.getState().state!.events.find(e => e.id === ROMANCE_RETRY_IDS.jihun)?.romancePlan).toBeUndefined();
+  expect(resumedRomancePlan(useGameStore.getState().state!)).toBeUndefined();
   expect(useGameStore.getState().state!.week).toBe(34);
   expect(useGameStore.getState().state!.relationship?.status).toBe('dating');
   fireEvent.click(screen.getByRole('button', { name: /친구 1명/ }));
@@ -61,6 +65,25 @@ it.each([false, true])('재대화 왕복/새로고침(%s) 후 계획과 연인 �
   fireEvent.click(screen.getByRole('button', { name: '닫기' }));
   for (const id of ['reading', 'library']) {
     expect(screen.getAllByText(ACTIVITIES.find(a => a.id === id)!.name).length).toBeGreaterThan(0);
+  }
+  if (reload) {
+    // Edit the resumed plan, then reload again: the old recovery snapshot must stay consumed.
+    fireEvent.click(screen.getByRole('button', { name: /토요일/ }));
+    const study = screen.getAllByRole('button').find(b => b.hasAttribute('aria-expanded') && b.textContent?.includes('공부'))!;
+    if (study.getAttribute('aria-expanded') === 'false') fireEvent.click(study);
+    const library = ACTIVITIES.find(a => a.id === 'library')!.name;
+    const activity = screen.getAllByRole('button').find(b => b.hasAttribute('aria-pressed') && b.textContent?.includes(library));
+    expect(activity).toBeTruthy();
+    fireEvent.click(activity!);
+    expect(screen.queryAllByText(ACTIVITIES.find(a => a.id === 'reading')!.name)).toHaveLength(0);
+    view.unmount();
+    expect(useGameStore.getState().loadSavedGame()).toBe(true);
+    view = render(<GameScreen />);
+    expect(screen.getByRole('button', { name: /지난주처럼/ })).toBeTruthy();
+    expect(screen.queryAllByText(ACTIVITIES.find(a => a.id === 'reading')!.name)).toHaveLength(0);
+    expect(screen.queryAllByText(library)).toHaveLength(0);
+    expect(resumedRomancePlan(useGameStore.getState().state!)).toBeUndefined();
+    return;
   }
   fireEvent.click(screen.getByRole('button', { name: /확정/ }));
   expect(useGameStore.getState().state!.week).toBe(35);

@@ -181,7 +181,8 @@ export function readRomancePlan(raw: unknown): RomancePlan | undefined {
 }
 export function resumedRomancePlan(state: GameState): RomancePlan | undefined {
   const event = [...state.events].reverse().find(e => romanceRetryNpc(e.id)
-    && e.year === state.year && e.week === state.week && e.resolvedChoice !== undefined);
+    && e.year === state.year && e.week === state.week && e.resolvedChoice !== undefined
+    && e.romanceReturnPhase === state.phase);
   return readRomancePlan(event?.romancePlan);
 }
 export function restoreRomanceRetry(state: GameState): GameEvent | null {

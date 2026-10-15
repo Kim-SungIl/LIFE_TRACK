@@ -53,7 +53,7 @@ export const NPC_CLOSURES: Record<string, NpcClosure> = {
         return relationship?.npcId === 'jihun' && s.events.some(e => e.id === ROMANCE_RETRY_IDS.jihun
           && e.resolvedChoice === 0 && e.year === relationship.year && e.week === relationship.week);
       }, sourceEvents: ['jihun-hs-unsaid', ROMANCE_RETRY_IDS.jihun],
-        text: '지훈이와는 지금도 가장 친한 친구다. 노을 지는 교실에 남겨 둔 이야기는, 나중에 다시 마주 앉아 끝까지 나눴다.' },
+        text: '지훈이와는 오래 쌓아 온 이야기를 계속 나눈다. 노을 지는 교실에 남겨 둔 이야기는, 나중에 다시 마주 앉아 끝까지 나눴다.' },
       { match: s => chose(s, 'jihun-hs-unsaid', 0), sourceEvents: ['jihun-hs-unsaid'],
         text: '지훈이와는 지금도 가장 친한 친구다. 노을 지는 교실의 그 한마디가, 아직 우리 사이에 있다.' },
       { match: s => chose(s, 'jihun-hs-unsaid', 1) || chose(s, 'jihun-hs-unsaid', 2), sourceEvents: ['jihun-hs-unsaid'],

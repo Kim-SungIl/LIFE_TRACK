@@ -39,6 +39,7 @@ type Props = {
   onTalkNpc: (npcId: string) => TalkActionResult;
   onRetryRomance?: (npcId: string, activities: string[], npcChoices: Record<string, string>) => boolean;
   initialPlan?: { activities: string[]; npcChoices: Record<string, string> };
+  onPlanRestored?: () => void;
   onTalkHome: () => TalkActionResult;
   onResolveParentChoice: (eventId: string, choiceIdx: number) => void;
   onBuyItem: (item: ShopItem, npcId?: string) => void;
@@ -57,11 +58,15 @@ type Props = {
   onChooseGoal?: (offer: GoalOffer) => boolean;
 };
 
-export function MainWeekScreen({ state, bgProps, initialPlan, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal }: Props) {
+export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal }: Props) {
   const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? []);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
   const [npcChoices, setNpcChoices] = useState<Record<string, string>>(initialPlan?.npcChoices ?? {});
+  // Only the mounted planner consumes its recovery snapshot, after initializing both drafts.
+  useEffect(() => {
+    if (initialPlan) onPlanRestored?.();
+  }, [initialPlan, onPlanRestored]);
   // Phase 2.1 말걸기 — 사전 결정 모델, 가정은 단일 엔티티
   const [showHomeModal, setShowHomeModal] = useState(false);
   const [miniTalkResult, setMiniTalkResult] = useState<MiniTalkEvent | null>(null);
