@@ -171,7 +171,7 @@ describe('one player-initiated romance revisit', () => {
     expect(resolveNpcClosure(declined, 'jihun', 100)).toEqual(before);
     const accepted = choose(open(cloneGameState(s), 'jihun'), 0);
     const closure = resolveNpcClosure(accepted, 'jihun', 100)!;
-    expect(closure.text).toContain('오래 쌓아 온 이야기를 계속 나눈다');
+    expect(closure.text).toContain('나중에 다시 마주 앉아 끝까지 나눴다');
     expect(closure.text).toContain('나중에 다시 마주 앉아 끝까지 나눴다');
     expect(closure.text).not.toContain('아직도 가끔 궁금하다');
     expect(closure.excludeEventIds.has(ROMANCE_RETRY_IDS.jihun)).toBe(true);

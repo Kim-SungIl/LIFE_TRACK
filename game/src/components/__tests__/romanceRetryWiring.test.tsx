@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => p, cgThumbSrc: (p: string) => p }));
@@ -30,7 +31,7 @@ it.each([false, true])('재대화 왕복/새로고침(%s) 후 계획과 연인 �
   const after = useGameStore.getState().state!;
   useGameStore.setState({ state: { ...after, week: 34, phase: 'weekday', currentEvent: null,
     lastWeekendPlan: { activities: ['reading', 'library'], npcChoices: {}, isVacation: false } } });
-  let view = render(<GameScreen />);
+  let view = render(<StrictMode><GameScreen /></StrictMode>);
   fireEvent.click(screen.getByRole('button', { name: /지난주처럼/ }));
   fireEvent.click(screen.getByRole('button', { name: /친구 1명/ }));
   fireEvent.click(screen.getByRole('button', { name: '지훈 상세 보기' }));
@@ -38,7 +39,7 @@ it.each([false, true])('재대화 왕복/새로고침(%s) 후 계획과 연인 �
   if (reload) {
     view.unmount();
     expect(useGameStore.getState().loadSavedGame()).toBe(true);
-    view = render(<GameScreen />);
+    view = render(<StrictMode><GameScreen /></StrictMode>);
   }
   await waitFor(() => expect(screen.queryByRole('button', { name: /지난주처럼/ })).toBeNull());
   // 실제 EventScene 페이지를 넘겨 선택지에 도달한다.
@@ -78,7 +79,7 @@ it.each([false, true])('재대화 왕복/새로고침(%s) 후 계획과 연인 �
     expect(screen.queryAllByText(ACTIVITIES.find(a => a.id === 'reading')!.name)).toHaveLength(0);
     view.unmount();
     expect(useGameStore.getState().loadSavedGame()).toBe(true);
-    view = render(<GameScreen />);
+    view = render(<StrictMode><GameScreen /></StrictMode>);
     expect(screen.getByRole('button', { name: /지난주처럼/ })).toBeTruthy();
     expect(screen.queryAllByText(ACTIVITIES.find(a => a.id === 'reading')!.name)).toHaveLength(0);
     expect(screen.queryAllByText(library)).toHaveLength(0);
