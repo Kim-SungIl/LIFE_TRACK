@@ -319,6 +319,41 @@ describe('연인 지훈의 졸업식은 졸업식 주에 온다', () => {
 
   const OPEN_WEEKS = [10, 30, 45];
 
+  /** 같은 판을 **제품 store**로 산다 — 미러는 W48 연쇄 뒤 학년을 넘기지 않지만 store는 그 자리에서 넘긴다
+   *  (3자 검수: 미러만 잠그면 store에서 예약이 W48 비우기 전에 묻혀도 초록일 수 있다). */
+  function liveY7Store(openWeek: number): { shownWeek: number | null; hasDecision: boolean; graduation: string | undefined } {
+    const s0 = createInitialState('female', ['emotional', 'info'], { rngSeed: 7000 + openWeek });
+    Object.assign(s0, { year: 7, week: 1, phase: 'weekday', currentEvent: null });
+    const j = s0.npcs.find(n => n.id === 'jihun')!;
+    j.met = true; j.intimacy = 80;
+    s0.events = [{ ...event(ROMANCE_ROUTES.jihun.opening), year: 6, week: openWeek, resolvedChoice: 3 }];
+    s0.relationship = { npcId: 'jihun', status: 'dating', year: 6, week: openWeek };
+    useGameStore.setState({ state: s0 });
+    let hasDecision = false;
+    for (let guard = 0; guard < 600; guard++) {
+      const st = useGameStore.getState().state!;
+      if (st.phase === 'ending') break;
+      const api = useGameStore.getState();
+      if (st.phase === 'event' && st.currentEvent) {
+        const choices = st.currentEvent.femaleChoices ?? st.currentEvent.choices;
+        let pick = choices.findIndex(c => !c.relationshipSelect && !c.romanceConversation);
+        if (st.currentEvent.id === GRAD) {
+          const together = choices.findIndex(c => c.relationshipSelect?.decision === 'together');
+          hasDecision = together >= 0;
+          if (together >= 0) pick = together;
+        }
+        api.resolveEvent(Math.max(0, pick));
+      } else if (st.phase === 'result') api.setPhase('weekday');
+      else if (st.phase === 'year-end') api.advanceFromYearEnd();
+      else if (st.phase === 'weekday') api.advanceWeek();
+      else break;
+    }
+    const f = useGameStore.getState().state!;
+    expect(f.phase, '전제: store 루프가 엔딩까지 갔다').toBe('ending');
+    const rec = f.events.find(e => e.id === GRAD && e.year === 7);
+    return { shownWeek: rec?.week ?? null, hasDecision, graduation: f.relationship?.graduation };
+  }
+
   it('양성 대조 — 앵커가 없으면 같은 판에서 졸업식이 졸업 전에 뜬다', () => {
     // 이게 거짓이면 아래 "46주 이후"는 픽스처가 원래 늦게 뜨는 판이라서 초록일 뿐이다.
     for (const w of OPEN_WEEKS) {
@@ -336,6 +371,19 @@ describe('연인 지훈의 졸업식은 졸업식 주에 온다', () => {
       expect(run.hasDecision, `Y6 W${w} 고백: 졸업 뒤 관계 결정이 안 붙었다`).toBe(true);
       expect(run.graduation, `Y6 W${w} 고백: 결정이 엔딩까지 안 갔다`).toBe('together');
     }
+  });
+
+  it('제품 store 경로에서도 같다 — 졸업식 주 이후·결정·엔딩 기록', { timeout: 60_000 }, () => {
+    for (const w of OPEN_WEEKS) {
+      const run = liveY7Store(w);
+      expect(run.shownWeek, `store Y6 W${w} 고백: 졸업 장면이 아예 안 떴다`).not.toBeNull();
+      expect(run.shownWeek!, `store Y6 W${w} 고백: 졸업식 전에 떴다`).toBeGreaterThanOrEqual(ANCHOR);
+      expect(run.hasDecision, `store Y6 W${w} 고백: 결정이 안 붙었다`).toBe(true);
+      expect(run.graduation, `store Y6 W${w} 고백: 결정이 엔딩까지 안 갔다`).toBe('together');
+    }
+    // 양성 대조(store) — 앵커를 떼면 같은 store 판이 졸업 전에 띄운다.
+    const base = withoutAnchor(() => liveY7Store(OPEN_WEEKS[0]));
+    expect(base.shownWeek!, 'store 대조가 이미 졸업 무렵이다 — 공허').toBeLessThan(ANCHOR);
   });
 });
 

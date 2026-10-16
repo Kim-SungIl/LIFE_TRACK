@@ -509,3 +509,67 @@ describe('I. 상한이 찬 주 — 막 넘은 앵커 컷은 그 자리에서 예
     expect(pick.event?.id, 'W48에 예약만 하고 안 띄웠다 — 그대로 학년이 넘어가면 사라진다').toBe(SEOA_END);
   });
 });
+
+describe('I2. 상한 예약 — 제품 store 경로(resolveEvent → resolveEventChain)', () => {
+  // 계약 I는 pickChainForWeek 단위다. store가 상한 분기의 reserve를 버리거나 옛 cap 경로로 돌아가도 I와 착지값(sim
+  // 미러)은 초록이었다(3자 검수 M10·M12: 3,113개 전부 통과, 실제로는 seoa-ending-page@46 대신 seoa-name-blank@26).
+  // 그래서 그 주 세 번째 사건을 진짜 store로 닫고, 예약이 state에 남는지와 앵커 주 표시까지 본다.
+  const SEOA_END = 'seoa-ending-page';
+  beforeEach(() => {
+    localStorage.clear();
+    useGameStore.setState({ state: null });
+  });
+
+  function cappedStore(): GameState {
+    const occ = 25;
+    const s = createInitialState('male', ['wealth', 'freedom'], { rngSeed: 3 });
+    s.routineSlot2 = 'self-study';
+    s.routineSlot3 = 'light-exercise';
+    // 연쇄는 week++ 뒤에 돈다 — state는 다음 주, 사건은 발생주(occ)를 들고 있다.
+    setWeek(s, 7, occ + 1);
+    for (const n of s.npcs) { n.met = false; n.intimacy = 0; n.weekStartIntimacy = 0; }
+    const seoa = s.npcs.find(n => n.id === 'seoa')!;
+    Object.assign(seoa, { met: true, weekStartIntimacy: 85, intimacy: 90.5 });
+    // 같은 발생주에 이미 사건 둘 — 지금 닫는 세 번째로 상한(3)이 찬다. 필러는 도달형이 아니다.
+    const fillers = ALL.filter(e => !e.reach && !e.condition && e.choices.length > 0).slice(0, 3);
+    expect(fillers.length, '전제: 필러 사건').toBe(3);
+    s.events = fillers.slice(0, 2).map(e => ({ ...e, year: 7, week: occ }));
+    s.currentEvent = { ...fillers[2], week: occ };
+    s.phase = 'event';
+    return s;
+  }
+
+  function playToYearEnd(): GameState {
+    for (let guard = 0; guard < 600; guard++) {
+      const st = useGameStore.getState().state!;
+      if (st.phase === 'ending' || st.year !== 7) break;
+      const seoa = st.npcs.find(n => n.id === 'seoa')!;
+      if (seoa.intimacy < 90) useGameStore.setState({ state: { ...st, npcs: st.npcs.map(n => n.id === 'seoa' ? { ...n, intimacy: 90 } : n) } });
+      const api = useGameStore.getState();
+      const cur = useGameStore.getState().state!;
+      if (cur.phase === 'event') api.resolveEvent(0);
+      else if (cur.phase === 'result') api.setPhase('weekday');
+      else if (cur.phase === 'weekday') {
+        api.setWeekendChoices(['self-study', 'club']);
+        api.setVacationChoices(['self-study', 'creative', 'rest']);
+        api.advanceWeek();
+      } else break;
+    }
+    return useGameStore.getState().state!;
+  }
+
+  it('세 번째 사건을 store로 닫으면 막 넘은 앵커 컷이 state에 예약되고, 앵커 주에 뜬다', { timeout: 60_000 }, () => {
+    useGameStore.setState({ state: cappedStore() });
+    useGameStore.getState().resolveEvent(0);
+    const after = useGameStore.getState().state!;
+    const thisWeek = after.events.filter(e => e.year === 7 && e.week === 25).length;
+    expect(thisWeek, '전제: 그 주 사건이 상한(3)에 찼다').toBe(3);
+    expect(after.reachReservations?.[SEOA_END], 'store가 상한 예약을 state에 남기지 않았다').toEqual({ year: 7, week: 25 });
+    expect(after.currentEvent?.id ?? null, '상한을 넘어 그 주에 화면을 띄웠다').toBeNull();
+    const final = playToYearEnd();
+    const shown = final.events.find(e => e.id === SEOA_END && e.year === 7);
+    expect(shown?.week, '예약된 컷이 그해 안 떴다').not.toBeUndefined();
+    expect(shown!.week, '앵커 전에 떴다').toBeGreaterThanOrEqual(ANCHORS[SEOA_END]);
+  });
+});
+

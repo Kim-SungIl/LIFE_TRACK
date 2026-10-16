@@ -326,6 +326,13 @@ export function pickChainForWeek(state: GameState, occurrenceWeek: number, event
 // 돌아오지만, 앵커 컷은 고티어·졸업 학년이라 감쇠가 먼저 온다. 그래서 여기서는 **앵커 컷만** 예약한다(표시는 원래도
 // 앵커로 미뤄지니, 상한이 막는 "그 주 화면"과 무관하다). 일반 컷은 상한 그대로 — 표시를 늘리지 않는다.
 // 지훈 졸업식(T64)에 앵커를 달자 W1 배치가 바뀌어 서아가 정확히 이 함정에 빠졌다(절친 빌드 13/40판 유실).
+//
+// **알려진 맞교환(수용, 2026-10-16 사용자 판정).** 예약 주가 그 NPC의 쿨다운 스탬프가 되므로(계약 D — 학년을 넘는
+// 연쇄 유실을 막는 규칙), 같은 해 같은 NPC의 **비앵커** 컷이 쿨다운에 막힐 수 있다. 예: 지훈 Y7 W25 상한 주에 95→97.5면
+// 기준선은 jihun-hs-lastgame을 W26에 띄우고 졸업식을 잃었는데, 여기서는 졸업식(W46)을 지키고 lastgame을 잃는다.
+// 서아·예린도 같은 꼴의 맞교환이다. 순손실은 두 NPC가 같은 상한 주에 동시에 넘는 합성 픽스처에서만 나왔고,
+// store 자연판 189판·QA 138판·절친 40판에선 비앵커 유실 0이다. 비앵커를 쿨다운에서 빼려면 D의 스탬프 규칙을
+// 다시 재야 해서 하지 않는다.
 function reserveCappedAnchors(state: GameState): string[] {
   const consumed = consumedReachIds(state);
   return (GAME_EVENTS as GameEvent[])
