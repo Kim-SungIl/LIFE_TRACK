@@ -1,6 +1,6 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
-import { romanceClosure } from './romance';
+import { romanceClosure, hasSuccessfulRomanceRetry, ROMANCE_ROUTES } from './romance';
 import { CareerBranch, GameState, NpcState, ParentStrength, Stats } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';
@@ -896,9 +896,17 @@ export function calculateEnding(state: GameState) {
   // 레이어 순서 역전: 후회("미처 닿지 못한 것")를 먼저 자기 점수로 top-2 확보한 뒤,
   // 그 본문(화해 마감 제외)을 회고 excludeTexts로 넘긴다. 회고가 후회 재료를 importance로
   // 선점해 후회카드가 0장 되던 문제 해소 + 이중 노출 방지(회고는 후회가 쓴 문장을 피함).
-  const regretHighlights = selectRegretHighlights(state);
+  // Preserve historical memories in the save, but do not frame a resolved conversation as
+  // still unspoken. Apply the same read-only view to both ending layers so failure-category
+  // selection cannot bring the old regret back through the memorial section.
+  const memoryState = hasSuccessfulRomanceRetry(state, 'jihun') ? {
+    ...state,
+    memorySlots: (state.memorySlots || []).filter(m =>
+      !(m.sourceEventId === ROMANCE_ROUTES.jihun.opening && m.category === 'failure')),
+  } : state;
+  const regretHighlights = selectRegretHighlights(memoryState);
   const regretUsedTexts = new Set(regretHighlights.filter(h => !h.isClosing).map(h => h.recallText));
-  const memorialHighlights = selectMemorialHighlights(state, regretUsedTexts);
+  const memorialHighlights = selectMemorialHighlights(memoryState, regretUsedTexts);
   // NPC 근황도 후회 본문을 제외(차선 기억 폴백) — 이중노출 0을 엔딩 전체 레이어로 완결.
   const npcStories = getTopNpcStories(state, regretUsedTexts);
   const yearClosings = [...(state.milestoneScenes || [])]

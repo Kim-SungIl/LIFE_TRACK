@@ -3,6 +3,7 @@ import { createInitialState } from '../gameEngine';
 import { GAME_EVENTS } from '../events';
 import { assignCurrentEvent } from '../eventPresentation';
 import { useGameStore } from '../store';
+import { calculateEnding } from '../ending';
 import { resolveNpcClosure } from '../endingNpc';
 import { migrateLoadedState } from '../stateMigration';
 import { cloneGameState } from '../stateClone';
@@ -177,6 +178,50 @@ describe('one player-initiated romance revisit', () => {
     expect(closure.excludeEventIds.has(ROMANCE_ROUTES.jihun.opening)).toBe(true);
     const noRelationship = { ...accepted, relationship: undefined };
     expect(resolveNpcClosure(noRelationship, 'jihun', 100)).toEqual(before);
+  });
+
+  it.each([1, 2])('successful Jihun revisit resolves original choice %i in both final memory layers without deleting history', firstChoice => {
+    const original = deferred('jihun', firstChoice);
+    const originalMemory = original.memorySlots.find(m => m.sourceEventId === ROMANCE_ROUTES.jihun.opening)!;
+    expect(originalMemory.category).toBe('failure');
+    const before = calculateEnding(original);
+    expect(before.regretHighlights.some(h => h.slot?.sourceEventId === ROMANCE_ROUTES.jihun.opening)).toBe(true);
+    const declined = choose(open(cloneGameState(original), 'jihun'), 1);
+    const declinedEnding = calculateEnding(declined);
+    expect(declinedEnding.regretHighlights).toEqual(before.regretHighlights);
+    expect(declinedEnding.memorialHighlights).toEqual(before.memorialHighlights);
+    const accepted = choose(open(cloneGameState(original), 'jihun'), 0);
+    const assertResolved = (state: GameState) => {
+      const savedMemories = cloneGameState(state).memorySlots;
+      const ending = calculateEnding(state);
+      expect(ending.regretHighlights.some(h => h.slot?.sourceEventId === ROMANCE_ROUTES.jihun.opening)).toBe(false);
+      expect(ending.memorialHighlights.some(h => h.slot?.sourceEventId === ROMANCE_ROUTES.jihun.opening)).toBe(false);
+      expect(state.memorySlots).toEqual(savedMemories);
+      expect(state.memorySlots.find(m => m.id === originalMemory.id)).toEqual(originalMemory);
+    };
+    assertResolved(accepted);
+    // Missing/mismatched evidence must not erase an unresolved regret from the ending.
+    for (const invalid of [
+      { ...accepted, relationship: undefined },
+      { ...accepted, relationship: { ...accepted.relationship!, week: 35 } },
+      { ...accepted, events: accepted.events.filter(e => e.id !== ROMANCE_RETRY_IDS.jihun) },
+    ]) {
+      expect(calculateEnding(invalid).regretHighlights.some(h => h.slot?.sourceEventId === ROMANCE_ROUTES.jihun.opening)).toBe(true);
+    }
+    const graduation = cloneGameState(accepted);
+    graduation.year = 7; graduation.week = 40;
+    assignCurrentEvent(graduation, GAME_EVENTS.find(e => e.id === ROMANCE_ROUTES.jihun.closing)!, 40);
+    const apart = graduation.currentEvent!.choices.findIndex(c => c.relationshipSelect?.decision === 'apart');
+    const ended = choose(graduation, apart);
+    expect(ended.relationship?.status).toBe('ended');
+    assertResolved(ended);
+    expect(calculateEnding(ended).regretHighlights.some(h => h.slot?.sourceEventId === ROMANCE_ROUTES.jihun.closing)).toBe(true);
+  });
+
+  it('keeps the original Jihun choice-zero growth memory in the ending after a successful revisit', () => {
+    const accepted = choose(open(deferred('jihun', 0), 'jihun'), 0);
+    expect(calculateEnding(accepted).memorialHighlights.some(h =>
+      h.slot?.sourceEventId === ROMANCE_ROUTES.jihun.opening && h.slot.category === 'growth')).toBe(true);
   });
 
   it('excludes the successful Subin revisit memory from the relationship closure', () => {

@@ -213,6 +213,14 @@ export function applyRelationshipChoice(state: GameState, event: GameEvent, choi
   }
 }
 
+// A later breakup does not undo a conversation that actually took place.
+// Match the accepted event to the saved relationship start, never infer it from intimacy.
+export function hasSuccessfulRomanceRetry(state: GameState, npcId: RomanceNpc): boolean {
+  const relationship = sanitizeRelationship(state.relationship, state.gender);
+  return relationship?.npcId === npcId && state.events.some(e => e.id === ROMANCE_RETRY_IDS[npcId]
+    && e.resolvedChoice === 0 && e.year === relationship.year && e.week === relationship.week);
+}
+
 export function romanceClosure(state: GameState, npcId: string): { text: string; excludeEventIds: Set<string> } | null {
   const r = sanitizeRelationship(state.relationship, state.gender);
   if (!r || r.npcId !== npcId) return null;
@@ -223,7 +231,6 @@ export function romanceClosure(state: GameState, npcId: string): { text: string;
     : r.status === 'ended' ? '지훈이와 연인으로서는 작별했지만, 함께 찍은 사진 속 웃음까지 지우지는 않았다.'
       : r.graduation === 'together' ? '지훈이와는 연인으로도 계속 만나며, 운동과 각자의 일상 사이에 둘의 사진을 더하고 있다.'
       : '지훈이와는 머뭇거리던 말의 끝에서 서로의 마음을 확인하고 연인이 되었다.';
-  const retrySources = state.events.some(e => e.id === ROMANCE_RETRY_IDS[r.npcId]
-    && e.resolvedChoice === 0 && e.year === r.year && e.week === r.week) ? [ROMANCE_RETRY_IDS[r.npcId]] : [];
+  const retrySources = hasSuccessfulRomanceRetry(state, r.npcId) ? [ROMANCE_RETRY_IDS[r.npcId]] : [];
   return { text, excludeEventIds: new Set([ROMANCE_ROUTES[r.npcId].opening, ROMANCE_ROUTES[r.npcId].closing, ...retrySources]) };
 }

@@ -10,7 +10,7 @@
 // - 도윤은 전출 후 상호작용 불가(말 걸기·선물 게이트 = relationshipSignals.isNpcInteractable) +
 //   주간 자연 감쇠(floor 20)로 엔딩 시점 친밀도가 항상 20대라 티어 흐름으로는 영구 사문 —
 //   친밀도 무관 이력 게이트의 별도 레인(departed)으로 회수한다.
-import { romanceClosure, ROMANCE_RETRY_IDS, sanitizeRelationship } from './romance';
+import { romanceClosure, ROMANCE_RETRY_IDS, hasSuccessfulRomanceRetry } from './romance';
 import { GameState } from './types';
 
 // ===== 이벤트 이력 조회 — resolvedChoice 해석의 단일 진입점 =====
@@ -48,11 +48,7 @@ export const NPC_CLOSURES: Record<string, NpcClosure> = {
     variants: [
       { match: s => choseF(s, 'jihun-hs-graduation', 0), sourceEvents: ['jihun-hs-graduation'],
         text: '지훈이와는 지금도 모든 사진을 같이 찍는다. 반칙이라던 그 말은, 지켜지고 있다.' },
-      { match: s => {
-        const relationship = sanitizeRelationship(s.relationship, s.gender);
-        return relationship?.npcId === 'jihun' && s.events.some(e => e.id === ROMANCE_RETRY_IDS.jihun
-          && e.resolvedChoice === 0 && e.year === relationship.year && e.week === relationship.week);
-      }, sourceEvents: ['jihun-hs-unsaid', ROMANCE_RETRY_IDS.jihun],
+      { match: s => hasSuccessfulRomanceRetry(s, 'jihun'), sourceEvents: ['jihun-hs-unsaid', ROMANCE_RETRY_IDS.jihun],
         text: '지훈이와는 오래 쌓아 온 이야기를 계속 나눈다. 노을 지는 교실에 남겨 둔 이야기는, 나중에 다시 마주 앉아 끝까지 나눴다.' },
       { match: s => chose(s, 'jihun-hs-unsaid', 0), sourceEvents: ['jihun-hs-unsaid'],
         text: '지훈이와는 지금도 가장 친한 친구다. 노을 지는 교실의 그 한마디가, 아직 우리 사이에 있다.' },
