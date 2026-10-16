@@ -20,6 +20,7 @@ import { ScreenTransition, type TransitionPace } from './ScreenTransition';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 import { SystemMenu } from './SystemMenu';
 import { goalRecordForWeekLog } from '../engine/semesterGoal';
+import { goalMomentForWeekLog } from '../engine/semesterGoalMoments';
 
 // 비-부팅 화면만 lazy — MainWeekScreen / WeeklyResultScreen / TitleScreen 은 첫 페인트·고빈도라 eager 유지.
 const EventScene = lazy(() =>
@@ -441,6 +442,7 @@ export function GameScreen() {
         upcomingEvents={getUpcomingEvents(state)}
         // T68 — 학기 마지막 주 결산이면 그 학기 목표의 판정. 사건을 거쳐 왔든 곧장 왔든 같은 로그를 읽는다.
         goalRecord={goalRecordForWeekLog(state)}
+        goalMoment={goalMomentForWeekLog(state)}
         onContinue={() => setPhase('weekday')}
       />
     );
