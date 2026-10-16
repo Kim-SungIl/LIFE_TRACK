@@ -1,7 +1,7 @@
 /**
  * Y1 시뮬·QA 스크립트 공용 — store.resolveEvent 와 동일한 이벤트 해결
  */
-import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES } from '../../src/engine/romance';
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, romanceRetryNpc, restoreRomanceRetry } from '../../src/engine/romance';
 import {
   getChainFollowup,
   pickChainForWeek,
@@ -27,6 +27,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   const s = state;
   if (!s.currentEvent) return state;
 
+  if (romanceRetryNpc(s.currentEvent.id) && (!restoreRomanceRetry(s) || !Number.isInteger(choiceIndex))) return state;
   const resolvedLocation = s.currentEvent.location;
   const isFemale = s.gender === 'female';
   const choiceList = (isFemale && s.currentEvent.femaleChoices)
@@ -131,7 +132,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     ),
   });
 
-  if (newState.weekLog) {
+  if (newState.weekLog && !romanceRetryNpc(newState.currentEvent!.id)) {
     newState.weekLog.messages.push(`📖 ${choice.message}`);
   }
 
@@ -139,6 +140,10 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
   const resolvedId = resolvedEvent.id;
   newState.currentEvent = null;
 
+  if (romanceRetryNpc(resolvedEvent.id) && resolvedEvent.romanceReturnPhase) {
+    newState.phase = resolvedEvent.romanceReturnPhase;
+    return newState;
+  }
   const continuation = relationshipContinuation(newState, resolvedEvent, choice);
   if (continuation) {
     assignCurrentEvent(newState, continuation, occurrenceWeek);
@@ -164,7 +169,7 @@ export function resolveEventLikeStore(state: GameState, choiceIndex: number): Ga
     // followup 없으면 conditional chain 시도 — store.resolveEvent와 동일 로직
     // cap=2 (일반) / cap=3 (milestone 잔여 시) — 학년 한정 도달형 누락 방지
     const eventsThisWeek = newState.events.filter(
-      prev => prev.week === occurrenceWeek && prev.year === newState.year && prev.id !== ROMANCE_ROUTES.subin.opening,
+      prev => prev.week === occurrenceWeek && prev.year === newState.year && prev.id !== ROMANCE_ROUTES.subin.opening && !romanceRetryNpc(prev.id),
     ).length;
     const pick = pickChainForWeek(newState, occurrenceWeek, eventsThisWeek);
     applyReachReservation(newState, pick.reserve, occurrenceWeek);
