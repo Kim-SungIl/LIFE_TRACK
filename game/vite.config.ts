@@ -2,6 +2,7 @@
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { promises as fs } from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import {
   FIRST_PAINT_TEXT,
@@ -49,34 +50,42 @@ function webpGenPlugin(): Plugin {
       let thumbCount = 0
       let thumbBytes = 0
       const failures: string[] = []
+      // 순회와 변환을 나눈다 — 예전엔 한 장씩 await해서 코어 하나만 썼다(로컬 94초 중 user 93초, CI 139초).
+      // 파일 목록을 먼저 모은 뒤 코어 수만큼 동시에 변환한다. sharp(libvips)는 장마다 자체 스레드 풀을
+      // 또 띄우므로 장 단위 병렬과 겹치면 과구독이 된다 — 장 안의 스레드는 1로 묶는다.
+      // 산출물은 순서와 무관하게 같다(파일별 독립 변환). 집계도 합만 쓰므로 순서에 기대지 않는다.
+      const pngs: string[] = []
       const walk = async (dir: string): Promise<void> => {
         const entries = await fs.readdir(dir, { withFileTypes: true })
         for (const e of entries) {
           const full = path.join(dir, e.name)
-          if (e.isDirectory()) {
-            await walk(full)
-            continue
+          if (e.isDirectory()) await walk(full)
+          else if (e.name.toLowerCase().endsWith('.png')) pngs.push(full)
+        }
+      }
+      const convert = async (full: string): Promise<void> => {
+        const dest = full.replace(/\.png$/i, '.webp')
+        try {
+          await sharp(full).webp({ quality: 82, effort: 5 }).toFile(dest)
+          // CG(images/events)만 축소본을 하나 더 낸다 — 앨범 격자 전용이다.
+          // **png를 지우기 전에** 만들어야 한다. 배경·캐릭터는 격자에 안 뜨므로 제외.
+          if (full.startsWith(eventsDir + path.sep)) {
+            const thumb = full.replace(/\.png$/i, '.thumb.webp')
+            await sharp(full).resize({ width: CG_THUMB_WIDTH }).webp({ quality: 82, effort: 5 }).toFile(thumb)
+            const thumbSize = (await fs.stat(thumb)).size
+            thumbBytes += thumbSize
+            thumbCount++
           }
-          if (!e.name.toLowerCase().endsWith('.png')) continue
-          const dest = full.replace(/\.png$/i, '.webp')
-          try {
-            await sharp(full).webp({ quality: 82, effort: 5 }).toFile(dest)
-            // CG(images/events)만 축소본을 하나 더 낸다 — 앨범 격자 전용이다.
-            // **png를 지우기 전에** 만들어야 한다. 배경·캐릭터는 격자에 안 뜨므로 제외.
-            if (full.startsWith(eventsDir + path.sep)) {
-              const thumb = full.replace(/\.png$/i, '.thumb.webp')
-              await sharp(full).resize({ width: CG_THUMB_WIDTH }).webp({ quality: 82, effort: 5 }).toFile(thumb)
-              thumbBytes += (await fs.stat(thumb)).size
-              thumbCount++
-            }
-            // 변환 성공한 png만 삭제 — 실패분은 남겨두고 아래에서 빌드를 중단시킨다.
-            pngBytes += (await fs.stat(full)).size
-            webpBytes += (await fs.stat(dest)).size
-            await fs.unlink(full)
-            count++
-          } catch (err) {
-            failures.push(`${full}: ${(err as Error).message}`)
-          }
+          // 변환 성공한 png만 삭제 — 실패분은 남겨두고 아래에서 빌드를 중단시킨다.
+          // `x += await …`는 병렬에서 갱신을 잃는다(좌변을 await 전에 읽는다) — 값을 먼저 받고 더한다.
+          const pngSize = (await fs.stat(full)).size
+          const webpSize = (await fs.stat(dest)).size
+          pngBytes += pngSize
+          webpBytes += webpSize
+          await fs.unlink(full)
+          count++
+        } catch (err) {
+          failures.push(`${full}: ${(err as Error).message}`)
         }
       }
       try {
@@ -84,6 +93,12 @@ function webpGenPlugin(): Plugin {
       } catch (err) {
         this.error(`[webp-gen] ${imagesDir} 순회 실패 — 릴리즈 빌드 중단: ${(err as Error).message}`)
       }
+      sharp.concurrency(1)
+      const workers = Math.max(1, Math.min(os.availableParallelism(), pngs.length))
+      let next = 0
+      await Promise.all(Array.from({ length: workers }, async () => {
+        while (next < pngs.length) await convert(pngs[next++])
+      }))
       if (failures.length > 0) {
         this.error(`[webp-gen] ${failures.length}개 png 변환 실패 — 릴리즈 빌드 중단:\n${failures.slice(0, 10).join('\n')}`)
       }
