@@ -1,6 +1,7 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
 import { romanceClosure, hasSuccessfulRomanceRetry, ROMANCE_ROUTES } from './romance';
+import { getParentIntimacyTone, type ParentIntimacyTone } from './parentIntimacy';
 import { CareerBranch, GameState, NpcState, ParentStrength, Stats } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
 import { josa } from './korean';
@@ -235,9 +236,9 @@ export function recoveryNoteOf(state: Parameters<typeof recoveryClaimOf>[0]): st
 // ===== 부모 에필로그 (Phase 4A) =====
 // 진로 결과(대학)는 stats/수능으로만 결정하고 친밀도로 바꾸지 않는다("스탯 퍼주기" 회피).
 // 친밀도는 "내 이야기의 결말"로만 남긴다 — 같은 결과를 부모와 함께(warm) 맞느냐,
-// 끝내 못 한 말로(distant) 맞느냐. tier 경계는 talkSystem.getParentIntimacyTone과 동일(distant<30 / warm≥70).
+// 끝내 못 한 말로(distant) 맞느냐. 경계는 parentIntimacy.getParentIntimacyTone 한곳에 있다(distant<30 / warm≥70).
 // 화자 SSOT 유지(엄마: emotional/info/resilience/freedom, 아빠: wealth/strict).
-export type EpilogueTier = 'distant' | 'normal' | 'warm';
+export type EpilogueTier = ParentIntimacyTone;
 export type ParentEpilogue = { tier: EpilogueTier; intro: string; beats: { strength: ParentStrength; text: string }[] };
 
 const PARENT_EPILOGUE_INTRO: Record<EpilogueTier, string> = {
@@ -292,7 +293,7 @@ const PARENT_EPILOGUE_BEATS: Record<ParentStrength, EpilogueBeatSet> = {
 
 function buildParentEpilogue(state: GameState): ParentEpilogue {
   const pi = state.parentIntimacy ?? 50;
-  const tier: EpilogueTier = pi < 30 ? 'distant' : pi >= 70 ? 'warm' : 'normal';
+  const tier: EpilogueTier = getParentIntimacyTone(pi);
   const climaxFired = new Set(state.parentClimaxFired ?? []);
   const beats = (state.parents ?? [])
     .map(s => {
