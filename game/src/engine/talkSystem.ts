@@ -167,4 +167,3 @@ export function getEligibleParentClimax(state: GameState): ParentClimaxEvent | n
   }
   return null;
 }
-

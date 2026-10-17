@@ -1,4 +1,4 @@
-import { isDating } from '../../../engine/romance';
+import { isDating, canStartRomanceRetry } from '../../../engine/romance';
 import { GameState, NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { Dialog } from '../../Dialog';
@@ -17,10 +17,11 @@ type Props = {
   // 말 걸기 후 잡담 라인 — null 이면 dialogue 표시, 있으면 잡담 라인으로 교체
   smalltalk: string | null;
   onTalk: () => void;
+  onRetryRomance?: () => void;
   onClose: () => void;
 };
 
-export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClose }: Props) {
+export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClose, onRetryRomance }: Props) {
   // 부재(전출·졸업) 중이면 잔상 모드 — 패널 카드(#331)와 톤을 맞춘다.
   // 이전엔 패널만 잔상 처리돼서, "떠난 자리" 카드를 누르면 컬러 초상·살아있는 게이지·말 걸기가
   // 그대로 있는 모달이 열렸다(같은 화면이 한 친구를 두 상태로 말하던 모순).
@@ -89,6 +90,11 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
           </>
         )}
 
+        {!absent && onRetryRomance && canStartRomanceRetry(state, npc.id) && (
+          <button className="btn btn-secondary" style={{ width: '100%', marginTop: 16 }} onClick={onRetryRomance}>
+            그때 이야기 꺼내기
+          </button>
+        )}
         {/* 말 걸기는 재적 중일 때만 — 사전 결정 모델. 클릭 시 상단 인사말 영역이 잡담 라인으로 교체.
             부재 친구는 버튼을 disabled로 두지 않고 아예 안 그린다(회색 버튼은 "언젠가 가능"을 암시). */}
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>

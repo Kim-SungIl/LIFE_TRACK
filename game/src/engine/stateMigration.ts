@@ -4,7 +4,7 @@
 //  2) 버전 무관 정규화(migrateLoadedState): 누락 필드 백필 + 리네임 + 직렬화 손실 함수 복원.
 //     store 로드와 processWeek 양쪽에서 매번 실행 — 반드시 멱등·저비용. 단순 필드 추가는 전부 이쪽.
 // gameEngine.ts 에서 추출 (P2-6). 새 필드 추가 시 migrateLoadedState 한 곳만 수정.
-import { buildSubinConfession, ROMANCE_ROUTES, sanitizeRelationship } from './romance';
+import { buildSubinConfession, ROMANCE_ROUTES, sanitizeRelationship, restoreRomanceRetry, romanceRetryNpc } from './romance';
 import { GameState, ParentStrength, PendingWeekDelta, StatKey } from './types';
 import { padYearCounts, yearCountsIntact } from './ending';
 import { hashInitialState, deriveTalkSeed } from './rng';
@@ -271,7 +271,8 @@ export function migrateLoadedState(state: GameState): GameState {
     const fresh = GAME_EVENTS.find(e => e.id === cur.id)
       ?? SCHOOL_LIFE_EVENTS.find(e => e.id === cur.id)
       ?? (cur.id === CAREER_CHOICE_EVENT_ID ? buildCareerChoiceEvent(result) : null)
-      ?? (cur.id === ROMANCE_ROUTES.subin.opening ? buildSubinConfession(result) : null);
+      ?? (cur.id === ROMANCE_ROUTES.subin.opening ? buildSubinConfession(result) : null)
+      ?? (romanceRetryNpc(cur.id) ? restoreRomanceRetry(result) : null);
     if (fresh) {
       // 발생주(cur.week)는 보존 — result.week 는 week++(gameEngine) 이후 값이라 덮어쓰면
       // 기억(memory)의 발생주가 +1 어긋난다(W48 이벤트 → 49).
@@ -292,7 +293,11 @@ export function migrateLoadedState(state: GameState): GameState {
       // 카탈로그에서 사라진 ID(구세이브 리네임/삭제) → currentEvent 제거 + phase 복구로 soft-lock 차단.
       // weekLog 가 있으면 주간 결산(result)으로, 없으면 일상(weekday)으로 떨어뜨려 진행 가능 상태 보장.
       result.currentEvent = null;
-      if (result.phase === 'event') result.phase = result.weekLog ? 'result' : 'weekday';
+      if (result.phase === 'event') {
+        result.phase = romanceRetryNpc(cur.id)
+          ? (cur.romanceReturnPhase === 'weekend' || cur.romanceReturnPhase === 'vacation' ? cur.romanceReturnPhase : 'weekday')
+          : result.weekLog ? 'result' : 'weekday';
+      }
     }
   }
 
