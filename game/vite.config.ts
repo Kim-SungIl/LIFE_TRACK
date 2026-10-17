@@ -1,6 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -42,6 +43,33 @@ function webpGenPlugin(): Plugin {
     async writeBundle(options) {
       if (!enabled) return
       const { default: sharp } = await import('sharp')
+      // 변환 캐시(선택) — WEBP_CACHE_DIR이 있으면 png 내용 해시로 결과를 재사용한다. CI는 이미지가 안 바뀐
+      // PR이 대부분인데 매번 594장을 다시 인코딩했다. 키 = png 바이트 sha256 + 인코더 버전(sharp·libvips·libwebp)
+      // + 설정이라, 이미지·설정·인코더 중 하나라도 바뀌면 그 장만 다시 만든다(내용 주소 — 낡은 캐시가 틀린 그림을
+      // 낼 경로가 없다). 이번 빌드에서 안 쓴 항목은 끝에서 지워 캐시가 한없이 자라지 않게 한다.
+      // 나이틀리는 이 변수 없이 돈다 — 캐시 없는 경로가 매일 한 번은 처음부터 검증된다.
+      const cacheDir = process.env.WEBP_CACHE_DIR ? path.resolve(process.env.WEBP_CACHE_DIR) : null
+      const v = sharp.versions as Record<string, string>
+      const encoderTag = `sharp${v.sharp}-vips${v.vips}-webp${v.webp}-q82e5-t${CG_THUMB_WIDTH}`
+      const cacheUsed = new Set<string>()
+      let cacheHits = 0
+      if (cacheDir) await fs.mkdir(cacheDir, { recursive: true })
+      // 캐시 항목을 쓰고 나서 이름을 바꾼다 — 중간에 죽어도 반쪽 파일이 적중으로 읽히지 않게.
+      const cachePut = async (src: string, key: string): Promise<void> => {
+        if (!cacheDir) return
+        const tmp = path.join(cacheDir, `${key}.tmp-${process.pid}`)
+        await fs.copyFile(src, tmp)
+        await fs.rename(tmp, path.join(cacheDir, key))
+      }
+      const cacheGet = async (key: string, dest: string): Promise<boolean> => {
+        if (!cacheDir) return false
+        try {
+          await fs.copyFile(path.join(cacheDir, key), dest)
+          return true
+        } catch {
+          return false
+        }
+      }
       const imagesDir = path.join(options.dir ?? 'dist', 'images')
       const eventsDir = path.join(imagesDir, 'events')
       let count = 0
@@ -66,12 +94,24 @@ function webpGenPlugin(): Plugin {
       const convert = async (full: string): Promise<void> => {
         const dest = full.replace(/\.png$/i, '.webp')
         try {
-          await sharp(full).webp({ quality: 82, effort: 5 }).toFile(dest)
+          const key = cacheDir
+            ? createHash('sha256').update(encoderTag).update(await fs.readFile(full)).digest('hex')
+            : ''
+          if (cacheDir) cacheUsed.add(`${key}.webp`)
+          if (await cacheGet(`${key}.webp`, dest)) cacheHits++
+          else {
+            await sharp(full).webp({ quality: 82, effort: 5 }).toFile(dest)
+            await cachePut(dest, `${key}.webp`)
+          }
           // CG(images/events)만 축소본을 하나 더 낸다 — 앨범 격자 전용이다.
           // **png를 지우기 전에** 만들어야 한다. 배경·캐릭터는 격자에 안 뜨므로 제외.
           if (full.startsWith(eventsDir + path.sep)) {
             const thumb = full.replace(/\.png$/i, '.thumb.webp')
-            await sharp(full).resize({ width: CG_THUMB_WIDTH }).webp({ quality: 82, effort: 5 }).toFile(thumb)
+            if (cacheDir) cacheUsed.add(`${key}.thumb.webp`)
+            if (!(await cacheGet(`${key}.thumb.webp`, thumb))) {
+              await sharp(full).resize({ width: CG_THUMB_WIDTH }).webp({ quality: 82, effort: 5 }).toFile(thumb)
+              await cachePut(thumb, `${key}.thumb.webp`)
+            }
             const thumbSize = (await fs.stat(thumb)).size
             thumbBytes += thumbSize
             thumbCount++
@@ -107,6 +147,15 @@ function webpGenPlugin(): Plugin {
       }
       if (thumbCount === 0) {
         this.error(`[webp-gen] CG 축소본 0개 — ${eventsDir} 확인 필요. 앨범 격자가 깨지므로 릴리즈 빌드 중단.`)
+      }
+      if (cacheDir) {
+        let pruned = 0
+        for (const name of await fs.readdir(cacheDir)) {
+          if (cacheUsed.has(name)) continue
+          await fs.rm(path.join(cacheDir, name), { force: true })
+          pruned++
+        }
+        console.log(`[webp-gen] 변환 캐시 ${cacheDir} — 적중 ${cacheHits}/${count}장, 정리 ${pruned}개 (${encoderTag})`)
       }
       const mb = (b: number) => (b / 1048576).toFixed(1)
       console.log(`[webp-gen] ${count}개 webp 생성 + 원본 png 삭제 완료 — `
