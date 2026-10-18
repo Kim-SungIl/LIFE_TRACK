@@ -5,6 +5,8 @@
  * 기본: 정본 생활 루틴 3 × 시드 3 × 정책 8 × 대상 2 = 144판.
  * story-targetbest는 친밀도 효과를 아는 공략 상한. first-choice는 선택 가능한 원문 중 첫 번째를 고르며
  * 사람의 중립 선택을 대표하지 않는다. 나머지는 같은 공략 선택에 행동 하나만 더한다.
+ * missed-entry는 수빈의 진입 선택 놓침, 지훈의 고백 보류 후 재시도하지 않음을 뜻한다.
+ * talks/companionSlots는 시도 횟수다.
  * full만 세 행동을 합친다. defer-retry / missed-entry는 story-targetbest의 분기 대조군.
  * 생활 활동은 고정하되 UI에서 비용 때문에 확정 불가이면 공통 무료 계획으로 그 주만 대체한다.
  * 선물은 해당 주 원래 계획 비용을 먼저 예약한 나머지 예산으로만 산다(예산예약 정책). 원래 동행 슬롯이 없는 주에는 동행도 없으므로 정책 강도는
@@ -150,6 +152,12 @@ function play(routine: Routine, policy: Policy, seed: number, target: Target) {
       const event = s.currentEvent!;
       assert(event && Number.isInteger(event.week), 'Scene without occurrence week');
       const choices = s.gender === 'female' && event.femaleChoices ? event.femaleChoices : event.choices;
+      if (s.year === 6 && !s.relationship) {
+        if (target === 'subin' && event.id === SUBIN_CONVERSATION_ENTRY)
+          assert(choices.some(c => c.romanceConversation === target), 'Missing Subin conversation choice');
+        if (target === 'jihun' && event.id === route.opening)
+          assert(choices.some(c => c.relationshipSelect?.decision === 'date'), 'Missing Jihun confession choice');
+      }
       const occurrence = stamp(s, target, event.week);
       if (event.id === SUBIN_CONVERSATION_ENTRY && target === 'subin') entry = occurrence;
       if (event.id === route.opening) opening = occurrence;
@@ -185,11 +193,13 @@ const rows = [];
 for (const routine of routines.filter(r => routineNames.includes(r.name))) for (const policy of chosenPolicies)
   for (const seed of seeds) for (const target of targets) rows.push(play(routine, policy, seed, target));
 if (process.env.OUT) writeFileSync(process.env.OUT, JSON.stringify({
-  note: 'Deterministic policy comparison, not a user success-rate estimate. story-targetbest is an informed upper-bound policy; first-choice means the first available original choice, not human neutrality. Lifestyle plans are fixed except explicitly recorded common free fallback weeks when the UI would block confirmation. Gifts reserve the original week plan budget before spending. Companion opportunities differ by routine. Actions may change RNG consumption.', rows,
+  note: 'Deterministic policy comparison, not a user success-rate estimate. story-targetbest is an informed upper-bound policy; first-choice means the first available original choice, not human neutrality. Lifestyle plans are fixed except explicitly recorded common free fallback weeks when the UI would block confirmation. Gifts reserve the original week plan budget before spending. missed-entry means skipped Subin conversation or deferred Jihun confession without retry. talks/companionSlots count attempts. Companion opportunities differ by routine. Actions may change RNG consumption.', rows,
 }, null, 2));
 for (const policy of chosenPolicies) for (const target of targets) {
   const group = rows.filter(r => r.policy === policy && r.target === target);
   console.log(JSON.stringify({ policy, target, runs: group.length,
+    entryShown: group.filter(r => r.entry).length, retryEligible: group.filter(r => r.retryEligible).length,
+    acceptedWithoutGraduation: group.filter(r => r.accepted && !r.graduation).length,
     opened: group.filter(r => r.opening).length, accepted: group.filter(r => r.accepted).length,
     retried: group.filter(r => r.actualRetry).length, together: group.filter(r => r.finalRelationship?.graduation === 'together').length,
     openingWeeks: [...new Set(group.flatMap(r => r.opening ? [r.opening.week] : []))].sort((a, b) => a - b),
