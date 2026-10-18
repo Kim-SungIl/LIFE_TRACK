@@ -41,3 +41,6 @@ public/images/characters/_archive/
 # 위생 게이트 e2e가 심는 탐침. **NUL이 든 파일이라** 워커가 SIGKILL로 죽어
 # finally를 못 돌면 커밋 가능한 상태로 남는다 — 게이트가 막으려던 바로 그 물건이다.
 scripts/__hygiene-probe.tmp.txt
+
+# 릴리스 webp 변환 캐시(WEBP_CACHE_DIR)
+.webp-cache
