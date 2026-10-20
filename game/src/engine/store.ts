@@ -204,6 +204,16 @@ interface GameStore {
    */
   recordWeekendPlan: (activities: string[], npcChoices: Record<string, string>) => void;
   setNpcActivityMap: (map: Record<string, string>) => void;
+  /**
+   * 한 주를 확정한다 — 계획 화면의 "이번 주 확정"이 부르는 **유일한** 경로.
+   *
+   * 순서가 계약이다: 슬롯(학기 주말 / 방학 자유) → 동행 → "지난주처럼" 스냅샷 → `advanceWeek`.
+   * 스냅샷은 반드시 `advanceWeek` 앞이어야 processWeek이 클론에 싣고 간다. 예전엔 GameScreen이
+   * 이 넷을 손으로 엮었다. 월 단위 자동 진행기(docs/monthly-plan-design-2026-10.md)가 같은 순서를
+   * 따로 짜면 동행이나 스냅샷이 조용히 빠지므로, 확정은 여기 하나로 모은다.
+   * 화면 순서와 바이트 동일한지는 weeklyDriverGolden.test.ts가 잠근다.
+   */
+  confirmWeek: (activities: string[], npcChoices: Record<string, string>) => void;
   advanceWeek: () => void;
   // 반환: 실제 적용된 효과(구간 감쇠·클램프 반영) — 결과 화면 표시는 이 실측값을 쓴다.
   resolveEvent: (choiceIndex: number) => AppliedEventOutcome | undefined;
@@ -601,6 +611,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setNpcActivityMap: (map) => {
     set({ npcActivityMap: map });
+  },
+
+  confirmWeek: (activities, npcChoices) => {
+    const s = get().state;
+    if (!s) return;
+    if (s.isVacation) get().setVacationChoices(activities);
+    else get().setWeekendChoices(activities);
+    // npcChoices를 그대로 전달 (슬롯 키 포함 — processWeek에서 npcId만 추출)
+    get().setNpcActivityMap(npcChoices);
+    get().recordWeekendPlan(activities, npcChoices);
+    // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
+    get().advanceWeek();
   },
 
   advanceWeek: () => {

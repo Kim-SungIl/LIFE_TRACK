@@ -177,3 +177,25 @@ describe('세이브 왕복 — 새로고침 뒤에도 남는다', () => {
     expect(current().lastWeekendPlan?.activities).toEqual(['reading']);
   });
 });
+
+describe('확정 버튼은 store.confirmWeek 하나를 탄다', () => {
+  // 확정 순서(슬롯 → 동행 → 스냅샷 → advanceWeek)는 store.confirmWeek이 갖고, 그 순서가 화면의
+  // 옛 순서와 바이트 동일한지는 weeklyDriverGolden.test.ts가 잠근다. 그 잠금은 **화면이 그
+  // 함수를 부를 때만** 뜻이 있다 — GameScreen이 다시 순서를 손으로 엮으면 골든은 초록인 채
+  // 화면 경로만 갈린다(#397: 훅을 잠가도 App이 부르는지는 별개). 그래서 배선을 따로 본다.
+  it('고른 슬롯 그대로 confirmWeek이 정확히 한 번 불리고, 그 호출이 주를 넘긴다', () => {
+    const real = useGameStore.getState().confirmWeek;
+    const calls: [string[], Record<string, string>][] = [];
+    useGameStore.setState({ confirmWeek: (a, n) => { calls.push([a, n]); real(a, n); } });
+    try {
+      put(weekdayState());
+      render(<GameScreen />);
+      pickActivity('reading', '토요일');
+      confirmWeek();
+      expect(calls).toEqual([[['reading'], {}]]);
+      expect(current().week, 'confirmWeek을 거쳤는데 주가 안 넘어갔다').toBe(4);
+    } finally {
+      useGameStore.setState({ confirmWeek: real });
+    }
+  });
+});

@@ -54,21 +54,17 @@ export function GameScreen() {
   // P3-7: selector 없는 전체-스토어 구독 → state + 사용하는 액션만 선택.
   // 액션은 Zustand에서 안정 참조라, npcActivityMap만 바뀔 땐 shallow-equal → 리렌더 스킵.
   const {
-    state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
-    advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
-    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, recordWeekendPlan,
+    state, setRoutine, confirmWeek,
+    advanceFromYearEnd, resolveEvent, buyItem, talkToNpc, talkToHome,
+    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
     startGame, exitToTitle, chooseSemesterGoal, startRomanceRetry, consumeRomancePlan,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
-    setWeekendChoices: s.setWeekendChoices,
-    setVacationChoices: s.setVacationChoices,
-    recordWeekendPlan: s.recordWeekendPlan,
     setRoutine: s.setRoutine,
-    advanceWeek: s.advanceWeek,
+    confirmWeek: s.confirmWeek,
     advanceFromYearEnd: s.advanceFromYearEnd,
     resolveEvent: s.resolveEvent,
-    setNpcActivityMap: s.setNpcActivityMap,
     buyItem: s.buyItem,
     talkToNpc: s.talkToNpc,
     talkToHome: s.talkToHome,
@@ -474,17 +470,8 @@ export function GameScreen() {
           onTalkHome={talkToHome}
           onResolveParentChoice={resolveParentTalkChoice}
           onBuyItem={buyItem}
-          onConfirmWeek={(activities, npcChoices) => {
-            if (state.isVacation) setVacationChoices(activities);
-            else setWeekendChoices(activities);
-            // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
-            setNpcActivityMap(npcChoices);
-            // "지난주처럼" 1탭 복사의 원본 — 확정 시점의 계획을 그대로 스냅샷한다.
-            // **advanceWeek 앞에 둔다**: processWeek이 클론에 실어 다음 주로 넘긴다.
-            recordWeekendPlan(activities, npcChoices);
-            // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
-            advanceWeek();
-          }}
+          // 확정 순서(슬롯 → 동행 → "지난주처럼" 스냅샷 → advanceWeek)는 store.confirmWeek 하나가 갖는다.
+          onConfirmWeek={confirmWeek}
         />
         {albumOverlay}
       </>

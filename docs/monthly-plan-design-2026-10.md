@@ -228,6 +228,9 @@
 
 0. ~~이 문서의 결정~~ → ✅ 완료
 1. 현행 동작 기준값 기록: 다중 시드 1년 궤적을 골든으로 남기고, 동등성 하네스를 만든다(수동 진행 vs 자동 드라이버, 매주 경계에서 GameState 깊은 비교)
+   - ✅ **완료(2026-10-20)**: `scripts/lib/week-driver.ts`(store 층 드라이버 + 정렬 키 sha256 지문) · 골든 `game/src/engine/__tests__/weekly-driver-golden.json`(페르소나 3 × 시드 2 × 336주, 기록 `scripts/sim/record-weekly-golden.ts`) · `weeklyDriverGolden.test.ts`.
+   - 확정 순서를 store `confirmWeek` 하나로 모았다(GameScreen은 그것만 부른다, 배선은 `weekendRepeatWiring.test.tsx`가 잠금). 자동 진행기도 이 함수를 부른다.
+   - 뮤테이션 6/6 검출: 스냅샷 누락·스냅샷 순서·방학 분기·동행 누락·동행 순서(골든) + 화면이 순서를 다시 손으로 엮음(배선).
 2. 블록 표 + `getMonthLabel` 교체
 3. 돈 한 묶음: 월초 용돈, 루틴 선불, 쓸 수 있는 돈 SSOT로 약 20곳 이관, 알바 주간 지급, 엔딩 돈 회고 재정의
    - 검증 두 층: 돈 이외 축은 바이트 동일 / 돈은 원장 불변식
