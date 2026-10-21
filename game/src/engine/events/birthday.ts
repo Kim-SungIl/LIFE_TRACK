@@ -37,7 +37,7 @@ export const BIRTHDAY_EVENTS = [
   },
   {
     id: 'subin-birthday', title: '수빈이 생일',
-    description: '오늘이 수빈이 생일이라는 게 떠올랐다.\n2학기가 시작되고 9월이다.',
+    description: '오늘이 수빈이 생일이라는 게 떠올랐다.\n2학기도 어느새 한 달이 지났다.',
     week: 29,
     location: 'classroom', background: 'classroom_{school}_afternoon',
     speakers: ['subin'],

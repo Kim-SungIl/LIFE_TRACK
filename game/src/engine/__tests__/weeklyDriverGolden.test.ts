@@ -8,6 +8,12 @@
 // `npx tsx scripts/sim/record-weekly-golden.ts` — 확정 순서 = confirmInline(GameScreen onConfirmWeek 현행).
 // 재생성은 동작을 **의도적으로** 바꾼 변경에서만 하고, 여기에 원인 귀속을 적는다
 // (romanceInvariance.test.ts와 같은 규약: "무엇을 되돌리면 바이트 동일로 돌아오는가").
+//
+// 재생성 1 (2026-10-22, 달력 문장 4건 — calendarWordsFit.test.ts): 수빈 생일 W29·모의고사 예고 W32·
+// 겨울방학 W43·학년의 끝 W47의 제목·설명·선택지 문장과 W47 배경 이름만 바꿨다. 6판 모두 Y1 W30 계획 시점
+// (W29 사건이 기록에 남은 직후)부터 지문이 갈린다. 원인 귀속: 그 문장 변경만 되돌린 직전 커밋 1bc1858과
+// 6판 전부 **최종 능력치·돈·피로·멘탈·NPC 친밀도·사건 열(학년-주-id-선택)이 바이트 동일**했고 카운터도 같다.
+// 수치·발동 시점 변화 0 — 문장만 바뀐 의도된 변경.
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
