@@ -16,7 +16,7 @@ import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } 
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { absWeek } from './relationshipSignals';
-import { getWeekInfo } from './weekMath';
+import { getMonthBlock, getWeekInfo } from './weekMath';
 import { recordGrowthDrag, pickGrowthReason, advanceGrowthReasonMemo, type GrowthMultipliers } from './growthDrag';
 import { createInitialNpcs } from './npcRoster';
 import { markSemesterGoalWeek, settleSemesterGoalIfDue, settleStaleSemesterGoal } from './semesterGoal';
@@ -137,13 +137,16 @@ export function getWeekLabel(state: GameState): string {
   return getWeekLabelAt(state.year, state.week);
 }
 
+/**
+ * HUD의 달 이름. 월 블록 SSOT(weekMath.getMonthBlock, 4주 × 12블록)에서 읽는다.
+ * 예전엔 한 달이 3~6주인 별도 표였다(12월 6주, 1·2월 3주) — 월 단위 계획의 블록과 갈리지 않게 하나로 합쳤다.
+ *
+ * 렌더 경로라 throw하지 않는다. 범위 밖 주차(손상 세이브 등)는 가장 가까운 블록으로 붙인다 —
+ * 예전 표도 범위 밖에서 3월을 냈다. 블록 판정 자체가 필요한 곳은 getMonthBlock을 직접 쓸 것(그쪽은 throw).
+ */
 export function getMonthLabel(week: number): string {
-  // 대략적 매핑: W1=3월, W5=4월, W9=5월, ...
-  const months = [3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7,
-    7, 7, 8, 8, 8, // 여름방학
-    9, 9, 9, 9, 10, 10, 10, 10, 11, 11, 11, 11, 12, 12, 12, 12, 12, 12,
-    1, 1, 1, 2, 2, 2]; // 겨울방학
-  return `${months[week - 1] || 3}월`;
+  const w = Number.isFinite(week) ? Math.min(48, Math.max(1, Math.round(week))) : 1;
+  return getMonthBlock(w).label;
 }
 
 // ===== 구간 감쇠 (문서 §1-3 표 기준) =====

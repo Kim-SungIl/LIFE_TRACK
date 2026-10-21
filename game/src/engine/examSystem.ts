@@ -1,5 +1,6 @@
 import { GameState, ExamResult, SubjectResult, SubjectKey, ExamGrade, ElementaryGrade, ExamType, SchoolLevel } from './types';
 import { seededRandom } from './rng';
+import type { MonthBlock } from './weekMath';
 
 // ===== 시험 스케줄 SSOT =====
 // 학교급별 시험 주차. UI(GameScreen 다가오는 이벤트), 로직(advanceWeek), 이벤트 가드(study-cafe 등)가 동일한 출처를 공유한다.
@@ -13,6 +14,39 @@ export function getExamSchedule(year: number): Record<number, ExamType> {
   } else {
     return { 8: 'midterm', 12: 'mock', 17: 'final', 30: 'midterm', 33: 'mock', 38: 'final' };
   }
+}
+
+// ===== 월 블록 × 시험 (월 단위 계획 화면의 📝 배지·다음 달 예고, 설계안 §2) =====
+// 시험은 주말 칸을 지우지 않는다(processWeek이 시험을 주말 뒤에 붙일 뿐) — 화면은 행에 배지만 단다.
+
+export interface MonthExam {
+  week: number;
+  type: ExamType;
+  /** 블록 안에서 몇 번째 주(1~4). */
+  weekOfMonth: number;
+}
+
+/** 그 블록(달) 안의 시험들. 학년마다 시험표가 다르다(Y1 단원평가 2회, Y7 수능). */
+export function getExamsInMonth(year: number, block: MonthBlock): MonthExam[] {
+  const schedule = getExamSchedule(year);
+  const out: MonthExam[] = [];
+  for (let w = block.startWeek; w <= block.endWeek; w++) {
+    const type = schedule[w];
+    if (type) out.push({ week: w, type, weekOfMonth: w - block.startWeek + 1 });
+  }
+  return out;
+}
+
+/**
+ * 다음 달 **첫 주**의 시험 — 이번 달 마지막 주가 그 시험의 준비 주다. 준비가 달을 넘는 자리라
+ * 계획 화면이 "다음 달 첫 주 기말고사"를 미리 말해야 한다(6월→7월 기말, 10월→11월 모의고사).
+ * 학년의 마지막 블록(2월)은 다음 주가 W49라 시험표에 없어 저절로 null이다(다음 학년 W1에도 시험이 없다).
+ * 따로 막는 가드를 두지 않는다 — 두면 뮤테이션으로 지워도 결과가 같은 죽은 코드가 된다.
+ */
+export function getNextMonthOpeningExam(year: number, block: MonthBlock): MonthExam | null {
+  const firstWeekNext = block.endWeek + 1;
+  const type = getExamSchedule(year)[firstWeekNext];
+  return type ? { week: firstWeekNext, type, weekOfMonth: 1 } : null;
 }
 
 // 시험 주 또는 시험 직전 주(준비 기간) 여부 — "시험 기간" 컨텍스트 가드
