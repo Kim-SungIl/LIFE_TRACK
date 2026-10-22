@@ -21,10 +21,15 @@
 // 돈이 모자라 잠긴 0번 선택지를 3번 실행했다. 이제 getConfirmGate로 잠김을 만나면 적립(markMoneyBlockedWeek)하고
 // 루틴 강등·못 내는 주말 비우기를 하며, 선택지는 firstPickableChoice(EventScene과 같은 판정)로 고른다.
 // 카운터에 moneyBlockedWeeks·routineFallbacks·lockedChoicesAvoided가 더해졌다(기존 4판은 셋 다 0).
+//
+// 재생성 3 (2026-10-23, 월 단위 계획 3단계 준비 — 형식만): 돈을 뺀 지문 `coreDigests`를 더했다. 같은 커밋에서
+// "새로 쓰는 돈" 판정 7곳을 spendableMoney로 옮겼는데, 6판 모두 `digests`·카운터가 직전 골든과 **바이트 동일**하다
+// (지금 getSpendableMoney = 잔액이라 동작 불변). 3단계가 돈 시점을 바꾸면 `digests`는 깨지고 `coreDigests`가
+// "돈만 갈렸나"를 가른다.
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
-  GOLDEN_PERSONAS, GOLDEN_SEEDS, confirmInline, driveGame, firstDivergence, installMemoryStorage, stateDigest,
+  GOLDEN_PERSONAS, GOLDEN_SEEDS, coreDigest, confirmInline, driveGame, firstDivergence, installMemoryStorage, stateDigest,
   type ConfirmFn, type WeeklyGolden,
 } from '../../../scripts/lib/week-driver';
 import { createInitialState } from '../gameEngine';
@@ -100,6 +105,7 @@ describe('store.confirmWeek — 화면의 확정 순서와 매주 바이트 동�
       const got = driveGame(store, persona(r.persona), r.seed, confirmViaStore, { storage });
       expect(got.reachedEnding).toBe(true);
       expectSameAsGolden(got.digests, r.digests, got.coords);
+      expectSameAsGolden(got.coreDigests, r.coreDigests, got.coords);
       expect(got.counters).toEqual(r.counters);
       // 지문 밖 출력 — 자동 저장이 매 계획 시점의 state를 그대로 담았고, 엔딩에서 기록실 적립이 일어났다.
       // (지문만 보면 둘 다 지워도 초록이었다 — 3자 검수에서 뮤테이션 2종이 살아남았다.)
@@ -178,6 +184,26 @@ describe('양성 대조군 — 확정 순서가 깨지면 지문이 갈린다', 
       expect(firstDivergence(bad.digests, ref.digests.slice(0, PREFIX))).toBeGreaterThanOrEqual(0);
     });
   }
+});
+
+describe('coreDigest — 돈만 바뀌면 그대로, 돈 이외가 바뀌면 다르다', () => {
+  it('잔액·연간 지출·잠김 기록·보류 돈·주간 돈 변화는 무시하고, 스탯은 본다', () => {
+    const s = createInitialState('male', ['wealth', 'info'], { rngSeed: 1 });
+    const base = coreDigest(s, {});
+    const moneyOnly = structuredClone(s);
+    moneyOnly.money += 12;
+    moneyOnly.moneySpentByYear = [3, 0, 0, 0, 0, 0, 0];
+    moneyOnly.moneyBlockedWeeksByYear = [1, 0, 0, 0, 0, 0, 0];
+    moneyOnly.moneyBlockedStamp = 5;
+    moneyOnly.pendingWeekDelta = { stats: {}, fatigue: 0, money: -4 };
+    const withPending = structuredClone(s);
+    withPending.pendingWeekDelta = { stats: {}, fatigue: 0, money: 0 };
+    expect(coreDigest(moneyOnly, {})).toBe(coreDigest(withPending, {}));
+    expect(stateDigest(moneyOnly, {}), '전체 지문은 돈을 본다(짝)').not.toBe(stateDigest(withPending, {}));
+    const statMoved = structuredClone(s);
+    statMoved.stats.academic += 1;
+    expect(coreDigest(statMoved, {})).not.toBe(base);
+  });
 });
 
 describe('stateDigest — 키 순서는 무시하고 값은 본다', () => {

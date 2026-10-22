@@ -10,6 +10,7 @@
 import { GameState, WeekendPlanSnapshot } from './types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from './activities';
 import { getParentMods } from './parentModifiers';
+import { canSpend } from './spendableMoney';
 import { isNpcEnrolled } from './relationshipSignals';
 import { predictWeekOutcome, type WeekPreview } from './gameEngine';
 
@@ -177,7 +178,7 @@ export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'ski
     const r3 = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null;
     return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
   })();
-  const routineTooExpensive = !state.isVacation && !!state.routineSlot2 && routineCost > 0 && state.money < routineCost;
+  const routineTooExpensive = !state.isVacation && !!state.routineSlot2 && routineCost > 0 && !canSpend(state, routineCost);
   const unaffordableIds = routineTooExpensive
     ? []
     : [...new Set(preview.skipped.filter(s => s.reason === 'money').map(s => s.activityId))]

@@ -1,4 +1,5 @@
 import { GameState, StatKey, ActiveBuff, STAT_LABELS } from './types';
+import { canSpend } from './spendableMoney';
 import { cloneGameState } from './stateClone';
 import { absWeek, isNpcInteractable } from './relationshipSignals';
 import { applyGrindIntimacyGain } from './intimacyScaling';
@@ -203,7 +204,7 @@ export function limitKey(item: ShopItem): string {
 
 // ===== 구매 가능 여부 체크 =====
 export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Record<string, number>): { ok: boolean; reason?: string } {
-  if (state.money < item.price) return { ok: false, reason: '돈이 부족해요' };
+  if (!canSpend(state, item.price)) return { ok: false, reason: '돈이 부족해요' };
   if (item.requireYear && state.year < item.requireYear) {
     const yearNames = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
     return { ok: false, reason: `${yearNames[item.requireYear - 1]}부터 구매 가능` };

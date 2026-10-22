@@ -21,6 +21,7 @@ import type { EventChoice, EventTextVariant, GameEvent, GameState, SchoolBand, V
 import { getSchoolLevel } from './backgrounds';
 import { presentRomanceEvent } from './romance';
 import { absWeek, getSeason } from './weekMath';
+import { canSpend } from './spendableMoney';
 
 export type EventPresentationCtx = Pick<GameState, 'year' | 'gender'> & Partial<Pick<GameState, 'relationship'>> & {
   week: number;
@@ -183,7 +184,7 @@ export function choiceCost(choice: EventChoice): number {
 /** 돈이 모자라 잠기는가 — 비용이 있는데 잔액이 그보다 적으면. state가 없으면 잠그지 않는다. */
 export function isChoiceUnaffordable(choice: EventChoice, state?: GameState | null): boolean {
   const cost = choiceCost(choice);
-  return cost > 0 && state ? state.money < cost : false;
+  return cost > 0 && state ? !canSpend(state, cost) : false;
 }
 
 /**

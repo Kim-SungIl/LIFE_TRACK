@@ -1,5 +1,6 @@
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
 import { isDating } from './romance';
+import { getSpendableMoney } from './spendableMoney';
 import { GameState, WeekLog } from './types';
 import { isExamPeriod } from './examSystem';
 import { GOOD_WEEK_AXIS_GAIN, slowdownShown } from './growthDrag';
@@ -48,7 +49,7 @@ const DIALOGUE_POOLS: DialoguePool[] = [
     '단톡방에 시험 범위 물어보는 애가 있다.',
   ]},
   // 돈 부족
-  { priority: 60, condition: s => s.money <= 2, lines: [
+  { priority: 60, condition: s => getSpendableMoney(s) <= 2, lines: [
     '용돈이 바닥이다...',
     '이번 주는 아끼자.',
     '돈이 없으니 할 수 있는 게 별로 없네.',

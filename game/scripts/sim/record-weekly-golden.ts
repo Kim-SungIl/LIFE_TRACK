@@ -22,7 +22,7 @@ for (const persona of GOLDEN_PERSONAS) {
     const t0 = Date.now();
     const r = driveGame(useGameStore, persona, seed, confirmInline);
     if (!r.reachedEnding) throw new Error(`${persona.name}/${seed}: 엔딩에 못 닿았다 — 골든을 쓰지 않는다`);
-    runs.push({ persona: persona.name, seed, digests: r.digests, counters: r.counters });
+    runs.push({ persona: persona.name, seed, digests: r.digests, coreDigests: r.coreDigests, counters: r.counters });
     console.log(`${persona.name}/seed${seed}: ${r.digests.length}칸 · ${Date.now() - t0}ms ·`, JSON.stringify(r.counters));
   }
 }

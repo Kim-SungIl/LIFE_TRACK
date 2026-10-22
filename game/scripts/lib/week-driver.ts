@@ -114,6 +114,23 @@ export function stateDigest(state: GameState, npcActivityMap: Record<string, str
   return createHash('sha256').update(json).digest('hex').slice(0, 16);
 }
 
+/**
+ * **돈을 뺀** 상태 지문. 월 단위 계획 3단계(월초 용돈·루틴 선불)는 돈의 **시점**을 바꿔 전체 지문을
+ * 의도적으로 깬다. 그때 "돈만 갈렸다"와 "스탯·사건까지 갈렸다"를 가르는 게 이 지문이다(3자 검수).
+ * 돈이 모자라 활동이 빠지는 판(paid-spend)은 돈 시점이 바뀌면 스탯도 정당하게 갈리므로, 이 지문의
+ * 불변은 **돈이 모자라지 않는 판**에서만 요구한다.
+ */
+export const MONEY_STATE_KEYS = ['money', 'moneySpentByYear', 'moneyBlockedWeeksByYear', 'moneyBlockedStamp'] as const;
+
+export function coreDigest(state: GameState, npcActivityMap: Record<string, string>): string {
+  const core: Record<string, unknown> = { ...state };
+  for (const k of MONEY_STATE_KEYS) delete core[k];
+  if (state.pendingWeekDelta) core.pendingWeekDelta = { ...state.pendingWeekDelta, money: 0 };
+  if (state.weekLog) core.weekLog = { ...state.weekLog, moneyChange: 0 };
+  const json = JSON.stringify(canonical({ state: core, npcActivityMap }));
+  return createHash('sha256').update(json).digest('hex').slice(0, 16);
+}
+
 export interface DriveCounters {
   /** 확정한 주 수(계획 시점 수). */
   weeks: number;
@@ -148,6 +165,8 @@ export interface DriveChecks {
 export interface DriveResult {
   /** 매 계획 시점(확정 직전)의 지문. 마지막 원소는 엔딩 상태. */
   digests: string[];
+  /** 같은 시점의 **돈을 뺀** 지문(coreDigest). */
+  coreDigests: string[];
   /** digests[i]의 좌표 — 갈린 지점을 사람이 읽을 수 있게. */
   coords: string[];
   counters: DriveCounters;
@@ -226,6 +245,7 @@ export function driveGame(
   };
 
   const digests: string[] = [];
+  const coreDigests: string[] = [];
   const coords: string[] = [];
   const counters: DriveCounters = {
     weeks: 0, vacationWeeks: 0, eventsResolved: 0, yearEnds: 0, talkEvents: 0, companionWeeks: 0, moneySpent: 0,
@@ -239,6 +259,7 @@ export function driveGame(
     const s = now();
     if (s.phase === 'ending') {
       digests.push(stateDigest(s, api().npcActivityMap));
+      coreDigests.push(coreDigest(s, api().npcActivityMap));
       coords.push(`Y${s.year} W${s.week} ending`);
       checks.runDeltaAtEnding = api().runDelta != null;
       checks.archiveWritten = !!opts.storage?.get(ARCHIVE_KEY);
@@ -268,6 +289,7 @@ export function driveGame(
     const atPlan = now();
     if (opts.maxPlans !== undefined && digests.length >= opts.maxPlans) break;
     digests.push(stateDigest(atPlan, api().npcActivityMap));
+    coreDigests.push(coreDigest(atPlan, api().npcActivityMap));
     coords.push(`Y${atPlan.year} W${atPlan.week} ${atPlan.phase}`);
     if (opts.storage) {
       checks.savesCompared++;
@@ -322,7 +344,7 @@ export function driveGame(
 
   const last = now();
   counters.moneySpent = Math.round((last.moneySpentByYear ?? []).reduce((a, b) => a + b, 0) * 10) / 10;
-  return { digests, coords, counters, checks, reachedEnding };
+  return { digests, coreDigests, coords, counters, checks, reachedEnding };
 }
 
 /** 첫 번째로 갈린 칸. 같으면 -1. */
@@ -336,7 +358,7 @@ export function firstDivergence(a: readonly string[], b: readonly string[]): num
 export interface WeeklyGolden {
   sourceCommit: string;
   note: string;
-  runs: { persona: string; seed: number; digests: string[]; counters: DriveCounters }[];
+  runs: { persona: string; seed: number; digests: string[]; coreDigests: string[]; counters: DriveCounters }[];
 }
 
 /** 골든 파일 경로(테스트 기준 상대 위치). */
