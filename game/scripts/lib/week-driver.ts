@@ -21,14 +21,21 @@
  * 둘이 **같은 함수**를 써야 비교가 성립한다(endingStateGrid.ts와 같은 이유).
  */
 import { createHash } from 'node:crypto';
-import { NPC_COMPANION_ACTIVITIES } from '../../src/engine/activities';
-import { createInitialState } from '../../src/engine/gameEngine';
+import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../../src/engine/activities';
+import { createInitialState, predictWeekOutcome } from '../../src/engine/gameEngine';
 import { GAME_EVENTS } from '../../src/engine/events';
-import { assignCurrentEvent } from '../../src/engine/eventPresentation';
+import {
+  assignCurrentEvent, firstPickableChoice, isChoiceUnaffordable, isChoiceVisible,
+} from '../../src/engine/eventPresentation';
 import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import type { useGameStore } from '../../src/engine/store';
 import type { GameState, ParentStrength } from '../../src/engine/types';
+import { getConfirmGate, getWeekSlotCount } from '../../src/engine/weekendPlan';
 import { SIM_ROUTINES, assertRoutineIds } from './sim-routines';
+
+/** 제품의 영속 키 — store.ts SAVE_KEY / archive.ts ARCHIVE_KEY(verify-nightly-e2e.ts와 같은 값). */
+const SAVE_KEY = 'lifetrack_save';
+const ARCHIVE_KEY = 'lifetrack_archive';
 
 export type StoreApi = typeof useGameStore.getState;
 type Store = typeof useGameStore;
@@ -119,6 +126,23 @@ export interface DriveCounters {
   companionWeeks: number;
   /** 7년 실지출 합(만원) — `moneySpentByYear`. */
   moneySpent: number;
+  /** 화면이라면 확정이 돈 때문에 잠겼을 주 — markMoneyBlockedWeek를 부른 횟수. */
+  moneyBlockedWeeks: number;
+  /** 루틴비를 못 내 무료 루틴으로 바꾼 횟수. */
+  routineFallbacks: number;
+  /** 0번 선택지가 숨겨졌거나 돈이 모자라 잠겨서 다른 선택지를 고른 횟수. */
+  lockedChoicesAvoided: number;
+}
+
+export interface DriveChecks {
+  /** 계획 시점마다 저장소의 세이브를 읽어 store state와 비교한 횟수. 저장소를 안 넘기면 0. */
+  savesCompared: number;
+  /** 세이브의 state가 store state와 달랐던 횟수 — 자동 저장이 빠지면 여기서 드러난다(지문 밖). */
+  saveMismatches: number;
+  /** 엔딩에서 기록실 적립 결과(runDelta)가 store에 남았나 — commitOnEnding 경로(지문 밖). */
+  runDeltaAtEnding: boolean;
+  /** 엔딩에서 기록실 키가 저장소에 쓰였나. */
+  archiveWritten: boolean;
 }
 
 export interface DriveResult {
@@ -127,6 +151,7 @@ export interface DriveResult {
   /** digests[i]의 좌표 — 갈린 지점을 사람이 읽을 수 있게. */
   coords: string[];
   counters: DriveCounters;
+  checks: DriveChecks;
   reachedEnding: boolean;
 }
 
@@ -147,17 +172,51 @@ function companionFor(state: GameState): string | null {
 }
 
 /**
- * 한 판을 끝까지 돈다. 사건은 늘 0번 선택지, 결산은 곧장 다음 주로(화면의 "다음 주로 →"),
- * 학년말은 `advanceFromYearEnd`. 루틴은 첫 계획 시점에 한 번 박는다(화면의 루틴 다이얼로그).
+ * 페르소나의 활동 목록을 **화면이 저장하는 모양**으로 편다 — 여러 칸짜리 활동은 차지하는 칸마다 같은 id를
+ * 반복하고(MainWeekScreen의 onToggle), 남은 칸에 안 들어가는 활동은 고를 수 없으므로 뺀다.
+ * 예: 방학 5칸에 [단기특강(2), 스포츠캠프(3), 휴식(1)] → [특강, 특강, 캠프, 캠프, 캠프] (휴식은 자리가 없다).
+ */
+export function layoutSlots(ids: readonly string[], slotCount: number): string[] {
+  const out: string[] = [];
+  for (const id of ids) {
+    const size = ACTIVITIES.find(a => a.id === id)?.slots ?? 1;
+    if (out.length + size > slotCount) continue;
+    for (let k = 0; k < size; k++) out.push(id);
+  }
+  return out;
+}
+
+function routineCostOf(state: GameState, slot2: string | null, slot3: string | null): number {
+  const cost = (id: string | null) => {
+    const a = id ? ACTIVITIES.find(x => x.id === id) : null;
+    return a ? getActivityCost(a, state.year) : 0;
+  };
+  return cost(slot2) + cost(slot3);
+}
+
+/** 돈이 없어 페르소나 루틴을 못 낼 때 플레이어가 바꿔 끼우는 무료 루틴. */
+const FALLBACK_ROUTINE: [string, string | null] = ['self-study', null];
+
+/**
+ * 한 판을 끝까지 돈다. **화면이 막는 것은 막는다** — 사건은 보이고 돈이 되는 첫 선택지(EventScene과 같은
+ * 판정, 전부 잠기면 "지나친다"), 결산은 곧장 다음 주로, 학년말은 `advanceFromYearEnd`.
+ * 확정은 화면의 잠금(getConfirmGate)을 따른다. 잠기면 잠긴 주를 적립하고(markMoneyBlockedWeek),
+ * 플레이어가 할 일을 한다 — 루틴비를 못 내면 무료 루틴으로 바꾸고, 못 내는 주말 활동은 비운다.
+ * 루틴은 첫 계획 시점에 박고, 돈이 생기면 페르소나 루틴으로 되돌린다.
+ *
+ * `opts.storage`(installMemoryStorage의 Map)를 주면 지문 밖 출력도 점검한다 — 계획 시점마다 세이브 바이트의
+ * state가 store state와 같은지, 엔딩에서 기록실 적립이 일어났는지.
  */
 export function driveGame(
   store: Store, persona: DriverPersona, seed: number, confirm: ConfirmFn,
-  opts: { maxPlans?: number } = {},
+  opts: { maxPlans?: number; storage?: Map<string, string> } = {},
 ): DriveResult {
   assertRoutineIds([{
     name: persona.name, label: persona.name, parents: persona.parents,
     slot2: persona.slot2, slot3: persona.slot3, weekend: [...persona.weekend], vacation: [...persona.vacation],
   }]);
+  opts.storage?.delete(SAVE_KEY);
+  opts.storage?.delete(ARCHIVE_KEY);
   bootStore(store, persona, seed);
   const api = store.getState;
   const now = () => {
@@ -170,7 +229,9 @@ export function driveGame(
   const coords: string[] = [];
   const counters: DriveCounters = {
     weeks: 0, vacationWeeks: 0, eventsResolved: 0, yearEnds: 0, talkEvents: 0, companionWeeks: 0, moneySpent: 0,
+    moneyBlockedWeeks: 0, routineFallbacks: 0, lockedChoicesAvoided: 0,
   };
+  const checks: DriveChecks = { savesCompared: 0, saveMismatches: 0, runDeltaAtEnding: false, archiveWritten: false };
   let routineSet = false;
   let reachedEnding = false;
 
@@ -179,20 +240,41 @@ export function driveGame(
     if (s.phase === 'ending') {
       digests.push(stateDigest(s, api().npcActivityMap));
       coords.push(`Y${s.year} W${s.week} ending`);
+      checks.runDeltaAtEnding = api().runDelta != null;
+      checks.archiveWritten = !!opts.storage?.get(ARCHIVE_KEY);
       reachedEnding = true;
       break;
     }
     if (s.phase === 'year-end') { counters.yearEnds++; api().advanceFromYearEnd(); continue; }
-    if (s.phase === 'event') { counters.eventsResolved++; api().resolveEvent(0); continue; }
+    if (s.phase === 'event') {
+      counters.eventsResolved++;
+      const e = s.currentEvent!;
+      const choices = s.gender === 'female' && e.femaleChoices ? e.femaleChoices : e.choices;
+      if (choices[0] && (!isChoiceVisible(choices[0], s) || isChoiceUnaffordable(choices[0], s))) counters.lockedChoicesAvoided++;
+      api().resolveEvent(firstPickableChoice(s, choices));
+      continue;
+    }
     if (s.phase === 'result') { api().setPhase('weekday'); continue; }
 
     if (!routineSet) { api().setRoutine(persona.slot2, persona.slot3); routineSet = true; }
+    // 돈이 생겼으면 페르소나 루틴으로 돌아간다(바꾸면 연속 보너스가 리셋되는 건 화면과 같다).
+    const pre = now();
+    if (!pre.isVacation && (pre.routineSlot2 !== persona.slot2 || pre.routineSlot3 !== persona.slot3)
+        && pre.money >= routineCostOf(pre, persona.slot2, persona.slot3)) {
+      api().setRoutine(persona.slot2, persona.slot3);
+    }
 
     // 계획 시점 — 여기서 지문을 뜬다(확정 직전, 말걸기 전).
     const atPlan = now();
     if (opts.maxPlans !== undefined && digests.length >= opts.maxPlans) break;
     digests.push(stateDigest(atPlan, api().npcActivityMap));
     coords.push(`Y${atPlan.year} W${atPlan.week} ${atPlan.phase}`);
+    if (opts.storage) {
+      checks.savesCompared++;
+      const raw = opts.storage.get(SAVE_KEY);
+      const saved = raw ? (JSON.parse(raw) as { state?: unknown }).state : undefined;
+      if (JSON.stringify(canonical(saved)) !== JSON.stringify(canonical(JSON.parse(JSON.stringify(atPlan))))) checks.saveMismatches++;
+    }
 
     if (persona.talk) {
       const target = companionFor(atPlan);
@@ -203,16 +285,36 @@ export function driveGame(
       if (now().phase !== atPlan.phase) continue; // 말걸기가 장면을 열었으면 그것부터
     }
 
-    const plan = now();
-    const activities = [...(plan.isVacation ? persona.vacation : persona.weekend)];
-    const npcChoices: Record<string, string> = {};
-    if (persona.companion) {
+    let plan = now();
+    let activities = layoutSlots(plan.isVacation ? persona.vacation : persona.weekend, getWeekSlotCount(plan));
+    const companions = () => {
+      const map: Record<string, string> = {};
+      if (!persona.companion) return map;
       const npc = companionFor(plan);
-      if (npc) {
-        activities.forEach((id, i) => { if (NPC_COMPANION_ACTIVITIES.includes(id)) npcChoices[`${id}:${i}`] = npc; });
+      if (npc) activities.forEach((id, i) => { if (id && NPC_COMPANION_ACTIVITIES.includes(id)) map[`${id}:${i}`] = npc; });
+      return map;
+    };
+    let npcChoices = companions();
+
+    // 화면의 확정 잠금 — 풀릴 때까지 플레이어가 하는 일을 한다. 두 번 안에 안 풀리면 드라이버 버그다.
+    let gate = getConfirmGate(plan, predictWeekOutcome(plan, activities, npcChoices));
+    if (gate.moneyBlocked) { api().markMoneyBlockedWeek(); counters.moneyBlockedWeeks++; }
+    for (let fix = 0; gate.disabled; fix++) {
+      if (fix >= 2) throw new Error(`week-driver: Y${plan.year} W${plan.week} 확정 잠금이 안 풀린다 ${JSON.stringify(gate)}`);
+      if (gate.routineTooExpensive) {
+        api().setRoutine(...FALLBACK_ROUTINE);
+        counters.routineFallbacks++;
+      } else if (gate.unaffordableIds.length) {
+        activities = activities.map(id => (gate.unaffordableIds.includes(id) ? '' : id));
+      } else {
+        throw new Error(`week-driver: 돈이 아닌 이유로 확정이 잠겼다 ${JSON.stringify(gate)}`);
       }
-      if (Object.keys(npcChoices).length) counters.companionWeeks++;
+      plan = now();
+      npcChoices = companions();
+      gate = getConfirmGate(plan, predictWeekOutcome(plan, activities, npcChoices));
     }
+
+    if (Object.keys(npcChoices).length) counters.companionWeeks++;
     if (plan.isVacation) counters.vacationWeeks++;
     counters.weeks++;
     confirm(api, activities, npcChoices);
@@ -220,7 +322,7 @@ export function driveGame(
 
   const last = now();
   counters.moneySpent = Math.round((last.moneySpentByYear ?? []).reduce((a, b) => a + b, 0) * 10) / 10;
-  return { digests, coords, counters, reachedEnding };
+  return { digests, coords, counters, checks, reachedEnding };
 }
 
 /** 첫 번째로 갈린 칸. 같으면 -1. */

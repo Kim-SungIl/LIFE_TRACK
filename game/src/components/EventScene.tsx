@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { playSfx } from '../audio/sfx';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
-import { presentEvent } from '../engine/eventPresentation';
+import { choiceCost, isChoiceUnaffordable, isChoiceVisible, presentEvent } from '../engine/eventPresentation';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
 import { spriteCandidates, pickAllExisting } from '../engine/characterAssets';
 import { CHARACTER_MANIFEST } from '../character-manifest.generated';
@@ -306,7 +306,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // condition이 있는 선택지는 만족하지 않으면 숨김 — 원본 인덱스 유지
   const visibleChoices: { choice: EventChoice; originalIndex: number }[] = eventChoices
     .map((choice, originalIndex) => ({ choice, originalIndex }))
-    .filter(({ choice }) => !choice.condition || (state ? choice.condition(state) : true));
+    .filter(({ choice }) => isChoiceVisible(choice, state));
 
   // 첫 플레이 첫 장면(지훈 재회)에서만 선택지 안내 오버레이 — 튜토리얼을 아직 본 적 없는 플레이어 한정.
   // (튜토리얼 완료 시 lifetrack_tutorial_ever_seen 세팅 → 반복 플레이어는 이 안내도 안 봄)
@@ -316,10 +316,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const [choiceIntroDismissed, setChoiceIntroDismissed] = useState(false);
 
   // B-2 안전망: 모든 보이는 선택지가 비용 부족으로 잠겼는지 체크 → "지나친다" fallback 노출
-  const allInsufficient = visibleChoices.length > 0 && visibleChoices.every(({ choice }) => {
-    const c = choice.moneyEffect && choice.moneyEffect < 0 ? -choice.moneyEffect : 0;
-    return c > 0 && state ? state.money < c : false;
-  });
+  const allInsufficient = visibleChoices.length > 0 && visibleChoices.every(({ choice }) => isChoiceUnaffordable(choice, state));
 
   // 모바일 폭(≤ 600px)에서는 한 줄에 들어가는 글자수가 데스크탑의 절반 이하 →
   // 페이지 분할 임계값과 description 박스 캡을 모바일에 맞춰 늘려준다.
@@ -672,8 +669,8 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
           }}>
             {visibleChoices.map(({ choice, originalIndex }, i) => {
               // 돈 부족 시 비활성화 — moneyEffect가 음수인데 잔돈이 모자라면 잠금
-              const cost = choice.moneyEffect && choice.moneyEffect < 0 ? -choice.moneyEffect : 0;
-              const insufficient = cost > 0 && state ? state.money < cost : false;
+              const cost = choiceCost(choice);
+              const insufficient = isChoiceUnaffordable(choice, state);
               return (
               <button
                 type="button" className="btn-reset"

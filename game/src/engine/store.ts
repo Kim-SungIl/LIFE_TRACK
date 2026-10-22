@@ -616,6 +616,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   confirmWeek: (activities, npcChoices) => {
     const s = get().state;
     if (!s) return;
+    // advanceWeek과 **같은 집합**에서 거부한다. 예전엔 결산·사건 중에 다시 불리면 advanceWeek만 조용히
+    // return하고 슬롯·동행·"지난주처럼" 스냅샷은 덮였다(3자 검수 재현). 화면은 계획 단계에서만 부르지만,
+    // 월 자동 진행기가 setPhase('weekday')를 빠뜨리면 스냅샷이 소리 없이 오염되는 자리라 여기서 막는다.
+    if (s.phase === 'event' || s.phase === 'result' || s.phase === 'year-end' || s.phase === 'ending') return;
     if (s.isVacation) get().setVacationChoices(activities);
     else get().setWeekendChoices(activities);
     // npcChoices를 그대로 전달 (슬롯 키 포함 — processWeek에서 npcId만 추출)

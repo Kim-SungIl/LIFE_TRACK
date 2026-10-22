@@ -141,8 +141,10 @@ export function getWeekLabel(state: GameState): string {
  * HUD의 달 이름. 월 블록 SSOT(weekMath.getMonthBlock, 4주 × 12블록)에서 읽는다.
  * 예전엔 한 달이 3~6주인 별도 표였다(12월 6주, 1·2월 3주) — 월 단위 계획의 블록과 갈리지 않게 하나로 합쳤다.
  *
- * 렌더 경로라 throw하지 않는다. 범위 밖 주차(손상 세이브 등)는 가장 가까운 블록으로 붙인다 —
- * 예전 표도 범위 밖에서 3월을 냈다. 블록 판정 자체가 필요한 곳은 getMonthBlock을 직접 쓸 것(그쪽은 throw).
+ * 렌더 경로라 throw하지 않는다. 범위 밖 주차는 가장 가까운 블록으로 붙인다. 정상 플레이에서 나오는 범위 밖은
+ * **W49(학년말 화면, 학년 전환 대기)** 하나뿐이고 그때 "2월"은 맞는 말이다 — 아직 그 학년의 2월 끝이다.
+ * 그 밖(0 이하·NaN)은 손상값이고 예전 표처럼 3월로 떨어진다. 블록 판정 자체가 필요한 곳은
+ * getMonthBlock을 직접 쓰고 W49를 먼저 가를 것(그쪽은 throw).
  */
 export function getMonthLabel(week: number): string {
   const w = Number.isFinite(week) ? Math.min(48, Math.max(1, Math.round(week))) : 1;

@@ -82,9 +82,12 @@ describe('getMonthLabel — HUD 달 이름은 블록에서 읽는다', () => {
     expect(changed).toEqual(['W21 7월→8월', 'W41 12월→1월', 'W42 12월→1월', 'W45 1월→2월']);
   });
 
-  it('렌더 경로라 범위 밖에서도 throw하지 않고 가장 가까운 블록을 낸다', () => {
-    expect(getMonthLabel(0)).toBe('3월');
+  it('렌더 경로라 범위 밖에서도 throw하지 않는다 — W49는 학년말(정상), 0·NaN은 손상값', () => {
+    // W49는 정상 플레이의 학년말 화면 좌표다(W48 처리 뒤 week=49, advanceFromYearEnd가 다음 학년 W1로).
+    // 그때 "2월"은 맞는 말이다. getMonthBlock은 이 상태를 거부하고 이유를 말한다 — "이번 달" 판정은 학년 전환을 먼저 가를 것.
     expect(getMonthLabel(49)).toBe('2월');
+    expect(() => getMonthBlock(49)).toThrow(/학년 전환 대기/);
+    expect(getMonthLabel(0)).toBe('3월');
     expect(getMonthLabel(Number.NaN)).toBe('3월');
   });
 });

@@ -4,7 +4,7 @@ import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
-import { assignSlot, getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
+import { assignSlot, getConfirmGate, getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
 import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
@@ -132,13 +132,6 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
 
   // 루틴 비용 체크 — 돈이 부족하면 루틴 변경 강제. 학년별 차등 비용 적용.
   // 방학 중에는 엔진이 루틴을 가동하지 않으므로 비용 0.
-  const routineCost = (() => {
-    if (state.isVacation) return 0;
-    const r2 = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null;
-    const r3 = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null;
-    return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
-  })();
-  const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
 
   // Phase 2 — 확정 시 예상 결과 프리뷰. 순수 processWeek 재실행 diff(gameEngine).
   // 계획(루틴/주말선택/동행)·현재 상태가 바뀔 때만 재계산.
@@ -176,20 +169,17 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   //
   // 루틴 슬롯도 포함한다. 루틴 경고(routineTooExpensive)는 두 슬롯의 **합계**로 판정하므로
   // 수입 루틴이 섞이면(학원 4 + 알바 −4 = 0) 순차로는 실패하는데도 뜨지 않는다.
-  const unaffordable = routineTooExpensive
-    // 루틴 경고가 이미 떠 있으면 그쪽 문구가 우선 — 두 경고를 겹치면 무엇을 고칠지 흐려진다
-    // (루틴을 고치면 잔액이 남아 선택 슬롯도 함께 풀리는 경우가 많다).
-    ? []
-    : [...new Set(weekPreview.skipped.filter(s => s.reason === 'money').map(s => s.activityId))]
-        .map(id => ACTIVITIES.find(a => a.id === id))
-        .filter((a): a is typeof ACTIVITIES[number] => !!a);
-  // 확정 가능 여부 — 프리뷰 노출/버튼 disabled 공용 판정 (SSOT).
-  const confirmDisabled = (!state.isVacation && !state.routineSlot2)
-    || !!routineTooExpensive || unaffordable.length > 0;
+  // 확정 가능 여부 — 루틴 비용·돈 잠김·루틴 미설정을 엔진 판정 하나(weekendPlan.getConfirmGate)로 읽는다.
+  // 주 진행 드라이버·월 자동 진행기가 같은 함수를 쓴다 — 화면에만 식이 있으면 화면 밖은 이 잠금을 모른다.
+  // 루틴 경고가 떠 있으면 unaffordable은 비어 있다(두 경고를 겹치면 무엇을 고칠지 흐려진다).
+  const gate = getConfirmGate(state, weekPreview);
+  const { routineCost, routineTooExpensive, disabled: confirmDisabled, moneyBlocked } = gate;
+  const unaffordable = gate.unaffordableIds
+    .map(id => ACTIVITIES.find(a => a.id === id))
+    .filter((a): a is typeof ACTIVITIES[number] => !!a);
 
   // T25 — 확정이 **돈 때문에** 잠긴 주를 적립한다. 루틴 미설정으로 잠긴 것은 돈이 아니므로 뺀다.
   // 스토어가 절대주차 스탬프로 1회만 세므로 매 렌더 호출해도 안전하다.
-  const moneyBlocked = !!routineTooExpensive || unaffordable.length > 0;
   useEffect(() => {
     if (moneyBlocked) onMoneyBlocked?.();
   }, [moneyBlocked, state.year, state.week, onMoneyBlocked]);

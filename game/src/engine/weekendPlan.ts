@@ -8,10 +8,10 @@
 // **자동 채움이 아니다.** 스냅샷을 슬롯에 **채우기만** 하고 확정은 기존 CTA가 한다. 유료
 // 주말 활동이 플레이어 모르게 확정되면 돈을 조용히 쓰는 경로가 되기 때문이다.
 import { GameState, WeekendPlanSnapshot } from './types';
-import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from './activities';
+import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from './activities';
 import { getParentMods } from './parentModifiers';
 import { isNpcEnrolled } from './relationshipSignals';
-import { predictWeekOutcome } from './gameEngine';
+import { predictWeekOutcome, type WeekPreview } from './gameEngine';
 
 /** 학기 중 주말 슬롯 수(토·일). */
 export const SEMESTER_WEEKEND_SLOTS = 2;
@@ -143,4 +143,46 @@ export function getRepeatablePlan(state: GameState): WeekendPlanSnapshot | null 
   if (skipped.some(s => s.origin === 'choice')) return null;
 
   return plan;
+}
+
+/**
+ * 이번 주를 확정할 수 있는가 — 계획 화면의 "이번 주 확정" 버튼과 주 진행 드라이버가 **같이** 읽는 판정.
+ *
+ * 예전엔 MainWeekScreen 안의 인라인 식이었다. 그러면 화면 밖(골든 드라이버·월 자동 진행기)은 이 잠금을
+ * 따로 흉내 내거나 무시하게 된다 — 실제로 골든 페르소나 하나가 화면이라면 238주를 확정 못 했을 판을
+ * 기준으로 박고 있었다(3자 검수). 두 층에 같은 식을 두면 한쪽만 늙으니(#441) 여기 하나로 모은다.
+ *
+ * `preview`는 같은 계획으로 돌린 `predictWeekOutcome` 결과다 — 화면은 이미 프리뷰를 들고 있어 두 번 돌리지 않게 받는다.
+ * 돈이 모자라 실행되지 않을 활동은 **엔진이 남긴 기록(skipped)**을 읽는다(순차 차감·수입 활동·꼬리 슬롯이 이미 반영됨).
+ */
+export interface ConfirmGate {
+  /** 루틴 두 칸의 이번 주 비용 합(방학이면 0 — 엔진이 루틴을 안 돌린다). */
+  routineCost: number;
+  /** 잔액이 루틴 비용 합보다 적다 → 루틴을 바꿔야 확정할 수 있다. */
+  routineTooExpensive: boolean;
+  /** 돈이 모자라 실행되지 않을 활동 id(중복 없음). 루틴 경고가 떠 있으면 비운다 — 경고를 겹치지 않는다. */
+  unaffordableIds: string[];
+  /** 학기인데 첫 루틴 칸이 비었다(돈과 무관한 잠금). */
+  missingRoutine: boolean;
+  /** 돈 때문에 잠겼다 — 기록실의 "돈에 막힌 주"(markMoneyBlockedWeek) 적립 근거. */
+  moneyBlocked: boolean;
+  /** 확정 버튼이 잠긴다. */
+  disabled: boolean;
+}
+
+export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'skipped'>): ConfirmGate {
+  const routineCost = (() => {
+    if (state.isVacation) return 0;
+    const r2 = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null;
+    const r3 = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null;
+    return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
+  })();
+  const routineTooExpensive = !state.isVacation && !!state.routineSlot2 && routineCost > 0 && state.money < routineCost;
+  const unaffordableIds = routineTooExpensive
+    ? []
+    : [...new Set(preview.skipped.filter(s => s.reason === 'money').map(s => s.activityId))]
+        .filter(id => ACTIVITIES.some(a => a.id === id));
+  const missingRoutine = !state.isVacation && !state.routineSlot2;
+  const moneyBlocked = routineTooExpensive || unaffordableIds.length > 0;
+  return { routineCost, routineTooExpensive, unaffordableIds, missingRoutine, moneyBlocked, disabled: missingRoutine || moneyBlocked };
 }

@@ -56,10 +56,18 @@ function buildMonthBlock(index: number): MonthBlock {
 /** 학년 하나의 12블록. 학년마다 같다(학기 구조가 학년과 무관). */
 export const MONTH_BLOCKS: readonly MonthBlock[] = Array.from({ length: MONTHS_PER_YEAR }, (_, i) => buildMonthBlock(i + 1));
 
-/** 주차(1~48)가 속한 블록. 범위 밖이면 throw한다 — 조용히 3월로 떨어지면 라벨이 거짓말한다. */
+/**
+ * 주차(1~48)가 속한 블록. 범위 밖이면 throw한다 — 조용히 3월로 떨어지면 라벨이 거짓말한다.
+ *
+ * ⚠️ **W49는 손상값이 아니라 정상 상태다.** W48을 처리하면 `week`가 49가 된 채 학년말 화면(phase
+ * 'year-end')에 머물고, `advanceFromYearEnd`가 다음 학년 W1로 넘긴다(Y1~Y6 매년, 3자 검수 재현).
+ * 그래서 `state.week`를 그대로 넘기는 호출처는 학년말에서 터진다. "이번 달" 판정이 필요한 쪽
+ * (월초 용돈 등)은 학년 전환 대기를 먼저 갈라야 한다 — 그 상태는 어느 달에도 속하지 않는다.
+ */
 export function getMonthBlock(week: number): MonthBlock {
   if (!Number.isInteger(week) || week < 1 || week > WEEKS_PER_MONTH * MONTHS_PER_YEAR) {
-    throw new RangeError(`getMonthBlock: 주차는 1~48 정수여야 한다 (받은 값 ${week})`);
+    throw new RangeError(`getMonthBlock: 주차는 1~48 정수여야 한다 (받은 값 ${week}` +
+      `${week === WEEKS_PER_MONTH * MONTHS_PER_YEAR + 1 ? ' — 학년 전환 대기(year-end)는 어느 달에도 속하지 않는다' : ''})`);
   }
   return MONTH_BLOCKS[Math.ceil(week / WEEKS_PER_MONTH) - 1];
 }
