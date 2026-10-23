@@ -10,15 +10,13 @@
 import { GameState, WeekendPlanSnapshot } from './types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from './activities';
 import { getRoutineDueCost } from './monthlyMoney';
-import { getParentMods } from './parentModifiers';
-import { canSpend } from './spendableMoney';
+import { canSpendWhilePlanning } from './spendableMoney';
+import { slotCountFor } from './slotCount';
 import { isNpcEnrolled } from './relationshipSignals';
 import { predictWeekOutcome, type WeekPreview } from './gameEngine';
 
-/** 학기 중 주말 슬롯 수(토·일). */
-export const SEMESTER_WEEKEND_SLOTS = 2;
-/** 방학 자유 슬롯의 기본 개수 — freedom 부모의 `vacationSlotBonus`가 여기에 더해진다. */
-export const VACATION_BASE_SLOTS = 5;
+// 칸 수의 단일 근거는 slotCount.ts(leaf) — 기존 import 경로를 위해 다시 내보낸다.
+export { SEMESTER_WEEKEND_SLOTS, VACATION_BASE_SLOTS } from './slotCount';
 
 /**
  * 이번 주에 플레이어가 채울 수 있는 선택 슬롯 수.
@@ -27,9 +25,7 @@ export const VACATION_BASE_SLOTS = 5;
  * 한쪽만 늙는다(#441). 엔진은 이 상한을 보지 않는다(슬롯 배열을 그대로 처리한다).
  */
 export function getWeekSlotCount(state: GameState): number {
-  return state.isVacation
-    ? VACATION_BASE_SLOTS + getParentMods(state.parents).vacationSlotBonus
-    : SEMESTER_WEEKEND_SLOTS;
+  return slotCountFor(state.parents, state.isVacation);
 }
 
 /**
@@ -176,7 +172,7 @@ export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'ski
   // 지금 내야 할 루틴비 — 월 단위 돈이면 이번 달 아직 안 낸 몫(남은 학기 주 × 주 단가), 이미 냈으면 0.
   // 구세이브(아직 매주 방식)는 예전처럼 이번 주 한 주치. 판정은 monthlyMoney.getRoutineDueCost 하나다.
   const routineCost = getRoutineDueCost(state);
-  const routineTooExpensive = !state.isVacation && !!state.routineSlot2 && routineCost > 0 && !canSpend(state, routineCost);
+  const routineTooExpensive = !state.isVacation && !!state.routineSlot2 && routineCost > 0 && !canSpendWhilePlanning(state, routineCost);
   const unaffordableIds = routineTooExpensive
     ? []
     : [...new Set(preview.skipped.filter(s => s.reason === 'money').map(s => s.activityId))]

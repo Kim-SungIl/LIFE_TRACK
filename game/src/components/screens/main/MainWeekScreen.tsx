@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { getSpendableMoney } from '../../../engine/spendableMoney';
+import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
@@ -192,7 +192,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     0,
   );
   const weeklyActivityCost = routineCost + selectedActivityCost;
-  const weeklyOverBudget = weeklyActivityCost > getSpendableMoney(state);
+  const weeklyOverBudget = weeklyActivityCost > getSpendableForPlanning(state);
 
   // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전).
   // 접두·"최대" 판정은 WeekPlanner 가 하고, 여기선 첫 티어에 못 닿은 슬롯을 0으로 눌러 배지를 숨긴다.
@@ -409,7 +409,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
           npcChoices={npcChoices}
           maxSlots={maxSlots}
           currentSlots={currentSlots}
-          availableMoney={getSpendableMoney(state) - routineCost -
+          availableMoney={getSpendableForPlanning(state) - routineCost -
             selectedInstances.reduce((sum, act) => sum + getActivityCost(act, state.year), 0)}
           onSetRoutine={onSetRoutine}
           setNpcSelectFor={setNpcSelectFor}

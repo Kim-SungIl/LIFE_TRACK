@@ -86,6 +86,6 @@ describe('getSpendableMoney / canSpend', () => {
     expect(canSpend(s, 7)).toBe(true);
     expect(canSpend(s, 7.1)).toBe(false);
     expect(canSpend(s, 0)).toBe(true);
-    expect(canSpend({ money: 0 }, -3)).toBe(true); // 수입은 항상 가능
+    expect(canSpend({ money: 0, year: 1, week: 1 }, -3)).toBe(true); // 수입은 항상 가능
   });
 });

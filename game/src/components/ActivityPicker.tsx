@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { getSpendableMoney } from '../engine/spendableMoney';
+import { getSpendableForPlanning } from '../engine/spendableMoney';
 import { playSfx } from '../audio/sfx';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
@@ -66,7 +66,7 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  const money = availableMoney !== undefined ? availableMoney : getSpendableMoney(state);
+  const money = availableMoney !== undefined ? availableMoney : getSpendableForPlanning(state);
   const categories = ACTIVITY_CATEGORIES;
 
   return (

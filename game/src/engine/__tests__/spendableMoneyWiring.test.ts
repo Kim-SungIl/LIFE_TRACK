@@ -10,6 +10,8 @@ const RESERVED = 5;
 vi.mock('../spendableMoney', () => ({
   getSpendableMoney: (s: { money: number }) => s.money - RESERVED,
   canSpend: (s: { money: number }, cost: number) => cost <= 0 || s.money - RESERVED >= cost,
+  getSpendableForPlanning: (s: { money: number }) => s.money - RESERVED,
+  canSpendWhilePlanning: (s: { money: number }, cost: number) => cost <= 0 || s.money - RESERVED >= cost,
 }));
 
 import { createInitialState } from '../gameEngine';

@@ -1,8 +1,9 @@
 import { create } from 'zustand';
 import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, buildRomanceRetry, canStartRomanceRetry, romanceRetryNpc, restoreRomanceRetry, type RomanceNpc, type RomancePlan, readRomancePlan, resumedRomancePlan } from './romance';
-import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
+import { GameState, GameEvent, EventChoice, ParentStrength, StatKey, type MonthPlan } from './types';
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition, settleMonthStartIfDue } from './gameEngine';
 import { payRoutineIfDue } from './monthlyMoney';
+import { validateMonthPlan } from './monthPlan';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { describeUnplayable } from './saveIntegrity';
@@ -215,6 +216,11 @@ interface GameStore {
    * 화면 순서와 바이트 동일한지는 weeklyDriverGolden.test.ts가 잠근다.
    */
   confirmWeek: (activities: string[], npcChoices: Record<string, string>) => void;
+  /**
+   * 이번 달 계획을 저장한다(monthPlan.ts). 지금 (학년, 달)·남은 주·칸 수·활동·동행이 맞아야 하고,
+   * 안 맞으면 저장하지 않고 이유를 돌려준다(null = 저장됨). 남은 주의 유료 활동비가 봉투로 예약된다.
+   */
+  setMonthPlan: (plan: MonthPlan) => string | null;
   advanceWeek: () => void;
   // 반환: 실제 적용된 효과(구간 감쇠·클램프 반영) — 결과 화면 표시는 이 실측값을 쓴다.
   resolveEvent: (choiceIndex: number) => AppliedEventOutcome | undefined;
@@ -620,6 +626,15 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setNpcActivityMap: (map) => {
     set({ npcActivityMap: map });
+  },
+
+  setMonthPlan: (plan) => {
+    const s = get().state;
+    if (!s) return 'state 없음';
+    const reason = validateMonthPlan(s, plan);
+    if (reason) return reason;
+    set({ state: { ...s, monthPlan: structuredClone(plan) } });
+    return null;
   },
 
   confirmWeek: (activities, npcChoices) => {

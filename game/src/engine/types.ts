@@ -71,6 +71,13 @@ export interface GameState {
    * 판정·복사 규칙은 전부 `weekendPlan.ts`에 있다.
    */
   lastWeekendPlan?: WeekendPlanSnapshot;
+  /**
+   * 이번 달 계획(월 단위 계획 4단계, monthPlan.ts) — 그 달 각 주의 주말(방학이면 자유) 칸과 동행.
+   * 월 계획 화면이 쓰고, 계획 화면·자동 진행이 주마다 그 주 칸을 꺼내 쓴다. 남은 주의 유료 활동비는
+   * **봉투처럼 예약**되어 쓸 수 있는 돈에서 빠진다(spendableMoney). (학년, 달)이 지금과 다르면 지난달 것이라 무시한다.
+   * 구세이브에는 없다(없음 = 계획 없음, 예약 0).
+   */
+  monthPlan?: MonthPlan;
   semester: 1 | 2;
   isVacation: boolean;
   weekLog: WeekLog | null;
@@ -288,6 +295,23 @@ export interface ParentBonusApplied {
  * 압축하면 동행 키 `${activityId}:${slotIdx}`가 가리키는 칸이 어긋난다.
  * `npcChoices`는 확정 시점 UI 표현 그대로(레거시 키는 `activityId` 단독).
  */
+/** 한 달 계획(monthPlan.ts). `month`는 월 블록 번호(1~12, weekMath.MONTH_BLOCKS). */
+export interface MonthPlan {
+  year: number;
+  month: number;
+  /** 그 달의 주마다 한 칸 — 블록 안 순서대로(1주차부터). */
+  weeks: MonthPlanWeek[];
+}
+
+export interface MonthPlanWeek {
+  /** 학년 안 주차(1~48). */
+  week: number;
+  /** 화면이 저장하는 모양 그대로의 슬롯 배열 — 여러 칸 활동은 칸마다 같은 id, 빈 칸은 ''. */
+  activities: string[];
+  /** `${활동}:${칸}` → NPC id(동행). */
+  npcChoices: Record<string, string>;
+}
+
 export interface WeekendPlanSnapshot {
   activities: string[];
   npcChoices: Record<string, string>;
