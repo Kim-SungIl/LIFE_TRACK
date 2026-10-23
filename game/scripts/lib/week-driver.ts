@@ -21,7 +21,10 @@
  * 둘이 **같은 함수**를 써야 비교가 성립한다(endingStateGrid.ts와 같은 이유).
  */
 import { createHash } from 'node:crypto';
-import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../../src/engine/activities';
+import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from '../../src/engine/activities';
+import { getRoutineDueCost } from '../../src/engine/monthlyMoney';
+import { canSpend } from '../../src/engine/spendableMoney';
+import { cloneGameState } from '../../src/engine/stateClone';
 import { createInitialState, predictWeekOutcome } from '../../src/engine/gameEngine';
 import { GAME_EVENTS } from '../../src/engine/events';
 import {
@@ -120,13 +123,27 @@ export function stateDigest(state: GameState, npcActivityMap: Record<string, str
  * 돈이 모자라 활동이 빠지는 판(paid-spend)은 돈 시점이 바뀌면 스탯도 정당하게 갈리므로, 이 지문의
  * 불변은 **돈이 모자라지 않는 판**에서만 요구한다.
  */
-export const MONEY_STATE_KEYS = ['money', 'moneySpentByYear', 'moneyBlockedWeeksByYear', 'moneyBlockedStamp'] as const;
+export const MONEY_STATE_KEYS = [
+  'money', 'moneySpentByYear', 'moneyBlockedWeeksByYear', 'moneyBlockedStamp',
+  // 월 단위 돈 장치의 기록(monthlyMoney.ts) — 돈이 언제 움직였나의 장부라 돈 쪽이다.
+  'monthlyMoney', 'routinePrepaid',
+] as const;
 
 export function coreDigest(state: GameState, npcActivityMap: Record<string, string>): string {
   const core: Record<string, unknown> = { ...state };
   for (const k of MONEY_STATE_KEYS) delete core[k];
-  if (state.pendingWeekDelta) core.pendingWeekDelta = { ...state.pendingWeekDelta, money: 0 };
-  if (state.weekLog) core.weekLog = { ...state.weekLog, moneyChange: 0 };
+  // 보류분은 돈 칸을 뺀 나머지만 본다. 돈 말고 아무것도 없으면 "보류분 없음"과 같다 — 달 초 용돈만 들어 있는
+  // 보류분과 예전의 빈 보류분(undefined)이 갈리면 돈 시점만 바뀐 판이 스탯까지 갈린 것처럼 보인다.
+  if (state.pendingWeekDelta) {
+    const { stats, fatigue } = state.pendingWeekDelta;
+    if (Object.keys(stats).length > 0 || fatigue !== 0) core.pendingWeekDelta = { stats, fatigue, money: 0 };
+    else delete core.pendingWeekDelta;
+  }
+  if (state.weekLog) {
+    const { monthMoney: _monthMoney, ...weekLog } = state.weekLog;
+    void _monthMoney; // 달 초 입금 내역 — 돈 쪽 장부라 뺀다
+    core.weekLog = { ...weekLog, moneyChange: 0 };
+  }
   const json = JSON.stringify(canonical({ state: core, npcActivityMap }));
   return createHash('sha256').update(json).digest('hex').slice(0, 16);
 }
@@ -205,12 +222,12 @@ export function layoutSlots(ids: readonly string[], slotCount: number): string[]
   return out;
 }
 
-function routineCostOf(state: GameState, slot2: string | null, slot3: string | null): number {
-  const cost = (id: string | null) => {
-    const a = id ? ACTIVITIES.find(x => x.id === id) : null;
-    return a ? getActivityCost(a, state.year) : 0;
-  };
-  return cost(slot2) + cost(slot3);
+/** 지금 이 루틴으로 바꾸면 내야 할 돈 — 제품 판정(monthlyMoney.getRoutineDueCost)을 그 루틴을 끼운 복제본에 묻는다. */
+function routineSwitchCost(state: GameState, slot2: string | null, slot3: string | null): number {
+  const probe = cloneGameState(state);
+  probe.routineSlot2 = slot2;
+  probe.routineSlot3 = slot3;
+  return getRoutineDueCost(probe);
 }
 
 /** 돈이 없어 페르소나 루틴을 못 낼 때 플레이어가 바꿔 끼우는 무료 루틴. */
@@ -221,7 +238,7 @@ const FALLBACK_ROUTINE: [string, string | null] = ['self-study', null];
  * 판정, 전부 잠기면 "지나친다"), 결산은 곧장 다음 주로, 학년말은 `advanceFromYearEnd`.
  * 확정은 화면의 잠금(getConfirmGate)을 따른다. 잠기면 잠긴 주를 적립하고(markMoneyBlockedWeek),
  * 플레이어가 할 일을 한다 — 루틴비를 못 내면 무료 루틴으로 바꾸고, 못 내는 주말 활동은 비운다.
- * 루틴은 첫 계획 시점에 박고, 돈이 생기면 페르소나 루틴으로 되돌린다.
+ * 루틴은 첫 계획 시점에 박고(그 달 학원비를 그때 낸다), 바꿀 돈이 생기면 페르소나 루틴으로 되돌린다(남은 주 몫을 낸다).
  *
  * `opts.storage`(installMemoryStorage의 Map)를 주면 지문 밖 출력도 점검한다 — 계획 시점마다 세이브 바이트의
  * state가 store state와 같은지, 엔딩에서 기록실 적립이 일어났는지.
@@ -281,7 +298,7 @@ export function driveGame(
     // 돈이 생겼으면 페르소나 루틴으로 돌아간다(바꾸면 연속 보너스가 리셋되는 건 화면과 같다).
     const pre = now();
     if (!pre.isVacation && (pre.routineSlot2 !== persona.slot2 || pre.routineSlot3 !== persona.slot3)
-        && pre.money >= routineCostOf(pre, persona.slot2, persona.slot3)) {
+        && canSpend(pre, routineSwitchCost(pre, persona.slot2, persona.slot3))) {
       api().setRoutine(persona.slot2, persona.slot3);
     }
 

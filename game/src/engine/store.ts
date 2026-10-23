@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, buildRomanceRetry, canStartRomanceRetry, romanceRetryNpc, restoreRomanceRetry, type RomanceNpc, type RomancePlan, readRomancePlan, resumedRomancePlan } from './romance';
 import { GameState, GameEvent, EventChoice, ParentStrength, StatKey } from './types';
-import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
+import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition, settleMonthStartIfDue } from './gameEngine';
+import { payRoutineIfDue } from './monthlyMoney';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { describeUnplayable } from './saveIntegrity';
@@ -584,10 +585,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 슬롯별로 변경 여부 판단 — 안 바뀐 슬롯은 보너스 카운터 유지
     const slot2Weeks = s.routineSlot2 === slot2 ? s.routineSlot2Weeks : 0;
     const slot3Weeks = s.routineSlot3 === slot3 ? s.routineSlot3Weeks : 0;
-    set({ state: {
-      ...s, routineSlot2: slot2, routineSlot3: slot3,
+    const next = cloneGameState(s);
+    Object.assign(next, {
+      routineSlot2: slot2, routineSlot3: slot3,
       routineSlot2Weeks: slot2Weeks, routineSlot3Weeks: slot3Weeks,
-    } });
+    });
+    // 한 달 등록(monthlyMoney.ts) — 새로 든 유료 칸은 이번 달 남은 학기 주 수 × 주 단가를 **지금** 낸다.
+    // 이미 낸 돈은 안 돌아온다(디렉터 결정 (가)). 모자라면 안 내고 두며, 확정 잠금이 막는다.
+    // 계획 단계의 지출이라 상점처럼 보류분으로 남겨 이 주 결산에 보이게 한다.
+    const before = visibleSnapshot(next);
+    payRoutineIfDue(next);
+    accruePendingDelta(next, before);
+    set({ state: next });
   },
 
   setWeekendChoices: (choices) => {
@@ -620,7 +629,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // return하고 슬롯·동행·"지난주처럼" 스냅샷은 덮였다(3자 검수 재현). 화면은 계획 단계에서만 부르지만,
     // 월 자동 진행기가 setPhase('weekday')를 빠뜨리면 스냅샷이 소리 없이 오염되는 자리라 여기서 막는다.
     if (s.phase === 'event' || s.phase === 'result' || s.phase === 'year-end' || s.phase === 'ending') return;
-    if (s.isVacation) get().setVacationChoices(activities);
+    // 달 초에 돈이 모자라 못 낸 이번 달 루틴비를 그 뒤 낼 수 있게 됐으면 확정 직전에 낸다(미리보기도 같은 순서).
+    {
+      const due = cloneGameState(s);
+      const before = visibleSnapshot(due);
+      if (payRoutineIfDue(due) > 0) {
+        accruePendingDelta(due, before);
+        set({ state: due });
+      }
+    }
+    if (get().state!.isVacation) get().setVacationChoices(activities);
     else get().setWeekendChoices(activities);
     // npcChoices를 그대로 전달 (슬롯 키 포함 — processWeek에서 npcId만 추출)
     get().setNpcActivityMap(npcChoices);
@@ -762,6 +780,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const nextInfo = getWeekInfo(newState.week);
       newState.semester = nextInfo.semester;
       newState.isVacation = nextInfo.isVacation;
+      // 새 학년 3월 — 그 달 용돈(새 학년 단가)과 루틴 선불. W48 처리 뒤엔 W49라 달이 아니어서 여기서 받는다.
+      settleMonthStartIfDue(newState);
     }
     const runDelta = commitOnEnding(s, newState);
     set({ state: newState, ...(runDelta ? { runDelta } : {}) });

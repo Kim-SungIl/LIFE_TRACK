@@ -322,6 +322,15 @@ export function WeeklyResultScreen({
               })()}
             </span>
           </div>
+          {/* 달이 넘어가며 들어온 용돈·낸 학원비(월 단위 돈) — 돈이 움직인 이유를 또렷이 말한다. */}
+          {weekLog.monthMoney && (
+            <div data-testid="month-money" style={{ marginTop: 4, fontSize: '0.7rem', color: 'var(--text-secondary)', textAlign: 'right' }}>
+              📅 {weekLog.monthMoney.label} 용돈 <span style={{ color: 'var(--green)', fontWeight: 600 }}>+{weekLog.monthMoney.allowance}만원</span>
+              {weekLog.monthMoney.routinePaid > 0 && (
+                <> · 학원비 <span style={{ color: 'var(--red)', fontWeight: 600 }}>−{weekLog.monthMoney.routinePaid}만원</span> (한 달 등록)</>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 시험 결과 (학교급별 분기) */}

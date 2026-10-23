@@ -144,7 +144,17 @@ export interface GameState {
   moneyBlockedWeeksByYear?: number[];
   // 같은 주를 두 번 세지 않기 위한 절대주차 스탬프((year-1)*48 + week). UI가 매 렌더 알려오므로 필요하다.
   moneyBlockedStamp?: number;
-  burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
+  /**
+   * 월 단위 돈(달 초 용돈·루틴 선불, monthlyMoney.ts)으로 도는 판인가. 새 판은 true로 시작하고,
+   * 구세이브(없음)는 첫 달 초를 만날 때까지 예전 매주 방식으로 돌다가 그때 켜진다.
+   */
+  monthlyMoney?: boolean;
+  /**
+   * 이번 달 루틴 선불 기록 — (학년, 달 블록)과 결제 당시 두 칸의 활동 id. 지금 칸의 활동이 이 기록과 같아야
+   * "이미 냈다". 칸을 바꾸면 기록과 어긋나 남은 주를 다시 낸다(디렉터 결정 (가)). 없으면 이번 달 미결제.
+   */
+  routinePrepaid?: { year: number; month: number; slot2: string | null; slot3: string | null };
+  burnoutCooldown: number;         // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
   // v1.2 기억 슬롯 시스템
   memorySlots: MemorySlot[];        // 최대 12 (카테고리당 2)
@@ -308,6 +318,11 @@ export interface WeekLog {
   /** 실행되지 않은 활동들 — 계획 화면의 사전 경고가 이걸 읽는다(문자열 파싱 아님) */
   skipped: SkippedActivity[];
   milestoneMessages: string[];   // 이번 주 달성한 성장 메시지들
+  /**
+   * 이 주를 끝으로 **다음 달로 넘어가며** 들어온 그 달 용돈과 낸 루틴 선불(monthlyMoney.ts). 달의 마지막 주
+   * 결산에만 있다. moneyChange에 이미 들어 있고, 결산 화면이 "5월 용돈 +16만원 · 학원비 −12만원"으로 따로 보인다.
+   */
+  monthMoney?: { label: string; allowance: number; routinePaid: number };
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
   /** 이번 주 발동한 부모 보너스 (UX 가시화용 — 인라인 스티커, WeekLog 1줄, HUD 펄스) */
   parentBonusesApplied?: ParentBonusApplied[];

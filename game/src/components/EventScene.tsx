@@ -3,6 +3,7 @@ import { playSfx } from '../audio/sfx';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
 import { choiceCost, isChoiceUnaffordable, isChoiceVisible, presentEvent } from '../engine/eventPresentation';
+import { prepaidRoutineSkippedBy } from '../engine/monthlyMoney';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
 import { spriteCandidates, pickAllExisting } from '../engine/characterAssets';
 import { CHARACTER_MANIFEST } from '../character-manifest.generated';
@@ -671,6 +672,8 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
               // 돈 부족 시 비활성화 — moneyEffect가 음수인데 잔돈이 모자라면 잠금
               const cost = choiceCost(choice);
               const insufficient = isChoiceUnaffordable(choice, state);
+              // 한 달 등록으로 이미 낸 학원을 이 선택이 빼먹게 하면 미리 말한다 — 낸 돈은 안 돌아온다(monthlyMoney.ts).
+              const prepaidSkipped = state ? prepaidRoutineSkippedBy(state, choice.timeCost) : [];
               return (
               <button
                 type="button" className="btn-reset"
@@ -706,6 +709,11 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 {cost > 0 && !insufficient && (
                   <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--yellow)', marginTop: 4 }}>
                     💰 비용 {cost}만원
+                  </div>
+                )}
+                {prepaidSkipped.length > 0 && (
+                  <div data-testid="prepaid-skip" style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--yellow)', marginTop: 4 }}>
+                    (이미 낸 {prepaidSkipped.join('·')} 빠짐)
                   </div>
                 )}
                 {insufficient && (

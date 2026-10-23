@@ -8,7 +8,8 @@
 // **자동 채움이 아니다.** 스냅샷을 슬롯에 **채우기만** 하고 확정은 기존 CTA가 한다. 유료
 // 주말 활동이 플레이어 모르게 확정되면 돈을 조용히 쓰는 경로가 되기 때문이다.
 import { GameState, WeekendPlanSnapshot } from './types';
-import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from './activities';
+import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from './activities';
+import { getRoutineDueCost } from './monthlyMoney';
 import { getParentMods } from './parentModifiers';
 import { canSpend } from './spendableMoney';
 import { isNpcEnrolled } from './relationshipSignals';
@@ -157,9 +158,9 @@ export function getRepeatablePlan(state: GameState): WeekendPlanSnapshot | null 
  * 돈이 모자라 실행되지 않을 활동은 **엔진이 남긴 기록(skipped)**을 읽는다(순차 차감·수입 활동·꼬리 슬롯이 이미 반영됨).
  */
 export interface ConfirmGate {
-  /** 루틴 두 칸의 이번 주 비용 합(방학이면 0 — 엔진이 루틴을 안 돌린다). */
+  /** 지금 내야 할 루틴비(monthlyMoney.getRoutineDueCost) — 이번 달 이미 냈으면 0, 방학이면 0. */
   routineCost: number;
-  /** 잔액이 루틴 비용 합보다 적다 → 루틴을 바꿔야 확정할 수 있다. */
+  /** 쓸 수 있는 돈이 내야 할 루틴비보다 적다 → 루틴을 바꿔야 확정할 수 있다. */
   routineTooExpensive: boolean;
   /** 돈이 모자라 실행되지 않을 활동 id(중복 없음). 루틴 경고가 떠 있으면 비운다 — 경고를 겹치지 않는다. */
   unaffordableIds: string[];
@@ -172,12 +173,9 @@ export interface ConfirmGate {
 }
 
 export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'skipped'>): ConfirmGate {
-  const routineCost = (() => {
-    if (state.isVacation) return 0;
-    const r2 = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null;
-    const r3 = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null;
-    return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
-  })();
+  // 지금 내야 할 루틴비 — 월 단위 돈이면 이번 달 아직 안 낸 몫(남은 학기 주 × 주 단가), 이미 냈으면 0.
+  // 구세이브(아직 매주 방식)는 예전처럼 이번 주 한 주치. 판정은 monthlyMoney.getRoutineDueCost 하나다.
+  const routineCost = getRoutineDueCost(state);
   const routineTooExpensive = !state.isVacation && !!state.routineSlot2 && routineCost > 0 && !canSpend(state, routineCost);
   const unaffordableIds = routineTooExpensive
     ? []

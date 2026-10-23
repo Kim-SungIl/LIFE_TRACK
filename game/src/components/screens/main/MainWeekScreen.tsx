@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSpendableMoney } from '../../../engine/spendableMoney';
+import { incomeNote } from '../../../engine/monthlyMoney';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
@@ -307,6 +308,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
         fatigueLabel={fatigueLabel}
         weeklyActivityCost={weeklyActivityCost}
         weeklyOverBudget={weeklyOverBudget}
+        incomeNote={incomeNote(state)}
         suneungWeeksLeft={suneungWeeksLeft}
         onOpenHome={handleOpenHome}
         onOpenAlbum={onOpenAlbum}

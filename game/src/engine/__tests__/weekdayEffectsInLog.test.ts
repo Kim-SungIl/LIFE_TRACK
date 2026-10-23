@@ -98,16 +98,24 @@ describe('상점 구매 — 결산이 지출을 본다', () => {
       '실제로 줄었는데 로그가 양수면 결산이 초록 "+"로 거짓말한다').toBeLessThan(0);
   });
 
-  // 음성 짝 — 아무것도 안 산 주는 예전처럼 순수입만 나와야 한다.
+  // 음성 짝 — 아무것도 안 산 주는 지출 없이 용돈 몫만 나와야 한다.
   // 없으면 "항상 음수"나 "돈을 두 번 뺀다"도 통과한다.
-  it('구매가 없으면 주간 순수입 그대로다 (음성 짝)', () => {
-    const s = inPlay({ year: 5, money: 1569 });   // 태블릿(15만원)이 열리는 학년 — 주간 순수입보다 확실히 비싸다
+  // 월 단위 돈(monthlyMoney.ts): 용돈은 달이 넘어가는 주에만 들어온다 — 달 중간 주는 0, 달 마지막 주는 그 달 용돈.
+  it('구매가 없으면 지출이 없다 — 달 중간 주는 0, 달이 넘어가는 주는 그 달 용돈 (음성 짝)', () => {
+    const s = inPlay({ year: 5, money: 1569 });   // W10 — 달 중간
     useGameStore.setState({ state: s });
     useGameStore.getState().advanceWeek();
-
     const after = useGameStore.getState().state!;
-    expect(after.weekLog!.moneyChange, '안 샀는데 음수면 지출을 지어낸 것이다').toBeGreaterThan(0);
+    expect(after.weekLog!.moneyChange, '안 샀는데 음수면 지출을 지어낸 것이다').toBe(0);
     expect(disagreements(s, after)).toEqual([]);
+
+    const end = inPlay({ year: 5, week: 12, money: 1569 }); // W12 → 6월 초
+    useGameStore.setState({ state: end });
+    useGameStore.getState().advanceWeek();
+    const afterEnd = useGameStore.getState().state!;
+    expect(afterEnd.weekLog!.moneyChange, '달이 넘어가며 용돈이 들어왔는데 결산이 그걸 못 본다').toBeGreaterThan(0);
+    expect(afterEnd.weekLog!.moneyChange).toBe(afterEnd.weekLog!.monthMoney!.allowance - afterEnd.weekLog!.monthMoney!.routinePaid);
+    expect(disagreements(end, afterEnd)).toEqual([]);
   });
 });
 

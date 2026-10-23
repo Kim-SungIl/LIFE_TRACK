@@ -42,6 +42,7 @@ describe('예약이 걸리면(가짜 5만) 잔액이 충분해도 새 지출은 
   it('확정 잠금 — 루틴비를 쓸 수 있는 돈으로 못 내면 잠긴다', () => {
     const s = stateWith(4);
     s.isVacation = false;
+    s.week = 4; // 달의 마지막 주 — 이번 달 몫이 한 주치라 내야 할 학원비가 잔액(4) 이하가 된다(월 단위 선불)
     s.routineSlot2 = 'academy';
     s.routineSlot3 = null;
     const gate = getConfirmGate(s, { skipped: [] });

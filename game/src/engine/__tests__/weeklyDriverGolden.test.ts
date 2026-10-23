@@ -26,6 +26,14 @@
 // "새로 쓰는 돈" 판정 7곳을 spendableMoney로 옮겼는데, 6판 모두 `digests`·카운터가 직전 골든과 **바이트 동일**하다
 // (지금 getSpendableMoney = 잔액이라 동작 불변). 3단계가 돈 시점을 바꾸면 `digests`는 깨지고 `coreDigests`가
 // "돈만 갈렸나"를 가른다.
+//
+// 재생성 4 (2026-10-23, 월 단위 계획 3c — 달 초 용돈·학원 한 달 등록, 의도된 동작 변경): 6판 모두 `digests`가
+// 첫 칸부터 갈린다(초기 자금 4 → 16, 상태에 monthlyMoney 필드). 원인 귀속은 `coreDigests`(돈 제외)로 한다:
+//   · free-talk 2판(무료 루틴)은 336주 내내 coreDigests가 **바이트 동일** — 용돈 시점만 바뀌었다.
+//   · paid 2판은 W15부터 갈린다 — 달 초에 학원을 선불해 달 중간 잔액이 줄어, 지훈 생일 선물(돈 선택지)이 잠겨
+//     "카톡으로 축하"를 고른다(lockedChoicesAvoided 0 → 1). 이벤트로 빠진 학원비가 돌아오지 않아 7년 지출 +38만.
+//   · paid-spend 2판은 W12부터 갈린다 — 같은 이유로 잠긴 선택지 3 → 28, 돈 잠김 240 → 254주.
+// 학업 최종값은 6판 모두 불변(정본 루틴 5종 × 4시드 비교도 학업 평균 불변). 디렉터 결정 (가)·월초 지급의 의도된 결과.
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {

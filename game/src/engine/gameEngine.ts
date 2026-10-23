@@ -11,10 +11,14 @@ import { seededRandom, hashInitialState, deriveTalkSeed } from './rng';
 import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { recordMilestoneForYear } from './memorySystem';
-import { getParentMods, getWeeklyIncome } from './parentModifiers';
+import { getParentMods } from './parentModifiers';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
+import {
+  getMonthlyAllowance, getWeeklyNetIncome, isMonthStartWeek, isMonthlyMoneyActive, payMonthStart, payRoutineIfDue,
+  routineSlotPrepaidThisWeek,
+} from './monthlyMoney';
 import { absWeek } from './relationshipSignals';
 import { getMonthBlock, getWeekInfo } from './weekMath';
 import { recordGrowthDrag, pickGrowthReason, advanceGrowthReasonMemo, type GrowthMultipliers } from './growthDrag';
@@ -55,8 +59,10 @@ export function createInitialState(
   if (mods.initStatBonus.academic) stats.academic += mods.initStatBonus.academic;
   if (mods.initStatBonus.mental) stats.mental += mods.initStatBonus.mental;
   if (mods.initStatBonus.health) stats.health += mods.initStatBonus.health;
-  // 초기 자금 = 첫 주 용돈. Y1 고정이라 초등 구간값(기본 4 / wealth 6).
-  const money = getWeeklyIncome(parents, 1);
+  // 초기 자금 = 첫 달 용돈(주 용돈 × 4, 월 단위 돈 monthlyMoney.ts). Y1 고정이라 초등 구간값(기본 16 / wealth 24).
+  // 예전엔 첫 주 용돈 한 주치였고 나머지는 매주 들어왔다 — 총액은 같고 시점만 달 초로 모인다.
+  // 첫 달 학원비는 여기서 내지 않는다(루틴이 아직 없다). 첫 계획에서 루틴을 고르는 순간(setRoutine) 그 달 몫을 낸다.
+  const money = getMonthlyAllowance({ parents, year: 1 });
   // freedom의 별도 효과는 idle 페널티 완화 + 방학 슬롯 +1로 처리됨
 
   return {
@@ -98,6 +104,7 @@ export function createInitialState(
     axesByYear: [],
     moneySpentByYear: emptyMoneyYears(),
     moneyBlockedWeeksByYear: emptyMoneyYears(),
+    monthlyMoney: true,
     burnoutCooldown: 0,
     eventTimeCost: 0,
     // v1.2 기억 슬롯 시스템
@@ -284,7 +291,7 @@ export function getRoutineBonus(weeks: number): number {
  * 직접 불러야 한다. processWeek로 감싸 재면 학교 수업·자연 감쇠·피로 회복이 섞여 곡선의
  * 연속성을 증명할 수 없다(activityGrowthCurve.test.ts가 84.99/85.01을 여기로 직접 넣는다).
  */
-export function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0): void {
+export function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0, prepaid = false): void {
   const activity = ACTIVITIES.find(a => a.id === activityId);
   if (!activity) return;
 
@@ -434,8 +441,9 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
   // 피로 로그는 여기서 더하지 않는다 — processWeek 끝에서 주 시작 대비 실제 변화로 한 번 적는다(T53).
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
 
-  // 용돈 적용 (음수 방지) — 학년별 차등 비용 적용
-  const cost = getActivityCost(activity, state.year);
+  // 용돈 적용 (음수 방지) — 학년별 차등 비용 적용.
+  // prepaid = 이번 달 몫으로 이미 선불한 유료 루틴(monthlyMoney.ts) — 실행할 때 다시 빼지 않는다.
+  const cost = prepaid ? 0 : getActivityCost(activity, state.year);
   const moneyBeforeActivity = state.money;
   state.money = Math.round((state.money - cost) * 10) / 10;
   if (state.money < 0) state.money = 0;
@@ -872,15 +880,48 @@ function prepareWeekContext(state: GameState): void {
 }
 
 // 용돈 지급 + 생활비 차감 (v6, parentModifiers SSOT). econMods를 반환해 idle 페널티와 공유.
+// 월 단위 돈(monthlyMoney.ts)으로 도는 판은 여기서 용돈을 주지 않는다 — 달 첫 주로 넘어갈 때 그 달 4주치를 받는다.
+// 그 돈은 달 첫 주의 보류분으로 들어가 **달 첫 주 결산**에 보이므로, wealth 문구도 그 주에만 단다.
+// 아직 매주 방식인 구세이브(첫 달 초 전)는 예전처럼 매주 받는다.
 function applyAllowanceAndLiving(state: GameState, log: WeekLog): ReturnType<typeof getParentMods> {
   const econMods = getParentMods(state.parents);
-  const netMoney = Math.round((getWeeklyIncome(state.parents, state.year) - econMods.livingCost) * 10) / 10;
+  if (isMonthlyMoneyActive(state)) {
+    if (state.parents.includes('wealth') && isMonthStartWeek(state.week)) {
+      log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
+    }
+    return econMods;
+  }
+  const netMoney = getWeeklyNetIncome(state);
   if (state.parents.includes('wealth')) {
     log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
   }
   state.money = Math.round((state.money + netMoney) * 10) / 10;
   log.moneyChange += netMoney;
   return econMods;
+}
+
+/**
+ * 달 첫 주로 넘어왔으면 그 달 용돈을 받고 루틴을 선불한다(monthlyMoney.payMonthStart).
+ *
+ * **어느 결산에 보이나.** `log`(방금 끝난 달의 마지막 주 로그)를 주면 거기에 싣는다 — 결산 화면이 바로 그
+ * 자리에서 뜨고, 잔액도 이미 바뀌었으니 "이번 주 변화"가 실제 잔액 변화와 같아야 한다(보류분으로 다음 주에
+ * 미루면 결산이 "0"이라 말하는데 잔액은 +16이 된다 — #442·#453과 같은 거짓말). 결산 화면이 없는 자리
+ * (학년 전환 advanceFromYearEnd)는 `log` 없이 불러 새 달 첫 주의 보류분으로 남긴다.
+ * 학년말(W49)·엔딩은 달이 아니다.
+ */
+export function settleMonthStartIfDue(state: GameState, log?: WeekLog): void {
+  if (state.phase === 'year-end' || state.phase === 'ending' || !isMonthStartWeek(state.week)) return;
+  const paid = payMonthStart(state);
+  if (!paid) return;
+  if (log) {
+    log.moneyChange = Math.round((log.moneyChange + paid.delta) * 10) / 10;
+    log.monthMoney = { label: paid.label, allowance: paid.allowance, routinePaid: paid.routinePaid };
+    return;
+  }
+  if (paid.delta === 0) return;
+  const p = state.pendingWeekDelta ?? { stats: {}, fatigue: 0, money: 0 };
+  p.money += paid.delta;
+  state.pendingWeekDelta = p;
 }
 
 // 방치 무기력 (v6): 3주 연속 비생산적 활동 시 멘탈/소셜 감소. freedom 부모는 페널티 배율(econMods).
@@ -933,6 +974,16 @@ function tickBuffsAndResetPurchases(state: GameState): void {
   state.weekPurchases = {};
 }
 
+/**
+ * 선불한 루틴 칸의 자격 판정용 — 돈 조건은 이미 냈으니 통과로 본다. 활동의 requires는 학년 조건과
+ * 자기 비용 조건(잔액이 비용 이상)을 한 함수에 섞어 두었는데, 달 초에 한 달 몫을 내면 잔액이 그 비용보다
+ * 작아져 **이미 낸 학원을 자격 미달로 건너뛴다**(골든 재생성에서 실측 — paid 판 W1 학원·헬스 둘 다 스킵).
+ * 학년·계절 같은 돈 이외 조건은 그대로 본다.
+ */
+function moneyAssured(state: GameState): GameState {
+  return { ...state, money: Number.POSITIVE_INFINITY };
+}
+
 // 루틴 활동 (학기 중 방과후). timeCost(이벤트 소모)로 슬롯 스킵, strict 부모 루틴 보너스 +1주.
 function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number): void {
   if (timeCost > 0) {
@@ -958,29 +1009,32 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
     // UI를 안 거친 입력(세이브 변조/sim/스테일 루틴)이 학년·학기 조건을 우회하는 것 방어.
     if (state.routineSlot2 && timeCost < 2) {
       const r2 = ACTIVITIES.find(a => a.id === state.routineSlot2);
-      const r2Cost = r2 ? getActivityCost(r2, state.year) : 0;
+      // 이번 달 몫으로 이미 냈으면 실행 때 돈을 보지도 빼지도 않는다(monthlyMoney.ts — 선불).
+      const r2Prepaid = routineSlotPrepaidThisWeek(state, 'routineSlot2');
+      const r2Cost = r2 && !r2Prepaid ? getActivityCost(r2, state.year) : 0;
       if (r2 && r2Cost > 0 && state.money < r2Cost) {
         log.messages.push(`💰 돈이 부족해서 ${josa(r2.name, '을/를')} 못 했다...`);
         log.skipped.push({ activityId: r2.id, reason: 'money', origin: 'routine' });
-      } else if (!r2 || !canApplyActivity(state, r2.id)) {
+      } else if (!r2 || !canApplyActivity(r2Prepaid ? moneyAssured(state) : state, r2.id)) {
         log.messages.push(`⚠ 지금은 ${josa(r2?.name || '설정된 활동', '을/를')} 할 수 없어 건너뛰었다.`);
         if (r2) log.skipped.push({ activityId: r2.id, reason: 'gate', origin: 'routine' });
       } else {
-        applyActivity(state, state.routineSlot2, log, r2Bonus);
+        applyActivity(state, state.routineSlot2, log, r2Bonus, 1.0, r2Prepaid);
         state.routineSlot2Weeks++;
       }
     }
     if (state.routineSlot3 && timeCost < 1) {
       const r3 = ACTIVITIES.find(a => a.id === state.routineSlot3);
-      const r3Cost = r3 ? getActivityCost(r3, state.year) : 0;
+      const r3Prepaid = routineSlotPrepaidThisWeek(state, 'routineSlot3');
+      const r3Cost = r3 && !r3Prepaid ? getActivityCost(r3, state.year) : 0;
       if (r3 && r3Cost > 0 && state.money < r3Cost) {
         log.messages.push(`💰 돈이 부족해서 ${josa(r3.name, '을/를')} 못 했다...`);
         log.skipped.push({ activityId: r3.id, reason: 'money', origin: 'routine' });
-      } else if (!r3 || !canApplyActivity(state, r3.id)) {
+      } else if (!r3 || !canApplyActivity(r3Prepaid ? moneyAssured(state) : state, r3.id)) {
         log.messages.push(`⚠ 지금은 ${josa(r3?.name || '설정된 활동', '을/를')} 할 수 없어 건너뛰었다.`);
         if (r3) log.skipped.push({ activityId: r3.id, reason: 'gate', origin: 'routine' });
       } else {
-        applyActivity(state, state.routineSlot3, log, r3Bonus);
+        applyActivity(state, state.routineSlot3, log, r3Bonus, 1.0, r3Prepaid);
         state.routineSlot3Weeks++;
       }
     }
@@ -1279,6 +1333,9 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 주 진행 + 학년 전환 판정 + 다음 주 학기/방학 상태
   advanceWeekCounter(newState);
+  // 달 첫 주로 넘어왔으면 그 달 용돈·루틴 선불(월 단위 돈). 학기/방학 상태가 정해진 뒤여야 학기 주 수가 맞다.
+  // 방금 끝난 주(달의 마지막 주)의 결산에 싣는다 — 그 화면이 바로 뜬다.
+  settleMonthStartIfDue(newState, log);
 
   // 선택 초기화
   newState.weekendChoices = [];
@@ -1317,7 +1374,11 @@ export function predictWeekOutcome(
   const input: GameState = state.isVacation
     ? { ...state, vacationChoices: plannedChoices }
     : { ...state, weekendChoices: plannedChoices };
-  const after = processWeek(input, npcActivityMap);
+  // 확정(store.confirmWeek)이 하듯 아직 안 낸 이번 달 루틴비를 먼저 낸 상태로 돌린다 — 그래야 미리보기의
+  // 돈 스킵이 실제 확정과 같다. 원본을 건드리지 않게 복제해서 낸다.
+  const paid = cloneGameState(input);
+  payRoutineIfDue(paid);
+  const after = processWeek(paid, npcActivityMap);
   const fatigueBefore = Math.round(state.fatigue);
   const fatigueAfter = Math.round(after.fatigue);
   const STAT_KEYS: StatKey[] = ['academic', 'social', 'health', 'talent', 'mental'];
