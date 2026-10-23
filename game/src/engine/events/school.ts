@@ -454,7 +454,7 @@ export const SCHOOL_MIDDLE_HIGH = [
     speakers: ['jihun', 'minjae'],
     choices: [
       {
-        text: '"가자!" — 주말에 농구하러 간다',
+        text: '"가자!" — 방과후랑 주말 하루 비워서 농구한다',
         effects: { health: 2, social: 2, mental: 3 },
         fatigueEffect: 3,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 1 }],
@@ -472,7 +472,7 @@ export const SCHOOL_MIDDLE_HIGH = [
     femaleDescription: '저녁에 지훈이한테 전화가 왔다.\n"야, 너 요즘 공부만 하잖아. 이번 주말에 떡볶이 먹으러 갈래? 민재도 온대."',
     femaleChoices: [
       {
-        text: '"가자!" — 같이 떡볶이 먹으러 간다',
+        text: '"가자!" — 방과후랑 주말 하루 비워서 떡볶이 먹으러 간다',
         effects: { social: 3, mental: 4 },
         fatigueEffect: 1,
         moneyEffect: -1,
