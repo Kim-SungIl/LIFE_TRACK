@@ -17,6 +17,10 @@ import { webpSrc } from '../engine/assetWebp';
 import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
+import { MonthPlanScreen } from './screens/main/MonthPlanScreen';
+import { isMonthlyPlanningEnabled } from '../engine/featureFlags';
+import { getCurrentMonthPlan } from '../engine/monthPlan';
+import { getMonthBlock } from '../engine/weekMath';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 import { SystemMenu } from './SystemMenu';
@@ -54,7 +58,7 @@ export function GameScreen() {
   // P3-7: selector 없는 전체-스토어 구독 → state + 사용하는 액션만 선택.
   // 액션은 Zustand에서 안정 참조라, npcActivityMap만 바뀔 땐 shallow-equal → 리렌더 스킵.
   const {
-    state, setRoutine, confirmWeek,
+    state, setRoutine, confirmWeek, setMonthPlan,
     advanceFromYearEnd, resolveEvent, buyItem, talkToNpc, talkToHome,
     resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
     startGame, exitToTitle, chooseSemesterGoal, startRomanceRetry, consumeRomancePlan,
@@ -63,6 +67,7 @@ export function GameScreen() {
     runDelta: s.runDelta,
     setRoutine: s.setRoutine,
     confirmWeek: s.confirmWeek,
+    setMonthPlan: s.setMonthPlan,
     advanceFromYearEnd: s.advanceFromYearEnd,
     resolveEvent: s.resolveEvent,
     buyItem: s.buyItem,
@@ -444,6 +449,13 @@ export function GameScreen() {
         goalMoment={goalMomentForWeekLog(state)}
         onContinue={() => setPhase('weekday')}
       />
+    );
+  } else if (isMonthlyPlanningEnabled() && state.week <= 48 && !getCurrentMonthPlan(state)) {
+    // ===== 한 달 계획(월 단위 계획 4단계 — 기능 플래그 뒤) =====
+    // 이번 달 계획이 아직 없으면 주간 화면 대신 이 화면이 먼저 뜬다. 저장되면 그 주 주간 화면이 계획한 칸으로 채워져 뜬다.
+    screenKey = `month:${state.year}-${getMonthBlock(state.week).index}`;
+    phaseContent = (
+      <MonthPlanScreen state={state} onSetRoutine={setRoutine} onStart={setMonthPlan} />
     );
   } else {
     // ===== 메인 게임 화면 =====

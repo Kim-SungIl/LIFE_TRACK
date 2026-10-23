@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
+import { getPlannedWeek } from '../../../engine/monthPlan';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
@@ -61,10 +62,12 @@ type Props = {
 };
 
 export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal }: Props) {
-  const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? []);
+  // 이번 달 계획(월 계획 화면이 저장)이 있으면 그 주 칸으로 미리 채운다 — 확정은 그대로 이 화면의 CTA가 한다.
+  const plannedWeek = getPlannedWeek(state);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? plannedWeek?.activities ?? []);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
-  const [npcChoices, setNpcChoices] = useState<Record<string, string>>(initialPlan?.npcChoices ?? {});
+  const [npcChoices, setNpcChoices] = useState<Record<string, string>>(initialPlan?.npcChoices ?? plannedWeek?.npcChoices ?? {});
   // Only the mounted planner consumes its recovery snapshot, after initializing both drafts.
   useEffect(() => {
     if (initialPlan) onPlanRestored?.();
