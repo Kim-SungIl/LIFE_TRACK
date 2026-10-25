@@ -4,6 +4,7 @@ import { GameState, GameEvent, EventChoice, ParentStrength, StatKey, type MonthP
 import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scaleStatChange, applyYearTransition, settleMonthStartIfDue } from './gameEngine';
 import { payRoutineIfDue } from './monthlyMoney';
 import { validateMonthPlan } from './monthPlan';
+import { applyDeclinedInvites, validateInviteAnswers } from './monthInvites';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import { describeUnplayable } from './saveIntegrity';
@@ -631,9 +632,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setMonthPlan: (plan) => {
     const s = get().state;
     if (!s) return 'state 없음';
-    const reason = validateMonthPlan(s, plan);
+    // 칸·주·달 검증과 초대 답 검증 — 둘을 한 파일에 두면 monthPlan ↔ monthInvites 순환이 생겨 여기서 잇는다.
+    const reason = validateMonthPlan(s, plan) ?? validateInviteAnswers(s, plan);
     if (reason) return reason;
-    set({ state: { ...s, monthPlan: structuredClone(plan) } });
+    const next = cloneGameState(s);
+    next.monthPlan = structuredClone(plan);
+    // 거절한 초대마다 친밀도 −1 — 저장할 때 한 번(디렉터 결정 2026-10-25).
+    applyDeclinedInvites(next, plan.invites ?? []);
+    set({ state: next });
     return null;
   },
 

@@ -19,6 +19,7 @@ import {
   getMonthlyAllowance, getWeeklyNetIncome, isMonthStartWeek, isMonthlyMoneyActive, payMonthStart, payRoutineIfDue,
   routineSlotPrepaidThisWeek,
 } from './monthlyMoney';
+import { settlePromisesForWeek } from './monthInvites';
 import { absWeek } from './relationshipSignals';
 import { getMonthBlock, getWeekInfo } from './weekMath';
 import { recordGrowthDrag, pickGrowthReason, advanceGrowthReasonMemo, type GrowthMultipliers } from './growthDrag';
@@ -1251,6 +1252,8 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   const appliedChoices = applyWeekendActivities(newState, log, timeCost);
   // T68 학기 목표 — 이번 주 주말 실행·동행을 기록만 한다(스탯·rng 무관). 판정은 아래 week++ 직전.
   markSemesterGoalWeek(newState, appliedChoices, npcActivityMap);
+  // 월 계획의 약속(친구 초대를 수락한 칸) — 실제로 했는지 본다. 못 지켰으면 친밀도 −2와 한 줄(monthInvites.ts).
+  settlePromisesForWeek(newState, log, appliedChoices, npcActivityMap);
 
   // 5b. 부모 친밀도 평균 회귀 — 이번 주 부모 행동(활동/대화)이 없었으면 50으로 천천히 수렴.
   //     (talkToHome은 processWeek 이전에, 부모 활동은 위에서 actedWithParentThisWeek를 세팅)

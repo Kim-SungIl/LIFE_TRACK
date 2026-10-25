@@ -14,8 +14,10 @@ import { ACTIVITIES, getActivityCost, getAvailableActivities } from '../../../en
 import { getExamsInMonth, getNextMonthOpeningExam } from '../../../engine/examSystem';
 import { getRoutineDueCost, incomeNote, remainingSemesterWeeks } from '../../../engine/monthlyMoney';
 import { plannedWeekCost, slotCountForWeek } from '../../../engine/monthPlan';
+import { generateMonthInvites } from '../../../engine/monthInvites';
+import { josa } from '../../../engine/korean';
 import { isNpcEnrolled } from '../../../engine/relationshipSignals';
-import { EXAM_TYPE_LABELS, type GameState, type MonthPlan } from '../../../engine/types';
+import { EXAM_TYPE_LABELS, type GameState, type MonthInvite, type MonthPlan } from '../../../engine/types';
 import { assignSlot } from '../../../engine/weekendPlan';
 import { getMonthBlock, getWeekInfo, getWeekOfMonth } from '../../../engine/weekMath';
 import { NpcSelectModal } from './NpcSelectModal';
@@ -58,6 +60,12 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
   const [npcSelect, setNpcSelect] = useState<{ idx: number; key: string } | null>(null);
   const [showBudget, setShowBudget] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 친구 초대(monthInvites) — 상태를 읽기만 하는 결정론적 함수라 다시 그려도 같은 초대다. 답은 시작할 때 계획에 실린다.
+  const invites = useMemo(() => generateMonthInvites(state), [state]);
+  const [answers, setAnswers] = useState<Record<number, boolean>>({});
+  const unanswered = invites.some((_, i) => answers[i] === undefined);
+  const pinnedFor = (week: number, slot: number) =>
+    invites.find((inv, i) => answers[i] === true && inv.week === week && inv.slotIdx === slot);
 
   const npcName = (id: string) => state.npcs.find(n => n.id === id)?.name ?? id;
   const isVac = (w: number) => getWeekInfo(w).isVacation;
@@ -74,6 +82,34 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
   const nextExam = getNextMonthOpeningExam(state.year, block);
   const companionNpcs = state.npcs.filter(n => n.met && isNpcEnrolled(n, state));
 
+  /** 수락한 초대의 칸은 약속으로 고정 — 복사·편집이 덮어써도 다시 박는다(못 지킨 약속은 −2라 화면이 실수로 지우면 안 된다). */
+  const withPins = (week: number, d: Draft, acc: Record<number, boolean> = answers): Draft => {
+    let { activities, npcChoices } = d;
+    invites.forEach((inv, i) => {
+      if (acc[i] !== true || inv.week !== week) return;
+      activities = assignSlot(activities, inv.slotIdx, inv.activityId);
+      npcChoices = { ...npcChoices, [`${inv.activityId}:${inv.slotIdx}`]: inv.npcId };
+    });
+    return { activities, npcChoices };
+  };
+
+  const answer = (i: number, accepted: boolean) => {
+    playSfx('tap');
+    const next = { ...answers, [i]: accepted };
+    setAnswers(next);
+    const inv = invites[i];
+    setDrafts(ds => ds.map((d, idx) => {
+      if (weeks[idx] !== inv.week) return d;
+      if (accepted) return withPins(inv.week, d, next);
+      // 수락을 거절로 바꾸면 그 칸을 비운다
+      const key = `${inv.activityId}:${inv.slotIdx}`;
+      if (d.npcChoices[key] !== inv.npcId) return d;
+      const { [key]: _drop, ...rest } = d.npcChoices;
+      void _drop;
+      return { activities: assignSlot(d.activities, inv.slotIdx, ''), npcChoices: rest };
+    }));
+  };
+
   /** 칸을 바꾸면 그 칸을 가리키던 동행은 지운다 — 남겨 두면 엔진 검증(validateMonthPlan)이 계획을 거부한다. */
   const setDraft = (idx: number, patch: Partial<Draft>) =>
     setDrafts(ds => ds.map((d, i) => {
@@ -83,7 +119,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
         const m = /^(.+):(\d+)$/.exec(key);
         return !!m && next.activities[Number(m[2])] === m[1];
       }));
-      return { ...next, npcChoices };
+      return withPins(weeks[i], { ...next, npcChoices });
     }));
 
   /** 이 주를 고칠 때 쓸 수 있는 돈 — 다른 주 예약과 아직 안 낸 학원비를 뺀다(그 주 몫은 지금 고르는 중). */
@@ -97,7 +133,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
       const firstOf = (vac: boolean) => ds.find((_, i) => isVac(weeks[i]) === vac);
       return ds.map((d, i) => {
         const src = firstOf(isVac(weeks[i]));
-        return src ? { activities: [...src.activities], npcChoices: { ...src.npcChoices } } : d;
+        return src ? withPins(weeks[i], { activities: [...src.activities], npcChoices: { ...src.npcChoices } }) : d;
       });
     });
   };
@@ -108,7 +144,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
     if (!snapshot) return;
     playSfx('tap');
     setDrafts(ds => ds.map((d, i) => (isVac(weeks[i]) === snapshot.isVacation
-      ? { activities: [...snapshot.activities].slice(0, slotCountForWeek(state, weeks[i])), npcChoices: { ...snapshot.npcChoices } }
+      ? withPins(weeks[i], { activities: [...snapshot.activities].slice(0, slotCountForWeek(state, weeks[i])), npcChoices: { ...snapshot.npcChoices } })
       : d)));
   };
 
@@ -118,6 +154,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
       year: state.year,
       month: block.index,
       weeks: weeks.map((week, i) => ({ week, activities: drafts[i].activities, npcChoices: drafts[i].npcChoices })),
+      invites: invites.map((inv, i) => ({ ...inv, accepted: answers[i] === true })),
     });
     setError(reason);
   };
@@ -196,6 +233,11 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
         </section>
       )}
 
+      {invites.map((inv, i) => (
+        <InviteCard key={`${inv.npcId}-${inv.week}`} invite={inv} answer={answers[i]} npcName={npcName(inv.npcId)}
+          cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} />
+      ))}
+
       <section aria-label="주별 계획" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{block.kind === 'vacation' ? '방학 일과' : '주말'}</span>
@@ -234,6 +276,11 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
                     <span data-testid={`week-summary-${w}`} style={{ fontSize: '0.82rem' }}>{summarize(d, npcName)}{cost > 0 ? ` (${won(cost)})` : ''}</span>
                     <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       {exam && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--blue)', background: chipSurface('rgba(125,163,217,0.14)'), borderRadius: 6, padding: '2px 6px' }}>{EXAM_TYPE_LABELS[exam.type]} 주</span>}
+                      {invites.some((inv, i) => answers[i] === true && inv.week === w) && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-soft)', background: chipSurface('rgba(240,164,122,0.14)'), borderRadius: 6, padding: '2px 6px' }}>
+                          {invites.filter((inv, i) => answers[i] === true && inv.week === w).map(inv => `${josa(npcName(inv.npcId), '와/과')} 약속`).join(' · ')}
+                        </span>
+                      )}
                       {(w === 19 || w === 42) && <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--yellow)', background: chipSurface('rgba(224,179,84,0.14)'), borderRadius: 6, padding: '2px 6px' }}>학기 마지막 주</span>}
                     </span>
                   </span>
@@ -244,8 +291,10 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
                     {Array.from({ length: slots }, (_, k) => {
                       const id = d.activities[k];
                       const dayLabel = vac ? `${k + 1}칸` : k === 0 ? '토' : '일';
+                      const pin = pinnedFor(w, k);
                       return (
                         <button key={k} type="button" className="btn-reset" data-testid={`slot-${w}-${k}`}
+                          disabled={!!pin} aria-label={pin ? `${dayLabel} — ${josa(npcName(pin.npcId), '와/과')} 약속(초대에서 바꿀 수 있어요)` : undefined}
                           onClick={() => { playSfx('tap'); setEditing({ idx, slot: `weekend${k + 1}` }); }}
                           style={{ minHeight: 56, borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2, padding: '6px 10px', textAlign: 'left' }}>
                           <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{dayLabel}</span>
@@ -269,8 +318,8 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
       {error && <div role="alert" style={{ fontSize: '0.78rem', color: 'var(--red)', padding: '0 4px' }}>{error}</div>}
 
       <div className="bottom-action">
-        <button type="button" className="btn btn-primary" disabled={overspent} onClick={start}>
-          {overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : '이번 달 시작'}
+        <button type="button" className="btn btn-primary" disabled={overspent || unanswered} onClick={start}>
+          {overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : unanswered ? '⬆ 친구 초대에 답해 주세요' : '이번 달 시작'}
         </button>
       </div>
 
@@ -310,5 +359,37 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
         />
       )}
     </div>
+  );
+}
+
+/** 친구 초대 카드 — 좋아(그 칸을 약속으로 고정) / 다음에(저장할 때 친밀도 −1). 답한 뒤에도 바꿀 수 있다. */
+function InviteCard({ invite, answer, npcName, cost, onAnswer }: {
+  invite: MonthInvite; answer: boolean | undefined; npcName: string; cost: number; onAnswer: (accepted: boolean) => void;
+}) {
+  const vac = getWeekInfo(invite.week).isVacation;
+  const when = `${getWeekOfMonth(invite.week)}주차 ${vac ? '하루' : invite.slotIdx === 0 ? '토요일' : '일요일'}`;
+  const line = invite.activityId === 'study-group' ? `"시험 기간인데 ${when}에 같이 공부할래?"` : `"${when}에 같이 놀래?"`;
+  return (
+    <section aria-label={`${npcName}의 초대`} data-testid={`invite-${invite.npcId}`} style={{
+      background: 'var(--bg-card-hover)', border: '1px solid rgba(240,164,122,0.35)', borderRadius: 14,
+      padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: '0.75rem', color: 'var(--accent-soft)', fontWeight: 600 }}>{npcName}의 초대 · {when}</span>
+        <span style={{ fontSize: '0.9rem' }}>{line}</span>
+      </div>
+      {answer === false && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{npcName}: "알겠어… 다음에 하자." — 조금 서운한 눈치다.</div>}
+      {answer === true && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>약속했다. 그 칸은 {josa(npcName, '와/과')} 보내는 시간으로 비워 둔다.</div>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+        <button type="button" className="btn-reset" aria-pressed={answer === true} onClick={() => onAnswer(true)} style={{
+          minHeight: 44, borderRadius: 10, background: answer === true ? 'var(--accent)' : 'transparent',
+          color: answer === true ? 'var(--btn-ink)' : 'var(--text-primary)', border: '1px solid var(--accent)', fontWeight: 700,
+        }}>좋아{cost > 0 ? ` · ${cost}만` : ''}</button>
+        <button type="button" className="btn-reset" aria-pressed={answer === false} onClick={() => onAnswer(false)} style={{
+          minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.14)',
+          background: answer === false ? 'var(--bg-secondary)' : 'transparent', color: 'var(--text-primary)',
+        }}>다음에</button>
+      </div>
+    </section>
   );
 }

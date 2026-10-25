@@ -19,6 +19,7 @@ import { ACTIVITIES } from '../../engine/activities';
 import { payMonthStart } from '../../engine/monthlyMoney';
 import { MONTHLY_PLANNING_KEY } from '../../engine/featureFlags';
 import { validateMonthPlan } from '../../engine/monthPlan';
+import { generateMonthInvites, validateInviteAnswers } from '../../engine/monthInvites';
 import type { GameState, MonthPlan } from '../../engine/types';
 
 const CAT_LABEL: Record<string, string> = {
@@ -146,5 +147,57 @@ describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
     expect(screen.queryByTestId('month-plan'), '저장했는데 계획 화면이 또 뜬다').toBeNull();
     // 주간 화면 토요일 칸이 계획한 활동으로 채워져 있다
     expect(screen.getAllByText('독서').length).toBeGreaterThan(0);
+  });
+});
+
+describe('친구 초대 카드 — 답해야 시작하고, 수락한 칸은 약속으로 고정된다', () => {
+  /** 지훈(40)·수빈(35)을 만난 4월 첫 주, 초대가 n개 나오는 첫 시드. */
+  function withInvites(n: number): GameState {
+    for (let seed = 0; seed < 2000; seed++) {
+      const s = aprilStart({ rngSeed: seed });
+      for (const [id, v] of [['jihun', 40], ['subin', 35]] as const) {
+        const npc = s.npcs.find(x => x.id === id)!;
+        npc.met = true;
+        npc.intimacy = v;
+      }
+      if (generateMonthInvites(s).length === n) return s;
+    }
+    throw new Error('시드 없음');
+  }
+
+  it('초대에 답하기 전엔 시작이 잠기고, 수락하면 그 주가 약속 칸으로 채워지며 복사해도 지워지지 않는다', () => {
+    const s = withInvites(2);
+    // 복사 원본(첫 주)이 아닌 주의 초대를 수락해야 "복사가 약속을 덮는가"를 겨눌 수 있다(두 초대는 주가 다르다).
+    const both = generateMonthInvites(s);
+    const first = both.find(i => i.week !== 5)!;
+    const second = both.find(i => i !== first)!;
+    const onStart = vi.fn<(p: MonthPlan) => string | null>(() => null);
+    render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={onStart} />);
+    expect(screen.getByRole('button', { name: /친구 초대에 답해 주세요/ }).hasAttribute('disabled')).toBe(true);
+
+    const card = screen.getByTestId(`invite-${first.npcId}`);
+    fireEvent.click(within(card).getByRole('button', { name: /좋아/ }));
+    const name = s.npcs.find(n => n.id === first.npcId)!.name;
+    expect(screen.getByTestId(`week-summary-${first.week}`).textContent).toContain(name);
+
+    fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
+    expect(screen.getByTestId(`week-summary-${first.week}`).textContent, '복사가 약속 칸을 덮었다').toContain(name);
+
+    fireEvent.click(within(screen.getByTestId(`invite-${second.npcId}`)).getByRole('button', { name: '다음에' }));
+    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    const plan = onStart.mock.calls[0][0];
+    expect(plan.invites?.find(i => i.npcId === first.npcId)?.accepted).toBe(true);
+    expect(plan.invites?.find(i => i.npcId === second.npcId)?.accepted).toBe(false);
+    expect(validateMonthPlan(s, plan), '화면이 만든 계획을 엔진이 거부했다').toBeNull();
+    expect(validateInviteAnswers(s, plan)).toBeNull();
+  });
+
+  it('약속한 칸은 펼쳐도 고를 수 없다(초대에서만 바꾼다)', () => {
+    const s = withInvites(1);
+    const [inv] = generateMonthInvites(s);
+    render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} />);
+    fireEvent.click(within(screen.getByTestId(`invite-${inv.npcId}`)).getByRole('button', { name: /좋아/ }));
+    if (inv.week !== 5) fireEvent.click(screen.getAllByRole('button', { expanded: false }).find(b => b.textContent?.startsWith(`${inv.week - 4}주`))!);
+    expect(screen.getByTestId(`slot-${inv.week}-${inv.slotIdx}`).hasAttribute('disabled')).toBe(true);
   });
 });

@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createInitialState, processWeek } from '../gameEngine';
 import { getCurrentMonthPlan, getPlannedWeek, plannedWeekCost, reservedMoney, validateMonthPlan } from '../monthPlan';
+import { generateMonthInvites } from '../monthInvites';
 import { canSpend, canSpendWhilePlanning, getSpendableForPlanning, getSpendableMoney } from '../spendableMoney';
 import { isChoiceUnaffordable } from '../eventPresentation';
 import { SHOP_ITEMS, canBuyItem } from '../shopSystem';
@@ -108,11 +109,13 @@ describe('새 지출은 예약을 넘지 못한다 — 선택지·상점', () =>
 });
 
 describe('계획 검증 — store.setMonthPlan이 저장 전에 본다', () => {
-  it('맞는 계획은 통과하고 저장된다', () => {
+  it('맞는 계획은 통과하고 저장된다 (받은 초대에는 답해야 한다 — monthInvites)', () => {
     expect(validateMonthPlan(at(5), aprilPlan())).toBeNull();
-    store.setState({ state: at(5, { monthPlan: undefined }) });
-    expect(store.getState().setMonthPlan(aprilPlan())).toBeNull();
-    expect(store.getState().state!.monthPlan).toEqual(aprilPlan());
+    const s = at(5, { monthPlan: undefined });
+    const plan = { ...aprilPlan(), invites: generateMonthInvites(s).map(i => ({ ...i, accepted: false })) };
+    store.setState({ state: s });
+    expect(store.getState().setMonthPlan(plan)).toBeNull();
+    expect(store.getState().state!.monthPlan).toEqual(plan);
   });
 
   it.each<[string, (p: MonthPlan) => void, RegExp]>([

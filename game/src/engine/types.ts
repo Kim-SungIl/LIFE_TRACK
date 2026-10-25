@@ -301,6 +301,20 @@ export interface MonthPlan {
   month: number;
   /** 그 달의 주마다 한 칸 — 블록 안 순서대로(1주차부터). */
   weeks: MonthPlanWeek[];
+  /**
+   * 그 달에 받은 친구 초대와 답(monthInvites.ts). 수락한 초대는 그 주 그 칸이 약속으로 고정된다.
+   * 거절은 계획을 저장할 때 친밀도 −1, 수락했는데 그 주에 못 지키면 그 주 처리 때 −2(디렉터 결정 2026-10-25).
+   * 구세이브·초대가 없던 달은 없다.
+   */
+  invites?: (MonthInvite & { accepted: boolean })[];
+}
+
+/** 친구 초대 한 건 — 그 주(week)의 그 칸(slotIdx)에 그 활동(activityId)을 같이 하자는 제안. */
+export interface MonthInvite {
+  npcId: string;
+  week: number;
+  slotIdx: number;
+  activityId: string;
 }
 
 export interface MonthPlanWeek {
