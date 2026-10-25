@@ -5,7 +5,7 @@
 // 계획을 짜서, 예산이 움직이고, 시작하면 계획이 저장되고, 그 주 주간 화면이 그 칸으로 채워지는지를 본다.
 // 기능 플래그(featureFlags.ts)가 꺼져 있으면 예전처럼 주간 화면이 먼저 뜬다는 짝도 둔다.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => p, cgThumbSrc: (p: string) => p }));
 vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
@@ -130,7 +130,7 @@ describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
     expect(screen.queryByTestId('month-plan')).toBeNull();
   });
 
-  it('플래그를 켜면 계획 없는 달은 월 계획 화면 → 시작하면 store에 저장되고 그 주 주간 화면이 계획한 칸으로 뜬다', () => {
+  it('플래그를 켜면 계획 없는 달은 월 계획 화면 → 시작하면 store에 저장되고 그 달이 계획한 칸으로 재생된다(5단계)', async () => {
     localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
     useGameStore.setState({ state: aprilStart() });
     const { rerender } = render(<GameScreen />);
@@ -140,13 +140,15 @@ describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
     fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
     fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
 
-    const saved = useGameStore.getState().state!.monthPlan;
-    expect(saved?.weeks).toHaveLength(4);
-    expect(saved?.weeks[2].activities[0]).toBe('reading');
+    const after = useGameStore.getState().state!;
+    expect(after.monthPlan?.weeks).toHaveLength(4);
+    expect(after.monthPlan?.weeks[2].activities[0]).toBe('reading');
+    // 시작하면 곧장 첫 주가 계획대로 확정된다 — 재생이 그 주를 처리했고, 확정한 칸이 계획의 칸이다.
+    expect(after.monthRun?.log.map(w => [w.week, w.auto])).toEqual([[5, true]]);
+    expect(after.lastWeekendPlan?.activities[0]).toBe('reading');
     rerender(<GameScreen />);
-    expect(screen.queryByTestId('month-plan'), '저장했는데 계획 화면이 또 뜬다').toBeNull();
-    // 주간 화면 토요일 칸이 계획한 활동으로 채워져 있다
-    expect(screen.getAllByText('독서').length).toBeGreaterThan(0);
+    // 첫 주 처리 뒤 사건(지연 청크)이나 재생 카드로 넘어간다 — 화면 전환 페이드가 끝나면 계획 화면은 없다.
+    await waitFor(() => expect(screen.queryByTestId('month-plan'), '저장했는데 계획 화면이 또 뜬다').toBeNull());
   });
 });
 

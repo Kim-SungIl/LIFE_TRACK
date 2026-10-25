@@ -15,7 +15,7 @@ import { getCurrentMonthPlan } from './monthPlan';
 import { isNpcEnrolled } from './relationshipSignals';
 import { getMonthBlock, getWeekInfo } from './weekMath';
 import type { ActivityInstance } from './activities';
-import type { GameState, MonthInvite, WeekLog } from './types';
+import type { GameState, MonthInvite, MonthPlan, WeekLog } from './types';
 
 /** 초대할 수 있는 친밀도 하한(포함). */
 export const INVITE_MIN_INTIMACY = 30;
@@ -78,18 +78,31 @@ const sameInvite = (a: MonthInvite, b: MonthInvite) =>
   a.npcId === b.npcId && a.week === b.week && a.slotIdx === b.slotIdx && a.activityId === b.activityId;
 
 /**
- * 계획의 초대 답이 맞는지 — null이면 통과. validateMonthPlan이 부른다.
- *   · 받은 초대(같은 함수로 다시 만든 것)마다 정확히 한 번 답해야 한다. 지어낸 초대는 거부.
- *   · 수락한 초대는 그 주 그 칸에 그 활동이 있고 그 친구가 동행이어야 한다.
+ * 계획의 초대 답이 맞는지 — null이면 통과. store.setMonthPlan이 부른다.
+ *   · 처음 짤 때: 받은 초대(같은 함수로 다시 만든 것)마다 정확히 한 번 답해야 한다. 지어낸 초대는 거부.
+ *   · 달 중간에 다시 짤 때(`existing` = 지금 달 계획): 초대는 처음 받은 그대로다 — 새로 받지 않고 답도 못 바꾼다.
+ *     다시 만들면 주·난수가 바뀌어 다른 초대가 나오고, 거절을 수락으로 뒤집으면 −1만 내고 빠져나간다.
+ *   · 수락한 초대는 (아직 안 지난 주라면) 그 주 그 칸에 그 활동이 있고 그 친구가 동행이어야 한다.
  */
-export function validateInviteAnswers(state: GameState, plan: { weeks: { week: number; activities: string[]; npcChoices: Record<string, string> }[]; invites?: (MonthInvite & { accepted: boolean })[] }): string | null {
-  const expected = generateMonthInvites(state);
+export function validateInviteAnswers(
+  state: GameState,
+  plan: { weeks: { week: number; activities: string[]; npcChoices: Record<string, string> }[]; invites?: (MonthInvite & { accepted: boolean })[] },
+  existing: MonthPlan | null = getCurrentMonthPlan(state),
+): string | null {
   const answers = plan.invites ?? [];
-  if (answers.length !== expected.length || !expected.every(e => answers.some(a => sameInvite(a, e)))) {
-    return `초대 답이 받은 초대와 맞지 않는다 — 받은 ${expected.length}개, 답 ${answers.length}개`;
+  if (existing) {
+    const before = existing.invites ?? [];
+    if (answers.length !== before.length || !before.every(b => answers.some(a => sameInvite(a, b) && a.accepted === b.accepted))) {
+      return '다시 짠 계획의 초대 답이 처음과 다르다';
+    }
+  } else {
+    const expected = generateMonthInvites(state);
+    if (answers.length !== expected.length || !expected.every(e => answers.some(a => sameInvite(a, e)))) {
+      return `초대 답이 받은 초대와 맞지 않는다 — 받은 ${expected.length}개, 답 ${answers.length}개`;
+    }
   }
   for (const a of answers) {
-    if (!a.accepted) continue;
+    if (!a.accepted || a.week < state.week) continue;
     const w = plan.weeks.find(x => x.week === a.week);
     if (!w || w.activities[a.slotIdx] !== a.activityId || w.npcChoices[`${a.activityId}:${a.slotIdx}`] !== a.npcId) {
       return `W${a.week}: 수락한 초대(${a.npcId})의 칸이 계획에 없다`;
@@ -128,6 +141,7 @@ export function settlePromisesForWeek(
     const ran = applied.some(inst => inst.id === inv.activityId && inst.slots.includes(inv.slotIdx));
     const together = npcActivityMap?.[`${inv.activityId}:${inv.slotIdx}`] === inv.npcId;
     const actName = ACTIVITIES.find(a => a.id === inv.activityId)?.name ?? inv.activityId;
+    (log.promises ??= []).push({ npcId: npc.id, kept: ran && together });
     if (ran && together) {
       log.messages.push(`📌 ${josa(npc.name, '와/과')} 한 약속 — ${actName}. 지켰다.`);
     } else {

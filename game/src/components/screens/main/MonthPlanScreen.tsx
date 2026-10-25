@@ -7,7 +7,9 @@
 //   · 방과후 루틴은 지금처럼 바꾼다(onSetRoutine) — 바꾸는 순간 남은 학기 주 몫을 낸다(monthlyMoney, 결정 (가)).
 //   · 예산은 "쓸 수 있는 돈 = 잔액 − 아직 안 낸 학원비 − 이 계획의 예약"으로 실시간 보인다. 모자라면 시작을 막는다.
 //   · 시작하면 store.setMonthPlan으로 저장한다(검증은 엔진 하나 — validateMonthPlan). 이 화면은 그 결과를 보여 줄 뿐.
-//   · 진행은 아직 주마다다 — 계획을 저장하면 그 주 주간 화면이 계획한 칸으로 미리 채워진 채 뜬다(4주 자동 진행은 5단계).
+//   · 시작하면 그 달이 자동으로 흐른다(GameScreen이 저장 뒤 store.startMonthPlayback을 부른다, 5단계).
+//   · 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다(`existing`) — 그때는 남은 주만 짜고, 초대는 처음 받은 그대로 고정이다
+//     (엔진도 다시 짠 계획의 초대 답이 처음과 다르면 거부한다 — monthInvites.validateInviteAnswers).
 import { useMemo, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { ACTIVITIES, getActivityCost, getAvailableActivities } from '../../../engine/activities';
@@ -29,6 +31,10 @@ type Props = {
   onSetRoutine: (slot2: string | null, slot3: string | null) => void;
   /** store.setMonthPlan — 저장되면 null, 아니면 이유. */
   onStart: (plan: MonthPlan) => string | null;
+  /** 지금 달 계획 — 있으면 "남은 주 다시 짜기"다(재생이 멈춘 뒤). */
+  existing?: MonthPlan | null;
+  /** 다시 짜기를 그만두고 짜 둔 계획 그대로 돌아간다. */
+  onCancel?: () => void;
 };
 
 type Draft = { activities: string[]; npcChoices: Record<string, string> };
@@ -48,21 +54,31 @@ function summarize(d: Draft, npcName: (id: string) => string): string {
   return parts.length ? parts.join(' / ') : '쉰다';
 }
 
-export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
+export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCancel }: Props) {
   const block = getMonthBlock(state.week);
   const weeks = useMemo(
     () => Array.from({ length: block.endWeek - state.week + 1 }, (_, i) => state.week + i),
     [block.endWeek, state.week],
   );
-  const [drafts, setDrafts] = useState<Draft[]>(() => weeks.map(() => ({ activities: [], npcChoices: {} })));
+  const replan = !!existing;
+  const [drafts, setDrafts] = useState<Draft[]>(() => weeks.map(w => {
+    const prev = existing?.weeks.find(x => x.week === w);
+    return prev ? { activities: [...prev.activities], npcChoices: { ...prev.npcChoices } } : { activities: [], npcChoices: {} };
+  }));
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   const [editing, setEditing] = useState<{ idx: number; slot: string } | null>(null);
   const [npcSelect, setNpcSelect] = useState<{ idx: number; key: string } | null>(null);
   const [showBudget, setShowBudget] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // 친구 초대(monthInvites) — 상태를 읽기만 하는 결정론적 함수라 다시 그려도 같은 초대다. 답은 시작할 때 계획에 실린다.
-  const invites = useMemo(() => generateMonthInvites(state), [state]);
-  const [answers, setAnswers] = useState<Record<number, boolean>>({});
+  // 다시 짤 때는 처음 받은 초대와 답 그대로(새로 받지 않는다).
+  const invites: MonthInvite[] = useMemo(
+    () => (existing ? (existing.invites ?? []).map(({ accepted: _a, ...inv }) => { void _a; return inv; }) : generateMonthInvites(state)),
+    [existing, state],
+  );
+  const [answers, setAnswers] = useState<Record<number, boolean>>(
+    () => Object.fromEntries((existing?.invites ?? []).map((inv, i) => [i, inv.accepted])),
+  );
   const unanswered = invites.some((_, i) => answers[i] === undefined);
   const pinnedFor = (week: number, slot: number) =>
     invites.find((inv, i) => answers[i] === true && inv.week === week && inv.slotIdx === slot);
@@ -175,7 +191,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
         <div>
           <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>{block.label}</h1>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            {YEAR_NAMES[state.year - 1]} · {block.kind === 'mixed' ? '학기 + 방학' : block.kind === 'vacation' ? '방학' : `${state.semester}학기`} · {state.week}~{block.endWeek}주차
+            {replan ? '남은 주 다시 짜기 · ' : ''}{YEAR_NAMES[state.year - 1]} · {block.kind === 'mixed' ? '학기 + 방학' : block.kind === 'vacation' ? '방학' : `${state.semester}학기`} · {state.week}~{block.endWeek}주차
           </div>
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right', lineHeight: 1.5 }}>
@@ -233,7 +249,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
         </section>
       )}
 
-      {invites.map((inv, i) => (
+      {!replan && invites.map((inv, i) => (
         <InviteCard key={`${inv.npcId}-${inv.week}`} invite={inv} answer={answers[i]} npcName={npcName(inv.npcId)}
           cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} />
       ))}
@@ -317,9 +333,12 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart }: Props) {
       )}
       {error && <div role="alert" style={{ fontSize: '0.78rem', color: 'var(--red)', padding: '0 4px' }}>{error}</div>}
 
-      <div className="bottom-action">
-        <button type="button" className="btn btn-primary" disabled={overspent || unanswered} onClick={start}>
-          {overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : unanswered ? '⬆ 친구 초대에 답해 주세요' : '이번 달 시작'}
+      <div className="bottom-action" style={replan && onCancel ? { display: 'flex', gap: 8 } : undefined}>
+        {replan && onCancel && (
+          <button type="button" className="btn btn-secondary" onClick={onCancel} style={{ flex: '0 0 auto', width: 'auto', minWidth: 88 }}>그대로</button>
+        )}
+        <button type="button" className="btn btn-primary" disabled={overspent || unanswered} onClick={start} style={replan && onCancel ? { flex: 1 } : undefined}>
+          {overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : unanswered ? '⬆ 친구 초대에 답해 주세요' : replan ? '이대로 이어서' : '이번 달 시작'}
         </button>
       </div>
 

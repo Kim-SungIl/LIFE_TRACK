@@ -23,6 +23,11 @@
 import { createHash } from 'node:crypto';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from '../../src/engine/activities';
 import { getRoutineDueCost } from '../../src/engine/monthlyMoney';
+import { getCurrentMonthPlan, getPlannedWeek } from '../../src/engine/monthPlan';
+import { generateMonthInvites } from '../../src/engine/monthInvites';
+import { checkPlannedWeek, getMonthRun } from '../../src/engine/monthPlayback';
+import { slotCountFor } from '../../src/engine/slotCount';
+import { getMonthBlock, getWeekInfo, getWeekOfMonth } from '../../src/engine/weekMath';
 import { canSpend } from '../../src/engine/spendableMoney';
 import { cloneGameState } from '../../src/engine/stateClone';
 import { createInitialState, predictWeekOutcome } from '../../src/engine/gameEngine';
@@ -32,8 +37,8 @@ import {
 } from '../../src/engine/eventPresentation';
 import { isNpcInteractable } from '../../src/engine/relationshipSignals';
 import type { useGameStore } from '../../src/engine/store';
-import type { GameState, ParentStrength } from '../../src/engine/types';
-import { getConfirmGate, getWeekSlotCount } from '../../src/engine/weekendPlan';
+import type { GameState, MonthPlan, ParentStrength } from '../../src/engine/types';
+import { assignSlot, getConfirmGate, getWeekSlotCount } from '../../src/engine/weekendPlan';
 import { SIM_ROUTINES, assertRoutineIds } from './sim-routines';
 
 /** 제품의 영속 키 — store.ts SAVE_KEY / archive.ts ARCHIVE_KEY(verify-nightly-e2e.ts와 같은 값). */
@@ -394,4 +399,187 @@ export function installMemoryStorage(): Map<string, string> {
   };
   Object.defineProperty(globalThis, 'localStorage', { value: shim, configurable: true, writable: true });
   return mem;
+}
+
+// ── 한 달 자동 진행 동등성(월 단위 계획 5단계) ─────────────────────────────
+
+/**
+ * 같은 달 계획을 **손으로 한 주씩**(`manual` — 그 주 계획 칸으로 confirmWeek) 돌린 판과 **재생으로**(`playback` —
+ * startMonthPlayback / continuePlayback / 멈춤 / 재개 / finishMonth) 돌린 판이 매주 같은 상태인지 보는 장치.
+ * 설계안 §12-5 "주 경계마다 지문 콜백" 어댑터다 — 재생은 한 액션 안에서 주를 확정하므로 드라이버가 사이에 끼어들 수 없어,
+ * store를 구독해 **매 결산(phase가 result로 바뀌는 순간)**과 엔딩의 지문을 뜬다.
+ *
+ * 두 판이 같은 입력을 받게 맞춘 것:
+ *   · 계획 — 달마다 페르소나 칸을 그 주 칸 수로 펴고, 동행 페르소나는 계획 시점의 첫 친구를 붙인다. 초대는 동행 페르소나면
+ *     첫 번째만 수락(그 칸에 약속을 박는다), 나머지는 거절 — 약속 지킴·깨짐(−2)·거절(−1)을 둘 다 밟는다.
+ *   · 대화 — 대화 페르소나는 달의 3주차 계획 시점에 그 주 미니 이벤트 기회가 있으면 첫 친구에게 말을 건다. 재생 판은 2주차 카드에서
+ *     💬를 눌러 경계에서 멈춘 뒤 같은 자리에서 말을 건다(일시정지 → 대화 → 재개 경로, §8 검증 항목).
+ *   · 계획이 깨지면(동행 친구 전출 등) 두 판 다 그 주에서 남은 주를 다시 짠다(재생 판은 'plan-invalid'로 멈춘 뒤 — 같은 판정 함수).
+ *
+ * 지문에서 빼는 것: `monthRun`(재생 위치·기록)과 `talkBank`(재생이 지나친 대화 적립). 둘은 재생에만 있는 장부이고,
+ * 적립은 이 하네스에서 쓰이지 않는다(대화는 그 주 기회가 있을 때만 걸어 기회가 먼저 소비된다).
+ */
+export type MonthMode = 'manual' | 'playback';
+
+export interface MonthDriveResult {
+  digests: string[];
+  coords: string[];
+  counters: {
+    weeks: number; plans: number; replans: number; talks: number; talkEvents: number;
+    summaries: number; promisesKept: number; promisesBroken: number; invitesAccepted: number; invitesDeclined: number;
+    stops: Record<string, number>;
+  };
+  checks: DriveChecks;
+  reachedEnding: boolean;
+}
+
+/** 재생에만 있는 장부를 뺀 지문. */
+export function monthEquivalenceDigest(state: GameState, npcActivityMap: Record<string, string>): string {
+  const { monthRun: _run, talkBank: _bank, ...rest } = state;
+  void _run; void _bank;
+  return stateDigest(rest as GameState, npcActivityMap);
+}
+
+/** 동등성 페르소나 — 돈이 모자라 계획이 깨지지 않는 판만(깨지면 두 판 다 같은 자리에서 멈추지만, 돈 잠김 수선은 이 장치의 일이 아니다). */
+export const MONTH_PERSONAS: readonly DriverPersona[] = GOLDEN_PERSONAS.filter(p => p.name !== 'paid-spend');
+
+export function driveMonthly(
+  store: Store, persona: DriverPersona, seed: number, mode: MonthMode,
+  opts: { storage?: Map<string, string> } = {},
+): MonthDriveResult {
+  opts.storage?.delete(SAVE_KEY);
+  opts.storage?.delete(ARCHIVE_KEY);
+  bootStore(store, persona, seed);
+  const api = store.getState;
+  const now = () => {
+    const s = api().state;
+    if (!s) throw new Error('month-driver: state 없음');
+    return s;
+  };
+  const digests: string[] = [];
+  const coords: string[] = [];
+  const counters: MonthDriveResult['counters'] = {
+    weeks: 0, plans: 0, replans: 0, talks: 0, talkEvents: 0, summaries: 0, promisesKept: 0, promisesBroken: 0,
+    invitesAccepted: 0, invitesDeclined: 0, stops: {},
+  };
+  const checks: DriveChecks = { savesCompared: 0, saveMismatches: 0, runDeltaAtEnding: false, archiveWritten: false };
+  const unsub = store.subscribe((st, prev) => {
+    const s = st.state;
+    if (!s || s.phase !== 'result' || prev.state?.phase === 'result') return;
+    counters.weeks++;
+    for (const p of s.weekLog?.promises ?? []) { if (p.kept) counters.promisesKept++; else counters.promisesBroken++; }
+    digests.push(monthEquivalenceDigest(s, st.npcActivityMap));
+    coords.push(`Y${s.weekLog?.year} W${s.weekLog?.week}`);
+    if (opts.storage) {
+      checks.savesCompared++;
+      const raw = opts.storage.get(SAVE_KEY);
+      const saved = raw ? (JSON.parse(raw) as { state?: unknown }).state : undefined;
+      if (JSON.stringify(canonical(saved)) !== JSON.stringify(canonical(JSON.parse(JSON.stringify(s))))) checks.saveMismatches++;
+    }
+  });
+
+  const companionsFor = (s: GameState, activities: string[]) => {
+    const map: Record<string, string> = {};
+    if (!persona.companion) return map;
+    const npc = companionFor(s);
+    if (npc) activities.forEach((id, i) => { if (id && NPC_COMPANION_ACTIVITIES.includes(id)) map[`${id}:${i}`] = npc; });
+    return map;
+  };
+  /** 지금 주부터 그 달 끝까지의 계획. `existing`이 있으면 다시 짜기(초대 답은 그대로). */
+  const buildPlan = (s: GameState, existing: MonthPlan | null): MonthPlan => {
+    const block = getMonthBlock(s.week);
+    const invites = existing?.invites
+      ?? generateMonthInvites(s).map((inv, i) => ({ ...inv, accepted: persona.companion && i === 0 }));
+    const weeks = Array.from({ length: block.endWeek - s.week + 1 }, (_, i) => s.week + i).map(week => {
+      const vac = getWeekInfo(week).isVacation;
+      let activities = layoutSlots(vac ? persona.vacation : persona.weekend, slotCountFor(s.parents, vac));
+      let npcChoices = companionsFor(s, activities);
+      for (const inv of invites) {
+        if (!inv.accepted || inv.week !== week) continue;
+        activities = assignSlot(activities, inv.slotIdx, inv.activityId);
+        npcChoices = Object.fromEntries(Object.entries(npcChoices).filter(([k]) => {
+          const m = /^(.+):(\d+)$/.exec(k);
+          return !!m && activities[Number(m[2])] === m[1];
+        }));
+        npcChoices[`${inv.activityId}:${inv.slotIdx}`] = inv.npcId;
+      }
+      return { week, activities, npcChoices };
+    });
+    return { year: s.year, month: block.index, weeks, invites };
+  };
+  const save = (plan: MonthPlan) => {
+    const why = api().setMonthPlan(plan);
+    if (why) throw new Error(`month-driver: Y${now().year} W${now().week} 계획 거부 — ${why}`);
+  };
+  const talkIfChance = (s: GameState) => {
+    if (!persona.talk || getWeekOfMonth(s.week) !== 3 || !s.npcEventPendingThisWeek) return;
+    const target = companionFor(s);
+    if (!target) return;
+    counters.talks++;
+    if (api().talkToNpc(target).kind !== 'smalltalk') counters.talkEvents++;
+  };
+
+  let routineSet = false;
+  let reachedEnding = false;
+  let talkedAt = -1;
+  for (let step = 0; step < STEP_LIMIT; step++) {
+    const s = now();
+    if (s.phase === 'ending') {
+      digests.push(monthEquivalenceDigest(s, api().npcActivityMap));
+      coords.push(`Y${s.year} W${s.week} ending`);
+      checks.runDeltaAtEnding = api().runDelta != null;
+      checks.archiveWritten = !!opts.storage?.get(ARCHIVE_KEY);
+      reachedEnding = true;
+      break;
+    }
+    if (s.phase === 'year-end') { api().advanceFromYearEnd(); continue; }
+    if (s.phase === 'event') {
+      const e = s.currentEvent!;
+      api().resolveEvent(firstPickableChoice(s, s.gender === 'female' && e.femaleChoices ? e.femaleChoices : e.choices));
+      continue;
+    }
+    if (s.phase === 'result') {
+      if (mode === 'manual') { api().setPhase('weekday'); continue; }
+      const run = s.monthRun;
+      const lw = s.weekLog?.week;
+      if (run && lw != null && s.weekLog?.year === run.year && getMonthBlock(lw).index === run.month && getMonthBlock(lw).endWeek === lw) {
+        counters.summaries++;
+        api().finishMonth();
+        continue;
+      }
+      // 2주차 카드에서 💬 — 다음 경계에서 멈춘다(재생 판의 대화 자리).
+      if (persona.talk && lw != null && getWeekOfMonth(lw) === 2) api().pausePlayback('talk');
+      api().continuePlayback();
+      continue;
+    }
+
+    if (!routineSet) { api().setRoutine(persona.slot2, persona.slot3); routineSet = true; continue; }
+    const plan = getCurrentMonthPlan(s);
+    if (!plan) {
+      counters.plans++;
+      const fresh = buildPlan(s, null);
+      for (const inv of fresh.invites ?? []) { if (inv.accepted) counters.invitesAccepted++; else counters.invitesDeclined++; }
+      save(fresh);
+      if (mode === 'playback') api().startMonthPlayback();
+      continue;
+    }
+    const abs = s.year * 100 + s.week;
+    if (mode === 'manual') {
+      if (talkedAt !== abs) { talkedAt = abs; talkIfChance(s); if (now().phase !== s.phase) continue; }
+      const p = now();
+      if (checkPlannedWeek(p)) { counters.replans++; save(buildPlan(p, getCurrentMonthPlan(p))); continue; }
+      const planned = getPlannedWeek(p)!;
+      api().confirmWeek([...planned.activities], { ...planned.npcChoices });
+      continue;
+    }
+    // 재생 판 — 계획 단계에 섰다면 멈춘 것이다.
+    const run = getMonthRun(s);
+    if (!run) throw new Error(`month-driver: Y${s.year} W${s.week} 계획은 있는데 재생 상태가 없다`);
+    counters.stops[run.stop ?? 'none'] = (counters.stops[run.stop ?? 'none'] ?? 0) + 1;
+    if (talkedAt !== abs) { talkedAt = abs; talkIfChance(s); if (now().phase !== s.phase) continue; }
+    if (run.stop === 'plan-invalid') { counters.replans++; save(buildPlan(now(), getCurrentMonthPlan(now()))); }
+    api().resumePlayback();
+  }
+  unsub();
+  return { digests, coords, counters, checks, reachedEnding };
 }

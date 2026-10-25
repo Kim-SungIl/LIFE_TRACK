@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
 import { getPlannedWeek } from '../../../engine/monthPlan';
+import { talkBankCount } from '../../../engine/monthPlayback';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
@@ -59,9 +60,16 @@ type Props = {
   onOpenMenu?: () => void;
   // T68 학기 목표 고르기 — 없으면 칩을 그리지 않는다(테스트·구 호출부 호환).
   onChooseGoal?: (offer: GoalOffer) => boolean;
+  /**
+   * 한 달 자동 진행이 멈춰 이 화면에 섰다(monthPlayback, 설계안 §5). 맨 위에 멈춘 이유와 [▶ 이어서]·[남은 주 다시 짜기]를 띄운다.
+   * 이 화면의 확정 버튼은 그대로 "이번 주만 손으로" 진행이다. 없으면(주간 진행) 띠를 안 그린다.
+   */
+  playback?: { line: string; talkBank: number; onResume: () => void; onReplan: () => void };
+  /** 재생 카드의 💬/🛒로 멈췄으면 그 창을 연 채로 시작한다. */
+  initialOverlay?: 'talk' | 'shop';
 };
 
-export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal }: Props) {
+export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal, playback, initialOverlay }: Props) {
   // 이번 달 계획(월 계획 화면이 저장)이 있으면 그 주 칸으로 미리 채운다 — 확정은 그대로 이 화면의 CTA가 한다.
   const plannedWeek = getPlannedWeek(state);
   const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? plannedWeek?.activities ?? []);
@@ -82,7 +90,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   useEffect(() => { setNpcSmalltalk(null); }, [npcDetailFor]);
   useEffect(() => { if (!showHomeModal) setHomeSmalltalk(null); }, [showHomeModal]);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
-  const [showShop, setShowShop] = useState(false);
+  const [showShop, setShowShop] = useState(initialOverlay === 'shop');
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
     // ever_seen은 새 게임에도 유지되는 영속 플래그 — 한 번이라도 튜토리얼을 본/건너뛴 반복 플레이어는 자동 스킵.
@@ -103,7 +111,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     try { return !!localStorage.getItem('lifetrack_rest_ack'); } catch { return false; }
   });
   // 친구 관계 시트 — 진입카드에서 열림(Phase 5 IA)
-  const [showRelations, setShowRelations] = useState(false);
+  const [showRelations, setShowRelations] = useState(initialOverlay === 'talk');
 
   // 의존: week/year/totalWeeksPlayed (primitives) — 한 주가 진행될 때만 새 라인 뽑고,
   // 말걸기 같은 로컬 state 변경에는 영향 안 받게 한다.
@@ -216,7 +224,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   // 가정 모달 배지 — pending 이어도 풀이 비면 잡담으로 빠지므로, 실제 남은 이벤트가 있을 때만 true.
   // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
   const homeHasEvent = getEligibleParentClimax(state) != null
-    || (state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0);
+    || ((state.parentEventPendingThisWeek || talkBankCount(state) > 0) && getAvailableHomeEvents(state).length > 0);
   // 동행 후보 = met + 재적(같은 학교) — 전출 도윤/졸업 공백기 하은은 주말 동행에서 제외.
   // NpcSelectModal memo 안정성 위해 npcs ref(+ 재적 판정 입력인 year/events) 변경 시에만 재계산.
   const companionNpcs = useMemo(
@@ -317,6 +325,29 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
         onOpenAlbum={onOpenAlbum}
         onOpenMenu={onOpenMenu}
       />
+
+      {/* 한 달 자동 진행이 멈춘 자리 — 이유 한 줄과 이어서/다시 짜기 */}
+      {playback && (
+        <div role="status" data-testid="playback-paused" style={{
+          background: tintedGlass('rgba(240,164,122,0.14)'), border: '1px solid rgba(240,164,122,0.35)',
+          borderRadius: 12, padding: '10px 14px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          <span style={{ fontSize: '0.82rem', lineHeight: 1.5 }}>⏸ {playback.line}</span>
+          {playback.talkBank > 0 && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {playback.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); playback.onResume(); }}
+              style={{ minHeight: 44, borderRadius: 10, background: 'var(--accent)', color: 'var(--btn-ink)', fontWeight: 700, fontSize: '0.82rem' }}>
+              ▶ 이어서 재생
+            </button>
+            <button type="button" className="btn-reset" data-testid="playback-replan" onClick={() => { playSfx('tap'); playback.onReplan(); }}
+              style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem' }}>
+              남은 주 다시 짜기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 저장 실패 경고 — 진행 손실을 사용자가 모른 채 지나가지 않게 (storage full/사파리 프라이빗 등) */}
       {saveFailed && (
