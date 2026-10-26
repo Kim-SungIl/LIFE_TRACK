@@ -26,55 +26,83 @@ const RNG_SEED = 42;
 // 학교급 경계(Y1 / Y2~4 / Y5~7)를 넘는 대표 연차 — 경계 양쪽을 모두 포함한다.
 const ELEMENTARY = 1, MIDDLE_FIRST = 2, MIDDLE_LAST = 4, HIGH_FIRST = 5, HIGH_LAST = 7;
 
-/** 활동을 하나도 고르지 않은 주 — moneyChange가 곧 순 용돈이 되도록 지출을 0으로 만든다. */
-function idleWeekAt(year: number, parents: [ParentStrength, ParentStrength]): GameState {
+// 월 단위 돈(2026-10, monthlyMoney.ts) 이후: 용돈은 **달 첫 주로 넘어갈 때** 그 달 4주치가 들어온다.
+// 그래서 "지급된 금액"은 달 마지막 주(W4)를 처리한 그 주 결산의 `weekLog.monthMoney`(달이 넘어가며 들어온 돈)로 본다.
+// 곡선(4/5/5, wealth +2)은 그대로이고 시점만 모였다 — 아래 값은 전부 주 단가 × 4다.
+
+/** 활동을 하나도 고르지 않은 주 — 지출을 0으로 만들어 달 초 입금이 곧 그 달 용돈이 되게 한다. */
+function idleWeekAt(year: number, parents: [ParentStrength, ParentStrength], week = 4): GameState {
   const s = createInitialState('male', parents, { rngSeed: RNG_SEED });
   return Object.assign(s, {
     year,
-    week: 3,              // 시험 주(W8·12·17·30·33·38)·방학(W20~24·43~48) 회피
+    week,                 // 기본 W4 → 처리 뒤 W5(4월 첫 주)로 넘어가며 그 달 용돈이 들어온다
     isVacation: false,
     weekendChoices: [],
     vacationChoices: [],
-    routineSlot2: null,   // 루틴 과금 없음 — moneyChange를 용돈만으로 남긴다
+    routineSlot2: null,   // 루틴 선불 없음 — 달 초 입금을 용돈만으로 남긴다
     routineSlot3: null,
   });
 }
 
-describe('주간 용돈 곡선 — 엔진 경로', () => {
-  it('초기 자금이 초등 구간 용돈과 일치한다 (wealth 포함)', () => {
+/** 그 주를 처리하며 다음 달로 넘어갈 때 들어온 돈(달 초 입금 − 루틴 선불). 달이 안 넘어가면 0. */
+const monthStartDelta = (s: GameState): number => {
+  const m = processWeek(s).weekLog?.monthMoney;
+  return m ? m.allowance - m.routinePaid : 0;
+};
+
+describe('용돈 곡선 — 엔진 경로(월 단위)', () => {
+  it('초기 자금이 초등 구간 첫 달 용돈과 일치한다 (주 단가 × 4, wealth 포함)', () => {
     expect(createInitialState('male', PLAIN, { rngSeed: RNG_SEED }).money)
-      .toBe(getWeeklyIncome(PLAIN, ELEMENTARY));
+      .toBe(getWeeklyIncome(PLAIN, ELEMENTARY) * 4);
     expect(createInitialState('male', RICH, { rngSeed: RNG_SEED }).money)
-      .toBe(getWeeklyIncome(RICH, ELEMENTARY));
+      .toBe(getWeeklyIncome(RICH, ELEMENTARY) * 4);
     // 값 자체도 잠근다 — 위 두 줄은 getWeeklyIncome이 통째로 바뀌어도 같이 따라간다.
-    expect(createInitialState('male', PLAIN, { rngSeed: RNG_SEED }).money).toBe(4);
-    expect(createInitialState('male', RICH, { rngSeed: RNG_SEED }).money).toBe(6);
+    expect(createInitialState('male', PLAIN, { rngSeed: RNG_SEED }).money).toBe(16);
+    expect(createInitialState('male', RICH, { rngSeed: RNG_SEED }).money).toBe(24);
   });
 
-  it('중학교로 올라가면 주간 지급액이 실제로 오른다 (초등 4 → 중학 5)', () => {
-    const elementary = processWeek(idleWeekAt(ELEMENTARY, PLAIN));
-    const middle = processWeek(idleWeekAt(MIDDLE_FIRST, PLAIN));
+  it('용돈은 달 초에만 들어온다 — 달 중간 주의 결산엔 용돈이 없다', () => {
+    const midMonth = processWeek(idleWeekAt(ELEMENTARY, PLAIN, 2)); // W2 → W3
+    expect(midMonth.weekLog?.moneyChange).toBe(0);
+    expect(midMonth.weekLog?.monthMoney).toBeUndefined();
+    const monthEnd = processWeek(idleWeekAt(ELEMENTARY, PLAIN, 4)); // W4 → W5(4월 초)
+    expect(monthEnd.weekLog?.monthMoney).toEqual({ label: '4월', allowance: 16, routinePaid: 0 });
+    // 결산의 "이번 주 변화"가 실제 잔액 변화와 같다 — 입금이 다음 주로 미뤄지면 결산이 0이라 말한다
+    expect(monthEnd.weekLog?.moneyChange).toBe(16);
+  });
 
-    expect(elementary.weekLog?.moneyChange).toBe(4);
-    expect(middle.weekLog?.moneyChange).toBe(5);
-    // 부등호까지 — 상수로 회귀하면 두 값이 같아진다
-    expect(middle.weekLog!.moneyChange).toBeGreaterThan(elementary.weekLog!.moneyChange);
+  it('중학교로 올라가면 한 달 용돈이 실제로 오른다 (초등 16 → 중학 20)', () => {
+    const elementary = monthStartDelta(idleWeekAt(ELEMENTARY, PLAIN));
+    const middle = monthStartDelta(idleWeekAt(MIDDLE_FIRST, PLAIN));
+    expect(elementary).toBe(16);
+    expect(middle).toBe(20);
+    expect(middle).toBeGreaterThan(elementary); // 상수로 회귀하면 두 값이 같아진다
   });
 
   it('중학교 끝과 고등학교 시작은 같다 (4/5/5 — 고등 인상 없음이 의도)', () => {
-    const middleLast = processWeek(idleWeekAt(MIDDLE_LAST, PLAIN));
-    const highFirst = processWeek(idleWeekAt(HIGH_FIRST, PLAIN));
-
-    expect(middleLast.weekLog?.moneyChange).toBe(5);
-    expect(highFirst.weekLog?.moneyChange).toBe(5);
+    expect(monthStartDelta(idleWeekAt(MIDDLE_LAST, PLAIN))).toBe(20);
+    expect(monthStartDelta(idleWeekAt(HIGH_FIRST, PLAIN))).toBe(20);
   });
 
-  it('wealth 부모는 전 학년에서 +2만원을 더 받는다', () => {
+  it('wealth 부모는 전 학년에서 한 달 +8만원(주 +2 × 4)을 더 받는다', () => {
     for (const year of [ELEMENTARY, MIDDLE_FIRST, MIDDLE_LAST, HIGH_FIRST, HIGH_LAST]) {
-      const plain = processWeek(idleWeekAt(year, PLAIN));
-      const rich = processWeek(idleWeekAt(year, RICH));
-      expect(rich.weekLog!.moneyChange - plain.weekLog!.moneyChange).toBe(2);
+      expect(monthStartDelta(idleWeekAt(year, RICH)) - monthStartDelta(idleWeekAt(year, PLAIN))).toBe(8);
     }
+  });
+
+  it('1년 용돈 합 = 주 단가 × 48 — 시점만 모였고 총액은 예전 매주 지급과 같다', () => {
+    // 학년 안의 12번 달 초를 전부 지나며 들어온 돈을 센다(초기 자금 = 첫 달 몫 포함).
+    let s = idleWeekAt(MIDDLE_FIRST, PLAIN, 1);
+    s.money = getWeeklyIncome(PLAIN, MIDDLE_FIRST) * 4; // W1 몫(학년 전환이 주는 첫 달)을 손으로 넣어 둔다
+    let received = s.money;
+    for (let w = 1; w <= 47; w++) {
+      s.weekendChoices = []; s.vacationChoices = [];
+      s = processWeek(s);
+      s.currentEvent = null;
+      if (s.phase === 'event') s.phase = 'weekday';
+      received += s.weekLog?.monthMoney?.allowance ?? 0;
+    }
+    expect(received).toBe(getWeeklyIncome(PLAIN, MIDDLE_FIRST) * 48);
   });
 
   // 이 게임의 주력 고정비 — 이게 수입을 넘으면 MainWeekScreen의 routineTooExpensive가
@@ -107,38 +135,30 @@ describe('주간 용돈 곡선 — 엔진 경로', () => {
     expect(getWeeklyIncome(RICH, HIGH_FIRST) - routineCostAt(HIGH_FIRST)).toBe(2);
   });
 
-  // 위 0은 **학기 중 루틴 원장**의 값이다. 루틴은 방학에 아예 안 돌지만
-  // (applyRoutineActivities의 `if (!state.isVacation)`) 용돈은 48주 전부 지급되므로,
-  // 방학 활동이 무료인 빌드는 방학 11주에 지출 없이 적립한다 → 고등 1년은 순증이다.
-  // 고등 잉여 0의 실제 기능은 "학기 중 유료 주말/방학까지 얹으면 선택을 강요받는다"이지
-  // "알바 없이는 루틴도 못 돌린다"가 아니다(그건 B-2 이전 상태였다).
-  it('방학엔 루틴 과금이 없어 고등 1년은 순증이다 (학기 잉여 0이 연간 정체가 아니다)', () => {
-    const SCHOOL_WEEKS = 37;   // W1~19 + W25~42
-    const VACATION_WEEKS = 11; // W20~24 + W43~48
-    expect(SCHOOL_WEEKS + VACATION_WEEKS).toBe(48);
-
-    // ⚠ 두 수치 모두 **엔진에서 유도**한다. vacationNet을 income으로 가정해 적으면
-    //   applyRoutineActivities의 `if (!state.isVacation)` 게이트를 지워도 통과한다(false lock).
-    const withRoutine = (week: number, isVacation: boolean): number => {
+  // 위 0은 **학기 중 루틴 원장**의 값이다. 루틴은 방학에 아예 안 돌므로 방학 달엔 선불도 0이고,
+  // 용돈은 방학 달에도 4주치 들어온다 → 방학 활동이 무료인 빌드는 방학 달에 적립한다(고등 1년 순증).
+  // 월 단위에서는 이게 "달 초 입금 − 루틴 선불"로 보인다: 학기 달 0, 방학 달 = 용돈 전액.
+  it('방학 달엔 루틴 선불이 없어 고등 1년은 순증이다 (학기 잉여 0이 연간 정체가 아니다)', () => {
+    // ⚠ 두 수치 모두 **엔진에서 유도**한다. 방학 달 선불을 0으로 가정해 적으면
+    //   remainingSemesterWeeks의 방학 제외를 지워도 통과한다(false lock).
+    const monthStartWithRoutine = (lastWeekOfPrevMonth: number): number => {
       const s = createInitialState('male', PLAIN, { rngSeed: RNG_SEED });
-      const next = processWeek(Object.assign(s, {
-        year: HIGH_FIRST, week, isVacation,
+      return monthStartDelta(Object.assign(s, {
+        year: HIGH_FIRST, week: lastWeekOfPrevMonth, isVacation: lastWeekOfPrevMonth >= 20 && lastWeekOfPrevMonth <= 24,
         routineSlot2: 'academy', routineSlot3: 'gym',
-        weekendChoices: [], vacationChoices: [],   // 주말·방학 지출 0 → 루틴 과금만 남는다
-        money: 999,                                // 잔액 부족 스킵을 배제(스킵되면 과금이 사라져 게이트와 구분 불가)
+        weekendChoices: [], vacationChoices: [],
+        money: 999, // 잔액 부족으로 선불이 안 되는 경우를 배제
       }));
-      return next.weekLog!.moneyChange;
     };
+    const semesterMonth = monthStartWithRoutine(4);   // → 4월(W5~8, 학기 4주)
+    const vacationMonth = monthStartWithRoutine(20);  // → 8월(W21~24, 방학 4주)
+    const mixedMonth = monthStartWithRoutine(16);     // → 7월(W17~20, 학기 3 + 방학 1)
 
-    const schoolNet = withRoutine(3, false);
-    const vacationNet = withRoutine(21, true);   // 여름방학 W20~24 중 한 주
-
-    expect(schoolNet).toBe(getWeeklyIncome(PLAIN, HIGH_FIRST) - routineCostAt(HIGH_FIRST));
-    expect(schoolNet).toBe(0);
-    // 방학 주는 루틴비가 전혀 안 빠져 용돈 전액이 남는다
-    expect(vacationNet).toBe(getWeeklyIncome(PLAIN, HIGH_FIRST));
-    expect(vacationNet).toBeGreaterThan(schoolNet);
-    // 연간 합산이 순증 — 학기에 정체돼도 방학 적립이 남는다
-    expect(SCHOOL_WEEKS * schoolNet + VACATION_WEEKS * vacationNet).toBeGreaterThan(0);
+    expect(semesterMonth).toBe(4 * (getWeeklyIncome(PLAIN, HIGH_FIRST) - routineCostAt(HIGH_FIRST)));
+    expect(semesterMonth).toBe(0);
+    expect(vacationMonth).toBe(4 * getWeeklyIncome(PLAIN, HIGH_FIRST)); // 방학 달은 루틴비가 전혀 없다
+    expect(mixedMonth).toBe(4 * getWeeklyIncome(PLAIN, HIGH_FIRST) - 3 * routineCostAt(HIGH_FIRST)); // 학기 3주만 선불
+    expect(vacationMonth).toBeGreaterThan(mixedMonth);
+    expect(mixedMonth).toBeGreaterThan(semesterMonth);
   });
 });

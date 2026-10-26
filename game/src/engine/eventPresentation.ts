@@ -21,6 +21,7 @@ import type { EventChoice, EventTextVariant, GameEvent, GameState, SchoolBand, V
 import { getSchoolLevel } from './backgrounds';
 import { presentRomanceEvent } from './romance';
 import { absWeek, getSeason } from './weekMath';
+import { canSpend } from './spendableMoney';
 
 export type EventPresentationCtx = Pick<GameState, 'year' | 'gender'> & Partial<Pick<GameState, 'relationship'>> & {
   week: number;
@@ -164,4 +165,33 @@ export function presentEvent(event: GameEvent, ctx: EventPresentationCtx): GameE
 export function assignCurrentEvent(state: GameState, event: GameEvent, week: number): void {
   state.currentEvent = presentEvent({ ...event, week }, state);
   state.phase = 'event';
+}
+
+// ===== 선택지 가용성 — EventScene과 주 진행 드라이버가 같이 읽는다 =====
+// 화면은 condition이 거짓인 선택지를 숨기고, 돈이 모자란 선택지를 잠근다. 이 판정이 화면에만 있으면
+// 화면 밖(골든 드라이버·월 자동 진행기)은 잠긴 선택지를 그대로 실행한다 — 3자 검수에서 실제로 3건이 나왔다.
+
+/** 화면에 보이는가 — condition이 있으면 만족할 때만. state가 없으면(카탈로그 미리보기 경로) 보인다. */
+export function isChoiceVisible(choice: EventChoice, state?: GameState | null): boolean {
+  return !choice.condition || (state ? choice.condition(state) : true);
+}
+
+/** 선택지의 비용(만원, 0 이상) — moneyEffect가 음수일 때만 비용이다. 화면의 "💰 비용 N만원" 표시도 이 값을 쓴다. */
+export function choiceCost(choice: EventChoice): number {
+  return choice.moneyEffect && choice.moneyEffect < 0 ? -choice.moneyEffect : 0;
+}
+
+/** 돈이 모자라 잠기는가 — 비용이 있는데 잔액이 그보다 적으면. state가 없으면 잠그지 않는다. */
+export function isChoiceUnaffordable(choice: EventChoice, state?: GameState | null): boolean {
+  const cost = choiceCost(choice);
+  return cost > 0 && state ? !canSpend(state, cost) : false;
+}
+
+/**
+ * 플레이어가 누를 수 있는 **첫** 선택지의 원본 인덱스. 보이는 선택지가 전부 잠겼으면 -1 —
+ * EventScene이 같은 상황에 보내는 "지나친다" sentinel이고, store.resolveEvent가 효과 0으로 처리한다.
+ * `choices`는 성별이 적용된 목록이어야 한다(store.resolveEvent가 인덱스를 그 목록에 건다).
+ */
+export function firstPickableChoice(state: GameState, choices: readonly EventChoice[]): number {
+  return choices.findIndex(c => isChoiceVisible(c, state) && !isChoiceUnaffordable(c, state));
 }

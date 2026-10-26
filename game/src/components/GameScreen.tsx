@@ -17,6 +17,14 @@ import { webpSrc } from '../engine/assetWebp';
 import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
+import { MonthPlanScreen } from './screens/main/MonthPlanScreen';
+import { MonthSummaryScreen } from './screens/main/MonthSummaryScreen';
+import { PlaybackCard } from './screens/main/PlaybackCard';
+import { isMonthlyPlanningEnabled } from '../engine/featureFlags';
+import { getCurrentMonthPlan } from '../engine/monthPlan';
+import { buildMonthSummary, getMonthRun, hadTalkChance, isMonthEndWeek, stopLine, talkBankCount } from '../engine/monthPlayback';
+import { ACTIVITIES } from '../engine/activities';
+import { getMonthBlock } from '../engine/weekMath';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 import { SystemMenu } from './SystemMenu';
@@ -54,21 +62,19 @@ export function GameScreen() {
   // P3-7: selector 없는 전체-스토어 구독 → state + 사용하는 액션만 선택.
   // 액션은 Zustand에서 안정 참조라, npcActivityMap만 바뀔 땐 shallow-equal → 리렌더 스킵.
   const {
-    state, setWeekendChoices, setVacationChoices, setRoutine, advanceWeek,
-    advanceFromYearEnd, resolveEvent, setNpcActivityMap, buyItem, talkToNpc, talkToHome,
-    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, recordWeekendPlan,
+    state, setRoutine, confirmWeek, setMonthPlan,
+    advanceFromYearEnd, resolveEvent, buyItem, talkToNpc, talkToHome,
+    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
     startGame, exitToTitle, chooseSemesterGoal, startRomanceRetry, consumeRomancePlan,
+    startMonthPlayback, continuePlayback, pausePlayback, resumePlayback, finishMonth,
   } = useGameStore(useShallow(s => ({
     state: s.state,
     runDelta: s.runDelta,
-    setWeekendChoices: s.setWeekendChoices,
-    setVacationChoices: s.setVacationChoices,
-    recordWeekendPlan: s.recordWeekendPlan,
     setRoutine: s.setRoutine,
-    advanceWeek: s.advanceWeek,
+    confirmWeek: s.confirmWeek,
+    setMonthPlan: s.setMonthPlan,
     advanceFromYearEnd: s.advanceFromYearEnd,
     resolveEvent: s.resolveEvent,
-    setNpcActivityMap: s.setNpcActivityMap,
     buyItem: s.buyItem,
     talkToNpc: s.talkToNpc,
     talkToHome: s.talkToHome,
@@ -78,6 +84,12 @@ export function GameScreen() {
     chooseSemesterGoal: s.chooseSemesterGoal,
     startRomanceRetry: s.startRomanceRetry,
     consumeRomancePlan: s.consumeRomancePlan,
+    // 한 달 자동 진행(monthPlayback) — 재생 카드·멈춘 주간 화면·월말 결산이 부른다.
+    startMonthPlayback: s.startMonthPlayback,
+    continuePlayback: s.continuePlayback,
+    pausePlayback: s.pausePlayback,
+    resumePlayback: s.resumePlayback,
+    finishMonth: s.finishMonth,
     // 엔딩 화면의 다회차 입구용. startGame은 새 판의 유일한 진입점이고,
     // exitToTitle은 **세이브를 남긴 채** 타이틀로 나간다(resetGame과의 차이).
     startGame: s.startGame,
@@ -171,6 +183,14 @@ export function GameScreen() {
   const [eventResultData, setEventResultData] = useState<EventResultData | null>(null);
   // 기록장 — 지난 학년 회상(읽기 전용). null이면 닫힘. phase를 안 건드리는 로컬 오버레이.
   const [albumYear, setAlbumYear] = useState<number | null>(null);
+  // 한 달 자동 진행의 화면 쪽 상태 — 남은 주 다시 짜기 화면을 열었나 / "다음 멈춤까지" 빨리 넘기기 /
+  // 달의 마지막 주가 시험·학기 목표 주라 결산 화면을 먼저 보고 월말 결산으로 넘어갔나(그 결산의 키).
+  const [replanning, setReplanning] = useState(false);
+  const [fastPlayback, setFastPlayback] = useState(false);
+  const [bigResultSeen, setBigResultSeen] = useState<string | null>(null);
+  const playbackActive = state?.monthRun?.status === 'playing';
+  // 빨리 넘기기는 "다음 멈춤까지"다 — 멈추면 보통 속도로 돌아간다.
+  useEffect(() => { if (!playbackActive) setFastPlayback(false); }, [playbackActive]);
 
   // 이벤트 화면 청크 prefetch — 메인 화면 idle 때 한 번만. 첫 이벤트 진입 Suspense 플래시 완화.
   const eventChunksPrefetched = useRef(false);
@@ -418,35 +438,105 @@ export function GameScreen() {
       />
     );
   } else if (state.phase === 'result' && state.weekLog) {
-    // ===== 주간 결산 =====
+    // ===== 주간 결산 / 재생 카드 / 월말 결산 =====
+    // 한 달 자동 진행(기능 플래그 뒤)이면 재생이 처리한 주는 짧은 카드로, 달의 마지막 주 뒤엔 월말 결산 한 장으로 간다.
+    // 시험 결과·학기 목표 판정이 있는 주는 결산 화면을 그대로 보인다(그 주의 사건이 성적표다) — 월말이면 그 뒤에 결산.
     const { color: fatigueColor } = getFatigueDisplay(state.fatigue);
-    screenKey = `weekly:${state.year}-${state.week}`;
+    const log = state.weekLog;
+    const rawRun = isMonthlyPlanningEnabled() ? state.monthRun : undefined;
+    const runForLog = rawRun && log.year === rawRun.year && log.week != null && log.week >= 1 && log.week <= 48
+      && getMonthBlock(log.week).index === rawRun.month ? rawRun : null;
+    const lastEntry = runForLog?.log[runForLog.log.length - 1];
+    const autoWeek = !!lastEntry && lastEntry.week === log.week && lastEntry.auto;
+    const monthEnd = !!runForLog && isMonthEndWeek(log.week!);
+    const goalRecord = goalRecordForWeekLog(state);
+    const bigWeek = !!log.examResult || !!goalRecord;
+    const resultKey = `${state.year}-${state.week}`;
+    const weekInfo = log.week != null && log.year != null ? getWeekLabelAt(log.year, log.week) : getWeekLabel(state);
+    if (runForLog && monthEnd && (!bigWeek || bigResultSeen === resultKey)) {
+      screenKey = `month-summary:${runForLog.year}-${runForLog.month}`;
+      const routineName = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name ?? null : null;
+      const mm = log.monthMoney;
+      phaseContent = (
+        <MonthSummaryScreen
+          summary={buildMonthSummary(state, runForLog, routineName)}
+          nextLabel={state.week <= 48 ? getMonthBlock(state.week).label : null}
+          moneyLeft={Math.round((state.money - (mm?.allowance ?? 0) + (mm?.routinePaid ?? 0)) * 10) / 10}
+          nextMonthMoney={mm ? { allowance: mm.allowance, routinePaid: mm.routinePaid } : null}
+          missedTalks={runForLog.missedTalks}
+          onContinue={() => { setBigResultSeen(null); finishMonth(); }}
+        />
+      );
+    } else if (autoWeek && !bigWeek && !monthEnd) {
+      screenKey = `card:${state.year}-${state.week}`;
+      phaseContent = (
+        <PlaybackCard
+          state={state}
+          weekLog={log}
+          weekLabel={weekInfo}
+          resultDialogue={resultDialogue}
+          bgProps={bgProps}
+          fast={fastPlayback}
+          talkBadge={hadTalkChance(state) || talkBankCount(state) > 0}
+          onToggleFast={() => setFastPlayback(f => !f)}
+          onContinue={continuePlayback}
+          onPause={() => { pausePlayback('player'); continuePlayback(); }}
+          onTalk={() => { pausePlayback('talk'); continuePlayback(); }}
+          onShop={() => { pausePlayback('shop'); continuePlayback(); }}
+        />
+      );
+    } else {
+      screenKey = `weekly:${state.year}-${state.week}`;
+      phaseContent = (
+        <WeeklyResultScreen
+          weekLog={log}
+          stats={state.stats}
+          fatigue={state.fatigue}
+          money={state.money}
+          gender={state.gender}
+          year={state.year}
+          mentalState={state.mentalState}
+          track={state.track}
+          bgProps={bgProps}
+          // **로그가 박아 둔 좌표를 쓴다.** state.week은 이미 다음 주라 결산이 "2주차"라고
+          // 적히고 바로 다음 계획 화면과 같은 라벨을 달았다. 구세이브(week 미스탬프)는 예전
+          // 동작으로 폴백한다 — 진행 중인 결산 한 화면뿐이고 다음 주부터 정확해진다.
+          // **둘 다 있어야 쓴다(부분 복구 금지).** 한쪽만 박힌 로그는 손상된 값이고,
+          // 학년만 빠지면 라벨이 "undefined 1학기 4주차"가 된다. 모자라면 예전 동작으로 떨어진다.
+          weekInfo={weekInfo}
+          resultDialogue={resultDialogue}
+          fatigueColor={fatigueColor}
+          upcomingEvents={getUpcomingEvents(state)}
+          // T68 — 학기 마지막 주 결산이면 그 학기 목표의 판정. 사건을 거쳐 왔든 곧장 왔든 같은 로그를 읽는다.
+          goalRecord={goalRecord}
+          goalMoment={goalMomentForWeekLog(state)}
+          onContinue={runForLog && monthEnd ? () => setBigResultSeen(resultKey)
+            : autoWeek ? continuePlayback
+            : () => setPhase('weekday')}
+        />
+      );
+    }
+  } else if (isMonthlyPlanningEnabled() && state.week <= 48 && (replanning || !getCurrentMonthPlan(state))) {
+    // ===== 한 달 계획(월 단위 계획 4·5단계 — 기능 플래그 뒤) =====
+    // 이번 달 계획이 아직 없으면 주간 화면 대신 이 화면이 먼저 뜨고, 저장하면 그 달이 자동으로 흐른다.
+    // 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다 — 그때는 짜 둔 계획을 고치고 이어서 재생한다.
+    const existing = replanning ? getCurrentMonthPlan(state) : null;
+    screenKey = `month:${state.year}-${getMonthBlock(state.week).index}${existing ? ':replan' : ''}`;
     phaseContent = (
-      <WeeklyResultScreen
-        weekLog={state.weekLog}
-        stats={state.stats}
-        fatigue={state.fatigue}
-        money={state.money}
-        gender={state.gender}
-        year={state.year}
-        mentalState={state.mentalState}
-        track={state.track}
-        bgProps={bgProps}
-        // **로그가 박아 둔 좌표를 쓴다.** state.week은 이미 다음 주라 결산이 "2주차"라고
-        // 적히고 바로 다음 계획 화면과 같은 라벨을 달았다. 구세이브(week 미스탬프)는 예전
-        // 동작으로 폴백한다 — 진행 중인 결산 한 화면뿐이고 다음 주부터 정확해진다.
-        // **둘 다 있어야 쓴다(부분 복구 금지).** 한쪽만 박힌 로그는 손상된 값이고,
-        // 학년만 빠지면 라벨이 "undefined 1학기 4주차"가 된다. 모자라면 예전 동작으로 떨어진다.
-        weekInfo={state.weekLog.week != null && state.weekLog.year != null
-          ? getWeekLabelAt(state.weekLog.year, state.weekLog.week)
-          : getWeekLabel(state)}
-        resultDialogue={resultDialogue}
-        fatigueColor={fatigueColor}
-        upcomingEvents={getUpcomingEvents(state)}
-        // T68 — 학기 마지막 주 결산이면 그 학기 목표의 판정. 사건을 거쳐 왔든 곧장 왔든 같은 로그를 읽는다.
-        goalRecord={goalRecordForWeekLog(state)}
-        goalMoment={goalMomentForWeekLog(state)}
-        onContinue={() => setPhase('weekday')}
+      <MonthPlanScreen
+        state={state}
+        existing={existing}
+        onSetRoutine={setRoutine}
+        onChooseGoal={chooseSemesterGoal}
+        onStart={(plan) => {
+          const reason = setMonthPlan(plan);
+          if (reason === null) {
+            setReplanning(false);
+            if (existing) resumePlayback(); else startMonthPlayback();
+          }
+          return reason;
+        }}
+        onCancel={existing ? () => setReplanning(false) : undefined}
       />
     );
   } else {
@@ -454,6 +544,14 @@ export function GameScreen() {
     // 주 안에서는 키가 고정이라 루틴 조작으로 페이드가 돌지 않는다. 주 넘김은
     // main → weekly → main 으로 키가 두 번 바뀌면서 전환이 붙는다.
     screenKey = `main:${state.year}-${state.week}`;
+    // 한 달 자동 진행이 멈춰 이 화면에 섰으면 맨 위에 이유와 [이어서]·[다시 짜기]를 띄운다.
+    const run = isMonthlyPlanningEnabled() && getCurrentMonthPlan(state) ? getMonthRun(state) : null;
+    const playback = isMonthlyPlanningEnabled() && getCurrentMonthPlan(state) ? {
+      line: run ? stopLine(run) : '이번 달 계획이 짜여 있어요.',
+      talkBank: talkBankCount(state),
+      onResume: run ? resumePlayback : startMonthPlayback,
+      onReplan: () => setReplanning(true),
+    } : undefined;
     phaseContent = (
       <>
         <MainWeekScreen
@@ -474,17 +572,10 @@ export function GameScreen() {
           onTalkHome={talkToHome}
           onResolveParentChoice={resolveParentTalkChoice}
           onBuyItem={buyItem}
-          onConfirmWeek={(activities, npcChoices) => {
-            if (state.isVacation) setVacationChoices(activities);
-            else setWeekendChoices(activities);
-            // npcChoices를 그대로 전달 (슬롯 키 포함 — store에서 npcId만 추출)
-            setNpcActivityMap(npcChoices);
-            // "지난주처럼" 1탭 복사의 원본 — 확정 시점의 계획을 그대로 스냅샷한다.
-            // **advanceWeek 앞에 둔다**: processWeek이 클론에 실어 다음 주로 넘긴다.
-            recordWeekendPlan(activities, npcChoices);
-            // advanceWeek가 phase를 result/event/year-end/ending으로 전환 → 라우터가 알아서 분기.
-            advanceWeek();
-          }}
+          // 확정 순서(슬롯 → 동행 → "지난주처럼" 스냅샷 → advanceWeek)는 store.confirmWeek 하나가 갖는다.
+          onConfirmWeek={confirmWeek}
+          playback={playback}
+          initialOverlay={run?.stop === 'talk' ? 'talk' : run?.stop === 'shop' ? 'shop' : undefined}
         />
         {albumOverlay}
       </>

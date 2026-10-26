@@ -108,11 +108,13 @@ describe('돈 표기는 그 주에 실제로 오간 액수를 말한다', () => 
       '같은 주에 (+)가 뜨면 부호가 뒤집힌 것이다').toBeNull();
   });
 
-  // 음성 짝 — 안 산 주는 예전처럼 초록 (+)여야 한다. 없으면 "항상 (-)"도 통과한다.
-  it('아무것도 안 산 주에는 초록 (+) 표기가 뜬다', () => {
+  // 음성 짝 — 안 산 주에 용돈이 들어오면 초록 (+)여야 한다. 없으면 "항상 (-)"도 통과한다.
+  // 월 단위 돈(monthlyMoney.ts)에서 용돈은 달이 넘어갈 때 들어오고, 그 달의 마지막 주 결산에 실린다 —
+  // 그래서 W4(→ 4월 초)를 처리한 결산을 본다. 달 중간 주에는 용돈이 없어 (+)가 안 뜨는 게 맞다.
+  it('아무것도 안 산 채 달이 넘어간 주에는 초록 (+)와 그 달 용돈 줄이 뜬다', () => {
     const s0 = createInitialState('male', ['wealth', 'info'], { rngSeed: 5 });
     const start: GameState = {
-      ...s0, year: 5, week: 10, money: 1569,
+      ...s0, year: 5, week: 4, money: 1569,
       phase: 'weekday' as GameState['phase'],
       routineSlot2: 'self-study', routineSlot3: 'rest',
     };
@@ -124,6 +126,7 @@ describe('돈 표기는 그 주에 실제로 오간 액수를 말한다', () => 
 
     expect(screen.getByText(/^\(\+[\d.]+\)$/),
       '용돈만 들어온 주에 (+)가 없으면 반대로 지어낸 것이다').toBeTruthy();
+    expect(screen.getByTestId('month-money').textContent, '돈이 움직인 이유(그 달 용돈)를 말하지 않는다').toMatch(/4월 용돈 \+28만원/);
   });
 });
 

@@ -1,4 +1,5 @@
 import { GameEvent } from '../../types';
+import { canSpend } from '../../spendableMoney';
 
 export const MINJAE_EVENTS = [
   // ===== 민재 이벤트 체인 =====
@@ -105,7 +106,7 @@ export const MINJAE_EVENTS = [
       {
         text: '따로 골라 온 책 한 권을 준다 (-5만원)',
         // 책 한 권 정성 선물: 여유 있는 상태에서만 — 5만원만 있으면 다 털어 사는 느낌이라 부자연스러움
-        condition: (s) => s.money >= 10,
+        condition: (s) => canSpend(s, 10),
         effects: { social: 3, mental: 4 },
         moneyEffect: -5,
         npcEffects: [{ npcId: 'minjae', intimacyChange: 10 }],

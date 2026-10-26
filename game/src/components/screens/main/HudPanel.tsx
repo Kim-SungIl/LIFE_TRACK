@@ -1,7 +1,6 @@
 import { memo, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, ParentStrength, ParentBonusApplied } from '../../../engine/types';
-import { getParentMods, getWeeklyIncome } from '../../../engine/parentModifiers';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { Portrait } from '../../Portrait';
 import { PARENT_ICONS } from '../shared';
@@ -25,6 +24,8 @@ type Props = {
   fatigueLabel: string;
   weeklyActivityCost: number;
   weeklyOverBudget: boolean;
+  /** 입금 안내 한 줄 — monthlyMoney.incomeNote(월 단위면 "다음 달 초 +N만원 입금"). */
+  incomeNote: string;
   // Y7 수능까지 남은 주 — null이면 비표시 (Y7 외 학년 / 수능 이후)
   suneungWeeksLeft?: number | null;
   onOpenHome: () => void;
@@ -45,7 +46,7 @@ const PARENT_TIP_DESC: Record<string, string> = {
   emotional: '엄마/아빠가 자주 물어봐주고 안아준다. 지친 주에 피로 회복 보조.',
   // 절대액이 아니라 가산분으로 쓴다 — 용돈이 학교급 곡선(4/5/5)이라 절대액은 학년마다 달라진다.
   // (v8.0의 "+6만원"이 v8.1 하향 뒤에도 남아 있던 걸 v8.2에서 정정)
-  wealth: '용돈이 풍족해 학원·도구를 부담 없이 쓸 수 있다. 매주 용돈 +2만원.',
+  wealth: '용돈이 풍족해 학원·도구를 부담 없이 쓸 수 있다. 매달 용돈 +8만원.',
   info: '엄마가 학원·인강 정보를 잘 안다. 학원·자습 효율 +10%.',
   strict: '정해진 시간에 책상 — 루틴이 한 주 더 길게 유지된다.',
   resilience: '타고난 체력 — 피로 증가 -15%.',
@@ -55,11 +56,10 @@ const PARENT_TIP_DESC: Record<string, string> = {
 export const HudPanel = memo(function HudPanel({
   parents, gender, mentalStat, mentalState, year, money, isVacation,
   parentBonusesApplied, mood, weekInfo, month, fatigueColor, fatigueLabel,
-  weeklyActivityCost, weeklyOverBudget, suneungWeeksLeft, onOpenHome, onOpenAlbum, onOpenMenu }: Props) {
+  weeklyActivityCost, weeklyOverBudget, incomeNote, suneungWeeksLeft, onOpenHome, onOpenAlbum, onOpenMenu }: Props) {
   // 부모 칩 hover/탭 시 보여줄 설명 — 모바일 대응 위해 클릭으로도 토글. HUD 전용 로컬 state.
   const [activeParentTip, setActiveParentTip] = useState<string | null>(null);
   const reducedMotion = usePrefersReducedMotion();
-  const mods = getParentMods(parents);
   return (
     // **유리 바닥 + 2단 구성.** 둘을 합친 자리다.
     //
@@ -121,7 +121,7 @@ export const HudPanel = memo(function HudPanel({
             </span>
           )}
         </div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>주말 마감 시 +{getWeeklyIncome(parents, year) - mods.livingCost}만원 입금</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>{incomeNote}</div>
       </div>
     </div>
       {/* 부모 칩 — 보이는 원은 22×22, 히트 영역만 24×24(WCAG 2.5.8 AA). 발동 시 펄스.

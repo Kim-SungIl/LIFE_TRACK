@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { playSfx } from '../../../audio/sfx';
-import { GameState, Activity } from '../../../engine/types';
+import { GameState, Activity, MonthPlan } from '../../../engine/types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
-import { assignSlot } from '../../../engine/weekendPlan';
+import { assignSlot, makeRoutineChangeCheck } from '../../../engine/weekendPlan';
+import { getRoutineSwitchCost } from '../../../engine/monthlyMoney';
 import { ActivityPicker } from '../../ActivityPicker';
 import { SlotIcon } from '../../icons/icons';
 import { Dialog } from '../../Dialog';
@@ -21,6 +23,10 @@ type Props = {
   onSetRoutine: (slot2: string | null, slot3: string | null) => void;
   setNpcSelectFor: (v: string | null) => void;
   setLastReaction: (v: string | null) => void;
+  /** 이 주 **밖**에 이미 짜 둔 방학 활동 횟수(한 달 계획의 다른 주) — 방학당 횟수 제한에 더한다. 주간 화면은 없음. */
+  extraVacUse?: Record<string, number>;
+  /** 계획 화면: 루틴 판정의 잠금 판단에 씌울 저장 전 초안 계획(결제는 실제 판 그대로 — makeRoutineChangeCheck). */
+  routineJudgePlan?: MonthPlan;
 };
 
 // 방과후/저녁 루틴 + 주말/방학 슬롯의 활동 선택 모달 (ActivityPicker 래퍼).
@@ -28,8 +34,16 @@ export function SlotEditPopup({
   editingSlot, setEditingSlot, state, activities,
   selectedActivities, setSelectedActivities, npcChoices,
   maxSlots, currentSlots, availableMoney,
-  onSetRoutine, setNpcSelectFor, setLastReaction,
+  onSetRoutine, setNpcSelectFor, setLastReaction, extraVacUse, routineJudgePlan,
 }: Props) {
+  // 루틴 칸 — 고르려는 활동으로 바꾸면 이 선택 때문에 이번 주 확정이 잠기나(엔진 판정, 바꾸기 전 판정은 한 번만).
+  const isRoutineSlot = editingSlot === 'routine1' || editingSlot === 'routine2';
+  const routineCheck = useMemo(
+    () => (isRoutineSlot ? makeRoutineChangeCheck(state, selectedActivities, npcChoices, routineJudgePlan) : null),
+    [isRoutineSlot, state, selectedActivities, npcChoices, routineJudgePlan],
+  );
+  // 저녁 「자유시간」도 루틴 변경이다 — 알바를 비우면 그 주 수입이 사라진다(3자 6차 검수: 이 버튼만 판정을 우회했다).
+  const freeEveningBlocked = editingSlot === 'routine2' && !!state.routineSlot3 && !!routineCheck?.(state.routineSlot2, null);
   return (
     <Dialog onClose={() => setEditingSlot(null)} align="bottom" zIndex={250} maxWidth={600}
       labelledBy="slot-edit-title" focusKey={editingSlot}
@@ -66,14 +80,14 @@ export function SlotEditPopup({
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px' }}>
           {/* 루틴 슬롯 2(저녁)에 자유시간 옵션 — 디폴트 상태(routineSlot3=null)도 강조하지 않음. */}
           {editingSlot === 'routine2' && (
-            <button type="button" className="btn-reset" onClick={() => {
+            <button type="button" className="btn-reset" data-testid="routine-free-evening" disabled={freeEveningBlocked} onClick={() => {
               playSfx('tap');
               if (state.routineSlot2) { onSetRoutine(state.routineSlot2, null); }
               setEditingSlot(null);
             }} style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', marginBottom: 6,
-              borderRadius: 10, cursor: 'pointer', width: '100%', textAlign: 'left',
-              background: 'rgba(255,255,255,0.04)',
+              borderRadius: 10, cursor: freeEveningBlocked ? 'not-allowed' : 'pointer', width: '100%', textAlign: 'left',
+              background: 'rgba(255,255,255,0.04)', opacity: freeEveningBlocked ? 0.45 : 1,
               border: '1px solid rgba(255,255,255,0.06)',
             }}>
               {/* 저녁 슬롯의 `free` 아이콘과 **같은 그림**이라야 한다 — 이 버튼을 누르면
@@ -85,6 +99,7 @@ export function SlotEditPopup({
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: '0.88rem', fontWeight: 600 }}>자유시간</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>쉬면서 멘탈 회복 + 피로 감소</div>
+                {freeEveningBlocked && <div style={{ fontSize: '0.65rem', color: 'var(--red)', fontWeight: 600 }}>💰부족 — 이번 주 활동비가 모자라요</div>}
               </div>
             </button>
           )}
@@ -162,13 +177,24 @@ export function SlotEditPopup({
             npcChoices={npcChoices}
             compact={false}
             availableMoney={availableMoney}
+            // 루틴 칸은 고른 순간 onToggle이 넣을 두 칸 그대로 잰다(setRoutine이 그 상태로 결제한다).
+            routineChangeBlocked={
+              routineCheck && editingSlot === 'routine1' ? (a: Activity) => routineCheck(a.id, state.routineSlot3 === a.id ? null : state.routineSlot3)
+              : routineCheck && editingSlot === 'routine2' ? (a: Activity) => routineCheck(state.routineSlot2, a.id)
+              : undefined
+            }
+            routineDueCost={
+              editingSlot === 'routine1' ? (a: Activity) => getRoutineSwitchCost(state, a.id, state.routineSlot3 === a.id ? null : state.routineSlot3)
+              : editingSlot === 'routine2' ? (a: Activity) => getRoutineSwitchCost(state, state.routineSlot2, a.id)
+              : undefined
+            }
             pendingVacUse={editingSlot.startsWith('routine') ? undefined : (() => {
               // 이번 주 계획에 이미 배치된 활동별 인스턴스 수 — 편집 중 슬롯의 활동은
               // 1인스턴스 제외 (위 currentSlots 계산과 동일 규칙)
               const idx = editingSlot === 'weekend1' ? 0 :
                           editingSlot === 'weekend2' ? 1 :
                           parseInt(editingSlot.replace('weekend', '')) - 1;
-              const counts: Record<string, number> = {};
+              const counts: Record<string, number> = { ...extraVacUse };
               for (const inst of collapseActivityChoices(selectedActivities)) {
                 counts[inst] = (counts[inst] ?? 0) + 1;
               }

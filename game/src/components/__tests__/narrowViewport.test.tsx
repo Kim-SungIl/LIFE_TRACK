@@ -95,7 +95,7 @@ describe('#444 HUD — 우측 블록이 찌그러지지 않는다', () => {
         gender="male" mood="☀️" weekInfo="중2 1학기 12주차" month="5월"
         isVacation={false} fatigueColor="var(--green)" fatigueLabel="좋음"
         money={4} parents={['strict', 'emotional']} year={3}
-        mentalStat={60} mentalState="normal" weeklyActivityCost={0} weeklyOverBudget={false}
+        mentalStat={60} mentalState="normal" weeklyActivityCost={0} weeklyOverBudget={false} incomeNote="다음 달 초 +16만원 입금"
         onOpenHome={() => {}} onOpenAlbum={() => {}}
       />,
     );
@@ -156,7 +156,7 @@ describe('#445 후속 HUD — 컨트롤 행이 가운데 칼럼 안으로 돌아
         gender="male" mood="☀️" weekInfo="중2 1학기 12주차" month="5월"
         isVacation={false} fatigueColor="var(--green)" fatigueLabel="좋음"
         money={1569} parents={['strict', 'emotional']} year={3}
-        mentalStat={60} mentalState="normal" weeklyActivityCost={0} weeklyOverBudget={false}
+        mentalStat={60} mentalState="normal" weeklyActivityCost={0} weeklyOverBudget={false} incomeNote="다음 달 초 +16만원 입금"
         onOpenHome={() => {}} onOpenAlbum={() => {}} onOpenMenu={() => {}}
       />,
     );

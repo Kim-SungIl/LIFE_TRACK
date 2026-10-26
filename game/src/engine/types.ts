@@ -71,6 +71,24 @@ export interface GameState {
    * 판정·복사 규칙은 전부 `weekendPlan.ts`에 있다.
    */
   lastWeekendPlan?: WeekendPlanSnapshot;
+  /**
+   * 이번 달 계획(월 단위 계획 4단계, monthPlan.ts) — 그 달 각 주의 주말(방학이면 자유) 칸과 동행.
+   * 월 계획 화면이 쓰고, 계획 화면·자동 진행이 주마다 그 주 칸을 꺼내 쓴다. 남은 주의 유료 활동비는
+   * **봉투처럼 예약**되어 쓸 수 있는 돈에서 빠진다(spendableMoney). (학년, 달)이 지금과 다르면 지난달 것이라 무시한다.
+   * 구세이브에는 없다(없음 = 계획 없음, 예약 0).
+   */
+  monthPlan?: MonthPlan;
+  /**
+   * 이번 달 자동 진행(월 단위 계획 5단계, monthPlayback.ts) — 재생 중인가·멈췄으면 왜·지금까지 처리한 주의 기록·
+   * 재생이 지나쳐 버린 대화 기회 수. 매 변경 저장에 실려 새로고침해도 이어진다(새로고침하면 멈춤으로 연다).
+   * 구세이브·계획만 쓰는 판에는 없다(없음 = 주마다 손으로 진행).
+   */
+  monthRun?: MonthRun;
+  /**
+   * 지난달 재생이 지나친 대화 기회(최대 4) — **이번 달에만** 쓴다(설계안 §8, 디렉터 결정 월 적립).
+   * 말걸기·가정 대화가 그 주의 미니 이벤트 기회가 없을 때 이걸 대신 쓴다. (학년, 달)이 지금과 다르면 사라진 것이다.
+   */
+  talkBank?: TalkBank;
   semester: 1 | 2;
   isVacation: boolean;
   weekLog: WeekLog | null;
@@ -144,7 +162,17 @@ export interface GameState {
   moneyBlockedWeeksByYear?: number[];
   // 같은 주를 두 번 세지 않기 위한 절대주차 스탬프((year-1)*48 + week). UI가 매 렌더 알려오므로 필요하다.
   moneyBlockedStamp?: number;
-  burnoutCooldown: number;          // 번아웃 회복 직후 면역 주수 (재진입 방지)
+  /**
+   * 월 단위 돈(달 초 용돈·루틴 선불, monthlyMoney.ts)으로 도는 판인가. 새 판은 true로 시작하고,
+   * 구세이브(없음)는 첫 달 초를 만날 때까지 예전 매주 방식으로 돌다가 그때 켜진다.
+   */
+  monthlyMoney?: boolean;
+  /**
+   * 이번 달 루틴 선불 기록 — (학년, 달 블록)과 결제 당시 두 칸의 활동 id. 지금 칸의 활동이 이 기록과 같아야
+   * "이미 냈다". 칸을 바꾸면 기록과 어긋나 남은 주를 다시 낸다(디렉터 결정 (가)). 없으면 이번 달 미결제.
+   */
+  routinePrepaid?: { year: number; month: number; slot2: string | null; slot3: string | null };
+  burnoutCooldown: number;         // 번아웃 회복 직후 면역 주수 (재진입 방지)
   eventTimeCost: number;            // 이벤트 시간 소모: 0=없음, 1=1슬롯, 2=2슬롯
   // v1.2 기억 슬롯 시스템
   memorySlots: MemorySlot[];        // 최대 12 (카테고리당 2)
@@ -278,6 +306,92 @@ export interface ParentBonusApplied {
  * 압축하면 동행 키 `${activityId}:${slotIdx}`가 가리키는 칸이 어긋난다.
  * `npcChoices`는 확정 시점 UI 표현 그대로(레거시 키는 `activityId` 단독).
  */
+/** 한 달 계획(monthPlan.ts). `month`는 월 블록 번호(1~12, weekMath.MONTH_BLOCKS). */
+export interface MonthPlan {
+  year: number;
+  month: number;
+  /** 그 달의 주마다 한 칸 — 블록 안 순서대로(1주차부터). */
+  weeks: MonthPlanWeek[];
+  /**
+   * 그 달에 받은 친구 초대와 답(monthInvites.ts). 수락한 초대는 그 주 그 칸이 약속으로 고정된다.
+   * 거절은 계획을 저장할 때 친밀도 −1, 수락했는데 그 주에 못 지키면 그 주 처리 때 −2(디렉터 결정 2026-10-25).
+   * 구세이브·초대가 없던 달은 없다.
+   */
+  invites?: (MonthInvite & { accepted: boolean })[];
+}
+
+/** 자동 진행이 멈춘 이유(monthPlayback.ts). */
+export type PlaybackStop =
+  | 'player'        // 플레이어가 ⏸
+  | 'talk'          // 💬 대화를 눌렀다 — 주 경계에서 멈추고 대화를 연다
+  | 'shop'          // 🛒 상점을 눌렀다
+  | 'burnout'       // 번아웃(디렉터 결정: 무너지면 멈춘다)
+  | 'season'        // 섞인 달 안에서 학기 → 방학(또는 반대)으로 넘어간다
+  | 'plan-invalid'  // 이번 주 계획이 성립하지 않는다(돈·동행 부재)
+  | 'reload';       // 재생 중에 껐다 켰다 — 멈춤으로 연다
+
+/** 이번 달 자동 진행 상태. `month`는 월 블록 번호(1~12). */
+export interface MonthRun {
+  year: number;
+  month: number;
+  status: 'playing' | 'paused';
+  /** 멈춘 이유(status가 paused일 때). */
+  stop?: PlaybackStop;
+  /** plan-invalid일 때 사람이 읽는 이유. */
+  stopDetail?: string;
+  /** 다음 주 경계에서 멈출 이유 — 처리 중(사건·결산 카드)에 정해 두고 경계에서 적용한다. */
+  stopAtBoundary?: PlaybackStop;
+  /** 이번 달에 처리한 주(손으로 확정한 주 포함), 처리한 순서대로. */
+  log: MonthRunWeek[];
+  /** 재생이 지나친 대화 기회 — 달이 끝나면 다음 달 talkBank가 된다(최대 4). */
+  missedTalks: number;
+  /** 달을 시작할 때의 능력치·친밀도 — 월말 결산의 변화 배지(숫자 없음)가 이것과 비교한다. */
+  startStats: Stats;
+  startIntimacy: Record<string, number>;
+  /** 달을 시작할 때의 잔액(월말 결산의 "남은 돈"). */
+  startMoney: number;
+}
+
+/** 이번 달에 처리한 한 주. */
+export interface MonthRunWeek {
+  week: number;
+  /** 재생이 처리했나(true) 손으로 확정했나(false). */
+  auto: boolean;
+  /** 이벤트 시간 소모로 빠진 칸 수(0~2) — 방과후·주말 마지막 칸이 함께 빠진다. */
+  timeCost: number;
+  /** 실행 안 된 루틴 수(시간 소모·돈·자격). */
+  routineMissed: number;
+  /** 실행 안 된 주말(방학) 칸 수. */
+  choiceMissed: number;
+  burnout: boolean;
+  /** 이 주에 걸린 약속 — 지켰나. */
+  promises: { npcId: string; kept: boolean }[];
+}
+
+/** 지난달 재생이 지나친 대화 기회 — 이번 달(year, month)에만 쓴다. */
+export interface TalkBank {
+  year: number;
+  month: number;
+  count: number;
+}
+
+/** 친구 초대 한 건 — 그 주(week)의 그 칸(slotIdx)에 그 활동(activityId)을 같이 하자는 제안. */
+export interface MonthInvite {
+  npcId: string;
+  week: number;
+  slotIdx: number;
+  activityId: string;
+}
+
+export interface MonthPlanWeek {
+  /** 학년 안 주차(1~48). */
+  week: number;
+  /** 화면이 저장하는 모양 그대로의 슬롯 배열 — 여러 칸 활동은 칸마다 같은 id, 빈 칸은 ''. */
+  activities: string[];
+  /** `${활동}:${칸}` → NPC id(동행). */
+  npcChoices: Record<string, string>;
+}
+
 export interface WeekendPlanSnapshot {
   activities: string[];
   npcChoices: Record<string, string>;
@@ -308,6 +422,13 @@ export interface WeekLog {
   /** 실행되지 않은 활동들 — 계획 화면의 사전 경고가 이걸 읽는다(문자열 파싱 아님) */
   skipped: SkippedActivity[];
   milestoneMessages: string[];   // 이번 주 달성한 성장 메시지들
+  /**
+   * 이 주를 끝으로 **다음 달로 넘어가며** 들어온 그 달 용돈과 낸 루틴 선불(monthlyMoney.ts). 달의 마지막 주
+   * 결산에만 있다. moneyChange에 이미 들어 있고, 결산 화면이 "5월 용돈 +16만원 · 학원비 −12만원"으로 따로 보인다.
+   */
+  monthMoney?: { label: string; allowance: number; routinePaid: number };
+  /** 이번 주에 걸린 약속을 지켰나(monthInvites.settlePromisesForWeek). 약속이 없던 주에는 없다. */
+  promises?: { npcId: string; kept: boolean }[];
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)
   /** 이번 주 발동한 부모 보너스 (UX 가시화용 — 인라인 스티커, WeekLog 1줄, HUD 펄스) */
   parentBonusesApplied?: ParentBonusApplied[];

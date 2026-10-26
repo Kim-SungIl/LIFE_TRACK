@@ -14,7 +14,7 @@
 
 import { readFileSync } from 'fs';
 import { createInitialState, processWeek } from '../../src/engine/gameEngine';
-import { getWeeklyIncome } from '../../src/engine/parentModifiers';
+import { getMonthlyAllowance } from '../../src/engine/monthlyMoney';
 import type { GameState, ParentStrength } from '../../src/engine/types';
 
 let passed = 0, failed = 0;
@@ -52,10 +52,11 @@ console.log('\n=== P8. freedom 죽은 코드 정리 ===');
 
   // P8의 불변식은 "freedom이 시작 자금을 바꾸지 않는다"이고, 금액 자체는 부수적이다.
   // v8.2에서 용돈이 학교급 곡선(초 4 / 중 5 / 고 5)이 되면서 리터럴 3이 깨졌는데, 그때
-  // 값만 4로 바꾸면 다음 조정에서 또 깨진다 → getWeeklyIncome(SSOT)에서 유도한다.
+  // 값만 4로 바꾸면 다음 조정에서 또 깨진다 → SSOT에서 유도한다.
+  // 2026-10 월 단위 돈(monthlyMoney.ts): 시작 자금이 "첫 주 용돈"에서 "첫 달 용돈(주 × 4)"이 됐다 — 근거만 갈아 끼운다.
   const sFree = createInitialState('male', ['freedom', 'resilience'], { rngSeed: SEED });
   const sNorm = createInitialState('male', ['resilience', 'emotional'], { rngSeed: SEED });
-  const expectedStart = getWeeklyIncome(['resilience', 'emotional'], 1); // 초등 첫 주 용돈
+  const expectedStart = getMonthlyAllowance({ parents: ['resilience', 'emotional'], year: 1 }); // 초등 첫 달 용돈
   assert(`freedom 시작 자금 = 일반 시작 자금 (${expectedStart}만원, 초등 곡선값)`,
     sFree.money === sNorm.money && sNorm.money === expectedStart,
     `freedom=${sFree.money} / 일반=${sNorm.money} / 기대=${expectedStart}`);
@@ -63,7 +64,7 @@ console.log('\n=== P8. freedom 죽은 코드 정리 ===');
   // 주석에 "wealth만 다름"이라고 써 있었는데 정작 검증이 없었다 — 함께 잠근다.
   const sWealth = createInitialState('male', ['wealth', 'resilience'], { rngSeed: SEED });
   assert('wealth 부모만 시작 자금이 더 많다',
-    sWealth.money > sNorm.money && sWealth.money === getWeeklyIncome(['wealth', 'resilience'], 1),
+    sWealth.money > sNorm.money && sWealth.money === getMonthlyAllowance({ parents: ['wealth', 'resilience'], year: 1 }),
     `wealth=${sWealth.money} / 일반=${sNorm.money}`);
 }
 

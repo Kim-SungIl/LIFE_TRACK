@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getSpendableForPlanning } from '../engine/spendableMoney';
 import { playSfx } from '../audio/sfx';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
@@ -59,13 +60,18 @@ interface Props {
   companionEligible?: boolean;
   // 이번 주 계획에 이미 배치된 활동별 인스턴스 수 (편집 중 슬롯 제외) — vacationLimit 합산 판정용
   pendingVacUse?: Record<string, number>;
+  // 루틴 칸이면 그 활동으로 바꿀 때 **지금** 낼 돈(monthlyMoney.getRoutineSwitchCost) — "이번 달 N만" 표시용.
+  routineDueCost?: (a: Activity) => number;
+  // 루틴 칸이면 그 활동으로 바꾸면 이 선택 때문에 확정이 잠기는가(weekendPlan.makeRoutineChangeCheck — 엔진에 직접 묻는다).
+  // 없으면 주말 칸(그 주 비용 × 쓸 수 있는 돈).
+  routineChangeBlocked?: (a: Activity) => boolean;
 }
 
-export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney, companionEligible = true, pendingVacUse }: Props) {
+export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney, companionEligible = true, pendingVacUse, routineDueCost, routineChangeBlocked }: Props) {
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
-  const money = availableMoney !== undefined ? availableMoney : state.money;
+  const money = availableMoney !== undefined ? availableMoney : getSpendableForPlanning(state);
   const categories = ACTIVITY_CATEGORIES;
 
   return (
@@ -137,7 +143,10 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                 {catActivities.map(a => {
                   const isSel = selected.includes(a.id);
                   const cost = getActivityCost(a, state.year);
-                  const canAfford = (cost <= 0 || money >= cost) && (!a.requires || a.requires(state));
+                  const due = routineDueCost ? routineDueCost(a) : cost;
+                  // 루틴은 엔진에 직접 묻는다(이 선택 때문에 확정이 잠기나). 지금 고른 칸은 막지 않는다(그대로 두는 선택이다).
+                  const moneyShort = routineChangeBlocked ? !isSel && routineChangeBlocked(a) : cost > 0 && money < cost;
+                  const canAfford = !moneyShort && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
                   // Phase 1: vacationLimit 도달 시 새 선택 불가 (이미 선택돼 있으면 그대로 유지)
                   // 이번 주 계획분(pendingVacUse)도 합산 — 남은 한도보다 많이 배치해 엔진이 스킵하는 것 방지
@@ -263,7 +272,10 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                               {vacLimitReached ? '이번 방학 한도 도달' : `방학당 ${a.vacationLimit}회 (${vacUsed}/${a.vacationLimit})`}
                             </span>
                           )}
-                          {cost > 0 && money < cost && (
+                          {routineDueCost && due > cost && (
+                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>이번 달 {due}만</span>
+                          )}
+                          {moneyShort && (
                             <span style={{ fontSize: '0.65rem', color: 'var(--red)', fontWeight: 600 }}>💰부족</span>
                           )}
                           {isSel && <span style={{ fontSize: '0.9rem' }}>✓</span>}

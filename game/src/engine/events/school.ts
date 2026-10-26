@@ -454,7 +454,7 @@ export const SCHOOL_MIDDLE_HIGH = [
     speakers: ['jihun', 'minjae'],
     choices: [
       {
-        text: '"가자!" — 주말에 농구하러 간다',
+        text: '"가자!" — 방과후랑 주말 하루 비워서 농구한다',
         effects: { health: 2, social: 2, mental: 3 },
         fatigueEffect: 3,
         npcEffects: [{ npcId: 'jihun', intimacyChange: 3 }, { npcId: 'minjae', intimacyChange: 1 }],
@@ -472,7 +472,7 @@ export const SCHOOL_MIDDLE_HIGH = [
     femaleDescription: '저녁에 지훈이한테 전화가 왔다.\n"야, 너 요즘 공부만 하잖아. 이번 주말에 떡볶이 먹으러 갈래? 민재도 온대."',
     femaleChoices: [
       {
-        text: '"가자!" — 같이 떡볶이 먹으러 간다',
+        text: '"가자!" — 방과후랑 주말 하루 비워서 떡볶이 먹으러 간다',
         effects: { social: 3, mental: 4 },
         fatigueEffect: 1,
         moneyEffect: -1,
@@ -976,10 +976,10 @@ export const SCHOOL_MIDDLE_HIGH = [
   // 고등 2학기 모의고사 이벤트 (W32 — 모의 W33 전주)
   {
     id: 'mock-exam-prep-2',
-    title: '9월 모의고사',
+    title: '모의고사 예고',
     // ANNUAL 등재 + year>=5라 고1·고2·고3에 모두 나온다. '수시 지원 기준'은 고3 담임 대사라
     // 학년 무관하게 참인 문장으로 교체 (학년별 분기는 title/description이 정적이라 불가).
-    description: '9월 모의고사가 다가온다.\n"이번 성적, 나중에 다 근거로 남는다" — 선생님의 말에 교실이 조용해졌다.',
+    description: '다음 주가 모의고사다.\n"이번 성적, 나중에 다 근거로 남는다" — 선생님의 말에 교실이 조용해졌다.',
     week: 32,
     location: 'classroom',
     background: 'classroom_{school}',
@@ -1002,21 +1002,21 @@ export const SCHOOL_MIDDLE_HIGH = [
   {
     id: 'winter-start',
     title: '겨울방학',
-    description: '겨울방학이 시작됐다. 크리스마스가 다가오고, 거리에 캐롤이 흘러나온다.\n올해도 끝나간다.',
+    description: '겨울방학이 시작됐다. 새해가 밝았다.\n거리엔 아직 연말 장식이 남아 있다.',
     week: 43,
     location: 'home',
     background: 'school_road_morning',
     speakers: ['jihun', 'subin'],
     choices: [
       {
-        text: '크리스마스에 친구들과 모인다',
+        text: '친구들과 새해 모임을 한다',
         effects: { social: 3, mental: 4 },
         moneyEffect: -2,
         npcEffects: [
           { npcId: 'jihun', intimacyChange: 3 },
           { npcId: 'subin', intimacyChange: 1 },
         ],
-        message: '친구들과 선물을 교환하고 케이크를 먹었다. 따뜻한 하루.',
+        message: '친구들과 떡볶이를 먹으며 새해 소원을 하나씩 말했다. 따뜻한 하루.',
       },
       {
         text: '집에서 가족과 보낸다',
@@ -1027,7 +1027,7 @@ export const SCHOOL_MIDDLE_HIGH = [
         text: '알바한다 — 돈이 필요해',
         effects: { mental: -1 },
         moneyEffect: 5,
-        message: '크리스마스에도 일했다. 돈은 벌었는데... 좀 씁쓸하다.',
+        message: '방학 첫 주부터 일했다. 돈은 벌었는데... 좀 씁쓸하다.',
         condition: (s) => s.year >= 4,
       },
       {
@@ -1041,12 +1041,12 @@ export const SCHOOL_MIDDLE_HIGH = [
   },
   {
     id: 'year-end-reflection',
-    title: '새해 전날',
-    description: '12월 31일 밤. 올 한 해를 돌아본다.\n창밖으로 불꽃놀이 소리가 들린다.',
+    title: '학년의 끝',
+    description: '학년이 끝나간다. 올 한 해를 돌아본다.\n창밖은 아직 겨울이다.',
     week: 47,
     condition: (s) => s.year !== 1 && s.year !== 4 && s.year !== 7, // 졸업 해에는 졸업 이벤트가 W46에 뜸
     location: 'home',
-    background: 'night_sky_fireworks',
+    background: 'bedroom_night',
     choices: [
       {
         text: '"내년에는 더 잘할 거야" — 다짐한다',

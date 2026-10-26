@@ -1,10 +1,14 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { getSpendableForPlanning } from '../../../engine/spendableMoney';
+import { incomeNote } from '../../../engine/monthlyMoney';
+import { getPlannedWeek } from '../../../engine/monthPlan';
+import { talkBankCount } from '../../../engine/monthPlayback';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
-import { assignSlot, getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
+import { assignSlot, getConfirmGate, getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
 import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
@@ -56,13 +60,22 @@ type Props = {
   onOpenMenu?: () => void;
   // T68 학기 목표 고르기 — 없으면 칩을 그리지 않는다(테스트·구 호출부 호환).
   onChooseGoal?: (offer: GoalOffer) => boolean;
+  /**
+   * 한 달 자동 진행이 멈춰 이 화면에 섰다(monthPlayback, 설계안 §5). 맨 위에 멈춘 이유와 [▶ 이어서]·[남은 주 다시 짜기]를 띄운다.
+   * 이 화면의 확정 버튼은 그대로 "이번 주만 손으로" 진행이다. 없으면(주간 진행) 띠를 안 그린다.
+   */
+  playback?: { line: string; talkBank: number; onResume: () => void; onReplan: () => void };
+  /** 재생 카드의 💬/🛒로 멈췄으면 그 창을 연 채로 시작한다. */
+  initialOverlay?: 'talk' | 'shop';
 };
 
-export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal }: Props) {
-  const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? []);
+export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal, playback, initialOverlay }: Props) {
+  // 이번 달 계획(월 계획 화면이 저장)이 있으면 그 주 칸으로 미리 채운다 — 확정은 그대로 이 화면의 CTA가 한다.
+  const plannedWeek = getPlannedWeek(state);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? plannedWeek?.activities ?? []);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
-  const [npcChoices, setNpcChoices] = useState<Record<string, string>>(initialPlan?.npcChoices ?? {});
+  const [npcChoices, setNpcChoices] = useState<Record<string, string>>(initialPlan?.npcChoices ?? plannedWeek?.npcChoices ?? {});
   // Only the mounted planner consumes its recovery snapshot, after initializing both drafts.
   useEffect(() => {
     if (initialPlan) onPlanRestored?.();
@@ -77,7 +90,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   useEffect(() => { setNpcSmalltalk(null); }, [npcDetailFor]);
   useEffect(() => { if (!showHomeModal) setHomeSmalltalk(null); }, [showHomeModal]);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
-  const [showShop, setShowShop] = useState(false);
+  const [showShop, setShowShop] = useState(initialOverlay === 'shop');
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
     // ever_seen은 새 게임에도 유지되는 영속 플래그 — 한 번이라도 튜토리얼을 본/건너뛴 반복 플레이어는 자동 스킵.
@@ -98,7 +111,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     try { return !!localStorage.getItem('lifetrack_rest_ack'); } catch { return false; }
   });
   // 친구 관계 시트 — 진입카드에서 열림(Phase 5 IA)
-  const [showRelations, setShowRelations] = useState(false);
+  const [showRelations, setShowRelations] = useState(initialOverlay === 'talk');
 
   // 의존: week/year/totalWeeksPlayed (primitives) — 한 주가 진행될 때만 새 라인 뽑고,
   // 말걸기 같은 로컬 state 변경에는 영향 안 받게 한다.
@@ -132,13 +145,6 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
 
   // 루틴 비용 체크 — 돈이 부족하면 루틴 변경 강제. 학년별 차등 비용 적용.
   // 방학 중에는 엔진이 루틴을 가동하지 않으므로 비용 0.
-  const routineCost = (() => {
-    if (state.isVacation) return 0;
-    const r2 = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null;
-    const r3 = state.routineSlot3 ? ACTIVITIES.find(a => a.id === state.routineSlot3) : null;
-    return (r2 ? getActivityCost(r2, state.year) : 0) + (r3 ? getActivityCost(r3, state.year) : 0);
-  })();
-  const routineTooExpensive = !state.isVacation && state.routineSlot2 && routineCost > 0 && state.money < routineCost;
 
   // Phase 2 — 확정 시 예상 결과 프리뷰. 순수 processWeek 재실행 diff(gameEngine).
   // 계획(루틴/주말선택/동행)·현재 상태가 바뀔 때만 재계산.
@@ -176,20 +182,17 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   //
   // 루틴 슬롯도 포함한다. 루틴 경고(routineTooExpensive)는 두 슬롯의 **합계**로 판정하므로
   // 수입 루틴이 섞이면(학원 4 + 알바 −4 = 0) 순차로는 실패하는데도 뜨지 않는다.
-  const unaffordable = routineTooExpensive
-    // 루틴 경고가 이미 떠 있으면 그쪽 문구가 우선 — 두 경고를 겹치면 무엇을 고칠지 흐려진다
-    // (루틴을 고치면 잔액이 남아 선택 슬롯도 함께 풀리는 경우가 많다).
-    ? []
-    : [...new Set(weekPreview.skipped.filter(s => s.reason === 'money').map(s => s.activityId))]
-        .map(id => ACTIVITIES.find(a => a.id === id))
-        .filter((a): a is typeof ACTIVITIES[number] => !!a);
-  // 확정 가능 여부 — 프리뷰 노출/버튼 disabled 공용 판정 (SSOT).
-  const confirmDisabled = (!state.isVacation && !state.routineSlot2)
-    || !!routineTooExpensive || unaffordable.length > 0;
+  // 확정 가능 여부 — 루틴 비용·돈 잠김·루틴 미설정을 엔진 판정 하나(weekendPlan.getConfirmGate)로 읽는다.
+  // 주 진행 드라이버·월 자동 진행기가 같은 함수를 쓴다 — 화면에만 식이 있으면 화면 밖은 이 잠금을 모른다.
+  // 루틴 경고가 떠 있으면 unaffordable은 비어 있다(두 경고를 겹치면 무엇을 고칠지 흐려진다).
+  const gate = getConfirmGate(state, weekPreview);
+  const { routineCost, routineTooExpensive, disabled: confirmDisabled, moneyBlocked } = gate;
+  const unaffordable = gate.unaffordableIds
+    .map(id => ACTIVITIES.find(a => a.id === id))
+    .filter((a): a is typeof ACTIVITIES[number] => !!a);
 
   // T25 — 확정이 **돈 때문에** 잠긴 주를 적립한다. 루틴 미설정으로 잠긴 것은 돈이 아니므로 뺀다.
   // 스토어가 절대주차 스탬프로 1회만 세므로 매 렌더 호출해도 안전하다.
-  const moneyBlocked = !!routineTooExpensive || unaffordable.length > 0;
   useEffect(() => {
     if (moneyBlocked) onMoneyBlocked?.();
   }, [moneyBlocked, state.year, state.week, onMoneyBlocked]);
@@ -200,7 +203,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     0,
   );
   const weeklyActivityCost = routineCost + selectedActivityCost;
-  const weeklyOverBudget = weeklyActivityCost > state.money;
+  const weeklyOverBudget = weeklyActivityCost > getSpendableForPlanning(state);
 
   // 루틴 콤보 표시 — 슬롯별 카운터 (한 슬롯만 변경 시 다른 슬롯 보너스 보전).
   // 접두·"최대" 판정은 WeekPlanner 가 하고, 여기선 첫 티어에 못 닿은 슬롯을 0으로 눌러 배지를 숨긴다.
@@ -221,7 +224,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   // 가정 모달 배지 — pending 이어도 풀이 비면 잡담으로 빠지므로, 실제 남은 이벤트가 있을 때만 true.
   // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
   const homeHasEvent = getEligibleParentClimax(state) != null
-    || (state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0);
+    || ((state.parentEventPendingThisWeek || talkBankCount(state) > 0) && getAvailableHomeEvents(state).length > 0);
   // 동행 후보 = met + 재적(같은 학교) — 전출 도윤/졸업 공백기 하은은 주말 동행에서 제외.
   // NpcSelectModal memo 안정성 위해 npcs ref(+ 재적 판정 입력인 year/events) 변경 시에만 재계산.
   const companionNpcs = useMemo(
@@ -316,11 +319,35 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
         fatigueLabel={fatigueLabel}
         weeklyActivityCost={weeklyActivityCost}
         weeklyOverBudget={weeklyOverBudget}
+        incomeNote={incomeNote(state)}
         suneungWeeksLeft={suneungWeeksLeft}
         onOpenHome={handleOpenHome}
         onOpenAlbum={onOpenAlbum}
         onOpenMenu={onOpenMenu}
       />
+
+      {/* 한 달 자동 진행이 멈춘 자리 — 이유 한 줄과 이어서/다시 짜기 */}
+      {playback && (
+        <div role="status" data-testid="playback-paused" style={{
+          background: tintedGlass('rgba(240,164,122,0.14)'), border: '1px solid rgba(240,164,122,0.35)',
+          borderRadius: 12, padding: '10px 14px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          <span style={{ fontSize: '0.82rem', lineHeight: 1.5 }}>⏸ {playback.line}</span>
+          {playback.talkBank > 0 && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {playback.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
+          )}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); playback.onResume(); }}
+              style={{ minHeight: 44, borderRadius: 10, background: 'var(--accent)', color: 'var(--btn-ink)', fontWeight: 700, fontSize: '0.82rem' }}>
+              ▶ 이어서 재생
+            </button>
+            <button type="button" className="btn-reset" data-testid="playback-replan" onClick={() => { playSfx('tap'); playback.onReplan(); }}
+              style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem' }}>
+              남은 주 다시 짜기
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 저장 실패 경고 — 진행 손실을 사용자가 모른 채 지나가지 않게 (storage full/사파리 프라이빗 등) */}
       {saveFailed && (
@@ -416,7 +443,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
           npcChoices={npcChoices}
           maxSlots={maxSlots}
           currentSlots={currentSlots}
-          availableMoney={state.money - routineCost -
+          availableMoney={getSpendableForPlanning(state) - routineCost -
             selectedInstances.reduce((sum, act) => sum + getActivityCost(act, state.year), 0)}
           onSetRoutine={onSetRoutine}
           setNpcSelectFor={setNpcSelectFor}
@@ -605,8 +632,9 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
       <div aria-hidden="true" style={{ height: 'calc(80px + env(safe-area-inset-bottom))' }} />
 
       {/* 확정 버튼 — 하단 고정(sticky CTA). .bottom-action = position:fixed + safe-area */}
+      {/* 재생이 멈춘 동안 주 행동은 띠의 ▶ 이어서 재생이다 — 이 버튼은 이 주만 손으로 확정하는 보조라 한 단계 낮춘다 */}
       <div data-tutorial="confirm" className="bottom-action">
-        <button className="btn btn-primary"
+        <button className={playback ? 'btn btn-secondary' : 'btn btn-primary'} data-testid="week-confirm"
           disabled={confirmDisabled}
           onClick={handleConfirm}
         >
@@ -615,6 +643,9 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
             // 비활성 버튼은 이유를 스스로 말해야 한다 — 위 경고를 못 보고 버튼만 누르는 사람이 있다.
             : unaffordable.length > 0
             ? '⬆ 돈이 부족한 활동이 있어요'
+            // 이번 주를 이대로 하면 한 달 계획에 떼어 둔 다음 주 몫까지 쓴다
+            : gate.reserveBreached
+            ? '⬆ 다음 주 계획 몫까지 써요 — 이번 주를 줄이세요'
             : !state.isVacation && !state.routineSlot2
               ? '⬆ 먼저 방과후 루틴을 설정하세요'
               : currentSlots === 0
