@@ -9,7 +9,8 @@
 // 주말 활동이 플레이어 모르게 확정되면 돈을 조용히 쓰는 경로가 되기 때문이다.
 import { GameState, WeekendPlanSnapshot } from './types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from './activities';
-import { getRoutineDueCost } from './monthlyMoney';
+import { getRoutineDueCost, payRoutineIfDue } from './monthlyMoney';
+import { cloneGameState } from './stateClone';
 import { canSpendWhilePlanning } from './spendableMoney';
 import { reservedMoney } from './monthPlan';
 import { slotCountFor } from './slotCount';
@@ -190,4 +191,32 @@ export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'ski
   const missingRoutine = !state.isVacation && !state.routineSlot2;
   const moneyBlocked = routineTooExpensive || unaffordableIds.length > 0 || reserveBreached;
   return { routineCost, routineTooExpensive, unaffordableIds, reserveBreached, missingRoutine, moneyBlocked, disabled: missingRoutine || moneyBlocked };
+}
+
+/**
+ * 루틴을 이렇게 바꾸면 **이 선택 때문에** 이번 주를 확정할 수 없게 되는가 — 루틴 고르기 화면의 "💰부족" 판정.
+ *
+ * 예전엔 화면이 엔진을 흉내 낸 예산식(쓸 수 있는 돈 − 주말 비용 + 지금 루틴비 …)으로 쟀다. 그 식은 한 달 등록(지금 낸다),
+ * 루틴 알바 수입(주말보다 먼저 들어온다), 주말 알바 수입(나중에 들어온다), 봉투를 하나씩 놓쳐 3자 검수가 매 라운드
+ * 새 어긋남을 찾았다(PR #523 3~5차). 그래서 흉내를 그만두고 **엔진에 직접 묻는다**: 바꾼 복제본에 setRoutine과 같은
+ * 결제(payRoutineIfDue)를 하고, 그 주를 미리보기로 돌려 확정 잠금(getConfirmGate)을 본다.
+ *
+ * 막는 때 = 바꾼 뒤 돈 때문에 잠기는데, ① 바꾸기 전엔 안 잠겼거나 ② 바꾸며 **안 바꿨으면 안 냈을 돈**을 낸다(잠긴 판에
+ * 돈만 넣고 끝난다). 이미 잠긴 판에서 더 내지 않는 전환은 막지 않는다 — 학원비를 못 내는 판의 저녁 독서, 주말 때문에
+ * 잠긴 판에서 저녁만 바꾸는 것(아직 안 낸 방과후 학원비는 setRoutine이 같이 내지만 확정 때도 어차피 내는 돈이다).
+ * 만든 뒤 활동마다 부른다 — 바꾸기 전 판정은 한 번만 돌린다.
+ */
+export function makeRoutineChangeCheck(
+  state: GameState, weekend: string[], npcChoices: Record<string, string>,
+): (slot2: string | null, slot3: string | null) => boolean {
+  const before = getConfirmGate(state, predictWeekOutcome(state, weekend, npcChoices)).moneyBlocked;
+  const paidAnyway = payRoutineIfDue(cloneGameState(state));
+  return (slot2, slot3) => {
+    const next = cloneGameState(state);
+    next.routineSlot2 = slot2;
+    next.routineSlot3 = slot3;
+    const paid = payRoutineIfDue(next);
+    const after = getConfirmGate(next, predictWeekOutcome(next, weekend, npcChoices)).moneyBlocked;
+    return after && (!before || paid > paidAnyway);
+  };
 }

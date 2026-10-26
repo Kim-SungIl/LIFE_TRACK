@@ -1,8 +1,9 @@
+import { useMemo } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
-import { assignSlot } from '../../../engine/weekendPlan';
+import { assignSlot, makeRoutineChangeCheck } from '../../../engine/weekendPlan';
 import { getRoutineSwitchCost } from '../../../engine/monthlyMoney';
 import { ActivityPicker } from '../../ActivityPicker';
 import { SlotIcon } from '../../icons/icons';
@@ -33,6 +34,12 @@ export function SlotEditPopup({
   maxSlots, currentSlots, availableMoney,
   onSetRoutine, setNpcSelectFor, setLastReaction, extraVacUse,
 }: Props) {
+  // 루틴 칸 — 고르려는 활동으로 바꾸면 이 선택 때문에 이번 주 확정이 잠기나(엔진 판정, 바꾸기 전 판정은 한 번만).
+  const isRoutineSlot = editingSlot === 'routine1' || editingSlot === 'routine2';
+  const routineCheck = useMemo(
+    () => (isRoutineSlot ? makeRoutineChangeCheck(state, selectedActivities, npcChoices) : null),
+    [isRoutineSlot, state, selectedActivities, npcChoices],
+  );
   return (
     <Dialog onClose={() => setEditingSlot(null)} align="bottom" zIndex={250} maxWidth={600}
       labelledBy="slot-edit-title" focusKey={editingSlot}
@@ -165,7 +172,12 @@ export function SlotEditPopup({
             npcChoices={npcChoices}
             compact={false}
             availableMoney={availableMoney}
-            // 루틴 칸은 고른 순간 onToggle이 넣을 두 칸 그대로 비용을 잰다(setRoutine이 그 상태로 결제한다).
+            // 루틴 칸은 고른 순간 onToggle이 넣을 두 칸 그대로 잰다(setRoutine이 그 상태로 결제한다).
+            routineChangeBlocked={
+              routineCheck && editingSlot === 'routine1' ? (a: Activity) => routineCheck(a.id, state.routineSlot3 === a.id ? null : state.routineSlot3)
+              : routineCheck && editingSlot === 'routine2' ? (a: Activity) => routineCheck(state.routineSlot2, a.id)
+              : undefined
+            }
             routineDueCost={
               editingSlot === 'routine1' ? (a: Activity) => getRoutineSwitchCost(state, a.id, state.routineSlot3 === a.id ? null : state.routineSlot3)
               : editingSlot === 'routine2' ? (a: Activity) => getRoutineSwitchCost(state, state.routineSlot2, a.id)

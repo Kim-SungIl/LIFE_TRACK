@@ -147,6 +147,12 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const setDraft = (idx: number, patch: Partial<Draft>) =>
     setDrafts(ds => ds.map((d, i) => (i === idx ? withPins(weeks[i], { ...d, ...patch }) : d)));
 
+  /** 저장 전 초안을 이번 달 계획으로 넣은 지금 주 판 — 루틴 칸 판정이 초안의 봉투를 보게 한다. */
+  const draftState: GameState = {
+    ...stateAt(state.week),
+    monthPlan: { year: state.year, month: block.index, weeks: weeks.map((week, i) => ({ week, activities: drafts[i].activities, npcChoices: drafts[i].npcChoices })) },
+  };
+
   /** 이 주를 고칠 때 쓸 수 있는 돈 — 다른 주 예약과 아직 안 낸 학원비를 뺀다(그 주 몫은 지금 고르는 중). */
   const availableFor = (idx: number) =>
     state.money - routineDue - drafts.reduce((s, d, i) => (i === idx ? s : s + plannedWeekCost(d.activities, state.year)), 0);
@@ -395,7 +401,8 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         <SlotEditPopup
           editingSlot={editing.slot}
           setEditingSlot={(slot) => setEditing(slot ? { idx: editing.idx, slot } : null)}
-          state={stateAt(editing.slot.startsWith('routine') ? state.week : editingWeek)}
+          // 루틴 칸은 저장 전 초안까지 예약으로 넣은 판으로 잰다 — 루틴 판정(makeRoutineChangeCheck)이 봉투를 보게.
+          state={editing.slot.startsWith('routine') ? draftState : stateAt(editingWeek)}
           activities={getAvailableActivities(stateAt(editing.slot.startsWith('routine') ? state.week : editingWeek))}
           selectedActivities={drafts[editing.idx].activities}
           setSelectedActivities={(ids) => setDraft(editing.idx, { activities: ids })}

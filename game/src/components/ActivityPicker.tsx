@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { canSpendWhilePlanning, getSpendableForPlanning } from '../engine/spendableMoney';
-import { getRoutineDueCost } from '../engine/monthlyMoney';
+import { getSpendableForPlanning } from '../engine/spendableMoney';
 import { playSfx } from '../audio/sfx';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
@@ -61,21 +60,18 @@ interface Props {
   companionEligible?: boolean;
   // 이번 주 계획에 이미 배치된 활동별 인스턴스 수 (편집 중 슬롯 제외) — vacationLimit 합산 판정용
   pendingVacUse?: Record<string, number>;
-  // 루틴 칸이면 그 활동으로 바꿀 때 **지금** 낼 돈(monthlyMoney.getRoutineSwitchCost). 월 단위 돈에서는 한 달 등록이라
-  // 주 단가가 아니다 — 주 단가로 보면 고르게 해 놓고 확정에서 잠근다. 없으면 주말 칸(그 주 비용 × 쓸 수 있는 돈).
+  // 루틴 칸이면 그 활동으로 바꿀 때 **지금** 낼 돈(monthlyMoney.getRoutineSwitchCost) — "이번 달 N만" 표시용.
   routineDueCost?: (a: Activity) => number;
+  // 루틴 칸이면 그 활동으로 바꾸면 이 선택 때문에 확정이 잠기는가(weekendPlan.makeRoutineChangeCheck — 엔진에 직접 묻는다).
+  // 없으면 주말 칸(그 주 비용 × 쓸 수 있는 돈).
+  routineChangeBlocked?: (a: Activity) => boolean;
 }
 
-export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney, companionEligible = true, pendingVacUse, routineDueCost }: Props) {
+export function ActivityPicker({ activities, selected, onToggle, maxSlots, currentSlots, state, npcChoices = {}, compact = false, availableMoney, companionEligible = true, pendingVacUse, routineDueCost, routineChangeBlocked }: Props) {
   const [expandedCat, setExpandedCat] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
 
   const money = availableMoney !== undefined ? availableMoney : getSpendableForPlanning(state);
-  // 넘겨받은 돈(availableMoney)은 지금 루틴비를 이미 뺀 값이다 — 루틴을 바꾸면 그 몫 대신 새 몫을 내므로 되돌려 놓고 잰다.
-  const currentRoutineDue = routineDueCost ? getRoutineDueCost(state) : 0;
-  // 지금 루틴비를 이미 못 내 확정이 잠긴 판 — 이때만 "내야 할 돈이 늘지 않는 전환"을 열어 준다(아래).
-  const routineAlreadyUnpayable = currentRoutineDue > 0 && !canSpendWhilePlanning(state, currentRoutineDue);
-  const routineBudget = routineDueCost ? Math.round((money + currentRoutineDue) * 10) / 10 : money;
   const categories = ACTIVITY_CATEGORIES;
 
   return (
@@ -147,19 +143,9 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                 {catActivities.map(a => {
                   const isSel = selected.includes(a.id);
                   const cost = getActivityCost(a, state.year);
-                  // 루틴은 바꿀 때 **지금 낼 돈**(한 달 등록)으로, 주말 칸은 그 주 비용으로 본다. 둘 다 이미 고른 주말 비용을
-                  // 뺀 돈과 비교한다 — 잔액 전체로 보면 주말에 넣은 과외비까지 학원비로 써 버리고 과외가 돈 부족으로 빠진다(3자 재검수).
                   const due = routineDueCost ? routineDueCost(a) : cost;
-                  // 루틴은 두 물음 다: ① 이미 고른 주말 비용을 뺀 돈으로 되나 ② **지금 잔액**으로 낼 수 있나(확정 잠금
-                  // routineTooExpensive와 같은 물음). 넘겨받은 돈에는 아직 안 받은 주말 알바 수입(음수 비용)이 더해져 있어
-                  // ①만 보면 결제는 거부되는데 고르게 해 놓고 확정에서 잠근다(3자 3차 검수).
-                  // 이미 루틴비를 못 내 잠긴 판에서는 내야 할 돈이 늘지 않는 전환(무료로 바꾸기 등)을 막지 않는다 — 막으면 저녁 칸의
-                  // 독서까지 "💰부족"이라 말했다(3자 3차 검수). 그 판의 잠금은 방과후 쪽이 말한다. 잠기지 않은 판에는 이 예외를
-                  // 두지 않는다: 저녁 알바(수입)를 독서로 바꾸면 내야 할 돈은 같아도 그 주 수입이 사라져 주말 활동이 빠진다(4차 검수).
-                  const freeSwapWhileLocked = routineAlreadyUnpayable && due <= currentRoutineDue;
-                  const moneyShort = routineDueCost
-                    ? due > 0 && !freeSwapWhileLocked && (routineBudget < due || !canSpendWhilePlanning(state, due))
-                    : cost > 0 && money < cost;
+                  // 루틴은 엔진에 직접 묻는다(이 선택 때문에 확정이 잠기나). 지금 고른 칸은 막지 않는다(그대로 두는 선택이다).
+                  const moneyShort = routineChangeBlocked ? !isSel && routineChangeBlocked(a) : cost > 0 && money < cost;
                   const canAfford = !moneyShort && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
                   // Phase 1: vacationLimit 도달 시 새 선택 불가 (이미 선택돼 있으면 그대로 유지)

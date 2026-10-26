@@ -16,7 +16,8 @@ import { useGameStore } from '../../engine/store';
 import { MONTHLY_PLANNING_KEY } from '../../engine/featureFlags';
 import { SlotEditPopup } from '../screens/main/SlotEditPopup';
 import { EventScene } from '../EventScene';
-import { createInitialState } from '../../engine/gameEngine';
+import { createInitialState, predictWeekOutcome } from '../../engine/gameEngine';
+import { getConfirmGate } from '../../engine/weekendPlan';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost, getAvailableActivities } from '../../engine/activities';
 import { getRoutineSwitchCost, payMonthStart } from '../../engine/monthlyMoney';
 import { validateMonthPlan } from '../../engine/monthPlan';
@@ -26,6 +27,7 @@ import { getMonthBlock, getWeekInfo } from '../../engine/weekMath';
 import { makeChoice, makeEvent, makeState } from '../../test/fixtures';
 import type { GameState, MonthPlan } from '../../engine/types';
 
+const ART_ID = 'art-lesson';
 const CAT_LABEL: Record<string, string> = {
   study: '공부', exercise: '운동', social: '관계', talent: '자기계발', rest: '휴식', parent: '가족', work: '알바',
 };
@@ -55,7 +57,9 @@ beforeEach(() => {
   localStorage.setItem('lifetrack_rest_ack', '1');
 });
 
-describe('루틴 피커 — 고를 수 있나를 "지금 낼 돈"으로 본다(플래그 꺼짐에도 나가는 경로)', () => {
+describe('루틴 피커 — 이 선택 때문에 이번 주를 확정할 수 없게 되면 막는다(엔진 판정, 플래그 꺼짐에도 나가는 경로)', () => {
+  // 판정은 weekendPlan.makeRoutineChangeCheck — 바꾼 복제본에 setRoutine과 같은 결제를 하고 그 주 미리보기로 확정 잠금을 본다.
+  // 화면 쪽 예산식은 3자 검수 3~5차에서 매번 새 어긋남이 나와(한 달 등록·루틴 알바 수입·주말 알바 수입·봉투) 버렸다.
   /** Y2 W6, 자습(무료)이 이번 달 몫으로 결제된 판. */
   function w6(patch: Partial<GameState> = {}): GameState {
     const s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 3 });
@@ -64,13 +68,14 @@ describe('루틴 피커 — 고를 수 있나를 "지금 낼 돈"으로 본다(�
       monthlyMoney: true, routinePrepaid: { year: 2, month: getMonthBlock(6).index, slot2: 'self-study', slot3: null },
     }, patch);
   }
-  /** 주간 화면이 넘기는 값과 같은 꼴: 쓸 수 있는 돈 − 지금 루틴비(0, 자습 선불) − 이번 주 주말에 고른 비용. */
-  function openRoutine(s: GameState, weekendCost = 0) {
-    render(<SlotEditPopup editingSlot="routine1" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
-      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
-      availableMoney={s.money - weekendCost} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+  /** 루틴 칸을 연다 — 주말은 그 주에 실제로 고른 칸(selectedActivities)이고, 판정은 그걸로 엔진을 돌린다. */
+  function openRoutine(s: GameState, weekend: string[] = ['rest', 'rest'], slot: 'routine1' | 'routine2' = 'routine1') {
+    render(<SlotEditPopup editingSlot={slot} setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
+      selectedActivities={weekend} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
+      availableMoney={s.money} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
   }
-  const weekly = () => getActivityCost(ACTIVITIES.find(a => a.id === 'academy')!, 2);
+  const cost = (id: string, year = 2) => getActivityCost(ACTIVITIES.find(a => a.id === id)!, year);
+  const weekly = () => cost('academy');
 
   it('잔액이 주 단가는 되고 한 달 몫(남은 3주)은 안 되면 학원을 못 고른다 — 이번 달 금액과 부족 표시', () => {
     const s = w6({ money: weekly() * 2 });
@@ -84,92 +89,120 @@ describe('루틴 피커 — 고를 수 있나를 "지금 낼 돈"으로 본다(�
   });
 
   it('한 달 몫이 있으면 고를 수 있다', () => {
-    const s = w6({ money: weekly() * 3 });
-    openRoutine(s);
+    openRoutine(w6({ money: weekly() * 3 }));
     expect(activityButton('academy').hasAttribute('disabled')).toBe(false);
   });
 
-  it('이번 주 주말에 고른 비용은 빼고 잰다 — 잔액으로는 한 달 몫이 되어도 주말 몫을 쓰면 안 되면 못 고른다', () => {
-    // 잔액 전체로 재던 1차 수정의 회귀(3자 재검수): 주말 과외비까지 학원비로 내고, 과외는 확정에서 돈 부족으로 빠졌다.
-    const s = w6({ money: weekly() * 4 });
-    openRoutine(s, weekly() * 2);
-    expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
+  it('이번 주 주말에 고른 유료 활동 몫까지 학원비로 쓰게 되면 막는다 · 둘 다 되는 잔액이면 연다', () => {
+    const art = cost(ART_ID);
+    openRoutine(w6({ money: weekly() * 3 + art - 1 }), [ART_ID, 'rest']);
+    expect(activityButton('academy').hasAttribute('disabled'), '학원을 내면 레슨이 돈 부족으로 빠진다').toBe(true);
     cleanup();
-    openRoutine(s, weekly());
-    expect(activityButton('academy').hasAttribute('disabled'), '경계: 남은 돈 = 한 달 몫').toBe(false);
+    openRoutine(w6({ money: weekly() * 3 + art }), [ART_ID, 'rest']);
+    expect(activityButton('academy').hasAttribute('disabled'), '경계: 학원 + 레슨 = 잔액').toBe(false);
   });
 
-  it('지금 낼 루틴비가 있는 칸을 바꿀 때는 그 몫을 되돌려 놓고 잰다(바꾸면 옛 몫 대신 새 몫을 낸다)', () => {
-    // 학원(미납)을 인강으로 바꾸는 판 — 주간 화면이 넘기는 돈은 학원 몫을 이미 뺀 값이다.
-    const s = w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: weekly() * 3 });
-    const academyDue = weekly() * 3;
-    render(<SlotEditPopup editingSlot="routine1" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
-      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
-      availableMoney={s.money - academyDue} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+  it('미납 학원을 인강으로 바꾸면 학원 몫 대신 인강 몫을 낸다 — 인강 몫이 되면 고를 수 있다', () => {
+    openRoutine(w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: cost('internet-lecture') * 3 }));
     expect(activityButton('internet-lecture').hasAttribute('disabled')).toBe(false);
   });
 
   it('저녁 칸에 있던 활동을 방과후로 옮기면 저녁 칸은 비므로 한 칸 몫만 잰다', () => {
-    // routine1에 저녁 칸 활동을 고르면 onToggle이 저녁 칸을 비운다 — 비용도 그 상태로 재야 한다.
-    const gym = getActivityCost(ACTIVITIES.find(a => a.id === 'gym')!, 2);
-    const s = w6({ routineSlot3: 'gym', money: gym * 3 + 1 });
-    const currentDue = gym * 3; // 저녁 헬스 미납
-    render(<SlotEditPopup editingSlot="routine1" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
-      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
-      availableMoney={s.money - currentDue} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+    const gym = cost('gym');
+    const s = w6({ routineSlot3: 'gym', money: gym * 3 });
     expect(getRoutineSwitchCost(s, 'gym', null), '전제').toBe(gym * 3);
+    openRoutine(s);
     expect(activityButton('gym').hasAttribute('disabled')).toBe(false);
   });
 
-  it('계획 화면 — 주말 초안에 잡은 돈은 루틴에 못 쓴다', () => {
-    const s = w6({ money: weekly() * 3 + getActivityCost(ACTIVITIES.find(a => a.id === 'art-lesson')!, 2) - 1 });
+  it('지금 잔액으로 못 내면 막는다 — 주말에 들어올 수입으로는 고르는 순간 내는 학원비를 못 낸다', () => {
+    // 학원비는 고르는 순간(setRoutine) 낸다. 주말 수입이 넘겨받는 돈을 키워도 결제는 지금 잔액에서 거부된다.
+    openRoutine(w6({ money: weekly() * 2 }));
+    expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('방과후 학원비를 못 내 이미 잠긴 판에서 저녁 칸 독서는 고를 수 있고 "부족"이라 하지 않는다', () => {
+    const s = w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: 1 });
+    openRoutine(s, ['rest', 'rest'], 'routine2');
+    const reading = activityButton('reading');
+    expect(reading.hasAttribute('disabled')).toBe(false);
+    expect(reading.textContent).not.toContain('부족');
+  });
+
+  it('이미 잠긴 판(주말 활동 값이 모자람)에 루틴 돈만 내고 끝나는 전환은 막는다 · 돈을 안 내는 전환은 연다', () => {
+    // 잠금 사유는 주말의 비싼 활동. 헬스로 바꾸면 헬스비는 지금 내지는데 주말은 여전히 못 한다 — 돈만 빠지고 잠금은 그대로.
+    // 달 마지막 주(W8)라 헬스는 한 주치만 낸다. 주말 레슨 둘은 잔액(헬스 한 주치)보다 비싸 바꾸기 전에 이미 잠겼다.
+    const gym = cost('gym');
+    const base = w6({ week: 8, money: gym });
+    const weekend = [ART_ID, ART_ID];
+    expect(cost(ART_ID) * 2 > gym, '전제: 레슨 둘 > 잔액').toBe(true);
+    expect(getRoutineSwitchCost(base, 'self-study', 'gym'), '전제: 헬스 한 주치').toBe(gym);
+    expect(getConfirmGate(base, predictWeekOutcome(base, weekend, {})).moneyBlocked, '전제: 바꾸기 전에 이미 잠김').toBe(true);
+    openRoutine(base, weekend, 'routine2');
+    expect(activityButton('gym').hasAttribute('disabled'), '헬스비를 내고도 잠긴 채').toBe(true);
+    expect(activityButton('reading').hasAttribute('disabled'), '돈을 안 내는 전환').toBe(false);
+  });
+
+  it('주말 때문에 잠긴 판에서 저녁만 바꾸면(미납 방과후 학원비는 어차피 낸다) 막지 않는다', () => {
+    // 5차 sub-agent: 저녁 독서를 고르면 setRoutine이 미납 학원비를 같이 내 "돈을 낸다"로 보였다 — 확정 때도 내는 돈이다.
+    const art = cost(ART_ID);
+    const due = weekly() * 3;
+    const s = w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: due + art - 1 });
+    expect(getConfirmGate(s, predictWeekOutcome(s, [ART_ID, 'rest'], {})).moneyBlocked, '전제: 주말 레슨 때문에 잠김').toBe(true);
+    openRoutine(s, [ART_ID, 'rest'], 'routine2');
+    const reading = activityButton('reading');
+    expect(reading.hasAttribute('disabled')).toBe(false);
+    expect(reading.textContent).not.toContain('부족');
+  });
+
+  it('주말 때문에 잠긴 판에서 저녁 알바를 넣어 그 수입으로 풀리면 연다', () => {
+    const due = cost('academy', 4) * 3;
+    const s = w6({ year: 4, routineSlot2: 'academy', routinePrepaid: undefined, money: due + 1 });
+    expect(getConfirmGate(s, predictWeekOutcome(s, [ART_ID, ART_ID], {})).moneyBlocked, '전제: 레슨 둘 때문에 잠김').toBe(true);
+    openRoutine(s, [ART_ID, ART_ID], 'routine2');
+    expect(activityButton('part-time').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('잠기지 않은 판에서 저녁 알바를 독서로 바꿔 그 주 수입이 사라지면 주말 레슨이 빠지므로 막는다', () => {
+    const job = cost('part-time', 4);
+    expect(job < 0, '전제: 알바는 수입(음수 비용)').toBe(true);
+    const due = cost('academy', 4) * 3;
+    const s = w6({ year: 4, routineSlot2: 'academy', routineSlot3: 'part-time', routinePrepaid: undefined, money: due });
+    openRoutine(s, [ART_ID, 'rest'], 'routine2');
+    expect(activityButton('reading').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('내야 할 돈이 0이어도(방과후 선불 완료) 저녁 알바를 독서로 바꿔 수입이 사라지면 막는다', () => {
+    // 5차 cursor: "내야 할 돈"만 보는 식은 이 전환을 늘 열었다 — 돈은 안 내지만 그 주 수입이 사라진다.
+    const s = w6({ year: 4, routineSlot3: 'part-time', money: 0 });
+    expect(getRoutineSwitchCost(s, 'self-study', 'reading'), '전제: 내야 할 돈 0').toBe(0);
+    expect(getConfirmGate(s, predictWeekOutcome(s, [ART_ID, 'rest'], {})).moneyBlocked, '전제: 알바 수입으로 레슨이 된다').toBe(false);
+    openRoutine(s, [ART_ID, 'rest'], 'routine2');
+    expect(activityButton('reading').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('저녁 알바를 둔 채 방과후를 더 싼 루틴으로 바꾸면 알바 수입이 주말 전에 들어와 레슨까지 된다 — 연다', () => {
+    // 5차 검수: 예산식은 루틴 알바 수입을 몰라 이 전환을 막았다.
+    const s = w6({ year: 4, week: 8, routineSlot2: 'academy', routineSlot3: 'part-time', routinePrepaid: undefined, money: cost('academy', 4) });
+    expect(getRoutineSwitchCost(s, 'gym', 'part-time'), '전제: 헬스 한 주치(W8)').toBe(cost('gym', 4));
+    openRoutine(s, [ART_ID, 'rest']);
+    expect(activityButton('gym').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('계획 화면 — 다음 주 초안에 잡은 돈(아직 저장 전 봉투)은 루틴에 못 쓴다', () => {
+    // 이번 주(W6) 초안은 판정이 주말 칸으로 직접 본다. 다음 주 초안은 저장 전이라 state.monthPlan에 없다 —
+    // 초안을 계획으로 넣은 판(draftState)으로 재야 결제가 그 몫을 피한다.
+    const s = w6({ money: weekly() * 3 + cost(ART_ID) - 1 });
     render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} />);
     for (const b of screen.queryAllByRole('button', { name: '다음에' })) fireEvent.click(b);
-    pickInto('slot-6-0', 'art-lesson');
+    fireEvent.click(screen.getAllByRole('button', { expanded: false }).find(b => b.textContent?.startsWith('3주'))!);
+    pickInto('slot-7-0', ART_ID);
     fireEvent.click(screen.getAllByRole('button').find(b => (b.textContent ?? '').includes('①'))!);
     expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
   });
 
-  it('아직 안 받은 주말 알바 수입으로는 학원비를 못 낸다 — 지금 잔액으로 낼 수 있어야 고를 수 있다', () => {
-    // 주간 화면이 넘기는 돈은 주말 알바(음수 비용)만큼 커진다. 그 돈은 주말에야 들어오는데 학원비는 고르는 순간 낸다.
-    const s = w6({ money: weekly() * 2 });
-    openRoutine(s, -weekly() * 2); // 주말 알바 수입 몫만큼 커진 availableMoney
-    expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
-  });
-
-  it('방과후 학원비를 못 내는 판에서도 저녁 칸에 무료 활동은 고를 수 있다(내야 할 돈이 늘지 않는다)', () => {
-    const s = w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: 1 });
-    const academyDue = weekly() * 3;
-    render(<SlotEditPopup editingSlot="routine2" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
-      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
-      availableMoney={s.money - academyDue} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
-    const reading = activityButton('reading');
-    expect(reading.hasAttribute('disabled')).toBe(false);
-    expect(reading.textContent).not.toContain('부족');
-    expect(activityButton('internet-lecture').hasAttribute('disabled'), '유료 저녁은 여전히 막힌다').toBe(true);
-  });
-
-  it('잠기지 않은 판에서 저녁 알바를 무료 활동으로 바꿔 그 주 수입이 사라지면 주말 몫이 모자라 막는다', () => {
-    // 학원(미납) 몫은 잔액으로 낼 수 있고, 주말 미술 레슨은 저녁 알바 수입으로 낸다. 독서로 바꾸면 내야 할 돈은 같지만
-    // 수입이 사라져 레슨이 돈 부족으로 빠진다 — "늘지 않는 전환" 예외가 이 판까지 열면 고르게 해 놓고 잠근다(4차 검수).
-    const job = ACTIVITIES.find(a => a.id === 'part-time')!;
-    expect(getActivityCost(job, 4) < 0, '전제: 알바는 수입(음수 비용)').toBe(true);
-    const art = getActivityCost(ACTIVITIES.find(a => a.id === 'art-lesson')!, 4);
-    const academy4 = getActivityCost(ACTIVITIES.find(a => a.id === 'academy')!, 4);
-    const s = w6({ year: 4, routineSlot2: 'academy', routineSlot3: 'part-time', routinePrepaid: undefined });
-    const due = academy4 * 3;
-    s.money = due;
-    const available = s.money - due - art; // 주간 화면 식: 쓸 수 있는 돈 − 지금 루틴비 − 주말(레슨)
-    render(<SlotEditPopup editingSlot="routine2" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
-      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
-      availableMoney={available} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
-    expect(getRoutineSwitchCost(s, 'academy', 'reading'), '전제: 내야 할 돈은 같다').toBe(due);
-    expect(activityButton('reading').hasAttribute('disabled')).toBe(true);
-  });
-
   it('아직 매주 방식인 구세이브는 예전처럼 주 단가로 본다', () => {
-    const s = w6({ money: weekly() * 2, monthlyMoney: undefined, routinePrepaid: undefined });
-    openRoutine(s);
+    openRoutine(w6({ money: weekly() * 2, monthlyMoney: undefined, routinePrepaid: undefined }));
     const btn = activityButton('academy');
     expect(btn.hasAttribute('disabled')).toBe(false);
     expect(btn.textContent).not.toContain('이번 달');
