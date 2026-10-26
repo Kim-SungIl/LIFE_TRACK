@@ -204,6 +204,7 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
     ['필드 대부분이 없는 기록', { week: 5 }],
     // 다른 필드는 멀쩡하고 결산이 .map 하는 promises만 없는 기록 — 위 픽스처는 auto에서 먼저 걸려 이 검사를 가린다.
     ['promises만 없는 기록', { week: 5, auto: true, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false }],
+    ['auto가 없는 기록', { week: 5, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false, promises: [] }],
     ['약속 항목이 깨진 기록', { week: 5, auto: true, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false, promises: [{ npcId: 'jihun' }] }],
   ])('주 기록이 깨진 장부도 버린다(%s) — 결산(buildMonthSummary)이 필드마다 읽는다', (_label, entry) => {
     const s = at(6);

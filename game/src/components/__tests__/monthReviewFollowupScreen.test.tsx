@@ -130,6 +130,25 @@ describe('루틴 피커 — 고를 수 있나를 "지금 낼 돈"으로 본다(�
     expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
   });
 
+  it('아직 안 받은 주말 알바 수입으로는 학원비를 못 낸다 — 지금 잔액으로 낼 수 있어야 고를 수 있다', () => {
+    // 주간 화면이 넘기는 돈은 주말 알바(음수 비용)만큼 커진다. 그 돈은 주말에야 들어오는데 학원비는 고르는 순간 낸다.
+    const s = w6({ money: weekly() * 2 });
+    openRoutine(s, -weekly() * 2); // 주말 알바 수입 몫만큼 커진 availableMoney
+    expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('방과후 학원비를 못 내는 판에서도 저녁 칸에 무료 활동은 고를 수 있다(내야 할 돈이 늘지 않는다)', () => {
+    const s = w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: 1 });
+    const academyDue = weekly() * 3;
+    render(<SlotEditPopup editingSlot="routine2" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
+      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
+      availableMoney={s.money - academyDue} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+    const reading = activityButton('reading');
+    expect(reading.hasAttribute('disabled')).toBe(false);
+    expect(reading.textContent).not.toContain('부족');
+    expect(activityButton('internet-lecture').hasAttribute('disabled'), '유료 저녁은 여전히 막힌다').toBe(true);
+  });
+
   it('아직 매주 방식인 구세이브는 예전처럼 주 단가로 본다', () => {
     const s = w6({ money: weekly() * 2, monthlyMoney: undefined, routinePrepaid: undefined });
     openRoutine(s);
@@ -226,6 +245,37 @@ describe('계획 화면 — 복사·「지난주처럼」도 방학당 횟수를
     const uses = plan.weeks.filter(w => w.activities.includes('countryside')).map(w => w.week);
     expect(uses).toEqual([21]);
     expect(validateMonthPlan(s, plan)).toBeNull();
+  });
+});
+
+describe('계획 화면 — 「지난주처럼」·이미 쓴 방학 횟수도 센다', () => {
+  function august(patch: Partial<GameState> = {}): GameState {
+    const s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 5 });
+    Object.assign(s, { year: 2, week: 21, phase: 'weekday' as const, isVacation: true, routineSlot2: 'self-study', money: 200 }, patch);
+    payMonthStart(s);
+    return s;
+  }
+  function startWith(s: GameState, act: () => void): MonthPlan {
+    const onStart = vi.fn<(p: MonthPlan) => string | null>(() => null);
+    render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={onStart} />);
+    act();
+    for (const b of screen.queryAllByRole('button', { name: '다음에' })) fireEvent.click(b);
+    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    return onStart.mock.calls[0][0];
+  }
+  const weeksWith = (p: MonthPlan, id: string) => p.weeks.filter(w => w.activities.includes(id)).map(w => w.week);
+
+  it('「지난주처럼」(방학 스냅샷에 시골)도 첫 주 한 번만 남긴다', () => {
+    const s = august({ lastWeekendPlan: { activities: ['countryside', 'countryside', 'countryside', 'rest', 'rest'], npcChoices: {}, isVacation: true } });
+    expect(weeksWith(startWith(s, () => fireEvent.click(screen.getByRole('button', { name: '지난주처럼 채우기' }))), 'countryside')).toEqual([21]);
+  });
+
+  it('이번 방학에 이미 시골을 다녀왔으면(vacationActivityCounts) 복사해도 한 주도 남지 않는다', () => {
+    const s = august({
+      vacationActivityCounts: { countryside: 1 },
+      lastWeekendPlan: { activities: ['countryside', 'countryside', 'countryside', 'rest', 'rest'], npcChoices: {}, isVacation: true },
+    });
+    expect(weeksWith(startWith(s, () => fireEvent.click(screen.getByRole('button', { name: '지난주처럼 채우기' }))), 'countryside')).toEqual([]);
   });
 });
 
