@@ -64,10 +64,11 @@ describe('루틴 피커 — 고를 수 있나를 "지금 낼 돈"으로 본다(�
       monthlyMoney: true, routinePrepaid: { year: 2, month: getMonthBlock(6).index, slot2: 'self-study', slot3: null },
     }, patch);
   }
-  function openRoutine(s: GameState) {
+  /** 주간 화면이 넘기는 값과 같은 꼴: 쓸 수 있는 돈 − 지금 루틴비(0, 자습 선불) − 이번 주 주말에 고른 비용. */
+  function openRoutine(s: GameState, weekendCost = 0) {
     render(<SlotEditPopup editingSlot="routine1" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
       selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
-      availableMoney={s.money} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+      availableMoney={s.money - weekendCost} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
   }
   const weekly = () => getActivityCost(ACTIVITIES.find(a => a.id === 'academy')!, 2);
 
@@ -86,6 +87,47 @@ describe('루틴 피커 — 고를 수 있나를 "지금 낼 돈"으로 본다(�
     const s = w6({ money: weekly() * 3 });
     openRoutine(s);
     expect(activityButton('academy').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('이번 주 주말에 고른 비용은 빼고 잰다 — 잔액으로는 한 달 몫이 되어도 주말 몫을 쓰면 안 되면 못 고른다', () => {
+    // 잔액 전체로 재던 1차 수정의 회귀(3자 재검수): 주말 과외비까지 학원비로 내고, 과외는 확정에서 돈 부족으로 빠졌다.
+    const s = w6({ money: weekly() * 4 });
+    openRoutine(s, weekly() * 2);
+    expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
+    cleanup();
+    openRoutine(s, weekly());
+    expect(activityButton('academy').hasAttribute('disabled'), '경계: 남은 돈 = 한 달 몫').toBe(false);
+  });
+
+  it('지금 낼 루틴비가 있는 칸을 바꿀 때는 그 몫을 되돌려 놓고 잰다(바꾸면 옛 몫 대신 새 몫을 낸다)', () => {
+    // 학원(미납)을 인강으로 바꾸는 판 — 주간 화면이 넘기는 돈은 학원 몫을 이미 뺀 값이다.
+    const s = w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: weekly() * 3 });
+    const academyDue = weekly() * 3;
+    render(<SlotEditPopup editingSlot="routine1" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
+      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
+      availableMoney={s.money - academyDue} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+    expect(activityButton('internet-lecture').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('저녁 칸에 있던 활동을 방과후로 옮기면 저녁 칸은 비므로 한 칸 몫만 잰다', () => {
+    // routine1에 저녁 칸 활동을 고르면 onToggle이 저녁 칸을 비운다 — 비용도 그 상태로 재야 한다.
+    const gym = getActivityCost(ACTIVITIES.find(a => a.id === 'gym')!, 2);
+    const s = w6({ routineSlot3: 'gym', money: gym * 3 + 1 });
+    const currentDue = gym * 3; // 저녁 헬스 미납
+    render(<SlotEditPopup editingSlot="routine1" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
+      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
+      availableMoney={s.money - currentDue} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+    expect(getRoutineSwitchCost(s, 'gym', null), '전제').toBe(gym * 3);
+    expect(activityButton('gym').hasAttribute('disabled')).toBe(false);
+  });
+
+  it('계획 화면 — 주말 초안에 잡은 돈은 루틴에 못 쓴다', () => {
+    const s = w6({ money: weekly() * 3 + getActivityCost(ACTIVITIES.find(a => a.id === 'art-lesson')!, 2) - 1 });
+    render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} />);
+    for (const b of screen.queryAllByRole('button', { name: '다음에' })) fireEvent.click(b);
+    pickInto('slot-6-0', 'art-lesson');
+    fireEvent.click(screen.getAllByRole('button').find(b => (b.textContent ?? '').includes('①'))!);
+    expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
   });
 
   it('아직 매주 방식인 구세이브는 예전처럼 주 단가로 본다', () => {
@@ -118,8 +160,8 @@ describe('계획 화면 — 동행 키는 칸의 활동과 늘 맞는다', () =>
     const [inv] = generateMonthInvites(s);
     const other = NPC_COMPANION_ACTIVITIES.find(id => id !== inv.activityId)!;
     const friend = inv.npcId === 'jihun' ? 'subin' : 'jihun';
-    const acts = ['rest', 'rest'];
-    acts[inv.slotIdx] = other;
+    // 두 칸 다 같은 동행 활동 — 키가 "칸의 활동"이 아니라 "어느 칸에든 있는 활동"과 맞는지만 보면 옛 키가 산다.
+    const acts = [other, other];
     s.lastWeekendPlan = { activities: acts, npcChoices: { [`${other}:${inv.slotIdx}`]: friend }, isVacation: false };
     const onStart = vi.fn<(p: MonthPlan) => string | null>(() => null);
     render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={onStart} />);
@@ -152,6 +194,38 @@ describe('계획 화면 — 방학당 횟수 제한은 달 전체를 센다', ()
     const btn = activityButton('countryside');
     expect(btn.hasAttribute('disabled')).toBe(true);
     expect(btn.textContent).toContain('이번 방학 한도 도달');
+  });
+});
+
+describe('계획 화면 — 방학 횟수는 편집 중인 주를 두 번 세지 않는다', () => {
+  it('방학당 2회 「학원 단기특강」을 8월 1주에 하나 넣고, 같은 주 다른 칸에서 다시 고를 수 있다', () => {
+    const s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 5 });
+    Object.assign(s, { year: 2, week: 21, phase: 'weekday' as const, isVacation: true, routineSlot2: 'self-study', money: 200 });
+    payMonthStart(s);
+    expect(ACTIVITIES.find(a => a.id === 'intensive-academy')!.vacationLimit, '전제: 방학당 2회').toBe(2);
+    render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} />);
+    pickInto('slot-21-0', 'intensive-academy');
+    fireEvent.click(screen.getByTestId('slot-21-2'));
+    expect(activityButton('intensive-academy').hasAttribute('disabled')).toBe(false);
+  });
+});
+
+describe('계획 화면 — 복사·「지난주처럼」도 방학당 횟수를 넘기지 않는다', () => {
+  it('8월 1주의 「시골/할머니댁」을 「모든 주 똑같이」로 복사하면 2~4주는 비고, 계획이 엔진 검증을 통과한다', () => {
+    // 피커의 한도 판정만으로는 복사 경로를 못 막았다 — 4주 모두 저장되고 재생이 2~4주를 건너뛰었다(3자 재검수).
+    const s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 5 });
+    Object.assign(s, { year: 2, week: 21, phase: 'weekday' as const, isVacation: true, routineSlot2: 'self-study', money: 200 });
+    payMonthStart(s);
+    const onStart = vi.fn<(p: MonthPlan) => string | null>(() => null);
+    render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={onStart} />);
+    pickInto('slot-21-0', 'countryside');
+    fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
+    for (const b of screen.queryAllByRole('button', { name: '다음에' })) fireEvent.click(b); // 초대는 거절(이 테스트의 축이 아니다)
+    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    const plan = onStart.mock.calls[0][0];
+    const uses = plan.weeks.filter(w => w.activities.includes('countryside')).map(w => w.week);
+    expect(uses).toEqual([21]);
+    expect(validateMonthPlan(s, plan)).toBeNull();
   });
 });
 
@@ -189,12 +263,13 @@ describe('계획 화면 — 학기 목표를 여기서 고른다(재생이 고�
 
 describe('선택지 부족 문구 — 잠금과 같은 값을 말한다', () => {
   function planned(reserve: number): MonthPlan {
-    // W6~W8 중 W7에 그 금액만큼 유료 활동을 예약한 계획(같은 활동을 칸 수만큼).
+    // W6~W8 중 W6에 그 금액만큼 유료 활동을 예약한 계획(같은 활동을 칸 수만큼).
     const paid = ACTIVITIES.find(a => a.id === 'art-lesson')!;
     const n = Math.round(reserve / getActivityCost(paid, 2));
     return {
       year: 2, month: getMonthBlock(6).index, invites: [],
-      weeks: [6, 7, 8].map(week => ({ week, activities: week === 7 ? Array(n).fill('art-lesson') : ['rest', 'rest'], npcChoices: {} })),
+      // 이번 주(W6)에 잡은 예약 — 잠금(canSpend)은 이번 주 예약까지 뺀다. 문구 조건이 "다음 주부터"만 보면 여기서 갈린다.
+      weeks: [6, 7, 8].map(week => ({ week, activities: week === 6 ? Array(n).fill('art-lesson') : ['rest', 'rest'], npcChoices: {} })),
     };
   }
 

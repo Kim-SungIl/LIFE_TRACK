@@ -12,7 +12,7 @@
 //     (엔진도 다시 짠 계획의 초대 답이 처음과 다르면 거부한다 — monthInvites.validateInviteAnswers).
 import { useMemo, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
-import { ACTIVITIES, collapseActivityChoices, getActivityCost, getAvailableActivities } from '../../../engine/activities';
+import { ACTIVITIES, collapseActivityChoices, collapseActivityChoicesWithSlots, getActivityCost, getAvailableActivities, isVacationLimitReached } from '../../../engine/activities';
 import { getExamsInMonth, getNextMonthOpeningExam } from '../../../engine/examSystem';
 import { getRoutineDueCost, incomeNote, remainingSemesterWeeks } from '../../../engine/monthlyMoney';
 import { plannedWeekCost, slotCountForWeek } from '../../../engine/monthPlan';
@@ -165,15 +165,38 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
     return counts;
   };
 
+  /**
+   * 방학당 횟수를 넘친 칸을 비운다 — 주 순서대로 세어 한도를 넘는 인스턴스는 지운다(동행 키도 withPins가 같이 정리).
+   * 복사·「지난주처럼」은 피커를 안 거치므로 피커의 한도 판정(vacUseOutside)이 못 막는다. 넘친 주는 재생이
+   * 건너뛰면서 그 비용은 봉투에 잡아 두었다(3자 재검수).
+   */
+  const capVacationUses = (ds: Draft[]): Draft[] => {
+    const used: Record<string, number> = {};
+    return ds.map((d, i) => {
+      if (!isVac(weeks[i])) return d;
+      const activities = [...d.activities];
+      for (const inst of collapseActivityChoicesWithSlots(activities)) {
+        const a = ACTIVITIES.find(x => x.id === inst.id);
+        if (!a) continue;
+        if (isVacationLimitReached(a, stateAt(weeks[i]), used[a.id] ?? 0)) {
+          for (const k of inst.slots) activities[k] = '';
+          continue;
+        }
+        used[a.id] = (used[a.id] ?? 0) + 1;
+      }
+      return withPins(weeks[i], { activities, npcChoices: d.npcChoices });
+    });
+  };
+
   /** 같은 계절의 첫 주를 나머지에 복사(모든 주 똑같이). */
   const copyFirstToAll = () => {
     playSfx('tap');
     setDrafts(ds => {
       const firstOf = (vac: boolean) => ds.find((_, i) => isVac(weeks[i]) === vac);
-      return ds.map((d, i) => {
+      return capVacationUses(ds.map((d, i) => {
         const src = firstOf(isVac(weeks[i]));
         return src ? withPins(weeks[i], { activities: [...src.activities], npcChoices: { ...src.npcChoices } }) : d;
-      });
+      }));
     });
   };
 
@@ -182,9 +205,9 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const fillFromLast = () => {
     if (!snapshot) return;
     playSfx('tap');
-    setDrafts(ds => ds.map((d, i) => (isVac(weeks[i]) === snapshot.isVacation
+    setDrafts(ds => capVacationUses(ds.map((d, i) => (isVac(weeks[i]) === snapshot.isVacation
       ? withPins(weeks[i], { activities: [...snapshot.activities].slice(0, slotCountForWeek(state, weeks[i])), npcChoices: { ...snapshot.npcChoices } })
-      : d)));
+      : d))));
   };
 
   const start = () => {
@@ -379,7 +402,8 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
           npcChoices={drafts[editing.idx].npcChoices}
           maxSlots={slotCountForWeek(state, editingWeek)}
           currentSlots={drafts[editing.idx].activities.reduce((n, id) => n + (id ? 1 : 0), 0)}
-          availableMoney={availableFor(editing.idx)}
+          // 루틴 칸은 어느 주의 칸도 아니다 — 모든 주 초안의 예약을 뺀 돈(spendable)으로 잰다(availableFor는 그 주 몫을 남긴다).
+          availableMoney={editing.slot.startsWith('routine') ? spendable : availableFor(editing.idx)}
           extraVacUse={vacUseOutside(editing.idx)}
           onSetRoutine={onSetRoutine}
           setNpcSelectFor={(v) => { if (v) setNpcSelect({ idx: editing.idx, key: v }); }}

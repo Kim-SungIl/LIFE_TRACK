@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { canSpendWhilePlanning, getSpendableForPlanning } from '../engine/spendableMoney';
+import { getSpendableForPlanning } from '../engine/spendableMoney';
+import { getRoutineDueCost } from '../engine/monthlyMoney';
 import { playSfx } from '../audio/sfx';
 import { Activity, StatKey, STAT_LABELS, GameState } from '../engine/types';
 import { getActivityCost, isVacationLimitReached } from '../engine/activities';
@@ -70,6 +71,8 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
   const [showDetail, setShowDetail] = useState(false);
 
   const money = availableMoney !== undefined ? availableMoney : getSpendableForPlanning(state);
+  // 넘겨받은 돈(availableMoney)은 지금 루틴비를 이미 뺀 값이다 — 루틴을 바꾸면 그 몫 대신 새 몫을 내므로 되돌려 놓고 잰다.
+  const routineBudget = routineDueCost ? Math.round((money + getRoutineDueCost(state)) * 10) / 10 : money;
   const categories = ACTIVITY_CATEGORIES;
 
   return (
@@ -141,9 +144,10 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                 {catActivities.map(a => {
                   const isSel = selected.includes(a.id);
                   const cost = getActivityCost(a, state.year);
-                  // 루틴은 확정 잠금·결제와 같은 물음(canSpendWhilePlanning)으로, 주말 칸은 쓸 수 있는 돈과 그 주 비용으로 본다.
+                  // 루틴은 바꿀 때 **지금 낼 돈**(한 달 등록)으로, 주말 칸은 그 주 비용으로 본다. 둘 다 이미 고른 주말 비용을
+                  // 뺀 돈과 비교한다 — 잔액 전체로 보면 주말에 넣은 과외비까지 학원비로 써 버리고 과외가 돈 부족으로 빠진다(3자 재검수).
                   const due = routineDueCost ? routineDueCost(a) : cost;
-                  const moneyShort = routineDueCost ? due > 0 && !canSpendWhilePlanning(state, due) : cost > 0 && money < cost;
+                  const moneyShort = routineDueCost ? due > 0 && routineBudget < due : cost > 0 && money < cost;
                   const canAfford = !moneyShort && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
                   // Phase 1: vacationLimit 도달 시 새 선택 불가 (이미 선택돼 있으면 그대로 유지)

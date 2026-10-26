@@ -849,23 +849,36 @@ export function applyYearTransition(s: GameState): void {
 
 // ===== processWeek 단계 헬퍼 (순수 추출 — state를 직접 mutate, 동작 보존) =====
 
-// npcActivityMap(UI에서 고른 동행 친구)에 따른 친밀도 +3. 반환 = 동행 키별로 **실제로 오른 양**(소프트캡 뒤) —
+// npcActivityMap(UI에서 고른 동행 친구)에 따른 친밀도 +3. 반환 = 동행 키 하나를 **빼면** 그 친구가 이 단계에서 덜 오르는 양.
 // 약속 정산이 "못 지킨 약속 칸의 동행 몫"을 되돌릴 때 쓴다(monthInvites.settlePromisesForWeek).
+// 같은 친구가 키 두 개에 있으면 소프트캡 구간 감쇠 때문에 키마다 오른 양이 순서에 따라 달라진다 — 그래서 키별 상승분이
+// 아니라 "그 키 없이 나머지 키만 적용했을 때"와의 차이를 낸다(3자 재검수: 순서에 따라 −3/−2로 갈렸다).
 function applyNpcActivitySelection(state: GameState, npcActivityMap?: Record<string, string>): Record<string, number> {
-  const gained: Record<string, number> = {};
-  if (!npcActivityMap) return gained;
-  for (const [key, npcId] of Object.entries(npcActivityMap)) {
+  const marginal: Record<string, number> = {};
+  if (!npcActivityMap) return marginal;
+  const entries = Object.entries(npcActivityMap);
+  const start = new Map<string, number>();
+  for (const [, npcId] of entries) {
+    const npc = state.npcs.find(n => n.id === npcId);
+    if (npc && !start.has(npc.id)) start.set(npc.id, npc.intimacy);
+  }
+  for (const [, npcId] of entries) {
     const npc = state.npcs.find(n => n.id === npcId);
     if (npc) {
       // 반복 grind 소프트캡 경유 — 동행은 무한 반복 가능하므로 캡 이상은 이벤트로만.
       // (구간 감쇠 + max(1) 바닥의 80+ 무한상승을 소프트캡으로 차단)
-      const before = npc.intimacy;
       npc.intimacy = applyGrindIntimacyGain(npc.intimacy, 3);
-      gained[key] = npc.intimacy - before;
       npc.lastInteractionWeek = absWeek(state.year, state.week); // 관계 신호: 동행 = 상호작용
     }
   }
-  return gained;
+  for (const [key, npcId] of entries) {
+    const npc = state.npcs.find(n => n.id === npcId);
+    if (!npc) continue;
+    let without = start.get(npc.id)!;
+    for (const [k, id] of entries) if (k !== key && id === npcId) without = applyGrindIntimacyGain(without, 3);
+    marginal[key] = npc.intimacy - without;
+  }
+  return marginal;
 }
 
 // 주 시작 컨텍스트: 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정.

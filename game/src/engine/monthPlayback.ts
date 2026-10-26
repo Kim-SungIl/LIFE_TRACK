@@ -39,8 +39,17 @@ export function isWellFormedMonthRun(run: unknown): run is MonthRun {
   if (!run || typeof run !== 'object') return false;
   const r = run as Record<string, unknown>;
   const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
+  // 주 기록은 결산(buildMonthSummary)이 필드마다 읽는다 — 겉 모양만 보면 `promises` 없는 기록이 결산에서 터진다(3자 재검수).
+  const okWeek = (w: unknown) => {
+    if (!w || typeof w !== 'object') return false;
+    const x = w as Record<string, unknown>;
+    return num(x.week) && typeof x.auto === 'boolean' && num(x.timeCost) && num(x.routineMissed) && num(x.choiceMissed)
+      && typeof x.burnout === 'boolean' && Array.isArray(x.promises)
+      && x.promises.every(p => !!p && typeof p === 'object' && typeof (p as Record<string, unknown>).npcId === 'string'
+        && typeof (p as Record<string, unknown>).kept === 'boolean');
+  };
   return num(r.year) && num(r.month) && (r.status === 'playing' || r.status === 'paused')
-    && Array.isArray(r.log) && r.log.every(w => !!w && typeof w === 'object' && num((w as Record<string, unknown>).week))
+    && Array.isArray(r.log) && r.log.every(okWeek)
     && num(r.missedTalks) && num(r.startMoney)
     && !!r.startStats && typeof r.startStats === 'object' && !!r.startIntimacy && typeof r.startIntimacy === 'object';
 }
@@ -79,6 +88,10 @@ export function checkPlannedWeek(state: GameState): string | null {
   if (gate.missingRoutine) return '방과후 루틴이 비어 있어요';
   if (gate.routineTooExpensive) return '학원비가 모자라요';
   if (gate.unaffordableIds.length > 0) return '이번 주 활동비가 모자라요';
+  if (gate.reserveBreached) return '다음 주 계획 몫까지 쓰게 돼요';
+  // 잠금 사유를 하나씩 묻다 보면 새 사유가 생길 때 여기만 빠진다(봉투 잠금이 실제로 빠졌다 — 3자 재검수).
+  // 화면이 확정을 못 하는 주는 재생도 처리하지 않는다.
+  if (gate.disabled) return '이번 주를 이대로는 확정할 수 없어요';
   return null;
 }
 

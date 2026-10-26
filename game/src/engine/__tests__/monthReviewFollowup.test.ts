@@ -9,6 +9,7 @@ import {
 } from '../monthlyMoney';
 import { canSpend, canSpendWhilePlanning } from '../spendableMoney';
 import { getConfirmGate } from '../weekendPlan';
+import { checkPlannedWeek } from '../monthPlayback';
 import { getMonthBlock, getWeekInfo } from '../weekMath';
 import { installMemoryStorage } from '../../../scripts/lib/week-driver';
 import type { useGameStore as UseGameStore } from '../store';
@@ -113,6 +114,19 @@ describe('봉투 — 이번 주를 늘려 다음 주 예약을 먼저 쓰면 확
     expect(g.disabled).toBe(false);
   });
 
+  it('재생도 같은 잠금을 본다 — 봉투를 침범하는 주는 처리하지 않고 plan-invalid로 멈춘다', () => {
+    // 재생의 계획 성립 검사가 잠금 사유를 하나씩 묻다 새 사유(봉투)만 빠뜨렸다(3자 재검수 — 화면은 잠그는데 재생은 통과).
+    const s = at(6, { money: art() + 1 });
+    s.monthPlan = plan(s, { 6: [ART, 'rest'], 7: [ART, 'rest'] });
+    expect(getConfirmGate(s, predictWeekOutcome(s, [ART, 'rest'], {})).reserveBreached, '전제: 화면은 잠근다').toBe(true);
+    expect(checkPlannedWeek(s)).toBe('다음 주 계획 몫까지 쓰게 돼요');
+    store.setState({ state: s, npcActivityMap: {} });
+    store.getState().startMonthPlayback();
+    const after = store.getState().state!;
+    expect(after.week, '처리하지 않았다').toBe(6);
+    expect(after.monthRun).toMatchObject({ status: 'paused', stop: 'plan-invalid' });
+  });
+
   it('계획이 없으면(플래그 꺼짐) 예약이 0이라 이 잠금은 생기지 않는다', () => {
     const s = at(6, { money: art() + 1 });
     expect(getConfirmGate(s, predictWeekOutcome(s, [ART, 'rest'], {})).reserveBreached).toBe(false);
@@ -149,7 +163,7 @@ describe('wealth "용돈이 넉넉했다"는 용돈이 보이는 결산에 붙�
 
   it('학년 첫 주(W1)는 용돈이 보류분으로 들어와 W1 결산에 보인다 — 문구도 W1 · 달 중간 주엔 없다', () => {
     expect(label(processWeek(at(1, { parents: WEALTH, weekendChoices: ['rest', 'rest'] })))).toBe(true);
-    expect(label(processWeek(at(6, { parents: WEALTH, weekendChoices: ['rest', 'rest'] })))).toBe(false);
+    for (const w of [2, 3, 6]) expect(label(processWeek(at(w, { parents: WEALTH, weekendChoices: ['rest', 'rest'] }))), `W${w}`).toBe(false);
   });
 
   it('wealth가 아니면 어느 주에도 없다', () => {
@@ -186,11 +200,55 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
     expect(() => store.getState().confirmWeek(['rest', 'rest'], {})).not.toThrow();
   });
 
+  it.each([
+    ['필드 대부분이 없는 기록', { week: 5 }],
+    // 다른 필드는 멀쩡하고 결산이 .map 하는 promises만 없는 기록 — 위 픽스처는 auto에서 먼저 걸려 이 검사를 가린다.
+    ['promises만 없는 기록', { week: 5, auto: true, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false }],
+    ['약속 항목이 깨진 기록', { week: 5, auto: true, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false, promises: [{ npcId: 'jihun' }] }],
+  ])('주 기록이 깨진 장부도 버린다(%s) — 결산(buildMonthSummary)이 필드마다 읽는다', (_label, entry) => {
+    const s = at(6);
+    s.monthPlan = plan(s);
+    store.setState({ state: s, npcActivityMap: {} });
+    store.getState().setRoutine('self-study', null);
+    const raw = JSON.parse(storage.get('lifetrack_save')!);
+    const target = raw.state ?? raw;
+    target.monthRun = {
+      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [entry], missedTalks: 0,
+      startStats: { ...s.stats }, startIntimacy: {}, startMoney: 30,
+    };
+    storage.set('lifetrack_save', JSON.stringify(raw));
+    store.setState({ state: null });
+    expect(store.getState().loadSavedGame()).toBe(true);
+    expect(store.getState().state!.monthRun).toBeUndefined();
+  });
+
+  it.each([
+    ['missedTalks가 없다', { missedTalks: undefined }],
+    ['startMoney가 문자열이다', { startMoney: '30' }],
+    ['startIntimacy가 없다', { startIntimacy: undefined }],
+  ])('장부 최상위 필드가 깨져도 버린다(%s)', (_label, patch) => {
+    const s = at(6);
+    s.monthPlan = plan(s);
+    store.setState({ state: s, npcActivityMap: {} });
+    store.getState().setRoutine('self-study', null);
+    const raw = JSON.parse(storage.get('lifetrack_save')!);
+    const target = raw.state ?? raw;
+    target.monthRun = {
+      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [], missedTalks: 0,
+      startStats: { ...s.stats }, startIntimacy: {}, startMoney: 30, ...patch,
+    };
+    storage.set('lifetrack_save', JSON.stringify(raw));
+    store.setState({ state: null });
+    expect(store.getState().loadSavedGame()).toBe(true);
+    expect(store.getState().state!.monthRun).toBeUndefined();
+  });
+
   it('멀쩡한 장부는 그대로 둔다(playing이면 paused/reload로 접는 기존 규칙만)', () => {
     const s = at(6);
     s.monthPlan = plan(s);
     s.monthRun = {
-      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [], missedTalks: 1,
+      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', missedTalks: 1,
+      log: [{ week: 5, auto: true, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false, promises: [{ npcId: 'jihun', kept: true }] }],
       startStats: { ...s.stats }, startIntimacy: {}, startMoney: 30,
     };
     store.setState({ state: s, npcActivityMap: {} });
@@ -198,5 +256,33 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
     store.setState({ state: null });
     expect(store.getState().loadSavedGame()).toBe(true);
     expect(store.getState().state!.monthRun).toMatchObject({ status: 'paused', stop: 'player', missedTalks: 1 });
+    expect(store.getState().state!.monthRun!.log).toHaveLength(1);
+  });
+});
+
+describe('깨진 약속은 정확히 −2 — 약속 칸 키만 없던 판과 비교한다', () => {
+  // 지훈과 W6 둘째 칸 「친구와 놀기」를 약속했다. 이벤트 시간 소모 1이 둘째 칸을 지워 약속이 깨진다.
+  function promise(intimacy: number, map: Record<string, string>, withPlan = true) {
+    const s = at(6, { weekendChoices: ['hang-out', 'hang-out'], eventTimeCost: 1 });
+    const j = s.npcs.find(n => n.id === 'jihun')!;
+    j.met = true;
+    j.intimacy = intimacy;
+    if (withPlan) s.monthPlan = { ...plan(s), invites: [{ npcId: 'jihun', week: 6, slotIdx: 1, activityId: 'hang-out', accepted: true }] };
+    return processWeek(s, map);
+  }
+  const jihun = (s: GameState) => s.npcs.find(n => n.id === 'jihun')!.intimacy;
+
+  it.each([
+    ['약속 칸 키만', 50, { 'hang-out:1': 'jihun' }, {}],
+    // 소프트캡 위(80+)는 동행 +3이 다 안 오른다 — 고정 3을 되돌리면 −2보다 더 깎인다.
+    ['소프트캡 위', 85, { 'hang-out:1': 'jihun' }, {}],
+    // 같은 친구가 다른 칸에도 동행 — 그 칸 몫은 정당하다. 구간 감쇠라 순서에 따라 키별 상승분이 달랐다(3자 재검수).
+    ['같은 친구가 두 칸(약속 칸이 먼저)', 39, { 'hang-out:1': 'jihun', 'hang-out:0': 'jihun' }, { 'hang-out:0': 'jihun' }],
+    ['같은 친구가 두 칸(약속 칸이 나중)', 39, { 'hang-out:0': 'jihun', 'hang-out:1': 'jihun' }, { 'hang-out:0': 'jihun' }],
+  ])('%s', (_label, start, map, withoutPromiseKey) => {
+    const broken = promise(start, map);
+    expect(broken.weekLog!.promises).toEqual([{ npcId: 'jihun', kept: false }]);
+    const counterfactual = promise(start, withoutPromiseKey, false);
+    expect(jihun(broken)).toBeCloseTo(Math.max(0, jihun(counterfactual) - 2), 9);
   });
 });
