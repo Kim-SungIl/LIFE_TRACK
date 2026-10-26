@@ -149,6 +149,24 @@ describe('루틴 피커 — 고를 수 있나를 "지금 낼 돈"으로 본다(�
     expect(activityButton('internet-lecture').hasAttribute('disabled'), '유료 저녁은 여전히 막힌다').toBe(true);
   });
 
+  it('잠기지 않은 판에서 저녁 알바를 무료 활동으로 바꿔 그 주 수입이 사라지면 주말 몫이 모자라 막는다', () => {
+    // 학원(미납) 몫은 잔액으로 낼 수 있고, 주말 미술 레슨은 저녁 알바 수입으로 낸다. 독서로 바꾸면 내야 할 돈은 같지만
+    // 수입이 사라져 레슨이 돈 부족으로 빠진다 — "늘지 않는 전환" 예외가 이 판까지 열면 고르게 해 놓고 잠근다(4차 검수).
+    const job = ACTIVITIES.find(a => a.id === 'part-time')!;
+    expect(getActivityCost(job, 4) < 0, '전제: 알바는 수입(음수 비용)').toBe(true);
+    const art = getActivityCost(ACTIVITIES.find(a => a.id === 'art-lesson')!, 4);
+    const academy4 = getActivityCost(ACTIVITIES.find(a => a.id === 'academy')!, 4);
+    const s = w6({ year: 4, routineSlot2: 'academy', routineSlot3: 'part-time', routinePrepaid: undefined });
+    const due = academy4 * 3;
+    s.money = due;
+    const available = s.money - due - art; // 주간 화면 식: 쓸 수 있는 돈 − 지금 루틴비 − 주말(레슨)
+    render(<SlotEditPopup editingSlot="routine2" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
+      selectedActivities={[]} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
+      availableMoney={available} onSetRoutine={vi.fn()} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+    expect(getRoutineSwitchCost(s, 'academy', 'reading'), '전제: 내야 할 돈은 같다').toBe(due);
+    expect(activityButton('reading').hasAttribute('disabled')).toBe(true);
+  });
+
   it('아직 매주 방식인 구세이브는 예전처럼 주 단가로 본다', () => {
     const s = w6({ money: weekly() * 2, monthlyMoney: undefined, routinePrepaid: undefined });
     openRoutine(s);

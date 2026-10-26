@@ -73,6 +73,8 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
   const money = availableMoney !== undefined ? availableMoney : getSpendableForPlanning(state);
   // 넘겨받은 돈(availableMoney)은 지금 루틴비를 이미 뺀 값이다 — 루틴을 바꾸면 그 몫 대신 새 몫을 내므로 되돌려 놓고 잰다.
   const currentRoutineDue = routineDueCost ? getRoutineDueCost(state) : 0;
+  // 지금 루틴비를 이미 못 내 확정이 잠긴 판 — 이때만 "내야 할 돈이 늘지 않는 전환"을 열어 준다(아래).
+  const routineAlreadyUnpayable = currentRoutineDue > 0 && !canSpendWhilePlanning(state, currentRoutineDue);
   const routineBudget = routineDueCost ? Math.round((money + currentRoutineDue) * 10) / 10 : money;
   const categories = ACTIVITY_CATEGORIES;
 
@@ -151,10 +153,12 @@ export function ActivityPicker({ activities, selected, onToggle, maxSlots, curre
                   // 루틴은 두 물음 다: ① 이미 고른 주말 비용을 뺀 돈으로 되나 ② **지금 잔액**으로 낼 수 있나(확정 잠금
                   // routineTooExpensive와 같은 물음). 넘겨받은 돈에는 아직 안 받은 주말 알바 수입(음수 비용)이 더해져 있어
                   // ①만 보면 결제는 거부되는데 고르게 해 놓고 확정에서 잠근다(3자 3차 검수).
-                  // 바꿔서 내야 할 돈이 지금보다 늘지 않으면(무료로 바꾸기 등) 막지 않는다 — 방과후 학원비를 못 내는 판에서 저녁
-                  // 칸의 독서까지 "💰부족"이라 말했다(3자 3차 검수). 그 판의 확정 잠금은 방과후 쪽이 말한다.
+                  // 이미 루틴비를 못 내 잠긴 판에서는 내야 할 돈이 늘지 않는 전환(무료로 바꾸기 등)을 막지 않는다 — 막으면 저녁 칸의
+                  // 독서까지 "💰부족"이라 말했다(3자 3차 검수). 그 판의 잠금은 방과후 쪽이 말한다. 잠기지 않은 판에는 이 예외를
+                  // 두지 않는다: 저녁 알바(수입)를 독서로 바꾸면 내야 할 돈은 같아도 그 주 수입이 사라져 주말 활동이 빠진다(4차 검수).
+                  const freeSwapWhileLocked = routineAlreadyUnpayable && due <= currentRoutineDue;
                   const moneyShort = routineDueCost
-                    ? due > 0 && due > currentRoutineDue && (routineBudget < due || !canSpendWhilePlanning(state, due))
+                    ? due > 0 && !freeSwapWhileLocked && (routineBudget < due || !canSpendWhilePlanning(state, due))
                     : cost > 0 && money < cost;
                   const canAfford = !moneyShort && (!a.requires || a.requires(state));
                   const canSelect = isSel || currentSlots + a.slots <= maxSlots || a.slots >= maxSlots;
