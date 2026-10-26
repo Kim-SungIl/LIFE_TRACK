@@ -147,11 +147,14 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const setDraft = (idx: number, patch: Partial<Draft>) =>
     setDrafts(ds => ds.map((d, i) => (i === idx ? withPins(weeks[i], { ...d, ...patch }) : d)));
 
-  /** 저장 전 초안을 이번 달 계획으로 넣은 지금 주 판 — 루틴 칸 판정이 초안의 봉투를 보게 한다. */
-  const draftState: GameState = {
-    ...stateAt(state.week),
-    monthPlan: { year: state.year, month: block.index, weeks: weeks.map((week, i) => ({ week, activities: drafts[i].activities, npcChoices: drafts[i].npcChoices })) },
-  };
+  /** 루틴 칸 판정용 지금 주 판 — 렌더마다 새 객체면 팝업의 판정 메모가 매번 깨져 미리보기를 다시 돌린다. */
+  const routineState = useMemo(() => ({ ...state, week: state.week, isVacation: getWeekInfo(state.week).isVacation }), [state]);
+
+  /** 저장 전 초안을 이번 달 계획 모양으로 — 루틴 칸 판정이 잠금 판단에 초안의 봉투를 보게 한다. */
+  const draftPlan: MonthPlan = useMemo(() => ({
+    year: state.year, month: block.index,
+    weeks: weeks.map((week, i) => ({ week, activities: drafts[i].activities, npcChoices: drafts[i].npcChoices })),
+  }), [state.year, block.index, weeks, drafts]);
 
   /** 이 주를 고칠 때 쓸 수 있는 돈 — 다른 주 예약과 아직 안 낸 학원비를 뺀다(그 주 몫은 지금 고르는 중). */
   const availableFor = (idx: number) =>
@@ -401,8 +404,9 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         <SlotEditPopup
           editingSlot={editing.slot}
           setEditingSlot={(slot) => setEditing(slot ? { idx: editing.idx, slot } : null)}
-          // 루틴 칸은 저장 전 초안까지 예약으로 넣은 판으로 잰다 — 루틴 판정(makeRoutineChangeCheck)이 봉투를 보게.
-          state={editing.slot.startsWith('routine') ? draftState : stateAt(editingWeek)}
+          state={editing.slot.startsWith('routine') ? routineState : stateAt(editingWeek)}
+          // 루틴 칸: 결제는 실제 판 그대로, 잠금 판단에만 저장 전 초안 계획을 씌운다(makeRoutineChangeCheck judgePlan).
+          routineJudgePlan={editing.slot.startsWith('routine') ? draftPlan : undefined}
           activities={getAvailableActivities(stateAt(editing.slot.startsWith('routine') ? state.week : editingWeek))}
           selectedActivities={drafts[editing.idx].activities}
           setSelectedActivities={(ids) => setDraft(editing.idx, { activities: ids })}

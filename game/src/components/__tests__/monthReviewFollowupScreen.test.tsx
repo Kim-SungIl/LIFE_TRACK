@@ -115,9 +115,13 @@ describe('루틴 피커 — 이 선택 때문에 이번 주를 확정할 수 없
     expect(activityButton('gym').hasAttribute('disabled')).toBe(false);
   });
 
-  it('지금 잔액으로 못 내면 막는다 — 주말에 들어올 수입으로는 고르는 순간 내는 학원비를 못 낸다', () => {
-    // 학원비는 고르는 순간(setRoutine) 낸다. 주말 수입이 넘겨받는 돈을 키워도 결제는 지금 잔액에서 거부된다.
-    openRoutine(w6({ money: weekly() * 2 }));
+  it('지금 잔액으로 못 내면 막는다 — 주말 알바로 들어올 수입으로는 고르는 순간 내는 학원비를 못 낸다', () => {
+    // 학원비는 고르는 순간(setRoutine) 낸다. 주말 알바 수입은 그 주 주말에야 들어온다.
+    const due = cost('academy', 4) * 3;
+    const job = -cost('part-time', 4);
+    const s = w6({ year: 4, money: due - 1 });
+    expect(job > 1, '전제: 주말 알바 수입이 모자란 1보다 크다').toBe(true);
+    openRoutine(s, ['part-time', 'rest']);
     expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
   });
 
@@ -199,6 +203,75 @@ describe('루틴 피커 — 이 선택 때문에 이번 주를 확정할 수 없
     pickInto('slot-7-0', ART_ID);
     fireEvent.click(screen.getAllByRole('button').find(b => (b.textContent ?? '').includes('①'))!);
     expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('저녁 「자유시간」도 같은 판정을 거친다 — 알바를 비워 그 주 수입이 사라지면 잠긴다', () => {
+    // 6차 codex: 이 버튼만 판정을 우회해 onSetRoutine을 바로 불렀다.
+    const onSetRoutine = vi.fn();
+    const s = w6({ year: 4, week: 8, routineSlot3: 'part-time', money: 0 });
+    render(<SlotEditPopup editingSlot="routine2" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
+      selectedActivities={[ART_ID, 'rest']} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
+      availableMoney={s.money} onSetRoutine={onSetRoutine} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+    const btn = screen.getByTestId('routine-free-evening');
+    expect(btn.hasAttribute('disabled')).toBe(true);
+    fireEvent.click(btn);
+    expect(onSetRoutine).not.toHaveBeenCalled();
+    cleanup();
+    // 주말이 무료면 수입이 사라져도 잠기지 않는다 — 연다.
+    render(<SlotEditPopup editingSlot="routine2" setEditingSlot={vi.fn()} state={s} activities={getAvailableActivities(s)}
+      selectedActivities={['rest', 'rest']} setSelectedActivities={vi.fn()} npcChoices={{}} maxSlots={2} currentSlots={0}
+      availableMoney={s.money} onSetRoutine={onSetRoutine} setNpcSelectFor={vi.fn()} setLastReaction={vi.fn()} />);
+    fireEvent.click(screen.getByTestId('routine-free-evening'));
+    expect(onSetRoutine).toHaveBeenCalledWith('self-study', null);
+  });
+
+  it('다시 짜기 — 결제는 저장된 봉투 기준, 잠금은 초안 봉투 기준으로 잰다(실제로 돈이 빠지고 잠기는 전환을 막는다)', () => {
+    // 6차 codex: 저장 W7 레슨 2, 초안에 W8 레슨을 더했다. 헬스로 바꾸면 setRoutine은 저장 봉투만 피해 헬스비를 내고,
+    // 그러면 초안 봉투(W7+W8)를 못 지킨다. 결제까지 초안 봉투로 흉내 내면 "안 낸다"로 보고 허용했다.
+    const art = cost(ART_ID);
+    const gym = cost('gym');
+    const s = w6({ routineSlot2: 'academy', routinePrepaid: undefined, money: gym * 3 + art });
+    const existing: MonthPlan = {
+      year: 2, month: getMonthBlock(6).index, invites: [],
+      weeks: [6, 7, 8].map(week => ({ week, activities: week === 7 ? [ART_ID, 'rest'] : ['rest', 'rest'], npcChoices: {} })),
+    };
+    s.monthPlan = existing;
+    // 초안은 피커를 안 거치는 「지난주처럼」으로 채운다(피커는 예산이 넘치면 레슨을 막는다) — W6~W8 모두 레슨.
+    s.lastWeekendPlan = { activities: [ART_ID, 'rest'], npcChoices: {}, isVacation: false };
+    render(<MonthPlanScreen state={s} existing={existing} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: '지난주처럼 채우기' }));
+    expect(screen.getByTestId('week-summary-8').textContent, '전제: W8 초안에 레슨').toContain('예체능 레슨');
+    fireEvent.click(screen.getAllByRole('button').find(b => (b.textContent ?? '').includes('①'))!);
+    expect(activityButton('gym').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('다시 짜기 — 초안에서 다음 주를 비워도 저장 계획 기준으로 결제가 거부되면 막는다(「그대로」로 나가면 잠긴다)', () => {
+    // 6차 cursor: 초안 판정만 보면 "낼 수 있다"였다. setRoutine은 저장된 봉투를 보고 결제를 거절해 칸만 바뀐다.
+    const art = cost(ART_ID);
+    const due = weekly() * 3;
+    const s = w6({ money: due });
+    const existing: MonthPlan = {
+      year: 2, month: getMonthBlock(6).index, invites: [],
+      weeks: [6, 7, 8].map(week => ({ week, activities: week === 7 ? [ART_ID, 'rest'] : ['rest', 'rest'], npcChoices: {} })),
+    };
+    s.monthPlan = existing;
+    expect(art > 0, '전제').toBe(true);
+    render(<MonthPlanScreen state={s} existing={existing} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} onCancel={vi.fn()} />);
+    fireEvent.click(screen.getAllByRole('button', { expanded: false }).find(b => b.textContent?.startsWith('3주'))!);
+    pickInto('slot-7-0', 'reading'); // 무료 활동으로 바꿔 W7 예약을 비운다
+    expect(screen.getByTestId('week-summary-7').textContent, '전제: W7 초안을 비웠다').not.toContain('예체능 레슨');
+    fireEvent.click(screen.getAllByRole('button').find(b => (b.textContent ?? '').includes('①'))!);
+    expect(activityButton('academy').hasAttribute('disabled')).toBe(true);
+  });
+
+  it('루틴비를 못 내 이미 잠긴 판에서 — 더 비싸 역시 못 내는 루틴은 막고, 낼 수 있는 더 싼 루틴은 연다', () => {
+    // 6차 sub-agent: 결제가 거부되면 낸 돈이 0이라 "돈을 더 안 낸다"로 보여 더 비싼 학원이 부족 표시 없이 열렸다.
+    const s = w6({ routineSlot2: 'gym', routinePrepaid: undefined, money: cost('gym') * 3 - 1 });
+    expect(getConfirmGate(s, predictWeekOutcome(s, ['rest', 'rest'], {})).routineTooExpensive, '전제: 헬스비를 못 내 잠김').toBe(true);
+    expect(cost('internet-lecture') * 3 <= s.money, '전제: 인강 한 달 몫은 낼 수 있다').toBe(true);
+    openRoutine(s);
+    expect(activityButton('academy').hasAttribute('disabled'), '더 비싼 학원').toBe(true);
+    expect(activityButton('internet-lecture').hasAttribute('disabled'), '낼 수 있는 인강').toBe(false);
   });
 
   it('아직 매주 방식인 구세이브는 예전처럼 주 단가로 본다', () => {

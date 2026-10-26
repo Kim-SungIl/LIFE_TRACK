@@ -7,9 +7,9 @@
 //
 // **자동 채움이 아니다.** 스냅샷을 슬롯에 **채우기만** 하고 확정은 기존 CTA가 한다. 유료
 // 주말 활동이 플레이어 모르게 확정되면 돈을 조용히 쓰는 경로가 되기 때문이다.
-import { GameState, WeekendPlanSnapshot } from './types';
+import { GameState, MonthPlan, WeekendPlanSnapshot } from './types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from './activities';
-import { getRoutineDueCost, payRoutineIfDue } from './monthlyMoney';
+import { getRoutineDueCost, isMonthlyMoneyActive, payRoutineIfDue } from './monthlyMoney';
 import { cloneGameState } from './stateClone';
 import { canSpendWhilePlanning } from './spendableMoney';
 import { reservedMoney } from './monthPlan';
@@ -205,18 +205,40 @@ export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'ski
  * 돈만 넣고 끝난다). 이미 잠긴 판에서 더 내지 않는 전환은 막지 않는다 — 학원비를 못 내는 판의 저녁 독서, 주말 때문에
  * 잠긴 판에서 저녁만 바꾸는 것(아직 안 낸 방과후 학원비는 setRoutine이 같이 내지만 확정 때도 어차피 내는 돈이다).
  * 만든 뒤 활동마다 부른다 — 바꾸기 전 판정은 한 번만 돌린다.
+ *
+ * `judgePlan`(계획 화면): 결제는 **실제 판**(state, 저장된 계획의 봉투) 그대로 흉내 낸다 — setRoutine이 그렇게 낸다.
+ * 잠금은 실제 판과 초안 계획을 씌운 판 **둘 다**로 재서 어느 쪽이든 이 선택 때문에 잠기면 막는다. 결제까지 초안 봉투로
+ * 흉내 내면 실제로 빠지는 돈과 갈리고(6차 codex), 초안으로만 재면 「그대로」로 나갔을 때 저장 계획 기준으로 잠긴다(6차 cursor).
+ * 초안 덕에 풀리는 선택은 계획을 먼저 저장한 뒤 바꾸면 된다.
+ * 이미 잠긴 판이라도 **결제가 거부되는데 내야 할 돈이 늘어나는** 전환(못 내는 학원 대신 더 비싼 학원)은 막는다 — 돈은 안
+ * 빠지지만 고칠 길이 멀어지고, 그 활동은 실제로 "💰부족"이다(6차 sub-agent). 더 싸거나 무료인 전환은 연다.
+ * 같은 (방과후, 저녁) 조합은 한 번만 판정한다 — 피커가 렌더마다 활동별로 부른다.
  */
 export function makeRoutineChangeCheck(
-  state: GameState, weekend: string[], npcChoices: Record<string, string>,
+  state: GameState, weekend: string[], npcChoices: Record<string, string>, judgePlan?: MonthPlan,
 ): (slot2: string | null, slot3: string | null) => boolean {
-  const before = getConfirmGate(state, predictWeekOutcome(state, weekend, npcChoices)).moneyBlocked;
+  const views: ((s: GameState) => GameState)[] = [s => s];
+  if (judgePlan) views.push(s => ({ ...s, monthPlan: judgePlan }));
+  const lockedIn = (view: (s: GameState) => GameState, s: GameState) => {
+    const v = view(s);
+    return getConfirmGate(v, predictWeekOutcome(v, weekend, npcChoices)).moneyBlocked;
+  };
   const paidAnyway = payRoutineIfDue(cloneGameState(state));
+  const dueBefore = getRoutineDueCost(state);
+  const before = views.map(view => lockedIn(view, state));
+  const cache = new Map<string, boolean>();
   return (slot2, slot3) => {
+    const key = `${slot2 ?? ''}|${slot3 ?? ''}`;
+    const hit = cache.get(key);
+    if (hit !== undefined) return hit;
     const next = cloneGameState(state);
     next.routineSlot2 = slot2;
     next.routineSlot3 = slot3;
+    const dueAfter = getRoutineDueCost(next);
     const paid = payRoutineIfDue(next);
-    const after = getConfirmGate(next, predictWeekOutcome(next, weekend, npcChoices)).moneyBlocked;
-    return after && (!before || paid > paidAnyway);
+    const refusedAndWorse = isMonthlyMoneyActive(next) && dueAfter > 0 && paid === 0 && dueAfter > dueBefore;
+    const blocked = refusedAndWorse || views.some((view, i) => lockedIn(view, next) && (!before[i] || paid > paidAnyway));
+    cache.set(key, blocked);
+    return blocked;
   };
 }
