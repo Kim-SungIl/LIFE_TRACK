@@ -632,8 +632,9 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
       <div aria-hidden="true" style={{ height: 'calc(80px + env(safe-area-inset-bottom))' }} />
 
       {/* 확정 버튼 — 하단 고정(sticky CTA). .bottom-action = position:fixed + safe-area */}
+      {/* 재생이 멈춘 동안 주 행동은 띠의 ▶ 이어서 재생이다 — 이 버튼은 이 주만 손으로 확정하는 보조라 한 단계 낮춘다 */}
       <div data-tutorial="confirm" className="bottom-action">
-        <button className="btn btn-primary"
+        <button className={playback ? 'btn btn-secondary' : 'btn btn-primary'} data-testid="week-confirm"
           disabled={confirmDisabled}
           onClick={handleConfirm}
         >

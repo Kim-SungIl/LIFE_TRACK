@@ -115,6 +115,30 @@ describe('GameScreen 라우팅', () => {
     await waitFor(() => expect(screen.getByTestId('playback-paused').textContent).toContain('일시정지했어요'));
   });
 
+  it('띠가 떠 있으면 아래 확정 버튼은 보조 단계로 낮아지고, 주 단위 판(플래그 꺼짐)에선 주 버튼 그대로다', async () => {
+    playingFrom(5);
+    api().pausePlayback('player');
+    api().continuePlayback();
+    const { unmount } = render(<GameScreen />);
+    await waitFor(() => screen.getByTestId('playback-paused'));
+    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-secondary');
+    unmount();
+    // 계획만 짜고 시작 전인 주도 띠(▶ 시작)가 주 행동이라 낮아진다
+    const s = at(6);
+    useGameStore.setState({ state: s, npcActivityMap: {} });
+    expect(api().setMonthPlan(planFor(s))).toBeNull();
+    expect(now().monthRun).toBeUndefined();
+    const second = render(<GameScreen />);
+    await waitFor(() => expect(screen.getByTestId('playback-paused').textContent).toContain('계획이 짜여'));
+    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-secondary');
+    second.unmount();
+    localStorage.removeItem(MONTHLY_PLANNING_KEY);
+    render(<GameScreen />);
+    await waitFor(() => screen.getByTestId('week-confirm'));
+    expect(screen.queryByTestId('playback-paused')).toBeNull();
+    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-primary');
+  });
+
   it('멈춘 화면의 ▶ 이어서 재생은 다음 주를 처리한다', async () => {
     playingFrom(5);
     api().pausePlayback('player');
