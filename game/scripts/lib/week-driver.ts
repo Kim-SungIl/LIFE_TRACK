@@ -106,7 +106,15 @@ export const GOLDEN_SEEDS: readonly number[] = [20261020, 7_000_003];
 /** 한 판의 상한. 336주 + 사건·결산·학년말 걸음 — 실측 한 판 약 1000걸음(verify-nightly-e2e). */
 const STEP_LIMIT = 6_000;
 
+/**
+ * 지문에 넣는 실수의 눈금. `Math.log`(growthDrag의 손실 배분)는 CPU마다 마지막 비트가 다르다 —
+ * arm64 맥과 x64 리눅스 CI가 성장 장부 값에서 1ulp(…4232 vs …4233) 갈려 골든이 CI에서만 깨졌다.
+ * 능력치·돈은 사칙연산이라 플랫폼과 무관하게 같다. 지문은 "동작이 같은가"를 보므로 이 아래 잡음은 접는다.
+ */
+const DIGEST_FLOAT_GRID = 1e9;
+
 function canonical(v: unknown): unknown {
+  if (typeof v === 'number' && !Number.isInteger(v) && Number.isFinite(v)) return Math.round(v * DIGEST_FLOAT_GRID) / DIGEST_FLOAT_GRID;
   if (Array.isArray(v)) return v.map(canonical);
   if (v && typeof v === 'object') {
     const out: Record<string, unknown> = {};
