@@ -643,6 +643,9 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
             // 비활성 버튼은 이유를 스스로 말해야 한다 — 위 경고를 못 보고 버튼만 누르는 사람이 있다.
             : unaffordable.length > 0
             ? '⬆ 돈이 부족한 활동이 있어요'
+            // 이번 주를 이대로 하면 한 달 계획에 떼어 둔 다음 주 몫까지 쓴다
+            : gate.reserveBreached
+            ? '⬆ 다음 주 계획 몫까지 써요 — 이번 주를 줄이세요'
             : !state.isVacation && !state.routineSlot2
               ? '⬆ 먼저 방과후 루틴을 설정하세요'
               : currentSlots === 0

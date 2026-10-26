@@ -4,6 +4,8 @@ import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
 import { choiceCost, isChoiceUnaffordable, isChoiceVisible, presentEvent } from '../engine/eventPresentation';
 import { prepaidRoutineSkippedBy } from '../engine/monthlyMoney';
+import { reservedMoney } from '../engine/monthPlan';
+import { getSpendableMoney } from '../engine/spendableMoney';
 import { getEventBackground, getSchoolLevel, LOCATION_GRADIENTS, DEFAULT_GRADIENT } from '../engine/backgrounds';
 import { spriteCandidates, pickAllExisting } from '../engine/characterAssets';
 import { CHARACTER_MANIFEST } from '../character-manifest.generated';
@@ -718,7 +720,10 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
                 )}
                 {insufficient && (
                   <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--red, #d96a6a)', marginTop: 4 }}>
-                    💰 돈이 부족합니다 (보유 {state?.money ?? 0}만 / 필요 {cost}만)
+                    {/* 잠금(isChoiceUnaffordable)은 한 달 계획에 떼어 둔 돈을 뺀 값으로 판정한다 — 문구도 같은 값을 말한다 */}
+                    {state && reservedMoney(state) > 0
+                      ? `💰 돈이 부족합니다 (쓸 수 있는 돈 ${getSpendableMoney(state)}만 / 필요 ${cost}만)`
+                      : `💰 돈이 부족합니다 (보유 ${state?.money ?? 0}만 / 필요 ${cost}만)`}
                   </div>
                 )}
               </button>

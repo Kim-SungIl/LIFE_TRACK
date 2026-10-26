@@ -30,6 +30,21 @@ export function getMonthRun(state: Pick<GameState, 'monthRun' | 'year' | 'week'>
   return run.year === state.year && run.month === getMonthBlock(state.week).index ? run : null;
 }
 
+/**
+ * 세이브에서 읽은 재생 장부가 쓸 수 있는 모양인가 — 손상·수동 편집 세이브의 방어선(loadSavedGame).
+ * `log`가 배열이 아니면 다음 확정에서 `run.log.map`이 터진다(3자 검수 실측: load는 성공, confirm에서 TypeError).
+ * 판정할 수 없는 장부는 접지 않고 **버린다** — 재생 상태만 잃고 판은 그대로 이어진다(#441 규약: 손상값은 거부).
+ */
+export function isWellFormedMonthRun(run: unknown): run is MonthRun {
+  if (!run || typeof run !== 'object') return false;
+  const r = run as Record<string, unknown>;
+  const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
+  return num(r.year) && num(r.month) && (r.status === 'playing' || r.status === 'paused')
+    && Array.isArray(r.log) && r.log.every(w => !!w && typeof w === 'object' && num((w as Record<string, unknown>).week))
+    && num(r.missedTalks) && num(r.startMoney)
+    && !!r.startStats && typeof r.startStats === 'object' && !!r.startIntimacy && typeof r.startIntimacy === 'object';
+}
+
 /** 이번 달 재생을 처음 시작할 때의 상태 — 결산이 비교할 시작 능력치·친밀도·잔액을 박는다. */
 export function createMonthRun(state: GameState): MonthRun {
   return {

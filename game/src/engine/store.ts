@@ -5,7 +5,7 @@ import { createInitialState, processWeek, getWeekInfo, scaleIntimacyChange, scal
 import { payRoutineIfDue } from './monthlyMoney';
 import { getCurrentMonthPlan, getPlannedWeek, validateMonthPlan } from './monthPlan';
 import {
-  MAX_TALK_BANK, boundaryStopAfter, checkPlannedWeek, createMonthRun, getMonthRun, hadTalkChance, recordWeek, talkBankCount,
+  MAX_TALK_BANK, boundaryStopAfter, checkPlannedWeek, createMonthRun, getMonthRun, hadTalkChance, recordWeek, talkBankCount, isWellFormedMonthRun,
 } from './monthPlayback';
 import { getMonthBlock } from './weekMath';
 import { applyDeclinedInvites, validateInviteAnswers } from './monthInvites';
@@ -622,6 +622,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 근거가 없어 이 호출이 유일한 복구 경로다. 판정·멱등의 근거는 archive.needsRecommit.
       if (needsRecommit(loaded)) commitRun(loaded, calculateEnding(loaded).title);
       // 재생 중에 껐다 켰으면 멈춘 채로 연다(설계안 §10). 사건·카드 중이었으면 그 화면을 마치고 경계에서 선다.
+      if (loaded.monthRun !== undefined && !isWellFormedMonthRun(loaded.monthRun)) delete loaded.monthRun;
       if (loaded.monthRun?.status === 'playing') loaded.monthRun = { ...loaded.monthRun, status: 'paused', stop: 'reload' };
       set({ state: loaded, runDelta: null });
       return true;

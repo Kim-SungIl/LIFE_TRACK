@@ -849,18 +849,23 @@ export function applyYearTransition(s: GameState): void {
 
 // ===== processWeek 단계 헬퍼 (순수 추출 — state를 직접 mutate, 동작 보존) =====
 
-// npcActivityMap(UI에서 고른 동행 친구)에 따른 친밀도 +3
-function applyNpcActivitySelection(state: GameState, npcActivityMap?: Record<string, string>): void {
-  if (!npcActivityMap) return;
-  for (const npcId of Object.values(npcActivityMap)) {
+// npcActivityMap(UI에서 고른 동행 친구)에 따른 친밀도 +3. 반환 = 동행 키별로 **실제로 오른 양**(소프트캡 뒤) —
+// 약속 정산이 "못 지킨 약속 칸의 동행 몫"을 되돌릴 때 쓴다(monthInvites.settlePromisesForWeek).
+function applyNpcActivitySelection(state: GameState, npcActivityMap?: Record<string, string>): Record<string, number> {
+  const gained: Record<string, number> = {};
+  if (!npcActivityMap) return gained;
+  for (const [key, npcId] of Object.entries(npcActivityMap)) {
     const npc = state.npcs.find(n => n.id === npcId);
     if (npc) {
       // 반복 grind 소프트캡 경유 — 동행은 무한 반복 가능하므로 캡 이상은 이벤트로만.
       // (구간 감쇠 + max(1) 바닥의 80+ 무한상승을 소프트캡으로 차단)
+      const before = npc.intimacy;
       npc.intimacy = applyGrindIntimacyGain(npc.intimacy, 3);
+      gained[key] = npc.intimacy - before;
       npc.lastInteractionWeek = absWeek(state.year, state.week); // 관계 신호: 동행 = 상호작용
     }
   }
+  return gained;
 }
 
 // 주 시작 컨텍스트: 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정.
@@ -882,12 +887,14 @@ function prepareWeekContext(state: GameState): void {
 
 // 용돈 지급 + 생활비 차감 (v6, parentModifiers SSOT). econMods를 반환해 idle 페널티와 공유.
 // 월 단위 돈(monthlyMoney.ts)으로 도는 판은 여기서 용돈을 주지 않는다 — 달 첫 주로 넘어갈 때 그 달 4주치를 받는다.
-// 그 돈은 달 첫 주의 보류분으로 들어가 **달 첫 주 결산**에 보이므로, wealth 문구도 그 주에만 단다.
+// wealth 문구는 **그 돈이 보이는 결산**에 단다: 달 경계는 지난달 마지막 주 결산(settleMonthStartIfDue가 그 로그에
+// 싣는 자리), 학년 첫 주(W1)는 보류분으로 들어와 W1 결산에 보이므로 여기서. 예전엔 달 첫 주에 달아 돈이 들어온
+// 결산 다음 주에 문구만 떴다(3자 검수).
 // 아직 매주 방식인 구세이브(첫 달 초 전)는 예전처럼 매주 받는다.
 function applyAllowanceAndLiving(state: GameState, log: WeekLog): ReturnType<typeof getParentMods> {
   const econMods = getParentMods(state.parents);
   if (isMonthlyMoneyActive(state)) {
-    if (state.parents.includes('wealth') && isMonthStartWeek(state.week)) {
+    if (state.parents.includes('wealth') && state.week === 1) {
       log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
     }
     return econMods;
@@ -917,6 +924,7 @@ export function settleMonthStartIfDue(state: GameState, log?: WeekLog): void {
   if (log) {
     log.moneyChange = Math.round((log.moneyChange + paid.delta) * 10) / 10;
     log.monthMoney = { label: paid.label, allowance: paid.allowance, routinePaid: paid.routinePaid };
+    if (state.parents.includes('wealth')) log.parentBonusesApplied?.push({ parent: 'wealth', what: '용돈이 넉넉했다' });
     return;
   }
   if (paid.delta === 0) return;
@@ -1215,7 +1223,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   }
 
   // NPC 선택(activity→npc 매핑)에 따른 친밀도 적용
-  applyNpcActivitySelection(newState, npcActivityMap);
+  const companionGained = applyNpcActivitySelection(newState, npcActivityMap);
 
   // 학기/방학 상태 + 말걸기 pressure 차오름 + 이번 주 이벤트 사전결정
   prepareWeekContext(newState);
@@ -1253,7 +1261,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
   // T68 학기 목표 — 이번 주 주말 실행·동행을 기록만 한다(스탯·rng 무관). 판정은 아래 week++ 직전.
   markSemesterGoalWeek(newState, appliedChoices, npcActivityMap);
   // 월 계획의 약속(친구 초대를 수락한 칸) — 실제로 했는지 본다. 못 지켰으면 친밀도 −2와 한 줄(monthInvites.ts).
-  settlePromisesForWeek(newState, log, appliedChoices, npcActivityMap);
+  settlePromisesForWeek(newState, log, appliedChoices, npcActivityMap, companionGained);
 
   // 5b. 부모 친밀도 평균 회귀 — 이번 주 부모 행동(활동/대화)이 없었으면 50으로 천천히 수렴.
   //     (talkToHome은 processWeek 이전에, 부모 활동은 위에서 actedWithParentThisWeek를 세팅)
@@ -1366,6 +1374,8 @@ export interface WeekPreview {
    * 전부 여기 이미 반영돼 있다.
    */
   skipped: SkippedActivity[];
+  /** 이 계획으로 그 주를 마친 뒤의 잔액 — 확정 잠금이 "다음 주부터의 예약(봉투)을 침범하나"를 본다. */
+  moneyAfter: number;
 }
 
 export function predictWeekOutcome(
@@ -1396,6 +1406,7 @@ export function predictWeekOutcome(
     statHints,
     burnoutRisk: fatigueAfter >= 80,
     skipped: after.weekLog?.skipped ?? [],
+    moneyAfter: after.money,
   };
 }
 

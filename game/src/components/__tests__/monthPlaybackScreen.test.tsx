@@ -17,6 +17,7 @@ import { firstPickableChoice } from '../../engine/eventPresentation';
 import { generateMonthInvites } from '../../engine/monthInvites';
 import { MONTHLY_PLANNING_KEY } from '../../engine/featureFlags';
 import { getWeekInfo } from '../../engine/weekMath';
+import { isMonthEndWeek } from '../../engine/monthPlayback';
 import type { GameState, MonthPlan, WeekLog } from '../../engine/types';
 
 const api = () => useGameStore.getState();
@@ -213,6 +214,19 @@ describe('GameScreen 라우팅', () => {
     fireEvent.click(screen.getByRole('button', { name: '다음 주로 →' }));
     await waitFor(() => expect(screen.getByTestId('month-summary')).toBeTruthy());
     expect(now().monthRun, '결산 화면을 넘겼다고 달을 닫으면 안 된다').toBeTruthy();
+  });
+
+  it('달 **중간**의 시험 주(Y2 W30 중간고사)도 카드가 아니라 결산 화면 — 넘기면 재생이 이어진다', async () => {
+    // 시험 주 픽스처가 달 마지막 주(W8)뿐이면 "시험 주는 카드 제외(bigWeek)" 조건을 지워도 통과했다(3자 검수 뮤테이션 L2).
+    playingFrom(30);
+    expect(now().weekLog?.examResult, '전제: W30 중간고사 결과').toBeTruthy();
+    expect(isMonthEndWeek(30), '전제: 달 중간 주').toBe(false);
+    render(<GameScreen />);
+    expect(screen.queryByTestId('playback-card')).toBeNull();
+    expect(screen.queryByTestId('month-summary')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '다음 주로 →' }));
+    expect(now().monthRun!.status).toBe('playing');
+    await waitFor(() => expect(now().monthRun!.log.map(w => w.week)).toContain(31));
   });
 
   it('플래그가 꺼져 있으면 재생 기록이 있어도 예전 결산 화면이다', () => {

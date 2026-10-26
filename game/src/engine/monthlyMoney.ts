@@ -18,7 +18,7 @@
 import { ACTIVITIES, getActivityCost } from './activities';
 import { recordMoneySpent } from './moneyTrajectory';
 import { getParentMods, getWeeklyIncome } from './parentModifiers';
-import { canSpend } from './spendableMoney';
+import { canSpendWhilePlanning } from './spendableMoney';
 import { WEEKS_PER_MONTH, getMonthBlock, getWeekInfo } from './weekMath';
 import type { GameState } from './types';
 
@@ -90,6 +90,15 @@ export function getRoutineDueCost(state: GameState): number {
 }
 
 /**
+ * 루틴을 이렇게 바꾸면 **지금** 내야 할 돈 — 루틴 고르기 화면이 "고를 수 있나"를 이걸로 본다.
+ * 월 단위 돈이면 새 칸은 이번 달 남은 학기 주 × 주 단가다. 주 단가만 보면 잔액이 한 주치보다 많고 한 달치보다
+ * 적을 때 고르게 해 놓고 확정에서 잠근다(3자 검수 — 3c가 결제만 바꾸고 피커는 그대로였다).
+ */
+export function getRoutineSwitchCost(state: GameState, slot2: string | null, slot3: string | null): number {
+  return getRoutineDueCost({ ...state, routineSlot2: slot2, routineSlot3: slot3 });
+}
+
+/**
  * 내야 할 루틴비가 있고 낼 수 있으면 지금 낸다. 모자라면 아무것도 안 내고 그대로 둔다
  * (확정 잠금이 "루틴을 바꿔야 한다"로 막는다). 반환 = 실제로 낸 돈.
  * 결제가 끝나면 두 칸 모두 지금 루틴으로 기록한다 — 무료 칸은 0원이라 기록만 남는다.
@@ -97,7 +106,9 @@ export function getRoutineDueCost(state: GameState): number {
 export function payRoutineIfDue(state: GameState): number {
   if (!isMonthlyMoneyActive(state) || state.week > 48) return 0;
   const due = getRoutineDueCost(state);
-  if (due > 0 && !canSpend(state, due)) return 0;
+  // 확정 잠금(getConfirmGate)과 **같은 물음**이다 — 이번 주 자신의 예약은 지금 고르는 중이라 빼지 않는다.
+  // 예전엔 여기만 canSpend(이번 주 예약까지 뺌)라 잠금은 열리는데 선불은 거부돼, 기록 없이 주 단위로 청구됐다(3자 검수).
+  if (due > 0 && !canSpendWhilePlanning(state, due)) return 0;
   if (due > 0) {
     const before = state.money;
     state.money = round1(state.money - due);
@@ -159,5 +170,7 @@ export function prepaidRoutineSkippedBy(state: GameState, timeCost: number | und
 /** HUD의 입금 안내 한 줄. 월 단위면 "다음 달 초 +N만원 입금", 아직 매주 방식인 구세이브는 예전 문구. */
 export function incomeNote(state: GameState): string {
   if (!isMonthlyMoneyActive(state)) return `주말 마감 시 +${getWeeklyNetIncome(state)}만원 입금`;
-  return `다음 달 초 +${getMonthlyAllowance(state)}만원 입금`;
+  // 학년 마지막 달의 "다음 달"은 새 학년 첫 달이다 — 그 학년 단가로 들어온다(초6→중1에서 16 → 20, 3자 검수).
+  const nextYear = state.week >= 1 && state.week <= 48 && getMonthBlock(state.week).endWeek === 48 && state.year < 7;
+  return `다음 달 초 +${getMonthlyAllowance(nextYear ? { ...state, year: state.year + 1 } : state)}만원 입금`;
 }

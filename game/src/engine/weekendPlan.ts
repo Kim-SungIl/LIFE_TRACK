@@ -11,6 +11,7 @@ import { GameState, WeekendPlanSnapshot } from './types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from './activities';
 import { getRoutineDueCost } from './monthlyMoney';
 import { canSpendWhilePlanning } from './spendableMoney';
+import { reservedMoney } from './monthPlan';
 import { slotCountFor } from './slotCount';
 import { isNpcEnrolled } from './relationshipSignals';
 import { predictWeekOutcome, type WeekPreview } from './gameEngine';
@@ -160,6 +161,12 @@ export interface ConfirmGate {
   routineTooExpensive: boolean;
   /** 돈이 모자라 실행되지 않을 활동 id(중복 없음). 루틴 경고가 떠 있으면 비운다 — 경고를 겹치지 않는다. */
   unaffordableIds: string[];
+  /**
+   * 이번 주를 이대로 마치면 잔액이 **다음 주부터의 예약**(한 달 계획의 봉투)보다 적어진다.
+   * 계획 밖으로 이번 주를 늘리면(멈춘 뒤 손으로 바꾼 주말, 상점 뒤) 다음 주 몫을 먼저 쓰게 된다 — 상점·선택지가
+   * canSpend로 지키는 봉투를 확정 경로만 뚫던 구멍(3자 검수). 계획이 없으면 예약이 0이라 늘 거짓이다.
+   */
+  reserveBreached: boolean;
   /** 학기인데 첫 루틴 칸이 비었다(돈과 무관한 잠금). */
   missingRoutine: boolean;
   /** 돈 때문에 잠겼다 — 기록실의 "돈에 막힌 주"(markMoneyBlockedWeek) 적립 근거. */
@@ -168,7 +175,7 @@ export interface ConfirmGate {
   disabled: boolean;
 }
 
-export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'skipped'>): ConfirmGate {
+export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'skipped'> & Partial<Pick<WeekPreview, 'moneyAfter'>>): ConfirmGate {
   // 지금 내야 할 루틴비 — 월 단위 돈이면 이번 달 아직 안 낸 몫(남은 학기 주 × 주 단가), 이미 냈으면 0.
   // 구세이브(아직 매주 방식)는 예전처럼 이번 주 한 주치. 판정은 monthlyMoney.getRoutineDueCost 하나다.
   const routineCost = getRoutineDueCost(state);
@@ -177,7 +184,10 @@ export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'ski
     ? []
     : [...new Set(preview.skipped.filter(s => s.reason === 'money').map(s => s.activityId))]
         .filter(id => ACTIVITIES.some(a => a.id === id));
+  const reserveAfter = reservedMoney(state, state.week + 1);
+  const reserveBreached = !routineTooExpensive && unaffordableIds.length === 0 && reserveAfter > 0
+    && preview.moneyAfter !== undefined && preview.moneyAfter + 1e-9 < reserveAfter;
   const missingRoutine = !state.isVacation && !state.routineSlot2;
-  const moneyBlocked = routineTooExpensive || unaffordableIds.length > 0;
-  return { routineCost, routineTooExpensive, unaffordableIds, missingRoutine, moneyBlocked, disabled: missingRoutine || moneyBlocked };
+  const moneyBlocked = routineTooExpensive || unaffordableIds.length > 0 || reserveBreached;
+  return { routineCost, routineTooExpensive, unaffordableIds, reserveBreached, missingRoutine, moneyBlocked, disabled: missingRoutine || moneyBlocked };
 }

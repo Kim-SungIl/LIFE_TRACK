@@ -12,7 +12,7 @@
 //     (엔진도 다시 짠 계획의 초대 답이 처음과 다르면 거부한다 — monthInvites.validateInviteAnswers).
 import { useMemo, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
-import { ACTIVITIES, getActivityCost, getAvailableActivities } from '../../../engine/activities';
+import { ACTIVITIES, collapseActivityChoices, getActivityCost, getAvailableActivities } from '../../../engine/activities';
 import { getExamsInMonth, getNextMonthOpeningExam } from '../../../engine/examSystem';
 import { getRoutineDueCost, incomeNote, remainingSemesterWeeks } from '../../../engine/monthlyMoney';
 import { plannedWeekCost, slotCountForWeek } from '../../../engine/monthPlan';
@@ -25,6 +25,8 @@ import { getMonthBlock, getWeekInfo, getWeekOfMonth } from '../../../engine/week
 import { NpcSelectModal } from './NpcSelectModal';
 import { chipSurface } from '../surface';
 import { SlotEditPopup } from './SlotEditPopup';
+import { SemesterGoalChip } from './SemesterGoalChip';
+import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
   state: GameState;
@@ -35,6 +37,11 @@ type Props = {
   existing?: MonthPlan | null;
   /** 다시 짜기를 그만두고 짜 둔 계획 그대로 돌아간다. */
   onCancel?: () => void;
+  /**
+   * T68 학기 목표 고르기(store.chooseSemesterGoal). 고를 수 있는 창은 학기 첫 두 주인데, 한 달 계획을 저장하면
+   * 그 두 주가 재생 카드로 지나가 주간 화면의 칩을 볼 일이 없다 — 그래서 계획 화면에서 고른다(디렉터 결정 2026-10-26).
+   */
+  onChooseGoal?: (offer: GoalOffer) => boolean;
 };
 
 type Draft = { activities: string[]; npcChoices: Record<string, string> };
@@ -54,7 +61,7 @@ function summarize(d: Draft, npcName: (id: string) => string): string {
   return parts.length ? parts.join(' / ') : '쉰다';
 }
 
-export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCancel }: Props) {
+export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCancel, onChooseGoal }: Props) {
   const block = getMonthBlock(state.week);
   const weeks = useMemo(
     () => Array.from({ length: block.endWeek - state.week + 1 }, (_, i) => state.week + i),
@@ -98,7 +105,12 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const nextExam = getNextMonthOpeningExam(state.year, block);
   const companionNpcs = state.npcs.filter(n => n.met && isNpcEnrolled(n, state));
 
-  /** 수락한 초대의 칸은 약속으로 고정 — 복사·편집이 덮어써도 다시 박는다(못 지킨 약속은 −2라 화면이 실수로 지우면 안 된다). */
+  /**
+   * 수락한 초대의 칸은 약속으로 고정 — 복사·편집이 덮어써도 다시 박는다(못 지킨 약속은 −2라 화면이 실수로 지우면 안 된다).
+   * 박은 뒤에는 **칸의 활동과 맞지 않게 된 동행 키를 지운다**. 수락·복사·「지난주처럼」·편집이 모두 여기를 지나므로
+   * 정리도 여기 하나다 — 예전엔 편집(setDraft)만 지워, 친구와 놀기 칸 위로 초대를 수락하면 `hang-out:1`이 남아
+   * 엔진 검증(validateMonthPlan)이 계획을 거부했다(3자 검수).
+   */
   const withPins = (week: number, d: Draft, acc: Record<number, boolean> = answers): Draft => {
     let { activities, npcChoices } = d;
     invites.forEach((inv, i) => {
@@ -106,6 +118,11 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
       activities = assignSlot(activities, inv.slotIdx, inv.activityId);
       npcChoices = { ...npcChoices, [`${inv.activityId}:${inv.slotIdx}`]: inv.npcId };
     });
+    const pinned = activities;
+    npcChoices = Object.fromEntries(Object.entries(npcChoices).filter(([key]) => {
+      const m = /^(.+):(\d+)$/.exec(key);
+      return !!m && pinned[Number(m[2])] === m[1];
+    }));
     return { activities, npcChoices };
   };
 
@@ -126,21 +143,27 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
     }));
   };
 
-  /** 칸을 바꾸면 그 칸을 가리키던 동행은 지운다 — 남겨 두면 엔진 검증(validateMonthPlan)이 계획을 거부한다. */
+  /** 칸을 바꾸면 그 칸을 가리키던 동행은 지운다(withPins) — 남겨 두면 엔진 검증(validateMonthPlan)이 계획을 거부한다. */
   const setDraft = (idx: number, patch: Partial<Draft>) =>
-    setDrafts(ds => ds.map((d, i) => {
-      if (i !== idx) return d;
-      const next = { ...d, ...patch };
-      const npcChoices = Object.fromEntries(Object.entries(next.npcChoices).filter(([key]) => {
-        const m = /^(.+):(\d+)$/.exec(key);
-        return !!m && next.activities[Number(m[2])] === m[1];
-      }));
-      return withPins(weeks[i], { ...next, npcChoices });
-    }));
+    setDrafts(ds => ds.map((d, i) => (i === idx ? withPins(weeks[i], { ...d, ...patch }) : d)));
 
   /** 이 주를 고칠 때 쓸 수 있는 돈 — 다른 주 예약과 아직 안 낸 학원비를 뺀다(그 주 몫은 지금 고르는 중). */
   const availableFor = (idx: number) =>
     state.money - routineDue - drafts.reduce((s, d, i) => (i === idx ? s : s + plannedWeekCost(d.activities, state.year)), 0);
+
+  /**
+   * 이 주 밖(같은 달의 다른 방학 주)에 짜 둔 방학 활동 횟수 — 방학당 횟수 제한은 방학 전체를 센다.
+   * 그 주 초안만 세면 4주 모두에 「할머니댁」(방학당 1회)을 넣을 수 있었고, 재생은 넘친 주를 건너뛰면서
+   * 그 비용은 봉투에 잡아 두었다(3자 검수).
+   */
+  const vacUseOutside = (idx: number): Record<string, number> => {
+    const counts: Record<string, number> = {};
+    drafts.forEach((d, i) => {
+      if (i === idx || !isVac(weeks[i])) return;
+      for (const id of collapseActivityChoices(d.activities)) counts[id] = (counts[id] ?? 0) + 1;
+    });
+    return counts;
+  };
 
   /** 같은 계절의 첫 주를 나머지에 복사(모든 주 똑같이). */
   const copyFirstToAll = () => {
@@ -254,6 +277,9 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
           cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} />
       ))}
 
+      {/* T68 학기 목표 — 주별 계획 바로 위. 칩이 스스로 고를 수 있는 때(학기 첫 두 주)와 진행 중 표시를 가른다. */}
+      {onChooseGoal && <SemesterGoalChip state={state} onChoose={onChooseGoal} />}
+
       <section aria-label="주별 계획" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{block.kind === 'vacation' ? '방학 일과' : '주말'}</span>
@@ -354,6 +380,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
           maxSlots={slotCountForWeek(state, editingWeek)}
           currentSlots={drafts[editing.idx].activities.reduce((n, id) => n + (id ? 1 : 0), 0)}
           availableMoney={availableFor(editing.idx)}
+          extraVacUse={vacUseOutside(editing.idx)}
           onSetRoutine={onSetRoutine}
           setNpcSelectFor={(v) => { if (v) setNpcSelect({ idx: editing.idx, key: v }); }}
           setLastReaction={() => {}}

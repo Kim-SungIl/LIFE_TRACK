@@ -3,6 +3,7 @@ import { GameState, Activity } from '../../../engine/types';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, collapseActivityChoices } from '../../../engine/activities';
 import { getActivityReaction } from '../../../engine/dialogues';
 import { assignSlot } from '../../../engine/weekendPlan';
+import { getRoutineSwitchCost } from '../../../engine/monthlyMoney';
 import { ActivityPicker } from '../../ActivityPicker';
 import { SlotIcon } from '../../icons/icons';
 import { Dialog } from '../../Dialog';
@@ -21,6 +22,8 @@ type Props = {
   onSetRoutine: (slot2: string | null, slot3: string | null) => void;
   setNpcSelectFor: (v: string | null) => void;
   setLastReaction: (v: string | null) => void;
+  /** 이 주 **밖**에 이미 짜 둔 방학 활동 횟수(한 달 계획의 다른 주) — 방학당 횟수 제한에 더한다. 주간 화면은 없음. */
+  extraVacUse?: Record<string, number>;
 };
 
 // 방과후/저녁 루틴 + 주말/방학 슬롯의 활동 선택 모달 (ActivityPicker 래퍼).
@@ -28,7 +31,7 @@ export function SlotEditPopup({
   editingSlot, setEditingSlot, state, activities,
   selectedActivities, setSelectedActivities, npcChoices,
   maxSlots, currentSlots, availableMoney,
-  onSetRoutine, setNpcSelectFor, setLastReaction,
+  onSetRoutine, setNpcSelectFor, setLastReaction, extraVacUse,
 }: Props) {
   return (
     <Dialog onClose={() => setEditingSlot(null)} align="bottom" zIndex={250} maxWidth={600}
@@ -162,13 +165,19 @@ export function SlotEditPopup({
             npcChoices={npcChoices}
             compact={false}
             availableMoney={availableMoney}
+            // 루틴 칸은 고른 순간 onToggle이 넣을 두 칸 그대로 비용을 잰다(setRoutine이 그 상태로 결제한다).
+            routineDueCost={
+              editingSlot === 'routine1' ? (a: Activity) => getRoutineSwitchCost(state, a.id, state.routineSlot3 === a.id ? null : state.routineSlot3)
+              : editingSlot === 'routine2' ? (a: Activity) => getRoutineSwitchCost(state, state.routineSlot2, a.id)
+              : undefined
+            }
             pendingVacUse={editingSlot.startsWith('routine') ? undefined : (() => {
               // 이번 주 계획에 이미 배치된 활동별 인스턴스 수 — 편집 중 슬롯의 활동은
               // 1인스턴스 제외 (위 currentSlots 계산과 동일 규칙)
               const idx = editingSlot === 'weekend1' ? 0 :
                           editingSlot === 'weekend2' ? 1 :
                           parseInt(editingSlot.replace('weekend', '')) - 1;
-              const counts: Record<string, number> = {};
+              const counts: Record<string, number> = { ...extraVacUse };
               for (const inst of collapseActivityChoices(selectedActivities)) {
                 counts[inst] = (counts[inst] ?? 0) + 1;
               }

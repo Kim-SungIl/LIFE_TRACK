@@ -527,6 +527,7 @@ export function GameScreen() {
         state={state}
         existing={existing}
         onSetRoutine={setRoutine}
+        onChooseGoal={chooseSemesterGoal}
         onStart={(plan) => {
           const reason = setMonthPlan(plan);
           if (reason === null) {

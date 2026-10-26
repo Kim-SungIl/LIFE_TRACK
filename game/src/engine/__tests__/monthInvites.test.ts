@@ -192,14 +192,18 @@ describe('약속 — 그 주에 지켰는지(processWeek)', () => {
     expect(intimacy(kept, inv.npcId)).toBe(intimacy(control, inv.npcId));
   });
 
-  it('이벤트 시간 소모로 그 칸이 잘리면 못 지킨 것 — 친밀도 −2와 한 줄', () => {
+  it('이벤트 시간 소모로 그 칸이 잘리면 못 지킨 것 — 결과는 정확히 −2(만나지 못한 동행 +3은 없던 일)와 한 줄', () => {
     const { s, inv, pick, map } = promiseWeek();
     // timeCost는 뒤에서부터 지운다 — 약속 칸이 마지막이 되게 둘째 칸 뒤를 비운다.
     const choices = inv.slotIdx === 1 ? pick : [pick[0]];
     const cut = processWeek({ ...s, weekendChoices: choices, eventTimeCost: 1 }, map);
-    const control = processWeek({ ...s, monthPlan: undefined, weekendChoices: choices, eventTimeCost: 1 }, map);
+    // 대조군은 **동행이 없던 판**이다. 동행 +3은 실행 여부와 무관하게 먼저 들어가므로, 동행이 있는 판을 대조로 두면
+    // 예전 결과(+3 −2 = +1)도 "대조 −2"로 통과했다(3자 검수 — 디렉터 결정 2026-10-26: 깨진 약속은 정산 −2).
+    const noCompanion = processWeek({ ...s, monthPlan: undefined, weekendChoices: choices, eventTimeCost: 1 });
+    const withCompanion = processWeek({ ...s, monthPlan: undefined, weekendChoices: choices, eventTimeCost: 1 }, map);
+    expect(intimacy(withCompanion, inv.npcId), '전제: 동행만으로는 칸이 잘려도 오른다').toBeGreaterThan(intimacy(noCompanion, inv.npcId));
     expect(cut.weekLog!.messages.some(m => m.startsWith('💔'))).toBe(true);
-    expect(intimacy(cut, inv.npcId)).toBe(Math.max(0, intimacy(control, inv.npcId) - 2));
+    expect(intimacy(cut, inv.npcId)).toBe(Math.max(0, intimacy(noCompanion, inv.npcId) - 2));
   });
 
   it('그 활동을 했어도 그 친구와가 아니면 못 지킨 것 — −2', () => {

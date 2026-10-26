@@ -128,9 +128,14 @@ export function applyDeclinedInvites(state: GameState, answers: readonly (MonthI
  * 이 주에 약속이 있었으면 지켰는지 본다 — processWeek가 주말(방학) 활동을 적용한 직후 부른다.
  * 지켰다 = 그 칸의 그 활동이 실제로 실행됐고(`applied`) 그 친구가 동행이었다. 못 지켰으면 친밀도 −2와 한 줄.
  * 지킨 주의 친밀도는 동행 경로(+3)가 이미 줬으니 여기서는 문장만 남긴다.
+ *
+ * **못 지킨 약속의 결과는 정확히 −2다(디렉터 결정 2026-10-26).** 동행 +3은 활동이 실행됐는지와 무관하게 동행 맵만
+ * 보고 먼저 들어간다 — 그래서 친구가 맵에 남은 채 칸이 잘리면(timeCost·돈) 예전엔 +3 −2 = +1이었다(3자 검수).
+ * 그 약속 칸 키로 오른 몫(`companionGained`, 소프트캡 뒤 실제 상승분)을 먼저 되돌리고 −2를 적용한다.
  */
 export function settlePromisesForWeek(
   state: GameState, log: WeekLog, applied: readonly ActivityInstance[], npcActivityMap?: Record<string, string>,
+  companionGained: Record<string, number> = {},
 ): void {
   const plan = getCurrentMonthPlan(state);
   if (!plan?.invites) return;
@@ -138,14 +143,17 @@ export function settlePromisesForWeek(
     if (!inv.accepted || inv.week !== state.week) continue;
     const npc = state.npcs.find(n => n.id === inv.npcId);
     if (!npc) continue;
+    const key = `${inv.activityId}:${inv.slotIdx}`;
     const ran = applied.some(inst => inst.id === inv.activityId && inst.slots.includes(inv.slotIdx));
-    const together = npcActivityMap?.[`${inv.activityId}:${inv.slotIdx}`] === inv.npcId;
+    const together = npcActivityMap?.[key] === inv.npcId;
     const actName = ACTIVITIES.find(a => a.id === inv.activityId)?.name ?? inv.activityId;
     (log.promises ??= []).push({ npcId: npc.id, kept: ran && together });
     if (ran && together) {
       log.messages.push(`📌 ${josa(npc.name, '와/과')} 한 약속 — ${actName}. 지켰다.`);
     } else {
-      npc.intimacy = Math.max(0, npc.intimacy + PROMISE_BROKEN_PENALTY);
+      // 만나지 못한 동행 몫은 없던 일이다 — 이 약속 칸 키로 오른 만큼 되돌린 뒤 −2.
+      const undo = together ? (companionGained[key] ?? 0) : 0;
+      npc.intimacy = Math.max(0, npc.intimacy - undo + PROMISE_BROKEN_PENALTY);
       log.messages.push(`💔 ${josa(npc.name, '와/과')} 한 약속을 못 지켰다.`);
     }
   }

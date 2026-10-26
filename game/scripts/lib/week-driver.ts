@@ -473,6 +473,11 @@ export function driveMonthly(
   const checks: DriveChecks = { savesCompared: 0, saveMismatches: 0, runDeltaAtEnding: false, archiveWritten: false };
   const unsub = store.subscribe((st, prev) => {
     const s = st.state;
+    // 학년 마지막 주(W48)는 결산 없이 곧장 학년말(Y7이면 엔딩)로 간다 — 그 주의 약속도 정산은 됐으니 여기서 센다.
+    // 예전엔 결산 진입만 세서 W48 약속이 "수락했는데 정산 0"으로 보였다(카운터 대조가 어긋나 드러남).
+    if (s && (s.phase === 'year-end' || s.phase === 'ending') && prev.state?.phase !== s.phase && s.weekLog?.week === 48) {
+      for (const p of s.weekLog.promises ?? []) { if (p.kept) counters.promisesKept++; else counters.promisesBroken++; }
+    }
     if (!s || s.phase !== 'result' || prev.state?.phase === 'result') return;
     counters.weeks++;
     for (const p of s.weekLog?.promises ?? []) { if (p.kept) counters.promisesKept++; else counters.promisesBroken++; }
