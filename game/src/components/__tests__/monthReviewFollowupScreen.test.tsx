@@ -274,6 +274,39 @@ describe('루틴 피커 — 이 선택 때문에 이번 주를 확정할 수 없
     expect(activityButton('internet-lecture').hasAttribute('disabled'), '낼 수 있는 인강').toBe(false);
   });
 
+  describe('다시 짜기 — 각 기준은 그 계획의 이번 주 칸으로 잰다(7차 codex: 저장 봉투와 초안 활동이 섞였다)', () => {
+    const gym = () => cost('gym');
+    function replan(saved: Record<number, string[]>, money: number) {
+      const s = w6({ money });
+      const existing: MonthPlan = {
+        year: 2, month: getMonthBlock(6).index, invites: [],
+        weeks: [6, 7, 8].map(week => ({ week, activities: saved[week] ?? ['rest', 'rest'], npcChoices: {} })),
+      };
+      s.monthPlan = existing;
+      render(<MonthPlanScreen state={s} existing={existing} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} onCancel={vi.fn()} />);
+    }
+    const openEvening = () => fireEvent.click(screen.getAllByRole('button').find(b => (b.textContent ?? '').includes('②'))!);
+
+    it('저장 W7 레슨을 초안에서 W6으로 옮겨도 두 계획 다 감당되면 저녁 헬스를 연다', () => {
+      replan({ 7: [ART_ID, 'rest'] }, gym() * 3 + cost(ART_ID));
+      pickInto('slot-6-0', ART_ID);
+      fireEvent.click(screen.getAllByRole('button', { expanded: false }).find(b => b.textContent?.startsWith('3주'))!);
+      pickInto('slot-7-0', 'reading');
+      expect(screen.getByTestId('week-summary-6').textContent, '전제: W6 초안에 레슨').toContain('예체능 레슨');
+      openEvening();
+      expect(activityButton('gym').hasAttribute('disabled')).toBe(false);
+    });
+
+    it('저장된 W6 레슨 둘을 초안에서 비워도, 「그대로」면 헬스비 뒤 레슨값이 모자라므로 막는다', () => {
+      replan({ 6: [ART_ID, ART_ID] }, gym() * 3 + cost(ART_ID) * 2 - 1);
+      pickInto('slot-6-0', 'reading');
+      pickInto('slot-6-1', 'reading');
+      expect(screen.getByTestId('week-summary-6').textContent, '전제: W6 초안을 비웠다').not.toContain('예체능 레슨');
+      openEvening();
+      expect(activityButton('gym').hasAttribute('disabled')).toBe(true);
+    });
+  });
+
   it('아직 매주 방식인 구세이브는 예전처럼 주 단가로 본다', () => {
     openRoutine(w6({ money: weekly() * 2, monthlyMoney: undefined, routinePrepaid: undefined }));
     const btn = activityButton('academy');

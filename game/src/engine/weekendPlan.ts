@@ -12,7 +12,7 @@ import { ACTIVITIES, NPC_COMPANION_ACTIVITIES } from './activities';
 import { getRoutineDueCost, isMonthlyMoneyActive, payRoutineIfDue } from './monthlyMoney';
 import { cloneGameState } from './stateClone';
 import { canSpendWhilePlanning } from './spendableMoney';
-import { reservedMoney } from './monthPlan';
+import { getPlannedWeek, reservedMoney } from './monthPlan';
 import { slotCountFor } from './slotCount';
 import { isNpcEnrolled } from './relationshipSignals';
 import { predictWeekOutcome, type WeekPreview } from './gameEngine';
@@ -217,11 +217,15 @@ export function getConfirmGate(state: GameState, preview: Pick<WeekPreview, 'ski
 export function makeRoutineChangeCheck(
   state: GameState, weekend: string[], npcChoices: Record<string, string>, judgePlan?: MonthPlan,
 ): (slot2: string | null, slot3: string | null) => boolean {
-  const views: ((s: GameState) => GameState)[] = [s => s];
-  if (judgePlan) views.push(s => ({ ...s, monthPlan: judgePlan }));
-  const lockedIn = (view: (s: GameState) => GameState, s: GameState) => {
-    const v = view(s);
-    return getConfirmGate(v, predictWeekOutcome(v, weekend, npcChoices)).moneyBlocked;
+  // 판마다 그 판이 이번 주에 실제로 할 칸으로 잰다. 계획 화면의 실제 판(「그대로」)은 **저장된 계획의 이번 주 칸**으로
+  // 이어지고, 초안 판은 초안의 이번 주 칸이다 — 둘에 같은 칸을 넣으면 저장 봉투와 초안 활동이 섞인다(7차 codex).
+  type View = { plan: (s: GameState) => GameState; weekend: string[]; npcChoices: Record<string, string> };
+  const saved = judgePlan ? getPlannedWeek(state) : null;
+  const views: View[] = [{ plan: s => s, weekend: saved?.activities ?? weekend, npcChoices: saved?.npcChoices ?? npcChoices }];
+  if (judgePlan) views.push({ plan: s => ({ ...s, monthPlan: judgePlan }), weekend, npcChoices });
+  const lockedIn = (view: View, s: GameState) => {
+    const v = view.plan(s);
+    return getConfirmGate(v, predictWeekOutcome(v, view.weekend, view.npcChoices)).moneyBlocked;
   };
   const paidAnyway = payRoutineIfDue(cloneGameState(state));
   const dueBefore = getRoutineDueCost(state);
