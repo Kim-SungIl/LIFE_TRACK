@@ -178,14 +178,20 @@ function webpGenPlugin(): Plugin {
         // 이 캐시가 만든 이름(64자리 키 + .webp/.thumb.webp [+ .sha256])만 지운다. 다른 빌드가 쓰는 중인 임시 파일,
         // 캐시와 무관한 파일, 디렉터리는 건드리지 않는다 — WEBP_CACHE_DIR을 잘못 가리켜도 남의 파일이 안 지워진다(3자 검수).
         const OURS = /^[0-9a-f]{64}\.(?:thumb\.)?webp(?:\.sha256)?$/
+        // 정리는 크기 관리일 뿐 산출물과 무관하다 — 실패(권한·디렉터리 소실)해도 경고만 하고 빌드는 계속한다(3자 재검수).
         let pruned = 0
-        for (const e of await fs.readdir(cacheDir, { withFileTypes: true })) {
-          if (!e.isFile() || !OURS.test(e.name)) continue
-          if (cacheUsed.has(e.name.replace(/\.sha256$/, ''))) continue
-          await fs.rm(path.join(cacheDir, e.name), { force: true })
-          pruned++
+        let pruneNote = ''
+        try {
+          for (const e of await fs.readdir(cacheDir, { withFileTypes: true })) {
+            if (!e.isFile() || !OURS.test(e.name)) continue
+            if (cacheUsed.has(e.name.replace(/\.sha256$/, ''))) continue
+            await fs.rm(path.join(cacheDir, e.name), { force: true })
+            pruned++
+          }
+        } catch (e) {
+          pruneNote = ` — 정리 중단: ${(e as Error).message}`
         }
-        console.log(`[webp-gen] 변환 캐시 ${cacheDir} — 적중 ${cacheHits}/${count}장, 정리 ${pruned}개 (${encoderTag})`)
+        console.log(`[webp-gen] 변환 캐시 ${cacheDir} — 적중 ${cacheHits}/${count}장, 정리 ${pruned}개${pruneNote} (${encoderTag})`)
       }
       const mb = (b: number) => (b / 1048576).toFixed(1)
       console.log(`[webp-gen] ${count}개 webp 생성 + 원본 png 삭제 완료 — `
