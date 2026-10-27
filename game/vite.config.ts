@@ -28,6 +28,10 @@ import {
 // 실측 축소본 평균 7.6KB — 54칸 462KB(13.4배 절감).
 // 라이트박스(maxHeight:76vh)는 원본이 필요하므로 축소본이 원본을 **대체하지 않고 추가**된다.
 const CG_THUMB_WIDTH = 256
+// 인코딩 설정 — 변환 코드와 캐시 키가 **같은 객체**를 읽는다. 키를 손으로 쓴 문자열("q82e5")로 두면 옵션을 바꿔도
+// 키가 그대로라 옛 설정의 그림이 조용히 배포된다(3자 검수 실측: quality 82→50에도 웜 캐시 12/12 적중).
+const WEBP_OPTIONS = { quality: 82, effort: 5 } as const
+const CG_THUMB_RESIZE = { width: CG_THUMB_WIDTH } as const
 
 function webpGenPlugin(): Plugin {
   const enabled = process.env.GEN_WEBP === '1'
@@ -50,21 +54,41 @@ function webpGenPlugin(): Plugin {
       // 나이틀리는 이 변수 없이 돈다 — 캐시 없는 경로가 매일 한 번은 처음부터 검증된다.
       const cacheDir = process.env.WEBP_CACHE_DIR ? path.resolve(process.env.WEBP_CACHE_DIR) : null
       const v = sharp.versions as Record<string, string>
-      const encoderTag = `sharp${v.sharp}-vips${v.vips}-webp${v.webp}-q82e5-t${CG_THUMB_WIDTH}`
+      const encoderTag = `sharp${v.sharp}-vips${v.vips}-webp${v.webp}-${JSON.stringify({ webp: WEBP_OPTIONS, thumb: CG_THUMB_RESIZE })}`
       const cacheUsed = new Set<string>()
       let cacheHits = 0
       if (cacheDir) await fs.mkdir(cacheDir, { recursive: true })
-      // 캐시 항목을 쓰고 나서 이름을 바꾼다 — 중간에 죽어도 반쪽 파일이 적중으로 읽히지 않게.
-      const cachePut = async (src: string, key: string): Promise<void> => {
+      // 캐시 항목 = `<키>.webp`(또는 .thumb.webp) + 같은 이름의 `.sha256`(내용 해시). 키는 **입력** png의 해시라
+      // 출력이 망가져도 키로는 모른다 — 읽을 때 내용 해시를 대조해 다르면 놓친 것으로 치고 다시 만든다(3자 검수:
+      // 잘리거나 쓰레기가 된 항목이 그대로 배포됐다). 쓰기는 임시 파일 → rename이다. 임시 이름에 pid만 쓰면 같은 바이트
+      // png 두 장(실제 트리에 5그룹)이 동시에 끝날 때 같은 임시 파일을 써서 한쪽 rename이 ENOENT로 빌드를 깼다.
+      const sha256 = (buf: Buffer) => createHash('sha256').update(buf).digest('hex')
+      let tmpSeq = 0
+      const cachePut = async (src: string, name: string): Promise<void> => {
         if (!cacheDir) return
-        const tmp = path.join(cacheDir, `${key}.tmp-${process.pid}`)
-        await fs.copyFile(src, tmp)
-        await fs.rename(tmp, path.join(cacheDir, key))
+        const body = await fs.readFile(src)
+        const tag = `.tmp-${process.pid}-${tmpSeq++}`
+        try {
+          await fs.writeFile(path.join(cacheDir, `${name}.sha256${tag}`), sha256(body))
+          await fs.writeFile(path.join(cacheDir, `${name}${tag}`), body)
+          // 해시를 먼저 놓고 본체를 놓는다 — 본체가 보이면 해시는 이미 있다.
+          await fs.rename(path.join(cacheDir, `${name}.sha256${tag}`), path.join(cacheDir, `${name}.sha256`))
+          await fs.rename(path.join(cacheDir, `${name}${tag}`), path.join(cacheDir, name))
+        } catch {
+          // 캐시 쓰기 실패는 빌드 실패가 아니다(산출물은 이미 dist에 있다). 남은 임시 파일만 치운다.
+          await fs.rm(path.join(cacheDir, `${name}.sha256${tag}`), { force: true })
+          await fs.rm(path.join(cacheDir, `${name}${tag}`), { force: true })
+        }
       }
-      const cacheGet = async (key: string, dest: string): Promise<boolean> => {
+      const cacheGet = async (name: string, dest: string): Promise<boolean> => {
         if (!cacheDir) return false
         try {
-          await fs.copyFile(path.join(cacheDir, key), dest)
+          const [body, want] = await Promise.all([
+            fs.readFile(path.join(cacheDir, name)),
+            fs.readFile(path.join(cacheDir, `${name}.sha256`), 'utf8'),
+          ])
+          if (sha256(body) !== want.trim()) return false
+          await fs.writeFile(dest, body)
           return true
         } catch {
           return false
@@ -100,7 +124,7 @@ function webpGenPlugin(): Plugin {
           if (cacheDir) cacheUsed.add(`${key}.webp`)
           if (await cacheGet(`${key}.webp`, dest)) cacheHits++
           else {
-            await sharp(full).webp({ quality: 82, effort: 5 }).toFile(dest)
+            await sharp(full).webp(WEBP_OPTIONS).toFile(dest)
             await cachePut(dest, `${key}.webp`)
           }
           // CG(images/events)만 축소본을 하나 더 낸다 — 앨범 격자 전용이다.
@@ -109,7 +133,7 @@ function webpGenPlugin(): Plugin {
             const thumb = full.replace(/\.png$/i, '.thumb.webp')
             if (cacheDir) cacheUsed.add(`${key}.thumb.webp`)
             if (!(await cacheGet(`${key}.thumb.webp`, thumb))) {
-              await sharp(full).resize({ width: CG_THUMB_WIDTH }).webp({ quality: 82, effort: 5 }).toFile(thumb)
+              await sharp(full).resize(CG_THUMB_RESIZE).webp(WEBP_OPTIONS).toFile(thumb)
               await cachePut(thumb, `${key}.thumb.webp`)
             }
             const thumbSize = (await fs.stat(thumb)).size
@@ -149,10 +173,14 @@ function webpGenPlugin(): Plugin {
         this.error(`[webp-gen] CG 축소본 0개 — ${eventsDir} 확인 필요. 앨범 격자가 깨지므로 릴리즈 빌드 중단.`)
       }
       if (cacheDir) {
+        // 이 캐시가 만든 이름(64자리 키 + .webp/.thumb.webp [+ .sha256])만 지운다. 다른 빌드가 쓰는 중인 임시 파일,
+        // 캐시와 무관한 파일, 디렉터리는 건드리지 않는다 — WEBP_CACHE_DIR을 잘못 가리켜도 남의 파일이 안 지워진다(3자 검수).
+        const OURS = /^[0-9a-f]{64}\.(?:thumb\.)?webp(?:\.sha256)?$/
         let pruned = 0
-        for (const name of await fs.readdir(cacheDir)) {
-          if (cacheUsed.has(name)) continue
-          await fs.rm(path.join(cacheDir, name), { force: true })
+        for (const e of await fs.readdir(cacheDir, { withFileTypes: true })) {
+          if (!e.isFile() || !OURS.test(e.name)) continue
+          if (cacheUsed.has(e.name.replace(/\.sha256$/, ''))) continue
+          await fs.rm(path.join(cacheDir, e.name), { force: true })
           pruned++
         }
         console.log(`[webp-gen] 변환 캐시 ${cacheDir} — 적중 ${cacheHits}/${count}장, 정리 ${pruned}개 (${encoderTag})`)
