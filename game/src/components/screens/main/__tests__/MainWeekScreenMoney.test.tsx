@@ -144,10 +144,10 @@ describe('계획 화면 — 낡은 계획(고른 뒤 사정이 바뀐 경우)', 
   });
 
   it('② 수입 루틴을 유료 루틴으로 바꾸면 경고한다 (루틴이 먼저 차감된다)', () => {
-    // 도달 경로: Y6 잔액 5, 루틴=편의점 알바(수입 4). 고르는 순간 availableMoney는
-    // 5 − (−4) = 9라 입시 실기(4)가 선택된다. 그 뒤 루틴을 학원(4)으로 바꾸면 교체 시점
-    // availableMoney는 5 − (−4) − 4 = 5로 여전히 통과한다 → 확정하면 총 8만이 필요해진다.
-    const { update } = renderScreen({ year: 6, money: 5, routineSlot2: 'part-time', routineSlot3: null });
+    // 도달 경로: Y6 잔액 5, 루틴=편의점 알바(수입). 입시 실기(4)를 고른 뒤 루틴을 학원(4)으로 바꾼다.
+    // 월 단위 돈(monthlyMoney.ts)에서 학원은 한 달 등록이라 바꾸는 순간 **이번 달 남은 학기 주** 몫을 낸다 —
+    // 달의 마지막 주(W4)라 한 주치(4)다. 루틴은 감당되고(5 ≥ 4) 남는 1만으로 실기(4)를 못 한다.
+    const { update } = renderScreen({ year: 6, week: 4, money: 5, routineSlot2: 'part-time', routineSlot3: null });
     expect(COST('part-time', 6)).toBeLessThan(0);
     pickActivity('practical-lesson');
     expect(warnText(), '수입 루틴 상태에서는 감당된다').toBeNull();
@@ -161,18 +161,17 @@ describe('계획 화면 — 낡은 계획(고른 뒤 사정이 바뀐 경우)', 
     expect(warn!.textContent).toContain(NAME('practical-lesson'));
   });
 
-  it('③ 수입 루틴이 섞여 합계로는 감당되는데 순차로는 루틴이 실패하면, 루틴 이름을 댄다', () => {
-    // 학원(4) + 알바(−4) = 0이라 기존 루틴 경고(합계 판정)는 뜨지 않는다. 그런데 엔진은
-    // 순차로 차감하므로 잔액 1만에서는 학원이 실행되지 않는다 — 예전에는 이걸 "루틴 id"라는
-    // 이유로 걸러내 경고가 아예 없었다.
-    // 학년 4: 중등 학원 3만 + 알바 −3만이 정확히 상쇄된다(고등은 알바가 −4만이라 합계가 음수).
-    renderScreen({ year: 4, money: 1, routineSlot2: 'academy', routineSlot3: 'part-time' });
-    expect(COST('academy', 4) + COST('part-time', 4)).toBe(0);
-
-    expect(screen.queryByText(/돈이 부족해요! 방과후/), '합계 기반 루틴 경고가 뜨면 전제가 다르다').toBeNull();
-    const warn = warnText();
-    expect(warn, '루틴이 조용히 스킵되는데 아무 말도 없다').toBeTruthy();
-    expect(warn!.textContent).toContain(NAME('academy'));
+  it('③ 수입 루틴은 학원 선불을 상쇄하지 않는다 — 학원비를 못 내면 루틴 경고가 뜨고 확정이 막힌다', () => {
+    // 예전(매주 차감)엔 학원(3) + 알바(−3) = 0이라 합계 경고가 안 뜨는데 순차로는 학원이 실패하는 틈이 있었다.
+    // 월 단위 돈에서는 학원만 한 달 몫을 선불하고 알바는 일한 주에 받으므로(monthlyMoney.ts) 그 틈이 구조적으로
+    // 없다 — 내야 할 학원비(3 × 남은 학기 2주 = 6)를 잔액 1로 못 내면 곧장 루틴 경고다.
+    const { onConfirmWeek } = renderScreen({ year: 4, money: 1, routineSlot2: 'academy', routineSlot3: 'part-time' });
+    expect(COST('academy', 4) + COST('part-time', 4), '전제: 예전 합계 판정이면 0이라 경고가 숨던 조합').toBe(0);
+    expect(screen.getByText(/돈이 부족해요! 방과후/), '알바가 학원비를 상쇄한 것처럼 경고가 숨는다').toBeTruthy();
+    expect(screen.getByText(/필요 6만원/)).toBeTruthy();
+    const btn = screen.getAllByRole('button').find(b => b.hasAttribute('disabled') && /확정|부족/.test(b.textContent ?? ''));
+    expect(btn, '학원비를 못 냈는데 확정 버튼이 열려 있다').toBeTruthy();
+    expect(onConfirmWeek).not.toHaveBeenCalled();
   });
 
   it('방학에도 경고하고 확정을 막는다 — 고액 활동이 몰린 구간', () => {

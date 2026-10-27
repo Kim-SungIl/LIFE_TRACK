@@ -64,7 +64,7 @@ export function presentRomanceEvent(event: GameEvent, state: RomanceContext): Ga
   const extra: EventChoice[] = [];
   if (npcId === 'subin' && event.id === SUBIN_CONVERSATION_ENTRY && state.year === route.openingYear && !state.relationship) {
     extra.push({ ...choices[0], romanceConversation: 'subin',
-      text: '"같이 외우자. 연습 끝나면 우리 얘기도 조금 할래?"',
+      text: '"같이 외우자. 끝나면 우리 사이에 대해서도 얘기할래?"',
       message: '수빈이와 단어장을 나눠 보고 발음을 맞춰 읽었다. 연습을 마친 뒤 수빈이가 가방을 닫았다. "응, 나도 따로 하고 싶은 얘기가 있어."' });
   } else if (npcId === 'jihun' && event.id === route.opening && state.year === route.openingYear && !state.relationship) {
     extra.push(relationshipChoice(choices[0], npcId, 'date',

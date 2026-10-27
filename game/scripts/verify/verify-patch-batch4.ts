@@ -103,8 +103,14 @@ console.log('\n=== P14. 주간 슬롯 수 SSOT (parentModifiers.vacationSlotBonu
     && /maxSlots[^=]*=\s*getWeekSlotCount\(/.test(src));
   assert('MainWeekScreen에서 maxSlots 직접 includes(\'freedom\') 호출 제거',
     !/parents\.includes\(['"]freedom['"]\)\s*\?\s*6/.test(src));
-  assert('getWeekSlotCount가 parentModifiers의 vacationSlotBonus를 쓴다',
-    /getParentMods\([^)]*\)\.vacationSlotBonus/.test(planSrc));
+  // 2026-10 월 계획(monthPlan.ts)이 같은 판정을 써야 해서 칸 수의 단일 근거를 leaf(slotCount.ts)로 내렸다 —
+  // weekendPlan은 gameEngine을 끌어와 월 계획 쪽에서 import하면 순환이 된다. 그래서 두 고리를 본다:
+  // getWeekSlotCount가 slotCountFor에 위임하고, slotCountFor가 parentModifiers의 vacationSlotBonus를 쓴다.
+  const slotSrc = readFileSync('./src/engine/slotCount.ts', 'utf8');
+  assert('getWeekSlotCount가 slotCountFor(SSOT)에 위임한다',
+    /export function getWeekSlotCount[\s\S]*?slotCountFor\(/.test(planSrc));
+  assert('slotCountFor가 parentModifiers의 vacationSlotBonus를 쓴다',
+    /getParentMods\([^)]*\)\.vacationSlotBonus/.test(slotSrc));
 
   // 실효 검증: parentModifiers가 freedom일 때 vacationSlotBonus +1
   const freedomMods = getParentMods(['freedom', 'wealth']);
