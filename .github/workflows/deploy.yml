@@ -84,7 +84,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: game/.webp-cache
-          key: webp-${{ runner.os }}-${{ hashFiles('game/package-lock.json') }}-${{ steps.imgtree.outputs.tree }}
+          # vite.config.ts(플러그인·인코더 설정)를 키에 넣는다 — 정확 키로 적중하면 actions/cache가 다시 저장하지 않아,
+          # 설정만 바뀐 빌드는 낡은 캐시를 영영 못 갈아 끼운다(적중 6/594가 고정됐다). 항목 자체의 정합성은 내용 키가 지킨다.
+          key: webp-${{ runner.os }}-${{ hashFiles('game/package-lock.json') }}-${{ hashFiles('game/vite.config.ts') }}-${{ steps.imgtree.outputs.tree }}
           restore-keys: |
             webp-${{ runner.os }}-${{ hashFiles('game/package-lock.json') }}-
 
