@@ -63,17 +63,15 @@ function overlayChoices(
   });
 }
 
+// 지문과 선택지는 **따로** 고른다. femaleDescription 없이 femaleChoices만 있는 사건이 10건이다 —
+// 예전엔 지문 유무 하나로 둘을 같이 골라서, 여성은 화면에 남성 선택지를 보고 resolveEvent는 femaleChoices를
+// 적용했다(jihun-birthday: "농구화 끈" 버튼을 누르면 그립테이프 문장이 나왔다). 화면이 집는 목록은
+// resolveEvent가 집는 목록과 같아야 한다 — genderChoiceContract.test.ts가 전 카탈로그로 잠근다.
 function withGenderFallback(event: GameEvent, isFemale: boolean): GameEvent {
-  if (isFemale && event.femaleDescription) {
-    return {
-      ...event,
-      description: event.femaleDescription,
-      choices: (event.femaleChoices ?? event.choices).map(c => ({ ...c })),
-    };
-  }
   return {
     ...event,
-    choices: event.choices.map(c => ({ ...c })),
+    description: isFemale && event.femaleDescription ? event.femaleDescription : event.description,
+    choices: ((isFemale && event.femaleChoices) || event.choices).map(c => ({ ...c })),
   };
 }
 
@@ -99,9 +97,9 @@ function withVacationText(shown: GameEvent, vt: VacationText, isFemale: boolean,
     ...shown,
     description,
     choices: overlay(shown.choices),
-    // 여성 경로는 resolveEvent·GameScreen이 femaleChoices를, EventScene이 femaleDescription을 직접 집는다 —
-    // 거기에도 같은 문장을 둬야 방학 판본이 화면과 기록에 닿는다. femaleChoices는 **자기 원본 위에** 덮는다:
-    // femaleDescription 없이 femaleChoices만 있는 사건은 choices가 남성 판본이라, 그걸 복사하면 여성 효과가 바뀐다.
+    // 여성 경로는 resolveEvent·GameScreen이 femaleChoices를 직접 집는다 — 거기에도 같은 문장을 둬야
+    // 방학 판본이 기록에 닿는다. femaleChoices는 **자기 원본 위에** 덮는다(여성이면 shown.choices가 이미
+    // femaleChoices의 사본이라 둘은 같은 결과가 된다. 남성 choices를 복사해 넣으면 여성 효과가 바뀐다).
     ...(isFemale && shown.femaleDescription !== undefined ? { femaleDescription: description } : {}),
     ...(isFemale && shown.femaleChoices ? { femaleChoices: overlay(shown.femaleChoices) } : {}),
   };
