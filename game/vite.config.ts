@@ -52,12 +52,22 @@ function webpGenPlugin(): Plugin {
       // + 설정이라, 이미지·설정·인코더 중 하나라도 바뀌면 그 장만 다시 만든다(내용 주소 — 낡은 캐시가 틀린 그림을
       // 낼 경로가 없다). 이번 빌드에서 안 쓴 항목은 끝에서 지워 캐시가 한없이 자라지 않게 한다.
       // 나이틀리는 이 변수 없이 돈다 — 캐시 없는 경로가 매일 한 번은 처음부터 검증된다.
-      const cacheDir = process.env.WEBP_CACHE_DIR ? path.resolve(process.env.WEBP_CACHE_DIR) : null
+      // 캐시는 속도일 뿐이다 — 디렉터리를 못 만들면 경고하고 캐시 없이 간다(3자 재검수).
+      const cacheDir = await (async (): Promise<string | null> => {
+        if (!process.env.WEBP_CACHE_DIR) return null
+        const dir = path.resolve(process.env.WEBP_CACHE_DIR)
+        try {
+          await fs.mkdir(dir, { recursive: true })
+          return dir
+        } catch (e) {
+          console.warn(`[webp-gen] 변환 캐시 ${dir} 사용 불가 — 캐시 없이 진행: ${(e as Error).message}`)
+          return null
+        }
+      })()
       const v = sharp.versions as Record<string, string>
       const encoderTag = `sharp${v.sharp}-vips${v.vips}-webp${v.webp}-${JSON.stringify({ webp: WEBP_OPTIONS, thumb: CG_THUMB_RESIZE })}`
       const cacheUsed = new Set<string>()
       let cacheHits = 0
-      if (cacheDir) await fs.mkdir(cacheDir, { recursive: true })
       // 캐시 항목 = `<키>.webp`(또는 .thumb.webp) + 같은 이름의 `.sha256`(내용 해시). 키는 **입력** png의 해시라
       // 출력이 망가져도 키로는 모른다 — 읽을 때 내용 해시를 대조해 다르면 놓친 것으로 치고 다시 만든다(3자 검수:
       // 잘리거나 쓰레기가 된 항목이 그대로 배포됐다). 쓰기는 임시 파일 → rename이다. 임시 이름에 pid만 쓰면 같은 바이트
@@ -66,9 +76,9 @@ function webpGenPlugin(): Plugin {
       let tmpSeq = 0
       const cachePut = async (src: string, name: string): Promise<void> => {
         if (!cacheDir) return
-        const body = await fs.readFile(src)
         const tag = `.tmp-${process.pid}-${tmpSeq++}`
         try {
+          const body = await fs.readFile(src)
           await fs.writeFile(path.join(cacheDir, `${name}.sha256${tag}`), sha256(body))
           await fs.writeFile(path.join(cacheDir, `${name}${tag}`), body)
           // 해시를 먼저 놓고 본체를 놓는다 — 본체가 보이면 해시는 이미 있다.
