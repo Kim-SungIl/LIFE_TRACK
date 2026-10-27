@@ -68,14 +68,15 @@ function webpGenPlugin(): Plugin {
       const encoderTag = `sharp${v.sharp}-vips${v.vips}-webp${v.webp}-${JSON.stringify({ webp: WEBP_OPTIONS, thumb: CG_THUMB_RESIZE })}`
       const cacheUsed = new Set<string>()
       let cacheHits = 0
+      let keyMisses = 0
       // 캐시 항목 = `<키>.webp`(또는 .thumb.webp) + 같은 이름의 `.sha256`(내용 해시). 키는 **입력** png의 해시라
       // 출력이 망가져도 키로는 모른다 — 읽을 때 내용 해시를 대조해 다르면 놓친 것으로 치고 다시 만든다(3자 검수:
       // 잘리거나 쓰레기가 된 항목이 그대로 배포됐다). 쓰기는 임시 파일 → rename이다. 임시 이름에 pid만 쓰면 같은 바이트
       // png 두 장(실제 트리에 5그룹)이 동시에 끝날 때 같은 임시 파일을 써서 한쪽 rename이 ENOENT로 빌드를 깼다.
       const sha256 = (buf: Buffer) => createHash('sha256').update(buf).digest('hex')
       let tmpSeq = 0
-      const cachePut = async (src: string, name: string): Promise<void> => {
-        if (!cacheDir) return
+      const cachePut = async (src: string, name: string | null): Promise<void> => {
+        if (!cacheDir || !name) return
         const tag = `.tmp-${process.pid}-${tmpSeq++}`
         try {
           const body = await fs.readFile(src)
@@ -92,8 +93,8 @@ function webpGenPlugin(): Plugin {
           await drop(`${name}${tag}`)
         }
       }
-      const cacheGet = async (name: string, dest: string): Promise<boolean> => {
-        if (!cacheDir) return false
+      const cacheGet = async (name: string | null, dest: string): Promise<boolean> => {
+        if (!cacheDir || !name) return false
         try {
           const [body, want] = await Promise.all([
             fs.readFile(path.join(cacheDir, name)),
@@ -130,23 +131,29 @@ function webpGenPlugin(): Plugin {
       const convert = async (full: string): Promise<void> => {
         const dest = full.replace(/\.png$/i, '.webp')
         try {
+          // 키용 읽기는 캐시를 켰을 때만 하는 일이라, 실패하면 이 파일만 캐시를 건너뛴다(3자 재검수).
+          // 진짜 변환 실패는 아래 sharp가 그대로 던진다.
           const key = cacheDir
-            ? createHash('sha256').update(encoderTag).update(await fs.readFile(full)).digest('hex')
-            : ''
-          if (cacheDir) cacheUsed.add(`${key}.webp`)
-          if (await cacheGet(`${key}.webp`, dest)) cacheHits++
+            ? await fs.readFile(full).then(b => createHash('sha256').update(encoderTag).update(b).digest('hex'), () => null)
+            : null
+          if (cacheDir && !key) keyMisses++
+          const entry = (suffix: string) => (key ? `${key}${suffix}` : null)
+          const main = entry('.webp')
+          if (main) cacheUsed.add(main)
+          if (await cacheGet(main, dest)) cacheHits++
           else {
             await sharp(full).webp(WEBP_OPTIONS).toFile(dest)
-            await cachePut(dest, `${key}.webp`)
+            await cachePut(dest, main)
           }
           // CG(images/events)만 축소본을 하나 더 낸다 — 앨범 격자 전용이다.
           // **png를 지우기 전에** 만들어야 한다. 배경·캐릭터는 격자에 안 뜨므로 제외.
           if (full.startsWith(eventsDir + path.sep)) {
             const thumb = full.replace(/\.png$/i, '.thumb.webp')
-            if (cacheDir) cacheUsed.add(`${key}.thumb.webp`)
-            if (!(await cacheGet(`${key}.thumb.webp`, thumb))) {
+            const thumbEntry = entry('.thumb.webp')
+            if (thumbEntry) cacheUsed.add(thumbEntry)
+            if (!(await cacheGet(thumbEntry, thumb))) {
               await sharp(full).resize(CG_THUMB_RESIZE).webp(WEBP_OPTIONS).toFile(thumb)
-              await cachePut(thumb, `${key}.thumb.webp`)
+              await cachePut(thumb, thumbEntry)
             }
             const thumbSize = (await fs.stat(thumb)).size
             thumbBytes += thumbSize
@@ -191,7 +198,9 @@ function webpGenPlugin(): Plugin {
         // 정리는 크기 관리일 뿐 산출물과 무관하다 — 실패(권한·디렉터리 소실)해도 경고만 하고 빌드는 계속한다(3자 재검수).
         let pruned = 0
         let pruneNote = ''
-        try {
+        // 키를 못 낸 파일이 있으면 무엇을 썼는지 모르니 정리하지 않는다 — 쓰는 항목을 지우게 된다.
+        if (keyMisses > 0) pruneNote = ` — 정리 생략: 키 계산 실패 ${keyMisses}장`
+        else try {
           for (const e of await fs.readdir(cacheDir, { withFileTypes: true })) {
             if (!e.isFile() || !OURS.test(e.name)) continue
             if (cacheUsed.has(e.name.replace(/\.sha256$/, ''))) continue
