@@ -45,6 +45,12 @@
 // growthDrag의 `Math.log` 둘뿐이고 CPU마다 마지막 비트가 다르다. 능력치·돈·사건은 사칙연산이라 같다.
 // 처방: 지문의 실수를 1e-9 눈금으로 접는다(week-driver `DIGEST_FLOAT_GRID`). 엔진은 그대로다. 6판 모두 카운터가 직전
 // 골든과 동일하고, 두 번 기록해 바이트 동일, 맥과 node:22 리눅스 컨테이너 양쪽에서 이 파일과 월 재생 동등성이 초록이다.
+//
+// 재생성 7 (2026-10-27, 여주 화면 선택지 — genderChoiceContract.test.ts): presentEvent가 femaleDescription 없이
+// femaleChoices만 있는 사건 10건에서 여성에게 남성 choices를 굽던 것을 femaleChoices로 고쳤다. free-talk(여주) 2판만
+// 337칸 중 323칸이 갈리고 paid·paid-spend(남주) 4판은 지문 불변. 원인 귀속: 수정 전·후로 6판을 돌려 **매 store 갱신**
+// (약 2,350번/판)마다 상태를 비교하니, currentEvent·사건 기록의 `choices` 칸만 빼면 전부 바이트 동일 — 적용 경로(resolveEvent)는
+// 원래 femaleChoices를 집었으므로 능력치·돈·친밀도·기억·문장은 그대로고 구운 선택지 사본만 바뀌었다. 카운터 6판 동일.
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
