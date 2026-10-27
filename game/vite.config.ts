@@ -75,9 +75,11 @@ function webpGenPlugin(): Plugin {
           await fs.rename(path.join(cacheDir, `${name}.sha256${tag}`), path.join(cacheDir, `${name}.sha256`))
           await fs.rename(path.join(cacheDir, `${name}${tag}`), path.join(cacheDir, name))
         } catch {
-          // 캐시 쓰기 실패는 빌드 실패가 아니다(산출물은 이미 dist에 있다). 남은 임시 파일만 치운다.
-          await fs.rm(path.join(cacheDir, `${name}.sha256${tag}`), { force: true })
-          await fs.rm(path.join(cacheDir, `${name}${tag}`), { force: true })
+          // 캐시 쓰기 실패는 빌드 실패가 아니다(산출물은 이미 dist에 있다). 남은 임시 파일만 치운다 — 치우기도
+          // 실패할 수 있다(권한 EACCES는 force가 못 삼킨다). 그것도 빌드를 깨지 않는다(3자 재검수).
+          const drop = (f: string) => fs.rm(path.join(cacheDir, f), { force: true }).catch(() => {})
+          await drop(`${name}.sha256${tag}`)
+          await drop(`${name}${tag}`)
         }
       }
       const cacheGet = async (name: string, dest: string): Promise<boolean> => {
