@@ -20,11 +20,11 @@ import { MonthPlanScreen } from './screens/main/MonthPlanScreen';
 import { MonthSummaryScreen } from './screens/main/MonthSummaryScreen';
 import { PlaybackCard } from './screens/main/PlaybackCard';
 import { isMonthlyPlanningEnabled } from '../engine/featureFlags';
-import { getCurrentMonthPlan } from '../engine/monthPlan';
-import { buildMonthSummary, getMonthRun, hadTalkChance, isMonthEndWeek, isPlaying, stopLine, talkBankCount, totalTalks } from '../engine/monthPlayback';
+import { buildMonthSummary, hadTalkChance, isPlaying, stopLine, talkBankCount, totalTalks } from '../engine/monthPlayback';
 import { ACTIVITIES } from '../engine/activities';
 import { getMonthBlock } from '../engine/weekMath';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
+import { decideScreen } from './screenRoute';
 import { ScreenChunkFallback } from './ScreenChunkFallback';
 import { SystemMenu } from './SystemMenu';
 import { goalRecordForWeekLog } from '../engine/semesterGoal';
@@ -278,19 +278,24 @@ export function GameScreen() {
 
   // ===== phase 분기 (단일 Suspense로 lazy 청크 로딩) =====
   let phaseContent: ReactNode;
-  // 전환 페이드용 화면 정체성. **분기마다 phaseContent와 같은 자리에서 함께 지정한다** —
-  // 별도 함수로 분기 조건을 다시 쓰면 라우터와 어긋나서(예: 결과 화면인데 키는 'main')
-  // 전환이 엉뚱한 타이밍에 돌게 된다. 새 분기를 추가하면 키도 같이 적어야 한다.
-  let screenKey: string;
-  let screenPace: TransitionPace = 'normal';
+  // 어느 화면인지와 전환 페이드용 화면 정체성(키·속도)은 decideScreen 하나가 같이 정한다(screenRoute.ts) —
+  // 분기 조건을 두 자리에서 쓰면 라우터와 키가 어긋난다(예: 결과 화면인데 키는 'main').
+  const route = decideScreen({
+    state,
+    eventResult: eventResultData ? { eventId: eventResultData.event?.id, choiceIndex: eventResultData.choiceIndex } : null,
+    endingReady: !!endingData,
+    monthlyEnabled: isMonthlyPlanningEnabled(),
+    bigResultSeen,
+    replanning,
+  });
+  const screenKey = route.key;
+  const screenPace: TransitionPace = route.pace;
 
   // 이벤트 결과 — 비주얼 노벨 배경 유지.
   // 방금 내린 선택의 결과 연출이라 어떤 phase보다 우선한다. 특히 학년말 주(W48) 이벤트에서
   // year-end/ending보다 먼저 체크해야 결과 화면이 학년말 일기장에 묻히지 않는다.
   // onContinue로 닫으면 다음 render에서 phase(result/year-end/ending/event)로 자연 분기.
-  if (eventResultData) {
-    // 같은 선택의 결과 화면 안에서는 키가 고정 — cgLoaded 등으로 다시 페이드되지 않는다.
-    screenKey = `event-result:${eventResultData.event?.id ?? '?'}#${eventResultData.choiceIndex ?? '?'}`;
+  if (route.kind === 'event-result' && eventResultData) {
     phaseContent = (
       <EventResultScreen
         gender={state.gender}
@@ -303,10 +308,8 @@ export function GameScreen() {
         onContinue={() => { setEventResultData(null); setCgLoaded(false); setCgError(false); }}
       />
     );
-  } else if (state.phase === 'year-end') {
+  } else if (route.kind === 'year-end') {
     // ===== v1.2 학년말 일기장 (Y1~Y6) =====
-    screenKey = `year-end:${state.year}`;
-    screenPace = 'slow';        // 한 판 6회 — 드문 장면이라 길게
     phaseContent = (
       <YearEndScreen
         year={state.year}
@@ -324,10 +327,8 @@ export function GameScreen() {
         onAdvance={advanceFromYearEnd}
       />
     );
-  } else if (state.phase === 'ending' && endingData) {
+  } else if (route.kind === 'ending' && endingData) {
     // ===== 엔딩 =====
-    screenKey = 'ending';
-    screenPace = 'slow';        // 한 판 1회
     // **한 번만 판정해서 버튼과 라벨이 같이 쓴다.** null = 부모가 망가진 병리적 세이브(버튼 없음).
     const restartSetup = deriveSetup(state);
     phaseContent = (
@@ -363,11 +364,10 @@ export function GameScreen() {
         saveFailed={isStorageSaveFailed()}
       />
     );
-  } else if (state.currentEvent && state.phase === 'event') {
+  } else if (route.kind === 'event' && state.currentEvent) {
     // ===== 이벤트 화면 (비주얼 노벨 스타일) =====
     // eventResultData가 세팅돼 있으면 결과 화면을 먼저 보여준 뒤, "계속 →" 클릭 후 followup 이벤트로 넘어감
     // 연쇄 이벤트도 id가 바뀌므로 사이사이 전환이 들어간다. pace는 normal 고정 — 고빈도다.
-    screenKey = `event:${state.currentEvent.id}`;
     phaseContent = (
       <EventScene
         event={state.currentEvent}
@@ -432,24 +432,16 @@ export function GameScreen() {
         }}
       />
     );
-  } else if (state.phase === 'result' && state.weekLog) {
+  } else if ((route.kind === 'month-summary' || route.kind === 'card' || route.kind === 'weekly') && state.weekLog) {
     // ===== 주간 결산 / 재생 카드 / 월말 결산 =====
     // 한 달 자동 진행(기능 플래그 뒤)이면 재생이 처리한 주는 짧은 카드로, 달의 마지막 주 뒤엔 월말 결산 한 장으로 간다.
     // 시험 결과·학기 목표 판정이 있는 주는 결산 화면을 그대로 보인다(그 주의 사건이 성적표다) — 월말이면 그 뒤에 결산.
     const { color: fatigueColor } = getFatigueDisplay(state.fatigue);
     const log = state.weekLog;
-    const rawRun = isMonthlyPlanningEnabled() ? state.monthRun : undefined;
-    const runForLog = rawRun && log.year === rawRun.year && log.week != null && log.week >= 1 && log.week <= 48
-      && getMonthBlock(log.week).index === rawRun.month ? rawRun : null;
-    const lastEntry = runForLog?.log[runForLog.log.length - 1];
-    const autoWeek = !!lastEntry && lastEntry.week === log.week && lastEntry.auto;
-    const monthEnd = !!runForLog && isMonthEndWeek(log.week!);
     const goalRecord = goalRecordForWeekLog(state);
-    const bigWeek = !!log.examResult || !!goalRecord;
-    const resultKey = `${state.year}-${state.week}`;
     const weekInfo = log.week != null && log.year != null ? getWeekLabelAt(log.year, log.week) : getWeekLabel(state);
-    if (runForLog && monthEnd && (!bigWeek || bigResultSeen === resultKey)) {
-      screenKey = `month-summary:${runForLog.year}-${runForLog.month}`;
+    if (route.kind === 'month-summary') {
+      const runForLog = route.run;
       const routineName = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2)?.name ?? null : null;
       const mm = log.monthMoney;
       phaseContent = (
@@ -462,8 +454,7 @@ export function GameScreen() {
           onContinue={() => { setBigResultSeen(null); finishMonth(); }}
         />
       );
-    } else if (autoWeek && !bigWeek && !monthEnd) {
-      screenKey = `card:${state.year}-${state.week}`;
+    } else if (route.kind === 'card') {
       phaseContent = (
         <PlaybackCard
           state={state}
@@ -481,7 +472,7 @@ export function GameScreen() {
         />
       );
     } else {
-      screenKey = `weekly:${state.year}-${state.week}`;
+      const { continueTo, resultKey } = route;
       phaseContent = (
         <WeeklyResultScreen
           weekLog={log}
@@ -505,18 +496,17 @@ export function GameScreen() {
           // T68 — 학기 마지막 주 결산이면 그 학기 목표의 판정. 사건을 거쳐 왔든 곧장 왔든 같은 로그를 읽는다.
           goalRecord={goalRecord}
           goalMoment={goalMomentForWeekLog(state)}
-          onContinue={runForLog && monthEnd ? () => setBigResultSeen(resultKey)
-            : autoWeek ? continuePlayback
+          onContinue={continueTo === 'mark-big-result-seen' ? () => setBigResultSeen(resultKey)
+            : continueTo === 'continue-playback' ? continuePlayback
             : () => setPhase('weekday')}
         />
       );
     }
-  } else if (isMonthlyPlanningEnabled() && state.week <= 48 && (replanning || !getCurrentMonthPlan(state))) {
+  } else if (route.kind === 'month-plan') {
     // ===== 한 달 계획(월 단위 계획 4·5단계 — 기능 플래그 뒤) =====
     // 이번 달 계획이 아직 없으면 주간 화면 대신 이 화면이 먼저 뜨고, 저장하면 그 달이 자동으로 흐른다.
     // 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다 — 그때는 짜 둔 계획을 고치고 이어서 재생한다.
-    const existing = replanning ? getCurrentMonthPlan(state) : null;
-    screenKey = `month:${state.year}-${getMonthBlock(state.week).index}${existing ? ':replan' : ''}`;
+    const existing = route.existing;
     phaseContent = (
       <MonthPlanScreen
         state={state}
@@ -538,10 +528,9 @@ export function GameScreen() {
     // ===== 메인 게임 화면 =====
     // 주 안에서는 키가 고정이라 루틴 조작으로 페이드가 돌지 않는다. 주 넘김은
     // main → weekly → main 으로 키가 두 번 바뀌면서 전환이 붙는다.
-    screenKey = `main:${state.year}-${state.week}`;
     // 한 달 자동 진행이 멈춰 이 화면에 섰으면 맨 위에 이유와 [이어서]·[다시 짜기]를 띄운다.
-    const run = isMonthlyPlanningEnabled() && getCurrentMonthPlan(state) ? getMonthRun(state) : null;
-    const playback = isMonthlyPlanningEnabled() && getCurrentMonthPlan(state) ? {
+    const run = route.kind === 'main' ? route.playback?.run ?? null : null;
+    const playback = route.kind === 'main' && route.playback ? {
       line: run ? stopLine(run) : '이번 달 계획이 짜여 있어요.',
       talkBank: talkBankCount(state),
       onResume: run ? resumePlayback : startMonthPlayback,
