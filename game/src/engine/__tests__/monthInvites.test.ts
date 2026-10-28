@@ -3,9 +3,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createInitialState, processWeek } from '../gameEngine';
 import {
-  INVITE_MIN_INTIMACY, MAX_INVITES_PER_MONTH, generateMonthInvites, validateInviteAnswers,
+  INVITE_MIN_INTIMACY, MAX_INVITES_PER_MONTH, NO_INVITE_WEEK, generateMonthInvites, validateInviteAnswers,
 } from '../monthInvites';
-import { getWeekInfo } from '../weekMath';
+import { getMonthBlock, getWeekInfo } from '../weekMath';
 import { installMemoryStorage } from '../../../scripts/lib/week-driver';
 import type { useGameStore as UseGameStore } from '../store';
 import type { GameState, MonthInvite, MonthPlan } from '../types';
@@ -33,6 +33,24 @@ function seedWith(week: number, n: number): number {
   for (let seed = 0; seed < 2000; seed++) if (generateMonthInvites(at(week, seed)).length === n) return seed;
   throw new Error(`초대 ${n}개가 나오는 시드가 없다`);
 }
+
+describe('학년 마지막 주(W48)엔 초대가 없다 — 그 주는 결산 없이 학년말로 가 약속 결과가 안 보인다', () => {
+  it('2월(마지막 달)의 초대는 그 달 다른 주에만 잡힌다 — 2월에도 초대는 뜬다(양성 짝)', () => {
+    const feb = getMonthBlock(NO_INVITE_WEEK);
+    expect(feb.endWeek, '전제: 학년 마지막 주는 마지막 달의 끝').toBe(NO_INVITE_WEEK);
+    const seen = new Set<number>();
+    for (let seed = 0; seed < 600; seed++) {
+      for (const inv of generateMonthInvites(at(feb.startWeek, seed))) seen.add(inv.week);
+    }
+    expect(seen.has(NO_INVITE_WEEK), 'W48 초대가 나왔다').toBe(false);
+    // 남은 주는 다 쓴다 — 빼는 건 W48 하나뿐이다.
+    expect([...seen].sort((a, b) => a - b)).toEqual(Array.from({ length: NO_INVITE_WEEK - feb.startWeek }, (_, i) => feb.startWeek + i));
+  });
+
+  it('학년 마지막 주에 달을 짜면(다시 짜기·구세이브) 초대는 0개다', () => {
+    for (let seed = 0; seed < 200; seed++) expect(generateMonthInvites(at(NO_INVITE_WEEK, seed))).toEqual([]);
+  });
+});
 
 describe('초대 생성 — 결정론, 0~2개, 친밀도 30 이상 재학 친구', () => {
   it('같은 상태면 같은 초대이고, 게임 난수를 전진시키지 않는다', () => {
