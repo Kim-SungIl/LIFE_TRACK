@@ -46,6 +46,7 @@ function endedState(): GameState {
 beforeEach(() => {
   localStorage.clear();
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  localStorage.setItem('lifetrack_month_tutorial_seen', '1'); // 월 계획 화면 튜토리얼은 monthTutorial.test가 본다
   vi.clearAllMocks();
   setBgmTrack('main');
   useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });

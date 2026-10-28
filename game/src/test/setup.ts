@@ -16,6 +16,12 @@ if (typeof document !== 'undefined') {
   });
 }
 
+// jsdom엔 scrollIntoView가 없다 — 튜토리얼(Tutorial.tsx)이 스텝마다 타깃으로 스크롤한다. 월 단위 계획이 기본값이 되면서
+// 새 판·계획 없는 달을 그리는 거의 모든 GameScreen 테스트가 월 계획 화면 튜토리얼을 지난다(파일마다 따로 막던 것을 한곳으로).
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = () => {};
+}
+
 // Node 22+가 메서드 없는 자체 localStorage 전역(--localstorage-file 필요)을 노출하고,
 // 이게 vitest의 jsdom 전역 주입과 충돌해 jsdom 환경에서도 진짜 Storage가 없다
 // (window.localStorage === undefined 확인). bare `localStorage` 참조(store.ts 저장/로드)가

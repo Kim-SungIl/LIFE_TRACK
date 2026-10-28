@@ -45,6 +45,7 @@ beforeEach(() => {
   // 반복 플레이어로 둔다 — 첫 플레이 튜토리얼 오버레이는 이 계약과 무관한데,
   // jsdom에 scrollIntoView가 없어서 렌더가 통째로 터진다.
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  localStorage.setItem('lifetrack_month_tutorial_seen', '1'); // 월 계획 화면 튜토리얼은 monthTutorial.test가 본다
   useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
   vi.clearAllMocks();
 });
