@@ -12,13 +12,18 @@ import { useGameStore } from '../store';
 import { clearArchive } from '../archive';
 import { cloneGameState } from '../stateClone';
 import { resolveEventLikeStore, talkToNpcLikeStore } from '../../../scripts/lib/y1-sim-resolve';
+import { resolveCurrentEvent, talkToNpcOutcome } from '../eventResolution';
 import type { Gender, GameState } from '../types';
 
-function viaStore(s: GameState, act: (api: ReturnType<typeof useGameStore.getState>) => void): GameState {
+/** 같은 입력 상태로 store 액션을 부르고, 결과 상태와 **액션의 반환값**을 함께 돌려준다. */
+function viaStore<R>(s: GameState, act: (api: ReturnType<typeof useGameStore.getState>) => R): [GameState, R] {
   useGameStore.setState({ state: cloneGameState(s), runDelta: null, npcActivityMap: {} });
-  act(useGameStore.getState());
-  return useGameStore.getState().state!;
+  const ret = act(useGameStore.getState());
+  return [useGameStore.getState().state!, ret];
 }
+
+// 시드별 착지값 — W48에 사건이 걸린 학년 수. 0이면 사건 입구 갈래를 안 지난 것이라 이 파일의 핵심이 공허해진다.
+const EXPECTED_EVENT_TRANSITIONS: Record<string, number> = { 'male/1': 2, 'female/7': 1 };
 
 describe('sim 하네스와 store가 같은 상태를 낸다', () => {
   beforeEach(() => {
@@ -31,7 +36,10 @@ describe('sim 하네스와 store가 같은 상태를 낸다', () => {
       let s = createInitialState(gender, ['wealth', 'freedom'], { rngSeed: seed });
       s.routineSlot2 = 'self-study';
       s.routineSlot3 = 'light-exercise';
-      let events = 0, talks = 0, yearTransitions = 0;
+      // weeks = processWeek 호출 수. 옛 사본은 W48 사건 뒤 학년 전환을 빼먹어 337~340주를 돌았다(제품은 336주).
+      // 학년 전환은 두 입구로 온다 — 사건 없는 W48의 processWeek, 또는 W48 사건을 닫는 해결. 둘을 따로 센다.
+      let events = 0, talks = 0, weeks = 0, transitionsByWeek = 0, transitionsByEvent = 0;
+      const crossedYear = (p: GameState['phase']) => p === 'year-end' || p === 'ending';
       const mismatches: string[] = [];
       for (let w = 0; w < 420; w++) {
         s.weekendChoices = ['self-study', 'club'];
@@ -40,20 +48,30 @@ describe('sim 하네스와 store가 같은 상태를 낸다', () => {
         const target = [...s.npcs].filter(n => n.met).sort((a, b) => b.intimacy - a.intimacy)[0];
         if (target && s.phase !== 'ending') {
           const sim = talkToNpcLikeStore(cloneGameState(s), target.id);
-          const real = viaStore(s, api => api.talkToNpc(target.id));
+          const [real, realResult] = viaStore(s, api => api.talkToNpc(target.id));
           talks++;
           if (JSON.stringify(sim) !== JSON.stringify(real)) mismatches.push(`talk Y${s.year}W${s.week} ${target.id}`);
+          // 액션의 반환값(화면이 그리는 미니 이벤트·잡담 한 줄)도 엔진 결과와 같아야 한다.
+          if (JSON.stringify(realResult) !== JSON.stringify(talkToNpcOutcome(cloneGameState(s), target.id).result)) {
+            mismatches.push(`talk-result Y${s.year}W${s.week} ${target.id}`);
+          }
           s = sim;
         }
         s = processWeek(s, undefined);
+        weeks++;
+        if (crossedYear(s.phase)) transitionsByWeek++;
         let guard = 0;
         while (s.currentEvent && guard++ < 20) {
           const before = s;
           const sim = resolveEventLikeStore(cloneGameState(before), 0);
-          const real = viaStore(before, api => { api.resolveEvent(0); });
+          const [real, applied] = viaStore(before, api => api.resolveEvent(0));
           events++;
-          if (before.week > 48 && sim.phase !== before.phase) yearTransitions++;
+          if (crossedYear(sim.phase)) transitionsByEvent++;
           if (JSON.stringify(sim) !== JSON.stringify(real)) mismatches.push(`event ${before.currentEvent!.id} Y${before.year}W${before.week}`);
+          // 결과 화면의 칩이 읽는 실제 적용값 — store 껍데기가 엔진 반환을 그대로 넘기는가.
+          if (JSON.stringify(applied) !== JSON.stringify(resolveCurrentEvent(cloneGameState(before), 0)?.applied)) {
+            mismatches.push(`event-applied ${before.currentEvent!.id} Y${before.year}W${before.week}`);
+          }
           s = sim;
         }
         if (s.phase === 'year-end') { s.week = 1; s.year++; s.phase = 'weekday'; }
@@ -61,10 +79,15 @@ describe('sim 하네스와 store가 같은 상태를 낸다', () => {
       }
       expect(mismatches).toEqual([]);
       expect(s.phase, '완주').toBe('ending');
-      // 공허하지 않다 — 사건·말걸기가 실제로 많이 비교됐고, W48 사건 뒤 학년 전환(옛 사본이 빠뜨린 갈래)도 지났다.
+      // 제품과 같은 달력 — 7학년 × 48주. 유령 주가 끼면 여기서 운다.
+      expect(weeks, 'processWeek 호출 수').toBe(336);
+      // 학년 전환은 정확히 7번(Y1~Y6 학년말 + Y7 엔딩)이고, 그중 일부는 W48 사건을 닫는 입구로 온다 —
+      // 옛 사본이 빠뜨린 그 갈래를 실제로 지났다. 착지값은 시드별로 박는다(아래 표).
+      expect(transitionsByWeek + transitionsByEvent, '학년 전환 총수').toBe(7);
+      expect(transitionsByEvent, '사건 입구로 온 학년 전환').toBe(EXPECTED_EVENT_TRANSITIONS[`${gender}/${seed}`]);
+      // 공허하지 않다 — 사건·말걸기가 실제로 많이 비교됐다.
       expect(events).toBeGreaterThan(200);
       expect(talks).toBeGreaterThan(300);
-      expect(yearTransitions).toBeGreaterThan(0);
     });
   }
 });

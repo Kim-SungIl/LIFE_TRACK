@@ -364,7 +364,7 @@ export function resolveCurrentEvent(
     // 방금 고른 갈래가 엔딩 시점에 닫힐 수 있다(careerChoice.ts 헤더).
     applyYearTransition(newState);
   } else {
-    resolveEventChain(newState, s.currentEvent.location, occurrenceWeek);
+    resolveEventChain(newState, s.currentEvent?.location, occurrenceWeek);
   }
   return { state: newState, applied };
 }
