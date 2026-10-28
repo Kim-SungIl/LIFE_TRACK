@@ -287,18 +287,18 @@ export function getRoutineBonus(weeks: number): number {
   return i < 0 ? 0 : ROUTINE_TIER_BONUS[i];
 }
 
-// ===== 활동 적용 =====
-/**
- * 활동 1회의 효과 적용. **export는 계약이다** — 성장 곡선 g(x)를 재려면 이 함수를 그 스탯에서
- * 직접 불러야 한다. processWeek로 감싸 재면 학교 수업·자연 감쇠·피로 회복이 섞여 곡선의
- * 연속성을 증명할 수 없다(activityGrowthCurve.test.ts가 84.99/85.01을 여기로 직접 넣는다).
- */
 /** 방학 따라잡기 보너스의 발동선 — 학교급별(초 25 / 중 35 / 고 = 활동 데이터의 threshold). 보고 도구도 이 함수를 읽는다. */
 export function catchupThreshold(year: number, cb: { threshold: number }): number {
   const level = getSchoolLevel(year);
   return level === 'elementary' ? 25 : level === 'middle' ? 35 : cb.threshold;
 }
 
+// ===== 활동 적용 =====
+/**
+ * 활동 1회의 효과 적용. **export는 계약이다** — 성장 곡선 g(x)를 재려면 이 함수를 그 스탯에서
+ * 직접 불러야 한다. processWeek로 감싸 재면 학교 수업·자연 감쇠·피로 회복이 섞여 곡선의
+ * 연속성을 증명할 수 없다(activityGrowthCurve.test.ts가 84.99/85.01을 여기로 직접 넣는다).
+ */
 export function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0, prepaid = false): void {
   const activity = ACTIVITIES.find(a => a.id === activityId);
   if (!activity) return;

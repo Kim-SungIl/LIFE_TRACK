@@ -225,7 +225,9 @@ describe('activityHints — 💛 관계 유지·최대 2개', () => {
 describe('activityHints — 엔진과 같은 피로식', () => {
   const sweaty = pickActivity(a => a.id === 'school-sports', 'school-sports 없음');
 
-  it('applyActivity가 실제로 올린 피로 = activityFatigueDelta (상태·부모·체력 전 구간)', () => {
+  // **배선 잠금이다, 식 잠금이 아니다.** 기대값도 같은 함수에서 나오므로 "applyActivity가 이 함수를 부른다"만 본다.
+  // 식의 값은 mentalRules.test.ts가 손으로 적은 표로 잠근다.
+  it('applyActivity가 실제로 올린 피로 = activityFatigueDelta 배선 (상태·부모·체력 전 구간)', () => {
     const rows: string[] = [];
     let checked = 0;
     for (const mentalState of ['normal', 'tired', 'burnout'] as const) {

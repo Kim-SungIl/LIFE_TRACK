@@ -187,8 +187,9 @@ export function GameScreen() {
   const [replanning, setReplanning] = useState(false);
   const [fastPlayback, setFastPlayback] = useState(false);
   const [bigResultSeen, setBigResultSeen] = useState<string | null>(null);
-  // 재생 중 판정은 monthPlayback.isPlaying 하나 — status만 보면 달이 끝나 지난달 장부가 남은 채(finishMonth 전)
-  // 'playing'으로 읽혀 월말 결산에서도 빨리 넘기기가 켜진 채 남았다.
+  // 재생 중 판정은 monthPlayback.isPlaying 하나를 읽는다(화면이 같은 사실을 따로 재지 않게).
+  // status만 보던 판과는 월말 결산 화면(finishMonth 전, 지난달 장부가 남은 동안)에서만 갈리는데, 그 화면은
+  // 빨리 넘기기를 안 쓰고 finishMonth가 장부를 지우므로 보이는 동작은 같다.
   const playbackActive = !!state && isPlaying(state);
   // 빨리 넘기기는 "다음 멈춤까지"다 — 멈추면 보통 속도로 돌아간다.
   useEffect(() => { if (!playbackActive) setFastPlayback(false); }, [playbackActive]);
