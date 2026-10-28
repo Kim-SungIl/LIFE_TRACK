@@ -1,7 +1,7 @@
 // 묶음 5 패치 검증 — followup 가드 + currentEvent 직렬화 위생
 //
-// P18. store.ts resolveEvent — 같은 주에 followup이 이미 발동했으면 추가 followup 안 띄움
-// P19. store.ts resolveEvent — events.push 시 condition 함수 제거 (직렬화 안전)
+// P18. 사건 해결(eventResolution.ts, 예전 store.ts resolveEvent) — 같은 주에 followup이 이미 발동했으면 추가 followup 안 띄움
+// P19. 사건 해결(eventResolution.ts) — events.push 시 condition 함수 제거 (직렬화 안전)
 // P20. (회귀) Y1 W26 subin-bridge / W25 minjae-sports followup은 여전히 도달 가능
 //
 // 실행: cd game && npx tsx scripts/verify-patch-batch5.ts
@@ -35,14 +35,14 @@ function assert(label: string, cond: boolean, detail?: string) {
 console.log('\n=== P18. store.ts followup same-week 1회 가드 ===');
 // ============================================================================
 {
-  const src = readFileSync('./src/engine/store.ts', 'utf8');
-  assert('store.ts가 FOLLOWUP_EVENT_IDS를 import',
+  const src = readFileSync('./src/engine/eventResolution.ts', 'utf8');
+  assert('eventResolution.ts가 FOLLOWUP_EVENT_IDS를 import',
     /from\s+['"]\.\/events['"][^;]*FOLLOWUP_EVENT_IDS/.test(src) ||
     /FOLLOWUP_EVENT_IDS[^;]*from\s+['"]\.\/events['"]/.test(src));
-  assert('store.ts에 followupFiredThisWeek 가드 변수',
+  assert('eventResolution.ts에 followupFiredThisWeek 가드 변수',
     /followupFiredThisWeek/.test(src));
   // #256 리팩터: resolveEventChain 헬퍼로 추출 — newState.week→occurrenceWeek(W48 off-by-one 가드), newState.year→state.year(헬퍼 파라미터)
-  assert('store.ts 가드가 같은 week+year+FOLLOWUP_EVENT_IDS 검사',
+  assert('eventResolution.ts 가드가 같은 week+year+FOLLOWUP_EVENT_IDS 검사',
     /prev\.week\s*===\s*occurrenceWeek/.test(src) &&
     /prev\.year\s*===\s*state\.year/.test(src) &&
     /FOLLOWUP_EVENT_IDS\.has\(prev\.id\)/.test(src));
@@ -79,8 +79,8 @@ console.log('\n=== P18. store.ts followup same-week 1회 가드 ===');
 console.log('\n=== P19. events.push에서 condition 함수 제거 (직렬화 안전) ===');
 // ============================================================================
 {
-  const src = readFileSync('./src/engine/store.ts', 'utf8');
-  assert('store.ts에 events.push 전 recordedEvent에서 condition 제거 코드',
+  const src = readFileSync('./src/engine/eventResolution.ts', 'utf8');
+  assert('eventResolution.ts에 events.push 전 recordedEvent에서 condition 제거 코드',
     /delete\s+recordedEvent\.condition/.test(src));
 
   // 런타임: GameEvent 샘플의 push 시뮬 (store와 동일한 destructure 동작)
@@ -163,9 +163,9 @@ console.log('\n=== P21. (회귀) followup이 정상 1회는 여전히 발동 ===
 console.log('\n=== P22. speakers met 처리 — 대사 전용 등장 NPC도 만남 인정 ===');
 // ============================================================================
 {
-  const src = readFileSync('./src/engine/store.ts', 'utf8');
+  const src = readFileSync('./src/engine/eventResolution.ts', 'utf8');
   // #256 리팩터: applyChoiceOutcome 헬퍼로 추출 — currentEvent.speakers→event 지역변수
-  assert('store.ts resolveEvent가 speakers 순회로 met 처리',
+  assert('eventResolution.ts 사건 해결이 speakers 순회로 met 처리',
     /event\.speakers/.test(src) && /npc\.met\s*=\s*true/.test(src));
 
   // 콘텐츠 일관성: 현재 모든 speakers NPC는 어떤 분기에서든 npcEffects 로 등장
@@ -194,6 +194,8 @@ console.log('\n=== P23. Phase 2.1 말걸기 미니 이벤트 (사전 결정 모�
   const engineSrc = readFileSync('./src/engine/gameEngine.ts', 'utf8');
   const migrationSrc = readFileSync('./src/engine/stateMigration.ts', 'utf8');
   const storeSrc = readFileSync('./src/engine/store.ts', 'utf8');
+  // 말걸기 본체(fire 시 pressure·pending 처리)는 eventResolution.talkToNpcOutcome으로 옮겼다 — store는 액션 껍데기.
+  const talkBodySrc = storeSrc + readFileSync('./src/engine/eventResolution.ts', 'utf8');
   assert('types.ts에 사전 결정 필드 (npcEventPendingThisWeek/parentEventPendingThisWeek)',
     /npcEventPendingThisWeek:\s*boolean/.test(typesSrc)
     && /parentEventPendingThisWeek:\s*boolean/.test(typesSrc)
@@ -210,8 +212,8 @@ console.log('\n=== P23. Phase 2.1 말걸기 미니 이벤트 (사전 결정 모�
   assert('store.ts에 talkToNpc/talkToHome 액션 + fire 시 pressure=0 + pending=false',
     /talkToNpc:\s*\(npcId\)\s*=>/.test(storeSrc)
     && /talkToHome:\s*\(\)\s*=>/.test(storeSrc)
-    && /talkEventPressure\s*=\s*0/.test(storeSrc)
-    && /npcEventPendingThisWeek\s*=\s*false/.test(storeSrc));
+    && /talkEventPressure\s*=\s*0/.test(talkBodySrc)
+    && /npcEventPendingThisWeek\s*=\s*false/.test(talkBodySrc));
   // P3-9: 데이터/로직 분리 — talkSystem.ts 가 풀 데이터를 talkData.ts 에서 import
   const talkSystemSrc = readFileSync('./src/engine/talkSystem.ts', 'utf8');
   assert('talkSystem.ts 가 talkData.ts 에서 풀 데이터 import (P3-9)',

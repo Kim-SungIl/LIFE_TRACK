@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // 연쇄 판정 좌표 = 발생주, 그리고 여름방학 임계 통과 이월.
 //
-// 결함(2026-10 장르 진단 후속): store.resolveEventChain의 연쇄 픽은 processWeek의 week++ **뒤** state로 조건을 봤다.
+// 결함(2026-10 장르 진단 후속): resolveEventChain(당시 store.ts, 지금 eventResolution.ts)의 연쇄 픽은 processWeek의 week++ **뒤** state로 조건을 봤다.
 //   · W24(여름방학 마지막 주) 연쇄가 W25 학기 좌표로 평가돼 `!s.isVacation` 가드가 샜다 — 기록·화면은 "여름방학 5주차".
 //   · W19·W42(학기 마지막 주) 연쇄는 반대로 W20·W43 방학 좌표라 정당한 학기 장면이 막혔다.
 //   · 쿨다운(10주 조건부·도달형 48÷N)도 연쇄에서만 1주 짧았다(실효 간격 N−1).

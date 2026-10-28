@@ -12,6 +12,10 @@
 // 지훈 졸업식 앵커(2026-10, `jihun-hs-graduation`에 reach.anchorWeek 46)에서는 runs가 **그대로였다** — 8판 모두
 // 지훈 친밀도가 97에 안 닿아 그 컷이 한 번도 안 떴다. 대신 scenes의 그 컷 `reach`에 `anchorWeek: 46` 한 칸을 넣었다
 // (본문·선택지는 그대로 — 표시 시점 메타만 바뀐 의도된 변경, 같은 장면을 romance.test.ts가 스냅샷으로 비교한다).
+// 하네스 교정(2026-10-27, sim 미러 → 엔진 eventResolution)에서 다시 재생성했다 — 원인 귀속: 옛 미러는 W48 사건을
+// 닫아도 학년 전환을 안 해서, 그 해엔 processWeek이 W49에 한 번 더(판당 337~340회, 제품은 늘 336회) 돌았다.
+// 미러에 그 한 줄(week > 48 → applyYearTransition)만 넣으면 8판 실패가 새 엔진 경로와 바이트 동일했다 — 다른
+// 드리프트(로그 접기·vacationText·지나친다 안전망) 몫은 0. 제품(store) 쪽은 주간 골든이 바이트 불변이다.
 // 재생성 절차: 이 하네스를 그대로 돌려 stats·endingHash만 갈아 끼운다(scenes·closures는 손대지 않는다).
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';

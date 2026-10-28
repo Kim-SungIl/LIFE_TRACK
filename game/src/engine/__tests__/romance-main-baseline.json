@@ -454,39 +454,39 @@
       "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 82.7,
-        "social": 88.8,
-        "talent": 80.2,
+        "academic": 84.1,
+        "social": 87.3,
+        "talent": 81.3,
         "mental": 87.7,
-        "health": 72
+        "health": 71.6
       },
-      "endingHash": "8e1ded89b5e8a5dd2032f6680e25e30594ec08b24d2a7f7802fc177df57b0c0e"
+      "endingHash": "ef848b09497469b7582092b5e36a93217909594ddbcf2aeff738e9deef35f6a9"
     },
     {
       "gender": "male",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 84.5,
-        "social": 86.3,
-        "talent": 80.9,
+        "academic": 85.2,
+        "social": 87.2,
+        "talent": 80.7,
         "mental": 88.1,
-        "health": 73.5
+        "health": 72.3
       },
-      "endingHash": "8d5da7ab18a5a3e8da54ae51991cef66c36b730e5eb33cdba5c4d08af7d08cd4"
+      "endingHash": "dc962b595c8d668f48c3e75adafc50995c856be63f09298b692874d0b942cca2"
     },
     {
       "gender": "male",
       "plan": "paid",
       "seed": 1,
       "stats": {
-        "academic": 89,
-        "social": 89.3,
-        "talent": 80.8,
-        "mental": 88.4,
-        "health": 78
+        "academic": 89.7,
+        "social": 90,
+        "talent": 80.89999999999999,
+        "mental": 88,
+        "health": 78.6
       },
-      "endingHash": "578c1989b6d9309cb3b31e3927d5e5e09bc9b0f28ac52a93d6ed3eda1e4af391"
+      "endingHash": "71150d2f3bd48b374fee8c16e41f4770e4096b1c8fa40a91c46f3ca777d4b801"
     },
     {
       "gender": "male",
@@ -494,51 +494,51 @@
       "seed": 7,
       "stats": {
         "academic": 89.6,
-        "social": 88.9,
-        "talent": 80.9,
-        "mental": 88.6,
-        "health": 78.3
+        "social": 89.2,
+        "talent": 81.2,
+        "mental": 87.4,
+        "health": 78.6
       },
-      "endingHash": "d86ec45c2770f11db983e6bdcc0139e9d0727c688ce1d1d876dcfe95381a80dd"
+      "endingHash": "d84e2133aaca20ec2bd2236827c8bbe79e71ebc068cb481b145a15055899f9bc"
     },
     {
       "gender": "female",
       "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 82.6,
-        "social": 88.9,
-        "talent": 80.2,
-        "mental": 87.7,
-        "health": 71.9
+        "academic": 84.1,
+        "social": 87.2,
+        "talent": 81.3,
+        "mental": 87.9,
+        "health": 71.6
       },
-      "endingHash": "8220a9319a7c12834b7d353aef944ba45079fb518e47d25e6d54b3f533945e6b"
+      "endingHash": "e19871bae42e691e4a7d1d2e19da9307a9c2cc2392d09eaa7cb6f0b3970e7125"
     },
     {
       "gender": "female",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 84.5,
-        "social": 86.3,
-        "talent": 80.9,
+        "academic": 85.2,
+        "social": 87.2,
+        "talent": 80.7,
         "mental": 88.1,
-        "health": 73.5
+        "health": 72.2
       },
-      "endingHash": "3bc533054795a85074f8b14c1bd770cb778a2748abe7ddaa9bb3c92e9580e689"
+      "endingHash": "7b888e706d37ea74340b0ba1dd21d3cb1b526c6897b521cda909a5d292cc29f2"
     },
     {
       "gender": "female",
       "plan": "paid",
       "seed": 1,
       "stats": {
-        "academic": 89,
-        "social": 89.3,
-        "talent": 80.8,
-        "mental": 88.4,
-        "health": 78
+        "academic": 89.7,
+        "social": 90,
+        "talent": 80.89999999999999,
+        "mental": 88,
+        "health": 78.6
       },
-      "endingHash": "99ed67ef2b2ca15a13da49f4a81b8af194ada3d9b918070a9a8fd72c8b6dadae"
+      "endingHash": "e1853d2f873c64a36222dbd602a5dc02f1595614bfb8b8e0546435f72297ccc5"
     },
     {
       "gender": "female",
@@ -546,12 +546,12 @@
       "seed": 7,
       "stats": {
         "academic": 89.6,
-        "social": 88.9,
-        "talent": 80.9,
-        "mental": 88.6,
-        "health": 78.3
+        "social": 89.2,
+        "talent": 81.2,
+        "mental": 87.4,
+        "health": 78.6
       },
-      "endingHash": "a7afc3215850a958153ba6faa3041c1f7269c93cc7b309dabf7e68d21ecf9345"
+      "endingHash": "1fbbcaa124f133b8de966a35d37ca43337783e101694965269fc5d32c06a8fe4"
     }
   ]
 }
