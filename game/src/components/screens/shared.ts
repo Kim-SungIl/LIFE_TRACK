@@ -1,12 +1,12 @@
-import { StatKey, GameEvent, GameState, EXAM_TYPE_LABELS } from '../../engine/types';
+import { StatKey, GameEvent, GameState, EXAM_TYPE_LABELS, STAT_LABELS } from '../../engine/types';
 import { getExamSchedule } from '../../engine/examSystem';
 
 /**
  * 능력치 아이콘의 **글자 채널**. 그림 채널(`icons/icons.tsx`의 `StatIcon`)과 일부러 갈라져 있다.
  *
- * 왜 하나로 못 합치나 — 아래 **두 자리**는 아이콘을 **문자열로 이어 붙인다**:
- *   · `GameScreen.tsx`   `${STAT_ICONS[k]} ${STAT_LABELS[k]} ${fmt(val)}`
- *   · `MiniTalkModal.tsx` 같은 모양
+ * 왜 하나로 못 합치나 — 아래 **두 자리**는 아이콘을 **문자열로 이어 붙인다**(조립은 이 파일의 `statEffectChips` 하나):
+ *   · `GameScreen.tsx`    사건 결과 칩
+ *   · `MiniTalkModal.tsx` 미니 이벤트 배지
  * 둘 다 `{ text, color }` 페이로드를 만들어 리스트로 넘기는 자리라 JSX가 들어갈 수 없다.
  * **이 표가 사는 근거는 이제 이 둘뿐이다.**
  *
@@ -135,4 +135,30 @@ export function getUpcomingEvents(state: GameState): UpcomingEvent[] {
   if (state.week >= 18 && state.week < 20) upcoming.push({ text: '여름방학이 다가온다' });
   if (state.week >= 40 && state.week < 43) upcoming.push({ text: '겨울방학이 다가온다' });
   return upcoming;
+}
+
+/** 효과 칩의 부호 숫자 — 정수는 그대로, 소수는 한 자리(구간 감쇠를 거친 적용값은 소수가 된다). */
+export function formatSignedEffect(v: number): string {
+  return `${v > 0 ? '+' : ''}${Number.isInteger(v) ? v : v.toFixed(1)}`;
+}
+
+/**
+ * 스탯·피로·돈 효과 칩 — 사건 결과(GameScreen)와 미니 이벤트(MiniTalkModal)가 같은 모양을 쓴다.
+ * 예전엔 두 곳이 각자 문자열을 만들어 소수 처리(한쪽만 toFixed)와 0 생략 규칙이 갈려 있었다.
+ * 0은 생략한다(클램프에 걸려 실변화가 없는 축을 "+0"으로 그리지 않는다). 피로는 오르면 빨강이다.
+ */
+export function statEffectChips(e: {
+  stats?: Partial<Record<StatKey, number>>;
+  fatigue?: number;
+  money?: number;
+}): { text: string; color: string }[] {
+  const chips: { text: string; color: string }[] = [];
+  for (const [k, v] of Object.entries(e.stats ?? {})) {
+    const val = v as number;
+    if (!val) continue;
+    chips.push({ text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${formatSignedEffect(val)}`, color: val > 0 ? 'var(--green)' : 'var(--red)' });
+  }
+  if (e.fatigue) chips.push({ text: `피로 ${formatSignedEffect(e.fatigue)}`, color: e.fatigue > 0 ? 'var(--red)' : 'var(--green)' });
+  if (e.money) chips.push({ text: `💰 ${formatSignedEffect(e.money)}만`, color: e.money > 0 ? 'var(--green)' : 'var(--red)' });
+  return chips;
 }

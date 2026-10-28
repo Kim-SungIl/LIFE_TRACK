@@ -425,8 +425,9 @@ describe('집합 — 키마다 서로 다른 그림이 있다', () => {
      * 이름이 나오면 소비자로 보고, **import 줄만** 뺀다.
      */
     const stripImports = (src: string) => src.replace(/^\s*import\b[\s\S]*?(?:;|$)/gm, '');
+    // 칩 문자열 조립은 shared.ts의 statEffectChips 하나로 모였다 — 그걸 부르는 자리가 글자 채널의 소비자다.
     const usesTextChannel = (src: string) =>
-      /\bSTAT_ICONS\b/.test(stripImports(stripComments(src)));
+      /\b(?:STAT_ICONS|statEffectChips)\b/.test(stripImports(stripComments(src)));
     const consumers = files(SRC)
       .filter(f => !f.endsWith('shared.ts'))
       .filter(f => usesTextChannel(readFileSync(f, 'utf8')))
@@ -445,6 +446,8 @@ describe('집합 — 키마다 서로 다른 그림이 있다', () => {
       ['const s = "STAT_ICONS[k]";', false, '문자열 속 가짜 호출'],
       ["/* don't STAT_ICONS[k] */ ok();", false, '아포스트로피 든 블록 주석'],
       ['const s = "/*"; push(STAT_ICONS[k]);', true, '문자열 속 /* 뒤의 진짜 호출'],
+      ['const chips = statEffectChips(applied);', true, '공용 칩 조립 함수 호출'],
+      ['import { statEffectChips } from "./shared";', false, '칩 함수 import'],
     ];
     for (const [src, want, why] of PROBES) {
       expect(usesTextChannel(src), `탐지기가 "${why}"를 ${want ? '못 본다' : '헛짚는다'}`).toBe(want);

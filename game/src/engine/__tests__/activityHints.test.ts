@@ -2,6 +2,8 @@
 // 경계는 양방향(바로 아래/위)으로 잠가 임계 이동(과발동·미발동)을 잡는다.
 import { describe, it, expect } from 'vitest';
 import { activityHints } from '../activityHints';
+import { activityFatigueDelta } from '../mentalRules';
+import { applyActivity } from '../gameEngine';
 import { ACTIVITIES, NPC_COMPANION_ACTIVITIES, getActivityCost } from '../activities';
 import { getParentMods, getWeeklyIncome } from '../parentModifiers';
 import { makeState } from '../../test/fixtures';
@@ -13,8 +15,10 @@ function pickActivity(pred: (a: Activity) => boolean, why: string): Activity {
   return found;
 }
 
+// 체력은 25로 못박는다 — 20~29는 엔진 피로식(mentalRules.activityFatigueDelta)의 체력 보정이 없는 구간이라,
+// 아래 경계 표가 "활동 피로 그대로(+9)"를 전제로 쓸 수 있다. 체력 보정 자체는 아래 '엔진과 같은 식' 블록이 잠근다.
 function withStats(state: GameState, mental: number, extra?: Partial<GameState>): GameState {
-  return { ...state, ...extra, stats: { ...state.stats, mental } satisfies Stats };
+  return { ...state, ...extra, stats: { ...state.stats, mental, health: 25 } satisfies Stats };
 }
 
 /** 경계 검증용 — id/category/cost/fatigue만 바꾼 리터럴 */
@@ -213,5 +217,48 @@ describe('activityHints — 💛 관계 유지·최대 2개', () => {
       return all;
     })();
     expect(unrestricted.length).toBeGreaterThan(2);
+  });
+});
+
+// 경고가 읽는 피로 = 엔진이 실제로 올리는 피로. 예전 경고는 부모 보정만 옮겨 적고 지침·번아웃 감쇠·체력 저항·
+// 체력<20 가중을 빠뜨려서, 체력 60인 학생에게 엔진은 +7만 올리는데 경고는 +9로 재 "피로 위험"을 띄웠다.
+describe('activityHints — 엔진과 같은 피로식', () => {
+  const sweaty = pickActivity(a => a.id === 'school-sports', 'school-sports 없음');
+
+  // **배선 잠금이다, 식 잠금이 아니다.** 기대값도 같은 함수에서 나오므로 "applyActivity가 이 함수를 부른다"만 본다.
+  // 식의 값은 mentalRules.test.ts가 손으로 적은 표로 잠근다.
+  it('applyActivity가 실제로 올린 피로 = activityFatigueDelta 배선 (상태·부모·체력 전 구간)', () => {
+    const rows: string[] = [];
+    let checked = 0;
+    for (const mentalState of ['normal', 'tired', 'burnout'] as const) {
+      for (const health of [10, 19, 20, 29, 30, 59, 60, 90]) {
+        for (const parents of [['info', 'wealth'], ['resilience', 'info']] as GameState['parents'][]) {
+          for (const act of ACTIVITIES.filter(a => a.fatigue > 0)) {
+            const s = makeState({ fatigue: 10, parents, mentalState });
+            s.stats = { ...s.stats, health };
+            const log = { statChanges: {}, fatigueChange: 0, moneyChange: 0, messages: [], skipped: [], milestoneMessages: [], parentBonusesApplied: [] } as unknown as Parameters<typeof applyActivity>[2];
+            const before = s.fatigue;
+            applyActivity(s, act.id, log, 0, 1, true);
+            // 엔진은 피로를 이 활동의 스탯 성장 **뒤**에 잰다 — 운동이 체력을 20·30·60 위로 올리면 그 체력으로 깎는다.
+            // 그래서 기대값은 적용 뒤 상태(피로 단계 뒤로 체력을 바꾸는 코드는 없다)로 계산한다. 경고는 고르기 전
+            // 상태밖에 모르니 이 경계에서만 엔진과 한 칸 갈릴 수 있다 — 식이 아니라 시점의 차이다.
+            const expected = activityFatigueDelta(s, act).delta;
+            checked++;
+            if (s.fatigue - before !== expected) rows.push(`${mentalState}/h${health}/${parents[0]}/${act.id}: 엔진 ${s.fatigue - before} ≠ 식 ${expected}`);
+          }
+        }
+      }
+    }
+    expect(rows).toEqual([]);
+    expect(checked).toBeGreaterThan(100);
+  });
+
+  it('체력이 높으면 같은 활동도 덜 지쳐 경고가 안 뜬다 (예전 식은 여기서 헛경고)', () => {
+    // mental 30·피로 37: 체력 25면 +9 → 46 경고, 체력 60이면 엔진은 +7 → 44라 tired 게이트(>45) 밑이다.
+    const base = withStats(makeState({ fatigue: 37, parents: ['info', 'wealth'] }), 30);
+    const fit = { ...base, stats: { ...base.stats, health: 60 } };
+    expect(activityFatigueDelta(fit, sweaty).delta).toBe(sweaty.fatigue - 2);
+    expect(texts(activityHints(sweaty, base))).toContain('⚠ 지금 피로 위험');
+    expect(texts(activityHints(sweaty, fit))).not.toContain('⚠ 지금 피로 위험');
   });
 });

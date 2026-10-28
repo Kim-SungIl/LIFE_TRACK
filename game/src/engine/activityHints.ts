@@ -4,7 +4,8 @@
 // 설계: docs/strategy-signals-design.md (#5)
 import { Activity, GameState } from './types';
 import { getActivityCost, NPC_COMPANION_ACTIVITIES } from './activities';
-import { getParentMods, getWeeklyIncome } from './parentModifiers';
+import { getWeeklyIncome } from './parentModifiers';
+import { activityFatigueDelta, isTiredEntry } from './mentalRules';
 
 export type ActivityHint = { text: string; tone: 'warn' | 'good' };
 
@@ -14,17 +15,13 @@ export type ActivityHint = { text: string; tone: 'warn' | 'good' };
 export function activityHints(a: Activity, s: GameState, companionEligible = true): ActivityHint[] {
   const hints: ActivityHint[] = [];
   const cost = getActivityCost(a, s.year);
-  const mods = getParentMods(s.parents);
   // 이 활동을 하면 도달할 피로 — tired 게이트는 활동 피로 적용 후 검사하므로 예측값으로 비교.
-  // resilience 부모는 피로 증가 -15%(gameEngine:297-298)라 그 보정을 반영해 과경고 방지.
-  const projAdded = mods.fatigueIncreaseMult < 1.0
-    ? Math.max(1, Math.round(a.fatigue * mods.fatigueIncreaseMult))
-    : a.fatigue;
-  const projFatigue = s.fatigue + projAdded;
+  // 피로 식과 진입 게이트는 엔진과 같은 함수(mentalRules)를 읽는다 — 손으로 옮긴 식은 보정 넷을 빠뜨렸었다.
+  // (엔진은 이 활동의 체력 성장 뒤 체력으로 재므로, 운동이 체력 문턱을 넘기는 칸에서만 한 칸 보수적이다.)
+  const projFatigue = s.fatigue + activityFatigueDelta(s, a).delta;
 
-  // ⚠ 피로 위험 — 실제 tired 진입 게이트(gameEngine checkMentalStateTransition)에 근접할 때만.
-  // (mental<40 && fatigue>45) || fatigue>=85. mental 여유가 있으면 오경보 방지. 활동 피로를 더해 "이 선택으로 넘는" 경우도 포착.
-  if (a.fatigue > 0 && ((s.stats.mental < 40 && projFatigue > 45) || projFatigue >= 85)) {
+  // ⚠ 피로 위험 — 실제 tired 진입 게이트에 닿을 때만. mental 여유가 있으면 오경보 방지. 활동 피로를 더해 "이 선택으로 넘는" 경우도 포착.
+  if (a.fatigue > 0 && isTiredEntry(s.stats.mental, projFatigue)) {
     hints.push({ text: '⚠ 지금 피로 위험', tone: 'warn' });
   }
   // 💸 돈 부담 — 주당소득 2배 이상(고정 임계 대신 상대 기준: wealth 부모는 소득이 높음).

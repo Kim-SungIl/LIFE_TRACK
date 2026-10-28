@@ -13,7 +13,7 @@
 //   - 패턴별 선호 활동 정책 적용
 //   - vacationLimit 존중, 비용 부족 시 무료 대체, 5슬롯 한도 준수
 
-import { createInitialState, processWeek, getWeekInfo } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek, getWeekInfo, catchupThreshold } from '../../src/engine/gameEngine';
 import { ACTIVITIES, getActivityCost } from '../../src/engine/activities';
 import { getFollowupForWeek } from '../../src/engine/events';
 import { applyMemorySlotFromChoice } from '../../src/engine/memorySystem';
@@ -252,7 +252,7 @@ async function runVacationSim(p: Pattern): Promise<Measurement> {
         const a = ACTIVITIES.find(x => x.id === id);
         if (a?.catchupBonus && a.catchupBonus.bonus > 0) {
           m.catchupActivityCount++;
-          if (s.stats[a.catchupBonus.targetStat] < a.catchupBonus.threshold) {
+          if (s.stats[a.catchupBonus.targetStat] < catchupThreshold(s.year, a.catchupBonus)) {  // 엔진과 같은 학교급별 발동선
             m.catchupTotal++;
             currentVacCatchups++;
           }

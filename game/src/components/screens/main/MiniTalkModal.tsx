@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { MiniTalkEvent } from '../../../engine/talkSystem';
-import { MemorySlotDraft, StatKey, STAT_LABELS } from '../../../engine/types';
-import { STAT_ICONS } from '../shared';
+import { MemorySlotDraft } from '../../../engine/types';
+import { statEffectChips } from '../shared';
 import { Portrait } from '../../Portrait';
 import { Dialog } from '../../Dialog';
 
@@ -36,24 +36,7 @@ const HEADER: Record<number, { text: string; color: string }> = {
 // effects → 색상 배지. 변화량을 또렷이 보여주는 게 목적이라 전 티어 공통으로 노출.
 // parentIntimacy 는 의도적으로 UI 미표시(숨겨진 부모 친밀도)라 제외.
 function buildBadges(effects: MiniTalkEvent['effects']): { text: string; color: string; emphasize?: boolean }[] {
-  const badges: { text: string; color: string; emphasize?: boolean }[] = [];
-  if (effects.stats) {
-    for (const [k, v] of Object.entries(effects.stats)) {
-      const val = v as number;
-      if (val !== 0) badges.push({
-        text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${val > 0 ? '+' + val : val}`,
-        color: val > 0 ? 'var(--green)' : 'var(--red)',
-      });
-    }
-  }
-  if (effects.fatigue) badges.push({
-    text: `피로 ${effects.fatigue > 0 ? '+' : ''}${effects.fatigue}`,
-    color: effects.fatigue > 0 ? 'var(--red)' : 'var(--green)',
-  });
-  if (effects.money) badges.push({
-    text: `💰 ${effects.money > 0 ? '+' : ''}${effects.money}만`,
-    color: effects.money > 0 ? 'var(--green)' : 'var(--red)',
-  });
+  const badges: { text: string; color: string; emphasize?: boolean }[] = statEffectChips(effects);
   // 친밀도는 관계 진척의 핵심이라 마지막 + 강조
   if (effects.intimacy) badges.push({
     text: `${effects.intimacy > 0 ? '♥' : '💔'} 친밀도 ${effects.intimacy > 0 ? '+' + effects.intimacy : effects.intimacy}`,
