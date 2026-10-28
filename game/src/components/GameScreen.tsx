@@ -5,7 +5,6 @@ import { resumedRomancePlan } from '../engine/romance';
 import { josa } from '../engine/korean';
 import { getWeekLabel, getWeekLabelAt } from '../engine/gameEngine';
 import { calculateEnding } from '../engine/ending';
-import { StatKey, STAT_LABELS } from '../engine/types';
 import { getBackground, getSchoolLevel } from '../engine/backgrounds';
 import { deriveSetup } from '../engine/lastSetup';
 import { setBgmTrack, type BgmId } from '../audio/bgm';
@@ -14,7 +13,7 @@ import { getResultDialogue } from '../engine/dialogues';
 import { LIGHT_RESULT_EVENT_IDS } from '../engine/events/light-result';
 import { prefetchAssets, runWhenIdle } from '../engine/assetPrefetch';
 import { webpSrc } from '../engine/assetWebp';
-import { STAT_ICONS, getFatigueDisplay, getUpcomingEvents, type EventResultData } from './screens/shared';
+import { getFatigueDisplay, getUpcomingEvents, statEffectChips, type EventResultData } from './screens/shared';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
 import { MainWeekScreen } from './screens/main/MainWeekScreen';
 import { MonthPlanScreen } from './screens/main/MonthPlanScreen';
@@ -22,7 +21,7 @@ import { MonthSummaryScreen } from './screens/main/MonthSummaryScreen';
 import { PlaybackCard } from './screens/main/PlaybackCard';
 import { isMonthlyPlanningEnabled } from '../engine/featureFlags';
 import { getCurrentMonthPlan } from '../engine/monthPlan';
-import { buildMonthSummary, getMonthRun, hadTalkChance, isMonthEndWeek, stopLine, talkBankCount } from '../engine/monthPlayback';
+import { buildMonthSummary, getMonthRun, hadTalkChance, isMonthEndWeek, isPlaying, stopLine, talkBankCount } from '../engine/monthPlayback';
 import { ACTIVITIES } from '../engine/activities';
 import { getMonthBlock } from '../engine/weekMath';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
@@ -188,7 +187,10 @@ export function GameScreen() {
   const [replanning, setReplanning] = useState(false);
   const [fastPlayback, setFastPlayback] = useState(false);
   const [bigResultSeen, setBigResultSeen] = useState<string | null>(null);
-  const playbackActive = state?.monthRun?.status === 'playing';
+  // 재생 중 판정은 monthPlayback.isPlaying 하나를 읽는다(화면이 같은 사실을 따로 재지 않게).
+  // status만 보던 판과는 월말 결산 화면(finishMonth 전, 지난달 장부가 남은 동안)에서만 갈리는데, 그 화면은
+  // 빨리 넘기기를 안 쓰고 finishMonth가 장부를 지우므로 보이는 동작은 같다.
+  const playbackActive = !!state && isPlaying(state);
   // 빨리 넘기기는 "다음 멈춤까지"다 — 멈추면 보통 속도로 돌아간다.
   useEffect(() => { if (!playbackActive) setFastPlayback(false); }, [playbackActive]);
 
@@ -406,14 +408,7 @@ export function GameScreen() {
               && !!after.weekLog?.messages.some(m => m === heroLine);
             if (landsOnWeeklyResult) return;
           }
-          const effects: Record<string, string>[] = [];
-          const fmt = (v: number) => `${v > 0 ? '+' : ''}${Number.isInteger(v) ? v : v.toFixed(1)}`;
-          for (const [k, v] of Object.entries(applied.stats)) {
-            const val = v as number;
-            effects.push({ text: `${STAT_ICONS[k as StatKey]} ${STAT_LABELS[k as StatKey]} ${fmt(val)}`, color: val > 0 ? 'var(--green)' : 'var(--red)' });
-          }
-          if (applied.fatigue) effects.push({ text: `피로 ${fmt(applied.fatigue)}`, color: applied.fatigue > 0 ? 'var(--red)' : 'var(--green)' });
-          if (applied.money) effects.push({ text: `💰 ${fmt(applied.money)}만`, color: applied.money > 0 ? 'var(--green)' : 'var(--red)' });
+          const effects: Record<string, string>[] = statEffectChips(applied);
           // NPC 친밀도 + 첫 만남 — state는 resolve 이전 스냅샷(렌더 클로저)이라 이름/이모지 조회용으로만 사용
           const newMeets: string[] = [];
           for (const an of applied.npcs) {

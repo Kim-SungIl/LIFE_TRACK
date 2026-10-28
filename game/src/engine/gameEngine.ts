@@ -12,6 +12,7 @@ import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
+import { activityFatigueDelta, isTiredEntry } from './mentalRules';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
 import { cloneGameState } from './stateClone';
@@ -286,6 +287,12 @@ export function getRoutineBonus(weeks: number): number {
   return i < 0 ? 0 : ROUTINE_TIER_BONUS[i];
 }
 
+/** 방학 따라잡기 보너스의 발동선 — 학교급별(초 25 / 중 35 / 고 = 활동 데이터의 threshold). 보고 도구도 이 함수를 읽는다. */
+export function catchupThreshold(year: number, cb: { threshold: number }): number {
+  const level = getSchoolLevel(year);
+  return level === 'elementary' ? 25 : level === 'middle' ? 35 : cb.threshold;
+}
+
 // ===== 활동 적용 =====
 /**
  * 활동 1회의 효과 적용. **export는 계약이다** — 성장 곡선 g(x)를 재려면 이 함수를 그 스탯에서
@@ -399,9 +406,7 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
   if (state.isVacation && activity.catchupBonus) {
     const cb = activity.catchupBonus;
     if (cb.bonus > 0) {
-      const level = getSchoolLevel(state.year);
-      const adjustedThreshold = level === 'elementary' ? 25 : level === 'middle' ? 35 : cb.threshold;
-      if (state.stats[cb.targetStat] < adjustedThreshold) {
+      if (state.stats[cb.targetStat] < catchupThreshold(state.year, cb)) {
         const before = state.stats[cb.targetStat];
         state.stats[cb.targetStat] = Math.max(0, Math.min(100, before + cb.bonus));
         if (!log.statChanges[cb.targetStat]) log.statChanges[cb.targetStat] = 0;
@@ -415,29 +420,10 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
     state.vacationActivityCounts[activity.id] = (state.vacationActivityCounts[activity.id] ?? 0) + 1;
   }
 
-  // 피로 적용
-  let fatigueDelta = activity.fatigue;
-  // v6.3: tired/burnout 중 활동 피로 감소 (tired 함정 방지)
-  if (fatigueDelta > 0 && state.mentalState === 'burnout') {
-    fatigueDelta = Math.round(fatigueDelta * 0.5);  // 번아웃: 50% 감소
-  } else if (fatigueDelta > 0 && state.mentalState === 'tired') {
-    fatigueDelta = Math.round(fatigueDelta * 0.75); // tired: 25% 감소
-  }
-  // v6.4: 체력 기반 피로 저항 (체력이 높으면 같은 활동도 덜 힘들다)
-  if (fatigueDelta > 0) {
-    if (state.stats.health >= 60) fatigueDelta = Math.max(1, fatigueDelta - 2);
-    else if (state.stats.health >= 30) fatigueDelta = Math.max(1, fatigueDelta - 1);
-  }
-  // v5.2: 체력 < 20이면 피로 증가량 1.5배
-  if (fatigueDelta > 0 && state.stats.health < 20) {
-    fatigueDelta = Math.round(fatigueDelta * 1.5);
-  }
-  // v7.2: resilience 부모 — 피로 증가 -15% (타고난 체질)
-  if (fatigueDelta > 0 && pMods.fatigueIncreaseMult < 1.0) {
-    fatigueDelta = Math.max(1, Math.round(fatigueDelta * pMods.fatigueIncreaseMult));
-    if (!log.parentBonusesApplied?.some(b => b.parent === 'resilience' && b.what.includes('피로'))) {
-      log.parentBonusesApplied?.push({ parent: 'resilience', what: '체질 — 피로 증가 -15%' });
-    }
+  // 피로 적용 — 식은 mentalRules.activityFatigueDelta 하나(활동 카드 경고가 같은 함수를 읽는다).
+  const { delta: fatigueDelta, resilienceApplied } = activityFatigueDelta(state, activity);
+  if (resilienceApplied && !log.parentBonusesApplied?.some(b => b.parent === 'resilience' && b.what.includes('피로'))) {
+    log.parentBonusesApplied?.push({ parent: 'resilience', what: '체질 — 피로 증가 -15%' });
   }
   // 피로 로그는 여기서 더하지 않는다 — processWeek 끝에서 주 시작 대비 실제 변화로 한 번 적는다(T53).
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
@@ -653,11 +639,19 @@ function recordHappinessWeek(state: GameState): void {
 
 // ===== 멘탈 상태 전환 =====
 // v5.1: tired/burnout 조건 완화 + tired 효과 추가
+// 번아웃 진입 — 게이트 판정(tired+멘탈 바닥)과 만성 탈진 강제 붕괴(24주 연속 tired) 두 입구가 같은 일을 한다.
+function enterBurnout(state: GameState, log: WeekLog, message: string): void {
+  state.mentalState = 'burnout';
+  state.burnoutCount++;
+  recordBurnoutForYear(state);
+  state.routineSlot2Weeks = 0;
+  state.routineSlot3Weeks = 0;
+  log.messages.push(message);
+}
+
 function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   // v6.2: tired 진입 — 기존 조건 OR 피로 85+ 단독 (피로 100인데 안 지치는 문제 해결)
-  if (state.mentalState === 'normal' && (
-    (state.stats.mental < 40 && state.fatigue > 45) || state.fatigue >= 85
-  )) {
+  if (state.mentalState === 'normal' && isTiredEntry(state.stats.mental, state.fatigue)) {
     state.mentalState = 'tired';
     log.messages.push('⚠️ 피로 상태 진입 — "요즘 뭘 해도 재미없다..."');
   }
@@ -670,12 +664,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
       log.statChanges.mental = (log.statChanges.mental || 0) + 2;
       log.messages.push('😮‍💨 한계 직전이지만, 간신히 버텼다.');
     } else {
-      state.mentalState = 'burnout';
-      state.burnoutCount++;
-      recordBurnoutForYear(state);
-      state.routineSlot2Weeks = 0;
-      state.routineSlot3Weeks = 0;
-      log.messages.push('🔥 번아웃! — "...더 이상 못하겠다"');
+      enterBurnout(state, log, '🔥 번아웃! — "...더 이상 못하겠다"');
     }
   }
   // 회복: tired → normal
@@ -702,12 +691,7 @@ function checkMentalStateTransition(state: GameState, log: WeekLog): void {
   //   재수/잠시쉼표로 "밑으로 무너지게" 한다(갈아넣기의 서사적 대가). 쿨다운 면역 중엔 미발동.
   if (state.mentalState === 'tired' && (state.consecutiveTiredWeeks || 0) >= 24
     && (state.burnoutCooldown || 0) === 0) {
-    state.mentalState = 'burnout';
-    state.burnoutCount++;
-    recordBurnoutForYear(state);
-    state.routineSlot2Weeks = 0;
-    state.routineSlot3Weeks = 0;
-    log.messages.push('🔥 한계였다 — 쉬지 않고 달린 몸이 결국 멈춰 섰다.');
+    enterBurnout(state, log, '🔥 한계였다 — 쉬지 않고 달린 몸이 결국 멈춰 섰다.');
   }
 
   // v8.2: 장기 tired 자력 탈출 보조 — 8주+ 연속 tired면 몸이 강제 회복 모드로 전환.
