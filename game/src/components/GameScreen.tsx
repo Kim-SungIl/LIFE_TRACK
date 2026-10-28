@@ -63,7 +63,7 @@ export function GameScreen() {
   const {
     state, setRoutine, confirmWeek, setMonthPlan,
     advanceFromYearEnd, resolveEvent, buyItem, talkToNpc, talkToHome,
-    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
+    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, markMoneyBlockedMonth,
     startGame, exitToTitle, chooseSemesterGoal, startRomanceRetry, consumeRomancePlan,
     startMonthPlayback, continuePlayback, pausePlayback, resumePlayback, finishMonth,
   } = useGameStore(useShallow(s => ({
@@ -80,6 +80,7 @@ export function GameScreen() {
     resolveParentTalkChoice: s.resolveParentTalkChoice,
     setPhase: s.setPhase,
     markMoneyBlockedWeek: s.markMoneyBlockedWeek,
+    markMoneyBlockedMonth: s.markMoneyBlockedMonth,
     chooseSemesterGoal: s.chooseSemesterGoal,
     startRomanceRetry: s.startRomanceRetry,
     consumeRomancePlan: s.consumeRomancePlan,
@@ -513,6 +514,7 @@ export function GameScreen() {
         existing={existing}
         onSetRoutine={setRoutine}
         onChooseGoal={chooseSemesterGoal}
+        onMoneyBlocked={markMoneyBlockedMonth}
         onStart={(plan) => {
           const reason = setMonthPlan(plan);
           if (reason === null) {

@@ -163,6 +163,11 @@ export interface GameState {
   // 같은 주를 두 번 세지 않기 위한 절대주차 스탬프((year-1)*48 + week). UI가 매 렌더 알려오므로 필요하다.
   moneyBlockedStamp?: number;
   /**
+   * 돈 때문에 월 계획을 시작하지 못한 달 — 그 달의 fromWeek부터 달 끝까지를 이미 "막힌 주"로 셌다(store.markMoneyBlockedMonth).
+   * 같은 달을 두 번 세지 않고, 그 달 안에서 주간 화면이 또 알려와도(재생이 멈춘 주) 겹쳐 세지 않기 위한 표시다.
+   */
+  moneyBlockedMonth?: { year: number; month: number; fromWeek: number };
+  /**
    * 월 단위 돈(달 초 용돈·루틴 선불, monthlyMoney.ts)으로 도는 판인가. 새 판은 true로 시작하고,
    * 구세이브(없음)는 첫 달 초를 만날 때까지 예전 매주 방식으로 돌다가 그때 켜진다.
    */

@@ -137,7 +137,7 @@ export function stateDigest(state: GameState, npcActivityMap: Record<string, str
  * 불변은 **돈이 모자라지 않는 판**에서만 요구한다.
  */
 export const MONEY_STATE_KEYS = [
-  'money', 'moneySpentByYear', 'moneyBlockedWeeksByYear', 'moneyBlockedStamp',
+  'money', 'moneySpentByYear', 'moneyBlockedWeeksByYear', 'moneyBlockedStamp', 'moneyBlockedMonth',
   // 월 단위 돈 장치의 기록(monthlyMoney.ts) — 돈이 언제 움직였나의 장부라 돈 쪽이다.
   'monthlyMoney', 'routinePrepaid',
 ] as const;

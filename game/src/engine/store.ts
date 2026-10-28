@@ -30,7 +30,7 @@ import {
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
-import { recordMoneyBlockedWeek } from './moneyTrajectory';
+import { recordMoneyBlockedWeek, recordMoneyBlockedWeeks } from './moneyTrajectory';
 import { captureWeekendPlan } from './weekendPlan';
 import { saveLastSetup } from './lastSetup';
 import { pickSemesterGoal, type GoalOffer } from './semesterGoal';
@@ -199,6 +199,11 @@ interface GameStore {
   // 판정 주체가 UI인 이유: 그 주는 확정되지 않으므로 processWeek에 도달하지 않는다.
   markMoneyBlockedWeek: () => void;
   /**
+   * 월 계획 화면의 [이번 달 시작]이 돈 때문에 잠겼다 — 그 달 남은 주를 "막힌 주"로 한 번 센다(moneyTrajectory.ts 헤더).
+   * 같은 달은 한 번만. 화면이 매 렌더 알려와도 안전하다.
+   */
+  markMoneyBlockedMonth: () => void;
+  /**
    * T68 — 이번 학기 목표를 고른다. 판정(고를 수 있는 때·후보)은 `semesterGoal.ts` 하나다.
    * 제시된 후보가 아니거나 고를 수 없는 때면 아무것도 안 하고 false. 스탯·rng 무관(기록만).
    */
@@ -281,6 +286,14 @@ function playPlannedWeek(get: StoreGet, set: StoreSet): void {
   }
   const planned = getPlannedWeek(s)!;
   get().confirmWeek([...planned.activities], { ...planned.npcChoices });
+}
+
+/** 이 주가 이미 "막힌 달"로 센 구간(그 달 fromWeek~달 끝)에 드는가. 손상된 표시는 없는 것으로 본다. */
+function inBlockedMonth(s: GameState): boolean {
+  const m = s.moneyBlockedMonth;
+  if (!m || typeof m.year !== 'number' || typeof m.month !== 'number' || typeof m.fromWeek !== 'number') return false;
+  if (s.week < 1 || s.week > 48) return false;
+  return m.year === s.year && m.month === getMonthBlock(s.week).index && s.week >= m.fromWeek;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -757,9 +770,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!s) return;
     const stamp = absWeek(s.year, s.week);
     if (s.moneyBlockedStamp === stamp) return;
+    // 이 주는 이미 막힌 달로 셌다(월 계획이 막힌 달의 남은 주) — 재생이 멈춘 주간 화면이 또 알려와도 겹쳐 세지 않는다.
+    if (inBlockedMonth(s)) return;
     // 배열을 새로 만들지 않는 recordMoneyBlockedWeek 규약 때문에 구세이브에선 조용히 no-op이다.
     const next = { ...s, moneyBlockedStamp: stamp };
     recordMoneyBlockedWeek(next);
+    set({ state: next });
+  },
+
+  markMoneyBlockedMonth: () => {
+    const s = get().state;
+    if (!s || s.week < 1 || s.week > 48) return;
+    const block = getMonthBlock(s.week);
+    const m = s.moneyBlockedMonth;
+    if (m && m.year === s.year && m.month === block.index) return;
+    // 이번 주를 주간 화면이 이미 셌으면 그 주는 빼고 센다(같은 주를 두 번 세지 않는다).
+    const weeks = block.endWeek - s.week + 1 - (s.moneyBlockedStamp === absWeek(s.year, s.week) ? 1 : 0);
+    // 배열은 새로 만든다 — 기록기는 제자리에 더하므로, 얕은 복사본에 그대로 쓰면 이전 상태의 배열까지 바뀐다.
+    const next: GameState = {
+      ...s,
+      moneyBlockedMonth: { year: s.year, month: block.index, fromWeek: s.week },
+      moneyBlockedWeeksByYear: s.moneyBlockedWeeksByYear ? [...s.moneyBlockedWeeksByYear] : s.moneyBlockedWeeksByYear,
+    };
+    recordMoneyBlockedWeeks(next, weeks);
     set({ state: next });
   },
 
