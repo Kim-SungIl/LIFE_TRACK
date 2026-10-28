@@ -13,13 +13,12 @@
 //
 // 실행: cd game && npx tsx scripts/verify-patch-batch1-2.ts
 
-import { readFileSync } from 'fs';
-import { createInitialState, processWeek } from '../../src/engine/gameEngine';
+import { createInitialState, processWeek, applyActivity } from '../../src/engine/gameEngine';
 import { migrateLoadedState } from '../../src/engine/stateMigration';
 import { generateExamResult } from '../../src/engine/examSystem';
 import { applyItemEffects, SHOP_ITEMS, type ShopItem } from '../../src/engine/shopSystem';
 import { GAME_EVENTS } from '../../src/engine/events';
-import type { GameState, ParentStrength } from '../../src/engine/types';
+import type { GameState, ParentStrength, WeekLog } from '../../src/engine/types';
 
 let passed = 0, failed = 0;
 function assert(label: string, cond: boolean, detail?: string) {
@@ -169,6 +168,18 @@ console.log('\n=== P5. social 자연감소 -1.0 → -0.5 (Y1 정체 완화) ==='
   assert('Y1 idleWeeks 0 (idle 페널티 회피, 자연감소만 측정)', s.idleWeeks === 0);
 }
 
+/** 학업 50·피로 0에서 독학 한 번의 학업 성장 — 정신 상태 배율만 남기는 측정 칸. */
+function activityGain(mentalState: 'normal' | 'tired' | 'burnout', ctw: number): number {
+  const s = createInitialState('male', PARENTS, { rngSeed: SEED });
+  s.stats.academic = 50;
+  s.fatigue = 0;
+  s.mentalState = mentalState;
+  s.consecutiveTiredWeeks = ctw;
+  const log = { statChanges: {}, fatigueChange: 0, moneyChange: 0, messages: [], skipped: [], milestoneMessages: [], parentBonusesApplied: [] } as unknown as WeekLog;
+  applyActivity(s, 'self-study', log, 0, 1, true);
+  return s.stats.academic - 50;
+}
+
 // ============================================================================
 console.log('\n=== P6. 만성 피로 임계 (ctw 8 → 10, 강도 0.6 → 0.75) ===');
 // ============================================================================
@@ -199,20 +210,23 @@ console.log('\n=== P6. 만성 피로 임계 (ctw 8 → 10, 강도 0.6 → 0.75) 
     ctwSnapshots.some(c => c >= 10),
     `max=${Math.max(...ctwSnapshots)}`);
 
-  // 코드 상수 직접 검증 (소스 grep 대용)
-  const src = readFileSync('./src/engine/gameEngine.ts', 'utf8');
-  assert('gameEngine.ts에 "ctw >= 10" 임계 존재', /ctw\s*>=\s*10/.test(src));
-  assert('gameEngine.ts에 tiredPenalty 0.75 존재', /tiredPenalty\s*=\s*0\.75/.test(src));
-  assert('gameEngine.ts에 ctw >= 16 → 0.5 (만성 강도 완화)', /ctw\s*>=\s*16/.test(src) && /tiredPenalty\s*=\s*0\.5/.test(src));
+  // 배율은 소스 문자열이 아니라 **행위**로 잰다 — 같은 상태에서 정신 상태·연속 tired 주수만 바꿔 활동 한 번의
+  // 성장을 비교한다(학업 50·피로 0, 감쇠·최저 보장·주당 상한이 안 걸리는 칸). 예전엔 gameEngine.ts 소스를
+  // 정규식으로 찾아서, 상수에 이름만 붙여도 이 게이트가 빨강이 됐다(2026-10 리팩토링 점검).
+  const ratio = (mentalState: 'tired' | 'burnout', ctw: number) => activityGain(mentalState, ctw) / activityGain('normal', 0);
+  const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  assert('tired 기본 배율 0.8 (ctw 9)', near(ratio('tired', 9), 0.8), `actual=${ratio('tired', 9)}`);
+  assert('ctw >= 10 → 0.75 (ctw 10·15)', near(ratio('tired', 10), 0.75) && near(ratio('tired', 15), 0.75),
+    `actual=${ratio('tired', 10)}/${ratio('tired', 15)}`);
+  assert('ctw >= 16 → 0.5 (만성 강도 완화)', near(ratio('tired', 16), 0.5), `actual=${ratio('tired', 16)}`);
 }
 
 // ============================================================================
 console.log('\n=== P7. burnout 활동 효율 0.35 + 쿨다운 8주 ===');
 // ============================================================================
 {
-  const src = readFileSync('./src/engine/gameEngine.ts', 'utf8');
-  assert('mentalPenalty burnout=0.35', /'burnout'\s*\?\s*0\.35/.test(src));
-  assert('burnoutCooldown = 8 (회복 시 면역 8주)', /burnoutCooldown\s*=\s*8/.test(src));
+  const burnoutRatio = activityGain('burnout', 0) / activityGain('normal', 0);
+  assert('mentalPenalty burnout=0.35 (행위로 잰 배율)', Math.abs(burnoutRatio - 0.35) < 1e-9, `actual=${burnoutRatio}`);
 
   // 시뮬: burnout 강제 진입 → 자동 회복 → cooldown=8 카운트다운
   let s = createInitialState('male', PARENTS, { rngSeed: SEED });
@@ -232,8 +246,9 @@ console.log('\n=== P7. burnout 활동 효율 0.35 + 쿨다운 8주 ===');
   }
 
   console.log(`  burnout 회복 직후 cooldown=${cooldownAfterRecovery} (예상 7~8 사이 — 같은 주 1tick 차감 가능)`);
-  assert('burnout 회복 후 cooldown ≥ 7 (8 설정 + 동일주 -1 가능)',
-    cooldownAfterRecovery >= 7,
+  // 상한도 본다 — 소스 정규식(burnoutCooldown = 8)을 걷어내면서 "8을 넘지 않는다"를 행위로 옮겼다.
+  assert('burnout 회복 후 cooldown 7~8 (8 설정 + 동일주 -1 가능)',
+    cooldownAfterRecovery >= 7 && cooldownAfterRecovery <= 8,
     `actual=${cooldownAfterRecovery}`);
 }
 
