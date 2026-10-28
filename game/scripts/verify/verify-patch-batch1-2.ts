@@ -236,20 +236,24 @@ console.log('\n=== P7. burnout 활동 효율 0.35 + 쿨다운 8주 ===');
   s.burnoutCooldown = 0;
 
   // 멘탈/피로 회복 가능한 조건이라 처음 1~2주에 burnout → tired 회복 발생
+  // 회복한 주의 쿨다운과 그 다음 주 쿨다운을 같이 본다. 쿨다운 틱은 같은 processWeek 안에서 회복(burnout→tired)
+  // **뒤에** 돌기 때문에 회복 주에는 항상 설정값−1이 보인다 — 8이면 7, 다음 주 6.
+  // 소스 정규식(burnoutCooldown = 8)을 걷어내면서 "정확히 8"을 이 두 관측으로 옮겼다. 범위(7~8)로 두면
+  // 9로 바꿔도 8이 보여 통과했다(3자 검수 MED).
   let cooldownAfterRecovery = -1;
+  let cooldownNextWeek = -1;
   for (let w = 0; w < 5; w++) {
     s = processWeek(s);
     if (s.currentEvent) s.currentEvent = null;
+    if (cooldownAfterRecovery >= 0 && cooldownNextWeek < 0) { cooldownNextWeek = s.burnoutCooldown ?? 0; break; }
     if (s.mentalState !== 'burnout' && cooldownAfterRecovery < 0) {
       cooldownAfterRecovery = s.burnoutCooldown ?? 0;
     }
   }
 
-  console.log(`  burnout 회복 직후 cooldown=${cooldownAfterRecovery} (예상 7~8 사이 — 같은 주 1tick 차감 가능)`);
-  // 상한도 본다 — 소스 정규식(burnoutCooldown = 8)을 걷어내면서 "8을 넘지 않는다"를 행위로 옮겼다.
-  assert('burnout 회복 후 cooldown 7~8 (8 설정 + 동일주 -1 가능)',
-    cooldownAfterRecovery >= 7 && cooldownAfterRecovery <= 8,
-    `actual=${cooldownAfterRecovery}`);
+  console.log(`  burnout 회복 직후 cooldown=${cooldownAfterRecovery}, 다음 주=${cooldownNextWeek}`);
+  assert('burnout 회복 주 cooldown = 7 (8 설정 − 같은 주 1틱)', cooldownAfterRecovery === 7, `actual=${cooldownAfterRecovery}`);
+  assert('다음 주 cooldown = 6 (주당 1씩 줄어든다)', cooldownNextWeek === 6, `actual=${cooldownNextWeek}`);
 }
 
 // ============================================================================
