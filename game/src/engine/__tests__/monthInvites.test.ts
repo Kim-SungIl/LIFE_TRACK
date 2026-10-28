@@ -6,6 +6,7 @@ import {
   INVITE_MIN_INTIMACY, MAX_INVITES_PER_MONTH, generateMonthInvites, validateInviteAnswers,
 } from '../monthInvites';
 import { getWeekInfo } from '../weekMath';
+import { inviteVoice } from '../talkData/inviteVoices';
 import { installMemoryStorage } from '../../../scripts/lib/week-driver';
 import type { useGameStore as UseGameStore } from '../store';
 import type { GameState, MonthInvite, MonthPlan } from '../types';
@@ -188,6 +189,8 @@ describe('약속 — 그 주에 지켰는지(processWeek)', () => {
     const { s, inv, pick, map } = promiseWeek();
     const kept = processWeek({ ...s, weekendChoices: pick }, map);
     expect(kept.weekLog!.messages.some(m => m.startsWith('📌'))).toBe(true);
+    // 그 친구의 말투로 적힌다(talkData/inviteVoices.ts).
+    expect(kept.weekLog!.messages.find(m => m.startsWith('📌'))).toContain(inviteVoice(inv.npcId).kept);
     const control = processWeek({ ...s, monthPlan: undefined, weekendChoices: pick }, map);
     expect(intimacy(kept, inv.npcId)).toBe(intimacy(control, inv.npcId));
   });
@@ -203,6 +206,7 @@ describe('약속 — 그 주에 지켰는지(processWeek)', () => {
     const withCompanion = processWeek({ ...s, monthPlan: undefined, weekendChoices: choices, eventTimeCost: 1 }, map);
     expect(intimacy(withCompanion, inv.npcId), '전제: 동행만으로는 칸이 잘려도 오른다').toBeGreaterThan(intimacy(noCompanion, inv.npcId));
     expect(cut.weekLog!.messages.some(m => m.startsWith('💔'))).toBe(true);
+    expect(cut.weekLog!.messages.find(m => m.startsWith('💔'))).toContain(inviteVoice(inv.npcId).broken);
     expect(intimacy(cut, inv.npcId)).toBe(Math.max(0, intimacy(noCompanion, inv.npcId) - 2));
   });
 

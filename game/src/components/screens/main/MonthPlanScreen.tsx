@@ -26,6 +26,7 @@ import { NpcSelectModal } from './NpcSelectModal';
 import { chipSurface } from '../surface';
 import { SlotEditPopup } from './SlotEditPopup';
 import { SemesterGoalChip } from './SemesterGoalChip';
+import { inviteLine, inviteVoice } from '../../../engine/talkData/inviteVoices';
 import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
@@ -449,7 +450,9 @@ function InviteCard({ invite, answer, npcName, cost, onAnswer }: {
 }) {
   const vac = getWeekInfo(invite.week).isVacation;
   const when = `${getWeekOfMonth(invite.week)}주차 ${vac ? '하루' : invite.slotIdx === 0 ? '토요일' : '일요일'}`;
-  const line = invite.activityId === 'study-group' ? `"시험 기간인데 ${when}에 같이 공부할래?"` : `"${when}에 같이 놀래?"`;
+  // 친구마다 말투가 다르다(talkData/inviteVoices.ts) — 누가 불러도 같은 말이면 초대가 달마다 다른 요청이 못 된다.
+  const line = inviteLine(invite.npcId, invite.activityId, invite.week, when);
+  const decline = inviteVoice(invite.npcId).decline;
   return (
     <section aria-label={`${npcName}의 초대`} data-testid={`invite-${invite.npcId}`} style={{
       background: 'var(--bg-card-hover)', border: '1px solid rgba(240,164,122,0.35)', borderRadius: 14,
@@ -459,7 +462,7 @@ function InviteCard({ invite, answer, npcName, cost, onAnswer }: {
         <span style={{ fontSize: '0.75rem', color: 'var(--accent-soft)', fontWeight: 600 }}>{npcName}의 초대 · {when}</span>
         <span style={{ fontSize: '0.9rem' }}>{line}</span>
       </div>
-      {answer === false && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{npcName}: "알겠어… 다음에 하자." — 조금 서운한 눈치다.</div>}
+      {answer === false && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{decline.startsWith('"') ? `${npcName}: ${decline}` : decline}</div>}
       {answer === true && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>약속했다. 그 칸은 {josa(npcName, '와/과')} 보내는 시간으로 비워 둔다.</div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
         <button type="button" className="btn-reset" aria-pressed={answer === true} onClick={() => onAnswer(true)} style={{
