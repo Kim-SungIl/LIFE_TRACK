@@ -1,4 +1,4 @@
-import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity } from './types';
+import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity, type Activity } from './types';
 import { achievementAxes, emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
 import { ACTIVITIES, getActivityCost, collapseActivityChoicesWithSlots, canApplyActivity, type ActivityInstance } from './activities';
@@ -294,23 +294,33 @@ export function catchupThreshold(year: number, cb: { threshold: number }): numbe
 }
 
 // ===== 활동 적용 =====
-/**
- * 활동 1회의 효과 적용. **export는 계약이다** — 성장 곡선 g(x)를 재려면 이 함수를 그 스탯에서
- * 직접 불러야 한다. processWeek로 감싸 재면 학교 수업·자연 감쇠·피로 회복이 섞여 곡선의
- * 연속성을 증명할 수 없다(activityGrowthCurve.test.ts가 84.99/85.01을 여기로 직접 넣는다).
- */
-export function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0, prepaid = false): void {
-  const activity = ACTIVITIES.find(a => a.id === activityId);
-  if (!activity) return;
+// 정신 상태별 성장 배율 — 지친 동안은 같은 활동도 덜 는다. 연속 tired 주수가 길수록 더 깎인다(만성).
+// v6.4 → v7.1: 만성 피로 누적 패널티 — 임계 늦춤 + 강도 완화(Y1 W11~12에 ×0.6 발동되던 문제 해결).
+const TIRED_GROWTH = 0.8;                    // 기본 피로 배율
+const TIRED_LONG = { weeks: 10, mult: 0.75 };  // 장기: 루틴 재고 필요 (8주 → 10주, 0.6 → 0.75)
+const TIRED_CHRONIC = { weeks: 16, mult: 0.5 }; // 만성: 거의 성장 불가 (0.4 → 0.5)
+const BURNOUT_GROWTH = 0.35;
+/** v6.1: 무기력 3주+ 시 쉬기 계열 멘탈 회복 대폭 감소 (쉬어도 공허함). */
+const IDLE_REST = { weeks: 3, mult: 0.3 };
+/** v6.1: 동일 축 중복 효율 감소 — 그 주에 이미 오른 양이 문턱을 넘으면 2회째 70%, 3회째+ 45%. */
+const CROWDED_SECOND = { over: 0.5, mult: 0.7 };
+const CROWDED_THIRD = { over: 2, mult: 0.45 };
+/** v6.2: 주당 스탯 성장 상한 (+2/주) — 활동값 하향과 함께 조정. 멘탈은 제외. */
+const WEEKLY_STAT_CAP = 2;
 
-  const fatiguemod = getFatigueModifier(state.fatigue);
-  // v6.4 → v7.1: 만성 피로 누적 패널티 — 임계 늦춤 + 강도 완화
-  // (Y1 W11~12에 ×0.6 발동되던 문제 해결)
-  let tiredPenalty = 0.8;  // 기본 피로 배율
+/** 정신 상태가 성장에 거는 배율. */
+function mentalGrowthPenalty(state: GameState): number {
   const ctw = state.consecutiveTiredWeeks || 0;
-  if (ctw >= 16) tiredPenalty = 0.5;        // 만성: 거의 성장 불가 (0.4 → 0.5)
-  else if (ctw >= 10) tiredPenalty = 0.75;  // 장기: 루틴 재고 필요 (8주 → 10주, 0.6 → 0.75)
-  const mentalPenalty = state.mentalState === 'burnout' ? 0.35 : state.mentalState === 'tired' ? tiredPenalty : 1.0;
+  const tiredPenalty = ctw >= TIRED_CHRONIC.weeks ? TIRED_CHRONIC.mult
+    : ctw >= TIRED_LONG.weeks ? TIRED_LONG.mult
+    : TIRED_GROWTH;
+  return state.mentalState === 'burnout' ? BURNOUT_GROWTH : state.mentalState === 'tired' ? tiredPenalty : 1.0;
+}
+
+/** 활동 한 번의 성장에 공통으로 걸리는 배율들. 부모 효율 보너스가 걸리면 그 주 로그에 칩을 한 번 남긴다. */
+function activityGrowthContext(state: GameState, activity: Activity, log: WeekLog) {
+  const fatiguemod = getFatigueModifier(state.fatigue);
+  const mentalPenalty = mentalGrowthPenalty(state);
 
   // v5.3: 상점 버프 보너스 계산
   let buffBonus = 0;
@@ -337,39 +347,45 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
       log.parentBonusesApplied?.push({ parent: 'resilience', what: '운동 효율 +10%' });
     }
   }
+  return { fatiguemod, mentalPenalty, buffBonus, parentEfficiencyBonus };
+}
 
-  // 각 스탯 성장 적용
-  for (const [key, baseValue] of Object.entries(activity.effects)) {
-    const statKey = key as StatKey;
-    let value = baseValue as number;
-    // T67 성장 둔화 기록용 — 아래 식이 **이미 쓰는 배율을 그대로** 받아 둔다. 식 자체는 그대로다.
-    let drag: GrowthMultipliers | null = null;
+/**
+ * 한 축의 성장 — 감쇠·배율 → 동일 축 중복 → 무료 소프트캡 → 최저 보장 → 주당 상한 순서. **순서가 계약이다**
+ * (아래 최저 보장 주석). 멘탈은 전용 회복률만 탄다.
+ */
+function applyStatGrowth(
+  state: GameState, activity: Activity, log: WeekLog, statKey: StatKey, baseValue: number,
+  ctx: ReturnType<typeof activityGrowthContext>, routineBonus: number, efficiency: number,
+): void {
+  const { fatiguemod, mentalPenalty, buffBonus, parentEfficiencyBonus } = ctx;
+  let value = baseValue;
+  // T67 성장 둔화 기록용 — 아래 식이 **이미 쓰는 배율을 그대로** 받아 둔다. 식 자체는 그대로다.
+  let drag: GrowthMultipliers | null = null;
 
-    if (statKey === 'mental') {
-      // 멘탈은 전용 감쇠
-      value *= getMentalRecoveryRate(state.stats.mental);
-      // v6.1: 무기력 3주+ 시 쉬기 계열 멘탈 회복 대폭 감소 (쉬어도 공허함)
-      if ((state.idleWeeks || 0) >= 3 && activity.category === 'rest' && value > 0) {
-        value *= 0.3;
-      }
-    } else if (value > 0) {
-      // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
-      const diminishing = getDiminishingReturn(state.stats[statKey]);
-      value *= diminishing * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus + parentEfficiencyBonus) * efficiency;
-      drag = { diminishing, fatigue: fatiguemod, mood: mentalPenalty, crowded: 1, freeCeiling: 1 };
-
-      // v6.1: 동일 축 중복 효율 감소 — 3단계 (2회 70%, 3회+ 45%)
-      const priorGain = log.statChanges[statKey] || 0;
-      if (priorGain > 2) { value *= 0.45; drag.crowded = 0.45; }       // 3회째+ → 45%
-      else if (priorGain > 0.5) { value *= 0.7; drag.crowded = 0.7; }  // 2회째 → 70%
-
-      // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감 (유·무료 갈림의 핵심)
-      if (getActivityCost(activity, state.year) === 0 && state.stats[statKey] >= FREE_SOFTCAP_STAT) {
-        value *= FREE_SOFTCAP_FACTOR;
-        drag.freeCeiling = FREE_SOFTCAP_FACTOR;
-      }
+  if (statKey === 'mental') {
+    // 멘탈은 전용 감쇠
+    value *= getMentalRecoveryRate(state.stats.mental);
+    if ((state.idleWeeks || 0) >= IDLE_REST.weeks && activity.category === 'rest' && value > 0) {
+      value *= IDLE_REST.mult;
     }
-    const valueBeforeFloor = value;
+  } else if (value > 0) {
+    // 양수 성장에만 감쇠 적용 + 멘탈 상태 패널티 + 버프/루틴 보너스
+    const diminishing = getDiminishingReturn(state.stats[statKey]);
+    value *= diminishing * fatiguemod * mentalPenalty * (1 + buffBonus + routineBonus + parentEfficiencyBonus) * efficiency;
+    drag = { diminishing, fatigue: fatiguemod, mood: mentalPenalty, crowded: 1, freeCeiling: 1 };
+
+    const priorGain = log.statChanges[statKey] || 0;
+    if (priorGain > CROWDED_THIRD.over) { value *= CROWDED_THIRD.mult; drag.crowded = CROWDED_THIRD.mult; }
+    else if (priorGain > CROWDED_SECOND.over) { value *= CROWDED_SECOND.mult; drag.crowded = CROWDED_SECOND.mult; }
+
+    // v5.2: 무료 활동 soft cap — 돈 안 드는 활동은 80+ 구간에서 급감 (유·무료 갈림의 핵심)
+    if (getActivityCost(activity, state.year) === 0 && state.stats[statKey] >= FREE_SOFTCAP_STAT) {
+      value *= FREE_SOFTCAP_FACTOR;
+      drag.freeCeiling = FREE_SOFTCAP_FACTOR;
+    }
+  }
+  const valueBeforeFloor = value;
 
     // 최저 보장 — v6.2는 85에서 **절벽으로** 끊었다("고구간은 진짜 어려워야 함"). 방향은 맞았지만
     // 절벽이라 85 바로 아래에서는 보장이 감쇠·소프트캡을 전부 이기고(무료 3슬롯 0.45/주 > 고등
@@ -377,43 +393,83 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
     // 박혀서 7년을 어떻게 살든 성취가 85로 빨려 들어갔다. T29에서 70→80 테이퍼로 바꿨다
     // (growthFloorRatio 주석이 왜 80인지 설명한다). 적용 **순서는 그대로**다 — 소프트캡 뒤에
     // 바닥. 뒤집으면 바닥까지 ×0.1을 맞아 무료 활동이 80에서 딱 멈추는 새 절벽이 생긴다.
-    const floorValue = baseValue * growthFloorRatio(state.stats[statKey]);
-    if (baseValue > 0 && value < floorValue) {
-      value = floorValue;
-    }
-    const valueAfterFloor = value;
+  const floorValue = baseValue * growthFloorRatio(state.stats[statKey]);
+  if (baseValue > 0 && value < floorValue) {
+    value = floorValue;
+  }
+  const valueAfterFloor = value;
 
-    // v6.2: 주당 스탯 성장 상한 (+2/주) — 활동값 하향과 함께 조정
-    const weeklyGainSoFar = log.statChanges[statKey] || 0;
-    if (statKey !== 'mental' && value > 0 && weeklyGainSoFar + value > 2) {
-      value = Math.max(0, 2 - weeklyGainSoFar);
-    }
-
-    const statBefore = state.stats[statKey];
-    state.stats[statKey] = Math.max(0, Math.min(100, state.stats[statKey] + value));
-    if (drag && statKey !== 'mental') {
-      recordGrowthDrag(log, statKey, drag, valueBeforeFloor, valueAfterFloor, value, state.stats[statKey] - statBefore);
-    }
-    if (!log.statChanges[statKey]) log.statChanges[statKey] = 0;
-    log.statChanges[statKey]! += value;
+  const weeklyGainSoFar = log.statChanges[statKey] || 0;
+  if (statKey !== 'mental' && value > 0 && weeklyGainSoFar + value > WEEKLY_STAT_CAP) {
+    value = Math.max(0, WEEKLY_STAT_CAP - weeklyGainSoFar);
   }
 
-  // Phase 1: catch-up 보너스 — 방학에만 트리거, 낮은 스탯에 한정
-  // 학교급별 발동선 차등: 초 25 / 중 35 / 고 50 (활동 데이터의 threshold는 high 기준 base로 둠)
-  // 의도: Y1 시작 스탯 분포(30/25/25...)에서 모든 활동이 catchup 발동되어 "안전망"이 일반 부스트로
-  // 변질되던 문제 해소. 진짜 뒤처진 학생만 보호하도록 발동선을 학교급에 맞춤.
-  // v8.x: 초 30→25 / 중 40→35 추가 너프 — sim에서 Y1 5.30회/방학(임계 3 초과)으로 발동 빈도 과다.
-  if (state.isVacation && activity.catchupBonus) {
-    const cb = activity.catchupBonus;
-    if (cb.bonus > 0) {
-      if (state.stats[cb.targetStat] < catchupThreshold(state.year, cb)) {
-        const before = state.stats[cb.targetStat];
-        state.stats[cb.targetStat] = Math.max(0, Math.min(100, before + cb.bonus));
-        if (!log.statChanges[cb.targetStat]) log.statChanges[cb.targetStat] = 0;
-        log.statChanges[cb.targetStat]! += cb.bonus;
-      }
-    }
+  const statBefore = state.stats[statKey];
+  state.stats[statKey] = Math.max(0, Math.min(100, state.stats[statKey] + value));
+  if (drag && statKey !== 'mental') {
+    recordGrowthDrag(log, statKey, drag, valueBeforeFloor, valueAfterFloor, value, state.stats[statKey] - statBefore);
   }
+  if (!log.statChanges[statKey]) log.statChanges[statKey] = 0;
+  log.statChanges[statKey]! += value;
+}
+
+// Phase 1: catch-up 보너스 — 방학에만 트리거, 낮은 스탯에 한정
+// 학교급별 발동선 차등: 초 25 / 중 35 / 고 50 (활동 데이터의 threshold는 high 기준 base로 둠)
+// 의도: Y1 시작 스탯 분포(30/25/25...)에서 모든 활동이 catchup 발동되어 "안전망"이 일반 부스트로
+// 변질되던 문제 해소. 진짜 뒤처진 학생만 보호하도록 발동선을 학교급에 맞춤.
+// v8.x: 초 30→25 / 중 40→35 추가 너프 — sim에서 Y1 5.30회/방학(임계 3 초과)으로 발동 빈도 과다.
+function applyCatchupBonus(state: GameState, activity: Activity, log: WeekLog): void {
+  if (!state.isVacation || !activity.catchupBonus) return;
+  const cb = activity.catchupBonus;
+  if (cb.bonus > 0 && state.stats[cb.targetStat] < catchupThreshold(state.year, cb)) {
+    const before = state.stats[cb.targetStat];
+    state.stats[cb.targetStat] = Math.max(0, Math.min(100, before + cb.bonus));
+    if (!log.statChanges[cb.targetStat]) log.statChanges[cb.targetStat] = 0;
+    log.statChanges[cb.targetStat]! += cb.bonus;
+  }
+}
+
+/** 활동 비용 차감 — prepaid = 이번 달 몫으로 이미 선불한 유료 루틴(monthlyMoney.ts), 실행할 때 다시 빼지 않는다. */
+function payActivityCost(state: GameState, activity: Activity, log: WeekLog, prepaid: boolean): void {
+  const cost = prepaid ? 0 : getActivityCost(activity, state.year);
+  const moneyBeforeActivity = state.money;
+  state.money = Math.round((state.money - cost) * 10) / 10;
+  if (state.money < 0) state.money = 0;
+  log.moneyChange -= cost;
+  // T25 돈 궤적 — 명목 비용이 아니라 0 클램프 이후의 실차감액을 적립한다.
+  recordMoneySpent(state, Math.round((moneyBeforeActivity - state.money) * 10) / 10);
+}
+
+// 부모 친밀도 — stat 감쇠(diminishing/fatigue 등)와 무관하게 raw baseDelta를 단일 진입점에 전달.
+// §2.1 구간 감쇠는 applyParentIntimacyDelta 내부에서만 적용(이중 적용 방지).
+// 같은 활동이 루틴 슬롯 + 주말 선택에 동시 등록되면 2번 호출되므로, 활동 id별 주 1회만 친밀도 적용.
+function applyActivityParentEffect(state: GameState, activity: Activity, log: WeekLog): void {
+  if (!activity.parentEffect || log.parentEffectAppliedIds?.includes(activity.id)) return;
+  applyParentIntimacyDelta(state, activity.parentEffect.baseDelta, activity.parentEffect.tag);
+  state.actedWithParentThisWeek = true; // 이번 주 평균 회귀 면제
+  (log.parentEffectAppliedIds ??= []).push(activity.id);
+  // 체감 보상: 친밀도가 이미 돈독하면 가족 저녁의 멘탈 회복이 미세하게 더 크다 (숫자 비노출)
+  if (activity.id === 'family-dinner' && (state.parentIntimacy ?? 50) >= 60) {
+    state.stats.mental = Math.min(100, state.stats.mental + 0.5);
+    log.statChanges.mental = (log.statChanges.mental ?? 0) + 0.5;
+  }
+}
+
+/**
+ * 활동 1회의 효과 적용. **export는 계약이다** — 성장 곡선 g(x)를 재려면 이 함수를 그 스탯에서
+ * 직접 불러야 한다. processWeek로 감싸 재면 학교 수업·자연 감쇠·피로 회복이 섞여 곡선의
+ * 연속성을 증명할 수 없다(activityGrowthCurve.test.ts가 84.99/85.01을 여기로 직접 넣는다).
+ */
+export function applyActivity(state: GameState, activityId: string, log: WeekLog, routineBonus = 0, efficiency = 1.0, prepaid = false): void {
+  const activity = ACTIVITIES.find(a => a.id === activityId);
+  if (!activity) return;
+
+  const ctx = activityGrowthContext(state, activity, log);
+  for (const [key, baseValue] of Object.entries(activity.effects)) {
+    applyStatGrowth(state, activity, log, key as StatKey, baseValue as number, ctx, routineBonus, efficiency);
+  }
+  applyCatchupBonus(state, activity, log);
+
   // Phase 1: 방학 활동 횟수 카운트 (vacationLimit 추적)
   if (state.isVacation && activity.seasonGate === 'vacation-only') {
     if (!state.vacationActivityCounts) state.vacationActivityCounts = {};
@@ -428,29 +484,8 @@ export function applyActivity(state: GameState, activityId: string, log: WeekLog
   // 피로 로그는 여기서 더하지 않는다 — processWeek 끝에서 주 시작 대비 실제 변화로 한 번 적는다(T53).
   state.fatigue = Math.max(0, Math.min(100, state.fatigue + fatigueDelta));
 
-  // 용돈 적용 (음수 방지) — 학년별 차등 비용 적용.
-  // prepaid = 이번 달 몫으로 이미 선불한 유료 루틴(monthlyMoney.ts) — 실행할 때 다시 빼지 않는다.
-  const cost = prepaid ? 0 : getActivityCost(activity, state.year);
-  const moneyBeforeActivity = state.money;
-  state.money = Math.round((state.money - cost) * 10) / 10;
-  if (state.money < 0) state.money = 0;
-  log.moneyChange -= cost;
-  // T25 돈 궤적 — 명목 비용이 아니라 0 클램프 이후의 실차감액을 적립한다.
-  recordMoneySpent(state, Math.round((moneyBeforeActivity - state.money) * 10) / 10);
-
-  // 부모 친밀도 — stat 감쇠(diminishing/fatigue 등)와 무관하게 raw baseDelta를 단일 진입점에 전달.
-  // §2.1 구간 감쇠는 applyParentIntimacyDelta 내부에서만 적용(이중 적용 방지).
-  // 같은 활동이 루틴 슬롯 + 주말 선택에 동시 등록되면 2번 호출되므로, 활동 id별 주 1회만 친밀도 적용.
-  if (activity.parentEffect && !log.parentEffectAppliedIds?.includes(activity.id)) {
-    applyParentIntimacyDelta(state, activity.parentEffect.baseDelta, activity.parentEffect.tag);
-    state.actedWithParentThisWeek = true; // 이번 주 평균 회귀 면제
-    (log.parentEffectAppliedIds ??= []).push(activity.id);
-    // 체감 보상: 친밀도가 이미 돈독하면 가족 저녁의 멘탈 회복이 미세하게 더 크다 (숫자 비노출)
-    if (activity.id === 'family-dinner' && (state.parentIntimacy ?? 50) >= 60) {
-      state.stats.mental = Math.min(100, state.stats.mental + 0.5);
-      log.statChanges.mental = (log.statChanges.mental ?? 0) + 0.5;
-    }
-  }
+  payActivityCost(state, activity, log, prepaid);
+  applyActivityParentEffect(state, activity, log);
 
   log.messages.push(`${activity.name} 완료`);
 }

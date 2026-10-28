@@ -20,6 +20,10 @@ const ROOT = resolve(import.meta.dirname, '../../..');
 const app = parseProject(resolve(ROOT, 'tsconfig.app.json'));
 const test = parseProject(resolve(ROOT, 'tsconfig.test.json'));
 
+// 탐침은 TypeScript 프로그램을 통째로 만든다(app·test 프로젝트 전 파일). 단독으론 1~2초지만 전체 스위트가 병렬로 돌면
+// 기본 5초를 넘겨 이 파일만 시간 초과로 빨개졌다(2026-10-28, 테스트 파일이 늘며 재현 빈도 상승). 판정이 아니라 예산 문제다.
+const TSC_TIMEOUT_MS = 30_000;
+
 describe('타입검사 커버리지 게이트', () => {
   it('자기검사가 전 케이스를 돈다', () => {
     expect(SELF_CHECK_COUNT).toBe(EXPECTED_SELF_CHECKS);
@@ -33,28 +37,28 @@ describe('타입검사 커버리지 게이트', () => {
   });
 
   // ── 탐침의 양성/음성 대조 ──────────────────────────────────────────────
-  it('app 프로젝트는 node 전역을 전부 거부한다 (음성)', () => {
+  it('app 프로젝트는 node 전역을 전부 거부한다 (음성)', { timeout: TSC_TIMEOUT_MS }, () => {
     const got = probe(app.options, app.fileNames, NODE_PROBES);
     for (const c of NODE_PROBES) {
       expect(got.get(c.name), `app이 ${c.name}를 통과시킨다`).not.toHaveLength(0);
     }
   });
 
-  it('app에 node를 열면 탐침이 조용해진다 (양성 — 탐침이 node를 보고 있다는 증거)', () => {
+  it('app에 node를 열면 탐침이 조용해진다 (양성 — 탐침이 node를 보고 있다는 증거)', { timeout: TSC_TIMEOUT_MS }, () => {
     const got = probe({ ...app.options, types: ['node', 'vite/client'] }, app.fileNames, NODE_PROBES);
     for (const c of NODE_PROBES) {
       expect(got.get(c.name), `${c.name} 탐침이 node 여부를 안 본다`).toHaveLength(0);
     }
   });
 
-  it('test 프로젝트는 타입 오류를 잡는다 (음성)', () => {
+  it('test 프로젝트는 타입 오류를 잡는다 (음성)', { timeout: TSC_TIMEOUT_MS }, () => {
     const got = probe(test.options, test.fileNames, TYPE_ERROR_PROBES);
     for (const c of TYPE_ERROR_PROBES) {
       expect(got.get(c.name), `test가 ${c.name}를 안 잡는다`).not.toHaveLength(0);
     }
   });
 
-  it('test에 noCheck를 켜면 탐침이 조용해진다 (양성)', () => {
+  it('test에 noCheck를 켜면 탐침이 조용해진다 (양성)', { timeout: TSC_TIMEOUT_MS }, () => {
     const got = probe({ ...test.options, noCheck: true }, test.fileNames, TYPE_ERROR_PROBES);
     for (const c of TYPE_ERROR_PROBES) {
       expect(got.get(c.name), `${c.name} 탐침이 검사 여부를 안 본다`).toHaveLength(0);
