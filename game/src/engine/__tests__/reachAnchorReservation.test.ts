@@ -162,9 +162,9 @@ describe('C. 표시 때 친밀도를 다시 보지 않는다', () => {
 });
 
 describe('A2. 제품 store 경로(advanceWeek → resolveEvent → resolveEventChain)', () => {
-  // A·B는 sim 미러(scripts/lib/y1-sim-resolve)로 돈다 — 미러가 같은 pickChainForWeek를 쓰더라도 store의
-  // 호출(발생주 전달·예약 기록)을 바꾸면 그쪽은 모른다(3자 검수: store만 고친 m7·m8·m9가 전부 초록이었다).
-  // 그래서 같은 계약을 진짜 store로 한 번 더 잠근다. 친밀도는 이벤트 국면에서 올려 chain에서 fresh가 되게 한다
+  // A·B는 sim 하네스(scripts/lib/y1-sim-resolve)로 돈다. 그 하네스는 이제 store와 같은 엔진 함수(eventResolution)를
+  // 타지만, 예전엔 손으로 베낀 미러라 store만 고친 m7·m8·m9가 전부 초록이었다(3자 검수). store 액션의 배선
+  // (훅·커밋)까지 보려고 같은 계약을 진짜 store로 한 번 더 잠근다. 친밀도는 이벤트 국면에서 올려 chain에서 fresh가 되게 한다
   // (예약이 chain 경로에서 일어나야 store 배선이 걸린다).
   beforeEach(() => {
     localStorage.clear();

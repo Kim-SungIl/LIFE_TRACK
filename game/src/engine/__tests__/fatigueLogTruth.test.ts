@@ -353,7 +353,7 @@ describe('피로 로그는 누적하지 않는다 — 쓰기 형태가 계약이
     // 0건이면 아래 each가 통째로 안 돌고, 1건이면 한 층만 보던 옛 판으로 되돌아간 것이다.
     expect(engineSources.length, 'src/engine 훑기가 0파일 — 경로가 바뀌었다').toBeGreaterThan(20);
     expect(writerFiles.map(f => f.rel).sort(), '쓰기를 가진 파일 집합')
-      .toEqual(['src/engine/gameEngine.ts', 'src/engine/store.ts']);
+      .toEqual(['src/engine/eventResolution.ts', 'src/engine/gameEngine.ts']);  // 사건 로그 접기는 store에서 eventResolution으로 옮겼다
   });
 
   it.each(writerFiles.map(f => [f.rel, f] as const))('%s의 fatigueChange 쓰기는 전부 절대 대입이다', (rel, f) => {

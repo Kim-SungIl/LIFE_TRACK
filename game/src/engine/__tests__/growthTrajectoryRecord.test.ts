@@ -64,7 +64,7 @@ describe('도달 가능성 — 제품의 두 입구가 모두 채운다', () => 
   //
   // ⚠️ 학년 전환의 입구는 **둘**이다. W48 처리 뒤 대기 이벤트가 없으면 processWeek이 곧장
   // 전환하지만, 이벤트가 걸리면 processWeek은 phase='event'로 멈추고 전환을 **미룬다** —
-  // 그 뒤 store.resolveEventChain이 `week > 48`을 보고 수행한다(store.ts의 그 분기).
+  // 그 뒤 resolveEventChain이 `week > 48`을 보고 수행한다(eventResolution.ts의 그 분기).
   // 엔진만 밀면 Y2~Y6이 통째로 안 돌아 "7칸이 찬다"가 거짓이 된다(초안에서 실제로 그랬다).
   beforeEach(() => {
     useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });

@@ -117,7 +117,8 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // 두 시드 모두 움직였다. 등급 밴드는 셋 다 그대로다.
     // 연쇄 판정 좌표 통일(2026-10, 연쇄를 week++ 뒤가 아니라 발생주 좌표로)으로 36.0/36.7 → 35.6/37.7. 원인 귀속: Y1 W14 연쇄에서 `s.week === 15` 조건(parent-pressure)이
     // 한 주 일찍 뜨던 것이 W15로 가며 사건 열이 갈렸다(이월 장치를 꺼도 같은 값 — 이월 몫 0). 시드 1~60 전부 C 유지.
-    const landings: Record<number, number> = { 1: 35.6, 7: 37.7 };
+    // 하네스 교정(2026-10-27, sim 미러 → 엔진 eventResolution — 옛 미러는 W48 사건 뒤 학년 전환을 빠뜨려 판당 337~340주를 돌았다. 제품은 336주)으로 35.6/37.7 → 38.4/37.7. 시드 1~60 전부 C 유지(평균 35.86 → 36.26).
+    const landings: Record<number, number> = { 1: 38.4, 7: 37.7 };
     for (const [seed, academic] of Object.entries(landings)) {
       const r = playSevenYears(MIN_INPUT, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);
@@ -153,7 +154,10 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // 바뀐 몫이다(효과 수치 불변). 시드 1~60 분포: 평균 83.31 → 83.32, 85 이상 1/60 → 0/60.
     // 연쇄 판정 좌표 통일(2026-10, 연쇄를 week++ 뒤가 아니라 발생주 좌표로)으로 83.5/82.5 → 82.83/84.2. 원인 귀속은 위 최소투입과 같다(이월 몫 0). 시드 1~60 분포: 평균 83.32 → 83.31,
     // 85 이상 0/60 → 0/60, 전부 A.
-    const landings: Record<number, number> = { 1: 82.8333, 2: 84.2 };
+    // 하네스 교정(2026-10-27, sim 미러 → 엔진 eventResolution — 옛 미러는 W48 사건 뒤 학년 전환을 빠뜨려 판당 337~340주를 돌았다. 제품은 336주)으로 82.83/84.2 → 84.1/84.2.
+    // **시드 1~60 분포: A 60/60 → A 58 · S 2(시드 7 85.2 · 13 85.1), 평균 83.32 → 83.51.** 옛 하네스의 유령 주가
+    // 무료 성실을 S 문턱 밑으로 눌러 두고 있었다 — "시간만으로는 S에 못 닿는다"는 제품에서 3% 깨져 있다(밸런스 판단은 별건).
+    const landings: Record<number, number> = { 1: 84.1, 2: 84.2 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_FREE, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);
@@ -180,7 +184,8 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // good-grade 방학 가드(2026-10)로 90.2/89.7 → 89.5/90.0. 시드 1~60 전부 S 유지(60/60, 평균 89.98 → 89.81).
     // 앵커 도달형 예약(2026-10)으로 시드 1이 89.5 → 89.8(위와 같은 귀속, 시드 7은 90.0 그대로). 시드 1~60 전부 S 유지(60/60, 평균 89.81 → 89.92).
     // 연쇄 판정 좌표 통일(2026-10, 연쇄를 week++ 뒤가 아니라 발생주 좌표로)으로 89.8/90.0 → 89.0/89.6(귀속 위와 같음, 이월 몫 0). 시드 1~60 전부 S 유지(60/60, 평균 89.92 → 89.83).
-    const landings: Record<number, number> = { 1: 89.0, 7: 89.6 };
+    // 하네스 교정(2026-10-27, sim 미러 → 엔진 eventResolution — 옛 미러는 W48 사건 뒤 학년 전환을 빠뜨려 판당 337~340주를 돌았다. 제품은 336주)으로 89.0/89.6 → 89.7/89.6. 시드 1~60 전부 S 유지(60/60, 평균 89.82 → 89.97).
+    const landings: Record<number, number> = { 1: 89.7, 7: 89.6 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_PAID, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);

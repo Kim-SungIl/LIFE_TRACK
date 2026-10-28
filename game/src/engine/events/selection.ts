@@ -40,7 +40,7 @@ export function getFollowupForWeek(state: GameState, excludeLocation?: string): 
 }
 
 // ===== 연쇄 판정 좌표 = 발생주 =====
-// 메인 슬롯(processWeek)은 week++ 전에 고르지만 연쇄(store.resolveEventChain)는 week++ **뒤** state로 돈다.
+// 메인 슬롯(processWeek)은 week++ 전에 고르지만 연쇄(eventResolution.resolveEventChain)는 week++ **뒤** state로 돈다.
 // 그대로 조건을 보면 W24(여름방학 마지막 주)의 연쇄가 W25 학기 좌표로 평가돼 `!s.isVacation` 가드가 새고
 // (기록·화면은 "여름방학 5주차"), W19·W42는 반대로 학기 주인데 방학으로 막혔다. 쿨다운(`weeksSince`·도달형
 // `cur − last`)도 연쇄에서만 1주 짧았다(실효 간격 N−1).
@@ -62,7 +62,7 @@ export function atOccurrence<T>(state: GameState, occurrenceWeek: number, fn: ()
   }
 }
 
-/** 연쇄 followup — 발생주 좌표로 판정한다(store.resolveEventChain과 sim 미러가 같이 쓴다). */
+/** 연쇄 followup — 발생주 좌표로 판정한다(eventResolution.resolveEventChain — store와 sim 하네스가 같은 함수를 탄다). */
 export function getChainFollowup(state: GameState, occurrenceWeek: number, excludeLocation?: string): GameEvent | null {
   return atOccurrence(state, occurrenceWeek, () => getFollowupForWeek(state, excludeLocation));
 }
@@ -234,7 +234,7 @@ export function isSummerVacationStart(week: number): boolean {
 
 /**
  * 여름방학 마지막 주가 끝나는 지점 — 그 주의 마지막 사건(연쇄 끝)이 닫히거나 사건 없이 결산으로 넘어갈 때 부른다
- * (store.resolveEventChain · processWeek · sim 미러). 주 확정 전(주중) 변화가 섞이지 않는 유일한 좌표다.
+ * (eventResolution.resolveEventChain · processWeek). 주 확정 전(주중) 변화가 섞이지 않는 유일한 좌표다.
  */
 export function recordSummerVacationEnd(state: GameState, occurrenceWeek: number): void {
   const snap = state.summerIntimacySnapshot;
@@ -304,7 +304,7 @@ export function getReachForWeek(state: GameState): GameEvent | null {
 }
 
 /**
- * fixed/followup 이벤트 resolve 후 chain 픽 — store.resolveEventChain과 sim 미러(scripts/lib/y1-sim-resolve)가
+ * fixed/followup 이벤트 resolve 후 chain 픽 — eventResolution.resolveEventChain(store·sim 하네스 공용)이
  * **이 함수 하나**를 쓴다(같은 규칙을 두 자리에 쓰면 갈린다). eventsThisWeek = 그 발생주에 이미 뜬 사건 수.
  *   < 2 : 도달형 우선, 없으면 일반 조건부 1개(EVENT_DENSITY.chain)
  *   < 3 : 도달형 전용 추가 픽(milestone) — 학년 한정 reach가 마감 직전 누락되는 것 완화

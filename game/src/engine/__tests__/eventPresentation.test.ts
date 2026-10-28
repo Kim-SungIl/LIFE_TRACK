@@ -442,12 +442,12 @@ describe('currentEvent 대입 4경로', () => {
   });
 
   it('followup_path_uses_assignCurrentEvent', () => {
-    expect(src('../store.ts'), 'followup_path_uses_assignCurrentEvent')
+    expect(src('../eventResolution.ts'), 'followup_path_uses_assignCurrentEvent')
       .toMatch(/assignCurrentEvent\(state,\s*followup,\s*occurrenceWeek\)/);
   });
 
   it('chain_path_uses_assignCurrentEvent', () => {
-    expect(src('../store.ts'), 'chain_path_uses_assignCurrentEvent')
+    expect(src('../eventResolution.ts'), 'chain_path_uses_assignCurrentEvent')
       .toMatch(/assignCurrentEvent\(state,\s*chainPick,\s*occurrenceWeek\)/);
   });
 
