@@ -10,7 +10,7 @@
 //   · 시작하면 그 달이 자동으로 흐른다(GameScreen이 저장 뒤 store.startMonthPlayback을 부른다, 5단계).
 //   · 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다(`existing`) — 그때는 남은 주만 짜고, 초대는 처음 받은 그대로 고정이다
 //     (엔진도 다시 짠 계획의 초대 답이 처음과 다르면 거부한다 — monthInvites.validateInviteAnswers).
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { ACTIVITIES, collapseActivityChoices, collapseActivityChoicesWithSlots, getActivityCost, getAvailableActivities, isVacationLimitReached } from '../../../engine/activities';
 import { getExamsInMonth, getNextMonthOpeningExam } from '../../../engine/examSystem';
@@ -26,6 +26,7 @@ import { NpcSelectModal } from './NpcSelectModal';
 import { chipSurface } from '../surface';
 import { SlotEditPopup } from './SlotEditPopup';
 import { SemesterGoalChip } from './SemesterGoalChip';
+import { recordTelemetry } from '../../../engine/telemetry';
 import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
@@ -76,6 +77,8 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const [editing, setEditing] = useState<{ idx: number; slot: string } | null>(null);
   const [npcSelect, setNpcSelect] = useState<{ idx: number; key: string } | null>(null);
   const [showBudget, setShowBudget] = useState(true);
+  // 계측(설계안 §12 "지난달처럼만 누르고 끝낸 달") — 칸을 손으로 고친 횟수와 채우기 버튼을 누른 횟수. 렌더를 안 일으키게 ref.
+  const touched = useRef({ edits: 0, fills: 0 });
   const [error, setError] = useState<string | null>(null);
   // 친구 초대(monthInvites) — 상태를 읽기만 하는 결정론적 함수라 다시 그려도 같은 초대다. 답은 시작할 때 계획에 실린다.
   // 다시 짤 때는 처음 받은 초대와 답 그대로(새로 받지 않는다).
@@ -200,6 +203,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   /** 같은 계절의 첫 주를 나머지에 복사(모든 주 똑같이). */
   const copyFirstToAll = () => {
     playSfx('tap');
+    touched.current.fills++;
     setDrafts(ds => {
       const firstOf = (vac: boolean) => ds.find((_, i) => isVac(weeks[i]) === vac);
       return capVacationUses(ds.map((d, i) => {
@@ -214,6 +218,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const fillFromLast = () => {
     if (!snapshot) return;
     playSfx('tap');
+    touched.current.fills++;
     setDrafts(ds => capVacationUses(ds.map((d, i) => (isVac(weeks[i]) === snapshot.isVacation
       ? withPins(weeks[i], { activities: [...snapshot.activities].slice(0, slotCountForWeek(state, weeks[i])), npcChoices: { ...snapshot.npcChoices } })
       : d))));
@@ -228,6 +233,13 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
       invites: invites.map((inv, i) => ({ ...inv, accepted: answers[i] === true })),
     });
     setError(reason);
+    if (reason === null) {
+      recordTelemetry({
+        t: 'month', y: state.year, m: block.index, week: state.week, replan, ...touched.current,
+        invitesAccepted: invites.filter((_, i) => answers[i] === true).length,
+        invitesDeclined: invites.filter((_, i) => answers[i] === false).length,
+      });
+    }
   };
 
   const r2 = state.routineSlot2 ? ACTIVITIES.find(a => a.id === state.routineSlot2) : null;
@@ -409,14 +421,14 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
           routineJudgePlan={editing.slot.startsWith('routine') ? draftPlan : undefined}
           activities={getAvailableActivities(stateAt(editing.slot.startsWith('routine') ? state.week : editingWeek))}
           selectedActivities={drafts[editing.idx].activities}
-          setSelectedActivities={(ids) => setDraft(editing.idx, { activities: ids })}
+          setSelectedActivities={(ids) => { touched.current.edits++; setDraft(editing.idx, { activities: ids }); }}
           npcChoices={drafts[editing.idx].npcChoices}
           maxSlots={slotCountForWeek(state, editingWeek)}
           currentSlots={drafts[editing.idx].activities.reduce((n, id) => n + (id ? 1 : 0), 0)}
           // 루틴 칸은 어느 주의 칸도 아니다 — 모든 주 초안의 예약을 뺀 돈(spendable)으로 잰다(availableFor는 그 주 몫을 남긴다).
           availableMoney={editing.slot.startsWith('routine') ? spendable : availableFor(editing.idx)}
           extraVacUse={vacUseOutside(editing.idx)}
-          onSetRoutine={onSetRoutine}
+          onSetRoutine={(a, b) => { touched.current.edits++; onSetRoutine(a, b); }}
           setNpcSelectFor={(v) => { if (v) setNpcSelect({ idx: editing.idx, key: v }); }}
           setLastReaction={() => {}}
         />
@@ -430,6 +442,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
             const [, idxStr, activityId] = npcSelect.key.split(':');
             const slotIdx = parseInt(idxStr);
             const d = drafts[npcSelect.idx];
+            touched.current.edits++;
             setDraft(npcSelect.idx, {
               activities: assignSlot(d.activities, slotIdx, activityId),
               npcChoices: { ...d.npcChoices, [`${activityId}:${slotIdx}`]: npcId },
