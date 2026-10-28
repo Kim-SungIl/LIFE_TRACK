@@ -197,23 +197,10 @@ describe('라우터 배선 — 실제 렌더', () => {
 describe('라우터 배선', () => {
   const src = readFileSync(resolve(process.cwd(), 'src/components/GameScreen.tsx'), 'utf8');
 
-  it('모든 phase 분기가 screenKey를 지정한다', () => {
-    // TS가 "사용 전 미할당"으로 이미 잡지만, 분기 수와 키 수가 함께 늘어나는지도 본다.
-    const branches = (src.match(/phaseContent = \(/g) ?? []).length;
-    const keys = (src.match(/screenKey = /g) ?? []).length;
-    expect(branches).toBeGreaterThanOrEqual(6);
-    expect(keys).toBe(branches);
-  });
-
+  // 분기마다 키·속도를 지정하던 소스 검사 두 개는 decideScreen(screenRoute.ts)으로 판정을 옮기며 그쪽 행위 테스트로
+  // 바꿨다(screenRoute.test.ts — 단계별 키, 느린 전환은 학년말·엔딩뿐, GameScreen이 route.key/pace만 쓰는지).
   it('전환이 Suspense 안에서 phaseContent를 감싼다', () => {
     expect(src).toMatch(/<ScreenTransition\s+transitionKey=\{screenKey\}\s+pace=\{screenPace\}>/);
     expect(src).toMatch(/<ScreenTransition[\s\S]*\{phaseContent\}[\s\S]*<\/ScreenTransition>/);
-  });
-
-  it('고빈도 화면(이벤트·주간결산·메인)에는 slow를 쓰지 않는다', () => {
-    // slow는 학년말·엔딩 두 곳만. 늘어나면 의도적 변경인지 확인이 필요하다.
-    expect((src.match(/screenPace = 'slow'/g) ?? []).length).toBe(2);
-    const eventBranch = src.slice(src.indexOf('screenKey = `event:'), src.indexOf('screenKey = `weekly:'));
-    expect(eventBranch).not.toMatch(/screenPace = 'slow'/);
   });
 });
