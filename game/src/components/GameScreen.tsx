@@ -22,7 +22,7 @@ import { MonthSummaryScreen } from './screens/main/MonthSummaryScreen';
 import { PlaybackCard } from './screens/main/PlaybackCard';
 import { isMonthlyPlanningEnabled } from '../engine/featureFlags';
 import { getCurrentMonthPlan } from '../engine/monthPlan';
-import { buildMonthSummary, getMonthRun, hadTalkChance, isMonthEndWeek, stopLine, talkBankCount } from '../engine/monthPlayback';
+import { buildMonthSummary, getMonthRun, hadTalkChance, isMonthEndWeek, stopLine, talkBankCount, totalTalks } from '../engine/monthPlayback';
 import { ACTIVITIES } from '../engine/activities';
 import { getMonthBlock } from '../engine/weekMath';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
@@ -463,7 +463,7 @@ export function GameScreen() {
           nextLabel={state.week <= 48 ? getMonthBlock(state.week).label : null}
           moneyLeft={Math.round((state.money - (mm?.allowance ?? 0) + (mm?.routinePaid ?? 0)) * 10) / 10}
           nextMonthMoney={mm ? { allowance: mm.allowance, routinePaid: mm.routinePaid } : null}
-          missedTalks={runForLog.missedTalks}
+          missedTalks={totalTalks(runForLog.missedTalks)}
           onContinue={() => { setBigResultSeen(null); finishMonth(); }}
         />
       );

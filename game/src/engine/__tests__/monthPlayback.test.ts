@@ -7,8 +7,8 @@ import { cloneGameState } from '../stateClone';
 import { firstPickableChoice } from '../eventPresentation';
 import { generateMonthInvites } from '../monthInvites';
 import {
-  MAX_TALK_BANK, VERDICT_PRIORITY, boundaryStopAfter, buildMonthSummary, getMonthRun, hadTalkChance, recordWeek,
-  talkBankCount,
+  MAX_TALK_BANK, VERDICT_PRIORITY, addMissedTalks, boundaryStopAfter, buildMonthSummary, getMonthRun, hadTalkChance, recordWeek,
+  talkBankCount, talkChances,
 } from '../monthPlayback';
 import { getAvailableHomeEvents, getAvailableNpcEvents, getEligibleParentClimax } from '../talkSystem';
 import { getWeekInfo } from '../weekMath';
@@ -205,7 +205,7 @@ describe('월말 — 결산과 다음 달', () => {
   });
 
   it('학년이 바뀌면 재생 상태와 적립이 사라진다', () => {
-    const s = at(48, { phase: 'year-end', week: 49, monthRun: { year: 2, month: 12 } as MonthRun, talkBank: { year: 2, month: 12, count: 2 } });
+    const s = at(48, { phase: 'year-end', week: 49, monthRun: { year: 2, month: 12 } as MonthRun, talkBank: { year: 2, month: 12, npc: 2, home: 0 } });
     store.setState({ state: s });
     api().advanceFromYearEnd();
     expect(now().monthRun).toBeUndefined();
@@ -222,31 +222,69 @@ function withTalkChance(week: number, patch: Partial<GameState> = {}): GameState
     n.intimacy = 60;
   }
   s.npcEventPendingThisWeek = true;
+  s.parentEventPendingThisWeek = false;
   const npc = s.npcs.find(n => getAvailableNpcEvents(s, n.id).length > 0);
   expect(npc, '전제: 미니 이벤트가 남은 친구').toBeTruthy();
   return s;
 }
 
-describe('놓친 대화 월 적립(§8) — 최대 4, 다음 달에만', () => {
-  it('기회가 있는 주를 재생이 지나치면 1을 세고, 기회가 없으면 안 센다', () => {
+describe('놓친 대화 월 적립(§8) — 친구·가정 따로, 합쳐 최대 4, 다음 달에만', () => {
+  it('친구 기회가 있는 주를 재생이 지나치면 친구 쪽에 1을 세고, 기회가 없으면 안 센다', () => {
     const s = withTalkChance(5);
     expect(hadTalkChance(s)).toBe(true);
+    expect(talkChances(s)).toEqual({ npc: 1, home: 0 });
     startAt(s, { ...planFor(s), invites: generateMonthInvites(s).map(i => ({ ...i, accepted: false })) });
-    expect(getMonthRun(now())!.missedTalks).toBe(1);
+    expect(getMonthRun(now())!.missedTalks).toEqual({ npc: 1, home: 0 });
     const none = at(5);
     none.npcEventPendingThisWeek = false;
     none.parentEventPendingThisWeek = false;
     expect(hadTalkChance(none)).toBe(false);
     startAt(none);
-    expect(getMonthRun(now())!.missedTalks).toBe(0);
+    expect(getMonthRun(now())!.missedTalks).toEqual({ npc: 0, home: 0 });
   });
 
-  it('세는 값은 4에서 멈춘다(경계 3→4, 4→4)', () => {
+  it('가정 기회를 지나치면 가정 쪽에 센다 — 같은 주에 둘 다 있으면 둘 다 센다(주 단위 판은 둘 다 쓸 수 있었다)', () => {
+    const home = at(5);
+    home.npcEventPendingThisWeek = false;
+    home.parentEventPendingThisWeek = true;
+    expect(getAvailableHomeEvents(home).length, '전제: 남은 가정 이벤트').toBeGreaterThan(0);
+    expect(getEligibleParentClimax(home), '전제: 절정 순간 없음').toBeNull();
+    expect(talkChances(home)).toEqual({ npc: 0, home: 1 });
+    startAt(home);
+    expect(getMonthRun(now())!.missedTalks).toEqual({ npc: 0, home: 1 });
+    const both = withTalkChance(5);
+    both.parentEventPendingThisWeek = true;
+    expect(talkChances(both)).toEqual({ npc: 1, home: 1 });
+    startAt(both, { ...planFor(both), invites: generateMonthInvites(both).map(i => ({ ...i, accepted: false })) });
+    expect(getMonthRun(now())!.missedTalks).toEqual({ npc: 1, home: 1 });
+  });
+
+  it('절정 순간은 적립하지 않는다 — 기한이 없어 지나쳐도 남는다(배지는 켠다)', () => {
+    const s = at(37, { year: 7, parentIntimacy: 60 });
+    s.npcEventPendingThisWeek = false;
+    s.parentEventPendingThisWeek = false;
+    expect(getEligibleParentClimax(s), '전제: 절정 순간이 열려 있다').not.toBeNull();
+    expect(talkChances(s)).toEqual({ npc: 0, home: 0 });
+    expect(hadTalkChance(s)).toBe(true);
+  });
+
+  it('합쳐 4에서 멈추고 친구 몫부터 채운다(경계 3→4, 4→4, 쪽을 넘어 막는다)', () => {
+    expect(MAX_TALK_BANK).toBe(4);
+    const both = { npc: 1, home: 1 };
+    expect(addMissedTalks({ npc: 3, home: 0 }, { npc: 1, home: 0 })).toEqual({ npc: 4, home: 0 });
+    expect(addMissedTalks({ npc: 4, home: 0 }, { npc: 1, home: 0 })).toEqual({ npc: 4, home: 0 });
+    expect(addMissedTalks({ npc: 0, home: 4 }, { npc: 1, home: 0 }), '가정이 다 찼으면 친구도 막힌다').toEqual({ npc: 0, home: 4 });
+    expect(addMissedTalks({ npc: 1, home: 2 }, both), '자리가 하나면 친구가 먼저').toEqual({ npc: 2, home: 2 });
+    expect(addMissedTalks({ npc: 1, home: 1 }, both)).toEqual({ npc: 2, home: 2 });
+    expect(addMissedTalks({ npc: 0, home: 0 }, { npc: 0, home: 0 })).toEqual({ npc: 0, home: 0 });
+  });
+
+  it('재생 경로도 4에서 멈춘다(store 배선)', () => {
     const s = withTalkChance(5);
     startAt(s, { ...planFor(s), invites: generateMonthInvites(s).map(i => ({ ...i, accepted: false })) });
-    const forced = (n: number) => {
+    const forced = (missed: { npc: number; home: number }) => {
       const t = cloneGameState(now());
-      t.monthRun = { ...t.monthRun!, missedTalks: n, status: 'paused' };
+      t.monthRun = { ...t.monthRun!, missedTalks: missed, status: 'paused' };
       t.phase = 'weekday';
       t.npcEventPendingThisWeek = true;
       store.setState({ state: t });
@@ -254,9 +292,8 @@ describe('놓친 대화 월 적립(§8) — 최대 4, 다음 달에만', () => {
       api().resumePlayback();
       return now().monthRun!.missedTalks;
     };
-    expect(MAX_TALK_BANK).toBe(4);
-    expect(forced(3)).toBe(4);
-    expect(forced(4)).toBe(4);
+    expect(forced({ npc: 2, home: 1 })).toEqual({ npc: 3, home: 1 });
+    expect(forced({ npc: 3, home: 1 })).toEqual({ npc: 3, home: 1 });
   });
 
   it('달을 마치면 놓친 수가 다음 달 적립이 되고, 그 달이 끝나면 사라진다', () => {
@@ -266,16 +303,18 @@ describe('놓친 대화 월 적립(§8) — 최대 4, 다음 달에만', () => {
     api().startMonthPlayback();
     settle();
     const t = cloneGameState(now());
-    t.monthRun!.missedTalks = 3;
+    t.monthRun!.missedTalks = { npc: 2, home: 1 };
     store.setState({ state: t });
     api().finishMonth();
-    expect(now().talkBank).toEqual({ year: 2, month: 3, count: 3 });
+    expect(now().talkBank).toEqual({ year: 2, month: 3, npc: 2, home: 1 });
     expect(talkBankCount(now())).toBe(3);
+    expect(talkBankCount(now(), 'npc')).toBe(2);
+    expect(talkBankCount(now(), 'home')).toBe(1);
     // 다음 달(W13, 4월이 아닌 4번째 달)이면 지난 적립은 안 읽힌다.
     expect(talkBankCount({ ...now(), week: 13 })).toBe(0);
     // 놓친 게 없는 달을 마치면 남은 적립도 지운다(다음 달로 안 넘어감).
     const u = cloneGameState(now());
-    u.monthRun = { ...(t.monthRun as MonthRun), missedTalks: 0 };
+    u.monthRun = { ...(t.monthRun as MonthRun), missedTalks: { npc: 0, home: 0 } };
     store.setState({ state: u });
     api().finishMonth();
     expect(now().talkBank).toBeUndefined();
@@ -285,16 +324,25 @@ describe('놓친 대화 월 적립(§8) — 최대 4, 다음 달에만', () => {
     const s = withTalkChance(9);
     s.npcEventPendingThisWeek = false;
     const target = s.npcs.find(n => getAvailableNpcEvents({ ...s, npcEventPendingThisWeek: true }, n.id).length > 0)!;
-    store.setState({ state: { ...s, talkBank: { year: 2, month: 3, count: 2 } } });
+    store.setState({ state: { ...s, talkBank: { year: 2, month: 3, npc: 2, home: 1 } } });
     expect(api().talkToNpc(target.id).kind).toBe('event');
-    expect(now().talkBank?.count).toBe(1);
+    expect(now().talkBank).toMatchObject({ npc: 1, home: 1 });
     expect(now().npcEventPendingThisWeek).toBe(false);
-    store.setState({ state: { ...s, talkBank: { year: 2, month: 2, count: 2 } } });
+    store.setState({ state: { ...s, talkBank: { year: 2, month: 2, npc: 2, home: 0 } } });
     expect(api().talkToNpc(target.id).kind, '지난달 적립을 이번 달에 썼다').toBe('smalltalk');
     // 이번 주 기회가 있으면 그걸 먼저 쓰고 적립은 그대로다.
-    store.setState({ state: { ...s, npcEventPendingThisWeek: true, talkBank: { year: 2, month: 3, count: 2 } } });
+    store.setState({ state: { ...s, npcEventPendingThisWeek: true, talkBank: { year: 2, month: 3, npc: 2, home: 0 } } });
     expect(api().talkToNpc(target.id).kind).toBe('event');
-    expect(now().talkBank?.count).toBe(2);
+    expect(now().talkBank).toMatchObject({ npc: 2, home: 0 });
+  });
+
+  it('가정 몫 적립은 친구 미니 이벤트로 바뀌지 않는다', () => {
+    const s = withTalkChance(9);
+    s.npcEventPendingThisWeek = false;
+    const target = s.npcs.find(n => getAvailableNpcEvents({ ...s, npcEventPendingThisWeek: true }, n.id).length > 0)!;
+    store.setState({ state: { ...s, talkBank: { year: 2, month: 3, npc: 0, home: 3 } } });
+    expect(api().talkToNpc(target.id).kind).toBe('smalltalk');
+    expect(now().talkBank).toMatchObject({ npc: 0, home: 3 });
   });
 });
 
@@ -305,11 +353,15 @@ describe('가정 대화도 적립을 쓴다', () => {
     const probe = { ...s, parentEventPendingThisWeek: true };
     expect(getAvailableHomeEvents(probe).length, '전제: 남은 가정 이벤트').toBeGreaterThan(0);
     expect(getEligibleParentClimax(s), '전제: 절정 순간 없음(그건 기회와 무관하게 뜬다)').toBeNull();
-    store.setState({ state: { ...s, talkBank: { year: 2, month: 3, count: 2 } } });
+    store.setState({ state: { ...s, talkBank: { year: 2, month: 3, npc: 1, home: 2 } } });
     expect(api().talkToHome().kind).toBe('event');
-    expect(now().talkBank?.count).toBe(1);
+    expect(now().talkBank).toMatchObject({ npc: 1, home: 1 });
     store.setState({ state: { ...s, talkBank: undefined } });
     expect(api().talkToHome().kind).toBe('smalltalk');
+    // 친구 몫만 남은 적립은 가정 미니 이벤트로 바뀌지 않는다.
+    store.setState({ state: { ...s, talkBank: { year: 2, month: 3, npc: 3, home: 0 } } });
+    expect(api().talkToHome().kind).toBe('smalltalk');
+    expect(now().talkBank).toMatchObject({ npc: 3, home: 0 });
   });
 });
 
@@ -395,7 +447,7 @@ describe('주 기록 — recordWeek', () => {
 describe('월말 결산 내용 — buildMonthSummary', () => {
   const week = (w: number, patch: Partial<MonthRunWeek> = {}): MonthRunWeek => ({ week: w, auto: true, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false, promises: [], ...patch });
   const run = (log: MonthRunWeek[], startStats = at(9).stats): MonthRun => ({
-    year: 2, month: 2, status: 'playing', log, missedTalks: 0, startStats, startIntimacy: { jihun: 40 }, startMoney: 10,
+    year: 2, month: 2, status: 'playing', log, missedTalks: { npc: 0, home: 0 }, startStats, startIntimacy: { jihun: 40 }, startMoney: 10,
   });
   const st = (patch: Partial<GameState> = {}) => {
     const s = at(9, patch);

@@ -224,7 +224,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   // 가정 모달 배지 — pending 이어도 풀이 비면 잡담으로 빠지므로, 실제 남은 이벤트가 있을 때만 true.
   // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
   const homeHasEvent = getEligibleParentClimax(state) != null
-    || ((state.parentEventPendingThisWeek || talkBankCount(state) > 0) && getAvailableHomeEvents(state).length > 0);
+    || ((state.parentEventPendingThisWeek || talkBankCount(state, 'home') > 0) && getAvailableHomeEvents(state).length > 0);
   // 동행 후보 = met + 재적(같은 학교) — 전출 도윤/졸업 공백기 하은은 주말 동행에서 제외.
   // NpcSelectModal memo 안정성 위해 npcs ref(+ 재적 판정 입력인 year/events) 변경 시에만 재계산.
   const companionNpcs = useMemo(
