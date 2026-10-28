@@ -7,7 +7,7 @@ import { cloneGameState } from '../stateClone';
 import { firstPickableChoice } from '../eventPresentation';
 import { generateMonthInvites } from '../monthInvites';
 import {
-  MAX_TALK_BANK, VERDICT_PRIORITY, boundaryStopAfter, buildMonthSummary, getMonthRun, hadTalkChance, recordWeek,
+  MAX_TALK_BANK, VERDICT_PRIORITY, boundaryStopAfter, buildMonthSummary, getMonthRun, hadTalkChance, isPlaying, recordWeek,
   talkBankCount,
 } from '../monthPlayback';
 import { getAvailableHomeEvents, getAvailableNpcEvents, getEligibleParentClimax } from '../talkSystem';
@@ -193,11 +193,20 @@ describe('멈춤 조건(§5)', () => {
 });
 
 describe('월말 — 결산과 다음 달', () => {
+  it('양성 짝: 달 중간 재생은 isPlaying이 참이다', () => {
+    startAt(at(5));
+    expect(getMonthRun(now())?.status).toBe('playing');
+    expect(isPlaying(now())).toBe(true);
+  });
+
   it('달의 마지막 주를 처리하면 재생 상태는 남아 있되 지금 달 것이 아니고, finishMonth가 지우고 계획 단계로 보낸다', () => {
     startAt(at(8));
     const after = now();
     expect(after.week).toBe(9);
     expect(getMonthRun(after), '다음 달 좌표에서 지난달 재생을 지금 것으로 읽었다').toBeNull();
+    // 장부의 status는 그대로라도 지금 달 재생이 아니다 — 화면(빨리 넘기기 해제)은 이 판정 하나를 읽는다.
+    expect(after.monthRun?.status, '전제: 장부는 아직 playing').toBe('playing');
+    expect(isPlaying(after), '지난달 장부를 재생 중으로 읽었다').toBe(false);
     expect(after.monthRun?.log.map(w => w.week)).toEqual([8]);
     api().finishMonth();
     expect(now().monthRun).toBeUndefined();
