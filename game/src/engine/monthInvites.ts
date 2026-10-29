@@ -36,11 +36,18 @@ function fnv1a(text: string): number {
   return h >>> 0;
 }
 
-/** 지금 달의 남은 주에 대한 초대 0~2개. 지금 주가 달이 아니거나(W49) 후보가 없으면 []. */
+/**
+ * 초대를 잡지 않는 주 — 학년 마지막 주(W48). 그 주를 처리하면 결산 화면 없이 곧장 학년말(Y7이면 엔딩)로 가서
+ * 약속 결과 줄(📌·💔)이 어디에도 안 보이고, 못 지킨 약속의 −2만 조용히 들어간다.
+ */
+export const NO_INVITE_WEEK = 48;
+
+/** 지금 달의 남은 주에 대한 초대 0~2개. 지금 주가 달이 아니거나(W49) 후보가 없으면 []. 학년 마지막 주는 뺀다(NO_INVITE_WEEK). */
 export function generateMonthInvites(state: GameState): MonthInvite[] {
   if (state.week < 1 || state.week > 48) return [];
   const block = getMonthBlock(state.week);
-  const weeks = Array.from({ length: block.endWeek - state.week + 1 }, (_, i) => state.week + i);
+  const weeks = Array.from({ length: block.endWeek - state.week + 1 }, (_, i) => state.week + i).filter(w => w !== NO_INVITE_WEEK);
+  if (weeks.length === 0) return [];
   const candidates = state.npcs
     .filter(n => n.met && n.intimacy >= INVITE_MIN_INTIMACY && isNpcEnrolled(n, state))
     .map(n => n.id)
