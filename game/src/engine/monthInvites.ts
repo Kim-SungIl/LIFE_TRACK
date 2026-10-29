@@ -8,9 +8,9 @@
 // **생성은 결정론적 순수 함수다.** 게임 난수(rngSeed)를 **읽기만** 하고 전진시키지 않는다 — 같은 상태면 새로고침해도
 // 같은 초대가 나오고, 다른 결과(사건 선택 등)가 흔들리지 않는다. 그래서 상태에 "받은 초대"를 따로 저장하지 않고,
 // 답만 계획(MonthPlan.invites)에 남긴다. 저장할 때 엔진이 같은 함수로 다시 만들어 대조한다(지어낸 초대 거부).
-import { ACTIVITIES } from './activities';
 import { getExamSchedule, isExamPeriod } from './examSystem';
 import { josa } from './korean';
+import { inviteVoice } from './talkData/inviteVoices';
 import { getCurrentMonthPlan } from './monthPlan';
 import { isNpcEnrolled } from './relationshipSignals';
 import { getMonthBlock, getWeekInfo } from './weekMath';
@@ -153,15 +153,14 @@ export function settlePromisesForWeek(
     const key = `${inv.activityId}:${inv.slotIdx}`;
     const ran = applied.some(inst => inst.id === inv.activityId && inst.slots.includes(inv.slotIdx));
     const together = npcActivityMap?.[key] === inv.npcId;
-    const actName = ACTIVITIES.find(a => a.id === inv.activityId)?.name ?? inv.activityId;
     (log.promises ??= []).push({ npcId: npc.id, kept: ran && together });
     if (ran && together) {
-      log.messages.push(`📌 ${josa(npc.name, '와/과')} 한 약속 — ${actName}. 지켰다.`);
+      log.messages.push(`📌 ${josa(npc.name, '와/과')} 한 약속을 지켰다. ${inviteVoice(npc.id).kept}`);
     } else {
       // 만나지 못한 동행 몫은 없던 일이다 — 이 약속 칸 키로 오른 만큼 되돌린 뒤 −2.
       const undo = together ? (companionGained[key] ?? 0) : 0;
       npc.intimacy = Math.max(0, npc.intimacy - undo + PROMISE_BROKEN_PENALTY);
-      log.messages.push(`💔 ${josa(npc.name, '와/과')} 한 약속을 못 지켰다.`);
+      log.messages.push(`💔 ${josa(npc.name, '와/과')} 한 약속을 못 지켰다. ${inviteVoice(npc.id).broken}`);
     }
   }
 }
