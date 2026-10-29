@@ -3,6 +3,8 @@
 // 잠그는 것:
 //   · 머무는 시간은 카드의 글자 수에 비례하고 하한·상한 안이다(cardDwellMs) — 긴 카드는 실제로 더 오래 머문다
 //   · 누르고 있는 동안은 넘어가지 않고, 떼면 **남은 시간만큼** 더 기다린다(처음부터도, 즉시도 아니다)
+//   · 실제 브라우저 순서(down → up → click)에서도 길게 누른 뒤엔 넘어가지 않고, 짧은 탭은 바로 넘어간다
+//   · 다 된 타이머 위로 누르고 떼도 최소 RESUME_MIN_MS는 기다린다(터치의 click이 늦게 와도 ⏸가 먹힌다)
 //   · 누른 채 ⏸를 눌러도 멈춤만 부른다 · 새 카드는 누름 상태를 물려받지 않는다
 //   · 남은 시간 막대가 그 시간으로 돌고, 누르면 멈춘다 · 조작 줄은 화면 아래 고정(.bottom-action)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,7 +16,7 @@ let reducedMotion = false;
 vi.mock('../../hooks/usePrefersReducedMotion', () => ({ usePrefersReducedMotion: () => reducedMotion }));
 
 import { PlaybackCard } from '../screens/main/PlaybackCard';
-import { CARD_DWELL_FAST_MS, CARD_DWELL_MAX_MS, CARD_DWELL_MIN_MS, CARD_DWELL_PER_CHAR_MS, cardDwellMs } from '../screens/main/playbackPace';
+import { CARD_DWELL_FAST_MS, CARD_DWELL_MAX_MS, CARD_DWELL_MIN_MS, CARD_DWELL_PER_CHAR_MS, LONG_PRESS_MS, RESUME_MIN_MS, cardDwellMs } from '../screens/main/playbackPace';
 import { createInitialState } from '../../engine/gameEngine';
 import type { GameState, WeekLog } from '../../engine/types';
 
@@ -46,8 +48,9 @@ describe('cardDwellMs — 글자 수에 비례, 하한·상한', () => {
     const mid = Math.ceil(CARD_DWELL_MIN_MS / CARD_DWELL_PER_CHAR_MS) + 10;
     expect(cardDwellMs(mid)).toBe(mid * CARD_DWELL_PER_CHAR_MS);
     for (let n = 1; n <= 300; n++) expect(cardDwellMs(n)).toBeGreaterThanOrEqual(cardDwellMs(n - 1));
-    // 예전 고정값(2.2초)보다 짧은 카드는 없다 — 하한이 그 위다.
+    // 예전 고정값(2.2초)보다 짧은 카드는 없다 — 하한이 그 위다. 실제 카드는 대부분 하한에 머문다(사건 문장 p90 51자).
     expect(CARD_DWELL_MIN_MS).toBeGreaterThan(2200);
+    expect(cardDwellMs(51), '흔한 카드(p90)가 하한에 머문다는 전제').toBe(CARD_DWELL_MIN_MS);
   });
 });
 
@@ -102,6 +105,83 @@ describe('누르고 있으면 멈춘다', () => {
     expect(onContinue).not.toHaveBeenCalled();
   });
 
+  it('실제 순서(down → 길게 → up → click)면 click이 넘기지 않고, 남은 시간 뒤에 넘어간다', () => {
+    const onContinue = vi.fn();
+    render(<PlaybackCard {...props(SHORT, { onContinue })} />);
+    const tap = screen.getByRole('button', { name: '다음 주로' });
+    act(() => { vi.advanceTimersByTime(1000); });
+    fireEvent.pointerDown(tap);
+    act(() => { vi.advanceTimersByTime(LONG_PRESS_MS + 2000); });
+    fireEvent.pointerUp(tap);
+    fireEvent.click(tap);
+    expect(onContinue, '길게 누르고 뗐는데 click이 넘겼다').not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MIN_MS - 1000 - 1); });
+    expect(onContinue).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('짧은 탭(down → up → click)은 바로 넘긴다 — 길게 누름과 문턱으로 가른다', () => {
+    const onContinue = vi.fn();
+    render(<PlaybackCard {...props(SHORT, { onContinue })} />);
+    const tap = screen.getByRole('button', { name: '다음 주로' });
+    fireEvent.pointerDown(tap);
+    act(() => { vi.advanceTimersByTime(LONG_PRESS_MS - 1); });
+    fireEvent.pointerUp(tap);
+    fireEvent.click(tap);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MAX_MS * 2); });
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('길게 누른 뒤 삼킨 click은 한 번뿐이다 — 다음 짧은 탭은 다시 넘긴다', () => {
+    const onContinue = vi.fn();
+    render(<PlaybackCard {...props(SHORT, { onContinue })} />);
+    const tap = screen.getByRole('button', { name: '다음 주로' });
+    fireEvent.pointerDown(tap);
+    act(() => { vi.advanceTimersByTime(LONG_PRESS_MS + 100); });
+    fireEvent.pointerUp(tap);
+    fireEvent.click(tap);
+    expect(onContinue).not.toHaveBeenCalled();
+    fireEvent.pointerDown(tap);
+    fireEvent.pointerUp(tap);
+    fireEvent.click(tap);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('다 된 타이머 위로 누르고 떼도 최소 시간은 기다린다 — 터치의 늦은 click에도 ⏸가 먹힌다', () => {
+    const onContinue = vi.fn();
+    const onPause = vi.fn();
+    render(<PlaybackCard {...props(SHORT, { onContinue, onPause })} />);
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MIN_MS - 1); });
+    const pause = screen.getByRole('button', { name: '⏸ 멈춤' });
+    fireEvent.pointerDown(pause);
+    fireEvent.pointerUp(pause);
+    act(() => { vi.advanceTimersByTime(RESUME_MIN_MS - 1); }); // 터치: 손을 뗀 뒤 click이 따로 온다
+    expect(onContinue, '떼자마자 남은 1ms 타이머가 돌았다').not.toHaveBeenCalled();
+    fireEvent.click(pause);
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MAX_MS * 2); });
+    expect(onPause).toHaveBeenCalledTimes(1);
+    expect(onContinue).not.toHaveBeenCalled();
+  });
+
+  it('떼고 최소 시간이 지나면 넘어간다(최소 시간이 영영 막지 않는다)', () => {
+    const onContinue = vi.fn();
+    render(<PlaybackCard {...props(SHORT, { onContinue })} />);
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MIN_MS - 1); });
+    fireEvent.pointerDown(card());
+    fireEvent.pointerUp(card());
+    act(() => { vi.advanceTimersByTime(RESUME_MIN_MS - 1); });
+    expect(onContinue).not.toHaveBeenCalled();
+    act(() => { vi.advanceTimersByTime(1); });
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('길게 누를 때 뜨는 메뉴를 막는다', () => {
+    render(<PlaybackCard {...props(SHORT)} />);
+    expect(fireEvent.contextMenu(screen.getByTestId('playback-hero')), '메뉴가 누름을 끊는다').toBe(false);
+  });
+
   it('다음 카드는 누름을 물려받지 않는다 — 제 시간 그대로 돈다', () => {
     const onContinue = vi.fn();
     const view = render(<PlaybackCard {...props(SHORT, { onContinue })} />);
@@ -123,6 +203,14 @@ describe('남은 시간 막대 · 조작 줄', () => {
     expect(bar().style.animationPlayState).toBe('paused');
     fireEvent.pointerUp(card());
     expect(bar().style.animationPlayState).toBe('running');
+  });
+
+  it('좌표가 빈 로그(구세이브)여도 카드가 바뀌면 막대가 처음부터 다시 돈다', () => {
+    const bare: WeekLog = { ...SHORT, year: undefined, week: undefined };
+    const view = render(<PlaybackCard {...props(bare)} />);
+    const first = bar();
+    view.rerender(<PlaybackCard {...props({ ...bare, messages: ['📖 다른 주.'] })} />);
+    expect(bar(), '같은 막대 노드가 남아 애니메이션이 다시 안 돈다').not.toBe(first);
   });
 
   it('애니메이션 줄이기면 막대를 안 그린다(시간과 누름 정지는 그대로)', () => {
