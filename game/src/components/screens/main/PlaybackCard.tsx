@@ -54,12 +54,7 @@ export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProp
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekLog, fast]);
 
-  // 사건 문장은 결과 화면에서 방금 읽었다 — 결과 화면을 건너뛴 가벼운 사건(lightNarration)만 머리 줄로 올리고,
-  // 나머지 주는 그 주에 실제로 한 일을 쓴다. 배지가 주 전체 순변화라 머리 줄도 주 전체 이야기여야 서로 맞는다.
-  const lastNarration = weekLog.messages.filter(m => m.startsWith('📖')).at(-1);
-  const hero = lastNarration && lastNarration === weekLog.lightNarration
-    ? lastNarration.replace(/^📖\s*/, '')
-    : cardLine(state, weekLog, resultDialogue);
+  const hero = cardLine(state, weekLog, resultDialogue);
   const notes = weekLog.messages.filter(m => NOTE_PREFIXES.some(p => m.startsWith(p))).slice(0, 3);
   const badges = (Object.keys(STAT_LABELS) as StatKey[]).flatMap(k => {
     const mark = statChangeMark(weekLog.statChanges[k] ?? 0);

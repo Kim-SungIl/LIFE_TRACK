@@ -88,11 +88,18 @@ describe('② 표', () => {
     ...Object.entries(CHOICE_LINES).flatMap(([id, two]) => two.map(line => ({ id, line, kind: 'choice' }))),
   ];
 
-  it('규모 — 루틴 8종 × 단계 4 × 변이 2, 활동 32종 × 변이 2', () => {
+  // 자주 뜨는 활동 — 지치면 한 달을 통째로 쉬는 판(월 모드)에서 같은 활동이 몇 주씩 이어진다.
+  const FREQUENT = ['rest', 'deep-rest', 'self-study', 'club', 'hang-out', 'gaming'];
+
+  it('규모 — 루틴 8종 × 단계 4 × 변이 2, 활동 32종 × 변이 4 이상(자주 뜨는 6종은 8)', () => {
     expect(Object.keys(ROUTINE_LINES)).toHaveLength(8);
-    for (const stages of Object.values(ROUTINE_LINES)) expect(stages).toHaveLength(ROUTINE_STAGES);
+    for (const stages of Object.values(ROUTINE_LINES)) {
+      expect(stages).toHaveLength(ROUTINE_STAGES);
+      for (const lines of stages) expect(lines).toHaveLength(2);
+    }
     expect(Object.keys(CHOICE_LINES)).toHaveLength(32);
-    expect(all).toHaveLength(8 * 4 * 2 + 32 * 2);
+    for (const [id, lines] of Object.entries(CHOICE_LINES)) expect(lines.length, id).toBe(FREQUENT.includes(id) ? 8 : 4);
+    expect(all).toHaveLength(8 * 4 * 2 + 6 * 8 + 26 * 4);
   });
 
   it('모든 id가 실제 활동이고, 루틴 표엔 방학 전용 활동이 없다', () => {
@@ -150,14 +157,45 @@ describe('③ 고르기', () => {
     expect(playbackLine(l)).toBe(playbackLine({ ...l }));
   });
 
-  // 모듈로 축은 조용히 죽는다 — 길이 하나에서만 보지 말고 학년 전체 주차로 잰다.
-  it.each([1, 2, 3, 4, 5])('같은 활동 %i개를 한 해 내내 해도 (활동 × 변이) 조합이 전부 나온다', n => {
-    const pool = Object.keys(C).slice(0, n);
-    for (const year of [1, 2]) {
+  // 모듈로 축은 조용히 죽는다 — 길이 하나에서만 보지 말고 학년 전체 주차로 잰다. 변이 수가 활동마다 달라(4·8)
+  // 활동 수 n과 나눠떨어지는 조합이 생기므로, 변이 8개짜리를 섞은 풀로 n 구간 전체를 본다.
+  const poolOf = (n: number) => [...['rest', 'self-study'], ...Object.keys(C).filter(id => id !== 'rest' && id !== 'self-study')].slice(0, n);
+  const kinds = (pool: string[]) => pool.reduce((sum, id) => sum + C[id].length, 0);
+
+  it.each([1, 2, 3, 4, 5, 6])('같은 활동 %i개를 한 해 내내 해도 (활동 × 변이) 조합이 전부 나온다', n => {
+    const pool = poolOf(n);
+    for (let year = 1; year <= 7; year++) {
       const seen = new Set<string>();
       for (let week = 1; week <= 48; week++) seen.add(playbackLine(log({ routines: [], choices: pool }, week, year))!);
-      expect(seen.size, `year ${year}`).toBe(n * 2);
+      expect(seen.size, `year ${year}`).toBe(kinds(pool));
     }
+  });
+
+  it.each([7, 8, 9, 10, 12, 16])('같은 활동 %i개를 판 내내 해도 (활동 × 변이) 조합이 전부 나온다', n => {
+    const pool = poolOf(n);
+    const seen = new Set<string>();
+    for (let year = 1; year <= 7; year++) for (let week = 1; week <= 48; week++) seen.add(playbackLine(log({ routines: [], choices: pool }, week, year))!);
+    expect(seen.size).toBe(kinds(pool));
+  });
+
+  // 진단(2026-10-29): 월 모드는 지치면 한 달을 통째로 쉰다 — 「늦잠을 자고 일어나니 점심이었다」가 판당 최대 38번이었다.
+  it('rest_month_all_distinct: 어느 달이든 4주를 쉬기만 하면 네 주 모두 다른 줄이다', () => {
+    for (let year = 1; year <= 7; year++) {
+      for (let start = 1; start + 3 <= 48; start++) {
+        const lines = [0, 1, 2, 3].map(d => playbackLine(log({ routines: [], choices: ['rest'] }, start + d, year)));
+        expect(new Set(lines).size, `Y${year} W${start}`).toBe(4);
+      }
+    }
+  });
+
+  it('rest_spread: 판 내내 쉬기만 해도 쉬기 줄 여덟이 고르게 나온다(한 줄 최다 ≤ 평균 + 1)', () => {
+    const count = new Map<string, number>();
+    for (let year = 1; year <= 7; year++) for (let week = 1; week <= 48; week++) {
+      const line = playbackLine(log({ routines: [], choices: ['rest'] }, week, year))!;
+      count.set(line, (count.get(line) ?? 0) + 1);
+    }
+    expect(count.size).toBe(C.rest.length);
+    expect(Math.max(...count.values()), 'rest_spread').toBeLessThanOrEqual(Math.ceil((7 * 48) / C.rest.length) + 1);
   });
 
   it('칸을 여럿 채운 활동도 한 번으로 센다 — 휴식 두 칸이 한 칸짜리 활동보다 자주 뽑히지 않는다', () => {
