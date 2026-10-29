@@ -1,22 +1,27 @@
 // 재생 카드 — 한 달 자동 진행 중 한 주가 끝날 때마다 잠깐 뜨는 짧은 카드(설계안 §5).
 // 주간 결산 화면을 대신한다: 날짜, 그 주의 한 줄, 변화 배지(숫자 없음 — 방향 표시만), 지친 표정. 저절로 넘어가고 탭하면 바로 넘어간다.
 //
+// **⏸를 누를 틈이 있어야 한다(2026-10-29 사용자 지적 "멈춤 누르기가 어렵다").** 예전엔 2.2초 고정이었는데, 카드 한 장의
+// 글(머리 줄 + 약속·결석 줄)이 100자 안팎이라 다 읽고 멈출지 정하기 전에 다음 주가 처리됐다. 그래서
+//   · 머무는 시간은 읽을 글자 수에 맞춘다(cardDwellMs — 하한·상한 있음). [⏭ 다음 멈춤까지]는 그대로 짧다.
+//   · 카드나 조작 줄을 누르고 있는 동안은 시간이 멈춘다 — 떼면 남은 시간부터 이어 간다(처음부터가 아니라).
+//   · 카드 아래 막대가 남은 시간을 보인다(애니메이션 줄이기면 안 그린다).
+//   · 조작 줄은 화면 아래에 고정한다 — 카드 높이(사건 문장·줄 수)에 따라 버튼이 오르내리지 않게.
+//
 // 조작은 넷이다 — ⏸ 일시정지 · ⏭ 다음 멈춤까지(카드를 빨리 넘긴다) · 💬 대화 · 🛒 상점. 셋 다 "다음 주 경계에서 멈춤"이고,
 // 카드 자체가 경계 바로 앞이라 누르면 곧장 멈춘 주간 화면으로 간다(그 화면이 말걸기·상점을 그대로 준다).
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { STAT_LABELS, type GameState, type StatKey, type WeekLog } from '../../../engine/types';
 import { getWeekOfMonth } from '../../../engine/weekMath';
 import { cardLine } from '../../../engine/talkData/playbackLines';
+import { CARD_DWELL_FAST_MS, cardDwellMs } from './playbackPace';
 import { Portrait } from '../../Portrait';
 import { BgWrapper, type ScreenBgProps } from '../BgWrapper';
 import { chipSurface, tintedGlass } from '../surface';
 import { statChangeMark } from '../shared';
 
-/** 카드가 머무는 시간(ms) — 보통 / "다음 멈춤까지". */
-export const CARD_DWELL_MS = 2200;
-export const CARD_DWELL_FAST_MS = 600;
 
 type Props = {
   state: GameState;
@@ -39,6 +44,11 @@ const NOTE_PREFIXES = ['📌', '💔', '📅'];
 
 export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProps, fast, talkBadge, onToggleFast, onContinue, onPause, onTalk, onShop }: Props) {
   const reducedMotion = usePrefersReducedMotion();
+  const narration = weekLog.messages.filter(m => m.startsWith('📖'));
+  const hero = narration.length ? narration[narration.length - 1].replace(/^📖\s*/, '') : cardLine(state, weekLog, resultDialogue);
+  const notes = weekLog.messages.filter(m => NOTE_PREFIXES.some(p => m.startsWith(p))).slice(0, 3);
+  const dwell = fast ? CARD_DWELL_FAST_MS : cardDwellMs([hero, ...notes].join('').replace(/\s/g, '').length);
+
   // 한 카드에서 한 번만 넘어간다 — 타이머와 탭이 겹치면 다음 주가 두 번 재생된다.
   const doneRef = useRef(false);
   const advance = () => {
@@ -46,17 +56,37 @@ export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProp
     doneRef.current = true;
     onContinue();
   };
+  // 남은 시간과 지금 도는 타이머 — 누르고 있으면 멈췄다가 떼면 남은 만큼만 더 기다린다.
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const remainingRef = useRef(dwell);
+  const startedAtRef = useRef(0);
+  const [held, setHeld] = useState(false);
+  const clearTimer = () => { if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; } };
+  const runTimer = () => {
+    clearTimer();
+    startedAtRef.current = Date.now();
+    timerRef.current = setTimeout(advance, remainingRef.current);
+  };
   useEffect(() => {
     doneRef.current = false;
-    const t = setTimeout(advance, fast ? CARD_DWELL_FAST_MS : CARD_DWELL_MS);
-    return () => clearTimeout(t);
-    // 카드 하나(=주 하나)마다 타이머 하나. advance는 ref만 읽는다.
+    remainingRef.current = dwell;
+    setHeld(false);
+    runTimer();
+    return clearTimer;
+    // 카드 하나(=주 하나)마다 타이머 하나. advance·runTimer는 ref만 읽는다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekLog, fast]);
-
-  const narration = weekLog.messages.filter(m => m.startsWith('📖'));
-  const hero = narration.length ? narration[narration.length - 1].replace(/^📖\s*/, '') : cardLine(state, weekLog, resultDialogue);
-  const notes = weekLog.messages.filter(m => NOTE_PREFIXES.some(p => m.startsWith(p))).slice(0, 3);
+  const hold = () => {
+    if (doneRef.current || !timerRef.current) return;
+    clearTimer();
+    remainingRef.current = Math.max(0, remainingRef.current - (Date.now() - startedAtRef.current));
+    setHeld(true);
+  };
+  const release = () => {
+    if (doneRef.current || timerRef.current) return;
+    setHeld(false);
+    runTimer();
+  };
   const badges = (Object.keys(STAT_LABELS) as StatKey[]).flatMap(k => {
     const mark = statChangeMark(weekLog.statChanges[k] ?? 0);
     return mark ? [{ k, text: `${STAT_LABELS[k]} ${mark}`, up: (weekLog.statChanges[k] ?? 0) > 0 }] : [];
@@ -66,7 +96,8 @@ export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProp
 
   return (
     <BgWrapper {...bgProps}>
-      <div data-testid="playback-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: '70dvh', justifyContent: 'center' }}>
+      <div data-testid="playback-card" onPointerDown={hold} onPointerUp={release} onPointerCancel={release} onPointerLeave={release}
+        style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: '70dvh', justifyContent: 'center', paddingBottom: 'calc(88px + env(safe-area-inset-bottom))' }}>
         <button type="button" className="btn-reset" onClick={advance} aria-label="다음 주로"
           style={{
             width: '100%', textAlign: 'left', cursor: 'pointer', borderRadius: 16, padding: '16px 18px',
@@ -107,10 +138,19 @@ export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProp
               ))}
             </div>
           )}
-          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>탭하면 바로 다음 주</span>
+          <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>탭하면 바로 다음 주 · 누르고 있으면 멈춰 있어요</span>
+          {!reducedMotion && (
+            <span aria-hidden="true" style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+              <span key={`${weekLog.year}-${weekLog.week}-${fast}`} data-testid="playback-dwell" style={{
+                display: 'block', height: '100%', background: 'var(--accent)', transformOrigin: 'left',
+                animation: `cardDwell ${dwell}ms linear forwards`, animationPlayState: held ? 'paused' : 'running',
+              }} />
+            </span>
+          )}
         </button>
 
-        <div role="group" aria-label="재생 조작" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 8 }}>
+        {/* 조작 줄은 화면 아래에 고정 — 카드 높이가 주마다 달라도 버튼 자리는 그대로다. */}
+        <div role="group" aria-label="재생 조작" className="bottom-action" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0,1fr))', gap: 8 }}>
           <ControlButton label="⏸ 멈춤" onClick={press(onPause)} />
           <ControlButton label={fast ? '⏭ 보통 속도' : '⏭ 다음 멈춤까지'} pressed={fast} onClick={() => { playSfx('tap'); onToggleFast(); }} />
           <ControlButton label={talkBadge ? '💬 대화 •' : '💬 대화'} onClick={press(onTalk)} testId="playback-talk" />

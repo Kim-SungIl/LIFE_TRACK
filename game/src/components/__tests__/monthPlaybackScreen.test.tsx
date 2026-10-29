@@ -10,7 +10,8 @@ vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
 vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
 
 import { GameScreen } from '../GameScreen';
-import { CARD_DWELL_FAST_MS, CARD_DWELL_MS, PlaybackCard } from '../screens/main/PlaybackCard';
+import { PlaybackCard } from '../screens/main/PlaybackCard';
+import { CARD_DWELL_FAST_MS, CARD_DWELL_MAX_MS, CARD_DWELL_MIN_MS } from '../screens/main/playbackPace';
 import { useGameStore } from '../../engine/store';
 import { createInitialState } from '../../engine/gameEngine';
 import { firstPickableChoice } from '../../engine/eventPresentation';
@@ -68,7 +69,8 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
   const log: WeekLog = { statChanges: { academic: 1.2 }, fatigueChange: 0, moneyChange: 0, messages: ['📖 도서관이 조용했다.', '📌 지훈과 한 약속 — 친구와 놀기. 지켰다.'], skipped: [], milestoneMessages: [], year: 2, week: 6 };
   const base = { state: at(7), weekLog: log, weekLabel: '중1 1학기 6주차', resultDialogue: '', bgProps: { bg: { image: '', mood: 'calm' }, bgImgError: true, onImgError: () => {} } as never, talkBadge: false, onToggleFast: vi.fn(), onPause: vi.fn(), onTalk: vi.fn(), onShop: vi.fn() };
 
-  it.each([[false, CARD_DWELL_MS], [true, CARD_DWELL_FAST_MS]])('빨리=%s — %ims 직전엔 안 넘어가고 그때 한 번 넘어간다', (fast, ms) => {
+  // 이 카드는 글이 짧아(머리 줄 + 약속 줄) 보통 속도면 하한에 머문다 — 글자 수 비례는 playbackCardPace.test가 본다.
+  it.each([[false, CARD_DWELL_MIN_MS], [true, CARD_DWELL_FAST_MS]])('빨리=%s — %ims 직전엔 안 넘어가고 그때 한 번 넘어간다', (fast, ms) => {
     vi.useFakeTimers();
     const onContinue = vi.fn();
     render(<PlaybackCard {...base} fast={fast} onContinue={onContinue} />);
@@ -88,7 +90,7 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
     expect(screen.getByText(/지훈과 한 약속/)).toBeTruthy();
     expect(screen.getByText(/학업 ▲/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '다음 주로' }));
-    act(() => { vi.advanceTimersByTime(CARD_DWELL_MS * 2); });
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MAX_MS * 2); });
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
 
@@ -98,7 +100,7 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
     const onPause = vi.fn();
     render(<PlaybackCard {...base} fast={false} onContinue={onContinue} onPause={onPause} />);
     fireEvent.click(screen.getByRole('button', { name: '⏸ 멈춤' }));
-    act(() => { vi.advanceTimersByTime(CARD_DWELL_MS * 2); });
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MAX_MS * 2); });
     expect(onPause).toHaveBeenCalledTimes(1);
     expect(onContinue).not.toHaveBeenCalled();
   });
