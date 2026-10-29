@@ -8,6 +8,7 @@ import { playSfx } from '../../../audio/sfx';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 import { STAT_LABELS, type GameState, type StatKey, type WeekLog } from '../../../engine/types';
 import { getWeekOfMonth } from '../../../engine/weekMath';
+import { cardLine } from '../../../engine/talkData/playbackLines';
 import { Portrait } from '../../Portrait';
 import { BgWrapper, type ScreenBgProps } from '../BgWrapper';
 import { chipSurface, tintedGlass } from '../surface';
@@ -54,7 +55,7 @@ export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProp
   }, [weekLog, fast]);
 
   const narration = weekLog.messages.filter(m => m.startsWith('📖'));
-  const hero = narration.length ? narration[narration.length - 1].replace(/^📖\s*/, '') : resultDialogue;
+  const hero = narration.length ? narration[narration.length - 1].replace(/^📖\s*/, '') : cardLine(state, weekLog, resultDialogue);
   const notes = weekLog.messages.filter(m => NOTE_PREFIXES.some(p => m.startsWith(p))).slice(0, 3);
   const badges = (Object.keys(STAT_LABELS) as StatKey[]).flatMap(k => {
     const mark = statChangeMark(weekLog.statChanges[k] ?? 0);

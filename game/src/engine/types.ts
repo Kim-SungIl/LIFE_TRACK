@@ -437,6 +437,15 @@ export interface WeekLog {
    * 결산에만 있다. moneyChange에 이미 들어 있고, 결산 화면이 "5월 용돈 +16만원 · 학원비 −12만원"으로 따로 보인다.
    */
   monthMoney?: { label: string; allowance: number; routinePaid: number };
+  /**
+   * 이번 주에 **실제로 한** 루틴(방과후)과 주말·방학 활동 — 재생 카드의 한 줄이 읽는다(talkData/playbackLines.ts).
+   * 돈·자격·이벤트로 빠진 칸은 없다. 루틴 단계는 보너스 티어 축(0 = 3주 전 … 3 = 습관), `reached`는 이번 주에 닿았나.
+   * 기록 전용(성장·rng 무관). 아무것도 안 한 주·구세이브 로그에는 없다.
+   */
+  played?: {
+    routines: { id: string; stage: number; reached: boolean }[];
+    choices: string[];
+  };
   /** 이번 주에 걸린 약속을 지켰나(monthInvites.settlePromisesForWeek). 약속이 없던 주에는 없다. */
   promises?: { npcId: string; kept: boolean }[];
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)

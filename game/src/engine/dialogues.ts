@@ -692,17 +692,29 @@ export const RESULT_POOLS: readonly ResultDialoguePool[] = [
   },
 ];
 
-export function getResultDialogue(state: GameState, weekLog: WeekLog): string {
+/** 그 주에 맞는 결산 독백 풀. 없으면 null(상태 풀로 넘어간다). */
+function matchResultPool(state: GameState, weekLog: WeekLog): ResultDialoguePool | null {
   const sorted = [...RESULT_POOLS].sort((a, b) => b.priority - a.priority);
   // 둔화 줄이 보이는 주에는 "좋았다" 계열이 전부 물러선다 — 판정은 결산 화면과 같은 함수(T67).
   const quiet = slowdownShown(weekLog);
   for (const pool of sorted) {
     if (quiet && pool.upbeat) continue;
-    if (pool.condition(state, weekLog)) {
-      return pool.lines[Math.floor(Math.random() * pool.lines.length)];
-    }
+    if (pool.condition(state, weekLog)) return pool;
   }
-  return getCharacterDialogue(state);
+  return null;
+}
+
+export function getResultDialogue(state: GameState, weekLog: WeekLog): string {
+  const pool = matchResultPool(state, weekLog);
+  return pool ? pool.lines[Math.floor(Math.random() * pool.lines.length)] : getCharacterDialogue(state);
+}
+
+/** 이 우선순위 이상(시험 결과·성장 마일스톤)의 독백은 그 주의 사건이다 — 재생 카드가 활동 한 줄보다 앞세운다. */
+export const STRONG_RESULT_PRIORITY = 80;
+
+/** 이번 주 결산 독백이 시험·마일스톤 같은 그 주의 사건에서 나왔나(getResultDialogue와 같은 판정). */
+export function isStrongResultWeek(state: GameState, weekLog: WeekLog): boolean {
+  return (matchResultPool(state, weekLog)?.priority ?? 0) >= STRONG_RESULT_PRIORITY;
 }
 
 // 활동 선택 시 반응 독백
