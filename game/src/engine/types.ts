@@ -446,6 +446,13 @@ export interface WeekLog {
     routines: { id: string; stage: number; reached: boolean }[];
     choices: string[];
   };
+  /**
+   * 결과 화면을 건너뛰는 가벼운 사건(events/light-result.ts)의 📖 줄 — 그 사건의 문장은 결산·재생 카드 머리 줄이
+   * 보이는 유일한 자리다. 재생 카드는 마지막 📖가 이 줄일 때만 머리 줄로 올린다(나머지 사건 문장은 결과 화면에서
+   * 방금 읽었다 — 다시 올리면 같은 문장이 두 번이고, 사건 효과 칩 옆에 주 전체 배지가 놓여 모순처럼 읽힌다).
+   * 기록 전용. 가벼운 사건이 없던 주·구세이브 로그에는 없다.
+   */
+  lightNarration?: string;
   /** 이번 주에 걸린 약속을 지켰나(monthInvites.settlePromisesForWeek). 약속이 없던 주에는 없다. */
   promises?: { npcId: string; kept: boolean }[];
   examResult?: ExamResult | null; // 이번 주 시험 결과 (없으면 undefined)

@@ -51,6 +51,11 @@
 // 337칸 중 323칸이 갈리고 paid·paid-spend(남주) 4판은 지문 불변. 원인 귀속: 수정 전·후로 6판을 돌려 **매 store 갱신**
 // (약 2,350번/판)마다 상태를 비교하니, currentEvent·사건 기록의 `choices` 칸만 빼면 전부 바이트 동일 — 적용 경로(resolveEvent)는
 // 원래 femaleChoices를 집었으므로 능력치·돈·친밀도·기억·문장은 그대로고 구운 선택지 사본만 바뀌었다. 카운터 6판 동일.
+//
+// 재생성 8 (2026-10-29, 기록 필드만 — 재생 카드 머리 줄): 가벼운 사건(light-result.ts)이 해결되면 그 📖 줄을
+// `weekLog.lightNarration`에 적는다(재생 카드가 결과 화면을 건너뛴 문장만 머리 줄로 올리려고). 반장 잡무가 뜬 주의
+// 다음 계획 시점부터 지문이 갈린다. 원인 귀속: `stateDigest`·`coreDigest`에서 그 한 칸만 지우고 돌리면 6판 모두 직전 골든과
+// **바이트 동일**(18개 초록)이고, 카운터는 6판 모두 직전 골든과 같다. 두 번 기록해 파일 바이트 동일.
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
