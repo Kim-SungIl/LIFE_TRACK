@@ -47,6 +47,8 @@ beforeEach(() => {
   localStorage.clear();
   // 첫 플레이 튜토리얼 오버레이는 이 계약과 무관한데 jsdom에 scrollIntoView가 없어 렌더가 터진다.
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  // 주간 화면 자체를 본다 — 월 단위가 기본값이라 그 화면은 재생이 멈췄을 때만 뜬다. 플래그를 꺼서 곧장 연다.
+  localStorage.setItem('lifetrack_monthly_planning', '0');
   useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
 });
 

@@ -54,6 +54,7 @@ beforeEach(() => {
   cleanup();
   localStorage.clear();
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  localStorage.setItem('lifetrack_month_tutorial_seen', '1'); // 월 계획 화면 튜토리얼은 monthTutorial.test가 본다
   localStorage.setItem('lifetrack_rest_ack', '1');
 });
 

@@ -26,6 +26,8 @@ import { NpcSelectModal } from './NpcSelectModal';
 import { chipSurface } from '../surface';
 import { SlotEditPopup } from './SlotEditPopup';
 import { SemesterGoalChip } from './SemesterGoalChip';
+import { Tutorial } from '../../Tutorial';
+import { TUTORIAL_KEYS, monthPlanSteps } from '../../tutorialSteps';
 import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
@@ -76,6 +78,11 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const [editing, setEditing] = useState<{ idx: number; slot: string } | null>(null);
   const [npcSelect, setNpcSelect] = useState<{ idx: number; key: string } | null>(null);
   const [showBudget, setShowBudget] = useState(true);
+  // 월 계획 튜토리얼 — 이 화면을 처음 보는 플레이어에게 한 번(영속). 다시 짜기에서는 안 띄운다(이미 이 화면을 지나왔다).
+  const [showTutorial, setShowTutorial] = useState(() => {
+    if (existing) return false;
+    try { return !localStorage.getItem(TUTORIAL_KEYS.monthSeen); } catch { return false; }
+  });
   const [error, setError] = useState<string | null>(null);
   // 친구 초대(monthInvites) — 상태를 읽기만 하는 결정론적 함수라 다시 그려도 같은 초대다. 답은 시작할 때 계획에 실린다.
   // 다시 짤 때는 처음 받은 초대와 답 그대로(새로 받지 않는다).
@@ -100,6 +107,8 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const spendable = Math.round((state.money - routineDue - reserve) * 10) / 10;
   const overspent = spendable < 0;
   const hasSemester = weeks.some(w => !isVac(w));
+  // 화면에 실제로 있는 칸의 스텝만 — 마운트 동안 바뀌지 않는 값들이다(초대는 상태를 읽기만 하는 결정론 함수).
+  const tutorialSteps = useMemo(() => monthPlanSteps({ hasInvites: !replan && invites.length > 0, hasRoutine: hasSemester }), [replan, invites.length, hasSemester]);
   const semesterWeeksLeft = remainingSemesterWeeks(state.week);
   const exams = getExamsInMonth(state.year, block).filter(e => e.week >= state.week);
   const nextExam = getNextMonthOpeningExam(state.year, block);
@@ -260,7 +269,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         </div>
       )}
 
-      <section aria-label="이번 달 예산" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <section aria-label="이번 달 예산" data-tutorial="month-budget" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>이번 달 쓸 수 있는 돈</span>
           <button type="button" className="btn-reset" onClick={() => setShowBudget(v => !v)}
@@ -281,7 +290,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
       </section>
 
       {hasSemester && (
-        <section aria-label="방과후 루틴" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <section aria-label="방과후 루틴" data-tutorial="month-routine" style={{ background: 'var(--bg-card)', borderRadius: 14, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
             <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>방과후 · 한 달 등록</span>
             <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>바꾸면 남은 주 몫을 다시 내요</span>
@@ -304,15 +313,19 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         </section>
       )}
 
-      {!replan && invites.map((inv, i) => (
-        <InviteCard key={`${inv.npcId}-${inv.week}`} invite={inv} answer={answers[i]} npcName={npcName(inv.npcId)}
-          cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} />
-      ))}
+      {!replan && invites.length > 0 && (
+        <div data-tutorial="month-invite" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {invites.map((inv, i) => (
+            <InviteCard key={`${inv.npcId}-${inv.week}`} invite={inv} answer={answers[i]} npcName={npcName(inv.npcId)}
+              cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} />
+          ))}
+        </div>
+      )}
 
       {/* T68 학기 목표 — 주별 계획 바로 위. 칩이 스스로 고를 수 있는 때(학기 첫 두 주)와 진행 중 표시를 가른다. */}
       {onChooseGoal && <SemesterGoalChip state={state} onChoose={onChooseGoal} />}
 
-      <section aria-label="주별 계획" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <section aria-label="주별 계획" data-tutorial="month-weeks" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.82rem', fontWeight: 600 }}>{block.kind === 'vacation' ? '방학 일과' : '주말'}</span>
           <span style={{ display: 'flex', gap: 6 }}>
@@ -391,7 +404,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
       )}
       {error && <div role="alert" style={{ fontSize: '0.78rem', color: 'var(--red)', padding: '0 4px' }}>{error}</div>}
 
-      <div className="bottom-action" style={replan && onCancel ? { display: 'flex', gap: 8 } : undefined}>
+      <div data-tutorial="month-start" className="bottom-action" style={replan && onCancel ? { display: 'flex', gap: 8 } : undefined}>
         {replan && onCancel && (
           <button type="button" className="btn btn-secondary" onClick={onCancel} style={{ flex: '0 0 auto', width: 'auto', minWidth: 88 }}>그대로</button>
         )}
@@ -438,6 +451,26 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
           }}
           onCancel={() => setNpcSelect(null)}
         />
+      )}
+      {/* 튜토리얼 — 칸 고르기 창이 열린 동안엔 CSS로만 숨긴다(언마운트하면 스텝이 처음으로 돌아간다 — MainWeekScreen과 같은 규칙). */}
+      {showTutorial && (
+        <div style={{ display: editing || npcSelect ? 'none' : 'contents' }}>
+          <Tutorial
+            steps={tutorialSteps}
+            routineSet={!!state.routineSlot2}
+            onComplete={() => {
+              setShowTutorial(false);
+              try {
+                // 주간 판 튜토리얼을 본 적 없는 플레이어는 재생이 멈춰 주간 화면이 처음 뜰 때 화면 읽는 법(MAIN_INFO_STEPS)을 마저 본다.
+                if (!localStorage.getItem(TUTORIAL_KEYS.everSeen)) localStorage.setItem(TUTORIAL_KEYS.infoPending, '1');
+                localStorage.setItem(TUTORIAL_KEYS.monthSeen, '1');
+                // 계획 스텝은 여기서 배웠다 — 플래그를 꺼도 주간 판 계획 튜토리얼이 처음부터 다시 뜨지 않게.
+                localStorage.setItem(TUTORIAL_KEYS.done, '1');
+                localStorage.setItem(TUTORIAL_KEYS.everSeen, '1');
+              } catch { /* storage unavailable */ }
+            }}
+          />
+        </div>
       )}
     </div>
   );

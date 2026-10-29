@@ -166,6 +166,8 @@ describe('라우터 배선 — 실제 렌더', () => {
     const { GameScreen } = await import('../GameScreen');
     const { act } = await import('@testing-library/react');
 
+    // 주간 화면의 주 넘김을 본다 — 월 단위(기본값)에선 같은 달 안의 주가 한 화면(월 계획)이라 키가 안 바뀐다.
+    localStorage.setItem('lifetrack_monthly_planning', '0');
     act(() => { useGameStore.getState().startGame('male', ['emotional', 'wealth']); });
     // 부팅 직후는 첫 장면 이벤트라 EventScene(lazy)이 suspend돼 Suspense fallback이 뜬다.
     // 전환 래퍼는 그 안쪽이므로, eager 렌더되는 메인 화면으로 맞춘 뒤 관측한다.

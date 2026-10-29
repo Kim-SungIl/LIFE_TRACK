@@ -16,6 +16,11 @@
 //   ② 학년말   — 이어하기 → **학년말 일기장** → 다음 학년 → 새 학년 1주차
 //   ③ 엔딩·기록실 — 엔딩 다시 보기 → **엔딩 화면** → 타이틀로 → **기록실** → 돌아가기
 //
+// **월 단위 계획이 기본값이다.** ②는 배포되는 기본 판 그대로 새 학년 첫 화면이 **월 계획 화면**인지 본다.
+// ①은 주 단위 판(플래그 키 '0')으로 돈다 — 여기서 겨누는 건 "사건 문장이 결산 화면에 다 실린다"인데, 월 단위 판은
+// 보통 주를 재생 카드(마지막 📖 한 줄)로 보이고 결산 화면은 시험·학기 목표 주에만 쓴다. 이벤트 화면·결과 화면·
+// 결산 화면 청크는 두 판이 같은 것이라 청크 커버리지는 그대로다. 월 단위 첫 판(재생 카드)은 PR 게이트 verify-dist-e2e가 본다.
+//
 // **왜 PR 게이트에 안 넣나.** 픽스처를 만드느라 엔진으로 한 판(336주)을 돌리고, 브라우저
 // 컨텍스트를 9번(정상 3 + 탐침 6) 띄운다. PR마다 이걸 얹으면 `build` job이 그만큼 길어진다.
 // main 브랜치 보호의 required check는 `build`·`content-verify` 둘뿐이고 **여기 잡은 그 목록에
@@ -58,6 +63,9 @@ const TITLE = '7년의 시간표';
 const SAVE_KEY = 'lifetrack_save';
 const ARCHIVE_KEY = 'lifetrack_archive';
 const TUTORIAL_SEEN_KEY = 'lifetrack_tutorial_ever_seen';
+/** 월 계획 화면 튜토리얼 영속 키(`tutorialSteps.ts` TUTORIAL_KEYS.monthSeen) · 월 단위 계획 플래그 키(`featureFlags.ts`). */
+const MONTH_TUTORIAL_SEEN_KEY = 'lifetrack_month_tutorial_seen';
+const MONTHLY_PLANNING_KEY = 'lifetrack_monthly_planning';
 /** 픽스처 시드. 값 자체는 아무래도 좋다 — 고정돼 있다는 것만 중요하다(PR 게이트와 같은 값). */
 const FIXTURE_SEED = 20260925;
 /** 한 UI 상태를 기다리는 상한. CI 러너가 로컬의 2~3배 느리다. */
@@ -159,6 +167,8 @@ interface Fixtures {
   readonly version: number;
   /** 주간 화면·결산이 다는 주차 라벨 — 엔진의 같은 함수로 뽑는다(리터럴 금지). */
   readonly labelAt: (year: number, week: number) => string;
+  /** 월 계획 화면 제목(weekMath.getMonthBlock 라벨). */
+  readonly monthLabelAt: (week: number) => string;
   /** 커버리지 — 시뮬이 실제로 몇 걸음을 갔고 사건을 몇 번 봤나. */
   readonly simSteps: number;
   readonly midweekEventsSeen: number;
@@ -185,6 +195,7 @@ async function buildFixtures(): Promise<Fixtures> {
   Object.defineProperty(globalThis, 'localStorage', { value: shim, configurable: true, writable: true });
 
   const { createInitialState, getWeekLabelAt } = await import('../../src/engine/gameEngine');
+  const { getMonthBlock } = await import('../../src/engine/weekMath');
   const { GAME_EVENTS } = await import('../../src/engine/events');
   const { assignCurrentEvent } = await import('../../src/engine/eventPresentation');
   const { useGameStore } = await import('../../src/engine/store');
@@ -288,6 +299,7 @@ async function buildFixtures(): Promise<Fixtures> {
     endingTitle,
     version: CURRENT_SAVE_VERSION,
     labelAt: getWeekLabelAt,
+    monthLabelAt: (week: number) => getMonthBlock(week).label,
     simSteps: steps,
     midweekEventsSeen,
   };
@@ -329,11 +341,14 @@ const MSG = {
  * Playwright가 직렬화해 페이지로 보내므로 바깥 변수를 닫아 쓸 수 없다 — 전부 인자로 받는다.
  */
 function seedScript(a: {
-  save: string; archive: string | null; saveKey: string; archiveKey: string; seenKey: string;
+  save: string; archive: string | null; saveKey: string; archiveKey: string; seenKeys: string[];
+  /** 주 단위 판으로 돌 시나리오면 월 계획 플래그 키에 '0'을 넣는다(null이면 기본값 — 월 단위). */
+  weeklyKey: string | null;
   probe: ProbeKind | null; missingUrl: string; consoleMarker: string; storyLine: string;
 }) {
   try {
-    localStorage.setItem(a.seenKey, '1');
+    for (const k of a.seenKeys) localStorage.setItem(k, '1');
+    if (a.weeklyKey) localStorage.setItem(a.weeklyKey, '0');
     if (!sessionStorage.getItem('__nightly_seeded__')) {
       localStorage.setItem(a.saveKey, a.save);
       if (a.archive === null) localStorage.removeItem(a.archiveKey);
@@ -407,16 +422,18 @@ interface Ctx {
   readonly playEvent: () => Promise<string>;
   readonly bumpEvents: () => void;
 }
-type Where = 'title' | 'main' | 'result' | 'year-end' | 'event-result' | 'event' | 'ending' | 'archive';
+type Where = 'title' | 'month-plan' | 'main' | 'result' | 'year-end' | 'event-result' | 'event' | 'ending' | 'archive';
 interface Plan { readonly name: string; readonly run: (c: Ctx) => Promise<string> }
 
 /** 세 시나리오의 단일 출처. Record라 한 종을 빼면 타입이 막는다. */
-const SCENARIOS: Readonly<Record<ScenarioKind, { label: string; fixture: (fx: Fixtures) => SaveFixture; archive: boolean; plan: readonly Plan[] }>> = {
+const SCENARIOS: Readonly<Record<ScenarioKind, { label: string; fixture: (fx: Fixtures) => SaveFixture; archive: boolean; weekly?: boolean; plan: readonly Plan[] }>> = {
   // ① 주중 사건 — 확정 → 이벤트 화면 → 선택지 → 결과 → **결산에 그 문장이 실렸나**
   'midweek-event': {
     label: '주중 사건 → 결산 반영',
     fixture: (fx) => fx.eventWeek,
     archive: false,
+    // 결산 화면 대조라 주 단위 판으로 돈다 — 머리 주석의 "월 단위 계획이 기본값이다".
+    weekly: true,
     plan: [
       { name: '부팅(이어하기 있음)', run: async (c) => {
         const res = await c.page.goto(`${c.origin}${BASE}`, { waitUntil: 'networkidle', timeout: 60_000 });
@@ -515,20 +532,22 @@ const SCENARIOS: Readonly<Record<ScenarioKind, { label: string; fixture: (fx: Fi
         if (blocks < 3) throw new Error(`학년말 화면의 본문 블록이 ${blocks}개뿐이다 — 일기장이 안 그려졌다`);
         return `${s.year}학년 마감 · 블록 ${blocks}개 · CTA "${label}"`;
       } },
-      { name: '다음 학년 → 새 학년 1주차', run: async (c) => {
+      { name: '다음 학년 → 새 학년 월 계획 화면', run: async (c) => {
         const before = await c.readSave();
         await yearEndCta(c.page).first().click();
         // 대기 실패를 그대로 흘리면 판정문이 "Timeout 15000ms exceeded"가 된다 — 무엇이 깨졌는지
         // 말하지 않는다(실측: CTA의 onAdvance를 no-op으로 바꾼 뮤테이션이 그 메시지를 냈다).
-        try { await confirmButton(c.page).waitFor({ state: 'visible', timeout: WAIT }); }
-        catch { throw new Error(`${MSG.yearEndNotAdvanced} — 다음 학년 주간 화면이 안 떴다 (CTA가 학년을 안 넘긴다)`); }
+        // 새 학년 첫 주는 계획 없는 달이라 기본 판(월 단위)이면 월 계획 화면이 먼저 뜬다.
+        try { await monthPlanScreen(c.page).waitFor({ state: 'visible', timeout: WAIT }); }
+        catch { throw new Error(`${MSG.yearEndNotAdvanced} — 다음 학년 월 계획 화면이 안 떴다 (CTA가 학년을 안 넘긴다)`); }
         const after = await c.readSave();
         if (!after || after.phase !== 'weekday' || after.year !== before!.year + 1 || after.week !== 1) {
           throw new Error(`${MSG.yearEndNotAdvanced}: ${JSON.stringify(before)} → ${JSON.stringify(after)}`);
         }
-        const label = c.fx.labelAt(after.year, after.week);
-        if (!(await c.bodyText()).includes(label)) throw new Error(`새 학년 주간 화면에 "${label}" 라벨이 없다`);
-        return `${before!.year}학년 → "${label}"`;
+        const want = c.fx.monthLabelAt(after.week);
+        const title = (await monthPlanScreen(c.page).locator('h1').first().innerText()).trim();
+        if (title !== want) throw new Error(`새 학년 월 계획 화면 제목이 "${title}"다 — "${want}"이어야 한다`);
+        return `${before!.year}학년 → ${after.year}학년 "${title}"`;
       } },
     ],
   },
@@ -597,6 +616,7 @@ const continueButton = (p: Page) => p.locator('button', { hasText: '이어하기
 const replayButton = (p: Page) => p.locator('button', { hasText: '엔딩 다시 보기' }).first();
 const archiveButton = (p: Page) => p.locator('button', { hasText: '기록실' }).first();
 const confirmButton = (p: Page) => p.locator('[data-tutorial="confirm"] button');
+const monthPlanScreen = (p: Page) => p.locator('[data-testid="month-plan"]');
 const nextWeekButton = (p: Page) => p.locator('button', { hasText: '다음 주로 →' });
 const eventContinue = (p: Page) => p.locator('button', { hasText: '계속 →' });
 const choiceButtons = (p: Page) => p.locator('button.btn-reset:not([aria-label]):not([disabled])');
@@ -629,7 +649,7 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixtures, por
     context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.addInitScript(seedScript, {
       save: saveFixture.raw, archive: archiveRaw, saveKey: SAVE_KEY, archiveKey: ARCHIVE_KEY,
-      seenKey: TUTORIAL_SEEN_KEY, probe: probeKind,
+      seenKeys: [TUTORIAL_SEEN_KEY, MONTH_TUTORIAL_SEEN_KEY], weeklyKey: scenario.weekly ? MONTHLY_PLANNING_KEY : null, probe: probeKind,
       missingUrl: `${origin}${BASE}${PROBE_ASSET}`, consoleMarker: PROBE_CONSOLE, storyLine: PROBE_STORY_LINE,
     });
     const page = await context.newPage();
@@ -683,6 +703,7 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixtures, por
       for (let i = 0; i < 80; i++) {
         if (await page.locator('.ending-title').count()) return 'ending';
         if (await yearEndCta(page).count()) return 'year-end';
+        if (await monthPlanScreen(page).count()) return 'month-plan';
         if (await confirmButton(page).count()) return 'main';
         if (await nextWeekButton(page).count()) return 'result';
         if (await eventContinue(page).count()) return 'event-result';
