@@ -24,6 +24,10 @@
 //   ③ 지금 세는 것 = **플레이어가 실제로 겪은 강제 계획 변경.** 계획 화면에서 확정 버튼이
 //      돈 때문에 잠긴 주다(루틴 고정비를 못 내거나, 고른 활동이 순차 차감에서 떨어짐).
 //      제품에서 그 순간에만 발생하므로 UI가 알려 준다(store.markMoneyBlockedWeek).
+//      **월 단위 계획(기본값)에서는** 그 잠금이 주간 화면이 아니라 월 계획 화면의 [이번 달 시작]에서 일어난다 —
+//      주간 화면의 확정은 재생이 그 주 계획 칸으로 대신 누르므로 거기서는 거의 안 잠긴다(설계안 §9: 주 단위로 세면 원리상 0).
+//      그래서 월 계획이 돈 때문에 막힌 달은 **그 달 남은 주를 한꺼번에** 센다(store.markMoneyBlockedMonth) — 주 환산이라
+//      아래 문턱(연 12주 = 약 석 달, 3주 = 약 한 달)과 문장을 그대로 쓴다.
 //      실측(4페르소나 × 4시드 × 7년, 연평균): 무료 0 · 혼합 0 · 유료 0 · 지출형 34.8 ·
 //      지출형+부유 4.6. 잔액 단일 문턱으로 환원되지 않는다 — 계획 대비 누적 비용에 달린다.
 //
@@ -80,11 +84,17 @@ export function recordMoneySpent(state: GameState, amount: number): void {
  * 주당 최대 1회 — 중복 호출은 store가 절대주차 스탬프로 막는다(markMoneyBlockedWeek).
  */
 export function recordMoneyBlockedWeek(state: GameState): void {
+  recordMoneyBlockedWeeks(state, 1);
+}
+
+/** n주를 한꺼번에 — 월 계획이 막힌 달의 남은 주(store.markMoneyBlockedMonth). */
+export function recordMoneyBlockedWeeks(state: GameState, n: number): void {
+  if (!Number.isInteger(n) || n <= 0) return;
   if (!hasMoneyTracking(state)) return;
   const i = yearSlot(state.year);
   if (i == null) return;
   const arr = state.moneyBlockedWeeksByYear!;
-  arr[i] = (arr[i] ?? 0) + 1;
+  arr[i] = (arr[i] ?? 0) + n;
 }
 
 export type MoneyTrajectory = {

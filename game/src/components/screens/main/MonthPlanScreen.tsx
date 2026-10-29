@@ -10,7 +10,7 @@
 //   · 시작하면 그 달이 자동으로 흐른다(GameScreen이 저장 뒤 store.startMonthPlayback을 부른다, 5단계).
 //   · 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다(`existing`) — 그때는 남은 주만 짜고, 초대는 처음 받은 그대로 고정이다
 //     (엔진도 다시 짠 계획의 초대 답이 처음과 다르면 거부한다 — monthInvites.validateInviteAnswers).
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
 import { ACTIVITIES, collapseActivityChoices, collapseActivityChoicesWithSlots, getActivityCost, getAvailableActivities, isVacationLimitReached } from '../../../engine/activities';
 import { getExamsInMonth, getNextMonthOpeningExam } from '../../../engine/examSystem';
@@ -44,6 +44,8 @@ type Props = {
    * 그 두 주가 재생 카드로 지나가 주간 화면의 칩을 볼 일이 없다 — 그래서 계획 화면에서 고른다(디렉터 결정 2026-10-26).
    */
   onChooseGoal?: (offer: GoalOffer) => boolean;
+  /** [이번 달 시작]이 돈 때문에 잠겼다 — 엔딩·학년말 돈 회고의 "막힌 주"(store.markMoneyBlockedMonth). */
+  onMoneyBlocked?: () => void;
 };
 
 type Draft = { activities: string[]; npcChoices: Record<string, string> };
@@ -63,7 +65,7 @@ function summarize(d: Draft, npcName: (id: string) => string): string {
   return parts.length ? parts.join(' / ') : '쉰다';
 }
 
-export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCancel, onChooseGoal }: Props) {
+export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCancel, onChooseGoal, onMoneyBlocked }: Props) {
   const block = getMonthBlock(state.week);
   const weeks = useMemo(
     () => Array.from({ length: block.endWeek - state.week + 1 }, (_, i) => state.week + i),
@@ -106,6 +108,10 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const reserve = drafts.reduce((sum, d) => sum + plannedWeekCost(d.activities, state.year), 0);
   const spendable = Math.round((state.money - routineDue - reserve) * 10) / 10;
   const overspent = spendable < 0;
+  // 돈 회고 — 주간 화면이 확정 잠금을 알리는 것(MainWeekScreen onMoneyBlocked)과 같은 자리. 스토어가 달마다 한 번만 센다.
+  useEffect(() => {
+    if (overspent) onMoneyBlocked?.();
+  }, [overspent, onMoneyBlocked]);
   const hasSemester = weeks.some(w => !isVac(w));
   // 화면에 실제로 있는 칸의 스텝만 — 마운트 동안 바뀌지 않는 값들이다(초대는 상태를 읽기만 하는 결정론 함수).
   const tutorialSteps = useMemo(() => monthPlanSteps({ hasInvites: !replan && invites.length > 0, hasRoutine: hasSemester }), [replan, invites.length, hasSemester]);
