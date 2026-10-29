@@ -19,7 +19,7 @@ function base(patch: Partial<GameState> = {}): GameState {
 }
 
 function input(state: GameState, patch: Partial<ScreenRouteInput> = {}): ScreenRouteInput {
-  return { state, eventResult: null, endingReady: false, monthlyEnabled: false, bigResultSeen: null, replanning: false, ...patch };
+  return { state, eventResult: null, endingReady: false, monthlyEnabled: false, bigResultSeen: null, planOpen: false, ...patch };
 }
 
 /** 결산 단계 — 로그는 지난주(logWeek) 좌표, state.week은 그 다음 주. */
@@ -106,31 +106,37 @@ describe('decideScreen — 결산 단계와 월 재생(플래그)', () => {
 });
 
 describe('decideScreen — 계획 단계(플래그)', () => {
-  it('이번 달 계획이 없으면 월 계획 화면, 있으면 메인 화면(재생 띠 포함)', () => {
+  // 주간 화면이 메인이다(2026-10-29 사용자 판정) — 계획이 없는 달이어도 계획 화면이 메인을 대신하지 않는다.
+  it('계획이 없는 달도 메인 화면이고, 띠는 계획이 없다고 말한다 — 계획이 있으면 그 계획을 띠에 싣는다', () => {
     const none = base();
-    expect(decideScreen(input(none, { monthlyEnabled: true }))).toMatchObject({ kind: 'month-plan', existing: null });
+    const r0 = decideScreen(input(none, { monthlyEnabled: true }));
+    expect(r0).toMatchObject({ kind: 'main', key: 'main:2-6' });
+    expect(r0.kind === 'main' && r0.monthly).toEqual({ plan: null, run: null });
     const planned = base();
     planned.monthPlan = planFor(planned);
     const r = decideScreen(input(planned, { monthlyEnabled: true }));
     expect(r).toMatchObject({ kind: 'main' });
-    expect(r.kind === 'main' && r.playback).toEqual({ run: null });
+    expect(r.kind === 'main' && r.monthly).toEqual({ plan: planned.monthPlan, run: null });
   });
 
-  it('남은 주 다시 짜기는 짜 둔 계획을 들고 계획 화면으로(키가 다르다)', () => {
+  it('띠에서 열면 계획 화면 — 계획이 없으면 새로(existing null), 있으면 짜 둔 계획을 들고(키가 다르다)', () => {
+    const none = decideScreen(input(base(), { monthlyEnabled: true, planOpen: true }));
+    expect(none).toMatchObject({ kind: 'month-plan', existing: null });
+    expect(none.key.endsWith(':replan')).toBe(false);
     const planned = base();
     planned.monthPlan = planFor(planned);
-    const r = decideScreen(input(planned, { monthlyEnabled: true, replanning: true }));
+    const r = decideScreen(input(planned, { monthlyEnabled: true, planOpen: true }));
     expect(r).toMatchObject({ kind: 'month-plan', existing: planned.monthPlan });
     expect(r.key.endsWith(':replan')).toBe(true);
   });
 
-  it('플래그가 꺼져 있으면 계획이 없어도 메인 화면, 재생 띠 없음', () => {
-    const r = decideScreen(input(base()));
-    expect(r).toMatchObject({ kind: 'main', key: 'main:2-6', playback: null });
+  it('플래그가 꺼져 있으면 열어 달라고 해도 메인 화면, 띠 없음', () => {
+    expect(decideScreen(input(base()))).toMatchObject({ kind: 'main', key: 'main:2-6', monthly: null });
+    expect(decideScreen(input(base(), { planOpen: true }))).toMatchObject({ kind: 'main', monthly: null });
   });
 
-  it('학년말 대기(W49)엔 계획 화면을 띄우지 않는다', () => {
-    expect(decideScreen(input(base({ week: 49 }), { monthlyEnabled: true })).kind).toBe('main');
+  it('학년말 대기(W49)엔 계획 화면을 띄우지 않고 띠도 없다', () => {
+    expect(decideScreen(input(base({ week: 49 }), { monthlyEnabled: true, planOpen: true }))).toMatchObject({ kind: 'main', monthly: null });
   });
 });
 

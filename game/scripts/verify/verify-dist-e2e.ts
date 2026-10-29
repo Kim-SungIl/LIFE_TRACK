@@ -5,8 +5,10 @@
 // 유닛 테스트 1600여 개는 jsdom이라 번들·경로·전환 순서를 안 지나간다. 그래서 여기서는
 // 크로미움이 **플레이어가 하는 그대로** 한 주를 돈다:
 //
-//   타이틀(이어하기) → 이어하기 → 월 계획 화면 → 루틴 설정 → (초대 답) → 이번 달 시작 →
-//   [사건이 뜨면 첫 선택지로 해결] → 재생 카드 → ⏸ 멈춤 → 주간 화면(재생 띠) → 세이브 확인 → 새로고침 → 이어하기 → 같은 주
+//   타이틀(이어하기) → 이어하기 → 주간 화면(계획 띠) → 📅 이번 달 계획 → 루틴 설정 → (초대 답) → 계획 저장 →
+//   주간 화면(계획 띠) → ▶ 남은 주 자동 진행 → [사건이 뜨면 첫 선택지로 해결] → 재생 카드 → ⏸ 멈춤 →
+//   주간 화면(멈춘 띠) → 세이브 확인 → 새로고침 → 이어하기 → 같은 주
+// 주간 화면이 메인이고 계획 화면은 그 띠에서 연다(2026-10-29 사용자 판정).
 //
 // **월 단위 계획이 기본값이다(featureFlags.MONTHLY_PLANNING_DEFAULT).** 이 게이트는 배포되는 첫 판을 걷는다 — 플래그 키를
 // 주입하지 않는다. 주 단위 판(키 '0')의 결산 → 다음 주 경로는 컴포넌트 테스트(weekendRepeatWiring 등)가 본다.
@@ -279,6 +281,8 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
     const confirmButton = () => page.locator('[data-tutorial="confirm"] button');
     const monthPlan = () => page.locator('[data-testid="month-plan"]');
     const startButton = () => page.locator('[data-tutorial="month-start"] button.btn-primary');
+    const planEntry = () => page.locator('[data-testid="month-plan-entry"]');
+    const planStrip = () => page.locator('[data-testid="month-plan-strip"]');
     const playbackCard = () => page.locator('[data-testid="playback-card"]');
     const pausedStrip = () => page.locator('[data-testid="playback-paused"]');
     const nextWeekButton = () => page.locator('button', { hasText: '다음 주로 →' });
@@ -347,11 +351,17 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
         if (!text.includes(want)) throw new Error(`${MSG.continueLabel}: "${text}" ≠ "${want}"`);
         return `"${text}"`;
       } },
-      { name: '이어하기 → 월 계획 화면', run: async () => {
+      { name: '이어하기 → 주간 화면(계획 띠) → 월 계획 화면', run: async () => {
         await continueButton().click();
-        await monthPlan().waitFor({ state: 'visible', timeout: WAIT });
+        // 계획이 없는 달도 메인은 주간 화면이다 — 계획 화면이 대신 뜨면 흐름이 되돌아간 것이다.
+        await planEntry().waitFor({ state: 'visible', timeout: WAIT });
+        await confirmButton().waitFor({ state: 'visible', timeout: WAIT });
+        if (await monthPlan().count()) throw new Error('계획 화면이 주간 화면을 대신했다 — 계획은 띠에서 열 때만 떠야 한다');
         const skip = page.locator('button', { hasText: '건너뛰기' });
         if (await skip.count() > 0 && await skip.first().isVisible()) throw new Error('튜토리얼이 떴다 — 영속 키 주입이 안 먹었다');
+        await planEntry().locator('[data-testid="month-plan-open"]').click();
+        await monthPlan().waitFor({ state: 'visible', timeout: WAIT });
+        if (await skip.count() > 0 && await skip.first().isVisible()) throw new Error('계획 화면 튜토리얼이 떴다 — 영속 키 주입이 안 먹었다');
         const title = (await monthPlan().locator('h1').first().innerText()).trim();
         if (title !== fx.monthLabel) throw new Error(`월 계획 화면 제목이 "${title}"다 — "${fx.monthLabel}"이어야 한다`);
         const s = await readSave();
@@ -384,9 +394,18 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
         if (!(await startButton().isEnabled())) throw new Error(`루틴을 고르고 초대에 답했는데 시작 버튼이 잠겨 있다: "${(await startButton().innerText()).trim()}"`);
         return `초대 ${n}건 거절 · "${(await startButton().innerText()).trim()}"`;
       } },
-      { name: '이번 달 시작 → 재생 카드', run: async () => {
+      { name: '계획 저장 → 주간 화면(계획 띠)', run: async () => {
         await startButton().click();
         await monthPlan().waitFor({ state: 'detached', timeout: WAIT });
+        await planStrip().waitFor({ state: 'visible', timeout: WAIT });
+        await confirmButton().waitFor({ state: 'visible', timeout: WAIT });
+        // 저장만 했다 — 주는 그대로, 재생 장부는 없다(자동 진행은 띠에서 고른다).
+        const s = await readSave();
+        if (s?.phase !== 'weekday' || s.week !== fx.week || !s.hasPlan || s.run !== null) throw new Error(`계획 저장 뒤 세이브가 어긋난다: ${JSON.stringify(s)}`);
+        return `띠 "${(await planStrip().innerText()).replace(/\s+/g, ' ').trim().slice(0, 40)}"`;
+      } },
+      { name: '▶ 남은 주 자동 진행 → 재생 카드', run: async () => {
+        await planStrip().locator('[data-testid="playback-resume"]').click();
         // 첫 주 처리 중 사건이 먼저 뜰 수 있다 — 재생 카드가 나올 때까지 상태로 판별한다.
         const scenes: string[] = [];
         for (let i = 0; i < 8; i++) {
@@ -394,7 +413,7 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
           if (where === 'card') break;
           if (where === 'event') scenes.push(await playEvent());
           else if (where === 'event-result') await eventContinue().first().click();
-          else throw new Error(`시작 뒤 예상 밖 화면: ${where}`);
+          else throw new Error(`자동 진행 뒤 예상 밖 화면: ${where}`);
         }
         await playbackCard().waitFor({ state: 'visible', timeout: WAIT });
         const s = await readSave();
@@ -435,8 +454,8 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
         const want = continueLabel(before!.year, before!.week);
         if (!text.includes(want)) found.push(`${MSG.continueLabel}: "${text}" ≠ "${want}"`);
         await continueButton().click();
-        // 멈춘 재생은 멈춘 채로 연다(설계안 §10) — 세이브가 틀어졌으면 월 계획 화면에 설 수도 있다. 둘 중 먼저 뜨는 쪽.
-        await pausedStrip().or(monthPlan()).first().waitFor({ state: 'visible', timeout: WAIT });
+        // 멈춘 재생은 멈춘 채로 연다(설계안 §10) — 세이브가 틀어졌으면 다른 띠(계획 없음·짜 둠)에 설 수도 있다. 먼저 뜨는 쪽.
+        await pausedStrip().or(planEntry()).or(planStrip()).first().waitFor({ state: 'visible', timeout: WAIT });
         const after = await readSave();
         if (!after || after.year !== before!.year || after.week !== before!.week || after.phase !== before!.phase
           || after.routineSlot2 !== before!.routineSlot2 || after.hasPlan !== before!.hasPlan || after.run !== before!.run) {
@@ -559,7 +578,7 @@ async function main() {
     console.log('\n  첫 화면 게이트(verify:dist-boot)는 여기서 실패한 화면을 원리상 못 본다.');
     process.exit(1);
   }
-  console.log(`\n✅ 배포 E2E — 이어하기→월 계획→루틴→초대→시작→재생 카드→멈춤→새로고침→이어하기 ${healthy?.steps.length}단계 ${fmtMs(healthyMs)}, 콘솔 에러·404 0건 (요청 ${healthy?.requests}건 / JS 청크 ${healthy?.chunks}개 / 자기검사 ${selfPassed}/${SELF_TOTAL}종 통과 / 전체 ${fmtMs(Date.now() - t0)})`);
+  console.log(`\n✅ 배포 E2E — 이어하기→주간 화면→월 계획→루틴→초대→저장→자동 진행→재생 카드→멈춤→새로고침→이어하기 ${healthy?.steps.length}단계 ${fmtMs(healthyMs)}, 콘솔 에러·404 0건 (요청 ${healthy?.requests}건 / JS 청크 ${healthy?.chunks}개 / 자기검사 ${selfPassed}/${SELF_TOTAL}종 통과 / 전체 ${fmtMs(Date.now() - t0)})`);
   process.exit(0);
 }
 

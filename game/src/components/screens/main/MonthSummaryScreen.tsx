@@ -1,5 +1,5 @@
 // 월말 결산 한 장 — 그 달 계획에 답하는 화면(설계안 §7). 재생 카드가 주간 결산을 흡수했으니 월말에 이것 하나만 뜬다.
-//   N월의 나 / 한 줄 총평(가장 강한 신호 하나) / 계획 vs 실제 / 약속 / 변화(방향만, 숫자 없음) / 돈 / [다음 달 계획하기]
+//   N월의 나 / 한 줄 총평(가장 강한 신호 하나) / 계획 vs 실제 / 약속 / 변화(방향만, 숫자 없음) / 돈 / [다음 달로] — 넘어가면 주간 화면이다(계획은 그 화면 띠에서 연다, 2026-10-29)
 // 사건 기억 회수·CG는 쓰지 않는다(학년말·엔딩의 몫). 내용은 엔진(monthPlayback.buildMonthSummary)이 만든다.
 import type { ReactNode } from 'react';
 import { playSfx } from '../../../audio/sfx';
@@ -77,7 +77,7 @@ export function MonthSummaryScreen({ summary, nextLabel, moneyLeft, nextMonthMon
 
       <div className="bottom-action">
         <button type="button" className="btn btn-primary" onClick={() => { playSfx('confirm'); onContinue(); }}>
-          {nextLabel ? `${nextLabel} 계획하기 ▶` : '계속 ▶'}
+          {nextLabel ? `${nextLabel}로 ▶` : '계속 ▶'}
         </button>
       </div>
     </div>

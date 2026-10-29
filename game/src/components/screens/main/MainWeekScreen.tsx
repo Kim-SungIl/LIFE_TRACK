@@ -19,7 +19,7 @@ import { Shop } from '../../Shop';
 import { Dialog } from '../../Dialog';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import { Tutorial } from '../../Tutorial';
-import { MAIN_INFO_STEPS, TUTORIAL_KEYS } from '../../tutorialSteps';
+import { MONTHLY_MAIN_STEPS, TUTORIAL_KEYS } from '../../tutorialSteps';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
 import { GLASS_BASE, chipSurface, tintedGlass } from '../surface';
 import { breakSentences, getFatigueDisplay, getUpcomingEvents } from '../shared';
@@ -62,15 +62,17 @@ type Props = {
   // T68 학기 목표 고르기 — 없으면 칩을 그리지 않는다(테스트·구 호출부 호환).
   onChooseGoal?: (offer: GoalOffer) => boolean;
   /**
-   * 한 달 자동 진행이 멈춰 이 화면에 섰다(monthPlayback, 설계안 §5). 맨 위에 멈춘 이유와 [▶ 이어서]·[남은 주 다시 짜기]를 띄운다.
-   * 이 화면의 확정 버튼은 그대로 "이번 주만 손으로" 진행이다. 없으면(주간 진행) 띠를 안 그린다.
+   * 월 단위 판의 계획 띠(설계안 §5) — 이 화면이 메인이고, 한 달 계획은 여기서 연다(2026-10-29 사용자 판정).
+   * 계획이 없으면 [📅 이번 달 계획], 있으면 [▶ 남은 주 자동 진행]·[계획 고치기], 자동 진행이 멈춰 섰으면(`stopLine`)
+   * 그 이유와 [▶ 이어서 자동 진행]·[남은 주 다시 짜기]. 확정 버튼은 어느 경우든 이 주를 진행하는 주 행동이다.
+   * 없으면(주간 진행 판) 띠를 안 그린다.
    */
-  playback?: { line: string; talkBank: number; onResume: () => void; onReplan: () => void };
+  monthly?: { hasPlan: boolean; stopLine: string | null; talkBank: number; onOpenPlan: () => void; onAutoPlay: () => void };
   /** 재생 카드의 💬/🛒로 멈췄으면 그 창을 연 채로 시작한다. */
   initialOverlay?: 'talk' | 'shop';
 };
 
-export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal, playback, initialOverlay }: Props) {
+export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal, monthly, initialOverlay }: Props) {
   // 이번 달 계획(월 계획 화면이 저장)이 있으면 그 주 칸으로 미리 채운다 — 확정은 그대로 이 화면의 CTA가 한다.
   const plannedWeek = getPlannedWeek(state);
   const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? plannedWeek?.activities ?? []);
@@ -93,14 +95,10 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showShop, setShowShop] = useState(initialOverlay === 'shop');
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
-  // 월 단위 판(playback 띠가 있다)이면 계획은 월 계획 화면이 가르쳤다 — 여기선 화면 읽는 법(MAIN_INFO_STEPS)만,
-  // 그것도 월 계획 튜토리얼이 "남았다"고 적어 둔 플레이어에게만 한 번(TUTORIAL_KEYS.infoPending).
-  const monthlyTutorial = !!playback;
   const [showTutorial, setShowTutorial] = useState(() => {
     // ever_seen은 새 게임에도 유지되는 영속 플래그 — 한 번이라도 튜토리얼을 본/건너뛴 반복 플레이어는 자동 스킵.
     // (startGame이 매번 지우는 tutorial_done과 달리 wipe하지 않음)
     try {
-      if (monthlyTutorial) return !!localStorage.getItem(TUTORIAL_KEYS.infoPending);
       return !localStorage.getItem(TUTORIAL_KEYS.done)
         && !localStorage.getItem(TUTORIAL_KEYS.everSeen);
     } catch { return false; }
@@ -331,24 +329,43 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
         onOpenMenu={onOpenMenu}
       />
 
-      {/* 한 달 자동 진행이 멈춘 자리 — 이유 한 줄과 이어서/다시 짜기 */}
-      {playback && (
-        <div role="status" data-testid="playback-paused" style={{
+      {/* 월 단위 판의 계획 띠 — 계획 세우기 / 자동 진행·고치기 / 멈춘 이유와 이어서·다시 짜기 */}
+      {monthly && !monthly.hasPlan && (
+        <div data-testid="month-plan-entry" data-tutorial="month-entry" style={{
+          background: tintedGlass('rgba(240,164,122,0.10)'), border: '1px solid rgba(240,164,122,0.28)',
+          borderRadius: 12, padding: '8px 10px 8px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10,
+        }}>
+          <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.78rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
+            <span>한 달 계획을 짜 두면 남은 주의 칸이 미리 채워져요.</span>
+            {monthly.talkBank > 0 && (
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
+            )}
+          </span>
+          <button type="button" className="btn-reset" data-testid="month-plan-open" onClick={() => { playSfx('tap'); monthly.onOpenPlan(); }}
+            style={{ minHeight: 44, padding: '0 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+            📅 이번 달 계획
+          </button>
+        </div>
+      )}
+      {monthly && monthly.hasPlan && (
+        <div role="status" data-testid={monthly.stopLine ? 'playback-paused' : 'month-plan-strip'} data-tutorial="month-entry" style={{
           background: tintedGlass('rgba(240,164,122,0.14)'), border: '1px solid rgba(240,164,122,0.35)',
           borderRadius: 12, padding: '10px 14px', marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 8,
         }}>
-          <span style={{ fontSize: '0.82rem', lineHeight: 1.5 }}>⏸ {playback.line}</span>
-          {playback.talkBank > 0 && (
-            <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {playback.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
+          <span style={{ fontSize: '0.82rem', lineHeight: 1.5 }}>
+            {monthly.stopLine ? `⏸ ${monthly.stopLine}` : '📅 이번 달 계획대로 칸을 채워 뒀어요.'}
+          </span>
+          {monthly.talkBank > 0 && (
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
           )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
-            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); playback.onResume(); }}
-              style={{ minHeight: 44, borderRadius: 10, background: 'var(--accent)', color: 'var(--btn-ink)', fontWeight: 700, fontSize: '0.82rem' }}>
-              ▶ 이어서 재생
+            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); monthly.onAutoPlay(); }}
+              style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(240,164,122,0.5)', background: 'var(--bg-secondary)', color: 'var(--accent)', fontWeight: 700, fontSize: '0.82rem' }}>
+              {monthly.stopLine ? '▶ 이어서 자동 진행' : '▶ 남은 주 자동 진행'}
             </button>
-            <button type="button" className="btn-reset" data-testid="playback-replan" onClick={() => { playSfx('tap'); playback.onReplan(); }}
+            <button type="button" className="btn-reset" data-testid="playback-replan" onClick={() => { playSfx('tap'); monthly.onOpenPlan(); }}
               style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem' }}>
-              남은 주 다시 짜기
+              {monthly.stopLine ? '남은 주 다시 짜기' : '계획 고치기'}
             </button>
           </div>
         </div>
@@ -637,9 +654,9 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
       <div aria-hidden="true" style={{ height: 'calc(80px + env(safe-area-inset-bottom))' }} />
 
       {/* 확정 버튼 — 하단 고정(sticky CTA). .bottom-action = position:fixed + safe-area */}
-      {/* 재생이 멈춘 동안 주 행동은 띠의 ▶ 이어서 재생이다 — 이 버튼은 이 주만 손으로 확정하는 보조라 한 단계 낮춘다 */}
+      {/* 월 단위 판이어도 주 행동은 이 버튼이다 — 자동 진행은 띠에서 고르는 보조 길(2026-10-29 사용자 판정) */}
       <div data-tutorial="confirm" className="bottom-action">
-        <button className={playback ? 'btn btn-secondary' : 'btn btn-primary'} data-testid="week-confirm"
+        <button className="btn btn-primary" data-testid="week-confirm"
           disabled={confirmDisabled}
           onClick={handleConfirm}
         >
@@ -693,7 +710,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     {showTutorial && (
       <div style={{ display: editingSlot ? 'none' : 'contents' }}>
       <Tutorial
-        steps={monthlyTutorial ? MAIN_INFO_STEPS : undefined}
+        steps={monthly ? MONTHLY_MAIN_STEPS : undefined}
         routineSet={!!state.routineSlot2}
         onComplete={() => {
           setShowTutorial(false);
@@ -701,7 +718,6 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
           try {
             localStorage.setItem(TUTORIAL_KEYS.done, '1');
             localStorage.setItem(TUTORIAL_KEYS.everSeen, '1');
-            localStorage.removeItem(TUTORIAL_KEYS.infoPending);
           } catch { /* storage unavailable */ }
         }}
       />

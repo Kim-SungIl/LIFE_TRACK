@@ -183,9 +183,9 @@ export function GameScreen() {
   const [eventResultData, setEventResultData] = useState<EventResultData | null>(null);
   // 기록장 — 지난 학년 회상(읽기 전용). null이면 닫힘. phase를 안 건드리는 로컬 오버레이.
   const [albumYear, setAlbumYear] = useState<number | null>(null);
-  // 한 달 자동 진행의 화면 쪽 상태 — 남은 주 다시 짜기 화면을 열었나 / "다음 멈춤까지" 빨리 넘기기 /
+  // 한 달 계획·자동 진행의 화면 쪽 상태 — 주간 화면에서 월 계획 화면을 열었나 / "다음 멈춤까지" 빨리 넘기기 /
   // 달의 마지막 주가 시험·학기 목표 주라 결산 화면을 먼저 보고 월말 결산으로 넘어갔나(그 결산의 키).
-  const [replanning, setReplanning] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
   const [fastPlayback, setFastPlayback] = useState(false);
   const [bigResultSeen, setBigResultSeen] = useState<string | null>(null);
   // 재생 중 판정은 monthPlayback.isPlaying 하나를 읽는다(화면이 같은 사실을 따로 재지 않게).
@@ -287,7 +287,7 @@ export function GameScreen() {
     endingReady: !!endingData,
     monthlyEnabled: isMonthlyPlanningEnabled(),
     bigResultSeen,
-    replanning,
+    planOpen,
   });
   const screenKey = route.key;
   const screenPace: TransitionPace = route.pace;
@@ -504,9 +504,9 @@ export function GameScreen() {
       );
     }
   } else if (route.kind === 'month-plan') {
-    // ===== 한 달 계획(월 단위 계획 4·5단계 — 기능 플래그 뒤) =====
-    // 이번 달 계획이 아직 없으면 주간 화면 대신 이 화면이 먼저 뜨고, 저장하면 그 달이 자동으로 흐른다.
-    // 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다 — 그때는 짜 둔 계획을 고치고 이어서 재생한다.
+    // ===== 한 달 계획(월 단위 계획 — 기능 플래그 뒤) =====
+    // 주간 화면의 띠에서 열린다. 저장하면 주간 화면으로 돌아가고, 남은 주의 칸이 계획대로 채워진다 —
+    // 확정은 매주 그 화면의 CTA가 하고, 자동 진행은 띠의 [▶ 자동 진행]을 누를 때만 돈다(2026-10-29 사용자 판정).
     const existing = route.existing;
     phaseContent = (
       <MonthPlanScreen
@@ -517,26 +517,24 @@ export function GameScreen() {
         onMoneyBlocked={markMoneyBlockedMonth}
         onStart={(plan) => {
           const reason = setMonthPlan(plan);
-          if (reason === null) {
-            setReplanning(false);
-            if (existing) resumePlayback(); else startMonthPlayback();
-          }
+          if (reason === null) setPlanOpen(false);
           return reason;
         }}
-        onCancel={existing ? () => setReplanning(false) : undefined}
+        onCancel={() => setPlanOpen(false)}
       />
     );
   } else {
     // ===== 메인 게임 화면 =====
     // 주 안에서는 키가 고정이라 루틴 조작으로 페이드가 돌지 않는다. 주 넘김은
     // main → weekly → main 으로 키가 두 번 바뀌면서 전환이 붙는다.
-    // 한 달 자동 진행이 멈춰 이 화면에 섰으면 맨 위에 이유와 [이어서]·[다시 짜기]를 띄운다.
-    const run = route.kind === 'main' ? route.playback?.run ?? null : null;
-    const playback = route.kind === 'main' && route.playback ? {
-      line: run ? stopLine(run) : '이번 달 계획이 짜여 있어요.',
+    // 월 단위 판이면 맨 위 띠가 한 달 계획을 잇는다 — [📅 이번 달 계획] / [▶ 자동 진행]·[계획 고치기] / 멈춘 이유.
+    const run = route.kind === 'main' ? route.monthly?.run ?? null : null;
+    const monthly = route.kind === 'main' && route.monthly ? {
+      hasPlan: !!route.monthly.plan,
+      stopLine: run ? stopLine(run) : null,
       talkBank: talkBankCount(state),
-      onResume: run ? resumePlayback : startMonthPlayback,
-      onReplan: () => setReplanning(true),
+      onOpenPlan: () => setPlanOpen(true),
+      onAutoPlay: run ? resumePlayback : startMonthPlayback,
     } : undefined;
     phaseContent = (
       <>
@@ -560,7 +558,7 @@ export function GameScreen() {
           onBuyItem={buyItem}
           // 확정 순서(슬롯 → 동행 → "지난주처럼" 스냅샷 → advanceWeek)는 store.confirmWeek 하나가 갖는다.
           onConfirmWeek={confirmWeek}
-          playback={playback}
+          monthly={monthly}
           initialOverlay={run?.stop === 'talk' ? 'talk' : run?.stop === 'shop' ? 'shop' : undefined}
         />
         {albumOverlay}

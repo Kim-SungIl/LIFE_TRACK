@@ -65,8 +65,8 @@ export const STEPS: TutorialStep[] = [
 ];
 
 // ── 월 단위 계획(기본값) ────────────────────────────────────────────────────────────────
-// 새 판의 첫 계획 화면이 월 계획 화면이라 주간 화면 튜토리얼(STEPS)은 뜰 자리가 없다. 같은 코치마크(Tutorial)에
-// 월 계획 화면의 앵커를 준다 — 예산 → 방과후 한 달 등록 → (초대) → 주말 → 이번 달 시작.
+// 주간 화면이 메인이고 월 계획 화면은 거기 띠에서 연다(2026-10-29). 새 판은 주간 화면 튜토리얼(MONTHLY_MAIN_STEPS)부터 보고,
+// 계획 화면을 처음 열면 그 화면의 앵커로 다시 짧게 — 예산 → 방과후 한 달 등록 → (초대) → 주말 → 계획 저장.
 // 초대·방과후 스텝은 그 달 화면에 그 칸이 있을 때만 끼운다(monthPlanSteps) — 앵커가 없으면 가운데 카드가 엉뚱한 설명을 띄운다
 // (방학 달엔 방과후 칸이 없다 — 새 판은 3월이라 늘 있지만, 플래그가 켜지기 전 세이브는 아무 달에서나 처음 이 화면을 본다).
 export const MONTH_PLAN_STEPS: TutorialStep[] = [
@@ -101,8 +101,8 @@ export const MONTH_PLAN_STEPS: TutorialStep[] = [
   },
   {
     target: 'month-start',
-    title: '한 달 보내기',
-    desc: '다 짰으면 이 버튼을 눌러요.\n4주가 저절로 흘러가고, 일이 생기면\n그 자리에서 장면이 나와요.\n\n흘러가는 동안에도 💬 버튼으로\n친구·가족과 이야기할 수 있어요!',
+    title: '계획 저장',
+    desc: '다 짰으면 이 버튼을 눌러요.\n주간 화면의 칸이 계획대로 채워져서\n매주 확인만 누르면 돼요.\n\n한 번에 흘려보내고 싶으면\n「▶ 남은 주 자동 진행」을 누르세요!',
     position: 'top',
   },
 ];
@@ -113,10 +113,16 @@ export function monthPlanSteps(screen: { hasInvites: boolean; hasRoutine: boolea
     (s.target !== 'month-invite' || screen.hasInvites) && (s.target !== 'month-routine' || screen.hasRoutine));
 }
 
-// 월 단위 판에서 주간 화면(재생이 멈췄을 때 뜬다)을 처음 볼 때 — 계획 스텝(루틴·주말·확정)은 월 계획 화면이 이미 가르쳤으니
-// 화면을 읽는 스텝만 남긴다. 주간 판 튜토리얼과 같은 문장을 쓴다(한 곳에서 고치면 둘 다 바뀐다).
-const INFO_TARGETS = new Set(['hud', 'home', 'stats', 'npc']);
-export const MAIN_INFO_STEPS: TutorialStep[] = STEPS.filter(s => INFO_TARGETS.has(s.target));
+// 월 단위 판의 주간 화면 — 주간 판 튜토리얼(STEPS)에 계획 띠 스텝 하나를 화면 순서 자리(가정 다음, 능력치 앞)에 끼운다.
+// 앵커는 띠 둘(계획 없음 / 있음) 모두에 붙어 있다. 주간 판에선 띠가 없으니 이 목록을 쓰면 안 된다(빈 앵커).
+export const MONTH_ENTRY_STEP: TutorialStep = {
+  target: 'month-entry',
+  title: '한 달 계획',
+  desc: '여기서 한 달 계획을 짤 수 있어요.\n짜 두면 남은 주의 칸이 미리 채워지고,\n원하면 한 번에 자동으로 흘려보낼 수도 있어요.\n\n안 짜도 지금처럼 한 주씩 할 수 있어요!',
+  position: 'bottom',
+};
+const ENTRY_AT = STEPS.findIndex(s => s.target === 'stats');
+export const MONTHLY_MAIN_STEPS: TutorialStep[] = [...STEPS.slice(0, ENTRY_AT), MONTH_ENTRY_STEP, ...STEPS.slice(ENTRY_AT)];
 
 /** 튜토리얼 영속 키. ever_seen은 새 게임에도 남는다(주간 판 튜토리얼 — MainWeekScreen). */
 export const TUTORIAL_KEYS = {
@@ -124,6 +130,4 @@ export const TUTORIAL_KEYS = {
   everSeen: 'lifetrack_tutorial_ever_seen',
   /** 월 계획 화면 튜토리얼을 본 적 있다(영속) — 주간 판 튜토리얼을 본 플레이어도 월 계획 화면은 처음이라 따로 둔다. */
   monthSeen: 'lifetrack_month_tutorial_seen',
-  /** 월 계획 튜토리얼을 마쳤고 주간 화면 읽는 법(MAIN_INFO_STEPS)이 남았다 — 주간 판 튜토리얼을 본 적 없는 플레이어만. */
-  infoPending: 'lifetrack_tutorial_info_pending',
 } as const;
