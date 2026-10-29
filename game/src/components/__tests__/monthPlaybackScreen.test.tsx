@@ -57,7 +57,10 @@ function playingFrom(week: number, patch: Partial<GameState> = {}) {
   expect(now().phase).toBe('result');
 }
 
-beforeEach(() => { localStorage.clear(); localStorage.setItem(MONTHLY_PLANNING_KEY, '1'); localStorage.setItem('lifetrack_tutorial_ever_seen', '1'); });
+beforeEach(() => {
+  localStorage.clear(); localStorage.setItem(MONTHLY_PLANNING_KEY, '1'); localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  localStorage.setItem('lifetrack_month_tutorial_seen', '1'); // 월 계획 화면 튜토리얼은 monthTutorial.test가 본다
+});
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
 describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
@@ -133,7 +136,7 @@ describe('GameScreen 라우팅', () => {
     await waitFor(() => expect(screen.getByTestId('playback-paused').textContent).toContain('계획이 짜여'));
     expect(screen.getByTestId('week-confirm').className).toBe('btn btn-secondary');
     second.unmount();
-    localStorage.removeItem(MONTHLY_PLANNING_KEY);
+    localStorage.setItem(MONTHLY_PLANNING_KEY, '0');
     render(<GameScreen />);
     await waitFor(() => screen.getByTestId('week-confirm'));
     expect(screen.queryByTestId('playback-paused')).toBeNull();
@@ -231,7 +234,7 @@ describe('GameScreen 라우팅', () => {
 
   it('플래그가 꺼져 있으면 재생 기록이 있어도 예전 결산 화면이다', () => {
     playingFrom(5);
-    localStorage.removeItem(MONTHLY_PLANNING_KEY);
+    localStorage.setItem(MONTHLY_PLANNING_KEY, '0');
     render(<GameScreen />);
     expect(screen.queryByTestId('playback-card')).toBeNull();
   });

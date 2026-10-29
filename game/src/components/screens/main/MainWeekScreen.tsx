@@ -19,6 +19,7 @@ import { Shop } from '../../Shop';
 import { Dialog } from '../../Dialog';
 import { ConfirmDialog } from '../../ConfirmDialog';
 import { Tutorial } from '../../Tutorial';
+import { MAIN_INFO_STEPS, TUTORIAL_KEYS } from '../../tutorialSteps';
 import { BgWrapper, ScreenBgProps } from '../BgWrapper';
 import { GLASS_BASE, chipSurface, tintedGlass } from '../surface';
 import { breakSentences, getFatigueDisplay, getUpcomingEvents } from '../shared';
@@ -92,12 +93,16 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showShop, setShowShop] = useState(initialOverlay === 'shop');
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  // 월 단위 판(playback 띠가 있다)이면 계획은 월 계획 화면이 가르쳤다 — 여기선 화면 읽는 법(MAIN_INFO_STEPS)만,
+  // 그것도 월 계획 튜토리얼이 "남았다"고 적어 둔 플레이어에게만 한 번(TUTORIAL_KEYS.infoPending).
+  const monthlyTutorial = !!playback;
   const [showTutorial, setShowTutorial] = useState(() => {
     // ever_seen은 새 게임에도 유지되는 영속 플래그 — 한 번이라도 튜토리얼을 본/건너뛴 반복 플레이어는 자동 스킵.
     // (startGame이 매번 지우는 tutorial_done과 달리 wipe하지 않음)
     try {
-      return !localStorage.getItem('lifetrack_tutorial_done')
-        && !localStorage.getItem('lifetrack_tutorial_ever_seen');
+      if (monthlyTutorial) return !!localStorage.getItem(TUTORIAL_KEYS.infoPending);
+      return !localStorage.getItem(TUTORIAL_KEYS.done)
+        && !localStorage.getItem(TUTORIAL_KEYS.everSeen);
     } catch { return false; }
   });
   // A-3: 확정 버튼 더블탭 락 — 렌더 갱신 사이 빠른 두 번째 클릭으로 processWeek가 두 번 도는 것 차단
@@ -224,7 +229,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   // 가정 모달 배지 — pending 이어도 풀이 비면 잡담으로 빠지므로, 실제 남은 이벤트가 있을 때만 true.
   // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
   const homeHasEvent = getEligibleParentClimax(state) != null
-    || ((state.parentEventPendingThisWeek || talkBankCount(state) > 0) && getAvailableHomeEvents(state).length > 0);
+    || ((state.parentEventPendingThisWeek || talkBankCount(state, 'home') > 0) && getAvailableHomeEvents(state).length > 0);
   // 동행 후보 = met + 재적(같은 학교) — 전출 도윤/졸업 공백기 하은은 주말 동행에서 제외.
   // NpcSelectModal memo 안정성 위해 npcs ref(+ 재적 판정 입력인 year/events) 변경 시에만 재계산.
   const companionNpcs = useMemo(
@@ -688,13 +693,15 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     {showTutorial && (
       <div style={{ display: editingSlot ? 'none' : 'contents' }}>
       <Tutorial
+        steps={monthlyTutorial ? MAIN_INFO_STEPS : undefined}
         routineSet={!!state.routineSlot2}
         onComplete={() => {
           setShowTutorial(false);
           // done(이번 게임) + ever_seen(영속) 동시 세팅 — 완료/건너뛰기 후 반복 플레이는 자동 스킵.
           try {
-            localStorage.setItem('lifetrack_tutorial_done', '1');
-            localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+            localStorage.setItem(TUTORIAL_KEYS.done, '1');
+            localStorage.setItem(TUTORIAL_KEYS.everSeen, '1');
+            localStorage.removeItem(TUTORIAL_KEYS.infoPending);
           } catch { /* storage unavailable */ }
         }}
       />

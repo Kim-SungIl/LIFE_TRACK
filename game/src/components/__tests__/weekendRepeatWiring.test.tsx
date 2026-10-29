@@ -67,6 +67,8 @@ beforeEach(() => {
   localStorage.clear();
   // 튜토리얼 오버레이는 클릭을 조용히 먹는다 / 빈 주말 되묻기도 끈다.
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  // 주간 화면 자체를 본다 — 월 단위가 기본값이라 그 화면은 재생이 멈췄을 때만 뜬다. 플래그를 꺼서 곧장 연다.
+  localStorage.setItem('lifetrack_monthly_planning', '0');
   localStorage.setItem('lifetrack_rest_ack', '1');
   useGameStore.setState({ state: null, npcActivityMap: {} });
 });

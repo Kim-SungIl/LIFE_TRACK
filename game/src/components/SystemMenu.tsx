@@ -18,6 +18,7 @@
 import { Dialog } from './Dialog';
 import { AudioToggle } from './AudioToggle';
 import { playSfx } from '../audio/sfx';
+import { downloadTelemetry } from './telemetryExport';
 
 type Props = {
   /** 타이틀로 나간다. 세이브는 남는다(store.exitToTitle) — 라벨이 그렇게 약속한다. */
@@ -77,6 +78,16 @@ export function SystemMenu({ onExit, onClose, saveFailed = false }: Props) {
             ? '저장이 안 되는 중이에요 — 나가면 최근 진행이 사라져요'
             : '진행은 저장돼 있어요'}
         </span>
+      </button>
+
+      {/* 오픈베타 피드백용 — 이 기기에만 쌓인 익명 기록(월 계획·멈춤·대화·등급)을 파일로. 보내는 건 플레이어가 한다. */}
+      <button
+        type="button" className="btn btn-secondary"
+        onClick={() => { playSfx('tap'); downloadTelemetry(); }}
+        style={{ marginBottom: 10 }}
+      >
+        📋 플레이 기록 내보내기
+        <span className="btn__sub">피드백용 파일 · 이 기기에만 저장돼 있어요</span>
       </button>
 
       <button type="button" className="btn btn-secondary" onClick={onClose}>

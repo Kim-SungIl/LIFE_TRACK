@@ -103,6 +103,8 @@ beforeEach(() => {
   clearArchive();
   localStorage.clear();
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  // 주간 화면 자체를 본다 — 월 단위가 기본값이라 그 화면은 재생이 멈췄을 때만 뜬다. 플래그를 꺼서 곧장 연다.
+  localStorage.setItem('lifetrack_monthly_planning', '0');
   localStorage.setItem('lifetrack_tutorial_done', '1');
   useGameStore.setState({ state: null, runDelta: null, npcActivityMap: {} });
 });

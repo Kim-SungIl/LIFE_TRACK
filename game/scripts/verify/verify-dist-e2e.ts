@@ -5,8 +5,11 @@
 // 유닛 테스트 1600여 개는 jsdom이라 번들·경로·전환 순서를 안 지나간다. 그래서 여기서는
 // 크로미움이 **플레이어가 하는 그대로** 한 주를 돈다:
 //
-//   타이틀(이어하기) → 이어하기 → 주간 화면 → 루틴 설정 → 주 확정(휴식 확인) →
-//   [주중 이벤트가 뜨면 첫 선택지로 해결] → 결산 → 다음 주 → 세이브 확인 → 새로고침 → 이어하기 → 같은 주
+//   타이틀(이어하기) → 이어하기 → 월 계획 화면 → 루틴 설정 → (초대 답) → 이번 달 시작 →
+//   [사건이 뜨면 첫 선택지로 해결] → 재생 카드 → ⏸ 멈춤 → 주간 화면(재생 띠) → 세이브 확인 → 새로고침 → 이어하기 → 같은 주
+//
+// **월 단위 계획이 기본값이다(featureFlags.MONTHLY_PLANNING_DEFAULT).** 이 게이트는 배포되는 첫 판을 걷는다 — 플래그 키를
+// 주입하지 않는다. 주 단위 판(키 '0')의 결산 → 다음 주 경로는 컴포넌트 테스트(weekendRepeatWiring 등)가 본다.
 //
 // **결정론.** 새 게임은 시드가 시간 기반이라(`rng.ts` `startedAt ?? Date.now()`) 5회 중 1회
 // 1주차 확정 직후 주중 이벤트가 먼저 떠 결산 대기가 흔들렸다. 그래서 새 게임 대신 **세이브
@@ -37,9 +40,10 @@ const DIST = resolve(ROOT, process.argv[2] ?? 'dist');
 const BASE = '/LIFE_TRACK/';
 /** 제품과 같은 값. 다르면 index.html이 안 실렸거나 덮인 것이다. */
 const TITLE = '7년의 시간표';
-/** 제품의 세이브 키·튜토리얼 영속 키(`store.ts` SAVE_KEY / `MainWeekScreen.tsx`). */
+/** 제품의 세이브 키·튜토리얼 영속 키(`store.ts` SAVE_KEY / `tutorialSteps.ts` TUTORIAL_KEYS). */
 const SAVE_KEY = 'lifetrack_save';
 const TUTORIAL_SEEN_KEY = 'lifetrack_tutorial_ever_seen';
+const MONTH_TUTORIAL_SEEN_KEY = 'lifetrack_month_tutorial_seen';
 /** 픽스처 시드. 값 자체는 아무래도 좋다 — 고정돼 있다는 것만 중요하다. */
 const FIXTURE_SEED = 20260925;
 /** 한 UI 상태를 기다리는 상한. CI 러너가 로컬의 2~3배 느리다. */
@@ -121,6 +125,8 @@ interface Fixture {
   readonly version: number;
   /** 주간 화면·결산이 다는 주차 라벨 — 엔진의 같은 함수로 뽑는다(리터럴 금지). */
   readonly labelAt: (year: number, week: number) => string;
+  /** 월 계획 화면 제목 — 그 주가 든 달 블록의 라벨(weekMath.getMonthBlock). */
+  readonly monthLabel: string;
 }
 
 /**
@@ -144,6 +150,7 @@ async function buildFixture(): Promise<Fixture> {
   const { assignCurrentEvent } = await import('../../src/engine/eventPresentation');
   const { useGameStore } = await import('../../src/engine/store');
   const { CURRENT_SAVE_VERSION } = await import('../../src/engine/stateMigration');
+  const { getMonthBlock } = await import('../../src/engine/weekMath');
 
   // `startGame`과 같은 흐름 — 다만 시드를 고정한다(startGame은 시드를 받지 않는다).
   const initial = createInitialState('male', ['emotional', 'wealth'], { rngSeed: FIXTURE_SEED });
@@ -159,7 +166,8 @@ async function buildFixture(): Promise<Fixture> {
   if (!state || state.phase !== 'weekday') throw new Error(`픽스처 생성 실패 — 부팅 장면을 해결한 뒤 phase가 '${state?.phase}'다 (weekday여야 주간 화면으로 들어간다)`);
   const raw = mem.get(SAVE_KEY);
   if (!raw) throw new Error('픽스처 생성 실패 — 스토어가 세이브를 안 썼다 (subscribe → saveToStorage 경로가 달라졌나)');
-  return { raw, year: state.year, week: state.week, version: CURRENT_SAVE_VERSION, labelAt: getWeekLabelAt };
+  if (state.monthPlan) throw new Error('픽스처 생성 실패 — 첫 주에 이미 월 계획이 있다 (월 계획 화면으로 들어가야 한다)');
+  return { raw, year: state.year, week: state.week, version: CURRENT_SAVE_VERSION, labelAt: getWeekLabelAt, monthLabel: getMonthBlock(state.week).label };
 }
 
 // ── 시나리오 ──────────────────────────────────────────────────────────────────────────────
@@ -195,9 +203,9 @@ const MSG = {
  * 2주차 세이브를 픽스처(1주차)로 덮어 "세이브 왕복"이 공허해진다.
  * Playwright가 직렬화해 페이지로 보내므로 바깥 변수를 닫아 쓸 수 없다 — 전부 인자로 받는다.
  */
-function seedScript(a: { save: string; saveKey: string; seenKey: string; probe: ProbeKind | null; missingUrl: string; consoleMarker: string }) {
+function seedScript(a: { save: string; saveKey: string; seenKeys: string[]; probe: ProbeKind | null; missingUrl: string; consoleMarker: string }) {
   try {
-    localStorage.setItem(a.seenKey, '1');
+    for (const k of a.seenKeys) localStorage.setItem(k, '1');
     const seeded = sessionStorage.getItem('__e2e_seeded__');
     if (!seeded) {
       localStorage.setItem(a.saveKey, a.save);
@@ -234,8 +242,11 @@ interface Outcome {
   readonly chunks: number;
 }
 
-/** 세이브에서 보는 좌표 — 수치는 안 읽는다. */
-interface SaveView { readonly phase: string; readonly year: number; readonly week: number; readonly routineSlot2: string | null }
+/** 세이브에서 보는 좌표 — 수치는 안 읽는다. 월 계획·재생 장부는 있는지와 재생 상태만. */
+interface SaveView {
+  readonly phase: string; readonly year: number; readonly week: number; readonly routineSlot2: string | null;
+  readonly hasPlan: boolean; readonly run: string | null;
+}
 
 async function runScenario(browser: Browser, served: Served[], fx: Fixture, port: number, probeKind: ProbeKind | null): Promise<Outcome> {
   const problems: string[] = [];
@@ -249,7 +260,7 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
     // 세로 폰 뷰포트. 이 게임의 1급 화면이고, 좁은 폭에서 하단 고정 CTA·다이얼로그 스택이 실제로 겹친다.
     context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     await context.addInitScript(seedScript, {
-      save: fx.raw, saveKey: SAVE_KEY, seenKey: TUTORIAL_SEEN_KEY, probe: probeKind,
+      save: fx.raw, saveKey: SAVE_KEY, seenKeys: [TUTORIAL_SEEN_KEY, MONTH_TUTORIAL_SEEN_KEY], probe: probeKind,
       missingUrl: `${origin}${BASE}${PROBE_ASSET}`, consoleMarker: PROBE_CONSOLE,
     });
     const page = await context.newPage();
@@ -262,10 +273,14 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
       const raw = await page.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
       if (!raw) return null;
       const s = JSON.parse(raw).state;
-      return { phase: s.phase, year: s.year, week: s.week, routineSlot2: s.routineSlot2 ?? null };
+      return { phase: s.phase, year: s.year, week: s.week, routineSlot2: s.routineSlot2 ?? null, hasPlan: !!s.monthPlan, run: s.monthRun?.status ?? null };
     };
     const continueButton = () => page.locator('button', { hasText: '이어하기' }).first();
     const confirmButton = () => page.locator('[data-tutorial="confirm"] button');
+    const monthPlan = () => page.locator('[data-testid="month-plan"]');
+    const startButton = () => page.locator('[data-tutorial="month-start"] button.btn-primary');
+    const playbackCard = () => page.locator('[data-testid="playback-card"]');
+    const pausedStrip = () => page.locator('[data-testid="playback-paused"]');
     const nextWeekButton = () => page.locator('button', { hasText: '다음 주로 →' });
     const eventContinue = () => page.locator('button', { hasText: '계속 →' });
     const choiceButtons = () => page.locator('button.btn-reset:not([aria-label]):not([disabled])');
@@ -298,9 +313,11 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
      * 지금 화면이 무엇인가 — DOM 마커 + 세이브 phase. 선택지는 마지막 페이지 전엔 `display:none`이라
      * visible 대기로는 못 가르고, 화면 전환 페이드 중엔 옛 버튼이 잠깐 남는다 — 호출부가 detach를 먼저 기다린다.
      */
-    type Where = 'main' | 'result' | 'year-end' | 'event-result' | 'event' | 'ending';
+    type Where = 'card' | 'month-plan' | 'main' | 'result' | 'year-end' | 'event-result' | 'event' | 'ending';
     const whereAmI = async (): Promise<Where> => {
       for (let i = 0; i < 60; i++) {
+        if (await playbackCard().count()) return 'card';
+        if (await monthPlan().count()) return 'month-plan';
         if (await confirmButton().count()) return 'main';
         if (await nextWeekButton().count()) return 'result';
         if (await page.locator('button.ye-cta').count()) return 'year-end';
@@ -313,7 +330,6 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
       throw new Error('화면 판별 실패 — 아는 마커가 하나도 없다');
     };
 
-    const labelW1 = fx.labelAt(fx.year, fx.week);
     const labelW2 = fx.labelAt(fx.year, fx.week + 1);
     let before: SaveView | null = null;
     let savedRaw = '';
@@ -331,20 +347,20 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
         if (!text.includes(want)) throw new Error(`${MSG.continueLabel}: "${text}" ≠ "${want}"`);
         return `"${text}"`;
       } },
-      { name: '이어하기 → 주간 화면', run: async () => {
+      { name: '이어하기 → 월 계획 화면', run: async () => {
         await continueButton().click();
-        await confirmButton().waitFor({ state: 'visible', timeout: WAIT });
+        await monthPlan().waitFor({ state: 'visible', timeout: WAIT });
         const skip = page.locator('button', { hasText: '건너뛰기' });
         if (await skip.count() > 0 && await skip.first().isVisible()) throw new Error('튜토리얼이 떴다 — 영속 키 주입이 안 먹었다');
-        const text = await bodyText();
-        if (!text.includes(labelW1)) throw new Error(`주간 화면에 "${labelW1}" 라벨이 없다`);
+        const title = (await monthPlan().locator('h1').first().innerText()).trim();
+        if (title !== fx.monthLabel) throw new Error(`월 계획 화면 제목이 "${title}"다 — "${fx.monthLabel}"이어야 한다`);
         const s = await readSave();
-        if (s?.phase !== 'weekday' || s.week !== fx.week) throw new Error(`세이브가 주간 화면과 어긋난다: ${JSON.stringify(s)}`);
-        return `"${labelW1}" 확정 버튼 "${(await confirmButton().innerText()).trim()}"`;
+        if (s?.phase !== 'weekday' || s.week !== fx.week || s.hasPlan) throw new Error(`세이브가 월 계획 화면과 어긋난다: ${JSON.stringify(s)}`);
+        return `"${title}" 시작 버튼 "${(await startButton().innerText()).trim()}"`;
       } },
       { name: '루틴 설정(다이얼로그)', run: async () => {
-        await page.locator('[data-tutorial="routine"] button:not([disabled])').first().click();
-        // 다이얼로그 밖에도 aria-expanded(능력치 패널)·aria-pressed(🔊 토글)가 있다 — 오버레이 뒤라 클릭이 막힌다.
+        await page.locator('[data-tutorial="month-routine"] button:not([disabled])').first().click();
+        // 다이얼로그 밖에도 aria-expanded·aria-pressed 버튼이 있다 — 오버레이 뒤라 클릭이 막힌다.
         const dlg = page.locator('[role="dialog"]').last();
         await dlg.waitFor({ state: 'visible', timeout: WAIT });
         await dlg.locator('button[aria-expanded]').first().click();
@@ -356,54 +372,54 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
         await dlg.getByText('저녁 활동').first().waitFor({ state: 'visible', timeout: WAIT });
         await dlg.locator('button[aria-label="닫기"]').first().click();
         await dlg.waitFor({ state: 'detached', timeout: WAIT });
-        if (!(await confirmButton().isEnabled())) throw new Error(`루틴을 골랐는데 확정 버튼이 잠겨 있다: "${(await confirmButton().innerText()).trim()}"`);
         const s = await readSave();
         if (!s?.routineSlot2) throw new Error(`${MSG.routineNotSaved} — 세이브 ${JSON.stringify(s)}`);
         return `"${picked}"`;
       } },
-      { name: '주 확정(휴식 확인) → 결산', run: async () => {
-        await confirmButton().click();
-        const rest = page.locator('button', { hasText: '쉬어갈게요' });
-        let restDialog = false;
-        try { await rest.first().waitFor({ state: 'visible', timeout: 2_000 }); restDialog = true; await rest.first().click(); } catch { /* 이미 확인한 브라우저 */ }
-        await confirmButton().waitFor({ state: 'detached', timeout: WAIT });
-        // 확정 직후 주중 이벤트가 먼저 뜰 수 있다 — 결산이 나올 때까지 상태로 판별한다.
-        const midweek: string[] = [];
+      { name: '초대 답 → 시작 버튼 열림', run: async () => {
+        // 새 판 3월엔 지훈이 초대 문턱 위라 초대가 뜬다 — 답하기 전엔 시작이 잠긴다. 거절로 답한다(약속 칸이 안 생겨 경로가 짧다).
+        const decline = page.locator('[data-tutorial="month-invite"] button', { hasText: '다음에' });
+        const n = await decline.count();
+        for (let i = 0; i < n; i++) await decline.nth(i).click();
+        if (!(await startButton().isEnabled())) throw new Error(`루틴을 고르고 초대에 답했는데 시작 버튼이 잠겨 있다: "${(await startButton().innerText()).trim()}"`);
+        return `초대 ${n}건 거절 · "${(await startButton().innerText()).trim()}"`;
+      } },
+      { name: '이번 달 시작 → 재생 카드', run: async () => {
+        await startButton().click();
+        await monthPlan().waitFor({ state: 'detached', timeout: WAIT });
+        // 첫 주 처리 중 사건이 먼저 뜰 수 있다 — 재생 카드가 나올 때까지 상태로 판별한다.
+        const scenes: string[] = [];
         for (let i = 0; i < 8; i++) {
           const where = await whereAmI();
-          if (where === 'result') break;
-          if (where === 'event') midweek.push(await playEvent());
+          if (where === 'card') break;
+          if (where === 'event') scenes.push(await playEvent());
           else if (where === 'event-result') await eventContinue().first().click();
-          else throw new Error(`확정 뒤 예상 밖 화면: ${where}`);
+          else throw new Error(`시작 뒤 예상 밖 화면: ${where}`);
         }
-        await nextWeekButton().waitFor({ state: 'visible', timeout: WAIT });
-        return `휴식확인=${restDialog ? '있음' : '없음'} 주중이벤트=${midweek.length}${midweek.length ? ` [${midweek.join(' | ')}]` : ''}`;
-      } },
-      { name: '결산 화면', run: async () => {
-        const text = await bodyText();
-        if (!text.includes(labelW1)) throw new Error(`결산에 "${labelW1}" 라벨이 없다`);
+        await playbackCard().waitFor({ state: 'visible', timeout: WAIT });
         const s = await readSave();
-        if (s?.phase !== 'result') throw new Error(`결산 화면인데 세이브 phase가 '${s?.phase}'다`);
-        return `"${labelW1}"`;
+        if (s?.phase !== 'result' || !s.hasPlan || s.run !== 'playing') throw new Error(`재생 카드인데 세이브가 어긋난다: ${JSON.stringify(s)}`);
+        return `사건=${scenes.length}${scenes.length ? ` [${scenes.join(' | ')}]` : ''}`;
       } },
-      { name: '다음 주로', run: async () => {
-        await nextWeekButton().click();
-        await nextWeekButton().waitFor({ state: 'detached', timeout: WAIT });
+      { name: '⏸ 멈춤 → 주간 화면(재생 띠)', run: async () => {
+        await playbackCard().locator('button', { hasText: '⏸ 멈춤' }).first().click();
+        await pausedStrip().waitFor({ state: 'visible', timeout: WAIT });
         await confirmButton().waitFor({ state: 'visible', timeout: WAIT });
         const s = await readSave();
-        if (s?.phase !== 'weekday' || s.week !== fx.week + 1) throw new Error(`다음 주 세이브가 어긋난다: ${JSON.stringify(s)}`);
+        if (s?.phase !== 'weekday' || s.week !== fx.week + 1 || s.run !== 'paused') throw new Error(`멈춘 주 세이브가 어긋난다: ${JSON.stringify(s)}`);
         const text = await bodyText();
         if (!text.includes(labelW2)) throw new Error(`주간 화면에 "${labelW2}" 라벨이 없다`);
-        return `"${labelW2}"`;
+        return `"${labelW2}" 띠 "${(await pausedStrip().innerText()).replace(/\s+/g, ' ').trim().slice(0, 40)}"`;
       } },
       { name: '세이브 필드 확인', run: async () => {
         const raw = await page.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
         if (!raw) throw new Error('세이브가 없다 — 진행이 저장되지 않았다');
         if (raw === fx.raw) throw new Error('세이브가 주입한 픽스처 그대로다 — 진행이 한 번도 저장되지 않았다');
-        const parsed = JSON.parse(raw) as { version?: unknown; savedAt?: unknown; state?: { phase?: unknown; year?: unknown; week?: unknown } };
+        const parsed = JSON.parse(raw) as { version?: unknown; savedAt?: unknown; state?: { phase?: unknown; year?: unknown; week?: unknown; monthPlan?: unknown } };
         if (parsed.version !== fx.version) throw new Error(`세이브 version이 ${String(parsed.version)}다 — 엔진의 CURRENT_SAVE_VERSION은 ${fx.version}`);
         if (typeof parsed.savedAt !== 'string' || Number.isNaN(Date.parse(parsed.savedAt))) throw new Error(`savedAt이 시각이 아니다: ${String(parsed.savedAt)}`);
         if (!parsed.state || parsed.state.phase !== 'weekday' || parsed.state.week !== fx.week + 1) throw new Error(`세이브 state 좌표가 어긋난다: ${JSON.stringify(parsed.state && { phase: parsed.state.phase, year: parsed.state.year, week: parsed.state.week })}`);
+        if (!parsed.state.monthPlan) throw new Error('세이브에 월 계획이 없다 — 시작한 계획이 저장되지 않았다');
         savedRaw = raw;
         before = await readSave();
         return `${raw.length}B version=${parsed.version} ${JSON.stringify(before)}`;
@@ -419,12 +435,14 @@ async function runScenario(browser: Browser, served: Served[], fx: Fixture, port
         const want = continueLabel(before!.year, before!.week);
         if (!text.includes(want)) found.push(`${MSG.continueLabel}: "${text}" ≠ "${want}"`);
         await continueButton().click();
-        await confirmButton().waitFor({ state: 'visible', timeout: WAIT });
+        // 멈춘 재생은 멈춘 채로 연다(설계안 §10) — 세이브가 틀어졌으면 월 계획 화면에 설 수도 있다. 둘 중 먼저 뜨는 쪽.
+        await pausedStrip().or(monthPlan()).first().waitFor({ state: 'visible', timeout: WAIT });
         const after = await readSave();
         if (!after || after.year !== before!.year || after.week !== before!.week || after.phase !== before!.phase
-          || after.routineSlot2 !== before!.routineSlot2) {
+          || after.routineSlot2 !== before!.routineSlot2 || after.hasPlan !== before!.hasPlan || after.run !== before!.run) {
           found.push(`${MSG.roundtrip}: ${JSON.stringify(before)} → ${JSON.stringify(after)}`);
         }
+        if (!(await pausedStrip().count())) found.push('이어하기 뒤 재생 띠가 없다 — 멈춘 재생이 멈춘 채로 열리지 않았다');
         const body = await bodyText();
         if (!body.includes(labelW2)) found.push(`이어하기 뒤 주간 화면에 "${labelW2}" 라벨이 없다`);
         if (found.length) throw new Error(found.join(' / '));
@@ -541,7 +559,7 @@ async function main() {
     console.log('\n  첫 화면 게이트(verify:dist-boot)는 여기서 실패한 화면을 원리상 못 본다.');
     process.exit(1);
   }
-  console.log(`\n✅ 배포 E2E — 이어하기→루틴→확정→결산→다음 주→새로고침→이어하기 ${healthy?.steps.length}단계 ${fmtMs(healthyMs)}, 콘솔 에러·404 0건 (요청 ${healthy?.requests}건 / JS 청크 ${healthy?.chunks}개 / 자기검사 ${selfPassed}/${SELF_TOTAL}종 통과 / 전체 ${fmtMs(Date.now() - t0)})`);
+  console.log(`\n✅ 배포 E2E — 이어하기→월 계획→루틴→초대→시작→재생 카드→멈춤→새로고침→이어하기 ${healthy?.steps.length}단계 ${fmtMs(healthyMs)}, 콘솔 에러·404 0건 (요청 ${healthy?.requests}건 / JS 청크 ${healthy?.chunks}개 / 자기검사 ${selfPassed}/${SELF_TOTAL}종 통과 / 전체 ${fmtMs(Date.now() - t0)})`);
   process.exit(0);
 }
 

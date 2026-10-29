@@ -20,7 +20,7 @@ import { MonthPlanScreen } from './screens/main/MonthPlanScreen';
 import { MonthSummaryScreen } from './screens/main/MonthSummaryScreen';
 import { PlaybackCard } from './screens/main/PlaybackCard';
 import { isMonthlyPlanningEnabled } from '../engine/featureFlags';
-import { buildMonthSummary, hadTalkChance, isPlaying, stopLine, talkBankCount } from '../engine/monthPlayback';
+import { buildMonthSummary, hadTalkChance, isPlaying, stopLine, talkBankCount, totalTalks } from '../engine/monthPlayback';
 import { ACTIVITIES } from '../engine/activities';
 import { getMonthBlock } from '../engine/weekMath';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
@@ -63,7 +63,7 @@ export function GameScreen() {
   const {
     state, setRoutine, confirmWeek, setMonthPlan,
     advanceFromYearEnd, resolveEvent, buyItem, talkToNpc, talkToHome,
-    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek,
+    resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, markMoneyBlockedMonth,
     startGame, exitToTitle, chooseSemesterGoal, startRomanceRetry, consumeRomancePlan,
     startMonthPlayback, continuePlayback, pausePlayback, resumePlayback, finishMonth,
   } = useGameStore(useShallow(s => ({
@@ -80,6 +80,7 @@ export function GameScreen() {
     resolveParentTalkChoice: s.resolveParentTalkChoice,
     setPhase: s.setPhase,
     markMoneyBlockedWeek: s.markMoneyBlockedWeek,
+    markMoneyBlockedMonth: s.markMoneyBlockedMonth,
     chooseSemesterGoal: s.chooseSemesterGoal,
     startRomanceRetry: s.startRomanceRetry,
     consumeRomancePlan: s.consumeRomancePlan,
@@ -450,7 +451,7 @@ export function GameScreen() {
           nextLabel={state.week <= 48 ? getMonthBlock(state.week).label : null}
           moneyLeft={Math.round((state.money - (mm?.allowance ?? 0) + (mm?.routinePaid ?? 0)) * 10) / 10}
           nextMonthMoney={mm ? { allowance: mm.allowance, routinePaid: mm.routinePaid } : null}
-          missedTalks={runForLog.missedTalks}
+          missedTalks={totalTalks(runForLog.missedTalks)}
           onContinue={() => { setBigResultSeen(null); finishMonth(); }}
         />
       );
@@ -513,6 +514,7 @@ export function GameScreen() {
         existing={existing}
         onSetRoutine={setRoutine}
         onChooseGoal={chooseSemesterGoal}
+        onMoneyBlocked={markMoneyBlockedMonth}
         onStart={(plan) => {
           const reason = setMonthPlan(plan);
           if (reason === null) {

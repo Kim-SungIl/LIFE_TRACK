@@ -5,7 +5,8 @@ import { createInitialState, processWeek, getWeekInfo, settleMonthStartIfDue } f
 import { payRoutineIfDue } from './monthlyMoney';
 import { getCurrentMonthPlan, getPlannedWeek, validateMonthPlan } from './monthPlan';
 import {
-  MAX_TALK_BANK, boundaryStopAfter, checkPlannedWeek, createMonthRun, getMonthRun, hadTalkChance, recordWeek, talkBankCount, isWellFormedMonthRun,
+  addMissedTalks, boundaryStopAfter, checkPlannedWeek, createMonthRun, getMonthRun, migrateTalkLedgers, recordWeek, talkBankCount, talkChances,
+  totalTalks, isWellFormedMonthRun,
 } from './monthPlayback';
 import { getMonthBlock } from './weekMath';
 import { applyDeclinedInvites, validateInviteAnswers } from './monthInvites';
@@ -30,7 +31,9 @@ import {
   type RunDelta,
 } from './archive';
 import { calculateEnding } from './ending';
-import { recordMoneyBlockedWeek } from './moneyTrajectory';
+import { recordMoneyBlockedWeek, recordMoneyBlockedWeeks } from './moneyTrajectory';
+import { recordTelemetry } from './telemetry';
+import { isMonthlyPlanningEnabled } from './featureFlags';
 import { captureWeekendPlan } from './weekendPlan';
 import { saveLastSetup } from './lastSetup';
 import { pickSemesterGoal, type GoalOffer } from './semesterGoal';
@@ -199,6 +202,11 @@ interface GameStore {
   // 판정 주체가 UI인 이유: 그 주는 확정되지 않으므로 processWeek에 도달하지 않는다.
   markMoneyBlockedWeek: () => void;
   /**
+   * 월 계획 화면의 [이번 달 시작]이 돈 때문에 잠겼다 — 그 달 남은 주를 "막힌 주"로 한 번 센다(moneyTrajectory.ts 헤더).
+   * 같은 달은 한 번만. 화면이 매 렌더 알려와도 안전하다.
+   */
+  markMoneyBlockedMonth: () => void;
+  /**
    * T68 — 이번 학기 목표를 고른다. 판정(고를 수 있는 때·후보)은 `semesterGoal.ts` 하나다.
    * 제시된 후보가 아니거나 고를 수 없는 때면 아무것도 안 하고 false. 스탯·rng 무관(기록만).
    */
@@ -238,6 +246,11 @@ interface GameStore {
  */
 function commitOnEnding(prev: GameState, next: GameState): RunDelta | null {
   if (next.phase !== 'ending' || prev.phase === 'ending') return null;
+  // 계측(등급 분포) — 기록실과 같은 "한 판에 정확히 한 번" 자리. 기록실 중복 방지와는 따로 센다(계측은 판이 끝난 순간을 센다).
+  try {
+    const end = calculateEnding(next);
+    recordTelemetry({ t: 'ending', achievement: end.achievement, happiness: end.happiness, burnouts: next.burnoutCount ?? 0 });
+  } catch { /* 계측 실패가 엔딩을 막지 않는다 */ }
   try {
     // 같은 판을 두 번 세지 않는다 — 기록은 닿았는데 세이브가 엔딩 전에 머문 판(세이브 키만
     // 쓰기 실패)을 이어하기로 다시 끝내면 이 전이가 또 걸린다(archive.alreadyCommitted 참조).
@@ -259,8 +272,15 @@ function isPlanningPhase(s: GameState): boolean {
   return s.phase === 'weekday' || s.phase === 'weekend' || s.phase === 'vacation';
 }
 
-function pausedRun(run: MonthRun, stop: PlaybackStop, stopDetail?: string): MonthRun {
+function pausedRun(run: MonthRun, stop: PlaybackStop, stopDetail?: string, at?: Pick<GameState, 'year' | 'week'>): MonthRun {
+  // 계측(판당 월중 멈춤) — 재생이 멈추는 길은 모두 여기를 지난다(새로고침의 'reload'는 멈춤이 아니라 따로).
+  if (at) recordTelemetry({ t: 'stop', y: at.year, w: at.week, reason: stop });
   return { ...run, status: 'paused', stop, stopDetail, stopAtBoundary: undefined };
+}
+
+/** 계측 — 말걸기·가정 대화가 이야기로 이어진 순간(효과가 실제로 들어가는 자리에서만 부른다). */
+function noteTalk(s: Pick<GameState, 'year' | 'week'>, to: 'npc' | 'home'): void {
+  recordTelemetry({ t: 'talk', y: s.year, w: s.week, to });
 }
 
 /**
@@ -273,14 +293,23 @@ function playPlannedWeek(get: StoreGet, set: StoreSet): void {
   if (!s || !run || run.status !== 'playing' || !isPlanningPhase(s)) return;
   const invalid = checkPlannedWeek(s);
   if (invalid) {
-    set({ state: { ...s, monthRun: pausedRun(run, 'plan-invalid', invalid) } });
+    set({ state: { ...s, monthRun: pausedRun(run, 'plan-invalid', invalid, s) } });
     return;
   }
-  if (hadTalkChance(s)) {
-    set({ state: { ...s, monthRun: { ...run, missedTalks: Math.min(MAX_TALK_BANK, run.missedTalks + 1) } } });
+  const chances = talkChances(s);
+  if (chances.npc || chances.home) {
+    set({ state: { ...s, monthRun: { ...run, missedTalks: addMissedTalks(run.missedTalks, chances) } } });
   }
   const planned = getPlannedWeek(s)!;
   get().confirmWeek([...planned.activities], { ...planned.npcChoices });
+}
+
+/** 이 주가 이미 "막힌 달"로 센 구간(그 달 fromWeek~달 끝)에 드는가. 손상된 표시는 없는 것으로 본다. */
+function inBlockedMonth(s: GameState): boolean {
+  const m = s.moneyBlockedMonth;
+  if (!m || typeof m.year !== 'number' || typeof m.month !== 'number' || typeof m.fromWeek !== 'number') return false;
+  if (s.week < 1 || s.week > 48) return false;
+  return m.year === s.year && m.month === getMonthBlock(s.week).index && s.week >= m.fromWeek;
 }
 
 export const useGameStore = create<GameStore>((set, get) => ({
@@ -293,6 +322,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     // 판 신원 — **엔진이 아니라 여기서** 붙인다(types.ts runId 참조: 순수함수의 결정론을 안 깬다).
     // 아래 saveToStorage보다 먼저여야 세이브가 신원을 들고 간다.
     initial.runId = newRunId();
+    recordTelemetry({ t: 'run', monthly: isMonthlyPlanningEnabled() });
     // 튜토리얼 지연 — 시스템 설명보다 첫 장면(first-week, 지훈 재회)이 먼저 오도록 phase='event'로 부팅.
     // MainWeekScreen이 이벤트 동안 마운트되지 않아 튜토리얼 게이트는 장면 종료 후 첫 계획 화면에서 열리고,
     // week:1로 기록되므로 첫 주 결산의 fixed 선택에서 중복 발동하지 않는다.
@@ -361,6 +391,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 근거가 없어 이 호출이 유일한 복구 경로다. 판정·멱등의 근거는 archive.needsRecommit.
       if (needsRecommit(loaded)) commitRun(loaded, calculateEnding(loaded).title);
       // 재생 중에 껐다 켰으면 멈춘 채로 연다(설계안 §10). 사건·카드 중이었으면 그 화면을 마치고 경계에서 선다.
+      migrateTalkLedgers(loaded);
       if (loaded.monthRun !== undefined && !isWellFormedMonthRun(loaded.monthRun)) delete loaded.monthRun;
       if (loaded.monthRun?.status === 'playing') loaded.monthRun = { ...loaded.monthRun, status: 'paused', stop: 'reload' };
       set({ state: loaded, runDelta: null });
@@ -593,7 +624,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   talkToNpc: (npcId) => {
     const s = get().state;
     if (!s) return { kind: 'smalltalk', line: '' };
-    const { state, result } = talkToNpcOutcome(s, npcId, { onMiniTalkFired: accrueTalk });
+    const { state, result } = talkToNpcOutcome(s, npcId, { onMiniTalkFired: (st, id) => { accrueTalk(st, id); noteTalk(st, 'npc'); } });
     if (state) set({ state });
     return result;
   },
@@ -616,18 +647,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 절정은 평생 1회 — 이 판을 완주하지 않으면 v1에서는 어디에도 남지 않았다.
       // 실제 이벤트 id를 넘긴다(합성 키는 CG 리졸버에서 절대 매칭되지 않는다).
       accrueParentEvent(newState, climax.id);
+      noteTalk(newState, 'home');
       set({ state: newState });
       return { kind: 'event', event: climax };
     }
 
-    if (s.parentEventPendingThisWeek || talkBankCount(s) > 0) {
+    if (s.parentEventPendingThisWeek || talkBankCount(s, 'home') > 0) {
       const available = getAvailableHomeEvents(s);
       if (available.length > 0 && !s.parentEventPendingThisWeek) {
         // 이번 주 기회가 없으면 지난달 재생이 지나친 적립(talkBank, 설계안 §8) 하나를 이번 주 기회로 바꿔 쓴다 —
         // 그 뒤는 평소 경로 그대로다(선택지 이벤트는 닫았다 열어도 같은 이벤트, 정산은 resolveParentTalkChoice).
         const converted = cloneGameState(s);
         converted.parentEventPendingThisWeek = true;
-        spendTalkBank(converted);
+        spendTalkBank(converted, 'home');
         set({ state: converted });
         return get().talkToHome();
       }
@@ -651,6 +683,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         newState.parentTalkPressure = 0;
         newState.parentEventPendingThisWeek = false;
         accrueParentEvent(newState, ev.id);
+        noteTalk(newState, 'home');
         set({ state: newState });
         return { kind: 'event', event: ev };
       }
@@ -687,6 +720,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     newState.parentTalkPressure = 0;
     newState.parentEventPendingThisWeek = false;
     accrueParentEvent(newState, ev.id);
+    noteTalk(newState, 'home');
     set({ state: newState });
   },
 
@@ -704,7 +738,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const run = getMonthRun(s);
     if (!run) { get().setPhase('weekday'); return; }
     const stop = run.status === 'playing' ? run.stopAtBoundary : (run.stop ?? 'player');
-    set({ state: { ...s, phase: 'weekday', monthRun: stop ? pausedRun(run, stop) : run } });
+    set({ state: { ...s, phase: 'weekday', monthRun: stop ? pausedRun(run, stop, undefined, s) : run } });
     if (!stop) playPlannedWeek(get, set);
   },
 
@@ -712,7 +746,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     const run = s && getMonthRun(s);
     if (!s || !run || run.status !== 'playing') return;
-    if (isPlanningPhase(s)) set({ state: { ...s, monthRun: pausedRun(run, reason) } });
+    if (isPlanningPhase(s)) set({ state: { ...s, monthRun: pausedRun(run, reason, undefined, s) } });
     else if (!run.stopAtBoundary) set({ state: { ...s, monthRun: { ...run, stopAtBoundary: reason } } });
   },
 
@@ -728,11 +762,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     if (!s || !s.monthRun) return;
     const next = cloneGameState(s);
-    const missed = Math.min(MAX_TALK_BANK, s.monthRun.missedTalks);
+    const missed = s.monthRun.missedTalks;
     delete next.monthRun;
-    // 지난달 적립은 여기서 끝난다(다음 달로 안 넘어감). 이번 달 재생이 지나친 만큼만 다음 달에 쓴다.
-    if (missed > 0 && next.week >= 1 && next.week <= 48) {
-      next.talkBank = { year: next.year, month: getMonthBlock(next.week).index, count: missed };
+    // 지난달 적립은 여기서 끝난다(다음 달로 안 넘어감). 이번 달 재생이 지나친 만큼만, 놓친 쪽으로 다음 달에 쓴다.
+    if (totalTalks(missed) > 0 && next.week >= 1 && next.week <= 48) {
+      next.talkBank = { year: next.year, month: getMonthBlock(next.week).index, npc: missed.npc, home: missed.home };
     } else {
       delete next.talkBank;
     }
@@ -757,9 +791,29 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!s) return;
     const stamp = absWeek(s.year, s.week);
     if (s.moneyBlockedStamp === stamp) return;
+    // 이 주는 이미 막힌 달로 셌다(월 계획이 막힌 달의 남은 주) — 재생이 멈춘 주간 화면이 또 알려와도 겹쳐 세지 않는다.
+    if (inBlockedMonth(s)) return;
     // 배열을 새로 만들지 않는 recordMoneyBlockedWeek 규약 때문에 구세이브에선 조용히 no-op이다.
     const next = { ...s, moneyBlockedStamp: stamp };
     recordMoneyBlockedWeek(next);
+    set({ state: next });
+  },
+
+  markMoneyBlockedMonth: () => {
+    const s = get().state;
+    if (!s || s.week < 1 || s.week > 48) return;
+    const block = getMonthBlock(s.week);
+    const m = s.moneyBlockedMonth;
+    if (m && m.year === s.year && m.month === block.index) return;
+    // 이번 주를 주간 화면이 이미 셌으면 그 주는 빼고 센다(같은 주를 두 번 세지 않는다).
+    const weeks = block.endWeek - s.week + 1 - (s.moneyBlockedStamp === absWeek(s.year, s.week) ? 1 : 0);
+    // 배열은 새로 만든다 — 기록기는 제자리에 더하므로, 얕은 복사본에 그대로 쓰면 이전 상태의 배열까지 바뀐다.
+    const next: GameState = {
+      ...s,
+      moneyBlockedMonth: { year: s.year, month: block.index, fromWeek: s.week },
+      moneyBlockedWeeksByYear: s.moneyBlockedWeeksByYear ? [...s.moneyBlockedWeeksByYear] : s.moneyBlockedWeeksByYear,
+    };
+    recordMoneyBlockedWeeks(next, weeks);
     set({ state: next });
   },
 

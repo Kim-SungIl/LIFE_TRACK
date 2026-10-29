@@ -1,11 +1,11 @@
-// 기능 플래그 — 아직 다 붙지 않은 큰 기능을 켜고 끈다.
+// 기능 플래그 — 큰 기능을 켜고 끈다.
 //
-// **월 단위 계획(MONTHLY_PLANNING).** 4단계(월 계획 화면)까지 들어왔지만 4주 자동 진행(5단계)·튜토리얼 개편(6단계)이
-// 아직이다. 지금 켜면 첫 판 튜토리얼이 가리키는 주간 화면 요소가 첫 화면에 없고, 배포 E2E(verify:dist-e2e)의
-// "이어하기 → 루틴 → 확정" 경로가 월 계획 화면에 막힌다. 그래서 기본은 꺼 두고, 디렉터가 직접 해 볼 수 있게
-// 브라우저 저장소 키로 켠다: 개발자 도구 콘솔에서 `localStorage.setItem('lifetrack_monthly_planning', '1')` 뒤 새로고침.
-// 5·6단계가 끝나면 기본값을 켠다(docs/monthly-plan-design-2026-10.md §12).
-export const MONTHLY_PLANNING_DEFAULT = false;
+// **월 단위 계획(MONTHLY_PLANNING) — 기본값 켜짐.** 한 달 계획 화면 → 4주 자동 진행 → 월말 결산이 기본 흐름이다
+// (docs/monthly-plan-design-2026-10.md). 막고 있던 둘을 풀고 켰다:
+//   · 첫 판 튜토리얼 — 월 계획 화면에 MONTH_PLAN_STEPS, 재생이 멈춰 주간 화면이 처음 뜰 때 MAIN_INFO_STEPS(tutorialSteps.ts)
+//   · 배포 E2E — verify:dist-e2e가 이어하기 → 월 계획 → 시작 → 재생 카드 → 멈춤 → 새로고침 경로를 걷는다
+// 주 단위로 되돌려 보려면 개발자 도구 콘솔에서 `localStorage.setItem('lifetrack_monthly_planning', '0')` 뒤 새로고침.
+export const MONTHLY_PLANNING_DEFAULT = true;
 export const MONTHLY_PLANNING_KEY = 'lifetrack_monthly_planning';
 
 /** 월 계획 화면을 쓰는가. 저장소가 막힌 환경에서는 기본값. */

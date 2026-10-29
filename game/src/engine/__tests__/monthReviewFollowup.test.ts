@@ -214,7 +214,7 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
     const raw = JSON.parse(storage.get('lifetrack_save')!);
     const target = raw.state ?? raw;
     target.monthRun = {
-      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [entry], missedTalks: 0,
+      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [entry], missedTalks: { npc: 0, home: 0 },
       startStats: { ...s.stats }, startIntimacy: {}, startMoney: 30,
     };
     storage.set('lifetrack_save', JSON.stringify(raw));
@@ -225,6 +225,8 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
 
   it.each([
     ['missedTalks가 없다', { missedTalks: undefined }],
+    ['missedTalks 한쪽이 음수다', { missedTalks: { npc: -1, home: 0 } }],
+    ['missedTalks가 문자열이다', { missedTalks: '2' }],
     ['startMoney가 문자열이다', { startMoney: '30' }],
     ['startIntimacy가 없다', { startIntimacy: undefined }],
   ])('장부 최상위 필드가 깨져도 버린다(%s)', (_label, patch) => {
@@ -235,7 +237,7 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
     const raw = JSON.parse(storage.get('lifetrack_save')!);
     const target = raw.state ?? raw;
     target.monthRun = {
-      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [], missedTalks: 0,
+      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [], missedTalks: { npc: 0, home: 0 },
       startStats: { ...s.stats }, startIntimacy: {}, startMoney: 30, ...patch,
     };
     storage.set('lifetrack_save', JSON.stringify(raw));
@@ -248,7 +250,7 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
     const s = at(6);
     s.monthPlan = plan(s);
     s.monthRun = {
-      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', missedTalks: 1,
+      year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', missedTalks: { npc: 1, home: 2 },
       log: [{ week: 5, auto: true, timeCost: 0, routineMissed: 0, choiceMissed: 0, burnout: false, promises: [{ npcId: 'jihun', kept: true }] }],
       startStats: { ...s.stats }, startIntimacy: {}, startMoney: 30,
     };
@@ -256,8 +258,41 @@ describe('손상된 재생 장부 — 세이브를 읽을 때 버린다', () => 
     store.getState().setRoutine('self-study', null);
     store.setState({ state: null });
     expect(store.getState().loadSavedGame()).toBe(true);
-    expect(store.getState().state!.monthRun).toMatchObject({ status: 'paused', stop: 'player', missedTalks: 1 });
+    expect(store.getState().state!.monthRun).toMatchObject({ status: 'paused', stop: 'player', missedTalks: { npc: 1, home: 2 } });
     expect(store.getState().state!.monthRun!.log).toHaveLength(1);
+  });
+
+  it('분리 전 세이브의 한 통 장부는 친구 몫으로 옮긴다(재생 장부·적립 둘 다) — 판정할 수 없는 적립은 버린다', () => {
+    const load = (patch: (target: Record<string, unknown>) => void) => {
+      const s = at(6);
+      s.monthPlan = plan(s);
+      store.setState({ state: s, npcActivityMap: {} });
+      store.getState().setRoutine('self-study', null);
+      const raw = JSON.parse(storage.get('lifetrack_save')!);
+      const target = raw.state ?? raw;
+      target.monthRun = {
+        year: 2, month: getMonthBlock(6).index, status: 'paused', stop: 'player', log: [], missedTalks: 0,
+        startStats: { ...s.stats }, startIntimacy: {}, startMoney: 30,
+      };
+      patch(target);
+      storage.set('lifetrack_save', JSON.stringify(raw));
+      store.setState({ state: null });
+      expect(store.getState().loadSavedGame()).toBe(true);
+      return store.getState().state!;
+    };
+    const block = getMonthBlock(6).index;
+    const legacy = load(t => {
+      (t.monthRun as Record<string, unknown>).missedTalks = 3;
+      t.talkBank = { year: 2, month: block, count: 2 };
+    });
+    expect(legacy.monthRun?.missedTalks).toEqual({ npc: 3, home: 0 });
+    expect(legacy.talkBank).toEqual({ year: 2, month: block, npc: 2, home: 0 });
+    // 옛 상한(4)을 넘는 손상값은 상한으로 접는다 — 새 장부의 합 상한과 같은 수.
+    expect(load(t => { t.talkBank = { year: 2, month: block, count: 9 }; }).talkBank).toEqual({ year: 2, month: block, npc: 4, home: 0 });
+    expect(load(t => { t.talkBank = { year: 2, month: block, npc: 1, home: 1 }; }).talkBank, '새 모양은 그대로').toEqual({ year: 2, month: block, npc: 1, home: 1 });
+    expect(load(t => { t.talkBank = { year: 2, month: block, count: -1 }; }).talkBank).toBeUndefined();
+    expect(load(t => { t.talkBank = { year: 2, count: 2 }; }).talkBank).toBeUndefined();
+    expect(load(t => { t.talkBank = 'x'; }).talkBank).toBeUndefined();
   });
 });
 

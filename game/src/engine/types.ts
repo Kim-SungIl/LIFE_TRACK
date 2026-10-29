@@ -163,6 +163,11 @@ export interface GameState {
   // 같은 주를 두 번 세지 않기 위한 절대주차 스탬프((year-1)*48 + week). UI가 매 렌더 알려오므로 필요하다.
   moneyBlockedStamp?: number;
   /**
+   * 돈 때문에 월 계획을 시작하지 못한 달 — 그 달의 fromWeek부터 달 끝까지를 이미 "막힌 주"로 셌다(store.markMoneyBlockedMonth).
+   * 같은 달을 두 번 세지 않고, 그 달 안에서 주간 화면이 또 알려와도(재생이 멈춘 주) 겹쳐 세지 않기 위한 표시다.
+   */
+  moneyBlockedMonth?: { year: number; month: number; fromWeek: number };
+  /**
    * 월 단위 돈(달 초 용돈·루틴 선불, monthlyMoney.ts)으로 도는 판인가. 새 판은 true로 시작하고,
    * 구세이브(없음)는 첫 달 초를 만날 때까지 예전 매주 방식으로 돌다가 그때 켜진다.
    */
@@ -343,8 +348,8 @@ export interface MonthRun {
   stopAtBoundary?: PlaybackStop;
   /** 이번 달에 처리한 주(손으로 확정한 주 포함), 처리한 순서대로. */
   log: MonthRunWeek[];
-  /** 재생이 지나친 대화 기회 — 달이 끝나면 다음 달 talkBank가 된다(최대 4). */
-  missedTalks: number;
+  /** 재생이 지나친 대화 기회 — 친구·가정을 따로 센다(합쳐 최대 4). 달이 끝나면 다음 달 talkBank가 된다. */
+  missedTalks: TalkCounts;
   /** 달을 시작할 때의 능력치·친밀도 — 월말 결산의 변화 배지(숫자 없음)가 이것과 비교한다. */
   startStats: Stats;
   startIntimacy: Record<string, number>;
@@ -368,11 +373,16 @@ export interface MonthRunWeek {
   promises: { npcId: string; kept: boolean }[];
 }
 
-/** 지난달 재생이 지나친 대화 기회 — 이번 달(year, month)에만 쓴다. */
-export interface TalkBank {
+/** 대화 기회 수 — 친구 말걸기(npc)와 가정 대화(home). 한 통으로 세면 놓친 가정 기회가 친구 미니 이벤트로 바뀐다. */
+export interface TalkCounts {
+  npc: number;
+  home: number;
+}
+
+/** 지난달 재생이 지나친 대화 기회 — 이번 달(year, month)에만, 놓친 쪽(친구/가정)으로만 쓴다. */
+export interface TalkBank extends TalkCounts {
   year: number;
   month: number;
-  count: number;
 }
 
 /** 친구 초대 한 건 — 그 주(week)의 그 칸(slotIdx)에 그 활동(activityId)을 같이 하자는 제안. */
