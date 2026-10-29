@@ -18,6 +18,7 @@ import { generateMonthInvites } from '../../engine/monthInvites';
 import { MONTHLY_PLANNING_KEY } from '../../engine/featureFlags';
 import { getWeekInfo } from '../../engine/weekMath';
 import { isMonthEndWeek } from '../../engine/monthPlayback';
+import { CHOICE_LINES, ROUTINE_LINES } from '../../engine/talkData/playbackLines';
 import type { GameState, MonthPlan, WeekLog } from '../../engine/types';
 
 const api = () => useGameStore.getState();
@@ -102,6 +103,12 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
     expect(onContinue).not.toHaveBeenCalled();
   });
 
+  it('사건이 없는 주는 그 주에 실제로 한 활동의 한 줄 — 결산 독백이 아니라(설계안 §11)', () => {
+    const quiet: WeekLog = { ...log, messages: [], played: { routines: [{ id: 'self-study', stage: 1, reached: false }], choices: ['reading'] } };
+    render(<PlaybackCard {...base} weekLog={quiet} resultDialogue="괜찮은 한 주였다." fast={false} onContinue={vi.fn()} />);
+    expect(CHOICE_LINES.reading).toContain(screen.getByTestId('playback-hero').textContent);
+  });
+
   it('지친 상태면 배지로 또렷이 보인다(멈추지는 않는다)', () => {
     render(<PlaybackCard {...base} state={at(7, { mentalState: 'tired' })} fast={false} onContinue={vi.fn()} />);
     expect(screen.getByTestId('playback-tired')).toBeTruthy();
@@ -109,6 +116,19 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
 });
 
 describe('GameScreen 라우팅', () => {
+  it('재생한 주의 카드는 엔진이 적은 그 주의 활동(played)으로 한 줄을 고른다', () => {
+    playingFrom(5);
+    // 이 픽스처(Y2 새 판)는 첫 만남 사건이 매주 뜬다 — 사건 주의 머리 줄은 위 테스트가 본다. 여기선 엔진이 적은
+    // played는 그대로 두고 사건 문장·마일스톤만 걷어, 사건 없는 주의 카드가 무엇을 고르는지 본다.
+    const w = now().weekLog!;
+    expect(w.played?.choices.length, '전제: 계획의 주말 칸이 실제로 돌았다').toBeGreaterThan(0);
+    for (const id of w.played!.choices) expect(['reading', 'rest']).toContain(id);
+    useGameStore.setState({ state: { ...now(), weekLog: { ...w, messages: w.messages.filter(m => !m.startsWith('📖')), milestoneMessages: [], examResult: undefined } } });
+    render(<GameScreen />);
+    expect(screen.getByTestId('playback-card')).toBeTruthy();
+    expect([...CHOICE_LINES.reading, ...CHOICE_LINES.rest, ...ROUTINE_LINES['self-study'].flat()]).toContain(screen.getByTestId('playback-hero').textContent);
+  });
+
   it('재생이 처리한 주의 결산은 카드로, ⏸ 하면 멈춘 주간 화면(띠)으로 간다', async () => {
     playingFrom(5);
     render(<GameScreen />);

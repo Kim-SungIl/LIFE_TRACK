@@ -1025,6 +1025,17 @@ function moneyAssured(state: GameState): GameState {
   return { ...state, money: Number.POSITIVE_INFINITY };
 }
 
+/**
+ * 재생 카드의 한 줄(talkData/playbackLines.ts)이 읽는 "이번 주 실제로 한 루틴" — 기록만 한다(성장·rng 무관).
+ * 단계는 보너스 티어와 같은 축이다(routineTierIndex + 1, strict 부모 보정 포함): 0 = 아직 3주 전, 3 = 습관.
+ * `reached`는 이번 주로 새 단계에 닿았나 — 카드가 그 주를 루틴의 주로 고른다.
+ */
+function notePlayedRoutine(log: WeekLog, id: string, weeksAfter: number, boost: number): void {
+  const stage = routineTierIndex(weeksAfter + boost) + 1;
+  const before = routineTierIndex(weeksAfter - 1 + boost) + 1;
+  (log.played ??= { routines: [], choices: [] }).routines.push({ id, stage, reached: stage > before });
+}
+
 // 루틴 활동 (학기 중 방과후). timeCost(이벤트 소모)로 슬롯 스킵, strict 부모 루틴 보너스 +1주.
 function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number): void {
   if (timeCost > 0) {
@@ -1062,6 +1073,7 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
       } else {
         applyActivity(state, state.routineSlot2, log, r2Bonus, 1.0, r2Prepaid);
         state.routineSlot2Weeks++;
+        notePlayedRoutine(log, r2.id, state.routineSlot2Weeks, boost);
       }
     }
     if (state.routineSlot3 && timeCost < 1) {
@@ -1077,6 +1089,7 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
       } else {
         applyActivity(state, state.routineSlot3, log, r3Bonus, 1.0, r3Prepaid);
         state.routineSlot3Weeks++;
+        notePlayedRoutine(log, r3.id, state.routineSlot3Weeks, boost);
       }
     }
     // timeCost로 스킵해도 카운터는 유지 (습관은 남아있음)
@@ -1290,6 +1303,7 @@ export function processWeek(state: GameState, npcActivityMap?: Record<string, st
 
   // 4. 주말/방학 선택 활동 — 돈 부족하면 스킵, timeCost로 슬롯 감소
   const appliedChoices = applyWeekendActivities(newState, log, timeCost);
+  if (appliedChoices.length > 0) (log.played ??= { routines: [], choices: [] }).choices = appliedChoices.map(i => i.id);
   // T68 학기 목표 — 이번 주 주말 실행·동행을 기록만 한다(스탯·rng 무관). 판정은 아래 week++ 직전.
   markSemesterGoalWeek(newState, appliedChoices, npcActivityMap);
   // 월 계획의 약속(친구 초대를 수락한 칸) — 실제로 했는지 본다. 못 지켰으면 친밀도 −2와 한 줄(monthInvites.ts).
