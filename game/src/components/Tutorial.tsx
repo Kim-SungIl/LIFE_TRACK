@@ -1,15 +1,17 @@
 import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
-import { STEPS } from './tutorialSteps';
+import { STEPS, type TutorialStep } from './tutorialSteps';
 import { focusFirst, isTopLayer, popLayer, pushLayer, trapTab } from './focusTrap';
 import { CARD_FALLBACK_HEIGHT, HIGHLIGHT_PAD, placeTooltip, scrollPlan } from './tutorialPlacement';
 
 interface Props {
   onComplete: () => void;
   routineSet?: boolean; // 루틴 설정 완료 여부
+  /** 보여 줄 스텝 — 주간 화면(STEPS, 기본)과 월 계획 화면(MONTH_PLAN_STEPS)이 같은 코치마크를 쓴다. 마운트 동안 바꾸지 말 것(스텝 번호가 밀린다). */
+  steps?: readonly TutorialStep[];
 }
 
-export function Tutorial({ onComplete, routineSet = false }: Props) {
+export function Tutorial({ onComplete, routineSet = false, steps = STEPS }: Props) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [waitDone, setWaitDone] = useState(false);
@@ -18,8 +20,8 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
   const cardRef = useRef<HTMLDivElement>(null);
   const [cardH, setCardH] = useState(0);
 
-  const current = STEPS[step];
-  const isLast = step === STEPS.length - 1;
+  const current = steps[step];
+  const isLast = step === steps.length - 1;
 
   const updateRect = useCallback(() => {
     const el = document.querySelector(`[data-tutorial="${current.target}"]`);
@@ -140,12 +142,12 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
       updateRect();
       // 1.5초 후 자동으로 다음 스텝
       const timer = setTimeout(() => {
-        if (step < STEPS.length - 1) setStep(step + 1);
+        if (step < steps.length - 1) setStep(step + 1);
         setWaitDone(false);
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [routineSet, current.waitFor, updateRect, step]);
+  }, [routineSet, current.waitFor, updateRect, step, steps.length]);
 
   const pad = HIGHLIGHT_PAD;
   const isInteractive = current.interactive && !waitDone;
@@ -276,7 +278,7 @@ export function Tutorial({ onComplete, routineSet = false }: Props) {
         }}>
           {/* 진행 표시 */}
           <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
-            {STEPS.map((_, i) => (
+            {steps.map((_, i) => (
               <div key={i} style={{
                 flex: 1, height: 3, borderRadius: 2,
                 background: i <= step ? 'var(--accent)' : 'rgba(255,255,255,0.15)',

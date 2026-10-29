@@ -55,6 +55,7 @@ beforeEach(() => {
   cleanup();
   localStorage.clear();
   localStorage.setItem('lifetrack_tutorial_ever_seen', '1');
+  localStorage.setItem('lifetrack_month_tutorial_seen', '1'); // 월 계획 화면 튜토리얼은 monthTutorial.test가 본다
   localStorage.setItem('lifetrack_rest_ack', '1');
   useGameStore.setState({ state: null, npcActivityMap: {} });
 });
@@ -125,6 +126,7 @@ describe('한 달 계획 화면 — 짜고, 예산이 움직이고, 시작하면
 
 describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
   it('플래그가 꺼져 있으면 예전처럼 주간 화면이 먼저 뜬다', () => {
+    localStorage.setItem(MONTHLY_PLANNING_KEY, '0');
     useGameStore.setState({ state: aprilStart() });
     render(<GameScreen />);
     expect(screen.queryByTestId('month-plan')).toBeNull();
