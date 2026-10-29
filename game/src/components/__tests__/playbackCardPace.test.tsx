@@ -50,6 +50,7 @@ describe('cardDwellMs — 글자 수에 비례, 하한·상한', () => {
     for (let n = 1; n <= 300; n++) expect(cardDwellMs(n)).toBeGreaterThanOrEqual(cardDwellMs(n - 1));
     // 예전 고정값(2.2초)보다 짧은 카드는 없다 — 하한이 그 위다. 실제 카드는 대부분 하한에 머문다(사건 문장 p90 51자).
     expect(CARD_DWELL_MIN_MS).toBeGreaterThan(2200);
+    expect(CARD_DWELL_MIN_MS, '하한은 3자 검수 뒤 사용자가 정한 값(2026-10-29)').toBe(4000);
     expect(cardDwellMs(51), '흔한 카드(p90)가 하한에 머문다는 전제').toBe(CARD_DWELL_MIN_MS);
   });
 });
@@ -147,6 +148,19 @@ describe('누르고 있으면 멈춘다', () => {
     fireEvent.pointerUp(tap);
     fireEvent.click(tap);
     expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('길게 누른 채 카드 밖으로 끌고 나가면(click 없음) 다음 짧은 탭이 삼켜지지 않는다', () => {
+    const onContinue = vi.fn();
+    render(<PlaybackCard {...props(SHORT, { onContinue })} />);
+    const tap = screen.getByRole('button', { name: '다음 주로' });
+    fireEvent.pointerDown(tap);
+    act(() => { vi.advanceTimersByTime(LONG_PRESS_MS + 100); });
+    fireEvent.pointerLeave(card()); // 끌고 나감 — 브라우저는 click을 안 낸다
+    fireEvent.pointerDown(tap);
+    fireEvent.pointerUp(tap);
+    fireEvent.click(tap);
+    expect(onContinue, '지난 누름의 삼킴이 남아 짧은 탭을 먹었다').toHaveBeenCalledTimes(1);
   });
 
   it('다 된 타이머 위로 누르고 떼도 최소 시간은 기다린다 — 터치의 늦은 click에도 ⏸가 먹힌다', () => {
