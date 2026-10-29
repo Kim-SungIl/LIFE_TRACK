@@ -5,7 +5,8 @@ import { createInitialState, processWeek, getWeekInfo, settleMonthStartIfDue } f
 import { payRoutineIfDue } from './monthlyMoney';
 import { getCurrentMonthPlan, getPlannedWeek, validateMonthPlan } from './monthPlan';
 import {
-  MAX_TALK_BANK, boundaryStopAfter, checkPlannedWeek, createMonthRun, getMonthRun, hadTalkChance, recordWeek, talkBankCount, isWellFormedMonthRun,
+  addMissedTalks, boundaryStopAfter, checkPlannedWeek, createMonthRun, getMonthRun, migrateTalkLedgers, recordWeek, talkBankCount, talkChances,
+  totalTalks, isWellFormedMonthRun,
 } from './monthPlayback';
 import { getMonthBlock } from './weekMath';
 import { applyDeclinedInvites, validateInviteAnswers } from './monthInvites';
@@ -276,8 +277,9 @@ function playPlannedWeek(get: StoreGet, set: StoreSet): void {
     set({ state: { ...s, monthRun: pausedRun(run, 'plan-invalid', invalid) } });
     return;
   }
-  if (hadTalkChance(s)) {
-    set({ state: { ...s, monthRun: { ...run, missedTalks: Math.min(MAX_TALK_BANK, run.missedTalks + 1) } } });
+  const chances = talkChances(s);
+  if (chances.npc || chances.home) {
+    set({ state: { ...s, monthRun: { ...run, missedTalks: addMissedTalks(run.missedTalks, chances) } } });
   }
   const planned = getPlannedWeek(s)!;
   get().confirmWeek([...planned.activities], { ...planned.npcChoices });
@@ -361,6 +363,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       // 근거가 없어 이 호출이 유일한 복구 경로다. 판정·멱등의 근거는 archive.needsRecommit.
       if (needsRecommit(loaded)) commitRun(loaded, calculateEnding(loaded).title);
       // 재생 중에 껐다 켰으면 멈춘 채로 연다(설계안 §10). 사건·카드 중이었으면 그 화면을 마치고 경계에서 선다.
+      migrateTalkLedgers(loaded);
       if (loaded.monthRun !== undefined && !isWellFormedMonthRun(loaded.monthRun)) delete loaded.monthRun;
       if (loaded.monthRun?.status === 'playing') loaded.monthRun = { ...loaded.monthRun, status: 'paused', stop: 'reload' };
       set({ state: loaded, runDelta: null });
@@ -620,14 +623,14 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return { kind: 'event', event: climax };
     }
 
-    if (s.parentEventPendingThisWeek || talkBankCount(s) > 0) {
+    if (s.parentEventPendingThisWeek || talkBankCount(s, 'home') > 0) {
       const available = getAvailableHomeEvents(s);
       if (available.length > 0 && !s.parentEventPendingThisWeek) {
         // 이번 주 기회가 없으면 지난달 재생이 지나친 적립(talkBank, 설계안 §8) 하나를 이번 주 기회로 바꿔 쓴다 —
         // 그 뒤는 평소 경로 그대로다(선택지 이벤트는 닫았다 열어도 같은 이벤트, 정산은 resolveParentTalkChoice).
         const converted = cloneGameState(s);
         converted.parentEventPendingThisWeek = true;
-        spendTalkBank(converted);
+        spendTalkBank(converted, 'home');
         set({ state: converted });
         return get().talkToHome();
       }
@@ -728,11 +731,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     if (!s || !s.monthRun) return;
     const next = cloneGameState(s);
-    const missed = Math.min(MAX_TALK_BANK, s.monthRun.missedTalks);
+    const missed = s.monthRun.missedTalks;
     delete next.monthRun;
-    // 지난달 적립은 여기서 끝난다(다음 달로 안 넘어감). 이번 달 재생이 지나친 만큼만 다음 달에 쓴다.
-    if (missed > 0 && next.week >= 1 && next.week <= 48) {
-      next.talkBank = { year: next.year, month: getMonthBlock(next.week).index, count: missed };
+    // 지난달 적립은 여기서 끝난다(다음 달로 안 넘어감). 이번 달 재생이 지나친 만큼만, 놓친 쪽으로 다음 달에 쓴다.
+    if (totalTalks(missed) > 0 && next.week >= 1 && next.week <= 48) {
+      next.talkBank = { year: next.year, month: getMonthBlock(next.week).index, npc: missed.npc, home: missed.home };
     } else {
       delete next.talkBank;
     }

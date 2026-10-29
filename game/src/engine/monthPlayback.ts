@@ -18,7 +18,7 @@ import { getAvailableHomeEvents, getAvailableNpcEvents, getEligibleParentClimax 
 import { STAT_LABELS } from './types';
 import { getConfirmGate } from './weekendPlan';
 import { getMonthBlock, getWeekInfo } from './weekMath';
-import type { GameState, MonthRun, MonthRunWeek, PlaybackStop, StatKey } from './types';
+import type { GameState, MonthRun, MonthRunWeek, PlaybackStop, StatKey, TalkBank, TalkCounts } from './types';
 
 /** 한 달에 모을 수 있는 놓친 대화 기회 상한(디렉터 결정 2026-10-20 "최대 4, 다음 달로 안 넘어감"). */
 export const MAX_TALK_BANK = 4;
@@ -50,7 +50,7 @@ export function isWellFormedMonthRun(run: unknown): run is MonthRun {
   };
   return num(r.year) && num(r.month) && (r.status === 'playing' || r.status === 'paused')
     && Array.isArray(r.log) && r.log.every(okWeek)
-    && num(r.missedTalks) && num(r.startMoney)
+    && isTalkCounts(r.missedTalks) && num(r.startMoney)
     && !!r.startStats && typeof r.startStats === 'object' && !!r.startIntimacy && typeof r.startIntimacy === 'object';
 }
 
@@ -61,7 +61,7 @@ export function createMonthRun(state: GameState): MonthRun {
     month: getMonthBlock(state.week).index,
     status: 'playing',
     log: [],
-    missedTalks: 0,
+    missedTalks: { npc: 0, home: 0 },
     startStats: { ...state.stats },
     startIntimacy: Object.fromEntries(state.npcs.filter(n => n.met).map(n => [n.id, n.intimacy])),
     startMoney: state.money,
@@ -96,23 +96,73 @@ export function checkPlannedWeek(state: GameState): string | null {
 }
 
 /**
- * 이번 주에 쓸 수 있었던 대화 기회가 있었나 — 재생이 그 주를 지나치면 월 적립(§8)에 1을 더한다.
- * 말걸기 미니 이벤트(친밀도 30+ 친구 중 남은 이야기가 있는 친구) 또는 가정 미니 이벤트·절정 순간.
+ * 이번 주에 **지나치면 사라지는** 대화 기회 — 재생이 그 주를 지나치면 그 쪽(친구/가정) 적립(§8)에 1을 더한다.
+ *   · 친구: 말걸기 미니 이벤트(친밀도 30+ 친구 중 남은 이야기가 있는 친구)
+ *   · 가정: 가정 미니 이벤트
+ * 둘을 한 통으로 세면 놓친 가정 기회가 다음 달 친구 미니 이벤트(절친 통로)로 바뀐다 — 주 단위 판보다 대화가 늘었다
+ * (sim-monthly-vs-weekly: 친구 +10~14%, 가정 +20%). 절정 순간은 넣지 않는다 — 기한이 없어 지나쳐도 남아 있다.
  * 화면 배지(MainWeekScreen homeHasEvent)와 같은 근거를 쓴다 — 실제로 뜰 게 없으면 놓친 것도 아니다.
  */
-export function hadTalkChance(state: GameState): boolean {
-  const npcChance = state.npcEventPendingThisWeek && state.npcs.some(n =>
+export function talkChances(state: GameState): TalkCounts {
+  const npc = state.npcEventPendingThisWeek && state.npcs.some(n =>
     n.met && n.intimacy >= 30 && isNpcInteractable(n, state) && getAvailableNpcEvents(state, n.id).length > 0);
-  const homeChance = getEligibleParentClimax(state) != null
-    || (state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0);
-  return npcChance || homeChance;
+  const home = state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0;
+  return { npc: npc ? 1 : 0, home: home ? 1 : 0 };
 }
 
-/** 지금 쓸 수 있는 지난달 적립 대화 수(0이면 없음). */
-export function talkBankCount(state: Pick<GameState, 'talkBank' | 'year' | 'week'>): number {
+/** 재생 카드의 💬 배지 — 지나칠 기회가 있거나 절정 순간이 열려 있다. */
+export function hadTalkChance(state: GameState): boolean {
+  const c = talkChances(state);
+  return c.npc > 0 || c.home > 0 || getEligibleParentClimax(state) != null;
+}
+
+/** 이번 주 놓친 기회를 장부에 더한다 — 합쳐 MAX_TALK_BANK를 넘지 않게, 친구 몫부터. */
+export function addMissedTalks(missed: TalkCounts, chances: TalkCounts): TalkCounts {
+  const npc = Math.min(missed.npc + chances.npc, MAX_TALK_BANK - missed.home);
+  const home = Math.min(missed.home + chances.home, MAX_TALK_BANK - npc);
+  return { npc, home };
+}
+
+export function totalTalks(c: TalkCounts): number {
+  return c.npc + c.home;
+}
+
+/** 지금 쓸 수 있는 지난달 적립 대화 수 — `kind`를 주면 그 쪽만, 없으면 합(화면 안내문). */
+export function talkBankCount(state: Pick<GameState, 'talkBank' | 'year' | 'week'>, kind?: keyof TalkCounts): number {
   const bank = state.talkBank;
   if (!bank || state.week < 1 || state.week > 48) return 0;
-  return bank.year === state.year && bank.month === getMonthBlock(state.week).index ? bank.count : 0;
+  if (bank.year !== state.year || bank.month !== getMonthBlock(state.week).index) return 0;
+  return kind ? bank[kind] : totalTalks(bank);
+}
+
+function isTalkCounts(v: unknown): v is TalkCounts {
+  if (!v || typeof v !== 'object') return false;
+  const c = v as Record<string, unknown>;
+  return [c.npc, c.home].every(x => typeof x === 'number' && Number.isInteger(x) && x >= 0);
+}
+
+/**
+ * 세이브에서 읽은 대화 장부를 지금 모양으로 — 판정은 isWellFormedMonthRun보다 먼저.
+ * 분리 전 세이브는 친구·가정을 한 수(`number` / `count`)로 셌다. 어느 쪽이었는지 모르므로 **친구 몫**으로 옮긴다
+ * (그 장부는 원래 말걸기에도 쓸 수 있었다 — 플레이어가 본 "못 다한 이야기 N"이 사라지지 않게).
+ * 판정할 수 없는 talkBank는 접지 않고 버린다(#441 규약). monthRun의 손상은 isWellFormedMonthRun이 거부한다.
+ */
+export function migrateTalkLedgers(state: GameState): void {
+  const run = state.monthRun as (MonthRun & { missedTalks: unknown }) | undefined;
+  if (run && typeof run.missedTalks === 'number' && Number.isInteger(run.missedTalks) && run.missedTalks >= 0) {
+    state.monthRun = { ...run, missedTalks: { npc: Math.min(MAX_TALK_BANK, run.missedTalks), home: 0 } };
+  }
+  const bank = state.talkBank as unknown;
+  if (bank === undefined) return;
+  const b = (bank && typeof bank === 'object' ? bank : {}) as Record<string, unknown>;
+  const num = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
+  if (!num(b.year) || !num(b.month)) { delete state.talkBank; return; }
+  if (isTalkCounts(b)) return;
+  if (typeof b.count === 'number' && Number.isInteger(b.count) && b.count >= 0) {
+    state.talkBank = { year: b.year as number, month: b.month as number, npc: Math.min(MAX_TALK_BANK, b.count), home: 0 } satisfies TalkBank;
+    return;
+  }
+  delete state.talkBank;
 }
 
 /**

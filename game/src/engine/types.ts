@@ -343,8 +343,8 @@ export interface MonthRun {
   stopAtBoundary?: PlaybackStop;
   /** 이번 달에 처리한 주(손으로 확정한 주 포함), 처리한 순서대로. */
   log: MonthRunWeek[];
-  /** 재생이 지나친 대화 기회 — 달이 끝나면 다음 달 talkBank가 된다(최대 4). */
-  missedTalks: number;
+  /** 재생이 지나친 대화 기회 — 친구·가정을 따로 센다(합쳐 최대 4). 달이 끝나면 다음 달 talkBank가 된다. */
+  missedTalks: TalkCounts;
   /** 달을 시작할 때의 능력치·친밀도 — 월말 결산의 변화 배지(숫자 없음)가 이것과 비교한다. */
   startStats: Stats;
   startIntimacy: Record<string, number>;
@@ -368,11 +368,16 @@ export interface MonthRunWeek {
   promises: { npcId: string; kept: boolean }[];
 }
 
-/** 지난달 재생이 지나친 대화 기회 — 이번 달(year, month)에만 쓴다. */
-export interface TalkBank {
+/** 대화 기회 수 — 친구 말걸기(npc)와 가정 대화(home). 한 통으로 세면 놓친 가정 기회가 친구 미니 이벤트로 바뀐다. */
+export interface TalkCounts {
+  npc: number;
+  home: number;
+}
+
+/** 지난달 재생이 지나친 대화 기회 — 이번 달(year, month)에만, 놓친 쪽(친구/가정)으로만 쓴다. */
+export interface TalkBank extends TalkCounts {
   year: number;
   month: number;
-  count: number;
 }
 
 /** 친구 초대 한 건 — 그 주(week)의 그 칸(slotIdx)에 그 활동(activityId)을 같이 하자는 제안. */

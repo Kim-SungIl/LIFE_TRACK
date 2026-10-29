@@ -76,9 +76,9 @@ export type TalkActionResult =
   | { kind: 'event'; event: MiniTalkEvent }
   | { kind: 'smalltalk'; line: string };
 
-/** 지난달 적립 대화를 하나 쓴다(store.talkToNpc / talkToHome). */
-export function spendTalkBank(state: GameState): void {
-  if (state.talkBank) state.talkBank = { ...state.talkBank, count: Math.max(0, state.talkBank.count - 1) };
+/** 지난달 적립 대화를 그 쪽(친구 talkToNpc / 가정 talkToHome)에서 하나 쓴다. */
+export function spendTalkBank(state: GameState, kind: 'npc' | 'home'): void {
+  if (state.talkBank) state.talkBank = { ...state.talkBank, [kind]: Math.max(0, state.talkBank[kind] - 1) };
 }
 
 // ===== resolveEvent 단계 헬퍼 (state 직접 mutate) =====
@@ -384,8 +384,8 @@ export function talkToNpcOutcome(
   if (!isNpcInteractable(npc, s)) return { state: null, result: { kind: 'smalltalk', line: '' } };
 
   // 친밀도 30+ 일 때만 미니 이벤트 후보 — 그 외엔 잡담 한 줄
-  // 이번 주 기회가 없어도 지난달 재생이 지나친 기회(talkBank)가 남았으면 쓴다(설계안 §8 월 적립).
-  const fromBank = !s.npcEventPendingThisWeek && talkBankCount(s) > 0;
+  // 이번 주 기회가 없어도 지난달 재생이 지나친 **친구** 기회(talkBank.npc)가 남았으면 쓴다(설계안 §8 월 적립).
+  const fromBank = !s.npcEventPendingThisWeek && talkBankCount(s, 'npc') > 0;
   const eligible = npc.intimacy >= 30 && (s.npcEventPendingThisWeek || fromBank);
   if (eligible) {
     const available = getAvailableNpcEvents(s, npcId);
@@ -404,7 +404,7 @@ export function talkToNpcOutcome(
       applyMemorySlotFromMiniTalk(newState, ev.id, ev.memorySlotDraft);
       newState.talkEventsFired = [...newState.talkEventsFired, ev.id];
       newState.talkEventPressure = 0;
-      if (fromBank) spendTalkBank(newState);
+      if (fromBank) spendTalkBank(newState, 'npc');
       else newState.npcEventPendingThisWeek = false;
       hooks.onMiniTalkFired?.(newState, ev.id);
       return { state: newState, result: { kind: 'event', event: ev } };

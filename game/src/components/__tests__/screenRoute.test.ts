@@ -29,7 +29,7 @@ function resultAt(logWeek: number, patch: Partial<WeekLog> = {}, statePatch: Par
 }
 
 function runFor(week: number, auto: boolean): MonthRun {
-  return { year: 2, month: getMonthBlock(week).index, status: 'playing', log: [{ week, auto }], missedTalks: 0 } as unknown as MonthRun;
+  return { year: 2, month: getMonthBlock(week).index, status: 'playing', log: [{ week, auto }], missedTalks: { npc: 0, home: 0 } } as unknown as MonthRun;
 }
 
 function planFor(state: GameState): MonthPlan {
