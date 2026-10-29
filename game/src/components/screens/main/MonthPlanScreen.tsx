@@ -481,10 +481,9 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
             onComplete={() => {
               setShowTutorial(false);
               try {
+                // 이 화면 몫만 적는다 — 주간 화면이 메인이 된 뒤(2026-10-29) 주간 튜토리얼은 따로 끝까지 돈다. 예전처럼 done·ever_seen까지
+                // 적으면 주간 튜토리얼 도중 계획 화면을 열었다 돌아온 첫 판이 나머지 스텝(루틴·친구·확정)을 못 봤다(3자 검수).
                 localStorage.setItem(TUTORIAL_KEYS.monthSeen, '1');
-                // 계획 스텝은 여기서 배웠다 — 플래그를 꺼도 주간 판 계획 튜토리얼이 처음부터 다시 뜨지 않게.
-                localStorage.setItem(TUTORIAL_KEYS.done, '1');
-                localStorage.setItem(TUTORIAL_KEYS.everSeen, '1');
               } catch { /* storage unavailable */ }
             }}
           />

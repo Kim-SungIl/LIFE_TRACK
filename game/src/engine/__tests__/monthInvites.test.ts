@@ -250,3 +250,33 @@ describe('약속 — 그 주에 지켰는지(processWeek)', () => {
     expect(next.weekLog!.messages.some(m => m.startsWith('📌') || m.startsWith('💔'))).toBe(false);
   });
 });
+
+describe('초대는 달 단위로 정해진다 — 계획 화면을 닫고 다음 주에 다시 열어도 새로 뽑히지 않는다(3자 검수)', () => {
+  it('달 중간에 다시 뽑으면 달 첫 주에 뽑은 것 중 남은 주의 것과 같다 — 달의 모든 주에서', () => {
+    let seen = 0;
+    for (let seed = 0; seed < 200; seed++) {
+      const block = getMonthBlock(5);
+      const first = generateMonthInvites(at(block.startWeek, seed));
+      seen += first.length;
+      for (let w = block.startWeek; w <= block.endWeek; w++) {
+        expect(generateMonthInvites(at(w, seed)), `시드 ${seed} W${w}`).toEqual(first.filter(i => i.week >= w));
+      }
+    }
+    expect(seen, '전제: 초대가 실제로 뜨는 시드들을 지났다').toBeGreaterThan(50);
+  });
+  it('실제 판(runId 있음)은 주마다 전진하는 rngSeed와 상관없이 같은 달이면 같은 초대다 — 한 주를 진행해도', () => {
+    const block = getMonthBlock(5);
+    let seen = 0;
+    for (let k = 0; k < 60; k++) {
+      const runId = `run-${k}`;
+      const first = generateMonthInvites(at(block.startWeek, 1, { runId }));
+      seen += first.length;
+      // 다음 주엔 rngSeed가 전진해 있다 — 굴림을 흉내 내 다른 값으로 둔다.
+      expect(generateMonthInvites(at(block.startWeek + 1, 987654 + k, { runId }))).toEqual(first.filter(i => i.week >= block.startWeek + 1));
+    }
+    expect(seen, '전제: 초대가 뜨는 판들을 지났다').toBeGreaterThan(15);
+    // 판이 다르면 초대도 갈린다(시드가 runId를 읽는다는 양성 짝).
+    const sets = new Set(Array.from({ length: 30 }, (_, k) => JSON.stringify(generateMonthInvites(at(block.startWeek, 1, { runId: `other-${k}` })))));
+    expect(sets.size).toBeGreaterThan(3);
+  });
+});

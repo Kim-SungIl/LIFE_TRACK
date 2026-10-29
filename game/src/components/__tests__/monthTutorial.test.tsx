@@ -101,8 +101,9 @@ describe('월 계획 튜토리얼 — 한 번만, 영속 키', () => {
     fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
     expect(document.querySelector('[data-tutorial-card]')).toBeNull();
     expect(localStorage.getItem(TUTORIAL_KEYS.monthSeen)).toBe('1');
-    expect(localStorage.getItem(TUTORIAL_KEYS.everSeen)).toBe('1');
-    expect(localStorage.getItem(TUTORIAL_KEYS.done)).toBe('1');
+    // 주간 튜토리얼 키는 건드리지 않는다 — 주간 튜토리얼 도중 열었다 돌아와도 나머지 스텝이 남는다.
+    expect(localStorage.getItem(TUTORIAL_KEYS.everSeen)).toBeNull();
+    expect(localStorage.getItem(TUTORIAL_KEYS.done)).toBeNull();
     first.unmount();
     renderPlan(s);
     expect(document.querySelector('[data-tutorial-card]')).toBeNull();
@@ -143,7 +144,7 @@ describe('월 계획 튜토리얼 — 한 번만, 영속 키', () => {
 
 describe('주간 화면 — 월 단위 판은 계획 띠 스텝까지', () => {
   type Monthly = Parameters<typeof MainWeekScreen>[0]['monthly'];
-  const strip = (hasPlan: boolean): Monthly => ({ hasPlan, stopLine: null, talkBank: 0, onOpenPlan: noop, onAutoPlay: noop });
+  const strip = (hasPlan: boolean): Monthly => ({ hasPlan, stopLine: null, talkBank: 0, onOpenPlan: noop, onAutoPlay: () => null });
   const renderMain = (monthly: Monthly) => {
     const s = marchStart({ routineSlot2: 'self-study' });
     return render(

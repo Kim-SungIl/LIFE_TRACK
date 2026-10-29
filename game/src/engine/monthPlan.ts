@@ -28,6 +28,23 @@ export function getPlannedWeek(state: Pick<GameState, 'monthPlan' | 'year' | 'we
   return getCurrentMonthPlan(state)?.weeks.find(w => w.week === week) ?? null;
 }
 
+/**
+ * 계획의 이번 주 칸을 주간 화면에서 고친 칸으로 바꾼 남은 주 계획 — [▶ 남은 주 자동 진행]이 화면에서 손본 이번 주를 버리지 않게(3자 검수).
+ * 지난 주는 뺀다(validateMonthPlan은 지금 주부터 달 끝까지를 받는다). 동행 키는 그 칸의 동행 활동을 가리키는 것만 남긴다 —
+ * 화면은 칸을 바꿔도 예전 동행 키를 들고 있을 수 있다.
+ */
+export function withPlannedWeek(plan: MonthPlan, week: number, activities: readonly string[], npcChoices: Readonly<Record<string, string>>): MonthPlan {
+  const companions = Object.fromEntries(Object.entries(npcChoices).filter(([key]) => {
+    const m = /^(.+):(\d+)$/.exec(key);
+    return !!m && activities[Number(m[2])] === m[1] && NPC_COMPANION_ACTIVITIES.includes(m[1]);
+  }));
+  return {
+    ...plan,
+    weeks: plan.weeks.filter(w => w.week >= week)
+      .map(w => w.week === week ? { ...w, activities: [...activities], npcChoices: companions } : w),
+  };
+}
+
 /** 한 주 계획의 유료 활동비 합 — 여러 칸 활동은 한 번만, 수입 활동은 0. */
 export function plannedWeekCost(activities: readonly string[], year: number): number {
   return round1(collapseActivityChoicesWithSlots([...activities]).reduce((sum, inst) => {

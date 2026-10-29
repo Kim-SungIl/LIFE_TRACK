@@ -46,7 +46,10 @@ export const NO_INVITE_WEEK = 48;
 export function generateMonthInvites(state: GameState): MonthInvite[] {
   if (state.week < 1 || state.week > 48) return [];
   const block = getMonthBlock(state.week);
-  const weeks = Array.from({ length: block.endWeek - state.week + 1 }, (_, i) => state.week + i).filter(w => w !== NO_INVITE_WEEK);
+  // 초대는 **달 단위로 정해 두고** 남은 주의 것만 보인다 — 예전엔 시드와 주 목록이 지금 주를 읽어, 계획 화면을 닫고 다음 주에
+  // 다시 열면 초대가 새로 뽑혔다(주간 화면이 메인이 되며 [닫기]가 생긴 뒤 열린 구멍, 3자 검수). 시드는 판 신원(runId)으로 —
+  // rngSeed는 매주 굴림마다 전진하는 상태라 주를 빼도 다음 주엔 다른 값이다. runId가 없는 판(시뮬·테스트 픽스처)만 rngSeed.
+  const weeks = Array.from({ length: block.endWeek - block.startWeek + 1 }, (_, i) => block.startWeek + i).filter(w => w !== NO_INVITE_WEEK);
   if (weeks.length === 0) return [];
   const candidates = state.npcs
     .filter(n => n.met && n.intimacy >= INVITE_MIN_INTIMACY && isNpcEnrolled(n, state))
@@ -54,7 +57,7 @@ export function generateMonthInvites(state: GameState): MonthInvite[] {
     .sort();
   if (candidates.length === 0) return [];
 
-  const seed = fnv1a(`${state.year}:${block.index}:${state.week}:${state.rngSeed}`);
+  const seed = fnv1a(`${state.year}:${block.index}:${state.runId ?? state.rngSeed}`);
   const count = Math.min(seed % (MAX_INVITES_PER_MONTH + 1), candidates.length, weeks.length);
   const invites: MonthInvite[] = [];
   const usedNpc = new Set<string>();
@@ -78,7 +81,7 @@ export function generateMonthInvites(state: GameState): MonthInvite[] {
       activityId: examWeek ? 'study-group' : 'hang-out',
     });
   }
-  return invites.sort((a, b) => a.week - b.week);
+  return invites.filter(i => i.week >= state.week).sort((a, b) => a.week - b.week);
 }
 
 const sameInvite = (a: MonthInvite, b: MonthInvite) =>

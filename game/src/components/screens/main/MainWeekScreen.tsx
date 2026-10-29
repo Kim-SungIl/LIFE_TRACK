@@ -67,10 +67,18 @@ type Props = {
    * 그 이유와 [▶ 이어서 자동 진행]·[남은 주 다시 짜기]. 확정 버튼은 어느 경우든 이 주를 진행하는 주 행동이다.
    * 없으면(주간 진행 판) 띠를 안 그린다.
    */
-  monthly?: { hasPlan: boolean; stopLine: string | null; talkBank: number; onOpenPlan: () => void; onAutoPlay: () => void };
+  monthly?: {
+    hasPlan: boolean; stopLine: string | null; talkBank: number;
+    /** 이 화면에서 고르던 이번 주 칸을 넘긴다 — 계획 화면을 닫고 돌아오면 그대로 되살린다. */
+    onOpenPlan: (draft: WeekDraft) => void;
+    /** 화면에서 고친 이번 주 칸을 계획에 실은 뒤 자동 진행. 실을 수 없으면 이유를 돌려준다(띠가 보인다). */
+    onAutoPlay: (draft: WeekDraft) => string | null;
+  };
   /** 재생 카드의 💬/🛒로 멈췄으면 그 창을 연 채로 시작한다. */
   initialOverlay?: 'talk' | 'shop';
 };
+
+export type WeekDraft = { activities: string[]; npcChoices: Record<string, string> };
 
 export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal, monthly, initialOverlay }: Props) {
   // 이번 달 계획(월 계획 화면이 저장)이 있으면 그 주 칸으로 미리 채운다 — 확정은 그대로 이 화면의 CTA가 한다.
@@ -94,6 +102,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   useEffect(() => { if (!showHomeModal) setHomeSmalltalk(null); }, [showHomeModal]);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showShop, setShowShop] = useState(initialOverlay === 'shop');
+  const [autoPlayError, setAutoPlayError] = useState<string | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
     // ever_seen은 새 게임에도 유지되는 영속 플래그 — 한 번이라도 튜토리얼을 본/건너뛴 반복 플레이어는 자동 스킵.
@@ -341,7 +350,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
               <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
             )}
           </span>
-          <button type="button" className="btn-reset" data-testid="month-plan-open" onClick={() => { playSfx('tap'); monthly.onOpenPlan(); }}
+          <button type="button" className="btn-reset" data-testid="month-plan-open" onClick={() => { playSfx('tap'); monthly.onOpenPlan({ activities: selectedActivities, npcChoices }); }}
             style={{ minHeight: 44, padding: '0 14px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
             📅 이번 달 계획
           </button>
@@ -358,12 +367,13 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
           {monthly.talkBank > 0 && (
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
           )}
+          {autoPlayError && <span role="alert" style={{ fontSize: '0.75rem', color: 'var(--red)' }}>{autoPlayError}</span>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
-            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); monthly.onAutoPlay(); }}
+            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); setAutoPlayError(monthly.onAutoPlay({ activities: selectedActivities, npcChoices })); }}
               style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(240,164,122,0.5)', background: 'var(--bg-secondary)', color: 'var(--accent)', fontWeight: 700, fontSize: '0.82rem' }}>
               {monthly.stopLine ? '▶ 이어서 자동 진행' : '▶ 남은 주 자동 진행'}
             </button>
-            <button type="button" className="btn-reset" data-testid="playback-replan" onClick={() => { playSfx('tap'); monthly.onOpenPlan(); }}
+            <button type="button" className="btn-reset" data-testid="playback-replan" onClick={() => { playSfx('tap'); monthly.onOpenPlan({ activities: selectedActivities, npcChoices }); }}
               style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem' }}>
               {monthly.stopLine ? '남은 주 다시 짜기' : '계획 고치기'}
             </button>

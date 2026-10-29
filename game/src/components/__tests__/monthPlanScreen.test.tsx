@@ -33,6 +33,9 @@ function aprilStart(patch: Partial<GameState> = {}): GameState {
     year: 2, week: 5, phase: 'weekday' as const, currentEvent: null, isVacation: false,
     routineSlot2: 'academy', routineSlot3: 'self-study', money: 4,
   }, patch);
+  // 초대 없는 달로 둔다 — 초대가 뜨면 답하기 전까지 저장이 잠긴다. 예전엔 시드가 우연히 0개를 냈다(초대를 달 단위로
+  // 고정하며 시드가 바뀌자 깨졌다). 초대를 보는 테스트는 withInvites가 친밀도를 다시 올린다.
+  for (const n of s.npcs) n.intimacy = Math.min(n.intimacy, 10);
   payMonthStart(s);
   return s;
 }
@@ -147,8 +150,8 @@ describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
     const after = useGameStore.getState().state!;
     expect(after.monthPlan?.weeks).toHaveLength(4);
     expect(after.monthPlan?.weeks[2].activities[0]).toBe('reading');
-    // 저장만 했다 — 재생 장부도, 처리된 주도 없다(주는 그대로 W5, 아직 계획 단계).
-    expect(after.monthRun).toBeUndefined();
+    // 저장만 했다 — 장부는 멈춘 채 열리고(월말 결산이 손으로 한 주도 담게), 처리된 주는 없다(주는 그대로 W5, 아직 계획 단계).
+    expect([after.monthRun?.status, after.monthRun?.log.length, after.monthRun?.stop]).toEqual(['paused', 0, undefined]);
     expect([after.week, after.phase]).toEqual([5, 'weekday']);
     await waitFor(() => expect(screen.queryByTestId('month-plan')).toBeNull());
     expect(screen.getByTestId('month-plan-strip')).toBeTruthy();
@@ -156,7 +159,8 @@ describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
     fireEvent.click(screen.getByTestId('week-confirm'));
     const confirmed = useGameStore.getState().state!;
     expect(confirmed.lastWeekendPlan?.activities[0]).toBe('reading');
-    expect(confirmed.monthRun).toBeUndefined();
+    expect(confirmed.monthRun?.log.map(w => [w.week, w.auto]), '손으로 한 주도 장부에 적힌다').toEqual([[5, false]]);
+    expect(confirmed.monthRun?.status).toBe('paused');
   });
 
   it('띠의 [▶ 남은 주 자동 진행]을 눌러야 재생이 돈다 — 첫 주가 계획한 칸으로 확정된다', () => {
@@ -167,7 +171,7 @@ describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
     pickInto('slot-5-0', 'reading');
     fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
     fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
-    expect(useGameStore.getState().state!.monthRun).toBeUndefined();
+    expect(useGameStore.getState().state!.monthRun?.status).toBe('paused');
     fireEvent.click(screen.getByTestId('playback-resume'));
     const after = useGameStore.getState().state!;
     expect(after.monthRun?.log.map(w => [w.week, w.auto])).toEqual([[5, true]]);

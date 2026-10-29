@@ -15,12 +15,13 @@ import { prefetchAssets, runWhenIdle } from '../engine/assetPrefetch';
 import { webpSrc } from '../engine/assetWebp';
 import { getFatigueDisplay, getUpcomingEvents, statEffectChips, type EventResultData } from './screens/shared';
 import { WeeklyResultScreen } from './screens/WeeklyResultScreen';
-import { MainWeekScreen } from './screens/main/MainWeekScreen';
+import { MainWeekScreen, type WeekDraft } from './screens/main/MainWeekScreen';
 import { MonthPlanScreen } from './screens/main/MonthPlanScreen';
 import { MonthSummaryScreen } from './screens/main/MonthSummaryScreen';
 import { PlaybackCard } from './screens/main/PlaybackCard';
 import { isMonthlyPlanningEnabled } from '../engine/featureFlags';
-import { buildMonthSummary, hadTalkChance, isPlaying, stopLine, talkBankCount, totalTalks } from '../engine/monthPlayback';
+import { buildMonthSummary, getMonthRun, hadTalkChance, isPlaying, stopLine, talkBankCount, totalTalks } from '../engine/monthPlayback';
+import { withPlannedWeek } from '../engine/monthPlan';
 import { ACTIVITIES } from '../engine/activities';
 import { getMonthBlock } from '../engine/weekMath';
 import { ScreenTransition, type TransitionPace } from './ScreenTransition';
@@ -186,6 +187,8 @@ export function GameScreen() {
   // 한 달 계획·자동 진행의 화면 쪽 상태 — 주간 화면에서 월 계획 화면을 열었나 / "다음 멈춤까지" 빨리 넘기기 /
   // 달의 마지막 주가 시험·학기 목표 주라 결산 화면을 먼저 보고 월말 결산으로 넘어갔나(그 결산의 키).
   const [planOpen, setPlanOpen] = useState(false);
+  // 계획 화면을 열 때 주간 화면에서 고르던 이번 주 칸 — 닫고 돌아오면 되살린다(열면 주간 화면이 언마운트돼 로컬 칸이 사라졌다).
+  const [planReturnDraft, setPlanReturnDraft] = useState<(WeekDraft & { year: number; week: number }) | null>(null);
   const [fastPlayback, setFastPlayback] = useState(false);
   const [bigResultSeen, setBigResultSeen] = useState<string | null>(null);
   // 재생 중 판정은 monthPlayback.isPlaying 하나를 읽는다(화면이 같은 사실을 따로 재지 않게).
@@ -517,7 +520,8 @@ export function GameScreen() {
         onMoneyBlocked={markMoneyBlockedMonth}
         onStart={(plan) => {
           const reason = setMonthPlan(plan);
-          if (reason === null) setPlanOpen(false);
+          // 저장했으면 칸은 새 계획이 채운다 — 고르던 칸은 버린다.
+          if (reason === null) { setPlanOpen(false); setPlanReturnDraft(null); }
           return reason;
         }}
         onCancel={() => setPlanOpen(false)}
@@ -529,12 +533,23 @@ export function GameScreen() {
     // main → weekly → main 으로 키가 두 번 바뀌면서 전환이 붙는다.
     // 월 단위 판이면 맨 위 띠가 한 달 계획을 잇는다 — [📅 이번 달 계획] / [▶ 자동 진행]·[계획 고치기] / 멈춘 이유.
     const run = route.kind === 'main' ? route.monthly?.run ?? null : null;
+    const returnDraft = planReturnDraft && planReturnDraft.year === state.year && planReturnDraft.week === state.week
+      ? { activities: planReturnDraft.activities, npcChoices: planReturnDraft.npcChoices } : undefined;
     const monthly = route.kind === 'main' && route.monthly ? {
       hasPlan: !!route.monthly.plan,
-      stopLine: run ? stopLine(run) : null,
+      // 멈춘 이유가 있을 때만(계획을 저장해 장부만 열린 달·손으로 이어 간 주는 이유가 없다).
+      stopLine: run?.stop ? stopLine(run) : null,
       talkBank: talkBankCount(state),
-      onOpenPlan: () => setPlanOpen(true),
-      onAutoPlay: run ? resumePlayback : startMonthPlayback,
+      onOpenPlan: (draft: WeekDraft) => { setPlanReturnDraft({ ...draft, year: state.year, week: state.week }); setPlanOpen(true); },
+      onAutoPlay: (draft: WeekDraft) => {
+        const plan = route.monthly?.plan;
+        if (plan) {
+          const reason = setMonthPlan(withPlannedWeek(plan, state.week, draft.activities, draft.npcChoices));
+          if (reason) return `이번 주 칸을 계획에 싣지 못했어요 — ${reason}`;
+        }
+        if (getMonthRun(useGameStore.getState().state!)) resumePlayback(); else startMonthPlayback();
+        return null;
+      },
     } : undefined;
     phaseContent = (
       <>
@@ -548,8 +563,8 @@ export function GameScreen() {
           onChooseGoal={chooseSemesterGoal}
           onSetRoutine={setRoutine}
           onTalkNpc={talkToNpc}
-          initialPlan={resumedRomancePlan(state)}
-          onPlanRestored={consumeRomancePlan}
+          initialPlan={returnDraft ?? resumedRomancePlan(state)}
+          onPlanRestored={() => { setPlanReturnDraft(null); consumeRomancePlan(); }}
           onRetryRomance={(npcId, activities, npcChoices) => {
             return startRomanceRetry(npcId, { activities, npcChoices });
           }}

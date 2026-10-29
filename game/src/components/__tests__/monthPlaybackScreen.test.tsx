@@ -153,7 +153,7 @@ describe('GameScreen 라우팅', () => {
     const s = at(6);
     useGameStore.setState({ state: s, npcActivityMap: {} });
     expect(api().setMonthPlan(planFor(s))).toBeNull();
-    expect(now().monthRun).toBeUndefined();
+    expect([now().monthRun?.status, now().monthRun?.stop]).toEqual(['paused', undefined]);
     const second = render(<GameScreen />);
     await waitFor(() => expect(screen.getByTestId('month-plan-strip').textContent).toContain('계획대로 칸을 채워'));
     expect(screen.getByTestId('playback-resume').textContent).toContain('남은 주 자동 진행');
@@ -207,7 +207,7 @@ describe('GameScreen 라우팅', () => {
     await waitFor(() => screen.getByTestId('playback-paused'));
   });
 
-  it('다시 짜고 "이대로 저장"이면 저장하고 멈춘 주간 화면으로 돌아온다 — 재생은 띠에서 다시 누를 때만', async () => {
+  it('다시 짜고 "이대로 저장"이면 저장하고 주간 화면으로 돌아온다 — 낡은 멈춤 이유는 지우고, 재생은 띠에서 다시 누를 때만', async () => {
     playingFrom(5);
     api().pausePlayback('player');
     api().continuePlayback();
@@ -217,8 +217,9 @@ describe('GameScreen 라우팅', () => {
     await waitFor(() => screen.getByTestId('month-plan'));
     fireEvent.click(screen.getByRole('button', { name: '이대로 저장' }));
     expect(now().monthRun!.log.map(w => w.week)).toEqual([5]);
-    expect(now().monthRun!.status).toBe('paused');
-    await waitFor(() => screen.getByTestId('playback-paused'));
+    expect([now().monthRun!.status, now().monthRun!.stop]).toEqual(['paused', undefined]);
+    await waitFor(() => screen.getByTestId('month-plan-strip'));
+    expect(screen.queryByTestId('playback-paused'), '다시 짰는데 예전 멈춤 이유가 남았다').toBeNull();
     fireEvent.click(screen.getByTestId('playback-resume'));
     expect(now().monthRun!.log.map(w => w.week)).toEqual([5, 6]);
   });
@@ -232,6 +233,39 @@ describe('GameScreen 라우팅', () => {
     render(<GameScreen />);
     expect(screen.queryByTestId('playback-card')).toBeNull();
     expect(now().monthRun!.log[1].auto).toBe(false);
+  });
+
+  it('💬로 멈춘 뒤 손으로 확정하면 멈춘 이유가 지워진다 — 다음 주 띠가 같은 말을 안 하고, 대화 창도 저절로 안 열린다', async () => {
+    playingFrom(5);
+    api().pausePlayback('talk');
+    api().continuePlayback();
+    expect(now().monthRun!.stop, '전제: 💬 멈춤').toBe('talk');
+    api().confirmWeek(['rest', ''], {});
+    settle();
+    expect([now().monthRun!.status, now().monthRun!.stop]).toEqual(['paused', undefined]);
+    api().setPhase('weekday');
+    render(<GameScreen />);
+    await waitFor(() => screen.getByTestId('month-plan-strip'));
+    expect(screen.queryByTestId('playback-paused')).toBeNull();
+    expect(screen.queryByRole('dialog', { name: '친구 관계' }), '지난주 💬 멈춤이 이번 주에도 대화 창을 열었다').toBeNull();
+  });
+
+  it('계획을 저장한 주부터 장부가 열린다 — 손으로 두 주 한 뒤 자동 진행을 켜도 월말 결산이 그 두 주를 담는다', () => {
+    const s = at(5);
+    useGameStore.setState({ state: s, npcActivityMap: {} });
+    expect(api().setMonthPlan(planFor(s))).toBeNull();
+    const startStats = { ...now().stats };
+    for (const w of [5, 6]) {
+      expect(now().week, '전제: 손으로 진행하는 주').toBe(w);
+      api().confirmWeek(['reading', 'rest'], {});
+      settle();
+      api().setPhase('weekday');
+    }
+    api().startMonthPlayback();
+    settle();
+    const run = now().monthRun!;
+    expect(run.log.map(w => [w.week, w.auto])).toEqual([[5, false], [6, false], [7, true]]);
+    expect(run.startStats, '결산의 출발점이 자동 진행을 켠 주가 아니라 계획을 저장한 주다').toEqual(startStats);
   });
 
   it('달의 마지막 주 뒤엔 월말 결산 한 장 → 다음 달로 → 다음 달 주간 화면(계획은 띠에서)', async () => {
