@@ -275,14 +275,42 @@ describe('EventScene 페이지 분할', () => {
     });
 
     it('short_line_untouched: 한도 안의 줄은 문장이 여럿이어도 한 줄 그대로다', () => {
-      renderScene({ event: makeEvent({ description: '짧은 문장. 또 짧은 문장.' }) });
+      const { unmount } = renderScene({ event: makeEvent({ description: '짧은 문장. 또 짧은 문장.' }) });
       expect(descBox()?.children.length, 'short_line_untouched').toBe(1);
       expect(screen.getByText('짧은 문장. 또 짧은 문장.')).toBeInTheDocument();
+      unmount();
+      // 지문·대사 사이도 한도 안이면 안 가른다 — 갈리면 줄 사이에 여백(4px)이 끼어 모양이 바뀐다.
+      renderScene({ event: makeEvent({ description: '짧은 지문 "짧은 대사."', speakers: ['jihun'] }), npcs: jihun });
+      expect(descBox()?.children.length, 'short_line_untouched').toBe(1);
+    });
+
+    it('clause_split: 마침표 없이 긴 문장은 쉼표에서 나눈다', () => {
+      const a = `${'가'.repeat(70)},`, b = `${'나'.repeat(70)},`, c = `${'다'.repeat(60)}`;
+      renderScene({ event: makeEvent({ description: `${a} ${b} ${c}` }) });
+      expect(screen.getByText('1 / 2'), 'clause_split').toBeInTheDocument();
+      expect(screen.getByText(`${a} ${b}`)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+      expect(screen.getByText(c)).toBeInTheDocument();
+    });
+
+    // 대사 사이에서 갈린 뒤에도 뒤 대사 하나가 한도보다 길면 그 대사를 다시 나눈다(minjae-hs-doubt 자리).
+    it('piece_resplit: 갈린 조각이 아직 넘치면 그 조각을 다시 나눈다', () => {
+      const long1 = `${'마'.repeat(100)}.`, long2 = `${'바'.repeat(100)}.`;
+      renderScene({ event: makeEvent({ description: `"${'라'.repeat(20)}." 웃는다. "${long1} ${long2}"`, speakers: ['jihun'] }), npcs: jihun });
+      const seen: string[] = [];
+      for (let i = 0; i < 5; i++) {
+        seen.push(descBox()?.textContent ?? '');
+        const next = screen.queryByRole('button', { name: '다음 페이지' });
+        if (!next || (next as HTMLButtonElement).disabled) break;
+        fireEvent.click(next);
+      }
+      expect(seen.some(t => t.endsWith(`"${long1}"`)), 'piece_resplit').toBe(true);
+      expect(seen.some(t => t.endsWith(`"${long2}"`))).toBe(true);
     });
 
     describe('그려진 상자 기하', () => {
       let restore: (() => void) | undefined;
-      const stub = (geo: { offsetWidth?: number; perLineChars?: number }) => {
+      const stub = (geo: { offsetWidth?: number; perLineChars?: number; boxH?: number }) => {
         const proto = HTMLElement.prototype;
         const keys = ['scrollHeight', 'clientHeight', 'offsetWidth'] as const;
         const saved = keys.map(k => [k, Object.getOwnPropertyDescriptor(proto, k)] as const);
@@ -293,7 +321,8 @@ describe('EventScene 페이지 분할', () => {
           Object.defineProperty(proto, 'scrollHeight', { configurable: true, get(this: HTMLElement) {
             return isBox(this) ? [...this.children].reduce((h, c) => h + 31 * Math.ceil((c.textContent ?? '').length / per), 0) : 0;
           } });
-          Object.defineProperty(proto, 'clientHeight', { configurable: true, get(this: HTMLElement) { return isBox(this) ? 90 : 0; } });
+          const boxH = geo.boxH ?? 90;
+          Object.defineProperty(proto, 'clientHeight', { configurable: true, get(this: HTMLElement) { return isBox(this) ? boxH : 0; } });
         }
         if (geo.offsetWidth) {
           const w = geo.offsetWidth;
@@ -318,6 +347,15 @@ describe('EventScene 페이지 분할', () => {
         const s = (n: number) => `${'가'.repeat(32)}${n}.`;
         renderScene({ event: makeEvent({ description: `${s(1)} ${s(2)}` }) });
         expect(screen.getByText('1 / 2'), 'measured_width_counts').toBeInTheDocument();
+      });
+
+      // 첫 그림은 짐작(61자)으로 나뉜다. 그 쪽이 넘친다고 바로 깎으면, 폭을 잰 뒤엔 넘치지 않을 쪽에서
+      // 한 줄을 괜히 잃는다 — 짐작 [a b c][d]가 넘쳐 깎이면 잰 뒤 [a][b c][d](3쪽), 기다리면 [a b][c d](2쪽).
+      it('measure_before_cut: 폭을 재기 전의 짐작 쪽이 넘쳐도 한도를 깎지 않는다', () => {
+        stub({ offsetWidth: 320, perLineChars: 20, boxH: 100 });
+        const a = `${'가'.repeat(39)}.`, line = (ch: string) => `${ch.repeat(19)}.`;
+        renderScene({ event: makeEvent({ description: [a, line('나'), line('다'), line('라')].join('\n') }) });
+        expect(screen.getByText('1 / 2'), 'measure_before_cut').toBeInTheDocument();
       });
     });
   });
