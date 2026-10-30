@@ -473,6 +473,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     next.monthPlan = structuredClone(plan);
     // 거절한 초대마다 친밀도 −1 — 처음 저장할 때 한 번(디렉터 결정 2026-10-25). 다시 짤 때 또 깎지 않는다.
     if (!existing) applyDeclinedInvites(next, plan.invites ?? []);
+    // 이 달 장부는 **계획을 저장할 때** 연다(멈춘 채) — 주간 화면이 메인이 된 뒤(2026-10-29) 손으로 몇 주 하다가 자동 진행을
+    // 켜는 게 보통 길이라, 누른 주에 장부를 열면 월말 결산이 그 뒤 주만 담았다(3자 검수). 다시 짜서 저장하면 멈춘 이유는 지운다 —
+    // 예전엔 곧장 재생이 이어져 저절로 지워졌지만 이제는 주간 화면으로 돌아오므로 낡은 이유가 띠에 남았다.
+    const run = getMonthRun(next);
+    if (!run) next.monthRun = { ...createMonthRun(next), status: 'paused' };
+    else if (run.status === 'paused') next.monthRun = { ...run, stop: undefined, stopDetail: undefined };
     set({ state: next });
     return null;
   },
@@ -514,6 +520,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const stop = run.status === 'playing' ? boundaryStopAfter(entry) : null;
       newState.monthRun = {
         ...structuredClone(run),
+        // 손으로 확정했으면 멈춘 이유는 지난 일이다 — 남겨 두면 그 달 내내 띠가 같은 이유를 말하고 대화·상점 창이 매주 저절로 열렸다.
+        ...(run.status === 'playing' ? {} : { stop: undefined, stopDetail: undefined }),
         log: [...run.log.map(w => structuredClone(w)), entry],
         // 이 시점엔 멈춤 요청이 없다(재생은 요청을 경계에서 소비한 뒤에만 주를 처리한다). 사건·카드 중의 ⏸·💬·🛒는
         // pausePlayback이 이미 적힌 이유를 덮지 않으므로 번아웃·계절 경계가 앞선다.

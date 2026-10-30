@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
-// 월 단위 계획이 기본값이 되면서 새 판의 첫 계획 화면이 월 계획 화면이다 — 주간 화면 튜토리얼(STEPS)은 뜰 자리가 없다.
-// 그래서 월 계획 화면에 같은 코치마크(Tutorial)를 MONTH_PLAN_STEPS로 띄우고, 재생이 멈춰 주간 화면이 처음 뜰 때
-// 화면 읽는 법(MAIN_INFO_STEPS)만 마저 보인다. 여기서 잠그는 것:
+// 월 단위 판의 튜토리얼 — 주간 화면이 메인이고 월 계획 화면은 그 화면 띠에서 연다(2026-10-29 사용자 판정).
+// 새 판은 주간 화면 튜토리얼(MONTHLY_MAIN_STEPS = 주간 판 STEPS + 계획 띠 스텝)부터 보고, 계획 화면을 처음 열면
+// 같은 코치마크를 MONTH_PLAN_STEPS로 한 번 더 본다. 여기서 잠그는 것:
 //   · 앵커 — 스텝이 가리키는 data-tutorial이 화면에 실제로 있다(없으면 가운데 카드로 조용히 강등된다)
 //   · 화면에 없는 칸(초대·방과후)의 스텝은 빠진다
-//   · 영속 키 — 한 번 보면 다시 안 뜨고, 주간 판 튜토리얼을 본 적 없는 사람만 주간 화면 몫이 남는다
-//   · 배선 — 키가 하나도 없는 새 판(플래그 기본값)이 월 계획 화면 + 그 튜토리얼로 열린다
+//   · 영속 키 — 한 번 보면 다시 안 뜬다(주간 화면 ever_seen / 계획 화면 month_seen)
+//   · 배선 — 키가 하나도 없는 새 판(플래그 기본값)이 주간 화면 + 그 튜토리얼로 열리고, 띠에서 계획 화면을 열면 그 튜토리얼
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 
@@ -16,7 +16,7 @@ vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn((
 import { GameScreen } from '../GameScreen';
 import { MonthPlanScreen } from '../screens/main/MonthPlanScreen';
 import { MainWeekScreen } from '../screens/main/MainWeekScreen';
-import { MAIN_INFO_STEPS, MONTH_PLAN_STEPS, STEPS, TUTORIAL_KEYS, monthPlanSteps } from '../tutorialSteps';
+import { MONTHLY_MAIN_STEPS, MONTH_ENTRY_STEP, MONTH_PLAN_STEPS, STEPS, TUTORIAL_KEYS, monthPlanSteps } from '../tutorialSteps';
 import { useGameStore } from '../../engine/store';
 import { createInitialState } from '../../engine/gameEngine';
 import { MONTHLY_PLANNING_DEFAULT, MONTHLY_PLANNING_KEY, isMonthlyPlanningEnabled } from '../../engine/featureFlags';
@@ -85,36 +85,36 @@ describe('월 계획 튜토리얼 — 스텝과 앵커', () => {
     expect(document.querySelector('[data-tutorial="month-invite"]')).toBeNull();
   });
 
-  it('주간 화면 몫은 화면 읽는 스텝뿐이다 — 계획 스텝(루틴·주말·확정)은 월 계획 화면이 가르쳤다', () => {
-    expect(MAIN_INFO_STEPS.map(x => x.target)).toEqual(['hud', 'home', 'stats', 'npc']);
-    // 같은 문장을 쓴다(주간 판 STEPS에서 고르기만 한다).
-    for (const st of MAIN_INFO_STEPS) expect(STEPS).toContain(st);
+  it('월 단위 판의 주간 화면 스텝은 주간 판 STEPS에 계획 띠 스텝 하나를 화면 순서 자리(가정 다음·능력치 앞)에 끼운 것이다', () => {
+    expect(MONTHLY_MAIN_STEPS.filter(x => x !== MONTH_ENTRY_STEP)).toEqual(STEPS);
+    const targets = MONTHLY_MAIN_STEPS.map(x => x.target);
+    expect(targets.indexOf('month-entry')).toBe(targets.indexOf('stats') - 1);
+    expect(targets.indexOf('month-entry')).toBe(targets.indexOf('home') + 1);
   });
 });
 
 describe('월 계획 튜토리얼 — 한 번만, 영속 키', () => {
-  it('처음 보는 플레이어에겐 뜨고, 건너뛰면 키를 남겨 다시 안 뜬다 — 주간 판을 안 본 사람은 주간 화면 몫이 남는다', () => {
+  it('처음 보는 플레이어에겐 뜨고, 건너뛰면 키를 남겨 다시 안 뜬다', () => {
     const s = marchStart();
     const first = renderPlan(s);
     expect(tutorialTitle()).toBe('이번 달 용돈');
     fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
     expect(document.querySelector('[data-tutorial-card]')).toBeNull();
     expect(localStorage.getItem(TUTORIAL_KEYS.monthSeen)).toBe('1');
-    expect(localStorage.getItem(TUTORIAL_KEYS.infoPending)).toBe('1');
-    expect(localStorage.getItem(TUTORIAL_KEYS.everSeen)).toBe('1');
-    expect(localStorage.getItem(TUTORIAL_KEYS.done)).toBe('1');
+    // 주간 튜토리얼 키는 건드리지 않는다 — 주간 튜토리얼 도중 열었다 돌아와도 나머지 스텝이 남는다.
+    expect(localStorage.getItem(TUTORIAL_KEYS.everSeen)).toBeNull();
+    expect(localStorage.getItem(TUTORIAL_KEYS.done)).toBeNull();
     first.unmount();
     renderPlan(s);
     expect(document.querySelector('[data-tutorial-card]')).toBeNull();
   });
 
-  it('주간 판 튜토리얼을 본 사람에게도 월 계획 화면은 처음이라 뜬다 — 대신 주간 화면 몫은 안 남긴다', () => {
+  it('주간 화면 튜토리얼을 본 사람에게도 월 계획 화면은 처음이라 뜬다(새 판의 보통 순서다)', () => {
     localStorage.setItem(TUTORIAL_KEYS.everSeen, '1');
     renderPlan(marchStart());
     expect(tutorialTitle()).toBe('이번 달 용돈');
     fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
     expect(localStorage.getItem(TUTORIAL_KEYS.monthSeen)).toBe('1');
-    expect(localStorage.getItem(TUTORIAL_KEYS.infoPending)).toBeNull();
   });
 
   it('다시 짜기(남은 주)에서는 안 띄운다 — 이 화면을 이미 지나왔다', () => {
@@ -142,8 +142,10 @@ describe('월 계획 튜토리얼 — 한 번만, 영속 키', () => {
   });
 });
 
-describe('주간 화면 — 월 단위 판에선 화면 읽는 법만', () => {
-  const renderMain = (playback: boolean) => {
+describe('주간 화면 — 월 단위 판은 계획 띠 스텝까지', () => {
+  type Monthly = Parameters<typeof MainWeekScreen>[0]['monthly'];
+  const strip = (hasPlan: boolean): Monthly => ({ hasPlan, stopLine: null, talkBank: 0, onOpenPlan: noop, onAutoPlay: () => null });
+  const renderMain = (monthly: Monthly) => {
     const s = marchStart({ routineSlot2: 'self-study' });
     return render(
       <MainWeekScreen
@@ -155,30 +157,35 @@ describe('주간 화면 — 월 단위 판에선 화면 읽는 법만', () => {
         onResolveParentChoice={noop}
         onBuyItem={noop}
         onConfirmWeek={noop}
-        playback={playback ? { line: '잠깐 멈췄어요.', talkBank: 0, onResume: noop, onReplan: noop } : undefined}
+        monthly={monthly}
       />,
     );
   };
 
-  it('남은 몫이 있으면 화면 읽는 스텝 4개만 보이고, 마치면 지운다', () => {
-    localStorage.setItem(TUTORIAL_KEYS.infoPending, '1');
-    localStorage.setItem(TUTORIAL_KEYS.everSeen, '1'); // 주간 판 게이트로는 안 뜨는 사람 — 남은 몫 키 하나로 뜬다
-    renderMain(true);
-    expect(tutorialTitle()).toBe('내 상태');
-    expect(document.querySelectorAll('[data-tutorial-card] > div:first-child > div')).toHaveLength(MAIN_INFO_STEPS.length);
-    fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
-    expect(localStorage.getItem(TUTORIAL_KEYS.infoPending)).toBeNull();
+  it.each([false, true])('스텝이 가리키는 data-tutorial이 전부 화면에 있다(계획 있음=%s — 띠 둘 다 앵커를 단다)', (hasPlan) => {
+    localStorage.setItem(TUTORIAL_KEYS.everSeen, '1'); // 오버레이 억제 — 앵커만 본다
+    renderMain(strip(hasPlan));
+    for (const step of MONTHLY_MAIN_STEPS) {
+      expect(document.querySelector(`[data-tutorial="${step.target}"]`), `앵커 누락: ${step.target}`).not.toBeNull();
+    }
   });
 
-  it('남은 몫이 없으면 안 뜬다 — 주간 판 게이트(ever_seen 없음)를 보지 않는다', () => {
-    renderMain(true);
+  it('처음 보는 플레이어에겐 계획 띠 스텝을 낀 전체가 뜨고, 건너뛰면 다시 안 뜬다', () => {
+    const first = renderMain(strip(false));
+    expect(tutorialTitle()).toBe(STEPS[0].title);
+    expect(document.querySelectorAll('[data-tutorial-card] > div:first-child > div')).toHaveLength(MONTHLY_MAIN_STEPS.length);
+    fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
+    expect(localStorage.getItem(TUTORIAL_KEYS.everSeen)).toBe('1');
+    first.unmount();
+    renderMain(strip(false));
     expect(document.querySelector('[data-tutorial-card]')).toBeNull();
   });
 
-  it('주 단위 판(플래그 꺼짐, 띠 없음)은 예전 그대로 계획 스텝부터다', () => {
-    renderMain(false);
+  it('주 단위 판(플래그 꺼짐, 띠 없음)은 예전 그대로 — 계획 띠 스텝이 없다', () => {
+    renderMain(undefined);
     expect(tutorialTitle()).toBe(STEPS[0].title);
     expect(document.querySelectorAll('[data-tutorial-card] > div:first-child > div')).toHaveLength(STEPS.length);
+    expect(document.querySelector('[data-tutorial="month-entry"]')).toBeNull();
   });
 });
 
@@ -191,13 +198,17 @@ describe('배선 — 플래그 기본값', () => {
     expect(isMonthlyPlanningEnabled(), "'0'이면 주 단위로 되돌릴 수 있다").toBe(false);
   });
 
-  it('키가 하나도 없는 새 판은 월 계획 화면과 그 튜토리얼로 열린다', () => {
+  it('키가 하나도 없는 새 판은 주간 화면과 그 튜토리얼로 열리고, 띠에서 계획 화면을 열면 그 화면 튜토리얼이 뜬다', () => {
     act(() => { useGameStore.getState().startGame('male', ['emotional', 'wealth']); });
     // 부팅 장면(first-week)을 지나 첫 계획 자리로.
     act(() => { useGameStore.setState(st => ({ state: { ...st.state!, phase: 'weekday', currentEvent: null } })); });
     render(<GameScreen />);
+    expect(screen.queryByTestId('month-plan'), '계획 화면이 주간 화면을 대신했다').toBeNull();
+    expect(screen.getByTestId('week-confirm')).toBeTruthy();
+    expect(tutorialTitle()).toBe(MONTHLY_MAIN_STEPS[0].title);
+    fireEvent.click(screen.getByRole('button', { name: '건너뛰기' }));
+    fireEvent.click(screen.getByTestId('month-plan-open'));
     expect(screen.getByTestId('month-plan')).toBeTruthy();
-    expect(screen.queryByTestId('week-confirm')).toBeNull();
     expect(tutorialTitle()).toBe(MONTH_PLAN_STEPS[0].title);
   });
 });

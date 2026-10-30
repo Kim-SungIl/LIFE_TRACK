@@ -731,6 +731,12 @@ body {
 
 .fade-in { animation: fadeIn 0.4s ease; }
 
+/* 재생 카드가 머무는 시간 — 카드 아래 막대가 그동안 찬다(PlaybackCard). 누르고 있으면 멈춘다(animation-play-state). */
+@keyframes cardDwell {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fade-in { animation: none; }
 }

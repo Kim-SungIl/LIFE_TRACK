@@ -10,7 +10,8 @@ vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
 vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
 
 import { GameScreen } from '../GameScreen';
-import { CARD_DWELL_FAST_MS, CARD_DWELL_MS, PlaybackCard } from '../screens/main/PlaybackCard';
+import { PlaybackCard } from '../screens/main/PlaybackCard';
+import { CARD_DWELL_FAST_MS, CARD_DWELL_MAX_MS, CARD_DWELL_MIN_MS } from '../screens/main/playbackPace';
 import { useGameStore } from '../../engine/store';
 import { createInitialState } from '../../engine/gameEngine';
 import { firstPickableChoice } from '../../engine/eventPresentation';
@@ -68,7 +69,8 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
   const log: WeekLog = { statChanges: { academic: 1.2 }, fatigueChange: 0, moneyChange: 0, messages: ['📖 도서관이 조용했다.', '📌 지훈과 한 약속 — 친구와 놀기. 지켰다.'], skipped: [], milestoneMessages: [], year: 2, week: 6 };
   const base = { state: at(7), weekLog: log, weekLabel: '중1 1학기 6주차', resultDialogue: '', bgProps: { bg: { image: '', mood: 'calm' }, bgImgError: true, onImgError: () => {} } as never, talkBadge: false, onToggleFast: vi.fn(), onPause: vi.fn(), onTalk: vi.fn(), onShop: vi.fn() };
 
-  it.each([[false, CARD_DWELL_MS], [true, CARD_DWELL_FAST_MS]])('빨리=%s — %ims 직전엔 안 넘어가고 그때 한 번 넘어간다', (fast, ms) => {
+  // 이 카드는 글이 짧아(머리 줄 + 약속 줄) 보통 속도면 하한에 머문다 — 글자 수 비례는 playbackCardPace.test가 본다.
+  it.each([[false, CARD_DWELL_MIN_MS], [true, CARD_DWELL_FAST_MS]])('빨리=%s — %ims 직전엔 안 넘어가고 그때 한 번 넘어간다', (fast, ms) => {
     vi.useFakeTimers();
     const onContinue = vi.fn();
     render(<PlaybackCard {...base} fast={fast} onContinue={onContinue} />);
@@ -88,7 +90,7 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
     expect(screen.getByText(/지훈과 한 약속/)).toBeTruthy();
     expect(screen.getByText(/학업 ▲/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '다음 주로' }));
-    act(() => { vi.advanceTimersByTime(CARD_DWELL_MS * 2); });
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MAX_MS * 2); });
     expect(onContinue).toHaveBeenCalledTimes(1);
   });
 
@@ -115,7 +117,7 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
     const onPause = vi.fn();
     render(<PlaybackCard {...base} fast={false} onContinue={onContinue} onPause={onPause} />);
     fireEvent.click(screen.getByRole('button', { name: '⏸ 멈춤' }));
-    act(() => { vi.advanceTimersByTime(CARD_DWELL_MS * 2); });
+    act(() => { vi.advanceTimersByTime(CARD_DWELL_MAX_MS * 2); });
     expect(onPause).toHaveBeenCalledTimes(1);
     expect(onContinue).not.toHaveBeenCalled();
   });
@@ -156,27 +158,40 @@ describe('GameScreen 라우팅', () => {
     await waitFor(() => expect(screen.getByTestId('playback-paused').textContent).toContain('일시정지했어요'));
   });
 
-  it('띠가 떠 있으면 아래 확정 버튼은 보조 단계로 낮아지고, 주 단위 판(플래그 꺼짐)에선 주 버튼 그대로다', async () => {
+  it('띠가 어떤 상태든 확정 버튼은 주 행동 그대로다 — 계획 없음 / 짜 둠 / 멈춤 · 주 단위 판엔 띠가 없다', async () => {
+    // 주간 화면이 메인이다(2026-10-29) — 예전엔 띠가 뜨면 확정을 보조로 낮췄다(재생이 주 행동이던 때).
     playingFrom(5);
     api().pausePlayback('player');
     api().continuePlayback();
     const { unmount } = render(<GameScreen />);
     await waitFor(() => screen.getByTestId('playback-paused'));
-    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-secondary');
+    expect(screen.getByTestId('playback-resume').textContent).toContain('이어서 자동 진행');
+    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-primary');
     unmount();
-    // 계획만 짜고 시작 전인 주도 띠(▶ 시작)가 주 행동이라 낮아진다
+    // 계획만 짜고 자동 진행 전인 주 — 띠는 계획대로 채웠다고 말하고 [▶ 남은 주 자동 진행]·[계획 고치기]를 준다
     const s = at(6);
     useGameStore.setState({ state: s, npcActivityMap: {} });
     expect(api().setMonthPlan(planFor(s))).toBeNull();
-    expect(now().monthRun).toBeUndefined();
+    expect([now().monthRun?.status, now().monthRun?.stop]).toEqual(['paused', undefined]);
     const second = render(<GameScreen />);
-    await waitFor(() => expect(screen.getByTestId('playback-paused').textContent).toContain('계획이 짜여'));
-    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-secondary');
+    await waitFor(() => expect(screen.getByTestId('month-plan-strip').textContent).toContain('계획대로 칸을 채워'));
+    expect(screen.getByTestId('playback-resume').textContent).toContain('남은 주 자동 진행');
+    expect(screen.getByTestId('playback-replan').textContent).toContain('계획 고치기');
+    expect(screen.queryByTestId('playback-paused')).toBeNull();
+    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-primary');
     second.unmount();
+    // 계획이 없는 달 — 띠는 계획 화면을 여는 버튼 하나다
+    useGameStore.setState({ state: at(6), npcActivityMap: {} });
+    const third = render(<GameScreen />);
+    await waitFor(() => screen.getByTestId('month-plan-entry'));
+    expect(screen.queryByTestId('month-plan-strip')).toBeNull();
+    expect(screen.getByTestId('week-confirm').className).toBe('btn btn-primary');
+    third.unmount();
     localStorage.setItem(MONTHLY_PLANNING_KEY, '0');
     render(<GameScreen />);
     await waitFor(() => screen.getByTestId('week-confirm'));
     expect(screen.queryByTestId('playback-paused')).toBeNull();
+    expect(screen.queryByTestId('month-plan-entry')).toBeNull();
     expect(screen.getByTestId('week-confirm').className).toBe('btn btn-primary');
   });
 
@@ -211,7 +226,7 @@ describe('GameScreen 라우팅', () => {
     await waitFor(() => screen.getByTestId('playback-paused'));
   });
 
-  it('다시 짜고 "이대로 이어서"면 저장하고 다음 주를 재생한다', async () => {
+  it('다시 짜고 "이대로 저장"이면 저장하고 주간 화면으로 돌아온다 — 낡은 멈춤 이유는 지우고, 재생은 띠에서 다시 누를 때만', async () => {
     playingFrom(5);
     api().pausePlayback('player');
     api().continuePlayback();
@@ -219,9 +234,13 @@ describe('GameScreen 라우팅', () => {
     await waitFor(() => screen.getByTestId('playback-replan'));
     fireEvent.click(screen.getByTestId('playback-replan'));
     await waitFor(() => screen.getByTestId('month-plan'));
-    fireEvent.click(screen.getByRole('button', { name: '이대로 이어서' }));
+    fireEvent.click(screen.getByRole('button', { name: '이대로 저장' }));
+    expect(now().monthRun!.log.map(w => w.week)).toEqual([5]);
+    expect([now().monthRun!.status, now().monthRun!.stop]).toEqual(['paused', undefined]);
+    await waitFor(() => screen.getByTestId('month-plan-strip'));
+    expect(screen.queryByTestId('playback-paused'), '다시 짰는데 예전 멈춤 이유가 남았다').toBeNull();
+    fireEvent.click(screen.getByTestId('playback-resume'));
     expect(now().monthRun!.log.map(w => w.week)).toEqual([5, 6]);
-    expect(now().monthRun!.status).toBe('playing');
   });
 
   it('손으로 확정한 주의 결산은 예전 결산 화면이다(카드 아님)', () => {
@@ -235,14 +254,48 @@ describe('GameScreen 라우팅', () => {
     expect(now().monthRun!.log[1].auto).toBe(false);
   });
 
-  it('달의 마지막 주 뒤엔 월말 결산 한 장 → 다음 달 계획하기 → 다음 달 계획 화면', async () => {
+  it('💬로 멈춘 뒤 손으로 확정하면 멈춘 이유가 지워진다 — 다음 주 띠가 같은 말을 안 하고, 대화 창도 저절로 안 열린다', async () => {
+    playingFrom(5);
+    api().pausePlayback('talk');
+    api().continuePlayback();
+    expect(now().monthRun!.stop, '전제: 💬 멈춤').toBe('talk');
+    api().confirmWeek(['rest', ''], {});
+    settle();
+    expect([now().monthRun!.status, now().monthRun!.stop]).toEqual(['paused', undefined]);
+    api().setPhase('weekday');
+    render(<GameScreen />);
+    await waitFor(() => screen.getByTestId('month-plan-strip'));
+    expect(screen.queryByTestId('playback-paused')).toBeNull();
+    expect(screen.queryByRole('dialog', { name: '친구 관계' }), '지난주 💬 멈춤이 이번 주에도 대화 창을 열었다').toBeNull();
+  });
+
+  it('계획을 저장한 주부터 장부가 열린다 — 손으로 두 주 한 뒤 자동 진행을 켜도 월말 결산이 그 두 주를 담는다', () => {
+    const s = at(5);
+    useGameStore.setState({ state: s, npcActivityMap: {} });
+    expect(api().setMonthPlan(planFor(s))).toBeNull();
+    const startStats = { ...now().stats };
+    for (const w of [5, 6]) {
+      expect(now().week, '전제: 손으로 진행하는 주').toBe(w);
+      api().confirmWeek(['reading', 'rest'], {});
+      settle();
+      api().setPhase('weekday');
+    }
+    api().startMonthPlayback();
+    settle();
+    const run = now().monthRun!;
+    expect(run.log.map(w => [w.week, w.auto])).toEqual([[5, false], [6, false], [7, true]]);
+    expect(run.startStats, '결산의 출발점이 자동 진행을 켠 주가 아니라 계획을 저장한 주다').toEqual(startStats);
+  });
+
+  it('달의 마지막 주 뒤엔 월말 결산 한 장 → 다음 달로 → 다음 달 주간 화면(계획은 띠에서)', async () => {
     playingFrom(12); // Y2 W12 — 시험 없는 5월 마지막 주
     render(<GameScreen />);
     expect(screen.getByTestId('month-summary')).toBeTruthy();
     expect(screen.getByRole('heading').textContent).toBe('5월의 나');
-    fireEvent.click(screen.getByRole('button', { name: '6월 계획하기 ▶' }));
+    fireEvent.click(screen.getByRole('button', { name: '6월로 ▶' }));
     expect(now().monthRun).toBeUndefined();
-    await waitFor(() => expect(screen.getByTestId('month-plan').textContent).toContain('6월'));
+    await waitFor(() => screen.getByTestId('month-plan-entry'));
+    expect(screen.queryByTestId('month-plan')).toBeNull();
   });
 
   it('시험 결과가 있는 마지막 주(Y2 W8 중간고사)는 결산 화면을 먼저 보이고, 다음에 월말 결산', async () => {

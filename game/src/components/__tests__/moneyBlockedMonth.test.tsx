@@ -8,7 +8,7 @@
 //   ② 배선 — 월 계획 화면이 돈 때문에 잠기면 실제로 센다(안 잠기면 안 센다)
 //   ③ 도달 — 그렇게 센 값으로 학년말·7년 판정이 tight/strapped에 닿는다
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => p, cgThumbSrc: (p: string) => p }));
 vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
@@ -114,6 +114,8 @@ describe('② 배선 — 월 계획 화면', () => {
     localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
     boot(broke());
     render(<GameScreen />);
+    // 주간 화면이 메인이다 — 계획 화면은 띠에서 열 때만 뜨고, 그 화면이 잠겨야 달을 센다(주간 화면의 잠금은 그 주 하나만 센다).
+    fireEvent.click(screen.getByTestId('month-plan-open'));
     expect(screen.getByTestId('month-plan')).toBeTruthy();
     expect(screen.getByRole('button', { name: /돈이 부족해요/ })).toBeTruthy();
     expect(blocked(2)).toBe(getMonthBlock(5).endWeek - 5 + 1);
@@ -123,6 +125,7 @@ describe('② 배선 — 월 계획 화면', () => {
     localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
     boot({ ...broke(), money: 200 });
     render(<GameScreen />);
+    fireEvent.click(screen.getByTestId('month-plan-open'));
     expect(screen.queryByRole('button', { name: /돈이 부족해요/ })).toBeNull();
     expect(blocked(2)).toBe(0);
   });

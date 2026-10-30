@@ -346,7 +346,7 @@ describe('계획 화면 — 동행 키는 칸의 활동과 늘 맞는다', () =>
     fireEvent.click(screen.getByRole('button', { name: '지난주처럼 채우기' }));
     fireEvent.click(within(screen.getByTestId(`invite-${inv.npcId}`)).getByRole('button', { name: /좋아/ }));
     fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
 
     const plan = onStart.mock.calls[0][0];
     const wk = plan.weeks.find(w => w.week === inv.week)!;
@@ -398,7 +398,7 @@ describe('계획 화면 — 복사·「지난주처럼」도 방학당 횟수를
     pickInto('slot-21-0', 'countryside');
     fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
     for (const b of screen.queryAllByRole('button', { name: '다음에' })) fireEvent.click(b); // 초대는 거절(이 테스트의 축이 아니다)
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     const plan = onStart.mock.calls[0][0];
     const uses = plan.weeks.filter(w => w.activities.includes('countryside')).map(w => w.week);
     expect(uses).toEqual([21]);
@@ -418,7 +418,7 @@ describe('계획 화면 — 「지난주처럼」·이미 쓴 방학 횟수도 �
     render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={onStart} />);
     act();
     for (const b of screen.queryAllByRole('button', { name: '다음에' })) fireEvent.click(b);
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     return onStart.mock.calls[0][0];
   }
   const weeksWith = (p: MonthPlan, id: string) => p.weeks.filter(w => w.activities.includes(id)).map(w => w.week);
@@ -462,6 +462,7 @@ describe('계획 화면 — 학기 목표를 여기서 고른다(재생이 고�
     Object.assign(s, { year: 2, week: 1, phase: 'weekday' as const, isVacation: false, routineSlot2: 'self-study', money: 40, monthlyMoney: true });
     useGameStore.setState({ state: s, npcActivityMap: {} });
     render(<GameScreen />);
+    fireEvent.click(screen.getByTestId('month-plan-open'));
     expect(screen.getByTestId('month-plan')).toBeTruthy();
     fireEvent.click(within(screen.getByTestId('month-plan')).getByTestId('semester-goal-chip'));
     fireEvent.click(screen.getAllByTestId(/^semester-goal-offer-/)[0]);

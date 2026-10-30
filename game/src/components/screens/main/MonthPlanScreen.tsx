@@ -6,9 +6,9 @@
 //     다시 쓴다. 활동 목록은 그 주가 학기인지 방학인지에 맞춘 상태로 묻는다(방학 전용 활동·칸 수가 다르다).
 //   · 방과후 루틴은 지금처럼 바꾼다(onSetRoutine) — 바꾸는 순간 남은 학기 주 몫을 낸다(monthlyMoney, 결정 (가)).
 //   · 예산은 "쓸 수 있는 돈 = 잔액 − 아직 안 낸 학원비 − 이 계획의 예약"으로 실시간 보인다. 모자라면 시작을 막는다.
-//   · 시작하면 store.setMonthPlan으로 저장한다(검증은 엔진 하나 — validateMonthPlan). 이 화면은 그 결과를 보여 줄 뿐.
-//   · 시작하면 그 달이 자동으로 흐른다(GameScreen이 저장 뒤 store.startMonthPlayback을 부른다, 5단계).
-//   · 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다(`existing`) — 그때는 남은 주만 짜고, 초대는 처음 받은 그대로 고정이다
+//   · 저장하면 store.setMonthPlan으로 남긴다(검증은 엔진 하나 — validateMonthPlan). 이 화면은 그 결과를 보여 줄 뿐.
+//   · 저장하면 주간 화면으로 돌아간다 — 남은 주의 칸이 계획대로 채워지고, 자동 진행은 그 화면 띠에서 고른다(2026-10-29).
+//   · 계획이 있는 달에 다시 열면(`existing`, 계획 고치기·남은 주 다시 짜기) 남은 주만 짜고, 초대는 처음 받은 그대로 고정이다
 //     (엔진도 다시 짠 계획의 초대 답이 처음과 다르면 거부한다 — monthInvites.validateInviteAnswers).
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { playSfx } from '../../../audio/sfx';
@@ -423,12 +423,12 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
       )}
       {error && <div role="alert" style={{ fontSize: '0.78rem', color: 'var(--red)', padding: '0 4px' }}>{error}</div>}
 
-      <div data-tutorial="month-start" className="bottom-action" style={replan && onCancel ? { display: 'flex', gap: 8 } : undefined}>
-        {replan && onCancel && (
-          <button type="button" className="btn btn-secondary" onClick={onCancel} style={{ flex: '0 0 auto', width: 'auto', minWidth: 88 }}>그대로</button>
+      <div data-tutorial="month-start" className="bottom-action" style={onCancel ? { display: 'flex', gap: 8 } : undefined}>
+        {onCancel && (
+          <button type="button" className="btn btn-secondary" data-testid="month-plan-cancel" onClick={onCancel} style={{ flex: '0 0 auto', width: 'auto', minWidth: 88 }}>{replan ? '그대로' : '닫기'}</button>
         )}
-        <button type="button" className="btn btn-primary" disabled={overspent || unanswered} onClick={start} style={replan && onCancel ? { flex: 1 } : undefined}>
-          {overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : unanswered ? '⬆ 친구 초대에 답해 주세요' : replan ? '이대로 이어서' : '이번 달 시작'}
+        <button type="button" className="btn btn-primary" disabled={overspent || unanswered} onClick={start} style={onCancel ? { flex: 1 } : undefined}>
+          {overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : unanswered ? '⬆ 친구 초대에 답해 주세요' : replan ? '이대로 저장' : '계획 저장'}
         </button>
       </div>
 
@@ -481,12 +481,9 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
             onComplete={() => {
               setShowTutorial(false);
               try {
-                // 주간 판 튜토리얼을 본 적 없는 플레이어는 재생이 멈춰 주간 화면이 처음 뜰 때 화면 읽는 법(MAIN_INFO_STEPS)을 마저 본다.
-                if (!localStorage.getItem(TUTORIAL_KEYS.everSeen)) localStorage.setItem(TUTORIAL_KEYS.infoPending, '1');
+                // 이 화면 몫만 적는다 — 주간 화면이 메인이 된 뒤(2026-10-29) 주간 튜토리얼은 따로 끝까지 돈다. 예전처럼 done·ever_seen까지
+                // 적으면 주간 튜토리얼 도중 계획 화면을 열었다 돌아온 첫 판이 나머지 스텝(루틴·친구·확정)을 못 봤다(3자 검수).
                 localStorage.setItem(TUTORIAL_KEYS.monthSeen, '1');
-                // 계획 스텝은 여기서 배웠다 — 플래그를 꺼도 주간 판 계획 튜토리얼이 처음부터 다시 뜨지 않게.
-                localStorage.setItem(TUTORIAL_KEYS.done, '1');
-                localStorage.setItem(TUTORIAL_KEYS.everSeen, '1');
               } catch { /* storage unavailable */ }
             }}
           />
