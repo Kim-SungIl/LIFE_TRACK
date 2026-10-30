@@ -223,6 +223,14 @@ function estimateVisualLines(line: string, charsPerLine: number, speakerLabel: s
 //   · maxVisualLines — 선택지가 아직 안 뜬 쪽(눌리지 않은 상자)
 //   · lastPageLines  — 선택지와 함께 뜨는 마지막 쪽. 뒷부분만 이 한도로 다시 나눈다
 //     (앞쪽을 다시 나누면 읽던 자리가 흔들린다).
+//
+// 그다음 구멍: 쪽은 원문 줄(`\n`)에서만 갈렸다. 원문 한 줄이 한도보다 길면 한도를 아무리 깎아도
+// 그 줄이 통째로 한 쪽에 남아 밑이 숨었다(실측 651건 — #536 뒤에도 1280×720 66종·320px 14종).
+//   · 지문 뒤에 대사가 붙은 줄 — 선택지에 눌린 마지막 쪽(43~49px)에서 대사가 숨었다
+//   · 문단 한 줄 — yerin-meet 첫 줄은 193자라 320px에서 세 줄이 숨었다
+// → 한도를 넘는 줄만 쪼갠다. 지문·대사 사이(그릴 때 이미 <br />이 들어가는 자리)를 먼저, 그래도 넘치면
+//   따옴표 밖의 문장 끝(그래도 넘치면 쉼표)에서. 한도 안의 줄은 손대지 않는다 — 같은 쪽에서 문단이 문장마다
+//   끊겨 보이지 않게.
 function paginateDescription(
   text: string,
   opts: { maxVisualLines: number; lastPageLines?: number; charsPerLine: number; speakerLabel: string | null },
@@ -230,11 +238,81 @@ function paginateDescription(
   const { maxVisualLines, charsPerLine, speakerLabel } = opts;
   const lastPageLines = Math.min(opts.lastPageLines ?? maxVisualLines, maxVisualLines);
   const visualLines = (line: string) => estimateVisualLines(line, charsPerLine, speakerLabel);
-  const pages = splitByVisualLines(text.split('\n'), maxVisualLines, visualLines);
+  const fitLines = (lines: string[], limit: number) => lines.flatMap(l => splitOversizeLine(l, limit, visualLines));
+  const pages = splitByVisualLines(fitLines(text.split('\n'), maxVisualLines), maxVisualLines, visualLines);
   const tail = pages[pages.length - 1];
   const tailVL = tail.reduce((sum, line) => sum + visualLines(line), 0);
-  if (tailVL > lastPageLines) pages.splice(pages.length - 1, 1, ...splitByVisualLines(tail, lastPageLines, visualLines));
+  if (tailVL > lastPageLines) pages.splice(pages.length - 1, 1, ...splitByVisualLines(fitLines(tail, lastPageLines), lastPageLines, visualLines));
   return pages.map(p => p.join('\n'));
+}
+
+/** 이 쪽을 더 잘게 나눌 수 있는가 — 실측 고리가 한도를 깎아도 소용없는 쪽(한 덩어리)에서 멈추게 한다. */
+function canSplitPage(page: string, charsPerLine: number, speakerLabel: string | null): boolean {
+  if (page.includes('\n')) return true;
+  // 한도 1로 쪼개 보아 조각이 둘 이상이면 아직 나눌 자리가 있다.
+  return splitOversizeLine(page, 1, l => estimateVisualLines(l, charsPerLine, speakerLabel)).length > 1;
+}
+
+function splitOversizeLine(line: string, limit: number, visualLines: (line: string) => number): string[] {
+  if (visualLines(line) <= limit) return [line];
+  const quoteMatch = line.match(QUOTE_LINE);
+  const before = quoteMatch?.[1] ?? '';
+  if (before.trim()) {
+    return [
+      ...splitOversizeLine(before.trimEnd(), limit, visualLines),
+      ...splitOversizeLine(line.slice(before.length), limit, visualLines),
+    ];
+  }
+  // 따옴표 밖에서 자른다 — `"…?" 옅게 웃는다. "…"`는 두 대사 사이에서 갈려 조각마다 짝이 맞는다.
+  // 갈린 조각이 아직 넘치면(긴 대사 하나) 그 조각을 다시 — 조각은 원래 줄보다 짧아 끝난다.
+  const parts = packPieces(finerPieces(line, visualLines, limit), visualLines, limit);
+  if (parts.length > 1) return parts.flatMap(p => splitOversizeLine(p, limit, visualLines));
+  // 대사 하나뿐이면 대사 안에서 자르고 조각마다 따옴표를 씌운다 — 화자 이름이 붙은 대사로 그려진다.
+  // 대사 안에 따옴표가 또 있으면 다시 씌우다 짝이 어긋나니 그대로 둔다. 대사 뒤 지문(after)은 마지막 조각에.
+  if (!quoteMatch || quoteMatch[2].includes('"')) return [line];
+  const [, , dialogue, after] = quoteMatch;
+  const inner = packPieces(finerPieces(dialogue, s => visualLines(`"${s}"`), limit), s => visualLines(`"${s}"`), limit);
+  return inner.length < 2 ? [line] : inner.map((p, i) => (i === inner.length - 1 ? `"${p}"${after}` : `"${p}"`));
+}
+
+// 문장 끝(마침표·물음표·느낌표·말줄임표, 닫는 따옴표까지 + 공백)에서 자르고, 그래도 한도를 넘는 문장은 쉼표에서.
+// `...잘`·`3.5`처럼 뒤에 공백이 없는 건 안 자른다. 따옴표 안(앞쪽 따옴표 수가 홀수)에서는 자르지 않는다.
+const SENTENCE_END = /[.?!…]+["'”’]*\s+/g;
+const CLAUSE_END = /,\s+/g;
+
+function finerPieces(text: string, visualLines: (s: string) => number, limit: number): string[] {
+  return cutOutsideQuotes(text, SENTENCE_END)
+    .flatMap(s => (visualLines(s) > limit ? cutOutsideQuotes(s, CLAUSE_END) : [s]));
+}
+
+function cutOutsideQuotes(text: string, sep: RegExp): string[] {
+  const out: string[] = [];
+  let start = 0;
+  for (const m of text.matchAll(sep)) {
+    const end = (m.index ?? 0) + m[0].length;
+    if ((text.slice(0, end).match(/"/g)?.length ?? 0) % 2 !== 0) continue;
+    out.push(text.slice(start, end).trim());
+    start = end;
+  }
+  if (start < text.length) out.push(text.slice(start).trim());
+  return out.filter(Boolean);
+}
+
+// 한도 안에서 조각을 최대한 이어 붙인다 — 한 조각이 한도보다 길면 그 조각 혼자(상자 스크롤에 맡긴다).
+function packPieces(sentences: string[], visualLines: (s: string) => number, limit: number): string[] {
+  const out: string[] = [];
+  let current = '';
+  for (const s of sentences) {
+    const joined = current ? `${current} ${s}` : s;
+    if (current && visualLines(joined) > limit) {
+      out.push(current);
+      current = s;
+    } else {
+      current = joined;
+    }
+  }
+  if (current) out.push(current);
+  return out;
 }
 
 function splitByVisualLines(lines: string[], maxVisualLines: number, visualLines: (line: string) => number): string[][] {
@@ -367,8 +445,14 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // 박스 폭에서 줄당 글자수(charsPerLine)를, 박스 높이(maxHeight)에서 visual line 한도를 추정해
   // wrap을 반영. 박스 폭 ≈ min(viewport, 1126px 컨테이너) - 좌우 패딩(24*2). 한글 1rem≈16px.
   // maxVisualLines: 데스크탑 6em/1.7≈3.5 → 3, 모바일 10em/1.7≈5.8 → 5.
+  // 그려진 상자 폭을 재면 그 값을 쓴다 — 데스크탑에서 짐작(976px)과 실측(552px)이 거의 두 배 갈려
+  // 한 줄을 실제의 절반으로 셌다. offsetWidth는 스크롤바를 포함해 넘침 여부와 무관하게 일정하다(진동 없음).
+  // jsdom은 폭이 0이라 짐작을 그대로 쓴다.
+  const [measuredBoxW, setMeasuredBoxW] = useState(0);
   const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1024;
-  const charsPerLine = Math.max(12, Math.floor((Math.min(viewportW, 1126) - 48) / 16));
+  const charsPerLine = measuredBoxW > 0
+    ? Math.max(12, Math.floor(measuredBoxW / 16))
+    : Math.max(12, Math.floor((Math.min(viewportW, 1126) - 48) / 16));
   const maxVisualLines = isMobile ? 5 : 3;
   // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
   const speakerIds: string[] = event.speakers && event.speakers.length > 0
@@ -396,18 +480,24 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // 그려진 상자가 넘치면 한도를 한 줄 깎고 다시 나눈다 — 칠하기 전에 돌아서 깜빡임이 없다.
   // 선택지가 뜬 마지막 쪽이면 last를, 선택지가 아직 없는 쪽이면 body를 깎는다.
   // 끝을 본 뒤 ◀ 이전으로 돌아간 쪽(선택지에 눌린 상자)은 이미 다 읽은 쪽이라 다시 나누지 않는다 — 자리가 흔들린다.
-  // 한 줄짜리 쪽은 나눌 수 없으니 상자 스크롤에 맡긴다. jsdom은 높이가 0이라 이 고리가 돌지 않는다(짐작만 쓴다).
+  // 더 나눌 데가 없는 쪽(문장 하나)은 상자 스크롤에 맡긴다. jsdom은 높이가 0이라 이 고리가 돌지 않는다(짐작만 쓴다).
   const descRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const w = descRef.current?.offsetWidth ?? 0;
+    if (w > 0 && w !== measuredBoxW) setMeasuredBoxW(w);
+  }, [event.id, measuredBoxW]);
   useLayoutEffect(() => {
     const box = descRef.current;
     if (!box || box.scrollHeight <= box.clientHeight + 1) return;
-    if (!currentPageText.includes('\n')) return;
+    // 폭을 재기 전의 짐작으로 나눈 쪽에서 깎으면 잰 뒤에 한 줄을 괜히 더 잃는다 — 폭부터.
+    if (box.offsetWidth > 0 && box.offsetWidth !== measuredBoxW) return;
+    if (!canSplitPage(currentPageText, charsPerLine, speakerLabel)) return;
     if (isLastPage && hasReachedEnd) {
       if (lastPageLines > 1) setFitCut({ eventId: event.id, body: cut.body, last: cut.last + 1 });
     } else if (!hasReachedEnd) {
       if (bodyLines > 1) setFitCut({ eventId: event.id, body: cut.body + 1, last: cut.last });
     }
-  }, [event.id, currentPageText, isLastPage, hasReachedEnd, bodyLines, lastPageLines, cut.body, cut.last]);
+  }, [event.id, currentPageText, isLastPage, hasReachedEnd, bodyLines, lastPageLines, cut.body, cut.last, measuredBoxW, charsPerLine, speakerLabel]);
   // 안내가 화면을 덮고 있는 동안은 뒤쪽 선택지·페이지 버튼을 키보드로도 못 만져야 한다.
   // (손으로 만든 오버레이 시절엔 Tab이 가려진 선택지 3개에 먼저 닿고 활성화까지 됐다.)
   const choiceHintOpen = showChoiceHint && hasReachedEnd && !choiceIntroDismissed;
