@@ -296,7 +296,8 @@ describe('EventScene 페이지 분할', () => {
     // 대사 사이에서 갈린 뒤에도 뒤 대사 하나가 한도보다 길면 그 대사를 다시 나눈다(minjae-hs-doubt 자리).
     it('piece_resplit: 갈린 조각이 아직 넘치면 그 조각을 다시 나눈다', () => {
       const long1 = `${'마'.repeat(100)}.`, long2 = `${'바'.repeat(100)}.`;
-      renderScene({ event: makeEvent({ description: `"${'라'.repeat(20)}." 웃는다. "${long1} ${long2}"`, speakers: ['jihun'] }), npcs: jihun });
+      // 뒤에 줄을 하나 더 둔다 — 긴 조각이 마지막 쪽이면 끝쪽 재분할이 대신 나눠 이 갈래를 가린다.
+      renderScene({ event: makeEvent({ description: `"${'라'.repeat(20)}." 웃는다. "${long1} ${long2}"\n마지막 지문.`, speakers: ['jihun'] }), npcs: jihun });
       const seen: string[] = [];
       for (let i = 0; i < 5; i++) {
         seen.push(descBox()?.textContent ?? '');
