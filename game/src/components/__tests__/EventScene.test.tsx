@@ -490,6 +490,36 @@ describe('EventScene 페이지 분할', () => {
     });
   });
 
+  // 데스크탑 패널은 고정 35%라 선택지가 뜨면 본문 상자가 함께 눌렸다(1280×720 minjae-birthday 17px,
+  // 쪽 수 +40%, 셋째 선택지가 화면 밑). 기하는 jsdom이 못 재니 실측(651건)이 보고, 여기는 그 배치를 잠근다.
+  describe('대화 패널 배치', () => {
+    const descBox = () => [...document.querySelectorAll<HTMLElement>('div')].find(d => d.style.overflowY === 'auto' && d.style.maxHeight !== '');
+    const panelOf = (box: HTMLElement) => box.parentElement!.parentElement!;
+    const savedW = window.innerWidth;
+    afterEach(() => { Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: savedW }); });
+
+    it('desktop_panel_grows: 데스크탑 패널은 35%가 바닥이고 75%까지 늘며, 본문은 줄지 않는다', () => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 1280 });
+      renderScene();
+      const box = descBox()!;
+      const panel = panelOf(box);
+      expect(panel.style.height, 'desktop_panel_grows').toBe('');
+      expect(panel.style.minHeight).toBe('max(220px, 35%)');
+      expect(panel.style.maxHeight).toBe('75%');
+      expect(box.style.flex).toBe('0 0 auto');
+    });
+
+    it('mobile_panel_unchanged: 모바일 패널·본문은 그대로다(80dvh 상한, 본문은 줄 수 있다)', () => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: 375 });
+      renderScene();
+      const box = descBox()!;
+      const panel = panelOf(box);
+      expect(panel.style.maxHeight, 'mobile_panel_unchanged').toBe('80dvh');
+      expect(panel.style.minHeight).toBe('220px');
+      expect(box.style.flex).toBe('0 1 auto');
+    });
+  });
+
   it('단일 페이지 이벤트는 네비게이션 없이 선택지를 바로 보여준다', () => {
     renderScene({ event: makeEvent({ description: '짧은 본문.', choices: [makeChoice({ text: '바로 선택' })] }) });
     expect(screen.queryByRole('button', { name: '다음 페이지' })).not.toBeInTheDocument();
