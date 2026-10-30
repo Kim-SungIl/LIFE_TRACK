@@ -24,7 +24,7 @@ export type ScreenRoute =
   | { kind: 'card'; key: string; pace: TransitionPace }
   | { kind: 'weekly'; key: string; pace: TransitionPace; continueTo: WeeklyContinue; resultKey: string }
   | { kind: 'month-plan'; key: string; pace: TransitionPace; existing: MonthPlan | null }
-  | { kind: 'main'; key: string; pace: TransitionPace; playback: { run: MonthRun | null } | null };
+  | { kind: 'main'; key: string; pace: TransitionPace; monthly: { plan: MonthPlan | null; run: MonthRun | null } | null };
 
 export interface ScreenRouteInput {
   state: GameState;
@@ -36,12 +36,12 @@ export interface ScreenRouteInput {
   monthlyEnabled: boolean;
   /** 월말 직전 큰 주(시험·학기 목표)의 결산을 이미 봤다고 적은 키(`${year}-${week}`). */
   bigResultSeen: string | null;
-  /** 재생이 멈춘 뒤 "남은 주 다시 짜기"를 열었는가. */
-  replanning: boolean;
+  /** 주간 화면에서 월 계획 화면을 열었는가(📅 이번 달 계획 · 계획 고치기 · 남은 주 다시 짜기). */
+  planOpen: boolean;
 }
 
 export function decideScreen(input: ScreenRouteInput): ScreenRoute {
-  const { state, eventResult, endingReady, monthlyEnabled, bigResultSeen, replanning } = input;
+  const { state, eventResult, endingReady, monthlyEnabled, bigResultSeen, planOpen } = input;
 
   // 이벤트 결과 — 방금 내린 선택의 결과 연출이라 어떤 phase보다 우선한다. 특히 학년말 주(W48) 이벤트에서
   // year-end/ending보다 먼저 봐야 결과 화면이 학년말 일기장에 묻히지 않는다.
@@ -82,15 +82,18 @@ export function decideScreen(input: ScreenRouteInput): ScreenRoute {
     return { kind: 'weekly', key: `weekly:${state.year}-${state.week}`, pace: 'normal', continueTo, resultKey };
   }
 
-  // 한 달 계획(플래그 뒤) — 이번 달 계획이 아직 없으면 주간 화면 대신 이 화면이 먼저 뜬다.
-  // 재생이 멈춘 뒤 "남은 주 다시 짜기"로도 열린다 — 그때는 짜 둔 계획을 고치고 이어서 재생한다.
-  if (monthlyEnabled && state.week <= 48 && (replanning || !getCurrentMonthPlan(state))) {
-    const existing = replanning ? getCurrentMonthPlan(state) : null;
+  // 한 달 계획(플래그 뒤) — **주간 화면이 메인이고, 계획 화면은 거기서 열 때만 뜬다**(2026-10-29 사용자 판정).
+  // 예전엔 계획이 없는 달이면 주간 화면 대신 이 화면이 먼저 떴고, 재생을 멈춰야만 주간 화면이 보였다.
+  // 열 때 이번 달 계획이 있으면 그걸 고치고(남은 주), 없으면 새로 짠다.
+  const monthlyHere = monthlyEnabled && state.week >= 1 && state.week <= 48;
+  if (monthlyHere && planOpen) {
+    const existing = getCurrentMonthPlan(state);
     return { kind: 'month-plan', key: `month:${state.year}-${getMonthBlock(state.week).index}${existing ? ':replan' : ''}`, pace: 'normal', existing };
   }
 
   // 메인 주간 화면 — 주 안에서는 키가 고정이라 루틴 조작으로 페이드가 돌지 않는다.
-  // 한 달 자동 진행이 멈춰 이 화면에 섰으면(계획이 있는 달) 맨 위 띠에 이유와 [이어서]·[다시 짜기]를 띄운다.
-  const playback = monthlyEnabled && getCurrentMonthPlan(state) ? { run: getMonthRun(state) } : null;
-  return { kind: 'main', key: `main:${state.year}-${state.week}`, pace: 'normal', playback };
+  // 월 단위 판이면 맨 위 띠가 계획을 잇는다: 계획이 없으면 [📅 이번 달 계획], 있으면 [▶ 자동 진행]·[계획 고치기],
+  // 자동 진행이 멈춰 섰으면 그 이유와 [▶ 이어서]·[남은 주 다시 짜기].
+  const monthly = monthlyHere ? { plan: getCurrentMonthPlan(state), run: getMonthRun(state) } : null;
+  return { kind: 'main', key: `main:${state.year}-${state.week}`, pace: 'normal', monthly };
 }

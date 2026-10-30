@@ -184,7 +184,7 @@ describe('② 배선', () => {
     const onStart = vi.fn(() => null);
     render(<MonthPlanScreen state={s} onSetRoutine={() => {}} onStart={onStart} />);
     fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     expect(onStart).toHaveBeenCalledTimes(1);
     expect(kinds('month')).toEqual([{ t: 'month', y: 1, m: 1, week: 1, replan: false, edits: 0, fills: 1, invitesAccepted: 0, invitesDeclined: 0 }]);
   });
@@ -194,7 +194,7 @@ describe('② 배선', () => {
     Object.assign(s, { phase: 'weekday', currentEvent: null, routineSlot2: 'self-study', routineSlot3: null });
     for (const n of s.npcs) n.intimacy = 10;
     render(<MonthPlanScreen state={s} onSetRoutine={() => {}} onStart={() => '거부'} />);
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     expect(kinds('month')).toHaveLength(0);
   });
 });

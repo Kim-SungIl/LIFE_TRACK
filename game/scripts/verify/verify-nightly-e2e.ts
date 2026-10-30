@@ -532,19 +532,22 @@ const SCENARIOS: Readonly<Record<ScenarioKind, { label: string; fixture: (fx: Fi
         if (blocks < 3) throw new Error(`학년말 화면의 본문 블록이 ${blocks}개뿐이다 — 일기장이 안 그려졌다`);
         return `${s.year}학년 마감 · 블록 ${blocks}개 · CTA "${label}"`;
       } },
-      { name: '다음 학년 → 새 학년 월 계획 화면', run: async (c) => {
+      { name: '다음 학년 → 새 학년 주간 화면(계획 띠) → 월 계획 화면', run: async (c) => {
         const before = await c.readSave();
         await yearEndCta(c.page).first().click();
         // 대기 실패를 그대로 흘리면 판정문이 "Timeout 15000ms exceeded"가 된다 — 무엇이 깨졌는지
         // 말하지 않는다(실측: CTA의 onAdvance를 no-op으로 바꾼 뮤테이션이 그 메시지를 냈다).
-        // 새 학년 첫 주는 계획 없는 달이라 기본 판(월 단위)이면 월 계획 화면이 먼저 뜬다.
-        try { await monthPlanScreen(c.page).waitFor({ state: 'visible', timeout: WAIT }); }
-        catch { throw new Error(`${MSG.yearEndNotAdvanced} — 다음 학년 월 계획 화면이 안 떴다 (CTA가 학년을 안 넘긴다)`); }
+        // 새 학년 첫 주는 계획 없는 달이다 — 메인은 주간 화면이고(2026-10-29), 띠에 [📅 이번 달 계획]이 뜬다.
+        try { await monthPlanEntry(c.page).waitFor({ state: 'visible', timeout: WAIT }); }
+        catch { throw new Error(`${MSG.yearEndNotAdvanced} — 다음 학년 주간 화면(계획 띠)이 안 떴다 (CTA가 학년을 안 넘긴다)`); }
+        if (await monthPlanScreen(c.page).count()) throw new Error('새 학년에 계획 화면이 주간 화면을 대신했다 — 계획은 띠에서 열 때만 떠야 한다');
         const after = await c.readSave();
         if (!after || after.phase !== 'weekday' || after.year !== before!.year + 1 || after.week !== 1) {
           throw new Error(`${MSG.yearEndNotAdvanced}: ${JSON.stringify(before)} → ${JSON.stringify(after)}`);
         }
         const want = c.fx.monthLabelAt(after.week);
+        await monthPlanEntry(c.page).locator('[data-testid="month-plan-open"]').click();
+        await monthPlanScreen(c.page).waitFor({ state: 'visible', timeout: WAIT });
         const title = (await monthPlanScreen(c.page).locator('h1').first().innerText()).trim();
         if (title !== want) throw new Error(`새 학년 월 계획 화면 제목이 "${title}"다 — "${want}"이어야 한다`);
         return `${before!.year}학년 → ${after.year}학년 "${title}"`;
@@ -617,6 +620,7 @@ const replayButton = (p: Page) => p.locator('button', { hasText: '엔딩 다시 
 const archiveButton = (p: Page) => p.locator('button', { hasText: '기록실' }).first();
 const confirmButton = (p: Page) => p.locator('[data-tutorial="confirm"] button');
 const monthPlanScreen = (p: Page) => p.locator('[data-testid="month-plan"]');
+const monthPlanEntry = (p: Page) => p.locator('[data-testid="month-plan-entry"]');
 const nextWeekButton = (p: Page) => p.locator('button', { hasText: '다음 주로 →' });
 const eventContinue = (p: Page) => p.locator('button', { hasText: '계속 →' });
 const choiceButtons = (p: Page) => p.locator('button.btn-reset:not([aria-label]):not([disabled])');

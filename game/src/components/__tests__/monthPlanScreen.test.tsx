@@ -33,6 +33,9 @@ function aprilStart(patch: Partial<GameState> = {}): GameState {
     year: 2, week: 5, phase: 'weekday' as const, currentEvent: null, isVacation: false,
     routineSlot2: 'academy', routineSlot3: 'self-study', money: 4,
   }, patch);
+  // 초대 없는 달로 둔다 — 초대가 뜨면 답하기 전까지 저장이 잠긴다. 예전엔 시드가 우연히 0개를 냈다(초대를 달 단위로
+  // 고정하며 시드가 바뀌자 깨졌다). 초대를 보는 테스트는 withInvites가 친밀도를 다시 올린다.
+  for (const n of s.npcs) n.intimacy = Math.min(n.intimacy, 10);
   payMonthStart(s);
   return s;
 }
@@ -74,7 +77,7 @@ describe('한 달 계획 화면 — 짜고, 예산이 움직이고, 시작하면
     expect(screen.getByTestId('month-spendable').textContent, '4주 × 2만이 예약돼야 한다').toContain(`${s.money - 8}만`);
     for (const w of [6, 7, 8]) expect(screen.getByTestId(`week-summary-${w}`).textContent).toContain('예체능 레슨');
 
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     const plan = onStart.mock.calls[0][0];
     expect(plan.year).toBe(2);
     expect(plan.month).toBe(2);
@@ -90,7 +93,7 @@ describe('한 달 계획 화면 — 짜고, 예산이 움직이고, 시작하면
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     expect(screen.getByTestId('week-summary-5').textContent).toContain('지훈');
     pickInto('slot-5-0', 'reading'); // 같은 칸을 동행 없는 활동으로
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     expect(onStart.mock.calls[0][0].weeks[0].npcChoices, '바뀐 칸의 동행이 남았다').toEqual({});
     expect(onStart.mock.results[0].value, '엔진 검증이 계획을 거부했다').toBeNull();
   });
@@ -132,25 +135,57 @@ describe('GameScreen 배선 — 플래그·저장·미리 채우기', () => {
     expect(screen.queryByTestId('month-plan')).toBeNull();
   });
 
-  it('플래그를 켜면 계획 없는 달은 월 계획 화면 → 시작하면 store에 저장되고 그 달이 계획한 칸으로 재생된다(5단계)', async () => {
+  it('플래그를 켜도 메인은 주간 화면이다 — 띠에서 계획을 열어 저장하면 주간 화면으로 돌아와 칸이 채워지고, 재생은 안 돈다', async () => {
     localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
     useGameStore.setState({ state: aprilStart() });
-    const { rerender } = render(<GameScreen />);
-    expect(screen.getByTestId('month-plan')).toBeTruthy();
+    render(<GameScreen />);
+    expect(screen.queryByTestId('month-plan'), '계획 화면이 주간 화면을 대신했다').toBeNull();
+    expect(screen.getByTestId('week-confirm')).toBeTruthy();
 
+    fireEvent.click(screen.getByTestId('month-plan-open'));
     pickInto('slot-5-0', 'reading');
     fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
 
     const after = useGameStore.getState().state!;
     expect(after.monthPlan?.weeks).toHaveLength(4);
     expect(after.monthPlan?.weeks[2].activities[0]).toBe('reading');
-    // 시작하면 곧장 첫 주가 계획대로 확정된다 — 재생이 그 주를 처리했고, 확정한 칸이 계획의 칸이다.
+    // 저장만 했다 — 장부는 멈춘 채 열리고(월말 결산이 손으로 한 주도 담게), 처리된 주는 없다(주는 그대로 W5, 아직 계획 단계).
+    expect([after.monthRun?.status, after.monthRun?.log.length, after.monthRun?.stop]).toEqual(['paused', 0, undefined]);
+    expect([after.week, after.phase]).toEqual([5, 'weekday']);
+    await waitFor(() => expect(screen.queryByTestId('month-plan')).toBeNull());
+    expect(screen.getByTestId('month-plan-strip')).toBeTruthy();
+    // 주간 화면의 이번 주 칸이 계획대로 채워져 있다 — 확정은 이 화면의 버튼이 한다(손으로 한 주, 재생 장부 없이).
+    fireEvent.click(screen.getByTestId('week-confirm'));
+    const confirmed = useGameStore.getState().state!;
+    expect(confirmed.lastWeekendPlan?.activities[0]).toBe('reading');
+    expect(confirmed.monthRun?.log.map(w => [w.week, w.auto]), '손으로 한 주도 장부에 적힌다').toEqual([[5, false]]);
+    expect(confirmed.monthRun?.status).toBe('paused');
+  });
+
+  it('띠의 [▶ 남은 주 자동 진행]을 눌러야 재생이 돈다 — 첫 주가 계획한 칸으로 확정된다', () => {
+    localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
+    useGameStore.setState({ state: aprilStart() });
+    render(<GameScreen />);
+    fireEvent.click(screen.getByTestId('month-plan-open'));
+    pickInto('slot-5-0', 'reading');
+    fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
+    expect(useGameStore.getState().state!.monthRun?.status).toBe('paused');
+    fireEvent.click(screen.getByTestId('playback-resume'));
+    const after = useGameStore.getState().state!;
     expect(after.monthRun?.log.map(w => [w.week, w.auto])).toEqual([[5, true]]);
     expect(after.lastWeekendPlan?.activities[0]).toBe('reading');
-    rerender(<GameScreen />);
-    // 첫 주 처리 뒤 사건(지연 청크)이나 재생 카드로 넘어간다 — 화면 전환 페이드가 끝나면 계획 화면은 없다.
-    await waitFor(() => expect(screen.queryByTestId('month-plan'), '저장했는데 계획 화면이 또 뜬다').toBeNull());
+  });
+
+  it('계획 화면은 저장하지 않고 닫을 수 있다 — 아무것도 남지 않는다', () => {
+    localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
+    useGameStore.setState({ state: aprilStart() });
+    render(<GameScreen />);
+    fireEvent.click(screen.getByTestId('month-plan-open'));
+    fireEvent.click(screen.getByTestId('month-plan-cancel'));
+    expect(useGameStore.getState().state!.monthPlan).toBeUndefined();
+    expect(screen.getByTestId('month-plan-entry')).toBeTruthy();
   });
 });
 
@@ -188,7 +223,7 @@ describe('친구 초대 카드 — 답해야 시작하고, 수락한 칸은 약�
     expect(screen.getByTestId(`week-summary-${first.week}`).textContent, '복사가 약속 칸을 덮었다').toContain(name);
 
     fireEvent.click(within(screen.getByTestId(`invite-${second.npcId}`)).getByRole('button', { name: '다음에' }));
-    fireEvent.click(screen.getByRole('button', { name: '이번 달 시작' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     const plan = onStart.mock.calls[0][0];
     expect(plan.invites?.find(i => i.npcId === first.npcId)?.accepted).toBe(true);
     expect(plan.invites?.find(i => i.npcId === second.npcId)?.accepted).toBe(false);
