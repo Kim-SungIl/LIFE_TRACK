@@ -346,7 +346,8 @@ describe('EventScene 페이지 분할', () => {
 
     // 3자 검수: 대사 속 괄호 지문이 쉼표에서 갈려 괄호 짝이 깨진 채 따옴표가 씌워졌다(seoa-name-blank).
     it('paren_not_cut: 괄호 안의 쉼표에서는 자르지 않는다', () => {
-      const dialogue = `(${'가'.repeat(40)}, ${'나'.repeat(40)}) ${'다'.repeat(60)}, ${'라'.repeat(60)}.`;
+      // 괄호 하나가 한도(3줄)를 넘을 만큼 길어야 괄호 안 쉼표에서 갈린 조각이 다시 안 붙는다.
+      const dialogue = `(${'가'.repeat(90)}, ${'나'.repeat(90)}) ${'다'.repeat(60)}, ${'라'.repeat(60)}.`;
       renderScene({ event: makeEvent({ description: `"${dialogue}"`, speakers: ['jihun'] }), npcs: jihun });
       const spans: string[] = [];
       for (let i = 0; i < 6; i++) {
