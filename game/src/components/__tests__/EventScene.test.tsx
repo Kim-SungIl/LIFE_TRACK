@@ -284,6 +284,87 @@ describe('EventScene 페이지 분할', () => {
       expect(descBox()?.children.length, 'short_line_untouched').toBe(1);
     });
 
+    // 쪽마다 상자 글자를 모은다.
+    const pageTexts = () => {
+      const texts: string[] = [];
+      for (let i = 0; i < 8; i++) {
+        texts.push((descBox()?.textContent ?? '').trim());
+        const next = screen.queryByRole('button', { name: '다음 페이지' });
+        if (!next || (next as HTMLButtonElement).disabled) break;
+        fireEvent.click(next);
+      }
+      return texts;
+    };
+    const siwoo = [{ id: 'siwoo', name: '시우', met: true }];
+
+    // 3자 검수: `시우: "…"`를 지문·대사 사이에서 가르면 `시우:`만 쪽 끝에 홀로 남았다(siwoo-meet).
+    it('prefix_stays_with_quote: 이름표 `시우:`는 대사와 떨어지지 않는다', () => {
+      const s = (ch: string) => `${ch.repeat(48)}.`;
+      renderScene({ event: makeEvent({ description: `${'가'.repeat(100)}.\n시우: "${s('나')} ${s('다')} ${s('라')}"`, speakers: ['siwoo'] }), npcs: siwoo });
+      const texts = pageTexts();
+      expect(texts.length).toBeGreaterThan(1);
+      expect(texts.some(t => t.endsWith('시우:')), 'prefix_stays_with_quote').toBe(false);
+      expect(texts.find(t => t.includes('시우:'))).toContain('나나');
+    });
+
+    // 3자 검수: 대사가 닫힌 뒤 인용 조사(했을)로 문장이 이어지는데 대사 뒤에서 쪽이 갈렸다(jihun-relay-baton).
+    it('embedded_quote_kept: 지문 속 인용 뒤 `했을 애가`로 이어지는 문장은 인용 뒤에서 자르지 않는다', () => {
+      const proto = HTMLElement.prototype;
+      const saved = Object.getOwnPropertyDescriptor(proto, 'offsetWidth');
+      Object.defineProperty(proto, 'offsetWidth', { configurable: true, get(this: HTMLElement) { return this.style.maxHeight !== '' && this.style.overflowY === 'auto' ? 544 : 0; } });
+      try {
+        const baton = GAME_EVENTS.find(e => e.id === 'jihun-relay-baton');
+        if (!baton) throw new Error('jihun-relay-baton 전제 붕괴');
+        renderScene({ event: baton, npcs: jihun });
+        const texts = pageTexts();
+        expect(texts.length).toBeGreaterThan(1);
+        expect(texts.some(t => t.endsWith('"에이 다음에!"')), 'embedded_quote_kept').toBe(false);
+        expect(texts.some(t => /^지훈\s*:\s*"에이 다음에!"/.test(t))).toBe(false);
+      } finally {
+        if (saved) Object.defineProperty(proto, 'offsetWidth', saved); else delete (proto as unknown as Record<string, unknown>).offsetWidth;
+      }
+    });
+
+    // 3자 검수: 대사만으론 한도 안인데 앞 지문까지 그리면 넘친다 — 첫 조각에 앞 지문 몫을 안 세면 한 덩어리로 묶여
+    // 마지막 수단(지문·대사 사이)으로 떨어지고 `나를 발견하자`만 한 쪽에 남았다(subin-academy).
+    it('first_piece_counts_before: 대사를 나눌 때 첫 조각은 앞 지문 몫까지 센다', () => {
+      const a = `${'가'.repeat(54)}?`, b = `${'나'.repeat(54)}?`, c = `${'다'.repeat(54)}~`;
+      renderScene({ event: makeEvent({ description: `나를 발견하자 "${a} ${b} ${c}"`, speakers: ['jihun'] }), npcs: jihun });
+      const texts = pageTexts();
+      expect(texts[0], 'first_piece_counts_before').toContain('나를 발견하자');
+      expect(texts[0]).toContain(a);
+    });
+
+    // 대사 뒤 지문(`하며 손을 든다.`)도 세야 한다 — 안 세면 같은 이유로 `수빈이가`만 남았다(school-festival).
+    it('after_counted: 대사를 나눌 때 대사 뒤 지문 몫도 센다', () => {
+      const a = `${'가'.repeat(54)}!`, b = `${'나'.repeat(54)}~`;
+      renderScene({ event: makeEvent({ description: `수빈이가 "${a} ${b}" 하며 ${'다'.repeat(50)} 든다.`, speakers: ['jihun'] }), npcs: jihun });
+      const texts = pageTexts();
+      expect(texts[0], 'after_counted').toContain('수빈이가');
+      expect(texts[0]).toContain(a);
+    });
+
+    // 3자 검수: 대사 속 괄호 지문이 쉼표에서 갈려 괄호 짝이 깨진 채 따옴표가 씌워졌다(seoa-name-blank).
+    it('paren_not_cut: 괄호 안의 쉼표에서는 자르지 않는다', () => {
+      const dialogue = `(${'가'.repeat(40)}, ${'나'.repeat(40)}) ${'다'.repeat(60)}, ${'라'.repeat(60)}.`;
+      renderScene({ event: makeEvent({ description: `"${dialogue}"`, speakers: ['jihun'] }), npcs: jihun });
+      const spans: string[] = [];
+      for (let i = 0; i < 6; i++) {
+        spans.push(...[...(descBox()?.querySelectorAll('span') ?? [])].map(s => s.textContent ?? '').filter(t => t.startsWith('"')));
+        const next = screen.queryByRole('button', { name: '다음 페이지' });
+        if (!next || (next as HTMLButtonElement).disabled) break;
+        fireEvent.click(next);
+      }
+      expect(spans.length).toBeGreaterThan(1);
+      for (const s of spans) expect((s.match(/\(/g) ?? []).length, `paren_not_cut: ${s}`).toBe((s.match(/\)/g) ?? []).length);
+    });
+
+    // 대사 안에 따옴표가 또 있으면 조각마다 따옴표를 다시 씌우지 않는다 — 짝이 어긋난다.
+    it('inner_quote_guard: 대사 속 따옴표가 있으면 대사 안에서 다시 씌우지 않는다', () => {
+      renderScene({ event: makeEvent({ description: `"${'가'.repeat(60)}. 그래서 "${'나'.repeat(20)}" 라고 ${'다'.repeat(150)}."`, speakers: ['jihun'] }), npcs: jihun });
+      expect(screen.queryByRole('button', { name: '다음 페이지' }), 'inner_quote_guard').not.toBeInTheDocument();
+    });
+
     it('clause_split: 마침표 없이 긴 문장은 쉼표에서 나눈다', () => {
       const a = `${'가'.repeat(70)},`, b = `${'나'.repeat(70)},`, c = `${'다'.repeat(60)}`;
       renderScene({ event: makeEvent({ description: `${a} ${b} ${c}` }) });
@@ -357,6 +438,36 @@ describe('EventScene 페이지 분할', () => {
         expect(texts.length).toBeGreaterThan(1);
         expect(texts, 'no_blank_page').not.toContain('');
         expect(texts.join(' ')).toContain('끝 문단이다.');
+      });
+
+      // 3자 검수: 원문 끝 빈 줄이 끝쪽이 되면 끝쪽 한도가 빈 줄에만 걸려 본문이 안 나뉘었다 — 빈 줄을 먼저 버린다.
+      it('trailing_blank_last_limit: 원문이 빈 줄로 끝나도 끝쪽 한도가 본문에 걸린다', () => {
+        stub({ offsetWidth: 480, perLineChars: 30, boxH: 40 });
+        const s = (n: number) => `${'가'.repeat(23)}${n}.`;
+        renderScene({ event: makeEvent({ description: `${s(1)} ${s(2)}\n\n\n\n` }) });
+        expect(screen.getByText('1 / 2'), 'trailing_blank_last_limit').toBeInTheDocument();
+      });
+
+      // 3자 검수: 사건 도중 창 크기가 바뀌면 폭 재기는 다시 안 돌고 고리는 '폭이 다르다'에서 매번 멈췄다.
+      it('resize_refits: 사건 도중 상자 폭이 바뀌어도 넘친 쪽을 다시 나눈다', () => {
+        const proto = HTMLElement.prototype;
+        const keys = ['scrollHeight', 'clientHeight', 'offsetWidth'] as const;
+        const saved = keys.map(k => [k, Object.getOwnPropertyDescriptor(proto, k)] as const);
+        const isBox = (el: HTMLElement) => el.style.maxHeight !== '' && el.style.overflowY === 'auto';
+        let geo = { w: 976, per: 61, h: 200 };
+        Object.defineProperty(proto, 'offsetWidth', { configurable: true, get(this: HTMLElement) { return isBox(this) ? geo.w : 0; } });
+        Object.defineProperty(proto, 'scrollHeight', { configurable: true, get(this: HTMLElement) {
+          return isBox(this) ? [...this.children].reduce((h, c) => h + 31 * Math.ceil((c.textContent ?? '').length / geo.per), 0) : 0;
+        } });
+        Object.defineProperty(proto, 'clientHeight', { configurable: true, get(this: HTMLElement) { return isBox(this) ? geo.h : 0; } });
+        restore = () => { for (const [k, d] of saved) { if (d) Object.defineProperty(proto, k, d); else delete (proto as unknown as Record<string, unknown>)[k]; } };
+        const desc = ['가', '나', '다', '라', '마', '바'].map((ch, i) => `${ch.repeat(40)}${i + 1}.`).join('\n');
+        renderScene({ event: makeEvent({ description: desc }) });
+        expect(screen.getByText('1 / 2')).toBeInTheDocument();
+        // 창이 좁아져 상자가 480px(30자)·90px이 됐다 — 한 줄 42자가 두 줄이라 3줄 쪽은 넘친다.
+        geo = { w: 480, per: 30, h: 90 };
+        fireEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+        expect(screen.queryByText('2 / 2'), 'resize_refits').not.toBeInTheDocument();
       });
 
       // 데스크탑 짐작 폭은 뷰포트−48(976px)인데 실측은 552px였다. 잰 폭이 있으면 그걸로 센다.
