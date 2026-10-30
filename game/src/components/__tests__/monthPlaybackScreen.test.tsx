@@ -85,13 +85,30 @@ describe('재생 카드 — 저절로 한 번만 넘어간다', () => {
   it('탭하면 바로 넘어가고, 그 뒤 타이머가 또 넘기지 않는다 · 사건 문장·약속 줄·변화 배지를 보인다', () => {
     vi.useFakeTimers();
     const onContinue = vi.fn();
-    render(<PlaybackCard {...base} fast={false} onContinue={onContinue} />);
+    render(<PlaybackCard {...base} weekLog={{ ...log, lightNarration: '📖 도서관이 조용했다.' }} fast={false} onContinue={onContinue} />);
     expect(screen.getByTestId('playback-hero').textContent).toBe('도서관이 조용했다.');
     expect(screen.getByText(/지훈과 한 약속/)).toBeTruthy();
     expect(screen.getByText(/학업 ▲/)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '다음 주로' }));
     act(() => { vi.advanceTimersByTime(CARD_DWELL_MAX_MS * 2); });
     expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  // 결과 화면에서 방금 읽은 사건 문장을 카드가 다시 올리면 같은 문장이 두 번이고, 결과 화면의 사건 효과 칩(멘탈 +0.4)
+  // 옆에 주 전체 배지(멘탈 ▼)가 놓여 모순처럼 읽힌다. 머리 줄은 결과 화면을 건너뛴 가벼운 사건(lightNarration)일 때만 사건 문장이다.
+  it('event_week_hero_is_week: 결과 화면을 거친 사건 주는 그 주에 한 일을 머리 줄로 쓴다', () => {
+    const played: WeekLog['played'] = { routines: [], choices: ['rest'] };
+    render(<PlaybackCard {...base} weekLog={{ ...log, played }} fast={false} onContinue={vi.fn()} />);
+    const hero = screen.getByTestId('playback-hero').textContent;
+    expect(hero, 'event_week_hero_is_week').not.toBe('도서관이 조용했다.');
+    expect(CHOICE_LINES.rest).toContain(hero);
+  });
+
+  it('가벼운 사건 줄이 마지막 📖가 아니면(그 뒤 다른 사건) 사건 문장을 올리지 않는다', () => {
+    const played: WeekLog['played'] = { routines: [], choices: ['rest'] };
+    const messages = ['📖 잡무를 끝냈다.', '📖 도서관이 조용했다.'];
+    render(<PlaybackCard {...base} weekLog={{ ...log, messages, played, lightNarration: '📖 잡무를 끝냈다.' }} fast={false} onContinue={vi.fn()} />);
+    expect(CHOICE_LINES.rest).toContain(screen.getByTestId('playback-hero').textContent);
   });
 
   it('⏸ 를 누르면 멈춤만 부르고 다음 주로 넘기지 않는다', () => {

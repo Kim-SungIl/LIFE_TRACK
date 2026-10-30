@@ -51,13 +51,12 @@ function cardSeq(log: WeekLog): number {
   return n;
 }
 
-/** 카드에 올릴 줄 — 약속·결석·사건 결과. 사건 문장(📖)은 마지막 것을 머리 줄로 쓰니 여기선 뺀다. */
+/** 카드에 올릴 줄 — 약속·결석. 사건 문장(📖)은 cardLine이 머리 줄로 고르니(결과 화면을 건너뛴 것만) 여기선 뺀다. */
 const NOTE_PREFIXES = ['📌', '💔', '📅'];
 
 export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProps, fast, talkBadge, onToggleFast, onContinue, onPause, onTalk, onShop }: Props) {
   const reducedMotion = usePrefersReducedMotion();
-  const narration = weekLog.messages.filter(m => m.startsWith('📖'));
-  const hero = narration.length ? narration[narration.length - 1].replace(/^📖\s*/, '') : cardLine(state, weekLog, resultDialogue);
+  const hero = cardLine(state, weekLog, resultDialogue);
   const notes = weekLog.messages.filter(m => NOTE_PREFIXES.some(p => m.startsWith(p))).slice(0, 3);
   const dwell = fast ? CARD_DWELL_FAST_MS : cardDwellMs([hero, ...notes].join('').replace(/\s/g, '').length);
 

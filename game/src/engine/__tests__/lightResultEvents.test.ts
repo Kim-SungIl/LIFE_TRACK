@@ -9,6 +9,8 @@ import { GAME_EVENTS } from '../events';
 import { LIGHT_RESULT_EVENT_IDS, LIGHT_RESULT_EFFECT_CAP } from '../events/light-result';
 import { FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from '../events/constants';
 import { CG_MANIFEST } from '../../cg-manifest.generated';
+import { resolveCurrentEvent } from '../eventResolution';
+import { makeState } from '../../test/fixtures';
 import type { EventChoice, GameEvent, SchoolBand } from '../types';
 
 const byId = new Map(GAME_EVENTS.map(e => [e.id, e]));
@@ -141,5 +143,35 @@ describe('LIGHT_RESULT_EVENT_IDS 자격 (카탈로그 파생)', () => {
     }
     // 루프가 좁아져 검사가 공허해지지 않게 — 사건마다 선택지가 둘 이상은 있어야 한다.
     expect(checked).toBeGreaterThanOrEqual(LIGHT_RESULT_EVENT_IDS.size * 2);
+  });
+});
+
+// 재생 카드 머리 줄(PlaybackCard)은 결과 화면을 건너뛴 사건의 문장만 다시 올린다 — 그 표시를 엔진이 해결할 때 박는다.
+describe('weekLog.lightNarration — 결과 화면을 건너뛰는 문장의 표시', () => {
+  const weekLog = { statChanges: {}, fatigueChange: 0, moneyChange: 0, messages: [], skipped: [], milestoneMessages: [] };
+  const resolve = (id: string, patchChoice?: Partial<EventChoice>) => {
+    const event = byId.get(id);
+    if (!event) throw new Error(`${id} 전제 붕괴`);
+    const choices = patchChoice ? event.choices.map((c, i) => (i === 0 ? { ...c, ...patchChoice } : c)) : event.choices;
+    const s = makeState({ year: 2, week: 6, phase: 'event', currentEvent: { ...event, choices }, weekLog: { ...weekLog, messages: [] } });
+    return resolveCurrentEvent(s, 0)!.state.weekLog!;
+  };
+
+  it.each([...LIGHT_RESULT_EVENT_IDS])('%s: 해결한 📖 줄이 그대로 표시된다', id => {
+    const w = resolve(id);
+    expect(w.lightNarration, id).toBeDefined();
+    expect(w.lightNarration).toBe(w.messages.filter(m => m.startsWith('📖')).at(-1));
+  });
+
+  it('결과 화면을 거치는 사건은 표시가 없다', () => {
+    const normal = GAME_EVENTS.find(e => !LIGHT_RESULT_EVENT_IDS.has(e.id) && e.choices[0]?.message && !e.speakers?.length);
+    if (!normal) throw new Error('일반 사건 전제 붕괴');
+    const w = resolve(normal.id);
+    expect(w.messages.some(m => m.startsWith('📖')), '전제: 📖 줄은 있다').toBe(true);
+    expect(w.lightNarration).toBeUndefined();
+  });
+
+  it('빈 문장이면 결과 화면이 생략되지 않으니(GameScreen 착지 판별) 표시도 없다', () => {
+    expect(resolve('president-errand', { message: '  ' }).lightNarration).toBeUndefined();
   });
 });

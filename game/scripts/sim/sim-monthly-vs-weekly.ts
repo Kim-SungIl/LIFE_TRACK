@@ -16,6 +16,7 @@
  * 루틴 4종: 정본 paid·mixed·free + 갈아넣기(grind, 번아웃이 실제로 나는 판). 월 계획 저장은 계획 화면의 돈 잠금(overspent)을 흉내 낸다 —
  * store는 돈을 안 봐서, 안 흉내 내면 유료 판이 W1에서 plan-invalid에 영원히 갇힌다.
  * 실행: npx tsx scripts/sim/sim-monthly-vs-weekly.ts [시드수=12]   (MVW_DECLINE=1 — 초대를 전부 거절하는 대조)
+ *       MVW_LINES=1 — 재생 카드 머리 줄(cardLine, 카드와 같은 함수)이 한 판에 몇 번·몇 종 나갔나를 행동별로 덧붙인다.
  */
 import { installMemoryStorage, layoutSlots } from '../lib/week-driver';
 import { SIM_ROUTINES, assertRoutineIds, type Routine } from '../lib/sim-routines';
@@ -36,6 +37,7 @@ import type { GameState, MonthPlan } from '../../src/engine/types';
 import { getRoutineDueCost } from '../../src/engine/monthlyMoney';
 import { canSpend } from '../../src/engine/spendableMoney';
 import { cloneGameState } from '../../src/engine/stateClone';
+import { cardLine } from '../../src/engine/talkData/playbackLines';
 
 type Behavior = 'W-react' | 'W-fixed' | 'M-active' | 'M-passive';
 const BEHAVIORS: Behavior[] = ['W-react', 'W-fixed', 'M-active', 'M-passive'];
@@ -80,6 +82,8 @@ interface Run {
   ach: string; hap: string; burnout: number; tiredWeeks: number; talkEvents: number; homeEvents: number;
   peak70: number; peak80: number; dating: boolean; money: number; spent: number; blockedWeeks: number;
   fallbacks: number; blockedMonths: number; manualWeeks: number; invAcc: number; invDec: number; kept: number; broken: number; stops: Record<string, number>; replans: number;
+  /** 재생 카드에 나간 머리 줄(월말·시험 결산 주와 결산 독백은 뺀다) */
+  cardLines: string[];
 }
 
 function runOne(r: Routine, behavior: Behavior, seed: number): Run {
@@ -93,7 +97,7 @@ function runOne(r: Routine, behavior: Behavior, seed: number): Run {
   const out: Run = {
     routine: r.name, behavior, seed, ok: false, ach: '-', hap: '-', burnout: 0, tiredWeeks: 0, talkEvents: 0, homeEvents: 0,
     peak70: 0, peak80: 0, dating: false, money: 0, spent: 0, blockedWeeks: 0,
-    fallbacks: 0, blockedMonths: 0, manualWeeks: 0, invAcc: 0, invDec: 0, kept: 0, broken: 0, stops: {}, replans: 0,
+    fallbacks: 0, blockedMonths: 0, manualWeeks: 0, invAcc: 0, invDec: 0, kept: 0, broken: 0, stops: {}, replans: 0, cardLines: [],
   };
   const peak: Record<string, number> = {};
   const unsub = store.subscribe((st, prev) => {
@@ -229,6 +233,12 @@ function runOne(r: Routine, behavior: Behavior, seed: number): Run {
           api().finishMonth();
           continue;
         }
+        // 카드 경로(screenRoute 'card')와 같은 조건 — 재생이 처리한 주, 시험 주 아님. 결산 독백 자리는 문장 표가 아니라 뺀다.
+        const entry = run?.log[run.log.length - 1];
+        if (s.weekLog && entry && entry.week === lw && entry.auto && !s.weekLog.examResult) {
+          const line = cardLine(s, s.weekLog, '\u0000');
+          if (line !== '\u0000') out.cardLines.push(line);
+        }
         if (behavior === 'M-active' && hadTalkChance(s)) api().pausePlayback('talk');
         api().continuePlayback();
         continue;
@@ -286,6 +296,12 @@ function runOne(r: Routine, behavior: Behavior, seed: number): Run {
 }
 
 // ── 실행 ──
+/** 한 판의 카드 머리 줄 — 나간 수 · 서로 다른 수 · 중복률(1 − 종/수) · 한 문장 최다 */
+function lineStats(lines: string[]): { n: number; distinct: number; dup: number; max: number } {
+  const count = new Map<string, number>();
+  for (const l of lines) count.set(l, (count.get(l) ?? 0) + 1);
+  return { n: lines.length, distinct: count.size, dup: lines.length ? 1 - count.size / lines.length : 0, max: Math.max(0, ...count.values()) };
+}
 assertRoutineIds(ROUTINES);
 const N = Number(process.argv[2] ?? 12);
 const seeds = Array.from({ length: N }, (_, i) => 1000 + i * 7919);
@@ -322,6 +338,19 @@ for (const r of ['ALL', ...ROUTINES.map(x => x.name)]) {
       `${fmt(mean(xs.map(x => x.invAcc)))}/${fmt(mean(xs.map(x => x.invDec)))}`.padStart(14),
       `${fmt(mean(xs.map(x => x.kept)))}/${fmt(mean(xs.map(x => x.broken)))}`.padStart(14),
       ` ${stopStr}`,
+    ].join(' '));
+  }
+}
+
+if (process.env.MVW_LINES === '1') {
+  console.log('\n── 재생 카드 머리 줄(판당 평균) ──');
+  console.log('행동        나간 줄   서로 다른 줄   중복률   한 문장 최다(평균/최대)');
+  for (const b of BEHAVIORS.filter(x => x.startsWith('M-'))) {
+    const xs = runs.filter(x => x.ok && x.behavior === b).map(x => lineStats(x.cardLines));
+    console.log([
+      b.padEnd(10), fmt(mean(xs.map(x => x.n))).padStart(8), fmt(mean(xs.map(x => x.distinct))).padStart(12),
+      `${fmt(mean(xs.map(x => x.dup)) * 100)}%`.padStart(9),
+      `${fmt(mean(xs.map(x => x.max)))}/${Math.max(0, ...xs.map(x => x.max))}`.padStart(14),
     ].join(' '));
   }
 }

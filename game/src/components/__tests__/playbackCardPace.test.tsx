@@ -24,10 +24,11 @@ function state(): GameState {
   const s = createInitialState('male', ['strict', 'emotional'], { rngSeed: 11 });
   return Object.assign(s, { year: 2, week: 7, phase: 'result' as const });
 }
-const SHORT: WeekLog = { statChanges: { academic: 1.2 }, fatigueChange: 0, moneyChange: 0, messages: ['📖 도서관이 조용했다.'], skipped: [], milestoneMessages: [], year: 2, week: 6 };
+const SHORT: WeekLog = { statChanges: { academic: 1.2 }, fatigueChange: 0, moneyChange: 0, messages: ['📖 도서관이 조용했다.'], lightNarration: '📖 도서관이 조용했다.', skipped: [], milestoneMessages: [], year: 2, week: 6 };
 // 사건 주 카드 — 머리 줄이 길고 약속·결석 줄이 붙는다(실측 카드 글 100자 안팎).
+// 📖가 머리 줄이 되는 건 결과 화면을 건너뛴 가벼운 사건(lightNarration)뿐이라 표시를 같이 단다(playbackLines.cardLine).
 const LONG_HERO = '방과후 교실에 남아 있던 지훈이 창밖을 보다가 갑자기 돌아보더니, 이번 주말에 같이 도서관에 가자고 했다. 나는 잠깐 망설이다가 고개를 끄덕였다.';
-const LONG: WeekLog = { ...SHORT, week: 7, messages: [`📖 ${LONG_HERO}`, '📌 지훈과 한 약속 — 친구와 놀기. 지켰다.', '📅 학원 결석 — 사건으로 하루 빠졌다.'] };
+const LONG: WeekLog = { ...SHORT, week: 7, messages: [`📖 ${LONG_HERO}`, '📌 지훈과 한 약속 — 친구와 놀기. 지켰다.', '📅 학원 결석 — 사건으로 하루 빠졌다.'], lightNarration: `📖 ${LONG_HERO}` };
 const nonSpace = (...xs: string[]) => xs.join('').replace(/\s/g, '').length;
 
 const props = (weekLog: WeekLog, over: Partial<Parameters<typeof PlaybackCard>[0]> = {}) => ({

@@ -19,6 +19,7 @@ import { applyParentIntimacyDelta } from './parentIntimacy';
 import { absWeek, isNpcInteractable } from './relationshipSignals';
 import { CAREER_CHOICE_EVENT_ID } from './careerChoice';
 import { recordMoneySpent } from './moneyTrajectory';
+import { LIGHT_RESULT_EVENT_IDS } from './events/light-result';
 
 /** 가시 효과의 "적용 전" 스냅샷 — 실제로 얼마가 먹혔는지는 클램프 뒤에만 알 수 있다. */
 export function visibleSnapshot(s: GameState): { stats: GameState['stats']; fatigue: number; money: number } {
@@ -349,7 +350,10 @@ export function resolveCurrentEvent(
 
   // weekLog 메시지 + 이벤트 닫기
   if (newState.weekLog && !romanceRetryNpc(event.id)) {
-    newState.weekLog.messages.push(`📖 ${choice.message}`);
+    const line = `📖 ${choice.message}`;
+    newState.weekLog.messages.push(line);
+    // 빈 문장이면 결과 화면이 생략되지 않는다(GameScreen.onChoice의 착지 판별) — 표시도 하지 않는다.
+    if (LIGHT_RESULT_EVENT_IDS.has(event.id) && choice.message.trim()) newState.weekLog.lightNarration = line;
   }
   newState.currentEvent = null;
 
