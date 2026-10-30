@@ -298,15 +298,16 @@ describe('EventScene 페이지 분할', () => {
       const long1 = `${'마'.repeat(100)}.`, long2 = `${'바'.repeat(100)}.`;
       // 뒤에 줄을 하나 더 둔다 — 긴 조각이 마지막 쪽이면 끝쪽 재분할이 대신 나눠 이 갈래를 가린다.
       renderScene({ event: makeEvent({ description: `"${'라'.repeat(20)}." 웃는다. "${long1} ${long2}"\n마지막 지문.`, speakers: ['jihun'] }), npcs: jihun });
-      const seen: string[] = [];
+      // 쪽마다 대사 칸(따옴표 span)을 모은다 — 다시 나눴으면 두 대사가 각자 한 칸이다.
+      const spans: string[] = [];
       for (let i = 0; i < 5; i++) {
-        seen.push(descBox()?.textContent ?? '');
+        spans.push(...[...(descBox()?.querySelectorAll('span') ?? [])].map(s => s.textContent ?? ''));
         const next = screen.queryByRole('button', { name: '다음 페이지' });
         if (!next || (next as HTMLButtonElement).disabled) break;
         fireEvent.click(next);
       }
-      expect(seen.some(t => t.endsWith(`"${long1}"`)), 'piece_resplit').toBe(true);
-      expect(seen.some(t => t.endsWith(`"${long2}"`))).toBe(true);
+      expect(spans, 'piece_resplit').toContain(`"${long1}"`);
+      expect(spans).toContain(`"${long2}"`);
     });
 
     describe('그려진 상자 기하', () => {
