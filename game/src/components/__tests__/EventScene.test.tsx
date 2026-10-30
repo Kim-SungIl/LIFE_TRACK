@@ -2,7 +2,7 @@
 // EventScene — 이벤트 화면의 계약 검증:
 // 선택지 노출 규칙(조건/원본 인덱스/돈 게이팅/지나친다), 페이지 분할, 성별 분기, 화자 라벨.
 // 이미지 로드는 jsdom에서 발화하지 않으므로(리소스 미로딩) 폴백 체인은 여기서 다루지 않는다.
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { EventScene } from '../EventScene';
 import { GAME_EVENTS } from '../../engine/events';
@@ -154,6 +154,73 @@ describe('EventScene 페이지 분할', () => {
     expect(screen.getByText('1 / 2')).toBeInTheDocument();
     // 재읽기 중 선택지가 사라지면 사용자는 "선택지가 없어졌다"고 느낀다 — 영구 노출 계약
     expect(screen.getByText('마지막 선택지')).toBeVisible();
+  });
+
+  // 첫 장면 회귀 앵커: 첫 줄 `…뒤에서 "야!" 하는 소리.`는 지문과 대사 사이에 <br />이 들어가 화면에서 두 줄이다.
+  // 한 줄로 세면 1쪽이 실제 4줄이 돼 6em 상자 밑으로 지훈의 셋째 줄이 숨었다(스크롤 표시 없음).
+  it('first_week_page_one_fits: 첫 장면 1쪽은 지문 뒤 대사 줄을 두 줄로 세서 셋째 줄을 2쪽으로 넘긴다', () => {
+    const firstWeek = GAME_EVENTS.find(e => e.id === 'first-week');
+    if (!firstWeek) throw new Error('first-week 전제 붕괴');
+    renderScene({ event: firstWeek, npcs: [{ id: 'jihun', name: '지훈', met: true }] });
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    expect(screen.getByText(/돌아보니 지훈이가/)).toBeInTheDocument();
+    expect(screen.queryByText(/우리 또 같은 반이다/), 'first_week_page_one_fits').not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+    expect(screen.getByText(/우리 또 같은 반이다/)).toBeInTheDocument();
+  });
+
+  // 데스크탑 charsPerLine = floor((1024 - 48) / 16) = 61. 대사 57자 + 따옴표 = 59자라 이름 없이는 한 줄,
+  // `지훈 : `(5자)이 붙으면 64자로 두 줄이다. 같은 본문을 화자 없이 그리면 한 쪽 — 이름을 세는지만 가른다.
+  it('speaker_label_counted: 화자 이름까지 글자로 세서 줄을 나눈다', () => {
+    const spoken = `"${'가'.repeat(57)}"`;
+    const event = makeEvent({ description: `첫째 줄이다.\n둘째 줄이다.\n${spoken}`, speakers: ['jihun'] });
+    const { unmount } = renderScene({ event, npcs: [{ id: 'jihun', name: '지훈', met: true }] });
+    expect(screen.getByText('1 / 2'), 'speaker_label_counted').toBeInTheDocument();
+    unmount();
+
+    renderScene({ event: { ...event, speakers: [] } });
+    expect(screen.queryByRole('button', { name: '다음 페이지' })).not.toBeInTheDocument();
+  });
+
+  // 실측 고리 — jsdom은 높이가 0이라 상자 기하를 심는다. 줄 하나 31px(1.7em+4px), 상자는 평소 90px이고
+  // 선택지가 뜨면 65px로 눌린다(1280·1024px 실측값). 짐작(데스크탑 3줄)은 둘 다 넘친다.
+  describe('넘침 실측', () => {
+    const box = (el: HTMLElement) => el.style.maxHeight !== '' && el.style.overflowY === 'auto';
+    const choicesShown = () => {
+      const b = [...document.querySelectorAll('button')].find(x => x.textContent?.includes('마지막 선택지'));
+      return !!b && b.closest('[style*="display: none"]') === null;
+    };
+    let restore: (() => void) | undefined;
+    beforeEach(() => {
+      const proto = HTMLElement.prototype;
+      const saved = (['scrollHeight', 'clientHeight'] as const).map(k => [k, Object.getOwnPropertyDescriptor(proto, k)] as const);
+      Object.defineProperty(proto, 'scrollHeight', { configurable: true, get(this: HTMLElement) { return box(this) ? 31 * this.children.length : 0; } });
+      Object.defineProperty(proto, 'clientHeight', { configurable: true, get(this: HTMLElement) { return box(this) ? (choicesShown() ? 65 : 90) : 0; } });
+      restore = () => { for (const [k, d] of saved) { if (d) Object.defineProperty(proto, k, d); else delete (proto as unknown as Record<string, unknown>)[k]; } };
+    });
+    afterEach(() => restore?.());
+
+    it('fit_cut_body: 선택지 전 쪽이 넘치면 한도를 깎아 셋째 줄을 다음 쪽으로 넘긴다', () => {
+      renderScene({ event: longEvent });
+      expect(screen.getByText('1 / 2')).toBeInTheDocument();
+      expect(screen.queryByText('셋째 줄이다.'), 'fit_cut_body').not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+      expect(screen.getByText('셋째 줄이다.')).toBeInTheDocument();
+      expect(screen.getByText('넷째 줄이다.')).toBeInTheDocument();
+      expect(screen.getByText('마지막 선택지')).toBeVisible();
+    });
+
+    it('fit_cut_last: 선택지에 눌린 마지막 쪽이 넘치면 그 쪽만 다시 나눈다', () => {
+      renderScene({
+        event: makeEvent({ description: '첫째 줄이다.\n둘째 줄이다.\n셋째 줄이다.', choices: [makeChoice({ text: '마지막 선택지' })] }),
+      });
+      expect(screen.getByText('1 / 2'), 'fit_cut_last').toBeInTheDocument();
+      expect(screen.getByText('마지막 선택지')).not.toBeVisible();
+      fireEvent.click(screen.getByRole('button', { name: '다음 페이지' }));
+      expect(screen.getByText('셋째 줄이다.')).toBeInTheDocument();
+      expect(screen.getByText('마지막 선택지')).toBeVisible();
+    });
   });
 
   it('단일 페이지 이벤트는 네비게이션 없이 선택지를 바로 보여준다', () => {

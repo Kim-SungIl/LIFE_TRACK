@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { playSfx } from '../audio/sfx';
 import { GameEvent, EventChoice, GameState } from '../engine/types';
 import { SCHOOL_LIFE_EVENT_IDS } from '../engine/events/school-life';
@@ -143,23 +143,31 @@ function CharacterImage({ npcId, height, isActive, delay, year, gender }: Charac
 // ===== Main Component =====
 
 // ===== 대사 파싱: "..." 부분에 화자 이름 붙이기 =====
+// 그리기(renderDescription)와 줄 셈(estimateVisualLines)이 같은 판정을 쓴다 — 둘이 갈리면 셈이 줄을 덜 세서
+// 페이지 끝줄이 6em 상자 밑으로 숨는다.
+const QUOTE_LINE = /^(.*?)"(.+)"(.*)$/;
+
+type SpeakerNpc = { id: string; name: string; met: boolean };
+
+function speakerLabelOf(speakerIds: string[], npcs?: SpeakerNpc[]): string | null {
+  const primaryNpc = npcs?.find(n => n.id === speakerIds[0]);
+  // met 안 됐으면 ???, met 됐거나 이 이벤트에서 만나는 거면 이름 표시
+  return primaryNpc ? (primaryNpc.met ? primaryNpc.name : '???') : null;
+}
+
 function renderDescription(
   text: string,
   speakerIds: string[],
-  npcs?: { id: string; name: string; met: boolean }[],
+  npcs?: SpeakerNpc[],
 ) {
   const lines = text.split('\n');
   const primaryId = speakerIds[0];
-  const primaryNpc = npcs?.find(n => n.id === primaryId);
-  // met 안 됐으면 ???, met 됐거나 이 이벤트에서 만나는 거면 이름 표시
-  const speakerLabel = primaryNpc
-    ? (primaryNpc.met ? primaryNpc.name : '???')
-    : null;
+  const speakerLabel = speakerLabelOf(speakerIds, npcs);
   const speakerColor = primaryId ? (NPC_COLORS[primaryId] || '#aaa') : '#aaa';
 
   return lines.map((line, i) => {
     // "..." 패턴 찾기
-    const quoteMatch = line.match(/^(.*?)"(.+)"(.*)$/);
+    const quoteMatch = line.match(QUOTE_LINE);
     if (quoteMatch) {
       const [, before, dialogue, after] = quoteMatch;
       return (
@@ -194,13 +202,42 @@ function renderDescription(
 // 사용자는 보통 스크롤 안 하고 다음을 눌러 핵심 문장을 놓친다.
 // → 이제 줄별로 ceil(글자수 / charsPerLine)로 wrap된 visual line을 추정해 누적하고,
 //   maxVisualLines를 넘으면 페이지를 나눈다. 박스 폭/캡에 맞춘 값은 호출부에서 주입.
+//
+// 그다음 구멍: 원문 한 줄을 화면 한 줄로 셌는데, 지문 뒤에 대사가 오는 줄(`…뒤에서 "야!" 하는 소리.`)은
+// 그릴 때 지문과 대사 사이에 <br />이 들어가 화면에선 두 줄이다. 화자 이름(`지훈 : `)도 글자로 안 셌다.
+// 첫 장면 「새 학기 첫날」 첫 페이지가 그렇게 4줄이 돼 지훈의 "우리 또 같은 반이다?"가 숨었다.
+// → 줄 셈이 renderDescription과 같은 판정(QUOTE_LINE)으로 지문·대사를 따로 센다.
+function estimateVisualLines(line: string, charsPerLine: number, speakerLabel: string | null): number {
+  const wrap = (s: string) => Math.max(1, Math.ceil(s.length / charsPerLine));
+  const quoteMatch = line.match(QUOTE_LINE);
+  if (!quoteMatch) return wrap(line);
+  const [, before, dialogue, after] = quoteMatch;
+  const spoken = `${speakerLabel ? `${speakerLabel} : ` : ''}"${dialogue}"${after}`;
+  return (before ? wrap(before) : 0) + wrap(spoken);
+}
+
+//
+// 짐작은 끝내 짐작이다 — 실측(1024·1280px)에서 상자 폭은 뷰포트−48(976px)이 아니라 552px였고,
+// 데스크탑 패널은 높이 35% 고정이라 선택지가 뜨면 상자가 96px → 65~69px로 눌렸다.
+// 그래서 호출부가 그려진 상자의 넘침을 재서 한도를 깎는다(아래 fitCut). 깎는 한도는 둘이다:
+//   · maxVisualLines — 선택지가 아직 안 뜬 쪽(눌리지 않은 상자)
+//   · lastPageLines  — 선택지와 함께 뜨는 마지막 쪽. 뒷부분만 이 한도로 다시 나눈다
+//     (앞쪽을 다시 나누면 읽던 자리가 흔들린다).
 function paginateDescription(
   text: string,
-  opts: { maxVisualLines: number; charsPerLine: number },
+  opts: { maxVisualLines: number; lastPageLines?: number; charsPerLine: number; speakerLabel: string | null },
 ): string[] {
-  const { maxVisualLines, charsPerLine } = opts;
-  const visualLines = (line: string) => Math.max(1, Math.ceil(line.length / charsPerLine));
-  const lines = text.split('\n');
+  const { maxVisualLines, charsPerLine, speakerLabel } = opts;
+  const lastPageLines = Math.min(opts.lastPageLines ?? maxVisualLines, maxVisualLines);
+  const visualLines = (line: string) => estimateVisualLines(line, charsPerLine, speakerLabel);
+  const pages = splitByVisualLines(text.split('\n'), maxVisualLines, visualLines);
+  const tail = pages[pages.length - 1];
+  const tailVL = tail.reduce((sum, line) => sum + visualLines(line), 0);
+  if (tailVL > lastPageLines) pages.splice(pages.length - 1, 1, ...splitByVisualLines(tail, lastPageLines, visualLines));
+  return pages.map(p => p.join('\n'));
+}
+
+function splitByVisualLines(lines: string[], maxVisualLines: number, visualLines: (line: string) => number): string[][] {
   const pages: string[][] = [];
   let current: string[] = [];
   let currentVL = 0;
@@ -216,7 +253,7 @@ function paginateDescription(
     }
   }
   if (current.length > 0) pages.push(current);
-  return pages.map(p => p.join('\n'));
+  return pages;
 }
 
 /**
@@ -333,9 +370,20 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const viewportW = typeof window !== 'undefined' ? window.innerWidth : 1024;
   const charsPerLine = Math.max(12, Math.floor((Math.min(viewportW, 1126) - 48) / 16));
   const maxVisualLines = isMobile ? 5 : 3;
+  // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
+  const speakerIds: string[] = event.speakers && event.speakers.length > 0
+    ? event.speakers
+    : [];
+
+  const speakerLabel = speakerLabelOf(speakerIds, npcs);
+  // 실측으로 깎은 줄 한도 — 사건마다 새로 잰다(id가 다르면 0에서 시작).
+  const [fitCut, setFitCut] = useState({ eventId: event.id, body: 0, last: 0 });
+  const cut = fitCut.eventId === event.id ? fitCut : { eventId: event.id, body: 0, last: 0 };
+  const bodyLines = Math.max(1, maxVisualLines - cut.body);
+  const lastPageLines = Math.max(1, bodyLines - cut.last);
   const pages = useMemo(
-    () => paginateDescription(eventDesc, { maxVisualLines, charsPerLine }),
-    [eventDesc, maxVisualLines, charsPerLine],
+    () => paginateDescription(eventDesc, { maxVisualLines: bodyLines, lastPageLines, charsPerLine, speakerLabel }),
+    [eventDesc, bodyLines, lastPageLines, charsPerLine, speakerLabel],
   );
   const safePageIndex = Math.min(pageIndex, pages.length - 1);
   const currentPageText = pages[safePageIndex] ?? eventDesc;
@@ -345,6 +393,21 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // 한 번이라도 마지막 페이지에 도달했으면 true — 이후 ◀ 이전으로 돌아가도 선택지 유지.
   // 단일 페이지 이벤트는 maxPageReached(0) >= pages.length-1(0)이라 즉시 true.
   const hasReachedEnd = maxPageReached >= pages.length - 1;
+  // 그려진 상자가 넘치면 한도를 한 줄 깎고 다시 나눈다 — 칠하기 전에 돌아서 깜빡임이 없다.
+  // 선택지가 뜬 마지막 쪽이면 last를, 선택지가 아직 없는 쪽이면 body를 깎는다.
+  // 끝을 본 뒤 ◀ 이전으로 돌아간 쪽(선택지에 눌린 상자)은 이미 다 읽은 쪽이라 다시 나누지 않는다 — 자리가 흔들린다.
+  // 한 줄짜리 쪽은 나눌 수 없으니 상자 스크롤에 맡긴다. jsdom은 높이가 0이라 이 고리가 돌지 않는다(짐작만 쓴다).
+  const descRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const box = descRef.current;
+    if (!box || box.scrollHeight <= box.clientHeight + 1) return;
+    if (!currentPageText.includes('\n')) return;
+    if (isLastPage && hasReachedEnd) {
+      if (lastPageLines > 1) setFitCut({ eventId: event.id, body: cut.body, last: cut.last + 1 });
+    } else if (!hasReachedEnd) {
+      if (bodyLines > 1) setFitCut({ eventId: event.id, body: cut.body + 1, last: cut.last });
+    }
+  }, [event.id, currentPageText, isLastPage, hasReachedEnd, bodyLines, lastPageLines, cut.body, cut.last]);
   // 안내가 화면을 덮고 있는 동안은 뒤쪽 선택지·페이지 버튼을 키보드로도 못 만져야 한다.
   // (손으로 만든 오버레이 시절엔 Tab이 가려진 선택지 3개에 먼저 닿고 활성화까지 됐다.)
   const choiceHintOpen = showChoiceHint && hasReachedEnd && !choiceIntroDismissed;
@@ -371,11 +434,6 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   const retreatPage = () => {
     if (!isFirstPage) { playSfx('page'); setPageIndex(p => p - 1); }
   };
-
-  // speakers가 명시된 경우에만 캐릭터 표시 (npcEffects에서 자동 추출하지 않음)
-  const speakerIds: string[] = event.speakers && event.speakers.length > 0
-    ? event.speakers
-    : [];
 
   // Primary speaker (first in array)
   const primarySpeaker = speakerIds.length > 0 ? speakerIds[0] : null;
@@ -596,6 +654,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
 
           {/* Description — 대사에 화자 이름 표시. 길면 페이지 분할, 마지막 페이지에서만 선택지 노출 */}
           <div
+            ref={descRef}
             onClick={isMultiPage && !isLastPage ? advancePage : undefined}
             style={{
               fontSize: '1rem',
