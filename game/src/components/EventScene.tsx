@@ -243,7 +243,17 @@ function paginateDescription(
   const tail = pages[pages.length - 1];
   const tailVL = tail.reduce((sum, line) => sum + visualLines(line), 0);
   if (tailVL > lastPageLines) pages.splice(pages.length - 1, 1, ...splitByVisualLines(fitLines(tail, lastPageLines), lastPageLines, visualLines));
-  return pages.map(p => p.join('\n'));
+  // 문단 사이 빈 줄이 쪽 끝에 걸리면 빈 줄만 든 쪽이 생긴다(suneung-done, 1280×720 실측) — 쪽 가장자리의 빈 줄은 버린다.
+  const trimmed = pages.map(trimBlankEdges).filter(p => p.length > 0);
+  return trimmed.length > 0 ? trimmed.map(p => p.join('\n')) : [text];
+}
+
+function trimBlankEdges(page: string[]): string[] {
+  let start = 0;
+  let end = page.length;
+  while (start < end && !page[start].trim()) start++;
+  while (end > start && !page[end - 1].trim()) end--;
+  return page.slice(start, end);
 }
 
 /** 이 쪽을 더 잘게 나눌 수 있는가 — 실측 고리가 한도를 깎아도 소용없는 쪽(한 덩어리)에서 멈추게 한다. */

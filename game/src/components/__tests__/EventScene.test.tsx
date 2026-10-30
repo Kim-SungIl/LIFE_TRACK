@@ -343,6 +343,22 @@ describe('EventScene 페이지 분할', () => {
         expect(screen.getByText('1 / 2'), 'fit_cut_single_line').toBeInTheDocument();
       });
 
+      // 문단 사이 빈 줄이 쪽 끝에 걸리면 빈 줄만 든 쪽이 생겼다(suneung-done, 1280×720 실측 — 빈 화면에 2 / 3).
+      it('no_blank_page: 빈 줄만 든 쪽은 만들지 않는다', () => {
+        stub({ perLineChars: 30, boxH: 40 });
+        renderScene({ event: makeEvent({ description: '첫 문단이다.\n둘째 줄이다.\n\n끝 문단이다.' }) });
+        const texts: string[] = [];
+        for (let i = 0; i < 6; i++) {
+          texts.push((descBox()?.textContent ?? '').trim());
+          const next = screen.queryByRole('button', { name: '다음 페이지' });
+          if (!next || (next as HTMLButtonElement).disabled) break;
+          fireEvent.click(next);
+        }
+        expect(texts.length).toBeGreaterThan(1);
+        expect(texts, 'no_blank_page').not.toContain('');
+        expect(texts.join(' ')).toContain('끝 문단이다.');
+      });
+
       // 데스크탑 짐작 폭은 뷰포트−48(976px)인데 실측은 552px였다. 잰 폭이 있으면 그걸로 센다.
       it('measured_width_counts: 그려진 상자 폭(320px → 20자)으로 줄을 센다', () => {
         stub({ offsetWidth: 320 });
