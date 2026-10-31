@@ -743,7 +743,9 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       {/* ===== Layer 4: Text Box + Choices ===== */}
       {/* 모바일: 고정 35% 대신 콘텐츠에 맞춰 늘어나되 상한(80dvh)을 둠 — 작은 화면에서
           description(10em)이 공간을 다 먹어 선택지가 잘리던 문제 방지.
-          데스크탑: 기존 고정 35% 유지. */}
+          데스크탑: 35%가 바닥이고 콘텐츠에 맞춰 75%까지 늘어난다. 고정 35%였을 땐 선택지가 뜨면 본문 상자가
+          함께 눌렸다 — 1280×720 minjae-birthday(선택지 4개)는 17px로 한 줄도 안 들어갔고, 눌린 끝쪽이
+          한 줄씩 갈려 쪽 수가 40% 늘었으며, 셋째 선택지가 화면 밑에 걸렸다. */}
       {/* inert: 씬의 포커스 가능한 요소(페이지 ◀▶, 선택지)는 전부 이 안에 있다.
           첫 선택 안내가 떠 있는 동안 이 블록만 비활성화하면 "안내 뒤로 Tab이 새는" 경로가 닫힌다. */}
       <div inert={choiceHintOpen || undefined} style={{
@@ -751,8 +753,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
         bottom: 0,
         left: 0,
         right: 0,
-        ...(isMobile ? { maxHeight: '80dvh' } : { height: '35%' }),
-        minHeight: 220,
+        ...(isMobile ? { maxHeight: '80dvh', minHeight: 220 } : { minHeight: 'max(220px, 35%)', maxHeight: '75%' }),
         zIndex: 10,
         display: 'flex',
         flexDirection: 'column',
@@ -792,7 +793,9 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
               maxHeight: isMobile ? '10em' : '6em',
               overflowY: 'auto',
               marginBottom: isMultiPage && !isLastPage ? 6 : 12,
-              flex: '0 1 auto',
+              // 데스크탑은 본문이 줄지 않는다 — 자리가 모자라면 선택지 목록이 스크롤한다(아래 overflowY).
+              // 모바일은 기존대로(작은 화면 실측 0건, 건드리지 않는다).
+              flex: isMobile ? '0 1 auto' : '0 0 auto',
               wordBreak: 'keep-all',
               overflowWrap: 'break-word',
               cursor: isMultiPage && !isLastPage ? 'pointer' : 'default',
