@@ -296,14 +296,15 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
             {showBudget ? '내역 접기' : '내역 보기'}
           </button>
         </div>
-        <div data-testid="month-spendable" style={{ fontSize: '1.9rem', fontWeight: 700, color: overspent ? 'var(--red)' : 'var(--text-primary)' }}>
-          {won(spendable)}<span style={{ fontSize: '1rem', fontWeight: 600 }}>원</span>
+        {/* 1.9rem은 주변 글자(0.8rem)의 두 배가 넘어 화면에서 돈만 튀었다 — 다른 칸 제목보다 한 단계 크게만. */}
+        <div data-testid="month-spendable" style={{ fontSize: '1.2rem', fontWeight: 700, color: overspent ? 'var(--red)' : 'var(--text-primary)' }}>
+          {won(spendable)}<span style={{ fontSize: '0.85rem', fontWeight: 600 }}>원</span>
         </div>
         {showBudget && (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) auto', rowGap: 4, columnGap: 12, fontSize: '0.75rem', color: 'var(--text-secondary)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 8 }}>
             <span>지금 잔액(이번 달 용돈 포함)</span><span style={{ textAlign: 'right' }}>{won(state.money)}</span>
             {routineDue > 0 && (<><span>학원 — 아직 안 낸 이번 달 몫</span><span style={{ textAlign: 'right', color: 'var(--red)' }}>−{won(routineDue)}</span></>)}
-            <span>주말·방학 예약(떼어 둔 돈)</span><span style={{ textAlign: 'right', color: 'var(--yellow)' }}>−{won(reserve)}</span>
+            <span>주말·방학 예약(떼어 둔 돈)</span><span style={{ textAlign: 'right', color: reserve > 0 ? 'var(--yellow)' : 'var(--text-secondary)' }}>{reserve > 0 ? '−' : ''}{won(reserve)}</span>
           </div>
         )}
       </section>
@@ -514,12 +515,13 @@ function InviteCard({ invite, answer, npcName, cost, onAnswer }: {
       {answer === false && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{decline.startsWith('"') ? `${npcName}: ${decline}` : decline}</div>}
       {answer === true && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>약속했다. 그 칸은 {josa(npcName, '와/과')} 보내는 시간으로 비워 둔다.</div>}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
+        {/* btn-reset은 여백 0·왼쪽 정렬이라 테두리에 글자가 붙는다 — 계획 띠 버튼(#541)과 같이 여백·가운데 정렬을 준다. */}
         <button type="button" className="btn-reset" aria-pressed={answer === true} onClick={() => onAnswer(true)} style={{
-          minHeight: 44, borderRadius: 10, background: answer === true ? 'var(--accent)' : 'transparent',
+          minHeight: 44, padding: '6px 10px', textAlign: 'center', borderRadius: 10, background: answer === true ? 'var(--accent)' : 'transparent',
           color: answer === true ? 'var(--btn-ink)' : 'var(--text-primary)', border: '1px solid var(--accent)', fontWeight: 700,
         }}>좋아{cost > 0 ? ` · ${cost}만` : ''}</button>
         <button type="button" className="btn-reset" aria-pressed={answer === false} onClick={() => onAnswer(false)} style={{
-          minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.14)',
+          minHeight: 44, padding: '6px 10px', textAlign: 'center', borderRadius: 10, border: '1px solid rgba(255,255,255,0.14)',
           background: answer === false ? 'var(--bg-secondary)' : 'transparent', color: 'var(--text-primary)',
         }}>다음에</button>
       </div>
