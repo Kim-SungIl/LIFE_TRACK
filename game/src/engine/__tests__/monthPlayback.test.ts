@@ -529,6 +529,21 @@ describe('월말 결산 내용 — buildMonthSummary', () => {
     }
   });
 
+  // 3자 검수: 다 빠진 달에 "4번 중 0번만 갔다", 독학 루틴에 "빠짐없이 다녔다/갔다"가 나왔다. 모든 학년·달로 훑는다.
+  it('verdict_wording: 다 빠진 달엔 "0번만"이 없고, 루틴 총평엔 장소 동사(갔다·다녔다)가 없다', () => {
+    const allMissed = [week(5, { routineMissed: 1 }), week(6, { routineMissed: 1 }), week(7, { routineMissed: 1 }), week(8, { routineMissed: 1 })];
+    const steady = [week(5), week(6), week(7), week(8)];
+    const missedSeen = new Set<string>(), steadySeen = new Set<string>();
+    for (let year = 1; year <= 7; year++) for (let month = 1; month <= 12; month++) {
+      missedSeen.add(buildMonthSummary(st(), { ...run(allMissed), year, month }, '독학').verdict);
+      steadySeen.add(buildMonthSummary(st(), { ...run(steady), year, month }, '독학').verdict);
+    }
+    expect(missedSeen.size).toBe(3);
+    for (const v of missedSeen) expect(v, `verdict_wording: ${v}`).not.toMatch(/0번만/);
+    expect(steadySeen.size).toBe(3);
+    for (const v of steadySeen) expect(v, `verdict_wording: ${v}`).not.toMatch(/갔다|다녔다/);
+  });
+
   it('방과후 집계는 학기 주만 — 다 간 주 / 학기 주 수', () => {
     const s = buildMonthSummary(st(), run([week(5), week(6, { routineMissed: 1 }), week(7, { routineMissed: 2 }), week(8)]), '독학');
     expect(s.routine).toEqual({ kept: 2, total: 4 });
