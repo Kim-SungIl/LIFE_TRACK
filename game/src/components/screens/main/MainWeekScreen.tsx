@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
 import { getPlannedWeek } from '../../../engine/monthPlan';
-import { talkBankCount } from '../../../engine/monthPlayback';
+import { npcsToContinueTalk, talkBankCount } from '../../../engine/monthPlayback';
+import { josa } from '../../../engine/korean';
 import { playSfx } from '../../../audio/sfx';
 import { GameState, STAT_LABELS } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
@@ -237,6 +238,16 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   // Phase 4B: 발동 가능한 강점 절정이 있으면 pending과 무관하게 배지를 켠다(놓침 방지).
   const homeHasEvent = getEligibleParentClimax(state) != null
     || ((state.parentEventPendingThisWeek || talkBankCount(state, 'home') > 0) && getAvailableHomeEvents(state).length > 0);
+  // 지난달 못 다한 이야기를 누구에게 쓰는지 — 친구는 이름, 가정은 '가족'(UX 재확인 U2). 안내문이 "친구·가족에게"라고만 해서
+  // 친밀도 30+·남은 이야기가 있는 친구에게만 줄어든다는 걸 알 길이 없었다. 판정은 말걸기와 같은 함수(npcTalkFires).
+  const continueFriends = npcsToContinueTalk(state);
+  const talkBankTargets = [
+    ...continueFriends.map(n => n.name),
+    ...(talkBankCount(state, 'home') > 0 && getAvailableHomeEvents(state).length > 0 ? ['가족'] : []),
+  ];
+  const talkBankHint = talkBankTargets.length === 0
+    ? '지금은 이어서 이야기할 상대가 없어요.'
+    : `${talkBankTargets.length > 3 ? `${talkBankTargets.slice(0, 2).join('·')} 외 ${talkBankTargets.length - 2}명` : talkBankTargets.join('·')}에게 말을 걸면 이어서 할 수 있어요.`;
   // 동행 후보 = met + 재적(같은 학교) — 전출 도윤/졸업 공백기 하은은 주말 동행에서 제외.
   // NpcSelectModal memo 안정성 위해 npcs ref(+ 재적 판정 입력인 year/events) 변경 시에만 재계산.
   const companionNpcs = useMemo(
@@ -347,7 +358,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
           <span style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2, fontSize: '0.78rem', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
             <span>한 달 계획을 짜 두면 남은 주의 칸이 미리 채워져요.</span>
             {monthly.talkBank > 0 && (
-              <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
+              <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — {talkBankHint}</span>
             )}
           </span>
           <button type="button" className="btn-reset" data-testid="month-plan-open" onClick={() => { playSfx('tap'); monthly.onOpenPlan({ activities: selectedActivities, npcChoices }); }}
@@ -365,7 +376,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
             {monthly.stopLine ? `⏸ ${monthly.stopLine}` : '📅 이번 달 계획대로 칸을 채워 뒀어요.'}
           </span>
           {monthly.talkBank > 0 && (
-            <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — 친구·가족에게 말을 걸면 이어서 할 수 있어요.</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — {talkBankHint}</span>
           )}
           {autoPlayError && <span role="alert" style={{ fontSize: '0.75rem', color: 'var(--red)' }}>{autoPlayError}</span>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
@@ -494,9 +505,13 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
         // 상태 라벨(절친/친구)은 '지훈 친구'처럼 어색해서 제거(사용자 피드백).
         // 챙길 친구(방치 warn)가 있을 때만 행동 단서를 남긴다.
         const warnFriend = present.find(n => relationshipSignal(n, state)?.tone === 'warn');
-        const cue = warnFriend
-          ? { text: `⚠️ ${warnFriend.name} 챙기기`, color: 'var(--yellow)' }
-          : null;
+        // 이어서 할 이야기가 있으면 그쪽이 먼저 — 띠의 "못 다한 이야기 N"이 가리키는 곳이 여기다(U2).
+        const talkLabel = continueFriends.length > 1 ? `${continueFriends[0].name} 외 ${continueFriends.length - 1}명` : continueFriends[0]?.name;
+        const cue = talkLabel
+          ? { text: `💬 ${josa(talkLabel, '와/과')} 할 이야기`, color: 'var(--accent-soft)' }
+          : warnFriend
+            ? { text: `⚠️ ${warnFriend.name} 챙기기`, color: 'var(--yellow)' }
+            : null;
         return (
           <button
             type="button" className="btn-reset" data-tutorial="npc"

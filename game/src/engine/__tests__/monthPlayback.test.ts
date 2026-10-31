@@ -8,7 +8,7 @@ import { firstPickableChoice } from '../eventPresentation';
 import { generateMonthInvites } from '../monthInvites';
 import {
   MAX_TALK_BANK, VERDICT_PRIORITY, addMissedTalks, boundaryStopAfter, buildMonthSummary, getMonthRun, hadTalkChance, isPlaying, recordWeek,
-  talkBankCount, talkChances,
+  npcsToContinueTalk, talkBankCount, talkChances,
 } from '../monthPlayback';
 import { getAvailableHomeEvents, getAvailableNpcEvents, getEligibleParentClimax } from '../talkSystem';
 import { getWeekInfo } from '../weekMath';
@@ -352,6 +352,34 @@ describe('놓친 대화 월 적립(§8) — 친구·가정 따로, 합쳐 최대
     store.setState({ state: { ...s, talkBank: { year: 2, month: 3, npc: 0, home: 3 } } });
     expect(api().talkToNpc(target.id).kind).toBe('smalltalk');
     expect(now().talkBank).toMatchObject({ npc: 0, home: 3 });
+  });
+});
+
+// UX 재확인 U2: "못 다한 이야기 N"은 친밀도 30+·남은 이야기가 있는 친구에게만 줄어드는데 화면이 대상을 안 알려줬다.
+// 표시(npcsToContinueTalk)와 말걸기가 같은 판정이어야 한다 — 표시된 친구에게 말을 걸면 이야기가 뜨고, 아니면 안 뜬다.
+describe('이어서 이야기할 친구 — npcsToContinueTalk', () => {
+  it('continue_matches_talk: 적립이 남았을 때 표시된 친구 = 말을 걸면 미니 이벤트가 뜨는 친구', () => {
+    const s = withTalkChance(9);
+    s.npcEventPendingThisWeek = false;
+    s.talkBank = { year: 2, month: 3, npc: 1, home: 0 };
+    // 한 명은 친밀도를 30 밑으로 — 이야기는 남았어도 표시도, 이벤트도 없어야 한다.
+    const low = s.npcs.find(n => n.met && getAvailableNpcEvents({ ...s, npcEventPendingThisWeek: true }, n.id).length > 0)!;
+    low.intimacy = 20;
+    const shown = new Set(npcsToContinueTalk(s).map(n => n.id));
+    expect(shown.size, '전제: 표시될 친구가 있다').toBeGreaterThan(0);
+    expect(shown.has(low.id), 'continue_matches_talk: 친밀도 30 미만은 표시 안 함').toBe(false);
+    for (const n of s.npcs.filter(x => x.met)) {
+      store.setState({ state: cloneGameState(s) });
+      expect(api().talkToNpc(n.id).kind === 'event', `continue_matches_talk: ${n.id}`).toBe(shown.has(n.id));
+    }
+  });
+
+  it('continue_needs_bank: 적립(친구 몫)이 없으면 비운다 — 이번 주 기회만 있는 주엔 누구인지 안 알려 준다', () => {
+    const s = withTalkChance(9);
+    expect(npcsToContinueTalk(s), 'continue_needs_bank: 이번 주 기회만').toEqual([]);
+    expect(npcsToContinueTalk({ ...s, npcEventPendingThisWeek: false, talkBank: { year: 2, month: 3, npc: 0, home: 2 } }), '가정 몫만').toEqual([]);
+    expect(npcsToContinueTalk({ ...s, npcEventPendingThisWeek: false, talkBank: { year: 2, month: 2, npc: 2, home: 0 } }), '지난달 적립').toEqual([]);
+    expect(npcsToContinueTalk({ ...s, npcEventPendingThisWeek: false, talkBank: { year: 2, month: 3, npc: 1, home: 0 } }).length).toBeGreaterThan(0);
   });
 });
 

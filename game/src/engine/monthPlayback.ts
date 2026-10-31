@@ -18,7 +18,7 @@ import { getAvailableHomeEvents, getAvailableNpcEvents, getEligibleParentClimax 
 import { STAT_LABELS } from './types';
 import { getConfirmGate } from './weekendPlan';
 import { getMonthBlock, getWeekInfo } from './weekMath';
-import type { GameState, MonthRun, MonthRunWeek, PlaybackStop, StatKey, TalkBank, TalkCounts } from './types';
+import type { GameState, MonthRun, MonthRunWeek, NpcState, PlaybackStop, StatKey, TalkBank, TalkCounts } from './types';
 
 /** 한 달에 모을 수 있는 놓친 대화 기회 상한(디렉터 결정 2026-10-20 "최대 4, 다음 달로 안 넘어감"). */
 export const MAX_TALK_BANK = 4;
@@ -108,6 +108,26 @@ export function talkChances(state: GameState): TalkCounts {
     n.met && n.intimacy >= 30 && isNpcInteractable(n, state) && getAvailableNpcEvents(state, n.id).length > 0);
   const home = state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0;
   return { npc: npc ? 1 : 0, home: home ? 1 : 0 };
+}
+
+/**
+ * 지금 이 친구에게 말을 걸면 미니 이벤트가 뜨는가 — 말걸기(eventResolution.talkToNpcOutcome)와 화면(친구 카드의 💬 표시)이
+ * 같이 읽는다. 둘이 따로 판정하면 표시된 친구에게 말을 걸어도 잡담만 나오는 날이 생긴다.
+ * 이번 주 기회(npcEventPendingThisWeek)나 지난달 적립의 친구 몫이 있고, 친밀도 30+·만날 수 있고·남은 이야기가 있을 때.
+ */
+export function npcTalkFires(state: GameState, npc: NpcState): boolean {
+  if (!isNpcInteractable(npc, state) || npc.intimacy < 30) return false;
+  if (!state.npcEventPendingThisWeek && talkBankCount(state, 'npc') <= 0) return false;
+  return getAvailableNpcEvents(state, npc.id).length > 0;
+}
+
+/**
+ * 지난달 못 다한 이야기를 이어서 할 수 있는 친구 — 적립(친구 몫)이 남았을 때만 고른다(UX 재확인 U2).
+ * 이번 주 기회만 있는 주엔 비운다: 그 주에 누구에게 이야기가 있는지는 원래 말을 걸어 봐야 아는 몫이다.
+ */
+export function npcsToContinueTalk(state: GameState): NpcState[] {
+  if (talkBankCount(state, 'npc') <= 0) return [];
+  return state.npcs.filter(n => n.met && npcTalkFires(state, n));
 }
 
 /** 재생 카드의 💬 배지 — 지나칠 기회가 있거나 절정 순간이 열려 있다. */
