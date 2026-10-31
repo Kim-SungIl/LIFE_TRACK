@@ -9,7 +9,7 @@
 import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, romanceRetryNpc, restoreRomanceRetry } from './romance';
 import type { GameState, GameEvent, EventChoice, StatKey } from './types';
 import { scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
-import { talkBankCount } from './monthPlayback';
+import { npcTalkFires, talkBankCount } from './monthPlayback';
 import { cloneGameState } from './stateClone';
 import { getChainFollowup, pickChainForWeek, recordSummerVacationEnd, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { assignCurrentEvent } from './eventPresentation';
@@ -389,9 +389,9 @@ export function talkToNpcOutcome(
 
   // 친밀도 30+ 일 때만 미니 이벤트 후보 — 그 외엔 잡담 한 줄
   // 이번 주 기회가 없어도 지난달 재생이 지나친 **친구** 기회(talkBank.npc)가 남았으면 쓴다(설계안 §8 월 적립).
+  // 판정은 화면(친구 카드의 💬 표시)과 같은 함수 하나 — npcTalkFires.
   const fromBank = !s.npcEventPendingThisWeek && talkBankCount(s, 'npc') > 0;
-  const eligible = npc.intimacy >= 30 && (s.npcEventPendingThisWeek || fromBank);
-  if (eligible) {
+  if (npcTalkFires(s, npc)) {
     const available = getAvailableNpcEvents(s, npcId);
     if (available.length > 0) {
       // fire — 효과 적용 + pressure 리셋 + pending 소비 + fired 기록

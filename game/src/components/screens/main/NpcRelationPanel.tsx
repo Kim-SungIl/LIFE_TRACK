@@ -3,6 +3,7 @@ import { GameState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { relationshipSignal, npcAbsence } from '../../../engine/relationshipSignals';
 import { intimacyTier, INTIMACY_TIER_LABEL } from '../../../engine/npcRoster';
+import { npcsToContinueTalk } from '../../../engine/monthPlayback';
 
 type Props = {
   state: GameState;
@@ -19,6 +20,8 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
   // 부재(전출·졸업) 친구는 흐린 "잔상"으로 아래에 모아 표시 — 있는 친구가 먼저.
   const ordered = [...metNpcs].sort((a, b) =>
     (npcAbsence(a, state) ? 1 : 0) - (npcAbsence(b, state) ? 1 : 0));
+  // 지난달 못 다한 이야기를 이어서 할 수 있는 친구(UX 재확인 U2) — 주간 화면 띠·친구 카드와 같은 판정.
+  const continueIds = new Set(npcsToContinueTalk(state).map(n => n.id));
 
   return (
     <div style={{ background: 'rgba(42,34,48,0.85)', backdropFilter: 'blur(6px)', borderRadius: 12, padding: '10px 14px', marginBottom: 10 }}>
@@ -69,6 +72,11 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
                         {intimacyLabel}
                       </span>
                     </div>
+                    {continueIds.has(n.id) && (
+                      <div data-testid={`npc-continue-${n.id}`} style={{ fontSize: '0.65rem', color: 'var(--accent-soft)', marginTop: 3 }}>
+                        💬 이어서 할 이야기가 있어요
+                      </div>
+                    )}
                     {/* 관계 신호 — 방치/최근/임박. 숫자 대신 감각적 한 줄(없으면 미표시) */}
                     {signal && (
                       <div style={{ fontSize: '0.65rem', color: SIGNAL_COLOR[signal.tone], marginTop: 3 }}>

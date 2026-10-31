@@ -18,7 +18,7 @@ import { getAvailableHomeEvents, getAvailableNpcEvents, getEligibleParentClimax 
 import { STAT_LABELS } from './types';
 import { getConfirmGate } from './weekendPlan';
 import { getMonthBlock, getWeekInfo } from './weekMath';
-import type { GameState, MonthRun, MonthRunWeek, PlaybackStop, StatKey, TalkBank, TalkCounts } from './types';
+import type { GameState, MonthRun, MonthRunWeek, NpcState, PlaybackStop, StatKey, TalkBank, TalkCounts } from './types';
 
 /** 한 달에 모을 수 있는 놓친 대화 기회 상한(디렉터 결정 2026-10-20 "최대 4, 다음 달로 안 넘어감"). */
 export const MAX_TALK_BANK = 4;
@@ -108,6 +108,26 @@ export function talkChances(state: GameState): TalkCounts {
     n.met && n.intimacy >= 30 && isNpcInteractable(n, state) && getAvailableNpcEvents(state, n.id).length > 0);
   const home = state.parentEventPendingThisWeek && getAvailableHomeEvents(state).length > 0;
   return { npc: npc ? 1 : 0, home: home ? 1 : 0 };
+}
+
+/**
+ * 지금 이 친구에게 말을 걸면 미니 이벤트가 뜨는가 — 말걸기(eventResolution.talkToNpcOutcome)와 화면(친구 카드의 💬 표시)이
+ * 같이 읽는다. 둘이 따로 판정하면 표시된 친구에게 말을 걸어도 잡담만 나오는 날이 생긴다.
+ * 이번 주 기회(npcEventPendingThisWeek)나 지난달 적립의 친구 몫이 있고, 친밀도 30+·만날 수 있고·남은 이야기가 있을 때.
+ */
+export function npcTalkFires(state: GameState, npc: NpcState): boolean {
+  if (!isNpcInteractable(npc, state) || npc.intimacy < 30) return false;
+  if (!state.npcEventPendingThisWeek && talkBankCount(state, 'npc') <= 0) return false;
+  return getAvailableNpcEvents(state, npc.id).length > 0;
+}
+
+/**
+ * 지난달 못 다한 이야기를 이어서 할 수 있는 친구 — 적립(친구 몫)이 남았을 때만 고른다(UX 재확인 U2).
+ * 이번 주 기회만 있는 주엔 비운다: 그 주에 누구에게 이야기가 있는지는 원래 말을 걸어 봐야 아는 몫이다.
+ */
+export function npcsToContinueTalk(state: GameState): NpcState[] {
+  if (talkBankCount(state, 'npc') <= 0) return [];
+  return state.npcs.filter(n => n.met && npcTalkFires(state, n));
 }
 
 /** 재생 카드의 💬 배지 — 지나칠 기회가 있거나 절정 순간이 열려 있다. */
@@ -250,28 +270,40 @@ const VERDICTS: Record<string, readonly ((v: { name: string; n: number; t: numbe
   burnout: [
     () => '한 번 무너졌다. 쉬는 법을 다시 배워야 했던 달.',
     () => '버티다 결국 주저앉은 주가 있었다. 몸이 먼저 신호를 보냈다.',
+    () => '끝내 무너진 주가 있었다. 다음 달엔 쉬는 칸부터 짜야겠다.',
   ],
   broken: [
     ({ name }) => `${josa(name, '와/과')} 한 약속을 못 지켰다. 그게 제일 마음에 걸린다.`,
     ({ name }) => `${name}한테 미안한 달. 약속한 날에 거기 없었다.`,
+    ({ name }) => `미안한 마음이 남은 달. ${josa(name, '와/과')}의 약속을 지키지 못했다.`,
   ],
   missed: [
     ({ n }) => `방과후를 ${n}번 빠졌다. 계획대로만 흘러가진 않았다.`,
-    ({ n, t }) => `일이 자꾸 끼어들었다. 방과후는 ${t}번 중 ${t - n}번만 갔다.`,
+    // 다 빠진 달엔 "4번 중 0번만 갔다"가 됐다(3자 검수) — 그땐 다른 말로.
+    ({ n, t }) => (t - n > 0 ? `일이 자꾸 끼어들었다. 방과후는 ${t}번 중 ${t - n}번만 갔다.` : `방과후를 한 번도 못 갔다. ${t}번 다 다른 일이 끼어들었다.`),
+    ({ n }) => `방과후를 ${n}번 놓쳤다. 다음 달엔 빈칸을 덜 만들고 싶다.`,
   ],
   kept: [
     ({ name }) => `${josa(name, '와/과')} 한 약속은 지켰다. 그날이 이번 달의 한가운데였다.`,
     ({ name }) => `약속한 날 ${josa(name, '와/과')} 만났다. 그걸로 충분한 달.`,
+    ({ name }) => `${josa(name, '와/과')} 한 약속을 지켰다. 그 하루가 이번 달을 버티게 했다.`,
   ],
   steady: [
     ({ routine }) => `${josa(routine, '은/는')} 한 번도 안 빠졌다. 꾸준함이 몸에 붙는 중.`,
-    ({ routine }) => `계획한 대로 굴러간 달. ${routine}도 빠짐없이 갔다.`,
+    // 루틴엔 학원만이 아니라 독학·인강·독서도 들어간다 — '갔다/다녔다'는 장소에만 맞아 동사를 가리지 않는 말로(3자 검수).
+    ({ routine }) => `계획한 대로 굴러간 달. ${routine}도 빠짐없이 했다.`,
+    ({ routine }) => `${josa(routine, '을/를')} 한 주도 거르지 않았다. 티는 안 나도 쌓이고 있다.`,
   ],
   quiet: [
     () => '별일 없이 지나간 달. 그래도 조금은 달라졌다.',
     () => '조용한 한 달이었다. 기억에 남는 건 많지 않아도.',
+    () => '별일 없던 한 달. 그래도 매일 무언가는 했다.',
   ],
 };
+
+// 총평 문장 고르기의 학년 몫. 12였을 땐 문장 수(2)로 나누어떨어져 학년 축이 없었다 — 같은 달이면 7년 내내
+// 같은 문장이었다(UX 재확인 U4). 13은 문장 수 2~12 어느 것으로도 안 나누어떨어진다(바꾸면 그 성질부터 볼 것).
+const VERDICT_YEAR_STEP = 13;
 
 /** 총평 틀의 신호 종류 — 강한 순서. 테스트가 이 순서를 잠근다. */
 export const VERDICT_PRIORITY = ['burnout', 'broken', 'missed', 'kept', 'steady', 'quiet'] as const;
@@ -310,7 +342,7 @@ export function buildMonthSummary(state: GameState, run: MonthRun, routineName: 
     : routine && routineName ? 'steady'
     : 'quiet';
   const variants = VERDICTS[kind];
-  const verdict = variants[(run.year * 12 + run.month) % variants.length]({
+  const verdict = variants[(run.year * VERDICT_YEAR_STEP + run.month) % variants.length]({
     name: (broken ?? kept)?.name ?? '',
     n: missedN,
     t: routine?.total ?? 0,
