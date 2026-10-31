@@ -246,3 +246,17 @@ describe('남은 시간 막대 · 조작 줄', () => {
     expect(group.contains(screen.getByRole('button', { name: '⏸ 멈춤' }))).toBe(true);
   });
 });
+
+// UX U6 — 배지는 사건 선택까지 더한 그 주 합계라 사건 결과의 +와 어긋나 보일 수 있다. '이번 주'로 범위를 밝힌다.
+describe('능력치 배지의 범위', () => {
+  it('badges_scope: 배지가 있으면 앞에 "이번 주"가 붙는다', () => {
+    render(<PlaybackCard {...props(SHORT)} />);
+    const scope = screen.getByTestId('playback-badges-scope');
+    expect(scope.textContent).toBe('이번 주');
+    expect(scope.nextElementSibling?.textContent, 'badges_scope: 배지 바로 앞').toContain('▲');
+  });
+  it('badges_scope_none: 배지가 없으면 붙지 않는다', () => {
+    render(<PlaybackCard {...props({ ...SHORT, statChanges: { academic: 0.05 } })} />);
+    expect(screen.queryByTestId('playback-badges-scope')).toBeNull();
+  });
+});

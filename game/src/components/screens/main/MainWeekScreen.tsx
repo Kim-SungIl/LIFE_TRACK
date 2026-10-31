@@ -103,7 +103,8 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
   useEffect(() => { if (!showHomeModal) setHomeSmalltalk(null); }, [showHomeModal]);
   const [lastReaction, setLastReaction] = useState<string | null>(null);
   const [showShop, setShowShop] = useState(initialOverlay === 'shop');
-  const [autoPlayError, setAutoPlayError] = useState<string | null>(null);
+  // 같은 이유로 또 막히면 문구가 그대로라 ▶가 먹통처럼 보였다 — 누를 때마다 n을 올려 알림을 새로 띄운다(다시 읽히고 다시 흔들린다).
+  const [autoPlayError, setAutoPlayError] = useState<{ text: string; n: number } | null>(null);
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(() => {
     // ever_seen은 새 게임에도 유지되는 영속 플래그 — 한 번이라도 튜토리얼을 본/건너뛴 반복 플레이어는 자동 스킵.
@@ -380,9 +381,14 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
           {monthly.talkBank > 0 && (
             <span style={{ fontSize: '0.72rem', color: 'var(--accent-soft)' }}>지난달 못 다한 이야기 {monthly.talkBank} — {talkBankHint}</span>
           )}
-          {autoPlayError && <span role="alert" style={{ fontSize: '0.75rem', color: 'var(--red)' }}>{autoPlayError}</span>}
+          {autoPlayError && (
+            <span key={autoPlayError.n} role="alert" data-testid="playback-error" data-repeat={autoPlayError.n}
+              className={autoPlayError.n > 1 ? 'nudge' : undefined} style={{ fontSize: '0.75rem', color: 'var(--red)' }}>
+              {autoPlayError.text}{autoPlayError.n > 1 ? ' — 칸이나 계획을 고친 뒤 다시 눌러 주세요' : ''}
+            </span>
+          )}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
-            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); setAutoPlayError(monthly.onAutoPlay({ activities: selectedActivities, npcChoices })); }}
+            <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); const why = monthly.onAutoPlay({ activities: selectedActivities, npcChoices }); setAutoPlayError(prev => (why ? { text: why, n: (prev?.n ?? 0) + 1 } : null)); }}
               style={{ minHeight: 44, padding: '6px 10px', textAlign: 'center', borderRadius: 10, border: '1px solid rgba(240,164,122,0.5)', background: 'var(--bg-secondary)', color: 'var(--accent)', fontWeight: 700, fontSize: '0.82rem' }}>
               {monthly.stopLine ? '▶ 이어서 자동 진행' : '▶ 남은 주 자동 진행'}
             </button>
