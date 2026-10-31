@@ -481,6 +481,25 @@ describe('월말 결산 내용 — buildMonthSummary', () => {
     expect(buildMonthSummary(st(), run(all), null).verdict, '루틴 이름이 없으면 조용함').toMatch(/조용|별일/);
   });
 
+  // UX 재확인 U4: 고르는 식이 (학년×12+달)이라 12가 문장 수(2)로 나누어떨어져 학년 축이 없었다 —
+  // 같은 달이면 7년 내내 같은 문장이었다. 모든 달·모든 갈래에서 학년마다 문장이 돌아야 한다.
+  it('verdict_year_axis: 같은 달이라도 학년이 바뀌면 총평 문장이 바뀐다 — 7년이면 그 갈래 문장을 다 쓴다', () => {
+    const logs: Record<string, MonthRunWeek[]> = {
+      burnout: [week(5, { burnout: true }), week(6), week(7), week(8)],
+      broken: [week(5, { promises: [{ npcId: 'jihun', kept: false }] }), week(6), week(7), week(8)],
+      missed: [week(5, { routineMissed: 1 }), week(6), week(7), week(8)],
+      kept: [week(5, { promises: [{ npcId: 'jihun', kept: true }] }), week(6), week(7), week(8)],
+      steady: [week(5), week(6), week(7), week(8)],
+    };
+    for (const [kind, log] of Object.entries(logs)) {
+      for (let month = 1; month <= 12; month++) {
+        const seen = new Set<string>();
+        for (let year = 1; year <= 7; year++) seen.add(buildMonthSummary(st(), { ...run(log), year, month }, '독학').verdict);
+        expect(seen.size, `verdict_year_axis: ${kind} ${month}월`).toBe(3);
+      }
+    }
+  });
+
   it('방과후 집계는 학기 주만 — 다 간 주 / 학기 주 수', () => {
     const s = buildMonthSummary(st(), run([week(5), week(6, { routineMissed: 1 }), week(7, { routineMissed: 2 }), week(8)]), '독학');
     expect(s.routine).toEqual({ kept: 2, total: 4 });

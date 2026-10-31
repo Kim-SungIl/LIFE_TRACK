@@ -250,28 +250,38 @@ const VERDICTS: Record<string, readonly ((v: { name: string; n: number; t: numbe
   burnout: [
     () => '한 번 무너졌다. 쉬는 법을 다시 배워야 했던 달.',
     () => '버티다 결국 주저앉은 주가 있었다. 몸이 먼저 신호를 보냈다.',
+    () => '끝내 무너진 주가 있었다. 다음 달엔 쉬는 칸부터 짜야겠다.',
   ],
   broken: [
     ({ name }) => `${josa(name, '와/과')} 한 약속을 못 지켰다. 그게 제일 마음에 걸린다.`,
     ({ name }) => `${name}한테 미안한 달. 약속한 날에 거기 없었다.`,
+    ({ name }) => `미안한 마음이 남은 달. ${josa(name, '와/과')}의 약속을 지키지 못했다.`,
   ],
   missed: [
     ({ n }) => `방과후를 ${n}번 빠졌다. 계획대로만 흘러가진 않았다.`,
     ({ n, t }) => `일이 자꾸 끼어들었다. 방과후는 ${t}번 중 ${t - n}번만 갔다.`,
+    ({ n }) => `방과후를 ${n}번 놓쳤다. 다음 달엔 빈칸을 덜 만들고 싶다.`,
   ],
   kept: [
     ({ name }) => `${josa(name, '와/과')} 한 약속은 지켰다. 그날이 이번 달의 한가운데였다.`,
     ({ name }) => `약속한 날 ${josa(name, '와/과')} 만났다. 그걸로 충분한 달.`,
+    ({ name }) => `${josa(name, '와/과')} 한 약속을 지켰다. 그 하루가 이번 달을 버티게 했다.`,
   ],
   steady: [
     ({ routine }) => `${josa(routine, '은/는')} 한 번도 안 빠졌다. 꾸준함이 몸에 붙는 중.`,
     ({ routine }) => `계획한 대로 굴러간 달. ${routine}도 빠짐없이 갔다.`,
+    ({ routine }) => `${josa(routine, '을/를')} 빠짐없이 다녔다. 티는 안 나도 쌓이고 있다.`,
   ],
   quiet: [
     () => '별일 없이 지나간 달. 그래도 조금은 달라졌다.',
     () => '조용한 한 달이었다. 기억에 남는 건 많지 않아도.',
+    () => '별일 없던 한 달. 그래도 매일 무언가는 했다.',
   ],
 };
+
+// 총평 문장 고르기의 학년 몫. 12였을 땐 문장 수(2)로 나누어떨어져 학년 축이 없었다 — 같은 달이면 7년 내내
+// 같은 문장이었다(UX 재확인 U4). 13은 문장 수 2~12 어느 것으로도 안 나누어떨어진다(바꾸면 그 성질부터 볼 것).
+const VERDICT_YEAR_STEP = 13;
 
 /** 총평 틀의 신호 종류 — 강한 순서. 테스트가 이 순서를 잠근다. */
 export const VERDICT_PRIORITY = ['burnout', 'broken', 'missed', 'kept', 'steady', 'quiet'] as const;
@@ -310,7 +320,7 @@ export function buildMonthSummary(state: GameState, run: MonthRun, routineName: 
     : routine && routineName ? 'steady'
     : 'quiet';
   const variants = VERDICTS[kind];
-  const verdict = variants[(run.year * 12 + run.month) % variants.length]({
+  const verdict = variants[(run.year * VERDICT_YEAR_STEP + run.month) % variants.length]({
     name: (broken ?? kept)?.name ?? '',
     n: missedN,
     t: routine?.total ?? 0,
