@@ -159,6 +159,10 @@ export function PlaybackCard({ state, weekLog, weekLabel, resultDialogue, bgProp
               {state.mentalState === 'tired' && (
                 <span data-testid="playback-tired" style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--yellow)', background: chipSurface('rgba(224,179,84,0.16)'), borderRadius: 6, padding: '3px 8px' }}>지쳤다</span>
               )}
+              {/* 배지는 사건 선택까지 더한 그 주 합계다 — 사건 결과에서 +였던 축이 ▼로 나와도 모순이 아니라는 걸 붙여 둔다(UX U6). */}
+              {badges.length > 0 && (
+                <span data-testid="playback-badges-scope" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', alignSelf: 'center' }}>이번 주</span>
+              )}
               {badges.map(b => (
                 <span key={b.k} style={{ fontSize: '0.75rem', fontWeight: 600, color: b.up ? 'var(--green)' : 'var(--red)', background: chipSurface(b.up ? 'rgba(110,190,140,0.14)' : 'rgba(214,110,110,0.14)'), borderRadius: 6, padding: '3px 8px' }}>{b.text}</span>
               ))}
