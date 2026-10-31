@@ -370,11 +370,11 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
           {autoPlayError && <span role="alert" style={{ fontSize: '0.75rem', color: 'var(--red)' }}>{autoPlayError}</span>}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
             <button type="button" className="btn-reset" data-testid="playback-resume" onClick={() => { playSfx('confirm'); setAutoPlayError(monthly.onAutoPlay({ activities: selectedActivities, npcChoices })); }}
-              style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(240,164,122,0.5)', background: 'var(--bg-secondary)', color: 'var(--accent)', fontWeight: 700, fontSize: '0.82rem' }}>
+              style={{ minHeight: 44, padding: '6px 10px', textAlign: 'center', borderRadius: 10, border: '1px solid rgba(240,164,122,0.5)', background: 'var(--bg-secondary)', color: 'var(--accent)', fontWeight: 700, fontSize: '0.82rem' }}>
               {monthly.stopLine ? '▶ 이어서 자동 진행' : '▶ 남은 주 자동 진행'}
             </button>
             <button type="button" className="btn-reset" data-testid="playback-replan" onClick={() => { playSfx('tap'); monthly.onOpenPlan({ activities: selectedActivities, npcChoices }); }}
-              style={{ minHeight: 44, borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem' }}>
+              style={{ minHeight: 44, padding: '6px 10px', textAlign: 'center', borderRadius: 10, border: '1px solid rgba(255,255,255,0.18)', background: 'var(--bg-secondary)', fontSize: '0.82rem' }}>
               {monthly.stopLine ? '남은 주 다시 짜기' : '계획 고치기'}
             </button>
           </div>
