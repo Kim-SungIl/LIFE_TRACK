@@ -362,7 +362,8 @@ describe('이어서 이야기할 친구 — npcsToContinueTalk', () => {
     const s = withTalkChance(9);
     s.npcEventPendingThisWeek = false;
     s.talkBank = { year: 2, month: 3, npc: 1, home: 0 };
-    // 한 명은 친밀도를 30 밑으로 — 이야기는 남았어도 표시도, 이벤트도 없어야 한다.
+    // 한 명은 친밀도를 30 밑으로 — 표시도, 이벤트도 없어야 한다. (미니 이벤트 풀 자체가 30 미만엔 비어서
+    // npcTalkFires의 친밀도 조건은 겹친 가드다 — 그걸 지운 뮤턴트는 동치라 살아남는다.)
     const low = s.npcs.find(n => n.met && getAvailableNpcEvents({ ...s, npcEventPendingThisWeek: true }, n.id).length > 0)!;
     low.intimacy = 20;
     const shown = new Set(npcsToContinueTalk(s).map(n => n.id));
