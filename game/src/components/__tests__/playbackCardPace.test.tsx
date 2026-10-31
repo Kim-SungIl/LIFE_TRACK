@@ -255,8 +255,10 @@ describe('능력치 배지의 범위', () => {
     expect(scope.textContent).toBe('이번 주');
     expect(scope.nextElementSibling?.textContent, 'badges_scope: 배지 바로 앞').toContain('▲');
   });
-  it('badges_scope_none: 배지가 없으면 붙지 않는다', () => {
-    render(<PlaybackCard {...props({ ...SHORT, statChanges: { academic: 0.05 } })} />);
+  it('badges_scope_none: 배지가 없으면 붙지 않는다 — 칩 줄은 \'지쳤다\'로 떠 있다', () => {
+    const tired = Object.assign(state(), { mentalState: 'tired' as const });
+    render(<PlaybackCard {...props({ ...SHORT, statChanges: { academic: 0.05 } }, { state: tired })} />);
+    expect(screen.getByTestId('playback-tired'), '전제: 칩 줄이 그려진다').toBeTruthy();
     expect(screen.queryByTestId('playback-badges-scope')).toBeNull();
   });
 });
