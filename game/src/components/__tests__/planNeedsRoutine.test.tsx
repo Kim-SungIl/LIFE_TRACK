@@ -11,7 +11,7 @@ import { MainWeekScreen } from '../screens/main/MainWeekScreen';
 import { TUTORIAL_KEYS } from '../tutorialSteps';
 import { createInitialState, predictWeekOutcome } from '../../engine/gameEngine';
 import { getBackground } from '../../engine/backgrounds';
-import { getWeekInfo } from '../../engine/weekMath';
+import { getMonthBlock, getWeekInfo } from '../../engine/weekMath';
 import { getConfirmGate } from '../../engine/weekendPlan';
 import type { GameState, MonthPlan } from '../../engine/types';
 
@@ -53,12 +53,31 @@ describe('한 달 계획 — 루틴이 없으면 저장 전에 막는다', () =>
     expect((saveButton() as HTMLButtonElement).disabled).toBe(locked);
   });
 
-  // 화면 판정이 엔진의 확정 잠금과 갈리면 저장은 되는데 재생이 멈추는 구멍이 다시 열린다 — 그 주 기준으로 같은지 본다.
-  it.each([5, 17, 20, 21])('matches_gate: W%i 첫 주 — 저장 잠금 ⇔ 확정 잠금의 missingRoutine', week => {
-    const s = at(week, null);
-    const gate = getConfirmGate(s, predictWeekOutcome(s, [], {}));
-    render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} />);
-    expect((saveButton() as HTMLButtonElement).disabled, 'matches_gate').toBe(gate.missingRoutine);
+  // 화면은 남은 주 중 학기 주가 하나라도 있으면 잠그고, 엔진(getConfirmGate)은 지금 주만 본다. 둘이 같은 건
+  // 한 달 안에서 방학 → 학기로 넘어가는 달이 없어서다(섞인 달은 W17~20·W41~44, 둘 다 학기 → 방학).
+  // 학사력이 바뀌어 그런 달이 생기면 화면만 잠기는 주가 생긴다 — 그 전제를 먼저 단언하고, 1~48주 전부 대조한다.
+  it('matches_gate: 한 달 안에 방학 → 학기 순서가 없다(전제)', () => {
+    for (let w = 1; w <= 48; w++) {
+      const { endWeek } = getMonthBlock(w);
+      if (!getWeekInfo(w).isVacation) continue;
+      for (let later = w + 1; later <= endWeek; later++) {
+        expect(getWeekInfo(later).isVacation, `matches_gate: W${w} 방학인데 같은 달 W${later}가 학기`).toBe(true);
+      }
+    }
+  });
+
+  it('matches_gate: 1~48주 전부 — 저장 잠금 ⇔ 그 주 확정 잠금의 missingRoutine', () => {
+    let locked = 0;
+    for (let week = 1; week <= 48; week++) {
+      const s = at(week, null);
+      const gate = getConfirmGate(s, predictWeekOutcome(s, [], {}));
+      const { unmount } = render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} />);
+      expect((saveButton() as HTMLButtonElement).disabled, `matches_gate: W${week}`).toBe(gate.missingRoutine);
+      if (gate.missingRoutine) locked++;
+      unmount();
+    }
+    // 양쪽이 늘 false여도 같다 — 잠기는 주와 안 잠기는 주가 둘 다 있어야 대조가 된다.
+    expect(locked, 'matches_gate: 학기 주 수 — 48주 − 방학 W20~24·W43~48(11주)').toBe(37);
   });
 });
 
@@ -81,12 +100,12 @@ describe('▶ 자동 진행 — 같은 이유로 또 막혀도 반응한다', ()
   it('repeat_feedback: 두 번째부터는 새 알림으로 다시 그려지고, 무엇을 할지 덧붙는다', () => {
     renderStrip(() => '방과후 루틴이 비어 있어요');
     fireEvent.click(screen.getByTestId('playback-resume'));
-    const first = screen.getByTestId('playback-error');
+    const first = screen.getByRole('alert'); // role이 빠지면 스크린 리더가 안 읽는다 — testid가 아니라 역할로 찾는다
     expect(first.textContent).toBe('방과후 루틴이 비어 있어요');
     expect(first.className).toBe('');
     fireEvent.click(screen.getByTestId('playback-resume'));
-    const second = screen.getByTestId('playback-error');
-    expect(second, 'repeat_feedback: 같은 노드면 스크린 리더가 다시 안 읽는다').not.toBe(first);
+    const second = screen.getByRole('alert');
+    expect(second, 'repeat_feedback: 새 노드로 다시 넣어야 다시 읽힐 여지가 있다').not.toBe(first);
     expect(second.getAttribute('data-repeat')).toBe('2');
     expect(second.className).toBe('nudge');
     expect(second.textContent).toContain('고친 뒤 다시 눌러 주세요');
@@ -96,9 +115,25 @@ describe('▶ 자동 진행 — 같은 이유로 또 막혀도 반응한다', ()
     let why: string | null = '이번 주 활동비가 모자라요';
     renderStrip(() => why);
     fireEvent.click(screen.getByTestId('playback-resume'));
-    expect(screen.getByTestId('playback-error')).toBeTruthy();
+    expect(screen.getByRole('alert')).toBeTruthy();
     why = null;
     fireEvent.click(screen.getByTestId('playback-resume'));
     expect(screen.queryByTestId('playback-error')).toBeNull();
+  });
+
+  it('repeat_new_reason: 처음 보는 이유는 반복이 아니다 — 새로 읽히되 흔들리거나 덧붙지 않는다', () => {
+    let why = '이번 주 활동비가 모자라요';
+    renderStrip(() => why);
+    fireEvent.click(screen.getByTestId('playback-resume'));
+    const first = screen.getByRole('alert');
+    why = '방과후 루틴이 비어 있어요';
+    fireEvent.click(screen.getByTestId('playback-resume'));
+    const second = screen.getByRole('alert');
+    expect(second, 'repeat_new_reason: 이유가 바뀌어도 새 노드').not.toBe(first);
+    expect(second.textContent).toBe('방과후 루틴이 비어 있어요');
+    expect(second.getAttribute('data-repeat')).toBe('1');
+    expect(second.className).toBe('');
+    fireEvent.click(screen.getByTestId('playback-resume'));
+    expect(screen.getByRole('alert').getAttribute('data-repeat'), 'repeat_new_reason: 같은 이유는 그다음부터 센다').toBe('2');
   });
 });
