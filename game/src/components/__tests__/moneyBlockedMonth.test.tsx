@@ -150,6 +150,7 @@ describe('② 배선 — 월 계획 화면', () => {
     expect(screen.getByTestId('month-plan')).toBeTruthy();
   };
 
+  // 원래 계획으로 되돌려 저장해도 센다 — 세는 기준은 "예산을 넘겨 본 뒤 저장"이다(사용자 결정, 2026-11-01).
   it('넘겼다가 줄여서 저장하면 그 달 남은 주를 센다', () => {
     boot(tight());
     open();
@@ -196,6 +197,35 @@ describe('② 배선 — 월 계획 화면', () => {
     reason = null;
     fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     expect(onMoneyBlocked, '받아들여진 저장(양성 짝)').toHaveBeenCalledTimes(1);
+  });
+
+  it('다시 짜기에서 열 때부터 넘쳐 있으면, 줄여서 저장할 때 센다', () => {
+    // 예산 안으로 한 번 저장(안 셈) → 그사이 잔액이 줄어 기존 계획이 넘친다 → [계획 고치기]로 열자마자 넘친 상태.
+    boot({ ...broke(), money: 200 });
+    open();
+    pickInto('slot-5-0', 'art-lesson');
+    fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
+    expect(now().monthPlan, '전제: 첫 저장').toBeTruthy();
+    expect(now().moneyBlockedMonth, '전제: 예산 안 저장은 안 셌다').toBeUndefined();
+    useGameStore.setState({ state: { ...now(), money: 15 } });
+    fireEvent.click(screen.getByTestId('playback-replan'));
+    expect(screen.getByRole('button', { name: /돈이 부족해요/ }), '전제: 열 때부터 넘쳤다').toBeTruthy();
+    reduce();
+    fireEvent.click(screen.getByRole('button', { name: '이대로 저장' }));
+    expect(now().moneyBlockedMonth?.month, '다시 짜기도 센다').toBe(getMonthBlock(5).index);
+    expect(blocked(2)).toBe(getMonthBlock(5).endWeek - 5 + 1);
+  });
+
+  it('쓸 수 있는 돈을 딱 0까지 쓰면 넘긴 게 아니다 — 저장되고 안 센다', () => {
+    boot({ ...broke(), money: 14 }); // 학원비 12만을 내고 2만 — 예체능 레슨(2만) 한 주로 0
+    open();
+    pickInto('slot-5-0', 'art-lesson');
+    expect(screen.getByTestId('month-spendable').textContent, '전제: 딱 0').toMatch(/(^|[^0-9.])0만/);
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
+    expect(now().monthPlan, '전제: 저장됐다').toBeTruthy();
+    expect(now().moneyBlockedMonth).toBeUndefined();
+    expect(blocked(2)).toBe(0);
   });
 
   it('넘긴 적 없이 저장하면 안 센다(음성 짝)', () => {
