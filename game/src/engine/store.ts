@@ -202,8 +202,8 @@ interface GameStore {
   // 판정 주체가 UI인 이유: 그 주는 확정되지 않으므로 processWeek에 도달하지 않는다.
   markMoneyBlockedWeek: () => void;
   /**
-   * 월 계획 화면의 [이번 달 시작]이 돈 때문에 잠겼다 — 그 달 남은 주를 "막힌 주"로 한 번 센다(moneyTrajectory.ts 헤더).
-   * 같은 달은 한 번만. 화면이 매 렌더 알려와도 안전하다.
+   * 월 계획 화면에서 예산을 넘겨 본 계획을 줄여서 저장했다 — 그 달 남은 주를 "막힌 주"로 한 번 센다(moneyTrajectory.ts 헤더).
+   * 같은 달은 한 번만. 여러 번 불려도 안전하다.
    */
   markMoneyBlockedMonth: () => void;
   /**
