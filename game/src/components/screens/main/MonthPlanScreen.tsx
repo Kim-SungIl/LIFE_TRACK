@@ -46,7 +46,7 @@ type Props = {
    * 그 두 주가 재생 카드로 지나가 주간 화면의 칩을 볼 일이 없다 — 그래서 계획 화면에서 고른다(디렉터 결정 2026-10-26).
    */
   onChooseGoal?: (offer: GoalOffer) => boolean;
-  /** [이번 달 시작]이 돈 때문에 잠겼다 — 엔딩·학년말 돈 회고의 "막힌 주"(store.markMoneyBlockedMonth). */
+  /** 예산을 넘겨 본 계획을 줄여서 저장했다 — 엔딩·학년말 돈 회고의 "막힌 주"(store.markMoneyBlockedMonth). */
   onMoneyBlocked?: () => void;
 };
 
@@ -115,10 +115,13 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   // 학기 주가 끼어 있는데 루틴이 비면 그 주에서 재생이 멈춘다(checkPlannedWeek '방과후 루틴이 비어 있어요').
   // 저장을 먼저 막아 계획을 세운 자리에서 고르게 한다 — 판정은 확정 잠금(getConfirmGate missingRoutine)과 같은 근거.
   const noRoutine = !state.routineSlot2 && weeks.some(w => !isVac(w));
-  // 돈 회고 — 주간 화면이 확정 잠금을 알리는 것(MainWeekScreen onMoneyBlocked)과 같은 자리. 스토어가 달마다 한 번만 센다.
+  // 돈 회고 — 세는 건 "돈 때문에 계획을 바꾼 달"이다: 예산을 넘겨 본 뒤 줄여서 **저장했을 때** 한 번(start).
+  // 넘긴 순간에 세면 열어 보기만 하거나 칸을 고르다 되돌리고 닫아도 그달 남은 주가 전부 막힌 주가 됐다.
+  // 학원비조차 못 내 저장이 아예 안 되는 달은 여기서 세지 않는다 — 주간 화면의 확정 잠금이 그 주를 센다.
+  const hitOverspent = useRef(false);
   useEffect(() => {
-    if (overspent) onMoneyBlocked?.();
-  }, [overspent, onMoneyBlocked]);
+    if (overspent) hitOverspent.current = true;
+  }, [overspent]);
   const hasSemester = weeks.some(w => !isVac(w));
   // 화면에 실제로 있는 칸의 스텝만 — 마운트 동안 바뀌지 않는 값들이다(초대는 상태를 읽기만 하는 결정론 함수).
   const tutorialSteps = useMemo(() => monthPlanSteps({ hasInvites: !replan && invites.length > 0, hasRoutine: hasSemester }), [replan, invites.length, hasSemester]);
@@ -253,6 +256,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
     });
     setError(reason);
     if (reason === null) {
+      if (hitOverspent.current) onMoneyBlocked?.();
       recordTelemetry({
         t: 'month', y: state.year, m: block.index, week: state.week, replan, ...touched.current,
         invitesAccepted: invites.filter((_, i) => answers[i] === true).length,

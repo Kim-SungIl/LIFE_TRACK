@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 // 돈 회고(설계안 §9) — 월 단위 판에서 "돈에 막힌 주"가 살아 있는가.
 //
-// 주 단위 판은 주간 화면의 확정 잠금을 셌다(store.markMoneyBlockedWeek). 월 단위 판(기본값)에선 그 잠금이
-// 월 계획 화면의 [이번 달 시작]에서 일어나고, 주간 화면의 확정은 재생이 대신 누른다 — 주 단위로만 세면 원리상 0이라
-// strapped/tight 결말 줄이 죽는다. 그래서 막힌 달은 그 달 남은 주를 한꺼번에 센다(store.markMoneyBlockedMonth).
+// 주 단위 판은 주간 화면의 확정 잠금을 셌다(store.markMoneyBlockedWeek). 월 계획을 쓰는 판에선 돈 때문에 계획을
+// 바꾸는 일이 월 계획 화면에서 일어나고, 예산 안으로 저장한 계획은 주간 확정에서 거의 안 잠긴다 — 주 단위로만 세면 원리상 0이라
+// strapped/tight 결말 줄이 죽는다. 그래서 줄여서 저장한 달은 그 달 남은 주를 한꺼번에 센다(store.markMoneyBlockedMonth).
 //   ① store — 남은 주 수만큼, 달마다 한 번, 이미 센 주와 겹치지 않게, 구세이브는 침묵
-//   ② 배선 — 월 계획 화면이 돈 때문에 잠기면 실제로 센다(안 잠기면 안 센다)
+//   ② 배선 — 월 계획 화면에서 예산을 넘겨 본 뒤 줄여서 저장하면 센다(보기만·되돌리고 닫기·넘긴 적 없음은 안 센다)
 //   ③ 도달 — 그렇게 센 값으로 학년말·7년 판정이 tight/strapped에 닿는다
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
@@ -15,6 +15,7 @@ vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
 vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
 
 import { GameScreen } from '../GameScreen';
+import { ACTIVITIES } from '../../engine/activities';
 import { useGameStore } from '../../engine/store';
 import { MONTHLY_PLANNING_KEY } from '../../engine/featureFlags';
 import { getMonthBlock } from '../../engine/weekMath';
@@ -33,6 +34,23 @@ beforeEach(() => {
   localStorage.setItem('lifetrack_rest_ack', '1');
   useGameStore.setState({ state: null, npcActivityMap: {} });
 });
+
+const CAT_LABEL: Record<string, string> = {
+  study: '공부', exercise: '운동', social: '관계', talent: '자기계발', rest: '휴식', parent: '가족', work: '알바',
+};
+/** 칸을 열어 활동을 고른다 — 실제 플레이 경로(칸 → 편집 팝업 → 카테고리 → 활동). monthPlanScreen.test와 같다. */
+function pickInto(slotTestId: string, id: string) {
+  const act = ACTIVITIES.find(a => a.id === id)!;
+  fireEvent.click(screen.getByTestId(slotTestId));
+  const header = screen.getAllByRole('button').find(el => el.getAttribute('aria-expanded') !== null
+    && (el.textContent ?? '').includes(CAT_LABEL[act.category]));
+  if (!header) throw new Error(`카테고리 헤더 없음: ${act.category}`);
+  if (header.getAttribute('aria-expanded') === 'false') fireEvent.click(header);
+  const btn = screen.getAllByRole('button').find(el => el.getAttribute('aria-pressed') != null
+    && !(el.textContent ?? '').includes('수치') && (el.textContent ?? '').includes(act.name));
+  if (!btn) throw new Error(`활동 버튼 없음: ${act.name}`);
+  fireEvent.click(btn);
+}
 
 function boot(patch: Partial<GameState> = {}) {
   api().startGame('male', ['emotional', 'info']);
@@ -107,26 +125,70 @@ describe('① store.markMoneyBlockedMonth', () => {
 });
 
 describe('② 배선 — 월 계획 화면', () => {
-  // 학원 한 달치(주 2만 × 4주)를 못 내는 잔액 — 계획 화면의 쓸 수 있는 돈이 음수라 [이번 달 시작]이 잠긴다.
+  // 세는 건 "돈 때문에 계획을 바꾼 달"이다 — 예산을 넘겨 본 뒤 줄여서 저장했을 때. 열어 보기만 하거나 되돌리고 닫으면 안 센다.
+  // 학원 한 달치(12만)를 못 내는 잔액 — 무엇을 골라도 쓸 수 있는 돈이 음수라 저장이 아예 안 된다.
   const broke = (): Partial<GameState> => ({ year: 2, week: 5, money: 1, routineSlot2: 'academy', routineSlot3: null, monthPlan: undefined });
-
-  it('[이번 달 시작]이 돈 때문에 잠기면 그 달을 센다', () => {
+  // 학원비(12만)를 내고 3만이 남는다. 고르기 창은 못 사는 활동을 막으니 예체능 레슨(2만) 한 주는 들어가고,
+  // [모든 주 똑같이]로 네 주에 복사하면 8만이라 넘친다 — 넘기는 실제 경로. 휴식으로 바꿔 다시 복사하면 들어온다.
+  const tight = (): Partial<GameState> => ({ ...broke(), money: 15 });
+  const overspend = () => {
+    pickInto('slot-5-0', 'art-lesson');
+    fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
+    expect(screen.getByRole('button', { name: /돈이 부족해요/ }), '전제: 넘겼다').toBeTruthy();
+  };
+  const reduce = () => {
+    pickInto('slot-5-0', 'rest');
+    fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
+  };
+  const open = () => {
     localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
-    boot(broke());
+    // 초대 없는 달로 둔다 — 초대가 뜨면 답하기 전까지 저장이 잠긴다(monthPlanScreen.test의 aprilStart와 같은 처리).
+    useGameStore.setState({ state: { ...now(), npcs: now().npcs.map(n => ({ ...n, intimacy: Math.min(n.intimacy, 10) })) } });
     render(<GameScreen />);
-    // 주간 화면이 메인이다 — 계획 화면은 띠에서 열 때만 뜨고, 그 화면이 잠겨야 달을 센다(주간 화면의 잠금은 그 주 하나만 센다).
     fireEvent.click(screen.getByTestId('month-plan-open'));
     expect(screen.getByTestId('month-plan')).toBeTruthy();
-    expect(screen.getByRole('button', { name: /돈이 부족해요/ })).toBeTruthy();
+  };
+
+  it('넘겼다가 줄여서 저장하면 그 달 남은 주를 센다', () => {
+    boot(tight());
+    open();
+    expect(screen.getByRole('button', { name: '계획 저장' }), '전제: 처음엔 예산 안').toBeTruthy();
+    expect(blocked(2), '전제: 주간 화면도 안 막혔다').toBe(0);
+    overspend();
+    expect(now().moneyBlockedMonth, '넘긴 순간엔 아직 안 센다').toBeUndefined();
+    reduce();
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
+    expect(now().monthPlan, '전제: 저장됐다').toBeTruthy();
     expect(blocked(2)).toBe(getMonthBlock(5).endWeek - 5 + 1);
+    expect(now().moneyBlockedMonth?.month).toBe(getMonthBlock(5).index);
   });
 
-  it('잠기지 않으면 안 센다(음성 짝)', () => {
-    localStorage.setItem(MONTHLY_PLANNING_KEY, '1');
+  it('넘겼다가 되돌리고 닫으면 안 센다 — 고르다 만 것은 계획을 바꾼 게 아니다', () => {
+    boot(tight());
+    open();
+    overspend();
+    reduce();
+    fireEvent.click(screen.getByTestId('month-plan-cancel'));
+    expect(now().moneyBlockedMonth).toBeUndefined();
+    expect(blocked(2)).toBe(0);
+  });
+
+  it('저장이 아예 안 되는 달은 열어 보고 닫아도 달로 세지 않는다 — 주간 화면의 확정 잠금이 그 주를 센다', () => {
+    boot(broke());
+    open();
+    expect(screen.getByRole('button', { name: /돈이 부족해요/ })).toBeTruthy();
+    fireEvent.click(screen.getByTestId('month-plan-cancel'));
+    expect(now().moneyBlockedMonth, '달로는 안 센다').toBeUndefined();
+    expect(blocked(2), '주간 화면이 이번 주 하나를 센다').toBe(1);
+  });
+
+  it('넘긴 적 없이 저장하면 안 센다(음성 짝)', () => {
     boot({ ...broke(), money: 200 });
-    render(<GameScreen />);
-    fireEvent.click(screen.getByTestId('month-plan-open'));
-    expect(screen.queryByRole('button', { name: /돈이 부족해요/ })).toBeNull();
+    open();
+    pickInto('slot-5-0', 'art-lesson');
+    fireEvent.click(screen.getByRole('button', { name: '모든 주 똑같이' }));
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
+    expect(now().monthPlan, '전제: 저장됐다').toBeTruthy();
     expect(blocked(2)).toBe(0);
   });
 });
