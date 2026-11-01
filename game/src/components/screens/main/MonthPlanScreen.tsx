@@ -408,7 +408,8 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
                           onClick={() => { playSfx('tap'); setEditing({ idx, slot: `weekend${k + 1}` }); }}
                           style={{ minHeight: 56, borderRadius: 10, border: '1px solid rgba(255,255,255,0.1)', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 2, padding: '6px 10px', textAlign: 'left' }}>
                           <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{dayLabel}</span>
-                          <span style={{ fontSize: '0.8rem' }}>{id ? nameOf(id) : '비움'}</span>
+                          {/* 친구와 같이 하는 칸은 누구와인지 칸에도 붙인다 — 요약 줄에만 있으면 펼친 칸이 "친구와 놀기"만 남는다. */}
+                          <span style={{ fontSize: '0.8rem' }}>{id ? (d.npcChoices[`${id}:${k}`] ? `${nameOf(id)} (${npcName(d.npcChoices[`${id}:${k}`])})` : nameOf(id)) : '비움'}</span>
                         </button>
                       );
                     })}

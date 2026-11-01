@@ -92,7 +92,9 @@ describe('한 달 계획 화면 — 짜고, 예산이 움직이고, 시작하면
     pickInto('slot-5-0', 'hang-out'); // 동행 활동 → 친구 고르기 창
     fireEvent.click(screen.getByRole('button', { name: /지훈/ }));
     expect(screen.getByTestId('week-summary-5').textContent).toContain('지훈');
+    expect(screen.getByTestId('slot-5-0').textContent, '펼친 칸에도 누구와인지 붙는다').toContain('친구와 놀기 (지훈)');
     pickInto('slot-5-0', 'reading'); // 같은 칸을 동행 없는 활동으로
+    expect(screen.getByTestId('slot-5-0').textContent, '동행이 지워진 칸에 이름이 남았다').not.toContain('지훈');
     fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
     expect(onStart.mock.calls[0][0].weeks[0].npcChoices, '바뀐 칸의 동행이 남았다').toEqual({});
     expect(onStart.mock.results[0].value, '엔진 검증이 계획을 거부했다').toBeNull();
