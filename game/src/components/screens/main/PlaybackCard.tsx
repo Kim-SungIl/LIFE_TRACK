@@ -195,8 +195,7 @@ function ControlButton({ label, onClick, pressed, testId }: { label: string; onC
   return (
     <button type="button" className="btn-reset" onClick={onClick} aria-pressed={pressed} data-testid={testId}
       style={{
-        // btn-reset은 text-align을 물려받아 글자가 왼쪽에 붙는다 — 조작 버튼은 가운데로, 글자는 버튼 크기에 맞게 키운다.
-        minHeight: 48, borderRadius: 12, fontSize: '0.9rem', fontWeight: 700, padding: '0 4px', textAlign: 'center',
+        minHeight: 48, borderRadius: 12, fontSize: '0.75rem', fontWeight: 600, padding: '0 4px',
         background: chipSurface(pressed ? 'rgba(240,164,122,0.22)' : 'rgba(42,34,48,0.85)'),
         border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', wordBreak: 'keep-all',
       }}>
