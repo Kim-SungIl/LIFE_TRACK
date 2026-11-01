@@ -15,6 +15,7 @@ vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
 vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
 
 import { GameScreen } from '../GameScreen';
+import { MonthPlanScreen } from '../screens/main/MonthPlanScreen';
 import { ACTIVITIES } from '../../engine/activities';
 import { useGameStore } from '../../engine/store';
 import { MONTHLY_PLANNING_KEY } from '../../engine/featureFlags';
@@ -180,6 +181,21 @@ describe('② 배선 — 월 계획 화면', () => {
     fireEvent.click(screen.getByTestId('month-plan-cancel'));
     expect(now().moneyBlockedMonth, '달로는 안 센다').toBeUndefined();
     expect(blocked(2), '주간 화면이 이번 주 하나를 센다').toBe(1);
+  });
+
+  it('저장이 거절되면 안 센다 — 계획이 실제로 바뀐 게 아니다', () => {
+    boot(tight());
+    useGameStore.setState({ state: { ...now(), npcs: now().npcs.map(n => ({ ...n, intimacy: Math.min(n.intimacy, 10) })) } });
+    const onMoneyBlocked = vi.fn();
+    let reason: string | null = '계획을 저장할 수 없어요';
+    render(<MonthPlanScreen state={now()} onSetRoutine={vi.fn()} onStart={() => reason} onMoneyBlocked={onMoneyBlocked} />);
+    overspend();
+    reduce();
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
+    expect(onMoneyBlocked, '거절된 저장').not.toHaveBeenCalled();
+    reason = null;
+    fireEvent.click(screen.getByRole('button', { name: '계획 저장' }));
+    expect(onMoneyBlocked, '받아들여진 저장(양성 짝)').toHaveBeenCalledTimes(1);
   });
 
   it('넘긴 적 없이 저장하면 안 센다(음성 짝)', () => {
