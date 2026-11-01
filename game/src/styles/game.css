@@ -807,6 +807,17 @@ body {
   50% { box-shadow: 0 0 12px 2px rgba(224,179,84,0.4); }
 }
 
+/* 같은 이유로 또 막힌 알림 — 문구가 그대로라 눌린 줄 모르던 자리(▶ 자동 진행) */
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+.nudge { display: inline-block; animation: nudge 0.24s ease-in-out 2; }
+@media (prefers-reduced-motion: reduce) {
+  .nudge { animation: none; }
+}
+
 /* 부모 보너스 발동 펄스 (활동 결과 인라인 + HUD 칩) */
 @keyframes parentBonusPulse {
   0% { background: rgba(224,138,91,0.25); transform: scale(1.04); }

@@ -112,6 +112,9 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const reserve = drafts.reduce((sum, d) => sum + plannedWeekCost(d.activities, state.year), 0);
   const spendable = Math.round((state.money - routineDue - reserve) * 10) / 10;
   const overspent = spendable < 0;
+  // 학기 주가 끼어 있는데 루틴이 비면 그 주에서 재생이 멈춘다(checkPlannedWeek '방과후 루틴이 비어 있어요').
+  // 저장을 먼저 막아 계획을 세운 자리에서 고르게 한다 — 판정은 확정 잠금(getConfirmGate missingRoutine)과 같은 근거.
+  const noRoutine = !state.routineSlot2 && weeks.some(w => !isVac(w));
   // 돈 회고 — 주간 화면이 확정 잠금을 알리는 것(MainWeekScreen onMoneyBlocked)과 같은 자리. 스토어가 달마다 한 번만 센다.
   useEffect(() => {
     if (overspent) onMoneyBlocked?.();
@@ -428,8 +431,8 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         {onCancel && (
           <button type="button" className="btn btn-secondary" data-testid="month-plan-cancel" onClick={onCancel} style={{ flex: '0 0 auto', width: 'auto', minWidth: 88 }}>{replan ? '그대로' : '닫기'}</button>
         )}
-        <button type="button" className="btn btn-primary" disabled={overspent || unanswered} onClick={start} style={onCancel ? { flex: 1 } : undefined}>
-          {overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : unanswered ? '⬆ 친구 초대에 답해 주세요' : replan ? '이대로 저장' : '계획 저장'}
+        <button type="button" className="btn btn-primary" disabled={noRoutine || overspent || unanswered} onClick={start} style={onCancel ? { flex: 1 } : undefined}>
+          {noRoutine ? '⬆ 방과후 루틴을 골라 주세요' : overspent ? '⬆ 돈이 부족해요 — 계획을 줄이세요' : unanswered ? '⬆ 친구 초대에 답해 주세요' : replan ? '이대로 저장' : '계획 저장'}
         </button>
       </div>
 
