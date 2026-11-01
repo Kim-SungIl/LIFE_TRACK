@@ -46,3 +46,44 @@ describe('timeCost 선택지 — 빠지는 칸을 반만 말하지 않는다', (
     expect(halfTruths([ev(['방과후랑 주말 하루 비워서 농구한다', '같이 간다'])])).toHaveLength(0);
   });
 });
+
+// 시간은 무언가를 포기하는 선택지만 쓴다(2026-11-01, 디렉터: "우유 당번 하나로 방과후를 빼는 건 말이 안 된다").
+// 도달 이벤트 96건이 모든 선택지에 timeCost 1을 똑같이 달아, 고를 수 있는 대가가 아니라 친해지는 데 붙는 세금이었다.
+// 어느 쪽을 골라도 빠지면 "(이미 낸 OO 빠짐)" 표시도 결정에 아무 정보를 못 준다.
+function uniformlyCostly(events: readonly GameEvent[]): string[] {
+  const out: string[] = [];
+  for (const e of events) {
+    for (const list of [e.choices ?? [], e.femaleChoices ?? []] as EventChoice[][]) {
+      if (list.length >= 2 && list.every(c => c.timeCost)) out.push(e.id);
+    }
+  }
+  return out;
+}
+
+// 도달 이벤트에서 시간을 쓰는 건 방과후 한 덩어리를 함께 쓰겠다고 하는 선택지뿐이다. 늘리려면 여기에 적고 들인다.
+const REACH_TIME_SPENDERS = [
+  'jihun-ramen-bet: "내기 콜. 단 둘 다 끝까지"',
+  'jihun-ramen-bet: "네 페이스 지키면서 같이 가자"',
+  'subin-hs-studyboard: "내가 같이 외워줄게" 옆에 앉는다',
+];
+
+describe('timeCost — 시간은 무언가를 포기하는 선택지만 쓴다', () => {
+  it('모든 선택지가 시간을 쓰는 이벤트는 없다', () => {
+    expect(uniformlyCostly(GAME_EVENTS)).toEqual([]);
+  });
+
+  it('도달 이벤트에서 시간을 쓰는 선택지는 정해 둔 것뿐이다', () => {
+    const found = new Set<string>();
+    for (const e of GAME_EVENTS.filter(x => x.reach)) {
+      for (const c of [...e.choices, ...(e.femaleChoices ?? [])]) if (c.timeCost) found.add(`${e.id}: ${c.text}`);
+    }
+    expect([...found].sort()).toEqual([...REACH_TIME_SPENDERS].sort());
+  });
+
+  it('자기검사 — 전부 쓰면 잡고, 하나라도 안 쓰거나 선택지가 하나면 통과', () => {
+    const ev = (costs: (1 | undefined)[]) => ({ id: 't', choices: costs.map(timeCost => ({ text: 'x', effects: {}, message: '', timeCost })) }) as unknown as GameEvent;
+    expect(uniformlyCostly([ev([1, 1])])).toEqual(['t']);
+    expect(uniformlyCostly([ev([1, undefined])])).toEqual([]);
+    expect(uniformlyCostly([ev([1])])).toEqual([]);
+  });
+});

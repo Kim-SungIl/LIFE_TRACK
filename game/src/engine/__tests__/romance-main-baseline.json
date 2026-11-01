@@ -31,7 +31,6 @@
             }
           ],
           "message": "지훈이 숨을 한 번 고른다. \"…야, 너 없었으면 고등학교 어떻게 버텼냐. 그 말, 한 번은 해야 될 것 같아서.\" 노을이 둘 사이로 진다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "growth",
             "importance": 7,
@@ -55,7 +54,6 @@
             }
           ],
           "message": "\"…그래. 다음에 하지 뭐.\" 지훈이 그 말을 도로 삼킨다. 무언가가 노을 속으로 그냥 묻힌다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "failure",
             "importance": 7,
@@ -78,7 +76,6 @@
             }
           ],
           "message": "\"긴장은 무슨!\" 발끈하는 사이 타이밍이 지나간다. 지훈이 그 말을 도로 삼킨다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "failure",
             "importance": 7,
@@ -104,7 +101,6 @@
             }
           ],
           "message": "지훈이 숨을 한 번 고른다. \"…너 없는 학교는 상상이 안 돼. 그 말, 하고 싶었어.\" 귀가 더 붉어진 채로, 시선은 안 피한다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "growth",
             "importance": 7,
@@ -128,7 +124,6 @@
             }
           ],
           "message": "\"…아니야, 됐다.\" 지훈이 웃어넘긴다. \"다음에.\" 다음이라는 말이 노을 속으로 묻힌다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "failure",
             "importance": 7,
@@ -151,7 +146,6 @@
             }
           ],
           "message": "\"긴장은 무슨!\" 발끈하는 사이 타이밍이 지나간다. 지훈이 그 말을 도로 삼킨다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "failure",
             "importance": 7,
@@ -204,8 +198,7 @@
               "intimacyChange": 5
             }
           ],
-          "message": "\"에이.\" 그러면서도 수빈이 더 또박또박 읽는다. 누가 들어준다는 것만으로.",
-          "timeCost": 1
+          "message": "\"에이.\" 그러면서도 수빈이 더 또박또박 읽는다. 누가 들어준다는 것만으로."
         },
         {
           "text": "단어 하나 골라 즉석 퀴즈를 낸다",
@@ -218,8 +211,7 @@
               "intimacyChange": 5
             }
           ],
-          "message": "둘이 단어장으로 티격태격 퀴즈를 낸다. 처음으로 수빈이 공부하다 소리 내 웃는다.",
-          "timeCost": 1
+          "message": "둘이 단어장으로 티격태격 퀴즈를 낸다. 처음으로 수빈이 공부하다 소리 내 웃는다."
         }
       ]
     },
@@ -252,7 +244,6 @@
             }
           ],
           "message": "\"…나도.\" 지훈이 사진을 찍는다. 찰칵. \"이게 첫 장이다, 다음 12년.\" 둘이 같은 화면을 들여다본다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "reconciliation",
             "importance": 7,
@@ -276,7 +267,6 @@
             }
           ],
           "message": "\"콜. 약속이다, 인마.\" 지훈이 새끼손가락을 내민다. 졸업생 행렬 소리가 멀게 들린다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "reconciliation",
             "importance": 7,
@@ -299,7 +289,6 @@
             }
           ],
           "message": "\"그르게. 콩만 하던 게.\" 지훈이 옛 사진 속 자기 키를 보며 웃는다. 그 웃음이 12년 전과 똑같다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "reconciliation",
             "importance": 7,
@@ -324,7 +313,6 @@
             }
           ],
           "message": "지훈이 잠깐 말을 잃는다. \"…야, 그건 반칙이지.\" 귀가 빨개진 채로 사진을 찍는다. 찰칵.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "reconciliation",
             "importance": 7,
@@ -348,7 +336,6 @@
             }
           ],
           "message": "\"콜. 약속이다.\" 지훈이 새끼손가락을 내민다. 평소보다 한참 오래 걸어둔다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "reconciliation",
             "importance": 7,
@@ -371,7 +358,6 @@
             }
           ],
           "message": "\"그르게. 콩만 하던 게.\" 지훈이 옛 사진 속 자기 키를 보며 웃는다. 그 웃음이 12년 전과 똑같다.",
-          "timeCost": 1,
           "memorySlotDraft": {
             "category": "reconciliation",
             "importance": 7,
@@ -454,26 +440,26 @@
       "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 84.1,
+        "academic": 84.3,
+        "social": 89.7,
+        "talent": 80.4,
+        "mental": 84.7,
+        "health": 73.6
+      },
+      "endingHash": "ac2cafc943b882d6acdf0d0c44cee8936dcd545456a05615d54837fa21387e06"
+    },
+    {
+      "gender": "male",
+      "plan": "free",
+      "seed": 7,
+      "stats": {
+        "academic": 84.8,
         "social": 87.3,
-        "talent": 81.3,
-        "mental": 87.7,
-        "health": 71.6
+        "talent": 81.1,
+        "mental": 89.5,
+        "health": 73.8
       },
-      "endingHash": "ef848b09497469b7582092b5e36a93217909594ddbcf2aeff738e9deef35f6a9"
-    },
-    {
-      "gender": "male",
-      "plan": "free",
-      "seed": 7,
-      "stats": {
-        "academic": 85.2,
-        "social": 87.2,
-        "talent": 80.7,
-        "mental": 88.1,
-        "health": 72.3
-      },
-      "endingHash": "dc962b595c8d668f48c3e75adafc50995c856be63f09298b692874d0b942cca2"
+      "endingHash": "bb99ff61a2d906f849d6f9e0349d42af96ae5334241b7e3376e524bd3f4c24e2"
     },
     {
       "gender": "male",
@@ -481,12 +467,12 @@
       "seed": 1,
       "stats": {
         "academic": 89.7,
-        "social": 90,
-        "talent": 80.89999999999999,
-        "mental": 88,
-        "health": 78.6
+        "social": 89.9,
+        "talent": 80.8,
+        "mental": 89.2,
+        "health": 78.8
       },
-      "endingHash": "71150d2f3bd48b374fee8c16e41f4770e4096b1c8fa40a91c46f3ca777d4b801"
+      "endingHash": "5997e99566261482aec290354130d81f63f3c55350840267bc3fea5b7ebc367a"
     },
     {
       "gender": "male",
@@ -494,38 +480,38 @@
       "seed": 7,
       "stats": {
         "academic": 89.6,
-        "social": 89.2,
+        "social": 89,
         "talent": 81.2,
-        "mental": 87.4,
-        "health": 78.6
+        "mental": 88.4,
+        "health": 79
       },
-      "endingHash": "d84e2133aaca20ec2bd2236827c8bbe79e71ebc068cb481b145a15055899f9bc"
+      "endingHash": "c2ec39eece8148f38c9fe666687d6120ad91d115b370e870308af373bc3ab8e3"
     },
     {
       "gender": "female",
       "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 84.1,
-        "social": 87.2,
-        "talent": 81.3,
-        "mental": 87.9,
-        "health": 71.6
+        "academic": 84.3,
+        "social": 89.6,
+        "talent": 80.4,
+        "mental": 84.7,
+        "health": 73.6
       },
-      "endingHash": "e19871bae42e691e4a7d1d2e19da9307a9c2cc2392d09eaa7cb6f0b3970e7125"
+      "endingHash": "dfe5e99d0a335c1a555504ececdf5cbaa7d96a2847a55335051b4592db99b385"
     },
     {
       "gender": "female",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 85.2,
+        "academic": 85,
         "social": 87.2,
-        "talent": 80.7,
-        "mental": 88.1,
-        "health": 72.2
+        "talent": 81.1,
+        "mental": 89.5,
+        "health": 73.8
       },
-      "endingHash": "7b888e706d37ea74340b0ba1dd21d3cb1b526c6897b521cda909a5d292cc29f2"
+      "endingHash": "ac8e809c1a63e6d2eed42578e704792434728161a7decc9c5d70627b8f2346ca"
     },
     {
       "gender": "female",
@@ -533,12 +519,12 @@
       "seed": 1,
       "stats": {
         "academic": 89.7,
-        "social": 90,
-        "talent": 80.89999999999999,
-        "mental": 88,
-        "health": 78.6
+        "social": 89.9,
+        "talent": 80.8,
+        "mental": 89.2,
+        "health": 78.8
       },
-      "endingHash": "e1853d2f873c64a36222dbd602a5dc02f1595614bfb8b8e0546435f72297ccc5"
+      "endingHash": "664ddba1d4d5ee735cc96eb445e8b5d95bc707fa64b50e3d60dee70970d6c7c1"
     },
     {
       "gender": "female",
@@ -546,12 +532,12 @@
       "seed": 7,
       "stats": {
         "academic": 89.6,
-        "social": 89.2,
+        "social": 89,
         "talent": 81.2,
-        "mental": 87.4,
-        "health": 78.6
+        "mental": 88.4,
+        "health": 79
       },
-      "endingHash": "1fbbcaa124f133b8de966a35d37ca43337783e101694965269fc5d32c06a8fe4"
+      "endingHash": "240c85db767afa5dd0640dc2fb8bcfb582d7ac89d5a9c5a75e3834dff7f0d42d"
     }
   ]
 }

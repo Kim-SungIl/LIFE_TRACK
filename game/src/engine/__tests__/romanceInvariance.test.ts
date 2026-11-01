@@ -16,6 +16,10 @@
 // 닫아도 학년 전환을 안 해서, 그 해엔 processWeek이 W49에 한 번 더(판당 337~340회, 제품은 늘 336회) 돌았다.
 // 미러에 그 한 줄(week > 48 → applyYearTransition)만 넣으면 8판 실패가 새 엔진 경로와 바이트 동일했다 — 다른
 // 드리프트(로그 접기·vacationText·지나친다 안전망) 몫은 0. 제품(store) 쪽은 주간 골든이 바이트 불변이다.
+// 도달 이벤트 시간 소모 정리(2026-11-01)에서 다시 재생성했다 — 도달형 96건이 모든 선택지에 달던 timeCost 1을 방과후를
+// 함께 쓰는 3개 선택지에만 남겼다. 변경은 이벤트 데이터의 그 칸뿐이고 연애 분기와 무관하다. 빠지던 셋째 칸(가벼운 운동·헬스)이
+// 돌아와 건강이 free +1.5~2.0·paid +0.2~0.4 올랐다. scenes도 그 칸만 따라 바꿨다(subin-hs-studyboard 첫 선택지만 남고,
+// 연애 추가 선택지는 choices[0]을 펼치므로 main처럼 시간을 쓴다). 그 밖의 칸이 갈리면 멈추는 스크립트로 갈아 끼웠다.
 // 재생성 절차: 이 하네스를 그대로 돌려 stats·endingHash만 갈아 끼운다(scenes·closures는 손대지 않는다).
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
