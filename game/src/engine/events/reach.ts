@@ -30,14 +30,12 @@ export const REACH_EVENTS = [
         fatigueEffect: 2,
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 "고마워, 사실 좀 무거웠어" 하고 웃는다. 교실까지 가는 복도가 짧게 느껴진다.',
-        timeCost: 1,
       },
       {
         text: '"넌 명단 불러줘, 내가 나눠줄게"',
         effects: { social: 2, mental: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 번호를 또박또박 불러준다. 둘이 맞춰 움직이니 반 애들이 금방 우유를 받아 간다.',
-        timeCost: 1,
       },
     ],
   },
@@ -61,21 +59,18 @@ export const REACH_EVENTS = [
         effects: { social: 1, mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 계획표 귀퉁이를 만지작거린다. "나 이거 다 채우면 괜히 안심돼."',
-        timeCost: 1,
       },
       {
         text: '"나도 하나 만들어볼까" — 따라 해본다',
         effects: { academic: 2, mental: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 빈 종이를 찢어 건넨다. 별 모양은 삐뚤빼뚤하지만 둘이 만든 계획표가 나란히 놓인다.',
-        timeCost: 1,
       },
       {
         text: '"너 너무 빡빡하게 하는 거 아냐?"',
         effects: { mental: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 잠깐 눈을 깜빡인다. "그런가? 근데 안 하면 좀 불안해서." 말끝이 작아진다.',
-        timeCost: 1,
       },
     ],
   },
@@ -99,7 +94,6 @@ export const REACH_EVENTS = [
         effects: { mental: 3, social: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
         message: '유나가 칠판 손잡이를 놓았다. "…고마워. 진짜." 말끝이 떨리다가 또 웃음으로 감춰진다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'growth',
           importance: 5,
@@ -113,7 +107,6 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '유나가 나를 봤다가 옆으로 시선을 돌린다. "그래? …우리 비슷하네." 칠판 지우개 가루가 햇살에 떠다닌다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -127,7 +120,6 @@ export const REACH_EVENTS = [
         effects: { social: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 "응 그럼 수업 들어가자" 하며 분필을 다시 집는다. 평소가 힘들어 보이는 날이 있다는 걸 그때 처음 알았다.',
-        timeCost: 1,
       },
     ],
     femaleChoices: [
@@ -136,7 +128,6 @@ export const REACH_EVENTS = [
         effects: { mental: 3, social: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 4 }],
         message: '유나가 칠판 손잡이를 놓았다. "…고마워. 진짜." 말끝이 떨리다가 또 웃음으로 감춰진다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'growth',
           importance: 5,
@@ -150,7 +141,6 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 5 }],
         message: '유나가 픽 웃었다. "그래? …우리 비슷하네, 의외로." 칠판 지우개 가루가 햇살에 떠다닌다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -164,7 +154,6 @@ export const REACH_EVENTS = [
         effects: { social: 1 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 1 }],
         message: '유나가 "응 그럼 수업 들어가자" 하며 분필을 다시 집는다. 평소가 힘들어 보이는 날이 있다는 걸 그때 처음 알았다.',
-        timeCost: 1,
       },
     ],
   },
@@ -190,7 +179,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }],
         message: '유나가 창문에 그린 별을 손바닥으로 지운다. "그 말, 오래 기억할 것 같아."',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'reconciliation',
           importance: 7,
@@ -204,7 +192,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, talent: 1, mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
         message: '유나가 잠깐 멈췄다가, 옆자리 별 옆에 작은 점 하나를 더한다. 말 없는 답이라는 걸 둘 다 안다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -220,7 +207,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, mental: 3 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 3 }],
         message: '유나가 창문에 그린 별을 손바닥으로 지운다. "그 말, 오래 기억할 것 같아."',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'reconciliation',
           importance: 7,
@@ -234,7 +220,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, talent: 1, mental: 2 },
         npcEffects: [{ npcId: 'yuna', intimacyChange: 2 }],
         message: '유나가 픽 웃더니 옆에 작은 별을 하나 더 그린다. "우리 우정 기념. 촌스럽지?" 별 두 개가 나란히 남았다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -265,14 +250,12 @@ export const REACH_EVENTS = [
         effects: { academic: 1, social: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
         message: '수빈이가 책등 세 권을 집어 준다. "이 중에 하나만 같이 읽어도 돼." 표지가 손에 닿는 감촉이 이상하게 고맙다.',
-        timeCost: 1,
       },
       {
         text: '"바쁜데… 다음에" — 미룬다',
         effects: { mental: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
         message: '수빈이가 "그래, 무리하지 마. 나 혼자 읽고 괜찮은 거 있으면 알려줄게" 하고 책등을 다시 꽂아 둔다. 부담 없는 호의가 한 줄 남는다.',
-        timeCost: 1,
       },
     ],
   },
@@ -296,14 +279,12 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
         message: '수빈이가 "잘 쓸 거지?" 하고 웃는다. 열쇠고리가 가벼운데 주머니 한쪽은 왠지 무겁다.',
-        timeCost: 1,
       },
       {
         text: '"너는?" — 돌려줄까 망설인다',
         effects: { social: 1, mental: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
         message: '수빈이가 손을 저었다. "나는 또 생겨. 엄마가 자주 그 마트 가거든." 말끝이 잠깐 가벼워졌다가 다시 조용해진다.',
-        timeCost: 1,
       },
     ],
   },
@@ -330,7 +311,6 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '답장이 늦게 왔다. "…그렇구나. 나만 그런 줄 알았어." 이모티콘 하나 없는 대화가 이상하게 따뜻하다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'unspoken_debt',
           importance: 5,
@@ -344,7 +324,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, mental: 2 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
         message: '"응. 오늘은… 이걸로 됐어." 수빈이가 마지막에 작은 하트 하나만 보냈다. 잠이 오는 속도가 조금 달라진다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'growth',
           importance: 6,
@@ -358,7 +337,6 @@ export const REACH_EVENTS = [
         effects: { mental: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
         message: '수빈이가 "ㅋㅋ 고마워" 하고 잤다는 메시지를 남겼다. 말이 많지 않아도 된다는 걸 배운 밤이다.',
-        timeCost: 1,
       },
     ],
     femaleChoices: [
@@ -367,7 +345,6 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 4 }],
         message: '답장이 늦게 왔다. "…그렇구나. 나만 그런 줄 알았어." 이모티콘 하나 없는 대화가 이상하게 따뜻하다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'unspoken_debt',
           importance: 5,
@@ -381,7 +358,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, mental: 2 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 5 }],
         message: '"응. 오늘은… 이걸로 됐어." 수빈이가 짧게 고맙다는 말을 남기고 로그아웃했다. 친구 하나 다독인 밤이다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'growth',
           importance: 6,
@@ -395,7 +371,6 @@ export const REACH_EVENTS = [
         effects: { mental: 1 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 1 }],
         message: '수빈이가 "ㅋㅋ 고마워" 하고 잤다는 메시지를 남겼다. 말이 많지 않아도 된다는 걸 배운 밤이다.',
-        timeCost: 1,
       },
     ],
   },
@@ -422,7 +397,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, talent: 1, mental: 3 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
         message: '종이비행기가 교실 앞문까지 미끄러진다. 수빈이가 "생각보다 멀리 갔다" 하고 오래 바라본다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'growth',
           importance: 7,
@@ -436,7 +410,6 @@ export const REACH_EVENTS = [
         effects: { social: 3, mental: 2 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
         message: '수빈이가 연필을 건넨다. 두 이름이 나란히 적힌 비행기가 책상 위에서 잠깐 쉬고 있다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -452,7 +425,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, talent: 1, mental: 3 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 3 }],
         message: '종이비행기가 교실 앞문까지 미끄러진다. 수빈이가 "생각보다 멀리 갔다" 하고 오래 바라본다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'growth',
           importance: 7,
@@ -466,7 +438,6 @@ export const REACH_EVENTS = [
         effects: { social: 3, mental: 2 },
         npcEffects: [{ npcId: 'subin', intimacyChange: 2 }],
         message: '수빈이가 연필을 건넨다. 둘이 가고 싶은 도시 이름이 나란히 적힌 비행기가 책상 위에서 잠깐 쉬고 있다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -498,14 +469,12 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 1 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
         message: '"저건 축구공 모양인데? 야, 넌 먹는 것만 생각하냐?" 도윤이가 웃자 그늘 안 공기가 같이 흔들린다.',
-        timeCost: 1,
       },
       {
         text: '"여기 어떻게 알았어?" — 묻는다',
         effects: { social: 2, mental: 1 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 3 }],
         message: '도윤이가 어깨를 으쓱한다. "그냥. 가끔 조용한 데가 필요해서." 한 박자 늦게 덧붙인다. "오늘은 같이 있어도 뭐."',
-        timeCost: 1,
       },
     ],
   },
@@ -529,7 +498,6 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 1 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 4 }],
         message: '도윤이가 고개를 끄덕이고 창문에 손을 댄다. 유리가 따뜻해서 김이 서린다. "말 안 해도 된다"는 뜻이 통한 것 같아서, 마음이 조금 내려앉는다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'unspoken_debt',
           importance: 5,
@@ -543,7 +511,6 @@ export const REACH_EVENTS = [
         effects: { social: 1, mental: 3 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 5 }],
         message: '도윤이가 작게 웃었다. "…그래, 지금." 그 한마디가 지금만 잡아주는 것 같아서, 마음이 잠깐 따뜻해진다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'reconciliation',
           importance: 6,
@@ -557,7 +524,6 @@ export const REACH_EVENTS = [
         effects: { academic: 1, mental: -1 },
         npcEffects: [{ npcId: 'doyun', intimacyChange: 1 }],
         message: '도윤이도 더 이상 말하지 않았다. 시끄러움 속에서만 서로의 간격이 조금 벌어진 느낌이 들었다.',
-        timeCost: 1,
       },
     ],
   },
@@ -581,7 +547,6 @@ export const REACH_EVENTS = [
         effects: { mental: 2, social: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 4 }],
         message: '민재가 한참 만에 "실수하면 안 된대" 하고 낮게 말했다. 부모 얘기인지 스스로 얘기인지 구분이 안 간다. 구겨진 종이만 조금 펴진다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'growth',
           importance: 5,
@@ -595,7 +560,6 @@ export const REACH_EVENTS = [
         effects: { social: 2, mental: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 5 }],
         message: '민재가 나를 봤다가 시선을 내린다. "…바보처럼 보이지?" 묻는데 답이 필요한 질문은 아니다. 창밖에서는 종소리만 멀게 들린다.',
-        timeCost: 1,
         memorySlotDraft: {
           category: 'discovery',
           importance: 6,
@@ -609,7 +573,6 @@ export const REACH_EVENTS = [
         effects: { social: 1 },
         npcEffects: [{ npcId: 'minjae', intimacyChange: 1 }],
         message: '민재가 억지로 웃었다. "그런가." 웃음이 얇아서 오히려 마음이 더 쓰인다.',
-        timeCost: 1,
       },
     ],
   },

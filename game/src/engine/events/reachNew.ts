@@ -17,9 +17,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'hallway_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 40 && s.year === 2 && !s.isVacation; },
     choices: [
-      { text: '한 걸음 들어가 같이 듣는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '둘이 한쪽씩 끼고 창밖을 본다. 줄 길이만큼만 가까운 거리. 한 곡이 끝나도 서아가 다음 곡을 안 넘긴다. "이 노래, 끝까지 들은 사람 처음이야."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'warm', recallText: '한쪽만 줄게, 네가 내는 소리는 안 적고 들을게.', npcIds: ['seoa'] } },
-      { text: '받되 "무슨 곡인데" 화면 쪽으로 손이 간다', effects: { social: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 5 }], message: '서아가 화면을 살짝 돌려놓는다. "…아직. 곡목은 끝나면. 끝나긴 할까." 이어폰은 준 채, 한 칸은 열고 한 칸은 닫는다.', timeCost: 1 },
-      { text: '"공부할 시간 아냐?"', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 1 }], message: '내민 이어폰을 도로 자기 귀에 끼운다. "…그렇지. 시간 아깝지." 사각거리던 펜이 멈춘다.', timeCost: 1 },
+      { text: '한 걸음 들어가 같이 듣는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '둘이 한쪽씩 끼고 창밖을 본다. 줄 길이만큼만 가까운 거리. 한 곡이 끝나도 서아가 다음 곡을 안 넘긴다. "이 노래, 끝까지 들은 사람 처음이야."', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'warm', recallText: '한쪽만 줄게, 네가 내는 소리는 안 적고 들을게.', npcIds: ['seoa'] } },
+      { text: '받되 "무슨 곡인데" 화면 쪽으로 손이 간다', effects: { social: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 5 }], message: '서아가 화면을 살짝 돌려놓는다. "…아직. 곡목은 끝나면. 끝나긴 할까." 이어폰은 준 채, 한 칸은 열고 한 칸은 닫는다.' },
+      { text: '"공부할 시간 아냐?"', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 1 }], message: '내민 이어폰을 도로 자기 귀에 끼운다. "…그렇지. 시간 아깝지." 사각거리던 펜이 멈춘다.' },
     ],
   },
   {
@@ -32,9 +32,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_middle_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 60 && s.year === 2 && !s.isVacation; },
     choices: [
-      { text: '"지금 거 적어. 안 움직일게" 멈춰 있어 준다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 나를 오래 본다. 펜이 사각거리다 멈춘다. "…안 적을래. 지금 거는 그냥 보고 있을게." 끝내 안 적고 펜을 내려놓는다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '네 표정은 적으려 보면 그새 딴 표정이 돼 있었다.', npcIds: ['seoa'] } },
-      { text: '"넌 왜 늘 적기만 해, 같이 떠들면 되잖아"', effects: { social: 1, mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 5 }], message: '"안에 들어가면, 밖이 안 보여서." 시선이 노트로 돌아간다. 펜이 한 박자 빨라진다.', timeCost: 1 },
-      { text: '펼친 노트를 가만히 덮어준다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '"비 그치고 봐"라는 말도 없이 그냥. 서아가 손등으로 페이지를 한 번 쓸고 픽 웃는다. "…방금 그것도 적고 싶어졌는데. 손이 안 움직이네."', timeCost: 1 },
+      { text: '"지금 거 적어. 안 움직일게" 멈춰 있어 준다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 나를 오래 본다. 펜이 사각거리다 멈춘다. "…안 적을래. 지금 거는 그냥 보고 있을게." 끝내 안 적고 펜을 내려놓는다.', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '네 표정은 적으려 보면 그새 딴 표정이 돼 있었다.', npcIds: ['seoa'] } },
+      { text: '"넌 왜 늘 적기만 해, 같이 떠들면 되잖아"', effects: { social: 1, mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 5 }], message: '"안에 들어가면, 밖이 안 보여서." 시선이 노트로 돌아간다. 펜이 한 박자 빨라진다.' },
+      { text: '펼친 노트를 가만히 덮어준다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '"비 그치고 봐"라는 말도 없이 그냥. 서아가 손등으로 페이지를 한 번 쓸고 픽 웃는다. "…방금 그것도 적고 싶어졌는데. 손이 안 움직이네."' },
     ],
   },
   {
@@ -47,9 +47,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'hallway_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 70 && s.year === 3 && !s.isVacation; },
     choices: [
-      { text: '"근데 나는 그 글이 자꾸 다시 읽히더라" 두 진실을 다 연다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 빼던 이어폰을 도로 안 낀다. 한참. "…너 하나면 됐는데, 왜 자꾸 더. 이런 건 안 적어둬야 하는데." 적으려다 만 손을 주머니에 넣는다.', timeCost: 1, memorySlotDraft: { category: 'failure', importance: 7, toneTag: 'regret', recallText: '나다움은 어디서 자랐길래 나한테 없을까.', npcIds: ['seoa'] } },
-      { text: '"그쪽이 좋아할 걸 한 번 써봐" 현실을 권한다', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 2 }], message: '서아가 빤히 본다. "…그럼 그게 내 글이야? 합격이 나야, 글이 나야." 답을 안 듣고 도로 양쪽을 낀다.', timeCost: 1 },
-      { text: '말없이 옆에서 같이 빈 명단을 본다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 7 }], message: '한참 뒤. "…안 물어봐줘서. 다들 뭐라도 해주려고 하던데." 접힌 원고를 펴지도 버리지도 않는다.', timeCost: 1 },
+      { text: '"근데 나는 그 글이 자꾸 다시 읽히더라" 두 진실을 다 연다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 빼던 이어폰을 도로 안 낀다. 한참. "…너 하나면 됐는데, 왜 자꾸 더. 이런 건 안 적어둬야 하는데." 적으려다 만 손을 주머니에 넣는다.', memorySlotDraft: { category: 'failure', importance: 7, toneTag: 'regret', recallText: '나다움은 어디서 자랐길래 나한테 없을까.', npcIds: ['seoa'] } },
+      { text: '"그쪽이 좋아할 걸 한 번 써봐" 현실을 권한다', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 2 }], message: '서아가 빤히 본다. "…그럼 그게 내 글이야? 합격이 나야, 글이 나야." 답을 안 듣고 도로 양쪽을 낀다.' },
+      { text: '말없이 옆에서 같이 빈 명단을 본다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 7 }], message: '한참 뒤. "…안 물어봐줘서. 다들 뭐라도 해주려고 하던데." 접힌 원고를 펴지도 버리지도 않는다.' },
     ],
   },
   {
@@ -62,9 +62,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'auditorium_middle',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 85 && s.year === 4; },
     choices: [
-      { text: '"데리러 올 때까지 갖고 있을게" 약속한다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 페이지를 마저 손에 쥐여준다. 손이 잠깐 안 놓아진다. 3년간 끝을 못 고치는 줄 하나를, 내게 맡긴 셈이 된다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '끝을 데리러 오겠다며, 끝없는 줄을 찢어 쥐여줬다.', npcIds: ['seoa'] } },
-      { text: '"지금 끝내주면 안 돼?" 되묻는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '"안 돼. 지금 쓰면 지금의 나로 끝나버려서." 살짝 웃으며 빈 끝을 일부러 남긴다.', timeCost: 1 },
-      { text: '페이지를 받지만 약속은 하지 않는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 3 }], message: '"…그래. 약속은 적어둔 거랑 달라서, 자꾸 달라지니까." 끝없는 줄이 끝없는 채로 내 손에 남는다.', timeCost: 1 },
+      { text: '"데리러 올 때까지 갖고 있을게" 약속한다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 페이지를 마저 손에 쥐여준다. 손이 잠깐 안 놓아진다. 3년간 끝을 못 고치는 줄 하나를, 내게 맡긴 셈이 된다.', memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '끝을 데리러 오겠다며, 끝없는 줄을 찢어 쥐여줬다.', npcIds: ['seoa'] } },
+      { text: '"지금 끝내주면 안 돼?" 되묻는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '"안 돼. 지금 쓰면 지금의 나로 끝나버려서." 살짝 웃으며 빈 끝을 일부러 남긴다.' },
+      { text: '페이지를 받지만 약속은 하지 않는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 3 }], message: '"…그래. 약속은 적어둔 거랑 달라서, 자꾸 달라지니까." 끝없는 줄이 끝없는 채로 내 손에 남는다.' },
     ],
   },
   {
@@ -77,9 +77,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_high_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 50 && s.year === 5 && !s.isVacation; },
     choices: [
-      { text: '"그거 아직 쓰는구나" 삐져나온 모서리를 알아봐준다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 8 }], message: '서아가 밀어넣던 노트를 도로 빼낸다. "…너만 이게 노트인 줄 아네. 남들 눈엔 다 똑같은 종이야."', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 5, toneTag: 'warm', recallText: '남들 눈엔 똑같은 종이를, 너만 노트로 봤다.', npcIds: ['seoa'] } },
-      { text: '"여기도 문이 두 번에 열리는 데 있으려나" 음악실 첫날을 소환한다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '서아가 처음으로 양쪽 다 뺀다. "…찾아보자. 경첩이 뻑뻑한 데로." 줄을 둘둘 감는다.', timeCost: 1 },
-      { text: '"이제 입시잖아, 그건 좀 접어두자"', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 1 }], message: '뺐던 이어폰을 도로 양쪽 다 낀다. 노트를 문제집 밑으로 완전히 밀어넣는다. 시선을 내린다.', timeCost: 1 },
+      { text: '"그거 아직 쓰는구나" 삐져나온 모서리를 알아봐준다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 8 }], message: '서아가 밀어넣던 노트를 도로 빼낸다. "…너만 이게 노트인 줄 아네. 남들 눈엔 다 똑같은 종이야."', memorySlotDraft: { category: 'reconciliation', importance: 5, toneTag: 'warm', recallText: '남들 눈엔 똑같은 종이를, 너만 노트로 봤다.', npcIds: ['seoa'] } },
+      { text: '"여기도 문이 두 번에 열리는 데 있으려나" 음악실 첫날을 소환한다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '서아가 처음으로 양쪽 다 뺀다. "…찾아보자. 경첩이 뻑뻑한 데로." 줄을 둘둘 감는다.' },
+      { text: '"이제 입시잖아, 그건 좀 접어두자"', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 1 }], message: '뺐던 이어폰을 도로 양쪽 다 낀다. 노트를 문제집 밑으로 완전히 밀어넣는다. 시선을 내린다.' },
     ],
   },
   {
@@ -92,9 +92,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_high_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 65 && s.year === 6 && !s.isVacation; },
     choices: [
-      { text: '"그럼 끝은 내가 계속 데리고 있을게" 부담을 거둔다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 펜을 내려놓는다. "…그렇게 말하는 사람이 하나 있으니까, 노트를 아직 못 버리겠어." 4년 전 줄이 둘의 것이 된다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '내 칸인데 내 손글씨가 제일 흐렸다.', npcIds: ['seoa'] } },
-      { text: '"두 줄 위에, 네 글씨로 한 번 더 적어" 행동을 권한다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '서아가 두 줄 위에 자기 글씨를 겹쳐 쓴다. 손이 떨려 더 흐리다. "…더 안 보이게 됐네. 근데 적긴 적었다."', timeCost: 1 },
-      { text: '"엄마 말도 일리는 있잖아" 현실을 든다', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 2 }], message: '"…너까지 또박또박하게 말하면, 나는 어디서 흐릴 수 있어." 희망서를 접는다. 이어폰을 한쪽 낀다.', timeCost: 1 },
+      { text: '"그럼 끝은 내가 계속 데리고 있을게" 부담을 거둔다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 펜을 내려놓는다. "…그렇게 말하는 사람이 하나 있으니까, 노트를 아직 못 버리겠어." 4년 전 줄이 둘의 것이 된다.', memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '내 칸인데 내 손글씨가 제일 흐렸다.', npcIds: ['seoa'] } },
+      { text: '"두 줄 위에, 네 글씨로 한 번 더 적어" 행동을 권한다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 6 }], message: '서아가 두 줄 위에 자기 글씨를 겹쳐 쓴다. 손이 떨려 더 흐리다. "…더 안 보이게 됐네. 근데 적긴 적었다."' },
+      { text: '"엄마 말도 일리는 있잖아" 현실을 든다', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 2 }], message: '"…너까지 또박또박하게 말하면, 나는 어디서 흐릴 수 있어." 희망서를 접는다. 이어폰을 한쪽 낀다.' },
     ],
   },
   {
@@ -107,9 +107,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_high_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 75 && s.year === 7 && !s.isVacation; },
     choices: [
-      { text: '"떨어져도, 적고 싶은 칸에 떨어지는 거잖아" 등을 민다', effects: { mental: 3 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 한참 만에 제목을 적는다. 한 글자씩. "…네가 옆에서 보고 있으니까 손이 움직이네. 이번엔 안 도망쳐." 자소서 출력물을 서랍에 넣는다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '제목 칸 하나가 다른 모든 칸보다 무거웠다.', npcIds: ['seoa'] } },
-      { text: '"현실도 봐야지. 자소서가 먼저 아닐까" 현실을 짚는다', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 4 }], message: '"…너답다. 맞는 말이라 더 미루고 싶어지네." 신청서를 서랍에 반쯤 넣다 만다.', timeCost: 1 },
-      { text: '"네가 정해. 뭘 골라도 네 편이야" 무게를 돌려준다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 7 }], message: '"…그 말이 제일 무거워. 결국 펜은 내가 쥐어야 하니까." 톡톡 치던 펜을 고쳐 쥔다.', timeCost: 1 },
+      { text: '"떨어져도, 적고 싶은 칸에 떨어지는 거잖아" 등을 민다', effects: { mental: 3 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '서아가 한참 만에 제목을 적는다. 한 글자씩. "…네가 옆에서 보고 있으니까 손이 움직이네. 이번엔 안 도망쳐." 자소서 출력물을 서랍에 넣는다.', memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'resolve', recallText: '제목 칸 하나가 다른 모든 칸보다 무거웠다.', npcIds: ['seoa'] } },
+      { text: '"현실도 봐야지. 자소서가 먼저 아닐까" 현실을 짚는다', effects: { mental: -1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 4 }], message: '"…너답다. 맞는 말이라 더 미루고 싶어지네." 신청서를 서랍에 반쯤 넣다 만다.' },
+      { text: '"네가 정해. 뭘 골라도 네 편이야" 무게를 돌려준다', effects: { mental: 1 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 7 }], message: '"…그 말이 제일 무거워. 결국 펜은 내가 쥐어야 하니까." 톡톡 치던 펜을 고쳐 쥔다.' },
     ],
   },
   {
@@ -122,9 +122,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'auditorium_high',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'seoa'); return !!n?.met && n.intimacy >= 90 && s.year === 7; },
     choices: [
-      { text: '채워진 줄을 끝까지 읽는다', effects: { mental: 3 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 10 }], message: '첫 줄은 음악실 경첩이 두 번 울리던 소리로 시작한다. 다 읽는 동안 서아는 이어폰도 안 낀 채 가만히 기다린다. 끊겨 있던 끝자리엔, 내 이름이 적혀 있다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '경첩이 두 번 울리던 소리로 시작하던, 끝이 채워진 줄.', npcIds: ['seoa'] } },
-      { text: '"나도 너한테 못 적은 줄 있어" 마주 꺼낸다', effects: { social: 1, mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '둘 다 이어폰을 뺀 채, 강당 밖에서 서로 미뤄둔 줄을 처음으로 소리 내 읽는다. "…너도 끝을 미뤄뒀구나."', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '경첩이 두 번 울리던 소리로 시작하던, 끝이 채워진 줄.', npcIds: ['seoa'] } },
-      { text: '"끝까지 못 봤으면 어쩔 뻔했어" 웃는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 8 }], message: '"…나도. 그래서 오늘은 안 고치고 안 미뤘어. 미루다 못 본 줄이, 너무 많아서." 페이지를 내 손에 쥐여준다. 이번엔 안 찢고 통째로.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '경첩이 두 번 울리던 소리로 시작하던, 끝이 채워진 줄.', npcIds: ['seoa'] } },
+      { text: '채워진 줄을 끝까지 읽는다', effects: { mental: 3 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 10 }], message: '첫 줄은 음악실 경첩이 두 번 울리던 소리로 시작한다. 다 읽는 동안 서아는 이어폰도 안 낀 채 가만히 기다린다. 끊겨 있던 끝자리엔, 내 이름이 적혀 있다.', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '경첩이 두 번 울리던 소리로 시작하던, 끝이 채워진 줄.', npcIds: ['seoa'] } },
+      { text: '"나도 너한테 못 적은 줄 있어" 마주 꺼낸다', effects: { social: 1, mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 9 }], message: '둘 다 이어폰을 뺀 채, 강당 밖에서 서로 미뤄둔 줄을 처음으로 소리 내 읽는다. "…너도 끝을 미뤄뒀구나."', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '경첩이 두 번 울리던 소리로 시작하던, 끝이 채워진 줄.', npcIds: ['seoa'] } },
+      { text: '"끝까지 못 봤으면 어쩔 뻔했어" 웃는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'seoa', intimacyChange: 8 }], message: '"…나도. 그래서 오늘은 안 고치고 안 미뤘어. 미루다 못 본 줄이, 너무 많아서." 페이지를 내 손에 쥐여준다. 이번엔 안 찢고 통째로.', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '경첩이 두 번 울리던 소리로 시작하던, 끝이 채워진 줄.', npcIds: ['seoa'] } },
     ],
   },
   // ===================== 한시우 (siwoo) — 고1~고3, 관찰자·건축꿈 / 소실점은 한 사람 =====================
@@ -138,9 +138,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_high',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 30 && s.year === 5 && !s.isVacation; },
     choices: [
-      { text: '"고치려면 어디부터 봐야 돼?" 그의 보는 법에 올라탄다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 6 }], message: '시우가 창문 따라 손가락으로 길을 다시 긋는다, 평소보다 빠르게. "여기서 한 발만 비켜 서면 돼. 길이 아니라 사람이."', timeCost: 1 },
-      { text: '"넌 부딪히는 쪽이야, 비켜 주는 쪽이야?" 정곡', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '시우가 잠깐 말이 없다. "…비켜 주는 쪽. 부딪히면 양쪽 다 멈추잖아." 텀블러를 도로 든다.', timeCost: 1 },
-      { text: '"피곤하겠다, 다 그렇게 보고 살면" 가볍게', effects: { social: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 3 }], message: '"가끔." 한 박자 늦게 픽 웃는다.', timeCost: 1 },
+      { text: '"고치려면 어디부터 봐야 돼?" 그의 보는 법에 올라탄다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 6 }], message: '시우가 창문 따라 손가락으로 길을 다시 긋는다, 평소보다 빠르게. "여기서 한 발만 비켜 서면 돼. 길이 아니라 사람이."' },
+      { text: '"넌 부딪히는 쪽이야, 비켜 주는 쪽이야?" 정곡', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '시우가 잠깐 말이 없다. "…비켜 주는 쪽. 부딪히면 양쪽 다 멈추잖아." 텀블러를 도로 든다.' },
+      { text: '"피곤하겠다, 다 그렇게 보고 살면" 가볍게', effects: { social: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 3 }], message: '"가끔." 한 박자 늦게 픽 웃는다.' },
     ],
   },
   {
@@ -153,9 +153,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'bus_stop_evening',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 45 && s.year === 5; },
     choices: [
-      { text: '"마주치는 게 그렇게 싫어?" 그 회피를 정면으로', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 텀블러를 만지작. "싫은 건 아니고. …끝물엔 비켜 줄 사람이 없으니까." 들킨 채로 안 도망간다.', timeCost: 1 },
-      { text: '"오늘은 끝물 말고 같이 건너자" 그의 동선에 끼어든다', effects: { social: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 6 }], message: '다음 초록에 둘이 같이 건넌다. 가운데서 마주 오는 사람과 시우가, 처음으로 안 비킨다. 대신 끝물의 그 빈 횡단보도는, 이제 그 혼자만의 것이 아니게 된다.', timeCost: 1 },
-      { text: '말없이 다음 끝물까지 옆에서 같이 기다린다', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '둘이 나란히 두 박자를 흘려보낸다. "…옆에 누가 끝물 기다리는 거, 처음이야."', timeCost: 1 },
+      { text: '"마주치는 게 그렇게 싫어?" 그 회피를 정면으로', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 텀블러를 만지작. "싫은 건 아니고. …끝물엔 비켜 줄 사람이 없으니까." 들킨 채로 안 도망간다.' },
+      { text: '"오늘은 끝물 말고 같이 건너자" 그의 동선에 끼어든다', effects: { social: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 6 }], message: '다음 초록에 둘이 같이 건넌다. 가운데서 마주 오는 사람과 시우가, 처음으로 안 비킨다. 대신 끝물의 그 빈 횡단보도는, 이제 그 혼자만의 것이 아니게 된다.' },
+      { text: '말없이 다음 끝물까지 옆에서 같이 기다린다', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '둘이 나란히 두 박자를 흘려보낸다. "…옆에 누가 끝물 기다리는 거, 처음이야."' },
     ],
   },
   {
@@ -168,9 +168,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'rooftop_sunset',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 60 && s.year === 5 && !s.isVacation; },
     choices: [
-      { text: '"끝까지 말해. 저 점이 누구 보는 자린데" 캐묻는다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '시우가 입을 닫는다. "…말하면 안 짓게 돼." 그날 더는 안 열린다. 대신 며칠 뒤 문자 한 통: "완성되면 데려올게. 그때까지 같이 와." 미래는 얻었지만, 그 한 점이 누구인지는 끝내 못 듣는다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '선이 전부 한 점으로 모이던 공터, 끝내 안 짚은 자리.', npcIds: ['siwoo'] } },
-      { text: '더 안 묻고 같이 그 한 점을 본다', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 텀블러를 도로 든다. 캐묻지 않은 그 자리에서, 평소보다 한참을 더 머문다. 공터는 끝내 \'이름 없는 소실점\'으로 남는다 — 지금은 가까워졌지만, 그 점이 누구였는지는 영영 안 들린다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '선이 전부 한 점으로 모이던 공터, 끝내 안 짚은 자리.', npcIds: ['siwoo'] } },
-      { text: '"안 선 거 보니까 너 같다" 가볍게', effects: { social: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '"나 같다는 게 뭔지 나도 모르겠는데, 너가 그러면 그런가 보다." 한 박자 늦게 픽.', timeCost: 1 },
+      { text: '"끝까지 말해. 저 점이 누구 보는 자린데" 캐묻는다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '시우가 입을 닫는다. "…말하면 안 짓게 돼." 그날 더는 안 열린다. 대신 며칠 뒤 문자 한 통: "완성되면 데려올게. 그때까지 같이 와." 미래는 얻었지만, 그 한 점이 누구인지는 끝내 못 듣는다.', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '선이 전부 한 점으로 모이던 공터, 끝내 안 짚은 자리.', npcIds: ['siwoo'] } },
+      { text: '더 안 묻고 같이 그 한 점을 본다', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 텀블러를 도로 든다. 캐묻지 않은 그 자리에서, 평소보다 한참을 더 머문다. 공터는 끝내 \'이름 없는 소실점\'으로 남는다 — 지금은 가까워졌지만, 그 점이 누구였는지는 영영 안 들린다.', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '선이 전부 한 점으로 모이던 공터, 끝내 안 짚은 자리.', npcIds: ['siwoo'] } },
+      { text: '"안 선 거 보니까 너 같다" 가볍게', effects: { social: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 5 }], message: '"나 같다는 게 뭔지 나도 모르겠는데, 너가 그러면 그런가 보다." 한 박자 늦게 픽.' },
     ],
   },
   {
@@ -183,9 +183,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'gymnasium',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 62 && s.year === 6 && !s.isVacation; },
     choices: [
-      { text: '"이번엔 네 자리도 여기 있잖아" 바닥의 선을 가리킨다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 제가 그은 선을 본다. "…이번엔 그러네." 처음으로 주머니에서 두 손을 다 뺀다. 위에서 다 보이던 시야는, 이제 없다.', timeCost: 1 },
-      { text: '"끼는 거, 위에서 보던 거보다 너한테 어울려" 변화를 짚는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 분필을 만지작. "…그런가." 선을 안 지운다.', timeCost: 1 },
-      { text: '"같이 마저 긋자" 옆에 쪼그려 앉는다', effects: { social: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '둘이 동선을 마저 긋는다. 반 애들이 둘러선다. 시우가 위가 아니라 한가운데 쪼그려 있다.', timeCost: 1 },
+      { text: '"이번엔 네 자리도 여기 있잖아" 바닥의 선을 가리킨다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 제가 그은 선을 본다. "…이번엔 그러네." 처음으로 주머니에서 두 손을 다 뺀다. 위에서 다 보이던 시야는, 이제 없다.' },
+      { text: '"끼는 거, 위에서 보던 거보다 너한테 어울려" 변화를 짚는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 분필을 만지작. "…그런가." 선을 안 지운다.' },
+      { text: '"같이 마저 긋자" 옆에 쪼그려 앉는다', effects: { social: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '둘이 동선을 마저 긋는다. 반 애들이 둘러선다. 시우가 위가 아니라 한가운데 쪼그려 있다.' },
     ],
   },
   {
@@ -202,9 +202,9 @@ export const NEW_NPC_REACH_EVENTS = [
     },
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 75 && s.year === 6; },
     choices: [
-      { text: '"그 평상, 네 기억엔 아직 안 헐렸잖아" 머무름을 허락한다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 빈터를 오래 본다. "…여긴 아직 펜스가 없네." 안 헐렸다고도 안 헐린다고도 안 한다. 다음 만남에도 그는 자꾸 헐린 자리로 데려간다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '막을 사람은 없는데, 턱 높여 비를 막아둔 빈터.', npcIds: ['siwoo'] } },
-      { text: '"언젠가 네가 여기 다시 뭐든 세우면, 나 보러 올게" 미래로 끌어낸다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 펜스 너머 빈터를 다르게 본다. "…턱부터 다시 높여야겠다." 헐린 자리에서 처음으로 \'세울 것\'을 본다. 이후 그는 헐린 데보다 안 선 데로 데려간다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '막을 사람은 없는데, 턱 높여 비를 막아둔 빈터.', npcIds: ['siwoo'] } },
-      { text: '말없이 펜스 옆에 같이 선다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '빗소리만 한참. 빈 텀블러에 빗물이 고인다.', timeCost: 1, memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '막을 사람은 없는데, 턱 높여 비를 막아둔 빈터.', npcIds: ['siwoo'] } },
+      { text: '"그 평상, 네 기억엔 아직 안 헐렸잖아" 머무름을 허락한다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 빈터를 오래 본다. "…여긴 아직 펜스가 없네." 안 헐렸다고도 안 헐린다고도 안 한다. 다음 만남에도 그는 자꾸 헐린 자리로 데려간다.', memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '막을 사람은 없는데, 턱 높여 비를 막아둔 빈터.', npcIds: ['siwoo'] } },
+      { text: '"언젠가 네가 여기 다시 뭐든 세우면, 나 보러 올게" 미래로 끌어낸다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 펜스 너머 빈터를 다르게 본다. "…턱부터 다시 높여야겠다." 헐린 자리에서 처음으로 \'세울 것\'을 본다. 이후 그는 헐린 데보다 안 선 데로 데려간다.', memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '막을 사람은 없는데, 턱 높여 비를 막아둔 빈터.', npcIds: ['siwoo'] } },
+      { text: '말없이 펜스 옆에 같이 선다', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '빗소리만 한참. 빈 텀블러에 빗물이 고인다.', memorySlotDraft: { category: 'growth', importance: 7, toneTag: 'burden', recallText: '막을 사람은 없는데, 턱 높여 비를 막아둔 빈터.', npcIds: ['siwoo'] } },
     ],
   },
   {
@@ -217,9 +217,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'counseling_hallway',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 78 && s.year === 7 && !s.isVacation; },
     choices: [
-      { text: '"네가 매일 서서 보는 자리가 거기면, 답은 벌써 나와 있잖아" 편을 든다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 안내서를 접지 않고, 건축학과 칸이 위로 오게 펴서 무릎에 그대로 둔다. "…들어줘서." 끝까지 고맙다곤 안 한다.', timeCost: 1 },
-      { text: '"밤새도 너답겠다" 본질을 인정', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 한참 뒤 픽. "…그건 맞아." 구긴 안내서를 도로 편다.', timeCost: 1 },
-      { text: '"아버지 말이 틀린 것도 아니잖아" 현실', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 4 }], message: '"…알아. 맞는 말인 거 알아서." 가위표 친 칸을 손톱으로 한 번 눌러 자국을 낸다. 이후 그는 옥상 대신 자습실에 보이기 시작한다.', timeCost: 1 },
+      { text: '"네가 매일 서서 보는 자리가 거기면, 답은 벌써 나와 있잖아" 편을 든다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 안내서를 접지 않고, 건축학과 칸이 위로 오게 펴서 무릎에 그대로 둔다. "…들어줘서." 끝까지 고맙다곤 안 한다.' },
+      { text: '"밤새도 너답겠다" 본질을 인정', effects: { mental: 2 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '시우가 한참 뒤 픽. "…그건 맞아." 구긴 안내서를 도로 편다.' },
+      { text: '"아버지 말이 틀린 것도 아니잖아" 현실', effects: { mental: 1 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 4 }], message: '"…알아. 맞는 말인 거 알아서." 가위표 친 칸을 손톱으로 한 번 눌러 자국을 낸다. 이후 그는 옥상 대신 자습실에 보이기 시작한다.' },
     ],
   },
   {
@@ -232,9 +232,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'rooftop_sunset',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'siwoo'); return !!n?.met && n.intimacy >= 80 && s.year === 7; },
     choices: [
-      { text: '"그 자리들, 평생 안 잊을게" 약속한다', effects: { mental: 4 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '"…잊는 게 나아. 자리 기억하는 사람이 제일 오래 거기 묶여 서 있거든. 나처럼." 처음으로 먼저 손을 내밀어 악수한다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '한 동이 다 올라선 자리, 짚는 곳마다 네가 있었다.', npcIds: ['siwoo'] } },
-      { text: '"너랑 본 자리들이 제일 좋았어" 마음을 연다', effects: { mental: 4 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 처음이자 마지막으로 똑바로 웃는다. "…나도." 시선을 안 돌린다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '한 동이 다 올라선 자리, 짚는 곳마다 네가 있었다.', npcIds: ['siwoo'] } },
-      { text: '"네가 진짜로 뭘 세우면, 그 앞에 꼭 서 있을게" 미래를 건다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '"…세워야지. 그땐 네 설 자리부터—" 말을 안 맺고, 텀블러를 내밀었다가 이번엔 안 돌려받는다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '한 동이 다 올라선 자리, 짚는 곳마다 네가 있었다.', npcIds: ['siwoo'] } },
+      { text: '"그 자리들, 평생 안 잊을게" 약속한다', effects: { mental: 4 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '"…잊는 게 나아. 자리 기억하는 사람이 제일 오래 거기 묶여 서 있거든. 나처럼." 처음으로 먼저 손을 내밀어 악수한다.', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '한 동이 다 올라선 자리, 짚는 곳마다 네가 있었다.', npcIds: ['siwoo'] } },
+      { text: '"너랑 본 자리들이 제일 좋았어" 마음을 연다', effects: { mental: 4 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 8 }], message: '시우가 처음이자 마지막으로 똑바로 웃는다. "…나도." 시선을 안 돌린다.', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '한 동이 다 올라선 자리, 짚는 곳마다 네가 있었다.', npcIds: ['siwoo'] } },
+      { text: '"네가 진짜로 뭘 세우면, 그 앞에 꼭 서 있을게" 미래를 건다', effects: { mental: 3 }, npcEffects: [{ npcId: 'siwoo', intimacyChange: 7 }], message: '"…세워야지. 그땐 네 설 자리부터—" 말을 안 맺고, 텀블러를 내밀었다가 이번엔 안 돌려받는다.', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '한 동이 다 올라선 자리, 짚는 곳마다 네가 있었다.', npcIds: ['siwoo'] } },
     ],
   },
   // ===================== 강예린 (yerin) — 고1~고3, 입시 전략가·효율의 언어 / 미산정 =====================
@@ -249,9 +249,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_high_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yerin'); return !!n?.met && n.intimacy >= 40 && s.year === 5 && !s.isVacation; },
     choices: [
-      { text: '"산출 까먹는 거, 나쁜 거 아니야" 가볍게 받는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린이 답 대신 엎어둔 휴대폰 위에 손을 얹었다 뗀다. "…무게가 안 나와." 그러곤 빈 책상을 손끝으로 한 번 쓸고 만다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '표본이 하나뿐이라 끝내 무게가 안 나오던 산출.', npcIds: ['yerin'] } },
-      { text: '"운동장, 한 번 안 봐?" 웃음소리 쪽을 가리킨다', effects: { social: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 5 }], message: '예린이 끝내 그쪽을 안 본다. 휴대폰을 더 멀리 민다. "…저긴 들어가는 순간 등수가 매겨지잖아." 거기서 끊는다.', timeCost: 1 },
-      { text: '아무 말 없이 같이 엎어둔 휴대폰을 본다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '둘 다 운동장 소리만 듣는다. "…이런 건 산출이 안 나오는데." 그러면서 안 일어난다.', timeCost: 1 },
+      { text: '"산출 까먹는 거, 나쁜 거 아니야" 가볍게 받는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린이 답 대신 엎어둔 휴대폰 위에 손을 얹었다 뗀다. "…무게가 안 나와." 그러곤 빈 책상을 손끝으로 한 번 쓸고 만다.', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '표본이 하나뿐이라 끝내 무게가 안 나오던 산출.', npcIds: ['yerin'] } },
+      { text: '"운동장, 한 번 안 봐?" 웃음소리 쪽을 가리킨다', effects: { social: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 5 }], message: '예린이 끝내 그쪽을 안 본다. 휴대폰을 더 멀리 민다. "…저긴 들어가는 순간 등수가 매겨지잖아." 거기서 끊는다.' },
+      { text: '아무 말 없이 같이 엎어둔 휴대폰을 본다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '둘 다 운동장 소리만 듣는다. "…이런 건 산출이 안 나오는데." 그러면서 안 일어난다.' },
     ],
   },
   {
@@ -264,9 +264,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_high',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yerin'); return !!n?.met && n.intimacy >= 42 && s.year === 6 && !s.isVacation; },
     choices: [
-      { text: '"실망했어" 한마디만 남기고 돌아선다', effects: { mental: -1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: -5 }], message: '예린이 끝내 눈을 못 맞춘다. 등 뒤로 작게 "…실망은, 기대가 있어야 하는 거잖아." 이후 예린은 졸업까지 다시는 먼저 다가오지 않는다.', timeCost: 1, memorySlotDraft: { category: 'betrayal', importance: 7, toneTag: 'regret', recallText: '기대가 있어야 실망도 한다던, 회수 없는 사과 한 줄.', npcIds: ['yerin'] } },
-      { text: '"이겨서 좋아?" 침묵을 강제한다', effects: { mental: -1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 0 }], message: '예린이 대답을 못 한다. 칭찬받은 발표 자료를 한 번 본다. 한참 뒤 "…좋아야 하는데." 말끝이 식는다.', timeCost: 1, memorySlotDraft: { category: 'betrayal', importance: 7, toneTag: 'regret', recallText: '기대가 있어야 실망도 한다던, 회수 없는 사과 한 줄.', npcIds: ['yerin'] } },
-      { text: '"한 번은 빚으로 달아둘게. 딱 한 번만"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 4 }], message: '예린이 처음으로 말문이 막힌다. "…왜 빚으로 해줘. 손절하면 깔끔한데." 부채감으로 관계가 끈적해지되, 예린은 그 빚을 스스로 못 갚는다.', timeCost: 1, memorySlotDraft: { category: 'betrayal', importance: 7, toneTag: 'regret', recallText: '기대가 있어야 실망도 한다던, 회수 없는 사과 한 줄.', npcIds: ['yerin'] } },
+      { text: '"실망했어" 한마디만 남기고 돌아선다', effects: { mental: -1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: -5 }], message: '예린이 끝내 눈을 못 맞춘다. 등 뒤로 작게 "…실망은, 기대가 있어야 하는 거잖아." 이후 예린은 졸업까지 다시는 먼저 다가오지 않는다.', memorySlotDraft: { category: 'betrayal', importance: 7, toneTag: 'regret', recallText: '기대가 있어야 실망도 한다던, 회수 없는 사과 한 줄.', npcIds: ['yerin'] } },
+      { text: '"이겨서 좋아?" 침묵을 강제한다', effects: { mental: -1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 0 }], message: '예린이 대답을 못 한다. 칭찬받은 발표 자료를 한 번 본다. 한참 뒤 "…좋아야 하는데." 말끝이 식는다.', memorySlotDraft: { category: 'betrayal', importance: 7, toneTag: 'regret', recallText: '기대가 있어야 실망도 한다던, 회수 없는 사과 한 줄.', npcIds: ['yerin'] } },
+      { text: '"한 번은 빚으로 달아둘게. 딱 한 번만"', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 4 }], message: '예린이 처음으로 말문이 막힌다. "…왜 빚으로 해줘. 손절하면 깔끔한데." 부채감으로 관계가 끈적해지되, 예린은 그 빚을 스스로 못 갚는다.', memorySlotDraft: { category: 'betrayal', importance: 7, toneTag: 'regret', recallText: '기대가 있어야 실망도 한다던, 회수 없는 사과 한 줄.', npcIds: ['yerin'] } },
     ],
   },
   {
@@ -279,9 +279,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'cafe_study',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yerin'); return !!n?.met && n.intimacy >= 55 && s.year === 6; },
     choices: [
-      { text: '"나한테까지 라인 안 짜도 돼" 가방을 가만히 본다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린의 말이 멈춘다. 영수증을 가린 발을 치우지도, 줍지도 못한다. "…너한테까지, 라고 하지 마. 그럼 진짜 약점이 되잖아."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '발끝으로 밀어 가렸다 끝내 못 줍던 카페 바닥의 영수증.', npcIds: ['yerin'] } },
-      { text: '"그 영수증, 나한텐 마이너스로 안 잡히는데" 그 애 회계로 받는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린의 눈빛이 흔들린다. 영수증을 가렸던 발끝이 슬쩍 떨어진다. 줍지도 다시 가리지도 않고, 그냥 거기 둔 채로 한참을 가만있는다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '발끝으로 밀어 가렸다 끝내 못 줍던 카페 바닥의 영수증.', npcIds: ['yerin'] } },
-      { text: '말없이 영수증을 주워 가방에 넣어준다', effects: { social: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 5 }], message: '예린이 한참 본다. "…빚 하나 진 거다." 익숙한 거래로 도망친다. 손은 가방끈을 꽉 쥔다. (이 빚도 끝내 회수 안 한다.)', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '발끝으로 밀어 가렸다 끝내 못 줍던 카페 바닥의 영수증.', npcIds: ['yerin'] } },
+      { text: '"나한테까지 라인 안 짜도 돼" 가방을 가만히 본다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린의 말이 멈춘다. 영수증을 가린 발을 치우지도, 줍지도 못한다. "…너한테까지, 라고 하지 마. 그럼 진짜 약점이 되잖아."', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '발끝으로 밀어 가렸다 끝내 못 줍던 카페 바닥의 영수증.', npcIds: ['yerin'] } },
+      { text: '"그 영수증, 나한텐 마이너스로 안 잡히는데" 그 애 회계로 받는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린의 눈빛이 흔들린다. 영수증을 가렸던 발끝이 슬쩍 떨어진다. 줍지도 다시 가리지도 않고, 그냥 거기 둔 채로 한참을 가만있는다.', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '발끝으로 밀어 가렸다 끝내 못 줍던 카페 바닥의 영수증.', npcIds: ['yerin'] } },
+      { text: '말없이 영수증을 주워 가방에 넣어준다', effects: { social: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 5 }], message: '예린이 한참 본다. "…빚 하나 진 거다." 익숙한 거래로 도망친다. 손은 가방끈을 꽉 쥔다. (이 빚도 끝내 회수 안 한다.)', memorySlotDraft: { category: 'discovery', importance: 6, toneTag: 'melancholy', recallText: '발끝으로 밀어 가렸다 끝내 못 줍던 카페 바닥의 영수증.', npcIds: ['yerin'] } },
     ],
   },
   {
@@ -294,9 +294,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'classroom_high_afternoon',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yerin'); return !!n?.met && n.intimacy >= 58 && s.year === 7 && !s.isVacation; },
     choices: [
-      { text: '"나는 그 줄, 아직도 단가 한 번 못 내봤는데" 내 미정산 줄을 같이 펼친다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 펜을 다시 쥐고 첫 글자를 대보다가, 두 줄에 똑같이 ???가 그어진 걸 보고 펜을 놓는다. "…너도 적자였구나. 그럼 이건 누구 손해로 다는 거야."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
-      { text: '"줄 세우기 전에, 뭐 할 때 시간 가는 줄 몰랐어?" 근본을 묻는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 오래 침묵한다. "…기억이 안 나." 거기서 끊는다. ??? 위에 펜을 댔다 뗀다.', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
-      { text: '"이 줄, 결산 안 하고 그냥 둬볼래?" 그 애 셈을 비튼다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린이 그어둔 ??? 옆에 펜을 한참 댔다 뗀다 — 처음 내 줄을 미산정으로 보류하던 그 손이다. "…결산을 미루는 회계는, 처음 본다."', timeCost: 1, memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
+      { text: '"나는 그 줄, 아직도 단가 한 번 못 내봤는데" 내 미정산 줄을 같이 펼친다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 펜을 다시 쥐고 첫 글자를 대보다가, 두 줄에 똑같이 ???가 그어진 걸 보고 펜을 놓는다. "…너도 적자였구나. 그럼 이건 누구 손해로 다는 거야."', memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
+      { text: '"줄 세우기 전에, 뭐 할 때 시간 가는 줄 몰랐어?" 근본을 묻는다', effects: { mental: 1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 오래 침묵한다. "…기억이 안 나." 거기서 끊는다. ??? 위에 펜을 댔다 뗀다.', memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
+      { text: '"이 줄, 결산 안 하고 그냥 둬볼래?" 그 애 셈을 비튼다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 6 }], message: '예린이 그어둔 ??? 옆에 펜을 한참 댔다 뗀다 — 처음 내 줄을 미산정으로 보류하던 그 손이다. "…결산을 미루는 회계는, 처음 본다."', memorySlotDraft: { category: 'discovery', importance: 7, toneTag: 'resolve', recallText: '될 수 있는 것만 줄 세우다 적자만 뜨던 장래희망의 ???.', npcIds: ['yerin'] } },
     ],
   },
   {
@@ -309,9 +309,9 @@ export const NEW_NPC_REACH_EVENTS = [
     background: 'school_gate_high',
     condition: (s) => { const n = s.npcs.find(x => x.id === 'yerin'); return !!n?.met && n.intimacy >= 68 && s.year === 7; },
     choices: [
-      { text: '"근거 없이? 너답지 않게" 웃으며 그 줄을 같이 본다', effects: { mental: 3 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 8 }], message: '예린이 \'미수금\' 옆 빈자리를 한 번 본다. "…그러게. 평생 결산으로 살았는데." 처음으로 산출 없이 픽 웃는다. 끝내 안 닫힌 줄 하나가 예린의 장부에 영영 남는다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '다른 줄은 다 닫고 내 줄만 미수금으로 남겨두던 예린.', npcIds: ['yerin'] } },
-      { text: '"이 줄, 끝내 결산 안 했네" 미수금을 짚는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 펜을 들어 결산선을 그으려다, 손이 멈춘다. 끝내 못 닫는다. "…닫으면 또 단가가 되니까." 미수금인 채로 노트를 덮는다.', timeCost: 1, memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '다른 줄은 다 닫고 내 줄만 미수금으로 남겨두던 예린.', npcIds: ['yerin'] } },
-      { text: '"넌 끝까지 다 결산해야 편한 애잖아. 그 줄도 닫아" 닫으라고 돌려보낸다', effects: { mental: -1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 0 }], message: '예린이 0.5초 멈췄다, 펜으로 그 줄에 결산선을 긋고 노트를 가방에 넣는다. "…그래. 그게 너답네." 더는 안 붙잡는다. 그 줄은 닫힌 채 안 건너온다.', timeCost: 1, memorySlotDraft: { category: 'failure', importance: 8, toneTag: 'regret', recallText: '끝내 내 줄까지 결산선을 긋고 닫아버린 예린.', npcIds: ['yerin'] } },
+      { text: '"근거 없이? 너답지 않게" 웃으며 그 줄을 같이 본다', effects: { mental: 3 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 8 }], message: '예린이 \'미수금\' 옆 빈자리를 한 번 본다. "…그러게. 평생 결산으로 살았는데." 처음으로 산출 없이 픽 웃는다. 끝내 안 닫힌 줄 하나가 예린의 장부에 영영 남는다.', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '다른 줄은 다 닫고 내 줄만 미수금으로 남겨두던 예린.', npcIds: ['yerin'] } },
+      { text: '"이 줄, 끝내 결산 안 했네" 미수금을 짚는다', effects: { mental: 2 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 7 }], message: '예린이 펜을 들어 결산선을 그으려다, 손이 멈춘다. 끝내 못 닫는다. "…닫으면 또 단가가 되니까." 미수금인 채로 노트를 덮는다.', memorySlotDraft: { category: 'reconciliation', importance: 8, toneTag: 'warm', recallText: '다른 줄은 다 닫고 내 줄만 미수금으로 남겨두던 예린.', npcIds: ['yerin'] } },
+      { text: '"넌 끝까지 다 결산해야 편한 애잖아. 그 줄도 닫아" 닫으라고 돌려보낸다', effects: { mental: -1 }, npcEffects: [{ npcId: 'yerin', intimacyChange: 0 }], message: '예린이 0.5초 멈췄다, 펜으로 그 줄에 결산선을 긋고 노트를 가방에 넣는다. "…그래. 그게 너답네." 더는 안 붙잡는다. 그 줄은 닫힌 채 안 건너온다.', memorySlotDraft: { category: 'failure', importance: 8, toneTag: 'regret', recallText: '끝내 내 줄까지 결산선을 긋고 닫아버린 예린.', npcIds: ['yerin'] } },
     ],
   },
 ] satisfies readonly GameEvent[];

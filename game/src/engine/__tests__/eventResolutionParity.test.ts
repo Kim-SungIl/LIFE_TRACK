@@ -23,7 +23,8 @@ function viaStore<R>(s: GameState, act: (api: ReturnType<typeof useGameStore.get
 }
 
 // 시드별 착지값 — W48에 사건이 걸린 학년 수. 0이면 사건 입구 갈래를 안 지난 것이라 이 파일의 핵심이 공허해진다.
-const EXPECTED_EVENT_TRANSITIONS: Record<string, number> = { 'male/1': 2, 'female/7': 1 };
+// male/1은 도달 이벤트 시간 소모 정리(2026-11-01)로 2 → 1 — 사건 흐름이 바뀐 몫이고, 불일치 0·전환 총수 7은 그대로다.
+const EXPECTED_EVENT_TRANSITIONS: Record<string, number> = { 'male/1': 1, 'female/7': 1 };
 
 describe('sim 하네스와 store가 같은 상태를 낸다', () => {
   beforeEach(() => {

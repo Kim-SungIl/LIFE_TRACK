@@ -157,7 +157,9 @@ describe('성취 등급 도달 가능성 (7년 완주)', () => {
     // 하네스 교정(2026-10-27, sim 미러 → 엔진 eventResolution — 옛 미러는 W48 사건 뒤 학년 전환을 빠뜨려 판당 337~340주를 돌았다. 제품은 336주)으로 82.83/84.2 → 84.1/84.2.
     // **시드 1~60 분포: A 60/60 → A 58 · S 2(시드 7 85.2 · 13 85.1), 평균 83.32 → 83.51.** 옛 하네스의 유령 주가
     // 무료 성실을 S 문턱 밑으로 눌러 두고 있었다 — "시간만으로는 S에 못 닿는다"는 제품에서 3% 깨져 있다(밸런스 판단은 별건).
-    const landings: Record<number, number> = { 1: 84.1, 2: 84.2 };
+    // 도달 이벤트 시간 소모 정리(2026-11-01, 도달형 96건의 timeCost 1을 방과후를 함께 쓰는 3개 선택지로만)로 84.1/84.2 → 84.3/84.2.
+    // 시드 1~60 분포: 평균 83.51 → 83.60, S 2/60 → 1/60(A 59). 유료 성실은 60/60 S 그대로(평균 89.97 → 89.80).
+    const landings: Record<number, number> = { 1: 84.3, 2: 84.2 };
     for (const [seed, best] of Object.entries(landings)) {
       const r = playSevenYears(DILIGENT_FREE, Number(seed));
       expect(r.state.year, `seed ${seed} 완주`).toBe(8);

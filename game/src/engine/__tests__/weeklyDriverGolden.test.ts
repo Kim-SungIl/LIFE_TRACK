@@ -56,6 +56,12 @@
 // `weekLog.lightNarration`에 적는다(재생 카드가 결과 화면을 건너뛴 문장만 머리 줄로 올리려고). 반장 잡무가 뜬 주의
 // 다음 계획 시점부터 지문이 갈린다. 원인 귀속: `stateDigest`·`coreDigest`에서 그 한 칸만 지우고 돌리면 6판 모두 직전 골든과
 // **바이트 동일**(18개 초록)이고, 카운터는 6판 모두 직전 골든과 같다. 두 번 기록해 파일 바이트 동일.
+//
+// 재생성 9 (2026-11-01, 도달 이벤트 시간 소모 — timeCostWording.test.ts, 의도된 동작 변경): 도달형 96건이 모든 선택지에
+// 달던 timeCost 1을 걷어내고 방과후를 함께 쓰는 3개 선택지(지훈 독서실 내기 2·수빈 단어장 1)에만 남겼다. 변경은 이벤트
+// 데이터의 그 칸뿐이다. 6판 모두 첫 도달 컷 다음 계획 시점(paid 29번째·free-talk 9번째)부터 지문이 갈린다. 카운터는
+// paid/seed7000003·free-talk 2판 동일, 나머지 3판(paid/seed20261020·paid-spend 2판)은 사건 수 +5/−3/+1·동행 주 59→53처럼
+// 사건 흐름이 바뀐 몫만 움직였다. 두 번 기록해 파일 바이트 동일.
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {
