@@ -79,6 +79,12 @@ export interface GameState {
    */
   monthPlan?: MonthPlan;
   /**
+   * 주간 화면에서 받은 친구 초대 답(monthInvites.ts weekInviteFor) — 계획 화면을 안 연 달에도 그 주에 잡힌 초대가
+   * 주간 화면에 뜬다. 계획 화면(처음 짤 때 그 주는 이 답으로 고정)·약속 판정(answeredInvites)이 계획의 답과 함께 읽는다.
+   * (학년, 달)이 지금과 다르면 지난달 것이라 무시한다. 구세이브에는 없다(없음 = 주간에서 답한 초대 없음).
+   */
+  weekInviteAnswers?: { year: number; month: number; answers: (MonthInvite & { accepted: boolean })[] };
+  /**
    * 이번 달 자동 진행(월 단위 계획 5단계, monthPlayback.ts) — 재생 중인가·멈췄으면 왜·지금까지 처리한 주의 기록·
    * 재생이 지나쳐 버린 대화 기회 수. 매 변경 저장에 실려 새로고침해도 이어진다(새로고침하면 멈춤으로 연다).
    * 구세이브·계획만 쓰는 판에는 없다(없음 = 주마다 손으로 진행).

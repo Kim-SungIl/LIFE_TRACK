@@ -87,6 +87,58 @@ export function generateMonthInvites(state: GameState): MonthInvite[] {
 const sameInvite = (a: MonthInvite, b: MonthInvite) =>
   a.npcId === b.npcId && a.week === b.week && a.slotIdx === b.slotIdx && a.activityId === b.activityId;
 
+type AnsweredInvite = MonthInvite & { accepted: boolean };
+type InviteState = Pick<GameState, 'monthPlan' | 'weekInviteAnswers' | 'year' | 'week'>;
+
+/** 이번 달 주간 화면에서 받은 답(GameState.weekInviteAnswers). 지난달 것·손상값은 없는 것으로 본다. */
+export function weekInviteAnswers(state: InviteState): AnsweredInvite[] {
+  const r = state.weekInviteAnswers;
+  if (!r || !Array.isArray(r.answers) || state.week < 1 || state.week > 48) return [];
+  return r.year === state.year && r.month === getMonthBlock(state.week).index ? r.answers : [];
+}
+
+/** 이번 달에 답한 초대 전부 — 계획의 답 + 주간 화면의 답(같은 초대는 한 번). 약속 판정이 이것 하나를 본다. */
+export function answeredInvites(state: InviteState): AnsweredInvite[] {
+  const plan = getCurrentMonthPlan(state)?.invites ?? [];
+  return [...plan, ...weekInviteAnswers(state).filter(w => !plan.some(p => sameInvite(p, w)))];
+}
+
+/**
+ * 이번 주 주간 화면에 띄울 초대 — 계획을 안 짠 달에, 이번 주에 잡힌 초대(답했으면 그 답과 함께).
+ * 계획이 있는 달은 계획 화면에서 이미 답했으니 null. 초대는 주마다 많아야 하나다(generateMonthInvites의 usedWeek).
+ * 주간에서 답한 초대는 바로 확정이다(거절 −1도 바로) — 계획 화면처럼 저장 전까지 바꿀 수 있는 단계가 없다.
+ */
+export function weekInviteFor(state: GameState): { invite: MonthInvite; accepted?: boolean } | null {
+  if (getCurrentMonthPlan(state)) return null;
+  const done = weekInviteAnswers(state).find(a => a.week === state.week);
+  if (done) {
+    const { accepted, ...invite } = done;
+    return { invite, accepted };
+  }
+  const invite = generateMonthInvites(state).find(i => i.week === state.week);
+  return invite ? { invite } : null;
+}
+
+/**
+ * 계획 화면을 처음 열 때(지금 달 계획이 없을 때) 답할 초대와 미리 정해진 답.
+ * 주간 화면에서 이미 답한 주는 그 초대·답 그대로 고정하고(새로 뽑힌 초대로 바꾸지 않는다 — 친밀도가 움직이면 후보가 바뀐다),
+ * 나머지 주만 새로 받는다. 지난 주의 답은 약속 판정이 끝났으니 싣지 않는다.
+ */
+export function planInvites(state: GameState): { invites: MonthInvite[]; fixed: (boolean | undefined)[] } {
+  const weekly = weekInviteAnswers(state).filter(a => a.week >= state.week);
+  const fresh = generateMonthInvites(state).filter(g => !weekly.some(w => w.week === g.week));
+  const all: (MonthInvite & { accepted?: boolean })[] = [...weekly, ...fresh].sort((a, b) => a.week - b.week);
+  return {
+    invites: all.map(({ npcId, week, slotIdx, activityId }) => ({ npcId, week, slotIdx, activityId })),
+    fixed: all.map(a => a.accepted),
+  };
+}
+
+/** 주간 화면에서 이미 답한 초대인가 — 계획을 저장할 때 거절 −1을 또 깎지 않게(store.setMonthPlan). */
+export function isWeekAnswered(state: InviteState, invite: MonthInvite): boolean {
+  return weekInviteAnswers(state).some(w => sameInvite(w, invite));
+}
+
 /**
  * 계획의 초대 답이 맞는지 — null이면 통과. store.setMonthPlan이 부른다.
  *   · 처음 짤 때: 받은 초대(같은 함수로 다시 만든 것)마다 정확히 한 번 답해야 한다. 지어낸 초대는 거부.
@@ -106,10 +158,13 @@ export function validateInviteAnswers(
       return '다시 짠 계획의 초대 답이 처음과 다르다';
     }
   } else {
-    const expected = generateMonthInvites(state);
+    const { invites: expected, fixed } = planInvites(state);
     if (answers.length !== expected.length || !expected.every(e => answers.some(a => sameInvite(a, e)))) {
       return `초대 답이 받은 초대와 맞지 않는다 — 받은 ${expected.length}개, 답 ${answers.length}개`;
     }
+    // 주간 화면에서 이미 답한 초대는 답을 못 바꾼다 — 거절을 수락으로 뒤집으면 −1만 내고 빠져나간다(다시 짤 때와 같은 이유).
+    const flipped = expected.find((e, i) => fixed[i] !== undefined && !answers.some(a => sameInvite(a, e) && a.accepted === fixed[i]));
+    if (flipped) return `W${flipped.week}: 주간 화면에서 답한 초대(${flipped.npcId})의 답이 다르다`;
   }
   for (const a of answers) {
     if (!a.accepted || a.week < state.week) continue;
@@ -147,9 +202,8 @@ export function settlePromisesForWeek(
   state: GameState, log: WeekLog, applied: readonly ActivityInstance[], npcActivityMap?: Record<string, string>,
   companionGained: Record<string, number> = {},
 ): void {
-  const plan = getCurrentMonthPlan(state);
-  if (!plan?.invites) return;
-  for (const inv of plan.invites) {
+  // 계획의 답과 주간 화면의 답을 함께 본다 — 계획 없이 주간에서 수락한 약속도 지켰는지 따진다.
+  for (const inv of answeredInvites(state)) {
     if (!inv.accepted || inv.week !== state.week) continue;
     const npc = state.npcs.find(n => n.id === inv.npcId);
     if (!npc) continue;

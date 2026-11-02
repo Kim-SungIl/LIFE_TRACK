@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
-import { getPlannedWeek } from '../../../engine/monthPlan';
+import { getPlannedWeek, plannedWeekCost } from '../../../engine/monthPlan';
+import { weekInviteFor } from '../../../engine/monthInvites';
 import { npcsToContinueTalk, talkBankCount } from '../../../engine/monthPlayback';
 import { josa } from '../../../engine/korean';
 import { playSfx } from '../../../audio/sfx';
-import { GameState, STAT_LABELS } from '../../../engine/types';
+import { GameState, STAT_LABELS, type MonthInvite } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
@@ -36,6 +37,7 @@ import { WeekPlanner } from './WeekPlanner';
 import { SlotEditPopup } from './SlotEditPopup';
 import { NpcRelationPanel } from './NpcRelationPanel';
 import { SemesterGoalChip } from './SemesterGoalChip';
+import { InviteCard } from './InviteCard';
 import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
@@ -74,6 +76,8 @@ type Props = {
     onOpenPlan: (draft: WeekDraft) => void;
     /** 화면에서 고친 이번 주 칸을 계획에 실은 뒤 자동 진행. 실을 수 없으면 이유를 돌려준다(띠가 보인다). */
     onAutoPlay: (draft: WeekDraft) => string | null;
+    /** 계획을 안 짠 달의 이번 주 친구 초대에 답한다(store.answerWeekInvite). 수락이면 돌려받은 초대로 그 칸을 채운다. */
+    onAnswerInvite?: (accepted: boolean) => MonthInvite | null;
   };
   /** 재생 카드의 💬/🛒로 멈췄으면 그 창을 연 채로 시작한다. */
   initialOverlay?: 'talk' | 'shop';
@@ -314,6 +318,20 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     setNpcSelectFor(null);
   };
 
+  // 친구 초대(계획을 안 짠 달) — 계획 화면에만 있어서 주간으로 진행하면 같은 주차여도 초대가 안 떴다(2026-11-02 사용자 지적).
+  // 이번 주에 잡힌 초대를 플래너 위에 띄운다. 답은 바로 확정이고, 수락하면 그 칸에 활동과 동행을 넣는다.
+  const weekInvite = monthly && !monthly.hasPlan && monthly.onAnswerInvite ? weekInviteFor(state) : null;
+  const answerInvite = (accepted: boolean) => {
+    if (!monthly?.onAnswerInvite || weekInvite?.accepted !== undefined) return;
+    playSfx('tap');
+    const inv = monthly.onAnswerInvite(accepted);
+    if (!inv || !accepted) return;
+    // 그 칸에 있던 다른 동행 기록은 지운다 — 남겨 두면 확정 검증이 없는 활동의 동행을 본다.
+    const rest = Object.fromEntries(Object.entries(npcChoices).filter(([key]) => !key.endsWith(`:${inv.slotIdx}`)));
+    setSelectedActivities(assignSlot(selectedActivities, inv.slotIdx, inv.activityId));
+    setNpcChoices({ ...rest, [`${inv.activityId}:${inv.slotIdx}`]: inv.npcId });
+  };
+
   const handleTalkNpc = (npcId: string) => {
     const r = onTalkNpc(npcId);
     if (r.kind === 'event') { setMiniTalkResult(r.event); setNpcSmalltalk(null); }
@@ -465,6 +483,14 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
 
       {/* T68 학기 목표 — 플래너 바로 위. 주말을 짜기 직전에 눈에 걸리는 자리다. */}
       {onChooseGoal && <SemesterGoalChip state={state} onChoose={onChooseGoal} />}
+
+      {weekInvite && (
+        <div data-testid="week-invite" style={{ marginBottom: 10 }}>
+          <InviteCard invite={weekInvite.invite} answer={weekInvite.accepted} locked={weekInvite.accepted !== undefined}
+            npcName={state.npcs.find(n => n.id === weekInvite.invite.npcId)?.name ?? weekInvite.invite.npcId}
+            cost={plannedWeekCost([weekInvite.invite.activityId], state.year)} onAnswer={answerInvite} />
+        </div>
+      )}
 
       {/* ===== 주간 플래너 ===== */}
       <WeekPlanner
