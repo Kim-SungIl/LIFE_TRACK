@@ -94,7 +94,21 @@ type InviteState = Pick<GameState, 'monthPlan' | 'weekInviteAnswers' | 'year' | 
 export function weekInviteAnswers(state: InviteState): AnsweredInvite[] {
   const r = state.weekInviteAnswers;
   if (!r || !Array.isArray(r.answers) || state.week < 1 || state.week > 48) return [];
-  return r.year === state.year && r.month === getMonthBlock(state.week).index ? r.answers : [];
+  if (r.year !== state.year || r.month !== getMonthBlock(state.week).index) return [];
+  // 원소 모양까지 본다 — 손상된 세이브의 `[null]`이 주간 화면 렌더에서 터졌다(3자 검수).
+  return r.answers.filter((a): a is AnsweredInvite => !!a && typeof a === 'object'
+    && typeof a.npcId === 'string' && typeof a.activityId === 'string' && typeof a.accepted === 'boolean'
+    && Number.isInteger(a.week) && Number.isInteger(a.slotIdx));
+}
+
+/**
+ * 아직 답하지 않은 이번 달 초대 — 주간에서 답한 주와 **답한 친구**는 뺀다.
+ * 초대는 달 단위로 정해 두지만 후보(친밀도 30 이상)가 달 중간에 바뀌면 NPC 고르기가 다시 돈다. 계획을 저장하면 굳던
+ * 예전과 달리 주간 경로는 매주 다시 만들어서, 이미 답한 친구가 다른 주에 또 뽑히고 거절 −1이 두 번 들어갔다(3자 검수).
+ */
+function unansweredInvites(state: GameState): MonthInvite[] {
+  const answered = weekInviteAnswers(state);
+  return generateMonthInvites(state).filter(g => !answered.some(a => a.week === g.week || a.npcId === g.npcId));
 }
 
 /** 이번 달에 답한 초대 전부 — 계획의 답 + 주간 화면의 답(같은 초대는 한 번). 약속 판정이 이것 하나를 본다. */
@@ -115,7 +129,7 @@ export function weekInviteFor(state: GameState): { invite: MonthInvite; accepted
     const { accepted, ...invite } = done;
     return { invite, accepted };
   }
-  const invite = generateMonthInvites(state).find(i => i.week === state.week);
+  const invite = unansweredInvites(state).find(i => i.week === state.week);
   return invite ? { invite } : null;
 }
 
@@ -126,7 +140,7 @@ export function weekInviteFor(state: GameState): { invite: MonthInvite; accepted
  */
 export function planInvites(state: GameState): { invites: MonthInvite[]; fixed: (boolean | undefined)[] } {
   const weekly = weekInviteAnswers(state).filter(a => a.week >= state.week);
-  const fresh = generateMonthInvites(state).filter(g => !weekly.some(w => w.week === g.week));
+  const fresh = unansweredInvites(state);
   const all: (MonthInvite & { accepted?: boolean })[] = [...weekly, ...fresh].sort((a, b) => a.week - b.week);
   return {
     invites: all.map(({ npcId, week, slotIdx, activityId }) => ({ npcId, week, slotIdx, activityId })),

@@ -20,7 +20,7 @@ import { planInvites } from '../../../engine/monthInvites';
 import { josa } from '../../../engine/korean';
 import { isNpcEnrolled } from '../../../engine/relationshipSignals';
 import { EXAM_TYPE_LABELS, type GameState, type MonthInvite, type MonthPlan } from '../../../engine/types';
-import { assignSlot } from '../../../engine/weekendPlan';
+import { assignSlot, pinCompanionSlot } from '../../../engine/weekendPlan';
 import { getMonthBlock, getWeekInfo, getWeekOfMonth } from '../../../engine/weekMath';
 import { NpcSelectModal } from './NpcSelectModal';
 import { chipSurface } from '../surface';
@@ -144,8 +144,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
     let { activities, npcChoices } = d;
     invites.forEach((inv, i) => {
       if (acc[i] !== true || inv.week !== week) return;
-      activities = assignSlot(activities, inv.slotIdx, inv.activityId);
-      npcChoices = { ...npcChoices, [`${inv.activityId}:${inv.slotIdx}`]: inv.npcId };
+      ({ activities, npcChoices } = pinCompanionSlot({ activities, npcChoices }, inv.slotIdx, inv.activityId, inv.npcId));
     });
     const pinned = activities;
     npcChoices = Object.fromEntries(Object.entries(npcChoices).filter(([key]) => {

@@ -203,3 +203,41 @@ describe('그 뒤 계획 화면 — 주간에서 답한 주는 그 답으로 고
     expect(all.length, 'answered_once').toBe(new Set(all.map(a => `${a.npcId}:${a.week}`)).size);
   });
 });
+
+describe('3자 검수 후속 — 한 달에 같은 친구는 한 번, 손상된 답은 없는 것으로', () => {
+  /** 첫 초대에 주간에서 답한 뒤, 말걸기·선물로 유나가 30에 닿아 후보 목록이 바뀐 판들(둘째 초대 주로 옮김). */
+  function candidatesGrew(): { s: GameState; first: MonthInvite }[] {
+    const out: { s: GameState; first: MonthInvite }[] = [];
+    for (let seed = 0; seed < 600; seed++) {
+      const inv = generateMonthInvites(at(5, seed));
+      if (inv.length !== 2) continue;
+      store.setState({ state: at(inv[0].week, seed) });
+      store.getState().answerWeekInvite(false);
+      const later = structuredClone({ ...now(), week: inv[1].week }) as GameState;
+      later.npcs.find(n => n.id === 'yuna')!.intimacy = 30;
+      out.push({ s: later, first: inv[0] });
+    }
+    return out;
+  }
+
+  it('dedupe_friend: 주간에서 답한 친구는 같은 달 다른 주에 다시 초대되지 않는다(주간·계획 경로 둘 다)', () => {
+    const cases = candidatesGrew();
+    expect(cases.length, '전제: 판이 충분하다').toBeGreaterThan(50);
+    // 고치기 전엔 이 판들 중 24%에서 같은 친구가 다시 뽑혔다 — 후보 목록이 바뀌면 NPC 고르기가 다시 돈다.
+    const regenerated = cases.filter(({ s, first }) => generateMonthInvites(s).some(g => g.week === s.week && g.npcId === first.npcId));
+    expect(regenerated.length, '전제(양성 대조): 생성기만 보면 같은 친구가 다시 나오는 판이 있다').toBeGreaterThan(0);
+    for (const { s, first } of regenerated) {
+      expect(weekInviteFor(s)?.invite.npcId, 'dedupe_friend: 주간').not.toBe(first.npcId);
+      expect(planInvites(s).invites.filter(i => i.npcId === first.npcId).length, 'dedupe_friend: 계획(지난 주 답은 안 싣는다)').toBe(0);
+    }
+  });
+
+  it('corrupt_answers: 모양이 틀린 원소는 걸러 낸다 — 렌더에서 터지지 않는다', () => {
+    const { s, first } = inviteWeek();
+    const bad = { ...s, weekInviteAnswers: { year: s.year, month: getMonthBlock(s.week).index, answers: [null, { npcId: 'jihun' }, { ...first, accepted: 'yes' }] } } as unknown as GameState;
+    expect(weekInviteAnswers(bad), 'corrupt_answers').toEqual([]);
+    expect(weekInviteFor(bad), '답이 없는 것으로 보고 초대를 다시 띄운다').toEqual({ invite: first });
+    const ok = { ...s, weekInviteAnswers: { year: s.year, month: getMonthBlock(s.week).index, answers: [null, { ...first, accepted: false }] } } as unknown as GameState;
+    expect(weekInviteAnswers(ok), '멀쩡한 원소는 남긴다(양성 짝)').toEqual([{ ...first, accepted: false }]);
+  });
+});
