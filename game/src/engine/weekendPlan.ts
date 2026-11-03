@@ -47,6 +47,33 @@ export function assignSlot(slots: readonly string[], idx: number, id: string): s
 }
 
 /**
+ * 약속 칸 고정 — `idx` 칸에 `id`를 넣고 동행을 `npcId`로 둔다. 친구 초대를 수락할 때(주간 화면·월 계획 화면) 쓴다.
+ *
+ * `assignSlot`만 쓰면 그 칸을 덮고 있던 **2칸 이상 활동**(푹 쉬기·가족 여행)의 나머지 칸이 남아, 주말 2칸에 3칸어치가
+ * 실행되고 화면은 약속 칸을 "(연속 활동)"으로 그려 안 보였다(3자 검수). 그런 활동은 통째로 비운다. 칸에서 사라진
+ * 활동의 동행 기록도 지운다 — 남겨 두면 확정 검증이 없는 활동의 동행을 본다.
+ */
+export function pinCompanionSlot(
+  d: { activities: readonly string[]; npcChoices: Record<string, string> }, idx: number, id: string, npcId: string,
+): { activities: string[]; npcChoices: Record<string, string> } {
+  const slots = Array.from({ length: d.activities.length }, (_, i) => d.activities[i] || '');
+  // 다칸 활동은 시작 칸부터 같은 id로 N칸을 채운다(SlotEditPopup) — 앞에서부터 묶음으로 읽어 idx를 덮는 묶음을 찾는다.
+  for (let i = 0; i < slots.length;) {
+    const n = Math.max(1, ACTIVITIES.find(a => a.id === slots[i])?.slots ?? 1);
+    let len = 1;
+    while (len < n && slots[i + len] === slots[i]) len++;
+    if (len > 1 && idx >= i && idx < i + len) slots.fill('', i, i + len);
+    i += len;
+  }
+  const activities = assignSlot(slots, idx, id);
+  const npcChoices = Object.fromEntries(Object.entries({ ...d.npcChoices, [`${id}:${idx}`]: npcId }).filter(([key]) => {
+    const m = /^(.+):(\d+)$/.exec(key);
+    return !!m && activities[Number(m[2])] === m[1];
+  }));
+  return { activities, npcChoices };
+}
+
+/**
  * 확정 시점의 계획을 스냅샷으로 접는다. **빈 주말이면 `null`** — 복사할 것이 없다.
  *
  * 슬롯 배열을 인덱스째로 보존하는 이유: 동행 키가 `${activityId}:${slotIdx}`라

@@ -62,7 +62,7 @@ export function GameScreen() {
   // P3-7: selector 없는 전체-스토어 구독 → state + 사용하는 액션만 선택.
   // 액션은 Zustand에서 안정 참조라, npcActivityMap만 바뀔 땐 shallow-equal → 리렌더 스킵.
   const {
-    state, setRoutine, confirmWeek, setMonthPlan,
+    state, setRoutine, confirmWeek, setMonthPlan, answerWeekInvite,
     advanceFromYearEnd, resolveEvent, buyItem, talkToNpc, talkToHome,
     resolveParentTalkChoice, setPhase, runDelta, markMoneyBlockedWeek, markMoneyBlockedMonth,
     startGame, exitToTitle, chooseSemesterGoal, startRomanceRetry, consumeRomancePlan,
@@ -73,6 +73,7 @@ export function GameScreen() {
     setRoutine: s.setRoutine,
     confirmWeek: s.confirmWeek,
     setMonthPlan: s.setMonthPlan,
+    answerWeekInvite: s.answerWeekInvite,
     advanceFromYearEnd: s.advanceFromYearEnd,
     resolveEvent: s.resolveEvent,
     buyItem: s.buyItem,
@@ -541,6 +542,7 @@ export function GameScreen() {
       stopLine: run?.stop ? stopLine(run) : null,
       talkBank: talkBankCount(state),
       onOpenPlan: (draft: WeekDraft) => { setPlanReturnDraft({ ...draft, year: state.year, week: state.week }); setPlanOpen(true); },
+      onAnswerInvite: answerWeekInvite,
       onAutoPlay: (draft: WeekDraft) => {
         const plan = route.monthly?.plan;
         if (plan) {

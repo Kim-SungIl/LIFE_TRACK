@@ -1,15 +1,16 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
-import { getPlannedWeek } from '../../../engine/monthPlan';
+import { getPlannedWeek, plannedWeekCost } from '../../../engine/monthPlan';
+import { weekInviteFor } from '../../../engine/monthInvites';
 import { npcsToContinueTalk, talkBankCount } from '../../../engine/monthPlayback';
 import { josa } from '../../../engine/korean';
 import { playSfx } from '../../../audio/sfx';
-import { GameState, STAT_LABELS } from '../../../engine/types';
+import { GameState, STAT_LABELS, type MonthInvite } from '../../../engine/types';
 import { getWeekLabel, getMonthLabel, predictWeekOutcome, ROUTINE_TIER_WEEKS } from '../../../engine/gameEngine';
 import { getAvailableActivities, ACTIVITIES, getActivityCost, collapseActivityChoices } from '../../../engine/activities';
 import { getParentMods } from '../../../engine/parentModifiers';
-import { assignSlot, getConfirmGate, getRepeatablePlan, getWeekSlotCount } from '../../../engine/weekendPlan';
+import { assignSlot, getConfirmGate, getRepeatablePlan, getWeekSlotCount, pinCompanionSlot } from '../../../engine/weekendPlan';
 import { getExamSchedule } from '../../../engine/examSystem';
 import { getCharacterDialogue, getActivityReaction, getNpcDialogue } from '../../../engine/dialogues';
 import { MiniTalkEvent, getAvailableHomeEvents, getEligibleParentClimax } from '../../../engine/talkSystem';
@@ -36,6 +37,7 @@ import { WeekPlanner } from './WeekPlanner';
 import { SlotEditPopup } from './SlotEditPopup';
 import { NpcRelationPanel } from './NpcRelationPanel';
 import { SemesterGoalChip } from './SemesterGoalChip';
+import { InviteCard } from './InviteCard';
 import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
@@ -74,6 +76,8 @@ type Props = {
     onOpenPlan: (draft: WeekDraft) => void;
     /** 화면에서 고친 이번 주 칸을 계획에 실은 뒤 자동 진행. 실을 수 없으면 이유를 돌려준다(띠가 보인다). */
     onAutoPlay: (draft: WeekDraft) => string | null;
+    /** 계획을 안 짠 달의 이번 주 친구 초대에 답한다(store.answerWeekInvite). 수락이면 돌려받은 초대로 그 칸을 채운다. */
+    onAnswerInvite?: (accepted: boolean) => MonthInvite | null;
   };
   /** 재생 카드의 💬/🛒로 멈췄으면 그 창을 연 채로 시작한다. */
   initialOverlay?: 'talk' | 'shop';
@@ -84,10 +88,18 @@ export type WeekDraft = { activities: string[]; npcChoices: Record<string, strin
 export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, onSetRoutine, onTalkNpc, onRetryRomance, onTalkHome, onResolveParentChoice, onBuyItem, onConfirmWeek, onOpenAlbum, onMoneyBlocked, saveFailed, onOpenMenu, onChooseGoal, monthly, initialOverlay }: Props) {
   // 이번 달 계획(월 계획 화면이 저장)이 있으면 그 주 칸으로 미리 채운다 — 확정은 그대로 이 화면의 CTA가 한다.
   const plannedWeek = getPlannedWeek(state);
-  const [selectedActivities, setSelectedActivities] = useState<string[]>(initialPlan?.activities ?? plannedWeek?.activities ?? []);
+  // 주간에서 수락한 이번 주 약속은 칸째로 되살린다 — 답(weekInviteAnswers)은 세이브에 남는데 칸은 화면 상태라,
+  // 새로고침·이어하기 뒤엔 카드만 수락으로 잠기고 칸이 비어 그대로 확정하면 −2였다(3자 검수). 복구 초안(initialPlan)은
+  // 플레이어가 고친 그대로라 건드리지 않는다.
+  const [initialDraft] = useState<WeekDraft>(() => {
+    const base = { activities: initialPlan?.activities ?? plannedWeek?.activities ?? [], npcChoices: initialPlan?.npcChoices ?? plannedWeek?.npcChoices ?? {} };
+    const kept = !initialPlan && monthly && !monthly.hasPlan && monthly.onAnswerInvite ? weekInviteFor(state) : null;
+    return kept?.accepted ? pinCompanionSlot(base, kept.invite.slotIdx, kept.invite.activityId, kept.invite.npcId) : base;
+  });
+  const [selectedActivities, setSelectedActivities] = useState<string[]>(initialDraft.activities);
   const [npcSelectFor, setNpcSelectFor] = useState<string | null>(null);
   const [npcDetailFor, setNpcDetailFor] = useState<string | null>(null);
-  const [npcChoices, setNpcChoices] = useState<Record<string, string>>(initialPlan?.npcChoices ?? plannedWeek?.npcChoices ?? {});
+  const [npcChoices, setNpcChoices] = useState<Record<string, string>>(initialDraft.npcChoices);
   // Only the mounted planner consumes its recovery snapshot, after initializing both drafts.
   useEffect(() => {
     if (initialPlan) onPlanRestored?.();
@@ -314,6 +326,30 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     setNpcSelectFor(null);
   };
 
+  // 친구 초대(계획을 안 짠 달) — 계획 화면에만 있어서 주간으로 진행하면 같은 주차여도 초대가 안 떴다(2026-11-02 사용자 지적).
+  // 이번 주에 잡힌 초대를 플래너 위에 띄운다. 답은 바로 확정이고, 수락하면 그 칸에 활동과 동행을 넣는다.
+  const weekInvite = monthly && !monthly.hasPlan && monthly.onAnswerInvite ? weekInviteFor(state) : null;
+  // 수락하면 돈 때문에 확정이 잠기는가 — 답은 바로 확정이라, 눌러 놓고 잠기면 남는 길이 칸을 빼는 −2뿐이었다(3자 검수).
+  // 계획 화면이 저장 단계에서 막는 것과 같은 판정을 엔진에 묻는다(그 칸을 고정한 초안으로 미리보기 → 확정 잠금).
+  // 원래 잠겨 있던 판은 이 초대 활동이 돈에 걸릴 때만 막는다(무료 같이 공부하기까지 막을 이유는 없다).
+  const inviteUnaffordable = useMemo(() => {
+    if (!weekInvite || weekInvite.accepted !== undefined) return false;
+    const { invite } = weekInvite;
+    const pinned = pinCompanionSlot({ activities: selectedActivities, npcChoices }, invite.slotIdx, invite.activityId, invite.npcId);
+    const after = getConfirmGate(state, predictWeekOutcome(state, pinned.activities, pinned.npcChoices));
+    return after.unaffordableIds.includes(invite.activityId) || (after.moneyBlocked && !gate.moneyBlocked);
+  }, [weekInvite, selectedActivities, npcChoices, state, gate.moneyBlocked]);
+  const answerInvite = (accepted: boolean) => {
+    if (!monthly?.onAnswerInvite || weekInvite?.accepted !== undefined) return;
+    if (accepted && inviteUnaffordable) return;
+    playSfx('tap');
+    const inv = monthly.onAnswerInvite(accepted);
+    if (!inv || !accepted) return;
+    const pinned = pinCompanionSlot({ activities: selectedActivities, npcChoices }, inv.slotIdx, inv.activityId, inv.npcId);
+    setSelectedActivities(pinned.activities);
+    setNpcChoices(pinned.npcChoices);
+  };
+
   const handleTalkNpc = (npcId: string) => {
     const r = onTalkNpc(npcId);
     if (r.kind === 'event') { setMiniTalkResult(r.event); setNpcSmalltalk(null); }
@@ -465,6 +501,15 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
 
       {/* T68 학기 목표 — 플래너 바로 위. 주말을 짜기 직전에 눈에 걸리는 자리다. */}
       {onChooseGoal && <SemesterGoalChip state={state} onChoose={onChooseGoal} />}
+
+      {weekInvite && (
+        <div data-testid="week-invite" style={{ marginBottom: 10 }}>
+          <InviteCard invite={weekInvite.invite} answer={weekInvite.accepted} locked={weekInvite.accepted !== undefined}
+            npcName={state.npcs.find(n => n.id === weekInvite.invite.npcId)?.name ?? weekInvite.invite.npcId}
+            cost={plannedWeekCost([weekInvite.invite.activityId], state.year)} onAnswer={answerInvite}
+            acceptBlocked={inviteUnaffordable ? '💰 지금은 돈이 모자라 약속할 수 없다' : undefined} />
+        </div>
+      )}
 
       {/* ===== 주간 플래너 ===== */}
       <WeekPlanner

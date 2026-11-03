@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { buildRomanceRetry, canStartRomanceRetry, romanceRetryNpc, type RomanceNpc, type RomancePlan, readRomancePlan, resumedRomancePlan } from './romance';
-import { GameState, ParentStrength, type MonthPlan, type MonthRun, type PlaybackStop } from './types';
+import { GameState, ParentStrength, type MonthInvite, type MonthPlan, type MonthRun, type PlaybackStop } from './types';
 import { createInitialState, processWeek, getWeekInfo, settleMonthStartIfDue } from './gameEngine';
 import { payRoutineIfDue } from './monthlyMoney';
 import { getCurrentMonthPlan, getPlannedWeek, validateMonthPlan } from './monthPlan';
@@ -9,7 +9,7 @@ import {
   totalTalks, isWellFormedMonthRun,
 } from './monthPlayback';
 import { getMonthBlock } from './weekMath';
-import { applyDeclinedInvites, validateInviteAnswers } from './monthInvites';
+import { applyDeclinedInvites, isWeekAnswered, validateInviteAnswers, weekInviteAnswers, weekInviteFor } from './monthInvites';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
 import { cloneGameState } from './stateClone';
 import {
@@ -179,6 +179,11 @@ interface GameStore {
    * 안 맞으면 저장하지 않고 이유를 돌려준다(null = 저장됨). 남은 주의 유료 활동비가 봉투로 예약된다.
    */
   setMonthPlan: (plan: MonthPlan) => string | null;
+  /**
+   * 계획을 안 짠 달에 주간 화면에 뜬 이번 주 친구 초대에 답한다(monthInvites.weekInviteFor). 답은 바로 확정이고,
+   * 거절이면 친밀도 −1(계획 화면의 거절과 같은 값). 반환 = 답한 초대(수락이면 화면이 그 칸을 채운다), 띄울 초대가 없으면 null.
+   */
+  answerWeekInvite: (accepted: boolean) => MonthInvite | null;
   advanceWeek: () => void;
   // 반환: 실제 적용된 효과(구간 감쇠·클램프 반영) — 결과 화면 표시는 이 실측값을 쓴다.
   resolveEvent: (choiceIndex: number) => AppliedEventOutcome | undefined;
@@ -472,7 +477,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const next = cloneGameState(s);
     next.monthPlan = structuredClone(plan);
     // 거절한 초대마다 친밀도 −1 — 처음 저장할 때 한 번(디렉터 결정 2026-10-25). 다시 짤 때 또 깎지 않는다.
-    if (!existing) applyDeclinedInvites(next, plan.invites ?? []);
+    // 주간 화면에서 이미 거절한 초대는 그때 깎았다 — 계획에 고정된 답으로 실려 와도 또 깎지 않는다.
+    if (!existing) applyDeclinedInvites(next, (plan.invites ?? []).filter(a => !isWeekAnswered(s, a)));
     // 이 달 장부는 **계획을 저장할 때** 연다(멈춘 채) — 주간 화면이 메인이 된 뒤(2026-10-29) 손으로 몇 주 하다가 자동 진행을
     // 켜는 게 보통 길이라, 누른 주에 장부를 열면 월말 결산이 그 뒤 주만 담았다(3자 검수). 다시 짜서 저장하면 멈춘 이유는 지운다 —
     // 예전엔 곧장 재생이 이어져 저절로 지워졌지만 이제는 주간 화면으로 돌아오므로 낡은 이유가 띠에 남았다.
@@ -794,6 +800,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   // ===== 디버그 메서드 (DebugPanel에서 호출, import.meta.env.DEV 가드는 컴포넌트 쪽에서) =====
   // 같은 주에 매 렌더 호출되므로 절대주차 스탬프로 1회만 적립한다.
   // 계획을 고쳐 잠금이 풀렸다가 다시 잠겨도 그 주는 1회다(겪은 것은 "그 주에 막혔다" 하나다).
+  answerWeekInvite: (accepted) => {
+    const s = get().state;
+    if (!s || !isPlanningPhase(s)) return null;
+    const offer = weekInviteFor(s);
+    if (!offer || offer.accepted !== undefined) return null;
+    const answer = { ...offer.invite, accepted };
+    const next = cloneGameState(s);
+    next.weekInviteAnswers = { year: s.year, month: getMonthBlock(s.week).index, answers: [...weekInviteAnswers(s), answer] };
+    applyDeclinedInvites(next, [answer]);
+    set({ state: next });
+    return offer.invite;
+  },
+
   markMoneyBlockedWeek: () => {
     const s = get().state;
     if (!s) return;

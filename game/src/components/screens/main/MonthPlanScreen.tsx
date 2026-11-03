@@ -16,11 +16,11 @@ import { ACTIVITIES, collapseActivityChoices, collapseActivityChoicesWithSlots, 
 import { getExamsInMonth, getNextMonthOpeningExam } from '../../../engine/examSystem';
 import { getRoutineDueCost, incomeNote, remainingSemesterWeeks } from '../../../engine/monthlyMoney';
 import { plannedWeekCost, slotCountForWeek } from '../../../engine/monthPlan';
-import { generateMonthInvites } from '../../../engine/monthInvites';
+import { planInvites } from '../../../engine/monthInvites';
 import { josa } from '../../../engine/korean';
 import { isNpcEnrolled } from '../../../engine/relationshipSignals';
 import { EXAM_TYPE_LABELS, type GameState, type MonthInvite, type MonthPlan } from '../../../engine/types';
-import { assignSlot } from '../../../engine/weekendPlan';
+import { assignSlot, pinCompanionSlot } from '../../../engine/weekendPlan';
 import { getMonthBlock, getWeekInfo, getWeekOfMonth } from '../../../engine/weekMath';
 import { NpcSelectModal } from './NpcSelectModal';
 import { chipSurface } from '../surface';
@@ -29,7 +29,7 @@ import { SemesterGoalChip } from './SemesterGoalChip';
 import { Tutorial } from '../../Tutorial';
 import { TUTORIAL_KEYS, monthPlanSteps } from '../../tutorialSteps';
 import { recordTelemetry } from '../../../engine/telemetry';
-import { inviteLine, inviteVoice } from '../../../engine/talkData/inviteVoices';
+import { InviteCard } from './InviteCard';
 import type { GoalOffer } from '../../../engine/semesterGoal';
 
 type Props = {
@@ -92,13 +92,17 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
   const [error, setError] = useState<string | null>(null);
   // 친구 초대(monthInvites) — 상태를 읽기만 하는 결정론적 함수라 다시 그려도 같은 초대다. 답은 시작할 때 계획에 실린다.
   // 다시 짤 때는 처음 받은 초대와 답 그대로(새로 받지 않는다).
-  const invites: MonthInvite[] = useMemo(
-    () => (existing ? (existing.invites ?? []).map(({ accepted: _a, ...inv }) => { void _a; return inv; }) : generateMonthInvites(state)),
+  // 처음 짤 때 주간 화면에서 이미 답한 주는 그 초대·답 그대로 고정이다(planInvites) — 카드는 잠긴 채 보인다.
+  const { invites, fixed } = useMemo<{ invites: MonthInvite[]; fixed: (boolean | undefined)[] }>(
+    () => (existing
+      ? { invites: (existing.invites ?? []).map(({ accepted: _a, ...inv }) => { void _a; return inv; }), fixed: [] }
+      : planInvites(state)),
     [existing, state],
   );
-  const [answers, setAnswers] = useState<Record<number, boolean>>(
-    () => Object.fromEntries((existing?.invites ?? []).map((inv, i) => [i, inv.accepted])),
-  );
+  const [answers, setAnswers] = useState<Record<number, boolean>>(() => ({
+    ...Object.fromEntries(fixed.flatMap((a, i) => (a === undefined ? [] : [[i, a] as const]))),
+    ...Object.fromEntries((existing?.invites ?? []).map((inv, i) => [i, inv.accepted])),
+  }));
   const unanswered = invites.some((_, i) => answers[i] === undefined);
   const pinnedFor = (week: number, slot: number) =>
     invites.find((inv, i) => answers[i] === true && inv.week === week && inv.slotIdx === slot);
@@ -140,8 +144,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
     let { activities, npcChoices } = d;
     invites.forEach((inv, i) => {
       if (acc[i] !== true || inv.week !== week) return;
-      activities = assignSlot(activities, inv.slotIdx, inv.activityId);
-      npcChoices = { ...npcChoices, [`${inv.activityId}:${inv.slotIdx}`]: inv.npcId };
+      ({ activities, npcChoices } = pinCompanionSlot({ activities, npcChoices }, inv.slotIdx, inv.activityId, inv.npcId));
     });
     const pinned = activities;
     npcChoices = Object.fromEntries(Object.entries(npcChoices).filter(([key]) => {
@@ -151,7 +154,15 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
     return { activities, npcChoices };
   };
 
+  // 주간 화면에서 수락해 둔 약속은 처음부터 그 칸에 박는다 — 저장 검증(validateInviteAnswers)이 그 칸을 요구한다.
+  useEffect(() => {
+    if (fixed.some(a => a === true)) setDrafts(ds => ds.map((d, idx) => withPins(weeks[idx], d)));
+    // 마운트 때 한 번 — 이후 편집은 각 경로가 withPins로 핀을 지킨다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const answer = (i: number, accepted: boolean) => {
+    if (fixed[i] !== undefined) return;
     playSfx('tap');
     const next = { ...answers, [i]: accepted };
     setAnswers(next);
@@ -344,7 +355,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         <div data-tutorial="month-invite" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {invites.map((inv, i) => (
             <InviteCard key={`${inv.npcId}-${inv.week}`} invite={inv} answer={answers[i]} npcName={npcName(inv.npcId)}
-              cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} />
+              cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} locked={fixed[i] !== undefined} />
           ))}
         </div>
       )}
@@ -499,40 +510,5 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         </div>
       )}
     </div>
-  );
-}
-
-/** 친구 초대 카드 — 좋아(그 칸을 약속으로 고정) / 다음에(저장할 때 친밀도 −1). 답한 뒤에도 바꿀 수 있다. */
-function InviteCard({ invite, answer, npcName, cost, onAnswer }: {
-  invite: MonthInvite; answer: boolean | undefined; npcName: string; cost: number; onAnswer: (accepted: boolean) => void;
-}) {
-  const vac = getWeekInfo(invite.week).isVacation;
-  const when = `${getWeekOfMonth(invite.week)}주차 ${vac ? '하루' : invite.slotIdx === 0 ? '토요일' : '일요일'}`;
-  // 친구마다 말투가 다르다(talkData/inviteVoices.ts) — 누가 불러도 같은 말이면 초대가 달마다 다른 요청이 못 된다.
-  const line = inviteLine(invite.npcId, invite.activityId, invite.week, when);
-  const decline = inviteVoice(invite.npcId).decline;
-  return (
-    <section aria-label={`${npcName}의 초대`} data-testid={`invite-${invite.npcId}`} style={{
-      background: 'var(--bg-card-hover)', border: '1px solid rgba(240,164,122,0.35)', borderRadius: 14,
-      padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10,
-    }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--accent-soft)', fontWeight: 600 }}>{npcName}의 초대 · {when}</span>
-        <span style={{ fontSize: '0.9rem' }}>{line}</span>
-      </div>
-      {answer === false && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{decline.startsWith('"') ? `${npcName}: ${decline}` : decline}</div>}
-      {answer === true && <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>약속했다. 그 칸은 {josa(npcName, '와/과')} 보내는 시간으로 비워 둔다.</div>}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 8 }}>
-        {/* btn-reset은 여백 0·왼쪽 정렬이라 테두리에 글자가 붙는다 — 계획 띠 버튼(#541)과 같이 여백·가운데 정렬을 준다. */}
-        <button type="button" className="btn-reset" aria-pressed={answer === true} onClick={() => onAnswer(true)} style={{
-          minHeight: 44, padding: '6px 10px', textAlign: 'center', borderRadius: 10, background: answer === true ? 'var(--accent)' : 'transparent',
-          color: answer === true ? 'var(--btn-ink)' : 'var(--text-primary)', border: '1px solid var(--accent)', fontWeight: 700,
-        }}>좋아{cost > 0 ? ` · ${cost}만` : ''}</button>
-        <button type="button" className="btn-reset" aria-pressed={answer === false} onClick={() => onAnswer(false)} style={{
-          minHeight: 44, padding: '6px 10px', textAlign: 'center', borderRadius: 10, border: '1px solid rgba(255,255,255,0.14)',
-          background: answer === false ? 'var(--bg-secondary)' : 'transparent', color: 'var(--text-primary)',
-        }}>다음에</button>
-      </div>
-    </section>
   );
 }
