@@ -2,7 +2,7 @@
 // 약속 칸 경고 — 수락한 친구 초대의 칸이나 동행을 바꾸면 확정 전에 "약속을 못 지킨다"를 보이고 되돌릴 길을 준다.
 // 예전엔 아무 말 없이 확정되고 결산에서 💔 −2만 나왔다(#550 검수 백로그). 판정은 엔진 미리보기(WeekPreview.promises).
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 
 vi.mock('../../engine/assetWebp', () => ({ webpSrc: (p: string) => p, cgThumbSrc: (p: string) => p }));
 vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
@@ -13,7 +13,7 @@ import { useGameStore } from '../../engine/store';
 import { createInitialState, predictWeekOutcome } from '../../engine/gameEngine';
 import { MONTHLY_PLANNING_KEY } from '../../engine/featureFlags';
 import { generateMonthInvites } from '../../engine/monthInvites';
-import { ACTIVITIES } from '../../engine/activities';
+import { ACTIVITIES, getActivityCost } from '../../engine/activities';
 import { getMonthBlock, getWeekInfo } from '../../engine/weekMath';
 import type { GameState, MonthInvite } from '../../engine/types';
 
@@ -99,7 +99,7 @@ describe('주간 화면 — 약속 칸을 바꾸면 경고와 되돌리기', () 
     const warn = screen.getByTestId('promise-warning');
     expect(warn.textContent, 'promise_moved_warns').toContain(`${npcName(inv.npcId)}`);
     expect(warn.textContent).toContain('약속을 못 지킨다');
-    expect(warn.textContent, '숫자는 내지 않는다(hide-numbers)').not.toMatch(/[−-]\s?\d/);
+    expect(warn.textContent, '숫자는 내지 않는다(hide-numbers)').not.toMatch(/\d/);
     fireEvent.click(within(warn).getByTestId(`promise-restore-${inv.npcId}`));
     expect(screen.queryByTestId('promise-warning'), '되돌리면 경고가 내려간다').toBeNull();
     fireEvent.click(screen.getByTestId('week-confirm'));
@@ -138,13 +138,48 @@ describe('주간 화면 — 약속 칸을 바꾸면 경고와 되돌리기', () 
   });
 
   it('promise_cut_no_restore: 칸은 그대로인데 이번 주 사건으로 빠지면 이유만 말하고 되돌리기는 없다', () => {
-    const { s, inv } = withInvite(0);
+    // 사건의 시간 소모는 **일요일부터** 지운다 — 일요일 약속이 잘리는 판.
+    const { s, inv } = withInvite(1);
     s.eventTimeCost = 1;
     useGameStore.setState({ state: s, npcActivityMap: {} });
     render(<GameScreen />);
     accept();
     const warn = screen.getByTestId('promise-warning');
     expect(warn.textContent, 'promise_cut_no_restore').toContain('일정에 밀려');
+    expect(warn.textContent, '숫자는 내지 않는다(hide-numbers)').not.toMatch(/\d/);
     expect(within(warn).queryByTestId(`promise-restore-${inv.npcId}`), '되돌릴 칸이 없다').toBeNull();
+  });
+
+  it('promise_saturday_survives_cut: 일요일을 비운 주에 시간 소모 1이면 빈 일요일이 빠지고 토요일 약속은 지킨다', () => {
+    // 예전엔 엔진이 배열 길이로 잘라 `['hang-out']`(토요일만)의 토요일을 지웠다 — 일요일을 채우면 지켜지는데
+    // 화면은 "일정에 밀려 못 지킨다, 되돌릴 칸 없음"이라 말했다(3자 검수 MED).
+    const { s, inv } = withInvite(0);
+    s.eventTimeCost = 1;
+    useGameStore.setState({ state: s, npcActivityMap: {} });
+    render(<GameScreen />);
+    accept();
+    expect(screen.queryByTestId('promise-warning'), 'promise_saturday_survives_cut').toBeNull();
+    const pinned = Array.from({ length: inv.slotIdx + 1 }, (_, i) => (i === inv.slotIdx ? inv.activityId : ''));
+    expect(predictWeekOutcome(now(), pinned, { [`${inv.activityId}:${inv.slotIdx}`]: inv.npcId }).promises, '저장 모양(길이 1)과 무관').toEqual([{ npcId: inv.npcId, kept: true }]);
+    expect(predictWeekOutcome(now(), [...pinned, ''], { [`${inv.activityId}:${inv.slotIdx}`]: inv.npcId }).promises).toEqual([{ npcId: inv.npcId, kept: true }]);
+  });
+
+  it('promise_money_reason: 돈이 모자라 빠지면 "일정에 밀려"가 아니라 돈 때문이라고 말한다', () => {
+    let found: { s: GameState; inv: MonthInvite } | null = null;
+    for (let seed = 0; seed < 4000 && !found; seed++) {
+      const s = april(seed);
+      const inv = generateMonthInvites(s).find(i => i.week === 5);
+      if (inv && getActivityCost(ACTIVITIES.find(a => a.id === inv.activityId)!, s.year) > 0) found = { s, inv };
+    }
+    if (!found) throw new Error('W5에 유료 초대가 있는 시드가 없다');
+    useGameStore.setState({ state: found.s, npcActivityMap: {} });
+    render(<GameScreen />);
+    accept();
+    expect(screen.queryByTestId('promise-warning'), '돈이 있으면 지킨다').toBeNull();
+    act(() => { useGameStore.setState({ state: { ...now(), money: 0 } }); });
+    const warn = screen.getByTestId('promise-warning');
+    expect(warn.textContent, 'promise_money_reason').toContain('돈이 모자라');
+    expect(warn.textContent).not.toContain('일정에 밀려');
+    expect(warn.textContent, '숫자는 내지 않는다(hide-numbers)').not.toMatch(/\d/);
   });
 });

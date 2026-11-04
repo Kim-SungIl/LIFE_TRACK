@@ -123,12 +123,23 @@ describe('WeekLog.skipped — eventTimeCost (계획 화면이 이걸 몰라 거�
 
   it('timeCost=1 — 꼬리 슬롯이 잘려 나가므로 그 활동은 기록되지 않는다', () => {
     // 위와 같은 상태에 timeCost만 1. 슬롯을 자르지 않으면 예체능이 돈 부족으로 걸린다 —
-    // 즉 이 단언이 꼬리 슬라이스를 실제로 잠근다.
+    // 즉 이 단언이 꼬리 슬라이스를 실제로 잠근다. 잘리는 건 **일요일 칸**이다(칸 수 기준).
     const s = makeState({
       money: 3, year: 1, isVacation: false, week: 3,
       routineSlot2: 'academy', routineSlot3: null, eventTimeCost: 1,
     });
-    expect(run(s, ['art-lesson']).moneyIds, '잘려 나간 슬롯을 돈 부족으로 잘못 기록했다').toEqual([]);
+    expect(run(s, ['', 'art-lesson']).moneyIds, '잘려 나간 슬롯을 돈 부족으로 잘못 기록했다').toEqual([]);
+  });
+
+  it('timeCost=1 — 일요일을 비운 주는 빈 일요일이 잘리고 토요일 활동은 돈다(배열 길이가 아니라 칸 수)', () => {
+    // 예전엔 배열 길이로 잘라 `['art-lesson']`(토요일만)의 토요일이 지워졌다 — 같은 화면이 저장 모양에 따라
+    // 갈렸다(약속 칸 경고 3자 검수). 토요일이 돌면 잔액 부족으로 money 기록이 남는다.
+    const s = makeState({
+      money: 3, year: 1, isVacation: false, week: 3,
+      routineSlot2: 'academy', routineSlot3: null, eventTimeCost: 1,
+    });
+    expect(run(s, ['art-lesson']).moneyIds, '토요일이 잘렸다').toEqual(['art-lesson']);
+    expect(run(s, ['art-lesson', '']).moneyIds, '저장 모양과 무관').toEqual(['art-lesson']);
   });
 
   it('timeCost=1 — 루틴 저녁 슬롯(slot3)은 아예 시도되지 않는다', () => {

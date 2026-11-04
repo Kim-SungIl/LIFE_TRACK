@@ -14,6 +14,7 @@ import { predictWeekOutcome } from './gameEngine';
 import { josa } from './korean';
 import { getCurrentMonthPlan, getPlannedWeek } from './monthPlan';
 import { isNpcEnrolled, isNpcInteractable } from './relationshipSignals';
+import { choicesAfterTimeCost, slotCountFor } from './slotCount';
 import { getAvailableHomeEvents, getAvailableNpcEvents, getEligibleParentClimax } from './talkSystem';
 import { STAT_LABELS } from './types';
 import { getConfirmGate } from './weekendPlan';
@@ -200,7 +201,7 @@ export function recordWeek(pre: GameState, post: GameState, auto: boolean): Mont
   // 주말(방학) 칸은 뒤에서부터 timeCost개를 지운다(applyWeekendActivities). 꼬리만 잘린 여러 칸 활동은 그대로 돌므로
   // 남은 칸에 같은 id가 있으면 빠진 걸로 세지 않는다.
   const plannedChoices = (pre.isVacation ? pre.vacationChoices : pre.weekendChoices) ?? [];
-  const kept = plannedChoices.slice(0, Math.max(0, plannedChoices.length - timeCost));
+  const kept = choicesAfterTimeCost(plannedChoices, slotCountFor(pre.parents, pre.isVacation), timeCost);
   const choiceCut = new Set(plannedChoices.slice(kept.length).filter(id => id && !kept.includes(id))).size;
   return {
     week: pre.week,

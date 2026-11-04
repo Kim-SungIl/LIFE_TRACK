@@ -12,6 +12,7 @@ import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
+import { choicesAfterTimeCost, slotCountFor } from './slotCount';
 import { activityFatigueDelta, isTiredEntry } from './mentalRules';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
@@ -1105,8 +1106,9 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
 // — 학기 목표 기록(T68)이 읽는다. 동작 불변.
 function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number): ActivityInstance[] {
   const rawChoices = state.isVacation ? state.vacationChoices : state.weekendChoices;
-  // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개, 2=마지막 2개) → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push
-  const slicedChoices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
+  // timeCost: 뒤에서부터 **칸** 제거 (1=마지막 1칸, 2=마지막 2칸) → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push.
+  // 배열 길이가 아니라 칸 수 기준 — 일요일을 비운 주에 토요일이 잘리지 않게(choicesAfterTimeCost).
+  const slicedChoices = choicesAfterTimeCost(rawChoices, slotCountFor(state.parents, state.isVacation), timeCost);
   // 2칸 활동의 같은 id 인접 중복을 1 인스턴스로 collapse
   const instances = collapseActivityChoicesWithSlots(slicedChoices);
   const choices = instances.map(inst => inst.id);
