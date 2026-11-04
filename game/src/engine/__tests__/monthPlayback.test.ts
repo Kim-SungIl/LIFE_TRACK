@@ -462,6 +462,15 @@ describe('주 기록 — recordWeek', () => {
     expect(recordWeek(p2, post(p2), true)).toMatchObject({ timeCost: 2, routineMissed: 2, choiceMissed: 2 });
   });
 
+  it('시간 소모는 배열 끝이 아니라 마지막 칸부터 지운다 — 토요일만 채운 주는 빈 일요일이 빠져 놓친 칸이 없다(엔진과 같은 근거)', () => {
+    const sat = pre({ eventTimeCost: 1, weekendChoices: ['reading'] });
+    expect(recordWeek(sat, post(sat), true).choiceMissed, '토요일을 놓친 칸으로 셌다').toBe(0);
+    const sun = pre({ eventTimeCost: 1, weekendChoices: ['', 'reading'] });
+    expect(recordWeek(sun, post(sun), true).choiceMissed).toBe(1);
+    const vac = at(21, { eventTimeCost: 1, vacationChoices: ['rest', 'reading', 'creative'] });
+    expect(recordWeek(vac, post(vac), true).choiceMissed, '방학 빈 꼬리 칸').toBe(0);
+  });
+
   it('슬롯3이 비면 시간 소모 1은 루틴을 안 지운다 · 방학엔 루틴이 없다 · 꼬리만 잘린 여러 칸 활동은 빠진 게 아니다', () => {
     const p = pre({ eventTimeCost: 1, routineSlot3: null });
     expect(recordWeek(p, post(p), true).routineMissed).toBe(0);
