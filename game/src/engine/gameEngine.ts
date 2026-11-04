@@ -1422,6 +1422,11 @@ export interface WeekPreview {
   skipped: SkippedActivity[];
   /** 이 계획으로 그 주를 마친 뒤의 잔액 — 확정 잠금이 "다음 주부터의 예약(봉투)을 침범하나"를 본다. */
   moneyAfter: number;
+  /**
+   * 이번 주 약속(수락한 친구 초대)을 지키는가 — 확정과 같은 판정(settlePromisesForWeek)이 남긴 기록.
+   * 화면이 칸·동행을 대조해 흉내 내면 eventTimeCost·돈으로 잘리는 칸을 놓친다(skipped와 같은 이유).
+   */
+  promises: { npcId: string; kept: boolean }[];
 }
 
 export function predictWeekOutcome(
@@ -1453,6 +1458,7 @@ export function predictWeekOutcome(
     burnoutRisk: fatigueAfter >= 80,
     skipped: after.weekLog?.skipped ?? [],
     moneyAfter: after.money,
+    promises: after.weekLog?.promises ?? [],
   };
 }
 

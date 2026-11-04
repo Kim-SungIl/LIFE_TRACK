@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
 import { getPlannedWeek, plannedWeekCost } from '../../../engine/monthPlan';
-import { weekInviteFor } from '../../../engine/monthInvites';
+import { answeredInvites, weekInviteFor } from '../../../engine/monthInvites';
 import { npcsToContinueTalk, talkBankCount } from '../../../engine/monthPlayback';
 import { josa } from '../../../engine/korean';
 import { playSfx } from '../../../audio/sfx';
@@ -350,6 +350,23 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
     setNpcChoices(pinned.npcChoices);
   };
 
+  // 이번 주 약속을 못 지키는 계획 — 수락한 칸을 바꾸거나 동행을 바꾸면 아무 말 없이 −2였다(#550 검수 백로그).
+  // 판정은 엔진 미리보기(확정과 같은 settlePromisesForWeek)가 하고, 화면은 그 약속이 **칸이 바뀌어서**인지만 가린다 —
+  // 칸이 그대로인데 못 지키면(이번 주 사건으로 꼬리 칸이 빠지는 등) 되돌릴 칸이 없으니 이유만 말한다.
+  // 확정은 막지 않는다 — 약속을 어기는 것도 플레이어의 선택이다.
+  const brokenPromises = useMemo(() => answeredInvites(state)
+    .filter(a => a.accepted && a.week === state.week && weekPreview.promises.some(p => p.npcId === a.npcId && !p.kept))
+    .map(invite => ({
+      invite,
+      moved: selectedActivities[invite.slotIdx] !== invite.activityId || npcChoices[`${invite.activityId}:${invite.slotIdx}`] !== invite.npcId,
+    })), [state, weekPreview, selectedActivities, npcChoices]);
+  const restorePromise = (inv: MonthInvite) => {
+    playSfx('tap');
+    const pinned = pinCompanionSlot({ activities: selectedActivities, npcChoices }, inv.slotIdx, inv.activityId, inv.npcId);
+    setSelectedActivities(pinned.activities);
+    setNpcChoices(pinned.npcChoices);
+  };
+
   const handleTalkNpc = (npcId: string) => {
     const r = onTalkNpc(npcId);
     if (r.kind === 'event') { setMiniTalkResult(r.event); setNpcSmalltalk(null); }
@@ -527,6 +544,34 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
         maxSlots={maxSlots}
         onRepeatLastPlan={canRepeatPlan ? handleRepeatPlan : undefined}
       />
+
+      {brokenPromises.length > 0 && (
+        <div data-testid="promise-warning" role="status" style={{
+          background: chipSurface('rgba(217,100,88,0.15)'), border: '1px solid rgba(217,100,88,0.3)',
+          borderRadius: 10, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem',
+          color: 'var(--red)', lineHeight: 1.6, display: 'flex', flexDirection: 'column', gap: 6,
+        }}>
+          {brokenPromises.map(({ invite, moved }) => {
+            const name = state.npcs.find(n => n.id === invite.npcId)?.name ?? invite.npcId;
+            const day = state.isVacation ? '그날' : invite.slotIdx === 0 ? '토요일' : '일요일';
+            return (
+              <div key={invite.npcId} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ flex: '1 1 180px' }}>
+                  {moved
+                    ? `💔 이대로면 ${josa(name, '와/과')} 한 약속을 못 지킨다 — ${day}은 ${josa(name, '와/과')} 보내기로 했다.`
+                    : `💔 이번 주 일정에 밀려 ${josa(name, '와/과')} 한 약속을 못 지킨다.`}
+                </span>
+                {moved && (
+                  <button type="button" className="btn-reset" data-testid={`promise-restore-${invite.npcId}`} onClick={() => restorePromise(invite)} style={{
+                    minHeight: 36, padding: '4px 12px', borderRadius: 8, textAlign: 'center', fontWeight: 700,
+                    border: '1px solid var(--accent)', color: 'var(--text-primary)', background: 'transparent',
+                  }}>↩ 약속대로 되돌리기</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* 슬롯 편집 팝업 */}
       {editingSlot && (
