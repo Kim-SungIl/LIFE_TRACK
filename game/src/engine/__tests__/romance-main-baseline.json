@@ -444,22 +444,22 @@
         "social": 89.7,
         "talent": 80.4,
         "mental": 84.7,
-        "health": 73.6
+        "health": 73.8
       },
-      "endingHash": "ac2cafc943b882d6acdf0d0c44cee8936dcd545456a05615d54837fa21387e06"
+      "endingHash": "40b229fb98f48552c04d50a79123cc9bbf191d06278e568315c9d00f7bd3fe91"
     },
     {
       "gender": "male",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 84.8,
+        "academic": 85.2,
         "social": 87.3,
         "talent": 81.1,
         "mental": 89.5,
-        "health": 73.8
+        "health": 74.1
       },
-      "endingHash": "bb99ff61a2d906f849d6f9e0349d42af96ae5334241b7e3376e524bd3f4c24e2"
+      "endingHash": "77a6c72fee805f29f63fa9095beebe3855fb13a50918ccffe81309be84e42c2f"
     },
     {
       "gender": "male",
@@ -480,38 +480,38 @@
       "seed": 7,
       "stats": {
         "academic": 89.6,
-        "social": 89,
+        "social": 89.4,
         "talent": 81.2,
         "mental": 88.4,
         "health": 79
       },
-      "endingHash": "c2ec39eece8148f38c9fe666687d6120ad91d115b370e870308af373bc3ab8e3"
+      "endingHash": "6ecab3e8cd000400d16c31b60bb379154a3cfc4eedecba3cd9475265fb03e7ad"
     },
     {
       "gender": "female",
       "plan": "free",
       "seed": 1,
       "stats": {
-        "academic": 84.3,
+        "academic": 84.4,
         "social": 89.6,
         "talent": 80.4,
         "mental": 84.7,
-        "health": 73.6
+        "health": 73.8
       },
-      "endingHash": "dfe5e99d0a335c1a555504ececdf5cbaa7d96a2847a55335051b4592db99b385"
+      "endingHash": "fbbb203525867b02f3445c8b4651a25c7429fe7b1b6a5f554351e2bfdf6173fb"
     },
     {
       "gender": "female",
       "plan": "free",
       "seed": 7,
       "stats": {
-        "academic": 85,
+        "academic": 85.4,
         "social": 87.2,
         "talent": 81.1,
         "mental": 89.5,
-        "health": 73.8
+        "health": 74.1
       },
-      "endingHash": "ac8e809c1a63e6d2eed42578e704792434728161a7decc9c5d70627b8f2346ca"
+      "endingHash": "af00eaaa777ccb73b4064edaba25c24761055fa5acc83aba914c4464a99f310e"
     },
     {
       "gender": "female",

@@ -62,6 +62,9 @@
 // 데이터의 그 칸뿐이다. 6판 모두 첫 도달 컷 다음 계획 시점(paid 29번째·free-talk 9번째)부터 지문이 갈린다. 카운터는
 // paid/seed7000003·free-talk 2판 동일, 나머지 3판(paid/seed20261020·paid-spend 2판)은 사건 수 +5/−3/+1·동행 주 59→53처럼
 // 사건 흐름이 바뀐 몫만 움직였다. 두 번 기록해 파일 바이트 동일.
+// 재생성 10 (2026-11-04, 시간 소모 칸 기준 자르기 — slotCount.choicesAfterTimeCost, 의도된 동작 변경): 사건의 시간 소모가
+// 선택 배열의 **끝**이 아니라 **마지막 칸**부터 지운다(토요일만 채운 주에 토요일이 지워지던 것). paid·free-talk 4판이
+// 167번째 계획 시점(Y4 W24)부터 지문이 갈리고 카운터는 6판 모두 동일, paid-spend 2판은 바이트 동일. 두 번 기록해 파일 바이트 동일.
 import { readFileSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import {

@@ -14,3 +14,15 @@ export const VACATION_BASE_SLOTS = 5;
 export function slotCountFor(parents: readonly ParentStrength[], isVacation: boolean): number {
   return isVacation ? VACATION_BASE_SLOTS + getParentMods(parents).vacationSlotBonus : SEMESTER_WEEKEND_SLOTS;
 }
+
+/**
+ * 시간 소모(`timeCost`)로 칸이 빠진 뒤 남는 선택 — **칸 수 기준으로** 뒤에서부터 지운다(1=일요일, 2=토·일).
+ *
+ * 배열 길이로 자르면 같은 화면이 저장 모양에 따라 갈린다: 토요일만 채운 주는 `['hang-out']`(길이 1)로 남아
+ * 빈 일요일 대신 **토요일이** 잘렸고, `['hang-out','']`이나 일요일을 채운 주는 일요일이 잘렸다(3자 검수, 약속 칸 경고).
+ * 그래서 칸 수만큼 빈 칸으로 채운 뒤 자른다. 반환 길이 = `max(0, 칸 수 − timeCost)`(칸 수보다 긴 입력은 그 길이 기준).
+ */
+export function choicesAfterTimeCost(choices: readonly string[], slots: number, timeCost: number): string[] {
+  const padded = Array.from({ length: Math.max(slots, choices.length) }, (_, i) => choices[i] || '');
+  return timeCost > 0 ? padded.slice(0, Math.max(0, padded.length - timeCost)) : padded;
+}

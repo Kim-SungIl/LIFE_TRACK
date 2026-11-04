@@ -12,6 +12,7 @@ import { scaleIntimacyChange, applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { recordMilestoneForYear } from './memorySystem';
 import { getParentMods } from './parentModifiers';
+import { choicesAfterTimeCost, slotCountFor } from './slotCount';
 import { activityFatigueDelta, isTiredEntry } from './mentalRules';
 import { applyParentIntimacyDelta, applyParentMeanReversion, examParentEffect } from './parentIntimacy';
 import { migrateLoadedState } from './stateMigration';
@@ -1105,8 +1106,9 @@ function applyRoutineActivities(state: GameState, log: WeekLog, timeCost: number
 // — 학기 목표 기록(T68)이 읽는다. 동작 불변.
 function applyWeekendActivities(state: GameState, log: WeekLog, timeCost: number): ActivityInstance[] {
   const rawChoices = state.isVacation ? state.vacationChoices : state.weekendChoices;
-  // timeCost: 뒤에서부터 슬롯 제거 (1=마지막 1개, 2=마지막 2개) → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push
-  const slicedChoices = timeCost > 0 ? rawChoices.slice(0, Math.max(0, rawChoices.length - timeCost)) : rawChoices;
+  // timeCost: 뒤에서부터 **칸** 제거 (1=마지막 1칸, 2=마지막 2칸) → 꼬리 잘린 2칸 활동은 collapse에서 1회만 push.
+  // 배열 길이가 아니라 칸 수 기준 — 일요일을 비운 주에 토요일이 잘리지 않게(choicesAfterTimeCost).
+  const slicedChoices = choicesAfterTimeCost(rawChoices, slotCountFor(state.parents, state.isVacation), timeCost);
   // 2칸 활동의 같은 id 인접 중복을 1 인스턴스로 collapse
   const instances = collapseActivityChoicesWithSlots(slicedChoices);
   const choices = instances.map(inst => inst.id);
@@ -1422,6 +1424,11 @@ export interface WeekPreview {
   skipped: SkippedActivity[];
   /** 이 계획으로 그 주를 마친 뒤의 잔액 — 확정 잠금이 "다음 주부터의 예약(봉투)을 침범하나"를 본다. */
   moneyAfter: number;
+  /**
+   * 이번 주 약속(수락한 친구 초대)을 지키는가 — 확정과 같은 판정(settlePromisesForWeek)이 남긴 기록.
+   * 화면이 칸·동행을 대조해 흉내 내면 eventTimeCost·돈으로 잘리는 칸을 놓친다(skipped와 같은 이유).
+   */
+  promises: { npcId: string; kept: boolean }[];
 }
 
 export function predictWeekOutcome(
@@ -1453,6 +1460,7 @@ export function predictWeekOutcome(
     burnoutRisk: fatigueAfter >= 80,
     skipped: after.weekLog?.skipped ?? [],
     moneyAfter: after.money,
+    promises: after.weekLog?.promises ?? [],
   };
 }
 
