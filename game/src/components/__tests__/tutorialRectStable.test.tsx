@@ -45,12 +45,16 @@ describe('튜토리얼 rAF 추적', () => {
     expect(commits(), '정지한 타깃에 60프레임 동안 리렌더').toBe(settled);
   });
 
-  it('tutorial_rect_moved: 타깃이 움직이면 다시 그린다', () => {
+  // 축마다 따로 — 한 축만 움직이면 다른 축의 비교를 지워도 초록이다(3자 검수: top만 바꾸던 초안은
+  // 폭·높이·left 비교를 지워도 통과했다). 제자리에서 펼쳐지는 타깃(높이·폭만 변함)이 rAF 추적의 이유다.
+  it.each([
+    ['top', 140], ['left', 60], ['width', 260], ['height', 300],
+  ] as const)('tutorial_rect_moved(%s): 그 축만 바뀌어도 다시 그린다', (axis, value) => {
     const { box, frames, commits } = setup();
     const settled = commits();
-    box.top = 140;
+    box[axis] = value;
     frames(2);
-    expect(commits(), '움직인 타깃을 놓쳤다').toBeGreaterThan(settled);
+    expect(commits(), `${axis}만 바뀐 타깃을 놓쳤다`).toBeGreaterThan(settled);
   });
 
   it('tutorial_viewport_changed: 뷰포트 높이만 바뀌어도 다시 그린다(말풍선 배치가 innerHeight를 읽는다)', () => {
