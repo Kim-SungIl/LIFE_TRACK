@@ -23,13 +23,21 @@ export function Tutorial({ onComplete, routineSet = false, steps = STEPS }: Prop
   const current = steps[step];
   const isLast = step === steps.length - 1;
 
+  // 인터랙티브 스텝은 rAF로 매 프레임 이걸 부른다 — 좌표가 그대로면 이전 rect를 유지해 리렌더를 건너뛴다.
+  // 말풍선 배치는 window.innerHeight도 직접 읽으므로(placeTooltip) 뷰포트 높이가 바뀐 프레임은 건너뛰지 않는다
+  // (모바일 주소창 접힘·회전: 타깃 rect는 그대로인데 말풍선만 옮겨야 한다).
+  const lastViewportH = useRef(0);
   const updateRect = useCallback(() => {
     const el = document.querySelector(`[data-tutorial="${current.target}"]`);
-    if (el) {
-      setRect(el.getBoundingClientRect());
-    } else {
-      setRect(null);
-    }
+    const next = el ? el.getBoundingClientRect() : null;
+    const viewportChanged = window.innerHeight !== lastViewportH.current;
+    lastViewportH.current = window.innerHeight;
+    setRect(prev => (
+      !viewportChanged && prev && next
+        && prev.top === next.top && prev.left === next.left
+        && prev.width === next.width && prev.height === next.height
+        ? prev : next
+    ));
   }, [current.target]);
 
   useEffect(() => {
