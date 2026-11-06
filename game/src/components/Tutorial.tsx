@@ -41,7 +41,6 @@ export function Tutorial({ onComplete, routineSet = false, steps = STEPS }: Prop
   }, [current.target]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- DOM 측정값(rect) 동기화, 외부 레이아웃 읽기
     updateRect();
     const timer = setTimeout(updateRect, 100);
     window.addEventListener('scroll', updateRect, true);
