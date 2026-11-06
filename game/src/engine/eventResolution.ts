@@ -236,7 +236,7 @@ export function recordResolvedEvent(state: GameState, event: GameEvent, choiceIn
   delete recordedEvent.vacationText;
   // presentedFemaleChoices는 바로 아래 resolvedFemale로 접어 넣으므로 원본은 남기지 않는다.
   delete recordedEvent.presentedFemaleChoices;
-  state.events.push({
+  const record: GameEvent = {
     ...(recordedEvent as GameEvent),
     resolvedChoice: choiceIndex,
     week: occurrenceWeek,
@@ -247,7 +247,20 @@ export function recordResolvedEvent(state: GameState, event: GameEvent, choiceIn
     resolvedFemale: isFemale && (
       !!event.femaleChoices || (event.presentedFemaleChoices?.includes(choiceIndex) ?? false)
     ),
-  });
+  };
+  // cloneGameState는 기록 레코드를 복제하지 않고 공유한다(stateClone.ts). 그래서 레코드는 처음부터
+  // 깊은 복사가 만들던 모양이어야 한다 — 선택지의 condition 같은 함수·undefined 키를 여기서 한 번 걷는다.
+  // 개발·테스트에서는 얼려서, 누가 레코드를 제자리에서 바꾸면 그 자리에서 던지게 한다(공유의 전제).
+  const normalized = JSON.parse(JSON.stringify(record)) as GameEvent;
+  state.events.push(import.meta.env?.DEV ? deepFreeze(normalized) : normalized);
+}
+
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const v of Object.values(value)) deepFreeze(v);
+  }
+  return value;
 }
 
 // 이벤트 종료 후 연쇄: followup → conditional/milestone chain(주당 cap) → 학년전환/주간결산 분기.
