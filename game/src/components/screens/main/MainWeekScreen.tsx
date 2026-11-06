@@ -328,7 +328,10 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
 
   // 친구 초대(계획을 안 짠 달) — 계획 화면에만 있어서 주간으로 진행하면 같은 주차여도 초대가 안 떴다(2026-11-02 사용자 지적).
   // 이번 주에 잡힌 초대를 플래너 위에 띄운다. 답은 바로 확정이고, 수락하면 그 칸에 활동과 동행을 넣는다.
-  const weekInvite = monthly && !monthly.hasPlan && monthly.onAnswerInvite ? weekInviteFor(state) : null;
+  // weekInviteFor는 부를 때마다 새 객체를 낸다 — 그대로 두면 아래 inviteUnaffordable 메모가 매 렌더 깨져
+  // 미리보기(한 주 시뮬레이션)를 렌더마다 다시 돌렸다. monthly는 매 렌더 새 객체라 deps에는 불리언으로 푼다.
+  const inviteOn = !!monthly && !monthly.hasPlan && !!monthly.onAnswerInvite;
+  const weekInvite = useMemo(() => (inviteOn ? weekInviteFor(state) : null), [inviteOn, state]);
   // 수락하면 돈 때문에 확정이 잠기는가 — 답은 바로 확정이라, 눌러 놓고 잠기면 남는 길이 칸을 빼는 −2뿐이었다(3자 검수).
   // 계획 화면이 저장 단계에서 막는 것과 같은 판정을 엔진에 묻는다(그 칸을 고정한 초안으로 미리보기 → 확정 잠금).
   // 원래 잠겨 있던 판은 이 초대 활동이 돈에 걸릴 때만 막는다(무료 같이 공부하기까지 막을 이유는 없다).
