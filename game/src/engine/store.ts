@@ -11,7 +11,7 @@ import {
 import { getMonthBlock } from './weekMath';
 import { applyDeclinedInvites, isWeekAnswered, validateInviteAnswers, weekInviteAnswers, weekInviteFor } from './monthInvites';
 import { migrateLoadedState, runSaveMigrations, CURRENT_SAVE_VERSION } from './stateMigration';
-import { cloneGameState } from './stateClone';
+import { adoptEventRecord, cloneGameState } from './stateClone';
 import {
   resolveCurrentEvent, talkToNpcOutcome, visibleSnapshot, accruePendingDelta, applyVisibleTalkEffects, spendTalkBank,
   type AppliedEventOutcome, type TalkActionResult,
@@ -547,12 +547,16 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const s = get().state;
     if (!s || s.currentEvent || !resumedRomancePlan(s)) return;
     const next = cloneGameState(s);
-    for (const event of next.events) {
+    // 기록 레코드는 이전 state와 공유된다(stateClone.ts) — 제자리에서 지우지 말고 새 객체로 갈아 끼우고, 채택해 둔다.
+    next.events = next.events.map(event => {
       if (romanceRetryNpc(event.id) && event.year === s.year && event.week === s.week
           && event.romanceReturnPhase === s.phase && event.resolvedChoice !== undefined) {
-        delete event.romancePlan;
+        const rest = { ...event };
+        delete rest.romancePlan;
+        return adoptEventRecord(rest);
       }
-    }
+      return event;
+    });
     set({ state: next });
   },
 

@@ -1252,7 +1252,12 @@ export function foldPendingIntoLog(state: GameState, log: WeekLog): void {
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
 export function processWeek(state: GameState, npcActivityMap?: Record<string, string>): GameState {
-  const newState = migrateLoadedState(cloneGameState(state)) as GameState;
+  return processOwnedWeek(migrateLoadedState(cloneGameState(state)) as GameState, npcActivityMap);
+}
+
+// processWeek 본체 — 인자를 **제자리에서** 진행시킨다. 호출자가 이미 복제해 소유한 사본만 넘길 것
+// (predictWeekOutcome은 루틴비를 내려고 한 번 복제하는데, processWeek를 부르면 같은 상태를 또 복제했다).
+function processOwnedWeek(newState: GameState, npcActivityMap?: Record<string, string>): GameState {
   // 피로 로그의 기준점 — 주 확정 전 효과(말걸기·상점)는 이미 state에 반영돼 있고 그 몫은
   // 보류분(pendingWeekDelta)이 따로 실제 델타로 들고 있다. 아래 끝에서 (지금 → 확정 후) 차이를
   // 적고, 그 뒤에 보류분을 더해야 "주 시작 → 확정 후" 전체가 된다.
@@ -1444,7 +1449,8 @@ export function predictWeekOutcome(
   // 돈 스킵이 실제 확정과 같다. 원본을 건드리지 않게 복제해서 낸다.
   const paid = cloneGameState(input);
   payRoutineIfDue(paid);
-  const after = processWeek(paid, npcActivityMap);
+  // paid는 여기서 만든 사본이라 다시 복제하지 않는다 — processWeek와 같은 재수화(migrate) 뒤 같은 본체.
+  const after = processOwnedWeek(migrateLoadedState(paid) as GameState, npcActivityMap);
   const fatigueBefore = Math.round(state.fatigue);
   const fatigueAfter = Math.round(after.fatigue);
   const STAT_KEYS: StatKey[] = ['academic', 'social', 'health', 'talent', 'mental'];

@@ -11,6 +11,7 @@ import { hashInitialState, deriveTalkSeed } from './rng';
 import { GAME_EVENTS } from './events';
 import { SCHOOL_LIFE_EVENTS } from './events/school-life';
 import { absWeek } from './weekMath';
+import { adoptEventRecords } from './stateClone';
 import { presentEvent } from './eventPresentation';
 import { buildCareerChoiceEvent, CAREER_CHOICE_EVENT_ID } from './careerChoice';
 // 순환 import(gameEngine → stateMigration)지만 함수 선언을 호출 시점에만 쓰므로 안전하다.
@@ -171,6 +172,9 @@ export function migrateLoadedState(state: GameState): GameState {
   }));
   const result: GameState = {
     ...state,
+    // 기록 레코드 채택 — 세이브에서 읽은 기록은 아직 공유 표시가 없어, 그대로 두면 로드 뒤 매 복제가 기록을
+    // 다시 복사한다(stateClone.ts). 채택된 레코드는 그대로 지나가므로 매주 processWeek에서 불려도 싸다.
+    ...(Array.isArray(state.events) ? { events: adoptEventRecords(state.events) } : {}),
     parents: migratedParents,
     relationship: sanitizeRelationship(state.relationship, state.gender),
     npcs: migratedNpcs,

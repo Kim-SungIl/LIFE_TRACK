@@ -10,7 +10,7 @@ import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, roma
 import type { GameState, GameEvent, EventChoice, StatKey } from './types';
 import { scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { npcTalkFires, talkBankCount } from './monthPlayback';
-import { cloneGameState } from './stateClone';
+import { adoptEventRecord, cloneGameState } from './stateClone';
 import { getChainFollowup, pickChainForWeek, recordSummerVacationEnd, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { assignCurrentEvent } from './eventPresentation';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from './memorySystem';
@@ -236,7 +236,7 @@ export function recordResolvedEvent(state: GameState, event: GameEvent, choiceIn
   delete recordedEvent.vacationText;
   // presentedFemaleChoices는 바로 아래 resolvedFemale로 접어 넣으므로 원본은 남기지 않는다.
   delete recordedEvent.presentedFemaleChoices;
-  state.events.push({
+  const record: GameEvent = {
     ...(recordedEvent as GameEvent),
     resolvedChoice: choiceIndex,
     week: occurrenceWeek,
@@ -247,7 +247,10 @@ export function recordResolvedEvent(state: GameState, event: GameEvent, choiceIn
     resolvedFemale: isFemale && (
       !!event.femaleChoices || (event.presentedFemaleChoices?.includes(choiceIndex) ?? false)
     ),
-  });
+  };
+  // cloneGameState는 채택된 기록 레코드를 복제하지 않고 공유한다(stateClone.ts) — 여기서 바로 채택해 넣는다
+  // (선택지의 condition 같은 함수·undefined 키를 걷고, 개발·테스트에서는 얼린다).
+  state.events.push(adoptEventRecord(record));
 }
 
 // 이벤트 종료 후 연쇄: followup → conditional/milestone chain(주당 cap) → 학년전환/주간결산 분기.
