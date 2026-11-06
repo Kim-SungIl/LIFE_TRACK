@@ -16,7 +16,9 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # 러너는 24.04로 고정 — ubuntu-latest가 26.04로 넘어가자(2026-11-04) Playwright 1.59.1이 크로미움을 못 깔아 설치 스텝에서 멈췄다.
+    # Playwright가 26.04를 지원하는 버전으로 올라갈 때 함께 풀 것.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -174,7 +176,7 @@ jobs:
   # build와 독립 병렬로 돌되, deploy가 둘 다에 의존한다 (2026-07-13 게이트 승격).
   # 이전엔 PR 체크 전용이었으나 main 직접 push 시 검증 없이 배포되는 구멍이 있어 배포 게이트로 전환.
   content-verify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -201,7 +203,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: [build, content-verify]
     steps:
       - uses: actions/deploy-pages@v4

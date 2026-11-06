@@ -26,7 +26,9 @@ jobs:
   # 여기가 붉어도 배포는 막히지 않는다 — 여기서 잡는 것은 "어제까지 멀쩡하던 후반부 화면이
   # 오늘 빌드에서 안 뜬다"이고, 그 신호는 PR을 세우는 대신 다음 날 아침에 읽는다.
   nightly-e2e:
-    runs-on: ubuntu-latest
+    # 러너는 24.04로 고정 — ubuntu-latest가 26.04로 넘어가자(2026-11-04) Playwright 1.59.1이 크로미움을 못 깔아 설치 스텝에서 멈췄다.
+    # Playwright가 26.04를 지원하는 버전으로 올라갈 때 함께 풀 것.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
