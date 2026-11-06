@@ -10,7 +10,7 @@ import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, roma
 import type { GameState, GameEvent, EventChoice, StatKey } from './types';
 import { scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { npcTalkFires, talkBankCount } from './monthPlayback';
-import { cloneGameState } from './stateClone';
+import { adoptEventRecord, cloneGameState } from './stateClone';
 import { getChainFollowup, pickChainForWeek, recordSummerVacationEnd, applyReachReservation, FOLLOWUP_EVENT_IDS, DIRECT_SEQUEL_IDS } from './events';
 import { assignCurrentEvent } from './eventPresentation';
 import { applyMemorySlotFromChoice, applyMemorySlotFromMiniTalk } from './memorySystem';
@@ -248,19 +248,9 @@ export function recordResolvedEvent(state: GameState, event: GameEvent, choiceIn
       !!event.femaleChoices || (event.presentedFemaleChoices?.includes(choiceIndex) ?? false)
     ),
   };
-  // cloneGameState는 기록 레코드를 복제하지 않고 공유한다(stateClone.ts). 그래서 레코드는 처음부터
-  // 깊은 복사가 만들던 모양이어야 한다 — 선택지의 condition 같은 함수·undefined 키를 여기서 한 번 걷는다.
-  // 개발·테스트에서는 얼려서, 누가 레코드를 제자리에서 바꾸면 그 자리에서 던지게 한다(공유의 전제).
-  const normalized = JSON.parse(JSON.stringify(record)) as GameEvent;
-  state.events.push(import.meta.env?.DEV ? deepFreeze(normalized) : normalized);
-}
-
-function deepFreeze<T>(value: T): T {
-  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
-    Object.freeze(value);
-    for (const v of Object.values(value)) deepFreeze(v);
-  }
-  return value;
+  // cloneGameState는 채택된 기록 레코드를 복제하지 않고 공유한다(stateClone.ts) — 여기서 바로 채택해 넣는다
+  // (선택지의 condition 같은 함수·undefined 키를 걷고, 개발·테스트에서는 얼린다).
+  state.events.push(adoptEventRecord(record));
 }
 
 // 이벤트 종료 후 연쇄: followup → conditional/milestone chain(주당 cap) → 학년전환/주간결산 분기.
