@@ -1,6 +1,6 @@
 // 친구 초대 카드(monthInvites) — 월 계획 화면과 주간 화면(계획을 안 짠 달의 이번 주 초대)이 같이 쓴다.
 import { josa } from '../../../engine/korean';
-import { inviteLine, inviteVoice } from '../../../engine/talkData/inviteVoices';
+import { declineLine, inviteLine } from '../../../engine/talkData/inviteVoices';
 import type { MonthInvite } from '../../../engine/types';
 import { getWeekInfo, getWeekOfMonth } from '../../../engine/weekMath';
 
@@ -8,8 +8,10 @@ import { getWeekInfo, getWeekOfMonth } from '../../../engine/weekMath';
  * 친구 초대 카드 — 좋아(그 칸을 약속으로 고정) / 다음에(친밀도 −1).
  * 월 계획 화면에선 저장 전까지 답을 바꿀 수 있고, 주간 화면·주간에서 이미 답한 초대는 바로 확정이라 `locked`로 그린다.
  */
-export function InviteCard({ invite, answer, npcName, cost, onAnswer, locked = false, acceptBlocked }: {
+export function InviteCard({ invite, answer, npcName, cost, onAnswer, locked = false, acceptBlocked, dating = false }: {
   invite: MonthInvite; answer: boolean | undefined; npcName: string; cost: number; onAnswer: (accepted: boolean) => void;
+  /** 이 친구와 연애 중이다(romance.isDating) — 초대·거절 줄을 연인 말투로. 문장만 바뀐다. */
+  dating?: boolean;
   /** 답이 확정됐다 — 버튼을 잠그고 답한 쪽만 눌린 채로 둔다. */
   locked?: boolean;
   /** [좋아]만 잠그는 이유(주간 화면 — 수락하면 돈 때문에 확정이 잠긴다). 있으면 카드에 그 줄을 보인다. */
@@ -18,8 +20,8 @@ export function InviteCard({ invite, answer, npcName, cost, onAnswer, locked = f
   const vac = getWeekInfo(invite.week).isVacation;
   const when = `${getWeekOfMonth(invite.week)}주차 ${vac ? '하루' : invite.slotIdx === 0 ? '토요일' : '일요일'}`;
   // 친구마다 말투가 다르다(talkData/inviteVoices.ts) — 누가 불러도 같은 말이면 초대가 달마다 다른 요청이 못 된다.
-  const line = inviteLine(invite.npcId, invite.activityId, invite.week, when);
-  const decline = inviteVoice(invite.npcId).decline;
+  const line = inviteLine(invite.npcId, invite.activityId, invite.week, when, dating);
+  const decline = declineLine(invite.npcId, invite.week, dating);
   return (
     <section aria-label={`${npcName}의 초대`} data-testid={`invite-${invite.npcId}`} style={{
       background: 'var(--bg-card-hover)', border: '1px solid rgba(240,164,122,0.35)', borderRadius: 14,

@@ -10,6 +10,9 @@
 //   · 거절 반응(decline)은 작은 서운함까지만(친밀도 −1). 못 지킨 약속(broken)은 그보다 한 칸 무겁게(−2).
 //   · `{when}`은 "2주차 토요일" 같은 그 칸의 때로 바뀐다.
 //   · 문장 고르기는 결정론 — 초대 주차로 고른다(같은 초대를 다시 그려도 같은 말).
+//   · 연애 중(romance.isDating)인 상대는 ROMANCE_INVITE_VOICES의 줄을 쓴다 — 아래 "연인 말투" 참고.
+import type { RomanceNpc } from '../romance';
+
 export interface InviteVoice {
   /** 놀자는 초대(hang-out). */
   readonly hangOut: readonly string[];
@@ -109,9 +112,96 @@ export function inviteVoice(npcId: string): InviteVoice {
   return INVITE_VOICES[npcId] ?? DEFAULT_INVITE_VOICE;
 }
 
-/** 초대 한 줄 — 활동(놀기/공부)에 맞는 풀에서 초대 주차로 고른다(결정론). */
-export function inviteLine(npcId: string, activityId: string, week: number, when: string): string {
-  const v = inviteVoice(npcId);
-  const pool = activityId === 'study-group' ? v.study : v.hangOut;
-  return pool[week % pool.length].replace('{when}', when);
+// 연인 말투 — 사귀고 나면 평소 하던 초대·약속이 다르게 들리게 한다. 문장만 바뀐다: 친밀도·초대 빈도·보상·페널티는 그대로다.
+//
+// 실측(2026-11-07, 연애 sim 144판): 연애 중 상대의 초대는 한 판 평균 약 5.4회, 그중 공부가 약 22%다. 그래서 놀기는 4종,
+// 나머지는 2~4종이다. 연애 중엔 일반 줄과 섞지 않는다 — 섞으면 연인 줄을 보는 횟수가 두세 번으로 줄어 차이가 안 보인다.
+// 소재는 그 친구 것만 쓴다(수빈 = 영어 연습·승무원 꿈·하늘 사진, 지훈 = 운동·체대 준비·사진). 거절·못 지킨 약속은 서운함까지만 —
+// 플레이어에게 죄책감을 지우는 말("너 때문에")은 쓰지 않는다. 일반 표와 같은 규칙(반말, 달력·학교급·계절 단어 금지)을 따른다.
+export interface RomanceInviteVoice {
+  readonly hangOut: readonly string[];
+  readonly study: readonly string[];
+  readonly decline: readonly string[];
+  readonly kept: readonly string[];
+  readonly broken: readonly string[];
+}
+
+export const ROMANCE_INVITE_VOICES: Readonly<Record<RomanceNpc, RomanceInviteVoice>> = {
+  subin: {
+    hangOut: [
+      '"{when}에 데이트하자. 비행기 뜨는 거 보러 갈래? 나 그거 보면 기운 나."',
+      '"{when} 비워 줘. 하늘 잘 보이는 데 찾아 놨어. 사진은 네가 찍어 줘."',
+      '"{when}에 새로 생긴 카페 가 볼래? 이번엔 애들 말고 둘이서만."',
+      '"{when}엔 나랑 놀자. 단어장은 집에 두고 갈게. 약속."',
+    ],
+    study: [
+      '"{when}에 같이 공부하자. 끝나고 내 영어 자기소개 한 번만 들어 줘."',
+      '"{when}에 카페에서 공부할래? 네 옆자리면 집중이 더 잘 돼. 진짜로."',
+    ],
+    decline: [
+      '"아, 그날 안 돼? 알았어. 대신 다음 데이트 장소는 내가 정한다?"',
+      '"괜찮아, 바쁜 거 알아. 예쁜 하늘 보이면 사진 보내 줄게."',
+    ],
+    kept: [
+      '수빈이가 헤어지기 전에 "오늘 제일 좋았던 거, 영어로 말해 줄까?" 하더니 끝내 한국어로 말했다. 너랑 있던 거라고.',
+      '수빈이가 오늘 찍은 하늘 사진을 보내왔다. 사진 귀퉁이에 내 어깨가 조금 걸려 있었다.',
+      '수빈이는 꿈 얘기를 하다가도 자꾸 내 얘기를 물었다. "너 하고 싶은 것도 나 응원할 거야."',
+      '헤어질 때 수빈이가 손을 흔들다 말고 다시 돌아왔다. "다음 데이트도 약속이다."',
+    ],
+    broken: [
+      '수빈이한테 "괜찮아, 다음에 보자"라는 답장이 왔다. 그날은 하늘 사진이 오지 않았다.',
+      '수빈이는 혼자 발음 연습을 했다고 했다. "들어 줄 사람이 없으니까 좀 심심하더라."',
+    ],
+  },
+  jihun: {
+    hangOut: [
+      '"{when}에 데이트하자. 운동장 말고, 네가 가고 싶은 데로."',
+      '"{when}에 사진 찍으러 가자. 이번엔 풍경 말고 너 찍을래."',
+      '"{when} 비워 놔. 그날은 기록 안 재고 너랑 천천히 걸을래."',
+      '"{when}에 농구 보러 갈래? 규칙은 내가 설명해 줄게. 지루하면 바로 나오고."',
+    ],
+    study: [
+      '"{when}에 같이 공부하자. 너 옆이면 나 안 졸아. …아마도."',
+      '"{when}에 도서관 가자. 쉬는 시간엔 스트레칭 같이 하고."',
+    ],
+    decline: [
+      '"에이, 아쉽다. 알았어. 대신 답장은 빨리 해 줘야 돼?"',
+      '"그래, 그날은 운동이나 하지 뭐. 다음엔 내가 먼저 찜한다?"',
+    ],
+    kept: [
+      '지훈이가 오늘 찍은 사진을 보여 줬다. 거의 다 내가 찍혀 있었다. "풍경 찍으려다 실수한 거야."',
+      '헤어질 때 지훈이가 잡은 손을 한 번 더 꼭 쥐었다. 손끝이 조금 떨린 건 모른 척해 줬다.',
+      '지훈이는 체대 준비 얘기를 하다가도 내 얘기만 나오면 자세를 고쳐 앉았다.',
+      '지훈이가 집 앞까지 바래다줬다. "오늘 기록은 웃은 횟수였는데, 세다가 포기했어."',
+    ],
+    broken: [
+      '지훈이한테서 "알았어, 다음에 보자"라는 짧은 답장이 왔다. 이모티콘이 하나도 없었다.',
+      '지훈이는 혼자 운동장을 몇 바퀴 더 돌았다고 했다. "생각 정리하기엔 좋더라."',
+    ],
+  },
+};
+
+const romanceVoice = (npcId: string, dating: boolean): RomanceInviteVoice | undefined =>
+  dating && Object.hasOwn(ROMANCE_INVITE_VOICES, npcId) ? ROMANCE_INVITE_VOICES[npcId as RomanceNpc] : undefined;
+const pick = (pool: readonly string[], week: number) => pool[week % pool.length];
+
+/** 초대 한 줄 — 활동(놀기/공부)에 맞는 풀에서 초대 주차로 고른다(결정론). `dating`이면 연인 말투. */
+export function inviteLine(npcId: string, activityId: string, week: number, when: string, dating = false): string {
+  const v = romanceVoice(npcId, dating) ?? inviteVoice(npcId);
+  return pick(activityId === 'study-group' ? v.study : v.hangOut, week).replace('{when}', when);
+}
+
+/** 거절 반응 — 초대 주차로 고른다. */
+export function declineLine(npcId: string, week: number, dating = false): string {
+  return pick(romanceVoice(npcId, dating)?.decline ?? [inviteVoice(npcId).decline], week);
+}
+
+/** 약속을 지킨 주의 한 줄(📌 뒤) — 약속 주차로 고른다. */
+export function keptLine(npcId: string, week: number, dating = false): string {
+  return pick(romanceVoice(npcId, dating)?.kept ?? [inviteVoice(npcId).kept], week);
+}
+
+/** 약속을 못 지킨 주의 한 줄(💔 뒤) — 약속 주차로 고른다. */
+export function brokenLine(npcId: string, week: number, dating = false): string {
+  return pick(romanceVoice(npcId, dating)?.broken ?? [inviteVoice(npcId).broken], week);
 }
