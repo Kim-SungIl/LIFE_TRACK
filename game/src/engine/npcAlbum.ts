@@ -116,6 +116,21 @@ const ALBUM: Map<string, AlbumBucket[]> = (() => {
     }
   }
 
+  // 고백은 런타임에 추가되는 장면/선택지라 GAME_EVENTS 순회에 포함되지 않는다.
+  // 첫 고백과 재고백이 공유하는 CG는 고등학교 시절에 한 칸만 등록한다.
+  for (const [npcId, eventId, choiceIndex, gender, title] of [
+    ['subin', 'subin-hs-confess', 0, 'male', '수빈과 마음이 통한 순간'],
+    ['jihun', 'jihun-hs-unsaid', 3, 'female', '지훈과 마음이 통한 순간'],
+  ] as const) {
+    const path = resolveEventCgRelPaths(eventId, choiceIndex, gender, 6)[0];
+    if (!path) continue;
+    const buckets = perRoot.get(npcId)!;
+    const slots = buckets.get('high') ?? [];
+    slots.push({ eventId, choiceIndex, level: 'high', title,
+      male: gender === 'male' ? path : null, female: gender === 'female' ? path : null });
+    buckets.set('high', slots);
+  }
+
   // 버킷 순서: 학년 행을 먼저, 그 학교급의 "시절" 행을 그 뒤에. 슬롯이 0인 행은 만들지 않는다
   // (도윤은 초6 외 6개 학년이 0칸이고, 준하는 고3 하나뿐이다 — 없는 칸을 그리면 "못 모은 것"과
   //  "애초에 없는 것"이 구별되지 않는다).
