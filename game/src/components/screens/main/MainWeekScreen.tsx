@@ -3,6 +3,7 @@ import { getSpendableForPlanning } from '../../../engine/spendableMoney';
 import { incomeNote } from '../../../engine/monthlyMoney';
 import { getPlannedWeek, plannedWeekCost } from '../../../engine/monthPlan';
 import { answeredInvites, weekInviteFor } from '../../../engine/monthInvites';
+import { isDating } from '../../../engine/romance';
 import { npcsToContinueTalk, talkBankCount } from '../../../engine/monthPlayback';
 import { josa } from '../../../engine/korean';
 import { playSfx } from '../../../audio/sfx';
@@ -528,7 +529,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
         <div data-testid="week-invite" style={{ marginBottom: 10 }}>
           <InviteCard invite={weekInvite.invite} answer={weekInvite.accepted} locked={weekInvite.accepted !== undefined}
             npcName={state.npcs.find(n => n.id === weekInvite.invite.npcId)?.name ?? weekInvite.invite.npcId}
-            cost={plannedWeekCost([weekInvite.invite.activityId], state.year)} onAnswer={answerInvite}
+            cost={plannedWeekCost([weekInvite.invite.activityId], state.year)} onAnswer={answerInvite} dating={isDating(state, weekInvite.invite.npcId)}
             acceptBlocked={inviteUnaffordable ? '💰 지금은 돈이 모자라 약속할 수 없다' : undefined} />
         </div>
       )}
@@ -663,7 +664,7 @@ export function MainWeekScreen({ state, bgProps, initialPlan, onPlanRestored, on
             padding: '10px 14px 20px', maxHeight: '80dvh', overflowY: 'auto',
           }}
         >
-          <NpcRelationPanel state={state} onSelect={(id) => { setShowRelations(false); setNpcDetailFor(id); }} />
+          <NpcRelationPanel state={state} romanceRetryAvailable={!!onRetryRomance} onSelect={(id) => { setShowRelations(false); setNpcDetailFor(id); }} />
         </Dialog>
       )}
 

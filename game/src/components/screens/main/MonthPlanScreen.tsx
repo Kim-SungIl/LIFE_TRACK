@@ -17,6 +17,7 @@ import { getExamsInMonth, getNextMonthOpeningExam } from '../../../engine/examSy
 import { getRoutineDueCost, incomeNote, remainingSemesterWeeks } from '../../../engine/monthlyMoney';
 import { plannedWeekCost, slotCountForWeek } from '../../../engine/monthPlan';
 import { planInvites } from '../../../engine/monthInvites';
+import { isDating } from '../../../engine/romance';
 import { josa } from '../../../engine/korean';
 import { isNpcEnrolled } from '../../../engine/relationshipSignals';
 import { EXAM_TYPE_LABELS, type GameState, type MonthInvite, type MonthPlan } from '../../../engine/types';
@@ -355,7 +356,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         <div data-tutorial="month-invite" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {invites.map((inv, i) => (
             <InviteCard key={`${inv.npcId}-${inv.week}`} invite={inv} answer={answers[i]} npcName={npcName(inv.npcId)}
-              cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} locked={fixed[i] !== undefined} />
+              cost={plannedWeekCost([inv.activityId], state.year)} onAnswer={(a) => answer(i, a)} locked={fixed[i] !== undefined} dating={isDating(state, inv.npcId)} />
           ))}
         </div>
       )}

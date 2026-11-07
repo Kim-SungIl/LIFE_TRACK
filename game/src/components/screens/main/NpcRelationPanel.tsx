@@ -1,4 +1,4 @@
-import { isDating } from '../../../engine/romance';
+import { canStartRomanceRetry, isDating } from '../../../engine/romance';
 import { GameState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { relationshipSignal, npcAbsence } from '../../../engine/relationshipSignals';
@@ -8,12 +8,14 @@ import { npcsToContinueTalk } from '../../../engine/monthPlayback';
 type Props = {
   state: GameState;
   onSelect: (npcId: string) => void;
+  /** 상세 창에 [그때 이야기 꺼내기]가 이어져 있다 — 없으면 카드 표시도 하지 않는다(누를 곳 없는 안내 금지). */
+  romanceRetryAvailable?: boolean;
 };
 
 const SIGNAL_COLOR = { warn: '#d9a05b', good: '#8fb573', info: '#8a8078' } as const;
 
 // 만난 친구만 카드로 표시 — 클릭 시 상세 모달 오픈 (부모가 npcDetailFor 처리)
-export function NpcRelationPanel({ state, onSelect }: Props) {
+export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = false }: Props) {
   const metNpcs = state.npcs.filter(n => n.met);
   if (metNpcs.length === 0) return null;
 
@@ -75,6 +77,13 @@ export function NpcRelationPanel({ state, onSelect }: Props) {
                     {continueIds.has(n.id) && (
                       <div data-testid={`npc-continue-${n.id}`} style={{ fontSize: '0.65rem', color: 'var(--accent-soft)', marginTop: 3 }}>
                         💬 이어서 할 이야기가 있어요
+                      </div>
+                    )}
+                    {/* 재고백 — 상세 창 버튼과 같은 판정(canStartRomanceRetry). 알리기만 하고 진행을 멈추지는 않는다.
+                        💬 줄과 같은 색·크기라 이모지와 짧은 말로 가른다 — 누르면 이어지는 장면 제목('그때 하지 못한 말')과 같은 말. */}
+                    {romanceRetryAvailable && canStartRomanceRetry(state, n.id) && (
+                      <div data-testid={`npc-romance-retry-${n.id}`} style={{ fontSize: '0.65rem', color: 'var(--accent-soft)', marginTop: 3 }}>
+                        💌 그때 못 한 말
                       </div>
                     )}
                     {/* 관계 신호 — 방치/최근/임박. 숫자 대신 감각적 한 줄(없으면 미표시) */}

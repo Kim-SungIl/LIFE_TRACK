@@ -10,7 +10,8 @@
 // 답만 계획(MonthPlan.invites)에 남긴다. 저장할 때 엔진이 같은 함수로 다시 만들어 대조한다(지어낸 초대 거부).
 import { getExamSchedule, isExamPeriod } from './examSystem';
 import { josa } from './korean';
-import { inviteVoice } from './talkData/inviteVoices';
+import { brokenLine, keptLine } from './talkData/inviteVoices';
+import { isDating } from './romance';
 import { getCurrentMonthPlan } from './monthPlan';
 import { isNpcEnrolled } from './relationshipSignals';
 import { getMonthBlock, getWeekInfo } from './weekMath';
@@ -225,13 +226,14 @@ export function settlePromisesForWeek(
     const ran = applied.some(inst => inst.id === inv.activityId && inst.slots.includes(inv.slotIdx));
     const together = npcActivityMap?.[key] === inv.npcId;
     (log.promises ??= []).push({ npcId: npc.id, kept: ran && together });
+    const dating = isDating(state, npc.id);
     if (ran && together) {
-      log.messages.push(`📌 ${josa(npc.name, '와/과')} 한 약속을 지켰다. ${inviteVoice(npc.id).kept}`);
+      log.messages.push(`📌 ${josa(npc.name, '와/과')} 한 약속을 지켰다. ${keptLine(npc.id, inv.week, dating)}`);
     } else {
       // 만나지 못한 동행 몫은 없던 일이다 — 이 약속 칸 키로 오른 만큼 되돌린 뒤 −2.
       const undo = together ? (companionGained[key] ?? 0) : 0;
       npc.intimacy = Math.max(0, npc.intimacy - undo + PROMISE_BROKEN_PENALTY);
-      log.messages.push(`💔 ${josa(npc.name, '와/과')} 한 약속을 못 지켰다. ${inviteVoice(npc.id).broken}`);
+      log.messages.push(`💔 ${josa(npc.name, '와/과')} 한 약속을 못 지켰다. ${brokenLine(npc.id, inv.week, dating)}`);
     }
   }
 }
