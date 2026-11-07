@@ -79,10 +79,11 @@ export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = fals
                         💬 이어서 할 이야기가 있어요
                       </div>
                     )}
-                    {/* 재고백 — 상세 창 버튼과 같은 판정(canStartRomanceRetry). 알리기만 하고 진행을 멈추지는 않는다. */}
+                    {/* 재고백 — 상세 창 버튼과 같은 판정(canStartRomanceRetry). 알리기만 하고 진행을 멈추지는 않는다.
+                        💬 줄과 같은 색·크기라 이모지와 짧은 말로 가른다 — 누르면 이어지는 장면 제목('그때 하지 못한 말')과 같은 말. */}
                     {romanceRetryAvailable && canStartRomanceRetry(state, n.id) && (
                       <div data-testid={`npc-romance-retry-${n.id}`} style={{ fontSize: '0.65rem', color: 'var(--accent-soft)', marginTop: 3 }}>
-                        그때 이야기를 다시 꺼낼 수 있어요
+                        💌 그때 못 한 말
                       </div>
                     )}
                     {/* 관계 신호 — 방치/최근/임박. 숫자 대신 감각적 한 줄(없으면 미표시) */}

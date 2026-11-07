@@ -83,7 +83,7 @@ describe('친구 카드 재고백 표시', () => {
     const s = deferred(4);
     expect(canStartRomanceRetry(s, 'jihun'), '전제: 4주 지남').toBe(true);
     const { rerender } = render(<NpcRelationPanel state={s} onSelect={() => {}} romanceRetryAvailable />);
-    expect(hint()?.textContent).toBe('그때 이야기를 다시 꺼낼 수 있어요');
+    expect(hint()?.textContent).toBe('💌 그때 못 한 말');
     rerender(<NpcRelationPanel state={s} onSelect={() => {}} />);
     expect(hint()).toBeNull();
   });

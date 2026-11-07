@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState, processWeek } from '../gameEngine';
 import { NPC_DIALOGUES } from '../dialogues';
+import { NPC_SMALLTALK } from '../talkData/npcSmalltalk';
 import {
   INVITE_VOICES, ROMANCE_INVITE_VOICES, brokenLine, declineLine, inviteLine, inviteVoice, keptLine,
 } from '../talkData/inviteVoices';
@@ -42,8 +43,11 @@ describe('연인 말투 표', () => {
     expect(new Set(all).size, '연인 표 안에서 중복').toBe(all.length);
     const general = Object.values(INVITE_VOICES).flatMap(v => [...v.hangOut, ...v.study, v.decline, v.kept, v.broken]);
     for (const line of all) expect(general, line).not.toContain(line);
-    // 연인 잡담(dialogues.ts)과 문두 다섯 글자까지 겹치지 않는다 — 같은 날 두 화면이 같은 말로 시작하면 복사본으로 읽힌다.
-    const talk = (['subin', 'jihun'] as const).flatMap(id => NPC_DIALOGUES[id].filter(p => p.additive).flatMap(p => p.lines));
+    // 연인 잡담(dialogues.ts 인사말·npcSmalltalk.ts romance)과 문두 다섯 글자까지 겹치지 않는다 — 같은 날 두 화면이 같은 말로
+    // 시작하면 복사본으로 읽힌다. 문두만 보니 핵심 구절 겹침("천천히 가자"·"하늘 사진 보내 줄게")은 못 잡는다 — 그건 사람이 읽는다.
+    const talk = (['subin', 'jihun'] as const).flatMap(id => [
+      ...NPC_DIALOGUES[id].filter(p => p.additive).flatMap(p => p.lines), ...(NPC_SMALLTALK[id].romance?.common ?? []),
+    ]);
     const head = (s: string) => s.replace(/^["“]/, '').slice(0, 5);
     expect(talk.length, '전제: 연인 잡담이 있다').toBeGreaterThan(0);
     for (const line of all) expect(talk.map(head), line).not.toContain(head(line));
@@ -86,46 +90,71 @@ describe('고르기 — 연애 중이면 연인 줄, 아니면 원래 줄', () =
 });
 
 describe('약속 결과(processWeek) — 연인이면 연인 줄, 수치는 같다', () => {
-  const WEEK = 29;
-  /** Y6 2학기 — 지훈(여주 루트)과 hang-out 약속을 주간 화면에서 수락한 주. */
-  function promiseState(relationship?: RomanceRelationship): GameState {
-    const s = createInitialState('female', ['emotional', 'info'], { rngSeed: 7 });
-    Object.assign(s, { year: 6, week: WEEK, phase: 'weekday', currentEvent: null, isVacation: false, money: 100,
+  const ROUTES = [
+    { npcId: 'jihun', gender: 'female' },
+    { npcId: 'subin', gender: 'male' },
+  ] as const;
+  type Route = (typeof ROUTES)[number];
+  /** 그 루트의 상대와 hang-out 약속을 주간 화면에서 수락한 주. */
+  function promiseState({ npcId, gender }: Route, year: number, week: number, relationship?: RomanceRelationship): GameState {
+    const s = createInitialState(gender, ['emotional', 'info'], { rngSeed: 7 });
+    Object.assign(s, { year, week, phase: 'weekday', currentEvent: null, isVacation: false, money: 100,
       routineSlot2: 'self-study', routineSlot3: 'self-study', relationship,
-      weekInviteAnswers: { year: 6, month: getMonthBlock(WEEK).index,
-        answers: [{ npcId: 'jihun', week: WEEK, slotIdx: 0, activityId: 'hang-out', accepted: true }] } });
-    s.npcs.forEach(n => { n.met = n.id === 'jihun'; n.intimacy = n.id === 'jihun' ? 95 : 0; });
+      weekInviteAnswers: { year, month: getMonthBlock(week).index,
+        answers: [{ npcId, week, slotIdx: 0, activityId: 'hang-out', accepted: true }] } });
+    s.npcs.forEach(n => { n.met = n.id === npcId; n.intimacy = n.id === npcId ? 95 : 0; });
     return s;
   }
-  const dating: RomanceRelationship = { npcId: 'jihun', status: 'dating', year: 6, week: 20 };
-  const numbers = (s: GameState) => JSON.stringify({ stats: s.stats, npcs: s.npcs, money: s.money, fatigue: s.fatigue });
+  const WEEK = 29;
+  const dating = (r: Route): RomanceRelationship => ({ npcId: r.npcId, status: 'dating', year: 6, week: 20 });
   const line = (s: GameState, mark: string) => s.weekLog!.messages.find(m => m.startsWith(mark));
+  const intimacy = (s: GameState, id: string) => s.npcs.find(n => n.id === id)!.intimacy;
+  /** 관계(입력이 다르다)와 약속 결과 줄(바뀌는 게 목적)만 뺀 상태 전체 — 문장 고르기가 난수·수치를 건드리면 여기서 갈린다. */
+  const rest = (s: GameState) => JSON.stringify({ ...s, relationship: undefined,
+    weekLog: { ...s.weekLog!, messages: s.weekLog!.messages.filter(m => !/^(📌|💔)/.test(m)) } });
 
-  it('전제: 방학이 아닌 주', () => expect(getWeekInfo(WEEK).isVacation).toBe(false));
-
-  it('지킨 약속 — 연인이면 연인 줄, 친구면 원래 줄, 나머지는 바이트 동일', () => {
-    const map = { 'hang-out:0': 'jihun' };
-    const lover = processWeek({ ...promiseState(dating), weekendChoices: ['hang-out', 'rest'] }, map);
-    const friend = processWeek({ ...promiseState(), weekendChoices: ['hang-out', 'rest'] }, map);
-    expect(line(lover, '📌')).toContain(keptLine('jihun', WEEK, true));
-    expect(line(friend, '📌')).toContain(inviteVoice('jihun').kept);
-    expect(numbers(lover)).toBe(numbers(friend));
-    expect(lover.weekLog!.messages.filter(m => !m.startsWith('📌'))).toEqual(friend.weekLog!.messages.filter(m => !m.startsWith('📌')));
+  it('전제: 고르는 주는 방학이 아니다', () => {
+    expect(getWeekInfo(WEEK).isVacation).toBe(false);
+    expect(getWeekInfo(42).isVacation).toBe(false);
   });
 
-  it('못 지킨 약속(그 칸을 혼자 했다) — 연인 줄, 친밀도 −2는 그대로', () => {
-    const lover = processWeek({ ...promiseState(dating), weekendChoices: ['hang-out', 'rest'] }, {});
-    const friend = processWeek({ ...promiseState(), weekendChoices: ['hang-out', 'rest'] }, {});
-    expect(line(lover, '💔')).toContain(brokenLine('jihun', WEEK, true));
-    expect(line(friend, '💔')).toContain(inviteVoice('jihun').broken);
-    expect(numbers(lover)).toBe(numbers(friend));
+  it.each(ROUTES)('$npcId: 지킨 약속 — 연인이면 연인 줄, 친구면 원래 줄, 나머지 상태는 같다', r => {
+    const map = { 'hang-out:0': r.npcId };
+    const lover = processWeek({ ...promiseState(r, 6, WEEK, dating(r)), weekendChoices: ['hang-out', 'rest'] }, map);
+    const friend = processWeek({ ...promiseState(r, 6, WEEK), weekendChoices: ['hang-out', 'rest'] }, map);
+    expect(line(lover, '📌')).toContain(keptLine(r.npcId, WEEK, true));
+    expect(line(friend, '📌')).toContain(inviteVoice(r.npcId).kept);
+    expect(line(lover, '📌')).not.toBe(line(friend, '📌'));
+    expect(rest(lover)).toBe(rest(friend));
   });
 
-  it('헤어진 뒤(ended)엔 원래 줄로 돌아간다', () => {
-    const ended = { ...promiseState(), year: 7 } as GameState;
-    ended.relationship = { npcId: 'jihun', status: 'ended', year: 6, week: 20, graduation: 'apart' };
-    ended.weekInviteAnswers = { ...ended.weekInviteAnswers!, year: 7 };
-    const out = processWeek({ ...ended, weekendChoices: ['hang-out', 'rest'] }, { 'hang-out:0': 'jihun' });
+  it.each(ROUTES)('$npcId: 못 지킨 약속(그 칸을 혼자 했다) — 연인 줄, 약속 없던 판보다 정확히 −2', r => {
+    const lover = processWeek({ ...promiseState(r, 6, WEEK, dating(r)), weekendChoices: ['hang-out', 'rest'] }, {});
+    const friend = processWeek({ ...promiseState(r, 6, WEEK), weekendChoices: ['hang-out', 'rest'] }, {});
+    const noPromise = processWeek({ ...promiseState(r, 6, WEEK, dating(r)), weekInviteAnswers: undefined, weekendChoices: ['hang-out', 'rest'] }, {});
+    expect(line(lover, '💔')).toContain(brokenLine(r.npcId, WEEK, true));
+    expect(line(friend, '💔')).toContain(inviteVoice(r.npcId).broken);
+    expect(line(noPromise, '💔'), '전제: 대조군엔 약속이 없다').toBeUndefined();
+    expect(intimacy(lover, r.npcId)).toBe(Math.max(0, intimacy(noPromise, r.npcId) - 2));
+    expect(rest(lover)).toBe(rest(friend));
+  });
+
+  // 실제 이별은 Y7 졸업 장면(40~42주)의 '여기까지'에서만 생긴다 — 그 뒤 남은 주의 약속.
+  it.each(ROUTES)("$npcId: 졸업 장면에서 헤어진 뒤(ended)엔 원래 줄, 계속 만나기로 했으면(together) 연인 줄", r => {
+    const map = { 'hang-out:0': r.npcId };
+    const ended = processWeek({ ...promiseState(r, 7, 42,
+      { npcId: r.npcId, status: 'ended', year: 6, week: 20, graduation: 'apart' }), weekendChoices: ['hang-out', 'rest'] }, map);
+    const together = processWeek({ ...promiseState(r, 7, 42,
+      { npcId: r.npcId, status: 'dating', year: 6, week: 20, graduation: 'together' }), weekendChoices: ['hang-out', 'rest'] }, map);
+    expect(line(ended, '📌')).toContain(inviteVoice(r.npcId).kept);
+    expect(line(together, '📌')).toContain(keptLine(r.npcId, 42, true));
+  });
+
+  it('성별이 맞지 않는 관계 값(손상 세이브)은 연애로 보지 않는다', () => {
+    const wrong = promiseState(ROUTES[1], 6, WEEK, dating(ROUTES[0]));
+    wrong.weekInviteAnswers!.answers[0].npcId = 'jihun';
+    wrong.npcs.find(n => n.id === 'jihun')!.met = true;
+    const out = processWeek({ ...wrong, weekendChoices: ['hang-out', 'rest'] }, { 'hang-out:0': 'jihun' });
     expect(line(out, '📌')).toContain(inviteVoice('jihun').kept);
   });
 });
