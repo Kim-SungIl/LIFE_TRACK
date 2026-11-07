@@ -16,6 +16,17 @@ export function resolveEventCgRelPaths(
   gender: Gender,
   year: number,
 ): string[] {
+  // 첫 고백과 재고백은 장소를 특정하지 않는 같은 수락 CG를 공유한다.
+  // 결과·회고·기록실 모두 이 경로를 사용하므로 중복 수집 없이 같은 그림을 가리킨다.
+  // 보류/거절에는 매핑하지 않는다. 일반 이벤트의 기존 폴백 순서는 유지한다.
+  if (choiceIndex === 0 && year >= 6 && year <= 7) {
+    if (eventId === 'subin-romance-revisit' && gender === 'male') {
+      eventId = 'subin-hs-confess';
+    } else if (eventId === 'jihun-romance-revisit' && gender === 'female') {
+      eventId = 'jihun-hs-unsaid';
+      choiceIndex = 3;
+    }
+  }
   const g = gender === 'male' ? 'm' : 'f';
   const sl = getSchoolLevel(year);
   // 두 소비처(결과화면/학년말)가 동일 정책을 쓰도록 choiceIndex 정규화를 resolver 안에 둔다.

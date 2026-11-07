@@ -188,11 +188,15 @@ describe('앨범 채움 판정', () => {
   });
 
   it('칸 배치는 판본과 무관하다 (전용 칸만 예외)', () => {
-    // 지훈은 성별 전용 칸이 없다(전용 4칸은 전부 도윤 첫 만남이다).
-    const m = albumFor('jihun', 'male').flatMap(b => b.slots).length;
-    const f = albumFor('jihun', 'female').flatMap(b => b.slots).length;
-    expect(m).toBe(f);
-    expect(m).toBe(allSlots('jihun').length);
+    // 고백 수락처럼 성별 전용인 칸을 제외하면 양쪽의 슬롯 자체가 같아야 한다.
+    const shared = allSlots('jihun').filter(s => s.male && s.female);
+    const mSlots = albumFor('jihun', 'male').flatMap(b => b.slots);
+    const fSlots = albumFor('jihun', 'female').flatMap(b => b.slots);
+    expect(mSlots.filter(s => s.female)).toEqual(shared);
+    expect(fSlots.filter(s => s.male)).toEqual(shared);
+    expect(mSlots).toEqual(allSlots('jihun').filter(s => s.male));
+    expect(fSlots).toEqual(allSlots('jihun').filter(s => s.female));
+    const m = mSlots.length;
     // 파일을 세면 두 판본 합집합이 칸 수보다 많다 — 칸이 판본별로 고정이라는 증거.
     const files = new Set(allSlots('jihun').flatMap(s => [s.male, s.female].filter(Boolean)));
     expect(files.size).toBeGreaterThan(m);
