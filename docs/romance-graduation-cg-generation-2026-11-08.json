@@ -1,0 +1,14 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-08",
+  "assets": [
+    {
+      "file": "game/public/images/events/high/subin-farewell_c2_m.png",
+      "prompt": "Use case: illustration-story. Generate a new landscape 16:9 CG for Korean school-life visual novel LIFE_TRACK, matching the attached reference's painterly anime style and character identity. Reference is identity/style only, make a new shot. Scene: evening outside the same academy on a quiet street, warm streetlamp and blue twilight. Subin and the male protagonist have just promised to keep dating after graduation while supporting each other's dreams. Medium close two-person composition, Subin black chin-length bob, brown eyes, small gold star earrings, navy school blazer, white shirt and burgundy ribbon; male protagonist same black hair and navy uniform as reference, seen mostly from rear three-quarter. They stand side by side turning toward each other, tender relaxed smiles, their hands gently joined visible at lower center. Subin is the emotional focus. Main faces and joined hands inside central horizontal 20-80 percent, leave headroom, suitable mobile crop. Wholesome high school romance, natural hands, no kiss. No graduation gowns, no flight attendant outfit, no airport, no readable signage/text, no watermark/UI. Opaque finished painting. Return saved local image path."
+    },
+    {
+      "file": "game/public/images/events/high/jihun-hs-graduation_c3_f.png",
+      "prompt": "Use case: illustration-story. Create one new landscape 16:9 finished painterly anime CG for Korean school-life visual novel LIFE_TRACK. Attached reference is identity/style guide: Jihun tousled short black hair, brown eyes, navy school blazer and backpack with small basketball keychain; female protagonist shoulder-length brown hair bangs and same navy uniform red ribbon. New shot after graduation ceremony at the school playground, the pair have just promised to continue dating and support each other's future. Both standing shoulder to shoulder, smiling naturally with subtle blush, looking together at a smartphone Jihun holds out to take their next shared photograph, back of phone visible to viewer (no screen text). Warm soft afternoon light, school building and distant blurred uniformed graduating students, modest winter trees, no cherry blossom emphasis. Main pair faces within central horizontal 20-80%, enough headroom, camera medium shot with natural hands inside image. Wholesome affectionate highschool romance, no kiss, no graduation gowns/caps, no wedding imagery, no readable text/logos/UI/watermark. Keep reference character identities, school uniforms and detailed warm painterly shading, beautiful emotionally rewarding finale composition. Return saved local image path."
+    }
+  ]
+}

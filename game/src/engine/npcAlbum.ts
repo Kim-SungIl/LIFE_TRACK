@@ -116,19 +116,21 @@ const ALBUM: Map<string, AlbumBucket[]> = (() => {
     }
   }
 
-  // 고백은 런타임에 추가되는 장면/선택지라 GAME_EVENTS 순회에 포함되지 않는다.
-  // 첫 고백과 재고백이 공유하는 CG는 고등학교 시절에 한 칸만 등록한다.
-  for (const [npcId, eventId, choiceIndex, gender, title] of [
-    ['subin', 'subin-hs-confess', 0, 'male', '수빈과 마음이 통한 순간'],
-    ['jihun', 'jihun-hs-unsaid', 3, 'female', '지훈과 마음이 통한 순간'],
+  // 연애 장면/선택지는 런타임에 추가되어 GAME_EVENTS 순회에 포함되지 않는다.
+  // 재고백과 공유하는 수락 CG는 고등학교 시절에, 졸업 약속은 고3에 등록한다.
+  for (const [npcId, eventId, choiceIndex, gender, title, year, bucket] of [
+    ['subin', 'subin-hs-confess', 0, 'male', '수빈과 마음이 통한 순간', 6, 'high'],
+    ['jihun', 'jihun-hs-unsaid', 3, 'female', '지훈과 마음이 통한 순간', 6, 'high'],
+    ['subin', 'subin-farewell', 2, 'male', '각자의 하늘, 이어지는 우리', 7, 'y7'],
+    ['jihun', 'jihun-hs-graduation', 3, 'female', '다음 사진도 너와', 7, 'y7'],
   ] as const) {
-    const path = resolveEventCgRelPaths(eventId, choiceIndex, gender, 6)[0];
+    const path = resolveEventCgRelPaths(eventId, choiceIndex, gender, year)[0];
     if (!path) continue;
     const buckets = perRoot.get(npcId)!;
-    const slots = buckets.get('high') ?? [];
+    const slots = buckets.get(bucket) ?? [];
     slots.push({ eventId, choiceIndex, level: 'high', title,
       male: gender === 'male' ? path : null, female: gender === 'female' ? path : null });
-    buckets.set('high', slots);
+    buckets.set(bucket, slots);
   }
 
   // 버킷 순서: 학년 행을 먼저, 그 학교급의 "시절" 행을 그 뒤에. 슬롯이 0인 행은 만들지 않는다

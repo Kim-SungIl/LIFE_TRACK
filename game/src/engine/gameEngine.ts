@@ -1,3 +1,4 @@
+import { isDating, ROMANCE_OUTING_IDS, type RomanceNpc } from './romance';
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity, type Activity } from './types';
 import { achievementAxes, emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
@@ -997,8 +998,8 @@ function applyIdlePenalty(state: GameState, log: WeekLog, econMods: ReturnType<t
 }
 
 // 이번 주 이벤트 선택 (getEventForWeek는 순수 — patch는 호출자가 명시 적용).
-function selectEventForWeek(state: GameState): void {
-  const selection = getEventForWeek(state);
+function selectEventForWeek(state: GameState, outingNpc?: RomanceNpc): void {
+  const selection = getEventForWeek(state, outingNpc);
   if (selection.patch?.hardCrisisYears) state.hardCrisisYears = selection.patch.hardCrisisYears;
   if (selection.patch?.reachReservations) state.reachReservations = selection.patch.reachReservations;
   if (selection.event) {
@@ -1316,6 +1317,15 @@ function processOwnedWeek(newState: GameState, npcActivityMap?: Record<string, s
   // 월 계획의 약속(친구 초대를 수락한 칸) — 실제로 했는지 본다. 못 지켰으면 친밀도 −2와 한 줄(monthInvites.ts).
   settlePromisesForWeek(newState, log, appliedChoices, npcActivityMap, companionGained);
 
+  let outingNpc: RomanceNpc | undefined;
+  const partner = newState.relationship?.npcId;
+  if (partner && isDating(newState, partner) && !newState.relationship?.graduation
+      && !newState.events.some(e => e.id === ROMANCE_OUTING_IDS[partner as RomanceNpc])
+      && appliedChoices.some(a => a.id === 'hang-out'
+        && a.slots.some(slot => npcActivityMap?.[`hang-out:${slot}`] === partner))) {
+    outingNpc = partner;
+  }
+
   // 5b. 부모 친밀도 평균 회귀 — 이번 주 부모 행동(활동/대화)이 없었으면 50으로 천천히 수렴.
   //     (talkToHome은 processWeek 이전에, 부모 활동은 위에서 actedWithParentThisWeek를 세팅)
   applyParentMeanReversion(newState);
@@ -1383,7 +1393,7 @@ function processOwnedWeek(newState: GameState, npcActivityMap?: Record<string, s
   recordHappinessWeek(newState);
 
   // 11. 이벤트 체크 — getEventForWeek는 순수 함수, patch는 selectEventForWeek 내부에서 명시 적용
-  selectEventForWeek(newState);
+  selectEventForWeek(newState, outingNpc);
   // 사건 없이 결산으로 가는 주면 여기가 주의 끝이다(사건이 있으면 resolveEventChain의 연쇄 끝에서 찍는다).
   if (!newState.currentEvent) recordSummerVacationEnd(newState, newState.week);
 

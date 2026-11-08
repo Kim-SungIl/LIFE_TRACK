@@ -11,7 +11,19 @@ export interface RomanceRelationship {
   week: number;
   graduation?: 'together' | 'apart';
 }
-export type RomanceContext = Pick<GameState, 'gender' | 'year' | 'week'> & Partial<Pick<GameState, 'relationship'>>;
+export type RomanceContext = Pick<GameState, 'gender' | 'year' | 'week'> & Partial<Pick<GameState, 'relationship' | 'events'>>;
+export const ROMANCE_OUTING_IDS = { subin: 'subin-romance-outing', jihun: 'jihun-romance-outing' } as const;
+export function hasRomanceOuting(state: RomanceContext, npc: RomanceNpc): boolean {
+  return isDating(state, npc) && !!state.events?.some(e => e.id === ROMANCE_OUTING_IDS[npc]
+    && (e.resolvedChoice === 0 || e.resolvedChoice === 1));
+}
+export function romanceOutingRecall(state: RomanceContext, npc: RomanceNpc): string {
+  if (!hasRomanceOuting(state, npc)) return '';
+  const playful = state.events?.find(e => e.id === ROMANCE_OUTING_IDS[npc])?.resolvedChoice === 1;
+  return npc === 'subin'
+    ? playful ? ' "카페 맞은편 자리, 아직 예약 유효한 거 알지?"' : ' "단어장 덮고 네 얘기 들었던 날처럼, 앞으로도 얘기해 줘."'
+    : playful ? ' "천천히 걷기 공동 우승, 졸업해도 유효다."' : ' "그날 공원에서처럼, 바빠도 같이 천천히 걷자."';
+}
 export const SUBIN_CONVERSATION_ENTRY = 'subin-hs-studyboard';
 export const ROMANCE_ROUTES = {
   subin: { gender: 'male', opening: 'subin-hs-confess', closing: 'subin-farewell', tier: 70, openingYear: 6, closingYear: 7 },
@@ -74,8 +86,8 @@ export function presentRomanceEvent(event: GameEvent, state: RomanceContext): Ga
   } else if (event.id === route.closing && state.year === route.closingYear && isDating(state, npcId)) {
     extra.push(relationshipChoice(choices[0], npcId, 'together',
       '"졸업하고도 계속 만나자. 각자 꿈도 응원하면서."',
-      npcId === 'subin' ? '수빈이가 웃었다. "영어 연습도, 네 얘기 듣는 것도 계속할래." 서로의 길을 막지 않고 연인으로 만나기로 했다.'
-        : '지훈이가 사진을 한 장 더 찍었다. "체대 준비하다 바빠도 연락할게. 너도 네 얘기 해줘." 졸업 뒤에도 연인으로 만나기로 했다.',
+      (npcId === 'subin' ? '수빈이가 웃었다. "영어 연습도, 네 얘기 듣는 것도 계속할래." 서로의 길을 막지 않고 연인으로 만나기로 했다.'
+        : '지훈이가 사진을 한 장 더 찍었다. "체대 준비하다 바빠도 연락할게. 너도 네 얘기 해줘." 졸업 뒤에도 연인으로 만나기로 했다.') + romanceOutingRecall(state, npcId),
       npcId === 'subin' ? '수빈이와 각자의 꿈을 응원하며 계속 만나기로 했다.' : '지훈이와 사진을 찍으며 졸업 뒤의 만남을 약속했다.'));
     extra.push(relationshipChoice(choices[0], npcId, 'apart',
       '"함께한 시간은 고마워. 연인으로서는 여기까지 하고 싶어."',

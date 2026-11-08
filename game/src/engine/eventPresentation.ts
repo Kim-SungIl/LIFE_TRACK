@@ -23,7 +23,7 @@ import { presentRomanceEvent } from './romance';
 import { absWeek, getSeason } from './weekMath';
 import { canSpend } from './spendableMoney';
 
-export type EventPresentationCtx = Pick<GameState, 'year' | 'gender'> & Partial<Pick<GameState, 'relationship'>> & {
+export type EventPresentationCtx = Pick<GameState, 'year' | 'gender'> & Partial<Pick<GameState, 'relationship' | 'events'>> & {
   week: number;
 };
 

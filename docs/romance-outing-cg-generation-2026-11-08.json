@@ -1,0 +1,14 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-08",
+  "assets": [
+    {
+      "file": "game/public/images/events/high/subin-romance-outing_m.png",
+      "prompt": "Use case: illustration-story. New landscape 16:9 painterly anime visual novel CG matching the supplied LIFE_TRACK character/style reference. Subin same black bob brown eyes gold star earrings, in a casual cream cardigan over light shirt for a weekend date, sitting across from male protagonist at a quiet cafe. English practice is finished, her closed plain vocabulary notebook beside two simple drink cups. She leans forward listening with warm curious smile, asking about his dreams, fingertips around her own cup, only small portion of male shoulder foreground. Soft afternoon window light, intimate everyday wholesome high school romance, detailed warm muted painting, face and notebook central 20-80% mobile-safe, full head with headroom. No text, logos, hearts, UI, watermark. Not confession, no kissing. Return local saved image path."
+    },
+    {
+      "file": "game/public/images/events/high/jihun-romance-outing_f.png",
+      "prompt": "Use case: illustration-story. New landscape 16:9 painterly anime CG matching supplied LIFE_TRACK Jihun identity/style. Same tousled black hair brown eyes athletic high school boy, wearing casual navy zip sports jacket over plain white T-shirt, backpack with small basketball keychain. Weekend date after shooting hoops together. Jihun and female protagonist walk slowly on quiet path beside public basketball court, he turns toward viewer's female protagonist with a playful warm smile, one hand loosely holding basketball by his hip, partial brown-haired female shoulder foreground only. Everyday tender relaxed romance not a confession, afternoon soft warm light, blurred court fence and hoop in distance, season-neutral greenery, central face/head fully visible with headroom, face and basketball central horizontal 20-80 percent for mobile crop. Polished painterly anime, restrained warm natural palette, anatomically natural hands. Wholesome, no kissing, no text/logos/UI/watermark. Return saved local path."
+    }
+  ]
+}
