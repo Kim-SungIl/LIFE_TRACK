@@ -12,6 +12,7 @@
 //   즉 "얼마나 가까웠나"가 아니라 "제때 가까워졌나"가 콘텐츠를 가른다.
 //
 // GAME_EVENTS를 끌어오지만 번들 부담은 없다 — store.ts가 이미 같은 모듈을 엔트리 청크로 당긴다.
+import { ROMANCE_OUTING_IDS } from './romance';
 import { GAME_EVENTS } from './events';
 import { INITIAL_NPCS } from './npcRoster';
 import type { GameEvent } from './types';
@@ -47,6 +48,9 @@ const POOL: Map<string, Set<string>> = (() => {
   const isNpc = (id: string) => m.has(id);
   m.set(SOLO_ROOT, new Set());
   for (const e of GAME_EVENTS) {
+    // 선택적인 연애 보너스는 공통 이야기 완주율을 낮추지 않는다.
+    // 고백처럼 CG 앨범에서는 수집하되 친구로 지낸 판의 엔딩·추천 분모는 보존한다.
+    if (Object.values(ROMANCE_OUTING_IDS).some(id => id === e.id)) continue;
     const owners = storyOwners(e, isNpc);
     if (owners.length === 0) { m.get(SOLO_ROOT)!.add(e.id); continue; }
     for (const id of owners) m.get(id)!.add(e.id);

@@ -1,4 +1,5 @@
-import { romanceEventEligibility } from '../romance';
+import { ROMANCE_OUTING_EVENTS } from './romance-outings';
+import { romanceEventEligibility, ROMANCE_OUTING_IDS, type RomanceNpc } from '../romance';
 import { GameEvent, GameState } from '../types';
 import { seededRandom } from '../rng';
 // 재발동 여부만 본다 — 기억 슬롯 금지 셋(ANNUAL_EVENT_IDS)과는 다른 축이다.
@@ -77,6 +78,7 @@ function weeksSince(state: GameState, prev: GameEvent): number {
 // conditional 이벤트 후보 필터링 — getEventForWeek 내부 + chain 픽(getConditionalForWeek)에서 공유
 function pickConditionalCandidates(state: GameState): GameEvent[] {
   return GAME_EVENTS.filter(e =>
+    !ROMANCE_OUTING_EVENTS.some(outing => outing.id === e.id) &&
     !e.week &&
     !e.reach &&
     e.condition &&
@@ -389,7 +391,7 @@ function pickByPriority(candidates: GameEvent[], speakersTiebreak = true): GameE
 }
 
 // 이번 주에 발동할 이벤트 가져오기 — 순수 함수 (state mutation 없음)
-export function getEventForWeek(state: GameState): EventSelection {
+export function getEventForWeek(state: GameState, outingNpc?: RomanceNpc): EventSelection {
   // 0. 고정 주차 이벤트 최우선 (followup보다 먼저 — 이미 발동한 이벤트 제외)
   // 같은 주에 여러 fixed 이벤트가 매칭될 수 있음. 경합 해소는 pickByPriority 규칙 참조.
   const fixedCandidates = GAME_EVENTS.filter(e =>
@@ -452,6 +454,11 @@ export function getEventForWeek(state: GameState): EventSelection {
     return { event, patch: { reachReservations: next } };
   };
   if (reach.event) return after(reach.event);
+
+  // 연인과 실제로 놀았던 주의 일회성 장면. 고정 행사·후속·위기·도달형을 밀어내지 않는다.
+  // 일반 조건부/연쇄 풀에서는 제외해 한 주에 장면을 덧붙이지 않는다.
+  const outing = outingNpc && ROMANCE_OUTING_EVENTS.find(e => e.id === ROMANCE_OUTING_IDS[outingNpc] && e.condition?.(state));
+  if (outing) return after(outing);
 
   // 4. 조건부 상태 이벤트 (피로/멘탈 등) — EVENT_DENSITY.conditional 확률
   // 위기 ID는 위에서 이미 처리했으므로 중복 제거

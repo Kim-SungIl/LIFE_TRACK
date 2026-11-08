@@ -1,3 +1,4 @@
+import { ROMANCE_OUTING_EVENTS } from './romance-outings';
 import { GameEvent } from '../types';
 import {
   HAEUN_EVENTS, JIHUN_EVENTS, SUBIN_EVENTS, MINJAE_EVENTS, YUNA_EVENTS, JUNHA_EVENTS,
@@ -54,4 +55,5 @@ export const GAME_EVENTS: GameEvent[] = [
   ...MID_REACH_EVENTS,
   ...HIGH_REACH_EVENTS,
   ...NEW_NPC_REACH_EVENTS,
+  ...ROMANCE_OUTING_EVENTS,
 ];

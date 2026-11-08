@@ -1,5 +1,5 @@
 // 캐릭터 독백 — 상황에 따라 랜덤으로 하나 선택
-import { isDating } from './romance';
+import { isDating, hasRomanceOuting } from './romance';
 import { getSpendableMoney } from './spendableMoney';
 import { GameState, WeekLog } from './types';
 import { isExamPeriod } from './examSystem';
@@ -159,6 +159,9 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '농구공 놓고 왔어. 오늘은 너랑 천천히 걷고 싶어서.',
       '새 사진 찍을 때마다 네 옆자리는 내가 찜해도 돼?',
     ]},
+    { additive: true, priority: 101, condition: (_, s) => hasRomanceOuting(s, 'jihun'), lines: [
+      '공원에서 천천히 걷던 날 생각나. 다음엔 공 없이 걸어도 좋겠다.',
+    ]},
     { priority: 100, condition: (int) => int >= 80, lines: [
       '야, 너 오늘 뭐해? 같이 놀자!',
       '너 아니면 누구한테 말하겠어. 들어봐.',
@@ -206,6 +209,9 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '발음 메모 옆에 낙서한 거 봤어? 네 이름은 비밀인데.',
       '하늘 사진 찍으면 누구한테 보내고 싶은지 알겠더라.',
       '연습 끝내고 제일 먼저 보고 싶었던 사람이 왔네.',
+    ]},
+    { additive: true, priority: 101, condition: (_, s) => hasRomanceOuting(s, 'subin'), lines: [
+      '카페에서 단어장 덮고 얘기하던 시간, 생각보다 자주 떠올라.',
     ]},
     { priority: 100, condition: (int) => int >= 80, lines: [
       '있잖아... 나 사실 어디에도 완전히 속한 적이 없는 것 같아.',

@@ -6,7 +6,7 @@
 // 안 지웠고, 말걸기는 지난달 적립 대화(talkBank)·보류분(pendingWeekDelta)을 몰랐다. 하네스가 없는 게임을 쟀다.
 // 이제 store는 기록실 적립(archive — 브라우저 저장소 쓰기)만 훅으로 얹고, 나머지는 여기서 한 번만 정한다.
 
-import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, romanceRetryNpc, restoreRomanceRetry } from './romance';
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, ROMANCE_OUTING_IDS, romanceRetryNpc, restoreRomanceRetry } from './romance';
 import type { GameState, GameEvent, EventChoice, StatKey } from './types';
 import { scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { npcTalkFires, talkBankCount } from './monthPlayback';
@@ -366,6 +366,9 @@ export function resolveCurrentEvent(
     newState.phase = event.romanceReturnPhase;
   } else if (continuation) {
     assignCurrentEvent(newState, continuation, occurrenceWeek);
+  } else if (Object.values(ROMANCE_OUTING_IDS).some(id => id === event.id)) {
+    recordSummerVacationEnd(newState, occurrenceWeek);
+    newState.phase = newState.weekLog ? 'result' : 'weekday';
   } else if (event.id === CAREER_CHOICE_EVENT_ID) {
     // T66: 갈림길 뒤에는 아무것도 끼우지 않고 곧장 엔딩으로 — 체인 사건이 스탯을 움직이면
     // 방금 고른 갈래가 엔딩 시점에 닫힐 수 있다(careerChoice.ts 헤더).
