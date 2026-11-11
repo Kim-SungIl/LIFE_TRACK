@@ -14,7 +14,8 @@ import { recallSlots } from '../romanceMoments';
 import { migrateLoadedState } from '../stateMigration';
 import { NPC_DIALOGUES } from '../dialogues';
 import { useGameStore } from '../store';
-import { clearArchive } from '../archive';
+import { clearArchive, loadArchive } from '../archive';
+import { resolveEventCgRelPaths } from '../eventCg';
 import { npcStoryRows } from '../npcStoryPool';
 import type { GameState } from '../types';
 
@@ -99,6 +100,10 @@ describe.each(ROUTES)('$npc', r => {
     expect(done.phase).toBe('result');
     expect(done.currentEvent).toBeNull();
     expect(hasRomanceOuting2(done, r.npc)).toBe(true);
+    // 그림 — 두 선택이 같은 한 장, 해결과 동시에 기록실에 한 번 적립된다
+    const file = `high/${ROMANCE_OUTING2_IDS[r.npc]}_${r.gender === 'male' ? 'm' : 'f'}.png`;
+    expect(resolveEventCgRelPaths(ROMANCE_OUTING2_IDS[r.npc], choice, r.gender, 6)[0]).toBe(file);
+    expect(loadArchive().cgFiles.filter(f => f === file)).toHaveLength(1);
     // 인사말
     const greet = r.npc === 'subin' ? '그 언덕 또 가자' : '그날 이긴 사람 없었잖아';
     expect(NPC_DIALOGUES[r.npc].filter(p => p.condition(95, done)).flatMap(p => p.lines).some(l => l.startsWith(greet))).toBe(true);

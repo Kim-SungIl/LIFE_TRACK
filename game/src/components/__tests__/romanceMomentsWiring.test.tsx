@@ -78,17 +78,18 @@ describe('인물 앨범', () => {
     <NpcAlbumScreen npcId="subin" story={{ seen: 1, total: 10 }} seenCgFiles={seen} onBack={() => {}} />);
 
   it("'함께한 순간'은 연인 칸만 겪은 순서로 모으고, 전체 보기로 돌아올 수 있다", () => {
-    expect(subinPaths, '전제: 고백·만남·졸업 세 칸').toEqual([
-      'high/subin-hs-confess_c0_m.png', 'high/subin-romance-outing_m.png', 'high/subin-farewell_c2_m.png']);
-    renderAlbum([subinPaths[0], subinPaths[2]]);
+    expect(subinPaths, '전제: 고백·첫 만남·두 번째 만남·졸업 네 칸').toEqual([
+      'high/subin-hs-confess_c0_m.png', 'high/subin-romance-outing_m.png', 'high/subin-romance-outing2_m.png',
+      'high/subin-farewell_c2_m.png']);
+    renderAlbum([subinPaths[0], subinPaths[3]]);
     const total = document.querySelectorAll('section').length;
     fireEvent.click(screen.getByRole('button', { name: '💞 함께한 순간' }));
     const sections = document.querySelectorAll('section');
     expect(sections).toHaveLength(1);
     expect(within(sections[0] as HTMLElement).getByText('함께한 순간')).toBeTruthy();
-    expect(within(sections[0] as HTMLElement).getByText('2 / 3')).toBeTruthy();
+    expect(within(sections[0] as HTMLElement).getByText('2 / 4')).toBeTruthy();
     const cells = Array.from(sections[0].querySelectorAll('img')).map(i => i.getAttribute('src'));
-    expect(cells.map(c => c!.split('images/events/')[1])).toEqual([subinPaths[0], subinPaths[2]]);
+    expect(cells.map(c => c!.split('images/events/')[1])).toEqual([subinPaths[0], subinPaths[3]]);
     fireEvent.click(screen.getByRole('button', { name: '전체' }));
     expect(document.querySelectorAll('section').length).toBe(total);
   });
@@ -133,5 +134,8 @@ describe('인물 앨범', () => {
     fireEvent.click(screen.getByRole('button', { name: '닫기' }));
     fireEvent.click(screen.getByTitle('단어장을 덮은 뒤'));
     expect(screen.queryByTestId('album-recall'), '만남은 두 선택이 한 그림').toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: '닫기' }));
+    fireEvent.click(screen.getByTitle('이번에는 내가 들어줄게'));
+    expect(screen.queryByTestId('album-recall'), '두 번째 만남도 두 선택이 한 그림').toBeNull();
   });
 });

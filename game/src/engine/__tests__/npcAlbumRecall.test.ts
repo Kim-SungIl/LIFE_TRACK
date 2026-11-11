@@ -31,11 +31,12 @@ describe('추억 한 줄', () => {
     expect(slotRecall(study, 'female')).toBe('도서관에서 유나에게 수학을 가르쳐준 날, 같이 푸니 더 잘 풀렸다.');
   });
 
-  it('연인 칸 — 졸업 약속만 한 줄, 재고백과 그림을 나눠 쓰는 고백·두 선택이 한 그림인 만남은 제목만', () => {
+  it('연인 칸 — 졸업 약속만 한 줄, 재고백과 그림을 나눠 쓰는 고백·두 선택이 한 그림인 만남 둘은 제목만', () => {
     const subin = romanceSlotsFor('subin', 'male');
     const jihun = romanceSlotsFor('jihun', 'female');
-    expect(subin.map(s => slotRecall(s, 'male'))).toEqual([null, null, '수빈이와 각자의 꿈을 응원하며 계속 만나기로 했다.']);
-    expect(jihun.map(s => slotRecall(s, 'female'))).toEqual([null, null, '지훈이와 사진을 찍으며 졸업 뒤의 만남을 약속했다.']);
-    expect(jihun.map(s => s.eventId)).toEqual(['jihun-hs-unsaid', 'jihun-romance-outing', 'jihun-hs-graduation']);
+    expect(subin.map(s => slotRecall(s, 'male'))).toEqual([null, null, null, '수빈이와 각자의 꿈을 응원하며 계속 만나기로 했다.']);
+    expect(jihun.map(s => slotRecall(s, 'female'))).toEqual([null, null, null, '지훈이와 사진을 찍으며 졸업 뒤의 만남을 약속했다.']);
+    expect(jihun.map(s => s.eventId)).toEqual(['jihun-hs-unsaid', 'jihun-romance-outing', 'jihun-romance-outing2', 'jihun-hs-graduation']);
+    expect(subin.map(s => s.eventId)).toEqual(['subin-hs-confess', 'subin-romance-outing', 'subin-romance-outing2', 'subin-farewell']);
   });
 });
