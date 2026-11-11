@@ -1,5 +1,5 @@
 import { ROMANCE_OUTING_EVENTS } from './romance-outings';
-import { romanceEventEligibility, ROMANCE_OUTING_IDS, type RomanceNpc } from '../romance';
+import { romanceEventEligibility, ROMANCE_OUTING2_IDS, ROMANCE_OUTING_IDS, type RomanceNpc } from '../romance';
 import { GameEvent, GameState } from '../types';
 import { seededRandom } from '../rng';
 // 재발동 여부만 본다 — 기억 슬롯 금지 셋(ANNUAL_EVENT_IDS)과는 다른 축이다.
@@ -457,7 +457,9 @@ export function getEventForWeek(state: GameState, outingNpc?: RomanceNpc): Event
 
   // 연인과 실제로 놀았던 주의 일회성 장면. 고정 행사·후속·위기·도달형을 밀어내지 않는다.
   // 일반 조건부/연쇄 풀에서는 제외해 한 주에 장면을 덧붙이지 않는다.
-  const outing = outingNpc && ROMANCE_OUTING_EVENTS.find(e => e.id === ROMANCE_OUTING_IDS[outingNpc] && e.condition?.(state));
+  // 그 연인의 만남 중 아직 열 수 있는 앞의 것 하나 — 첫 만남이 먼저, 두 번째는 첫 만남 4주 뒤부터.
+  const outingIds: readonly string[] = outingNpc ? [ROMANCE_OUTING_IDS[outingNpc], ROMANCE_OUTING2_IDS[outingNpc]] : [];
+  const outing = ROMANCE_OUTING_EVENTS.find(e => outingIds.includes(e.id) && e.condition?.(state));
   if (outing) return after(outing);
 
   // 4. 조건부 상태 이벤트 (피로/멘탈 등) — EVENT_DENSITY.conditional 확률

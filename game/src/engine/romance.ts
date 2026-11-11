@@ -13,17 +13,51 @@ export interface RomanceRelationship {
 }
 export type RomanceContext = Pick<GameState, 'gender' | 'year' | 'week'> & Partial<Pick<GameState, 'relationship' | 'events'>>;
 export const ROMANCE_OUTING_IDS = { subin: 'subin-romance-outing', jihun: 'jihun-romance-outing' } as const;
-export function hasRomanceOuting(state: RomanceContext, npc: RomanceNpc): boolean {
-  return isDating(state, npc) && !!state.events?.some(e => e.id === ROMANCE_OUTING_IDS[npc]
-    && (e.resolvedChoice === 0 || e.resolvedChoice === 1));
+// 두 번째 만남 — 첫 만남을 마치고 4주 이상 지난 뒤, 연인과 실제로 놀았던 주에 한 번 열린다(romance-outings.ts).
+export const ROMANCE_OUTING2_IDS = { subin: 'subin-romance-outing2', jihun: 'jihun-romance-outing2' } as const;
+/** 연인 만남 전부(겪는 순서). 사건 선택·해결·완주율 분모·회고·앨범이 이 집합 하나를 쓴다. */
+export const ALL_ROMANCE_OUTING_IDS: ReadonlySet<string> = new Set([
+  ...Object.values(ROMANCE_OUTING_IDS), ...Object.values(ROMANCE_OUTING2_IDS)]);
+/** 그 만남에서 고른 선택(0·1). 안 겪었으면 undefined. */
+export function romanceOutingChoice(state: Partial<Pick<GameState, 'events'>>, id: string): 0 | 1 | undefined {
+  const c = state.events?.find(e => e.id === id)?.resolvedChoice;
+  return c === 0 || c === 1 ? c : undefined;
 }
+export function hasRomanceOuting(state: RomanceContext, npc: RomanceNpc): boolean {
+  return isDating(state, npc) && romanceOutingChoice(state, ROMANCE_OUTING_IDS[npc]) !== undefined;
+}
+export function hasRomanceOuting2(state: RomanceContext, npc: RomanceNpc): boolean {
+  return isDating(state, npc) && romanceOutingChoice(state, ROMANCE_OUTING2_IDS[npc]) !== undefined;
+}
+// 졸업 '계속 만나자' 대사 끝에 붙는 회상 — 겪은 만남 중 **가장 최근 것** 하나만 잇는다(같은 회상 반복 방지).
 export function romanceOutingRecall(state: RomanceContext, npc: RomanceNpc): string {
+  if (hasRomanceOuting2(state, npc)) {
+    const quiet = romanceOutingChoice(state, ROMANCE_OUTING2_IDS[npc]) === 1;
+    return npc === 'subin'
+      ? quiet ? ' "말 안 해도 옆에 있던 그날처럼, 멀리 가도 그렇게 있자."' : ' "그날 언덕에서처럼, 이제 내 차례도 계속 올 거야."'
+      : quiet ? ' "이긴 사람 없는 한 판, 계속 같이 치자."' : ' "랠리 기록은 졸업하고도 같이 갱신하자."';
+  }
   if (!hasRomanceOuting(state, npc)) return '';
-  const playful = state.events?.find(e => e.id === ROMANCE_OUTING_IDS[npc])?.resolvedChoice === 1;
+  const playful = romanceOutingChoice(state, ROMANCE_OUTING_IDS[npc]) === 1;
   return npc === 'subin'
     ? playful ? ' "카페 맞은편 자리, 아직 예약 유효한 거 알지?"' : ' "단어장 덮고 네 얘기 들었던 날처럼, 앞으로도 얘기해 줘."'
     : playful ? ' "천천히 걷기 공동 우승, 졸업해도 유효다."' : ' "그날 공원에서처럼, 바빠도 같이 천천히 걷자."';
 }
+// 두 번째 만남 도입부 — 가운데 한 줄이 첫 만남에서 고른 답을 받는다. 카탈로그의 description은 그 줄이
+// 빠진 판(head+tail)이고, 화면에 낼 때 presentRomanceEvent가 기록을 읽어 끼운다(기록이 없으면 원문 그대로).
+export const ROMANCE_OUTING2_TEXT: Record<RomanceNpc, { head: string; tail: string; callback: readonly [string, string] }> = {
+  subin: {
+    head: '비행기가 낮게 지나가는 강변 언덕. 수빈이가 캔음료 두 개를 잔디에 내려놓는다.\n"네가 예전에 내 비행기 사진 봐 줬잖아. 그때부터 나만 계속 얘기한 것 같아서."',
+    tail: '수빈이가 무릎을 끌어안는다. "무슨 얘기든 괜찮아. 없으면 없는 대로 괜찮고."',
+    callback: ['"지난번에 이런 얘기 계속하자고 했지? 그래서 오늘은 내가 먼저 물을게."',
+      '"맞은편 자리 예약했다며. 오늘은 맞은편 말고 옆자리야."'],
+  },
+  jihun: {
+    head: '공원 공터. 네트도 선도 없다. 지훈이가 셔틀콕을 건넨다.\n"오늘은 이기는 사람 없음. 떨어뜨리면 줍는 사람이 다음 서브."',
+    tail: '지훈이가 라켓을 한 번 휘둘러 보더니 웃는다.',
+    callback: ['"그날처럼 천천히 치자. 끝나면 또 걷고."', '"걷기는 공동 우승이었지? 오늘은 둘이서 랠리 기록 하나 세우자."'],
+  },
+};
 export const SUBIN_CONVERSATION_ENTRY = 'subin-hs-studyboard';
 export const ROMANCE_ROUTES = {
   subin: { gender: 'male', opening: 'subin-hs-confess', closing: 'subin-farewell', tier: 70, openingYear: 6, closingYear: 7 },
@@ -70,6 +104,12 @@ function relationshipChoice(base: EventChoice, npcId: RomanceNpc, decision: Roma
 export function presentRomanceEvent(event: GameEvent, state: RomanceContext): GameEvent {
   const npcId: RomanceNpc = state.gender === 'male' ? 'subin' : 'jihun';
   const route = ROMANCE_ROUTES[npcId];
+  if (event.id === ROMANCE_OUTING2_IDS[npcId]) {
+    // 매번 상수에서 다시 짓는다 — 저장 복원·재렌더에서 줄이 두 번 붙지 않는다.
+    const first = romanceOutingChoice(state, ROMANCE_OUTING_IDS[npcId]);
+    const t = ROMANCE_OUTING2_TEXT[npcId];
+    return first === undefined ? event : { ...event, description: `${t.head}\n${t.callback[first]}\n${t.tail}` };
+  }
   const choices = state.gender === 'female' && event.femaleChoices ? event.femaleChoices : event.choices;
   // 저장 복원과 재렌더에서 같은 선택지를 다시 붙이지 않는다.
   if (choices.some(c => c.relationshipSelect || c.romanceConversation)) return event;

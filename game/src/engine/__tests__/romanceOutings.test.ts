@@ -2,7 +2,7 @@ import { beforeEach, expect, it } from 'vitest';
 import { createInitialState, processWeek } from '../gameEngine';
 import { GAME_EVENTS, getEventForWeek } from '../events';
 import { ROMANCE_OUTING_EVENTS } from '../events/romance-outings';
-import { ROMANCE_OUTING_IDS, hasRomanceOuting, presentRomanceEvent } from '../romance';
+import { ALL_ROMANCE_OUTING_IDS, ROMANCE_OUTING_IDS, hasRomanceOuting, presentRomanceEvent } from '../romance';
 import { useGameStore } from '../store';
 import { clearArchive, loadArchive } from '../archive';
 import { albumFor, slotPath } from '../npcAlbum';
@@ -22,7 +22,7 @@ for (const npc of ['subin', 'jihun'] as const) {
       relationship: { npcId: npc, status: 'dating', year: 6, week: 20 } });
     s.npcs.forEach(n => { n.met = n.id === npc; n.intimacy = n.id === npc ? 95 : 0; });
     // 기존 이야기를 본 판: 다른 도달형과의 경합 없이 만남 자체를 검증한다.
-    s.events = GAME_EVENTS.filter(e => !Object.values(ROMANCE_OUTING_IDS).some(id => id === e.id))
+    s.events = GAME_EVENTS.filter(e => !ALL_ROMANCE_OUTING_IDS.has(e.id))
       .map(e => ({ ...e, year: 6, week: 1, resolvedChoice: 0 }));
     return s;
   }

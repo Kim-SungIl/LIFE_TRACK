@@ -6,7 +6,7 @@
 // 안 지웠고, 말걸기는 지난달 적립 대화(talkBank)·보류분(pendingWeekDelta)을 몰랐다. 하네스가 없는 게임을 쟀다.
 // 이제 store는 기록실 적립(archive — 브라우저 저장소 쓰기)만 훅으로 얹고, 나머지는 여기서 한 번만 정한다.
 
-import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, ROMANCE_OUTING_IDS, romanceRetryNpc, restoreRomanceRetry } from './romance';
+import { applyRelationshipChoice, relationshipContinuation, ROMANCE_ROUTES, ALL_ROMANCE_OUTING_IDS, romanceRetryNpc, restoreRomanceRetry } from './romance';
 import type { GameState, GameEvent, EventChoice, StatKey } from './types';
 import { scaleIntimacyChange, scaleStatChange, applyYearTransition } from './gameEngine';
 import { npcTalkFires, talkBankCount } from './monthPlayback';
@@ -366,7 +366,7 @@ export function resolveCurrentEvent(
     newState.phase = event.romanceReturnPhase;
   } else if (continuation) {
     assignCurrentEvent(newState, continuation, occurrenceWeek);
-  } else if (Object.values(ROMANCE_OUTING_IDS).some(id => id === event.id)) {
+  } else if (ALL_ROMANCE_OUTING_IDS.has(event.id)) {
     recordSummerVacationEnd(newState, occurrenceWeek);
     newState.phase = newState.weekLog ? 'result' : 'weekday';
   } else if (event.id === CAREER_CHOICE_EVENT_ID) {

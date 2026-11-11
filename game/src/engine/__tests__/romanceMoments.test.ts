@@ -6,7 +6,7 @@ import { assignCurrentEvent } from '../eventPresentation';
 import { useGameStore } from '../store';
 import { clearArchive } from '../archive';
 import { resolveEventCgRelPaths } from '../eventCg';
-import { ROMANCE_OUTING_IDS } from '../romance';
+import { ALL_ROMANCE_OUTING_IDS, ROMANCE_OUTING_IDS } from '../romance';
 import { recallSlots, romanceMomentSlots } from '../romanceMoments';
 import { yearToPhaseTag } from '../memorySystem';
 import type { GameState, MemorySlot } from '../types';
@@ -89,7 +89,7 @@ describe.each(ROUTES)('$npc', r => {
     confess(r, r.accept);
     const before = { ...cur(), week: 33, phase: 'weekday' as const, weekendChoices: ['hang-out', 'rest'] };
     // 다른 이야기와의 경합 없이 만남만 본다(romanceOutings.test.ts와 같은 처리).
-    before.events = [...before.events, ...GAME_EVENTS.filter(e => !Object.values(ROMANCE_OUTING_IDS).some(id => id === e.id))
+    before.events = [...before.events, ...GAME_EVENTS.filter(e => !ALL_ROMANCE_OUTING_IDS.has(e.id))
       .map(e => ({ ...e, year: 5, week: 1, resolvedChoice: 0 }))];
     const out = processWeek(before, { 'hang-out:0': r.npc });
     expect(out.currentEvent?.id).toBe(ROMANCE_OUTING_IDS[r.npc]);

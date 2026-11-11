@@ -1,4 +1,4 @@
-import { isDating, ROMANCE_OUTING_IDS, type RomanceNpc } from './romance';
+import { isDating, type RomanceNpc } from './romance';
 import { GameState, Stats, StatKey, ParentStrength, WeekLog, SkippedActivity, type Activity } from './types';
 import { achievementAxes, emptyYearCounts } from './ending';
 import { emptyMoneyYears, recordMoneySpent } from './moneyTrajectory';
@@ -1320,7 +1320,6 @@ function processOwnedWeek(newState: GameState, npcActivityMap?: Record<string, s
   let outingNpc: RomanceNpc | undefined;
   const partner = newState.relationship?.npcId;
   if (partner && isDating(newState, partner) && !newState.relationship?.graduation
-      && !newState.events.some(e => e.id === ROMANCE_OUTING_IDS[partner as RomanceNpc])
       && appliedChoices.some(a => a.id === 'hang-out'
         && a.slots.some(slot => npcActivityMap?.[`hang-out:${slot}`] === partner))) {
     outingNpc = partner;
