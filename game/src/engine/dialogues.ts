@@ -156,11 +156,11 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '손 내밀 때마다 아직 조금 떨리는 거, 비밀이다.',
       '기록 재는 것보다 네 답장 기다리는 게 더 긴장돼.',
       '스트레칭하다 네 생각나서 웃었어. 혼자 좀 웃겼지.',
-      '농구공 놓고 왔어. 오늘은 너랑 천천히 걷고 싶어서.',
+      '라켓은 사물함에 두고 왔어. 오늘은 너랑 그냥 걷고 싶어서.',
       '새 사진 찍을 때마다 네 옆자리는 내가 찜해도 돼?',
     ]},
     { additive: true, priority: 101, condition: (_, s) => hasRomanceOuting(s, 'jihun'), lines: [
-      '공원에서 천천히 걷던 날 생각나. 다음엔 공 없이 걸어도 좋겠다.',
+      '공원에서 기록 안 재고 걷던 날 생각나. 그날 걸음이 제일 느렸는데, 제일 좋았어.',
     ]},
     { priority: 100, condition: (int) => int >= 80, lines: [
       '야, 너 오늘 뭐해? 같이 놀자!',

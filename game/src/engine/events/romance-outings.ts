@@ -24,11 +24,11 @@ export const ROMANCE_OUTING_EVENTS: GameEvent[] = [
   {
     id: ROMANCE_OUTING_IDS.jihun, title: '기록을 재지 않는 산책', speakers: ['jihun'],
     location: 'park', background: 'park', condition: s => available(s, 'jihun'),
-    description: '함께 놀러 나온 공원에서 지훈이와 번갈아 농구공을 던졌다. 코트를 나서자 늘 성큼성큼 걷던 지훈이가 보폭을 줄인다.\n"오늘은 기록 안 잰다. 천천히 가자."\n공을 옆구리에 끼고 웃던 지훈이가 덧붙인다. "앞으로 바빠져도, 가끔 이렇게 걷고 싶다."',
+    description: '함께 놀러 나온 공원에서 지훈이와 한참 배드민턴을 쳤다. 라켓을 가방에 넣고 나서자 늘 성큼성큼 걷던 지훈이가 보폭을 줄인다.\n"오늘은 기록 안 잰다. 걷는 것도 그냥 걷자."\n라켓 가방을 어깨에 고쳐 메던 지훈이가 덧붙인다. "앞으로 바빠져도, 가끔 이렇게 걷고 싶다."',
     choices: [
       { text: '"나도. 멀리 안 가도 같이 걸으면 좋더라."', effects: {}, npcEffects: [{ npcId: 'jihun', intimacyChange: 0 }],
-        message: '지훈이가 신발 끝을 한번 내려다보다 웃었다. "그럼 다음에도 이 속도로." 코트에서 들려오는 공 소리가 멀어질 때까지 나란히 걸었다.',
-        memorySlotDraft: { category: 'growth', importance: 6, toneTag: 'warm', recallText: '농구를 마치고 지훈이와 기록을 재지 않고 천천히 걸었다.', npcIds: ['jihun'] } },
+        message: '지훈이가 신발 끝을 한번 내려다보다 웃었다. "그럼 다음에도 이 속도로." 뒤에서 들려오던 셔틀콕 소리가 멀어질 때까지 나란히 걸었다.',
+        memorySlotDraft: { category: 'growth', importance: 6, toneTag: 'warm', recallText: '배드민턴을 치고 나서, 지훈이와 기록을 재지 않고 나란히 걸었다.', npcIds: ['jihun'] } },
       { text: '"그럼 오늘 천천히 걷기 대회는 공동 우승이네."', effects: {}, npcEffects: [{ npcId: 'jihun', intimacyChange: 0 }],
         message: '"그것도 대회로 만드는 거야?" 지훈이가 소리 내 웃었다. "좋아. 공동 우승은 계속 같이 가야 인정이다." 둘 다 일부러 한 걸음씩 느리게 걸었다.',
         memorySlotDraft: { category: 'growth', importance: 6, toneTag: 'warm', recallText: '지훈이와 천천히 걷기 대회 공동 우승을 약속하며 웃었다.', npcIds: ['jihun'] } },

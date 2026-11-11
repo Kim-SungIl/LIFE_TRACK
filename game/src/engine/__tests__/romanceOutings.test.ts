@@ -49,7 +49,7 @@ for (const npc of ['subin', 'jihun'] as const) {
     expect(loadArchive().cgFiles.filter(p => p === file)).toHaveLength(1);
     expect(albumFor(npc, gender).flatMap(b => b.slots).filter(s => slotPath(s, gender) === file)).toHaveLength(1);
     expect(ROMANCE_OUTING_EVENTS.find(e => e.id === id)!.condition!(done)).toBe(false);
-    expect(NPC_DIALOGUES[npc].filter(p => p.condition(95, done)).flatMap(p => p.lines).some(l => l.includes(npc === 'subin' ? '카페에서 단어장' : '공원에서 천천히'))).toBe(true);
+    expect(NPC_DIALOGUES[npc].filter(p => p.condition(95, done)).flatMap(p => p.lines).some(l => l.includes(npc === 'subin' ? '카페에서 단어장' : '공원에서 기록 안 재고'))).toBe(true);
     const closing = GAME_EVENTS.find(e => e.id === (npc === 'subin' ? 'subin-farewell' : 'jihun-hs-graduation'))!;
     const shown = presentRomanceEvent(closing, { ...done, year: 7 });
     const choices = gender === 'female' && shown.femaleChoices ? shown.femaleChoices : shown.choices;
