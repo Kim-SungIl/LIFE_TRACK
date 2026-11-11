@@ -20,7 +20,8 @@ import { INITIAL_NPCS } from './npcRoster';
 import { getSchoolLevel } from './backgrounds';
 import { resolveEventCgRelPaths } from './eventCg';
 import { SOLO_ROOT, storyOwners } from './npcStoryPool';
-import type { Gender } from './types';
+import { presentRomanceEvent, ROMANCE_OUTING_IDS, ROMANCE_ROUTES } from './romance';
+import type { EventChoice, GameEvent, Gender } from './types';
 
 /** 학교급별 대표 학년 — resolver는 학년을 학교급으로만 쓰므로(eventCg의 getSchoolLevel) 이걸로 충분하다. */
 const LEVEL_YEAR = { elementary: 1, middle: 2, high: 5 } as const;
@@ -38,7 +39,23 @@ export interface AlbumSlot {
    */
   male: string | null;
   female: string | null;
+  /**
+   * 판본별 추억 한 줄 — 그 판본에서 이 그림이 **선택지 하나만** 대표할 때만 있다. 그림 서명으로
+   * 접힌 칸(여러 선택지가 같은 그림)이나 재고백과 그림을 나눠 쓰는 고백 칸은 어느 선택이었는지
+   * 알 수 없으므로 비운다 — 기록에는 판별 선택이 남지 않는다(archive는 그림 경로만 적립한다).
+   */
+  recall?: { male?: string; female?: string };
+  /** 연인과 함께한 순간(고백 수락·만남·졸업 약속) — 앨범의 '함께한 순간' 보기가 고른다. */
+  romance?: true;
 }
+
+/** 그 판본의 이 선택지 추억 문장. */
+function draftRecall(e: GameEvent, ci: number, gender: Gender): string | undefined {
+  const list: EventChoice[] = gender === 'female' && e.femaleChoices ? e.femaleChoices : e.choices;
+  return list?.[ci]?.memorySlotDraft?.recallText || undefined;
+}
+const OUTING_IDS = new Set<string>(Object.values(ROMANCE_OUTING_IDS));
+const CLOSING_IDS = new Set<string>(Object.values(ROMANCE_ROUTES).map(r => r.closing));
 
 export interface AlbumBucket {
   /** 안정 키 — 학년 버킷은 `y3`, 학년을 특정할 수 없는 학교급 버킷은 `middle`. */
@@ -86,6 +103,9 @@ const ALBUM: Map<string, AlbumBucket[]> = (() => {
       // choiceIndex에 되돌려주므로, 그림 서명으로 접지 않으면 선택지 수만큼 칸이 불어난다
       // (지훈 52 → 88로 부풀었다). 대표 choiceIndex는 가장 작은 값을 쓴다.
       const bySignature = new Map<string, AlbumSlot>();
+      // 판본별로 같은 그림을 가리키는 선택지 수 — 1개일 때만 그 선택의 추억 한 줄을 붙인다.
+      // 판본을 섞어 세면 안 된다: 남주판은 두 선택이 한 그림을 나눠 쓰는데 여주판은 갈리는 칸이 있다.
+      const perPath = new Map<string, number[]>();
       for (let ci = 0; ci < nChoices; ci++) {
         // 적립층이 실제로 저장하는 값과 같아야 한다 — resolveCg가 폴백 체인의 첫 항목만 쓴다.
         const top = (gender: Gender) => {
@@ -95,13 +115,27 @@ const ALBUM: Map<string, AlbumBucket[]> = (() => {
         const male = top('male');
         const female = top('female');
         if (!male && !female) continue;
+        for (const [g, p] of [['male', male], ['female', female]] as const) {
+          if (p) perPath.set(`${g}|${p}`, [...(perPath.get(`${g}|${p}`) ?? []), ci]);
+        }
         // 서명에 판본을 **둘 다** 넣는다 — 한쪽만 넣으면 공용 그림을 공유하는 선택지들이
         // 접히지 않거나, 반대로 판본이 다른 칸이 같은 칸으로 접힌다.
         const signature = `${male}|${female}`;
         if (bySignature.has(signature)) continue;
-        bySignature.set(signature, { eventId: e.id, choiceIndex: ci, level, title: e.title, male, female });
+        bySignature.set(signature, { eventId: e.id, choiceIndex: ci, level, title: e.title, male, female,
+          ...(OUTING_IDS.has(e.id) ? { romance: true as const } : {}) });
       }
       if (bySignature.size === 0) continue;
+      for (const slot of bySignature.values()) {
+        const recall: AlbumSlot['recall'] = {};
+        for (const g of ['male', 'female'] as const) {
+          const p = slot[g];
+          const cis = p ? perPath.get(`${g}|${p}`) : undefined;
+          const text = cis?.length === 1 ? draftRecall(e, cis[0], g) : undefined;
+          if (text) recall[g] = text;
+        }
+        if (recall.male || recall.female) slot.recall = recall;
+      }
 
       const year = level === 'elementary' ? 1
         : (e.reach?.year && getSchoolLevel(e.reach.year) === level ? e.reach.year : null);
@@ -118,18 +152,29 @@ const ALBUM: Map<string, AlbumBucket[]> = (() => {
 
   // 연애 장면/선택지는 런타임에 추가되어 GAME_EVENTS 순회에 포함되지 않는다.
   // 재고백과 공유하는 수락 CG는 고등학교 시절에, 졸업 약속은 고3에 등록한다.
-  for (const [npcId, eventId, choiceIndex, gender, title, year, bucket] of [
-    ['subin', 'subin-hs-confess', 0, 'male', '수빈과 마음이 통한 순간', 6, 'high'],
-    ['jihun', 'jihun-hs-unsaid', 3, 'female', '지훈과 마음이 통한 순간', 6, 'high'],
-    ['subin', 'subin-farewell', 2, 'male', '각자의 하늘, 이어지는 우리', 7, 'y7'],
-    ['jihun', 'jihun-hs-graduation', 3, 'female', '다음 사진도 너와', 7, 'y7'],
+  // 추억 한 줄: 고백 칸은 재고백과 그림을 나눠 쓰니(eventCg) 비운다. 졸업 약속은 선택지가 하나라
+  // 런타임 선택지를 만드는 presentRomanceEvent에서 그대로 읽는다(문장을 여기 복제하지 않는다).
+  const graduationRecall = (npcId: 'subin' | 'jihun', eventId: string, ci: number, gender: Gender) => {
+    const event = GAME_EVENTS.find(e => e.id === eventId);
+    if (!event) return undefined;
+    const shown = presentRomanceEvent(event, { gender, year: 7, week: 46, events: [],
+      relationship: { npcId, status: 'dating', year: 6, week: 30 } });
+    return draftRecall(shown, ci, gender);
+  };
+  for (const [npcId, eventId, choiceIndex, gender, title, year, bucket, shared] of [
+    ['subin', 'subin-hs-confess', 0, 'male', '수빈과 마음이 통한 순간', 6, 'high', true],
+    ['jihun', 'jihun-hs-unsaid', 3, 'female', '지훈과 마음이 통한 순간', 6, 'high', true],
+    ['subin', 'subin-farewell', 2, 'male', '각자의 하늘, 이어지는 우리', 7, 'y7', false],
+    ['jihun', 'jihun-hs-graduation', 3, 'female', '다음 사진도 너와', 7, 'y7', false],
   ] as const) {
     const path = resolveEventCgRelPaths(eventId, choiceIndex, gender, year)[0];
     if (!path) continue;
     const buckets = perRoot.get(npcId)!;
     const slots = buckets.get(bucket) ?? [];
-    slots.push({ eventId, choiceIndex, level: 'high', title,
-      male: gender === 'male' ? path : null, female: gender === 'female' ? path : null });
+    const text = shared ? undefined : graduationRecall(npcId, eventId, choiceIndex, gender);
+    slots.push({ eventId, choiceIndex, level: 'high', title, romance: true,
+      male: gender === 'male' ? path : null, female: gender === 'female' ? path : null,
+      ...(text ? { recall: { [gender]: text } } : {}) });
     buckets.set(bucket, slots);
   }
 
@@ -172,6 +217,21 @@ export function albumFor(npcId: string, gender: Gender): AlbumBucket[] {
   return npcAlbum(npcId)
     .map(b => ({ ...b, slots: b.slots.filter(s => slotPath(s, gender) !== null) }))
     .filter(b => b.slots.length > 0);
+}
+
+/** 그 판본에서 이 칸의 추억 한 줄 — 선택지 하나만 대표하는 칸만 있다. */
+export function slotRecall(slot: AlbumSlot, gender: Gender): string | null {
+  return slot.recall?.[gender] ?? null;
+}
+
+/**
+ * '함께한 순간' 보기 — 연애 칸만, 앨범의 학년 순서 그대로 한 줄로 모은다. 칸 정의·판본은
+ * 그대로이고 보기만 바뀐다(학년별 분모는 전체 보기에 있다). 연애 칸이 없는 사람이면 빈 배열.
+ */
+export function romanceSlotsFor(npcId: string, gender: Gender): AlbumSlot[] {
+  // 학년 행 순서대로면 고3 졸업이 고등학교 시절 행(고백·만남)보다 먼저 온다 — 겪은 순서로 놓는다.
+  const rank = (s: AlbumSlot) => OUTING_IDS.has(s.eventId) ? 1 : CLOSING_IDS.has(s.eventId) ? 2 : 0;
+  return albumFor(npcId, gender).flatMap(b => b.slots).filter(s => s.romance).sort((a, b) => rank(a) - rank(b));
 }
 
 /** 이 칸의 그 판본을 본 적이 있나. */
