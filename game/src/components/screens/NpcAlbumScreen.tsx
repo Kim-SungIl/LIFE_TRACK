@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { albumFor, isSlotFilled, filledPath, dominantGender, type AlbumSlot } from '../../engine/npcAlbum';
+import { albumFor, isSlotFilled, filledPath, dominantGender, romanceSlotsFor, slotRecall, type AlbumBucket, type AlbumSlot } from '../../engine/npcAlbum';
 import { INITIAL_NPCS } from '../../engine/npcRoster';
 import { SOLO_ROOT } from '../../engine/npcStoryPool';
 import type { Gender } from '../../engine/types';
 import { cgThumbSrc, webpSrc } from '../../engine/assetWebp';
 import { Portrait } from '../Portrait';
+import { chipSurface } from './surface';
 
 const CELL = 44;
 const TABS: { gender: Gender; label: string; portrait: string }[] = [
@@ -111,6 +112,15 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
   const npc = INITIAL_NPCS.find(n => n.id === npcId);
   const buckets = albumFor(npcId, gender);
   const openPath = open ? filledPath(open, seenCgFiles, gender) : null;
+  const openRecall = open ? slotRecall(open, gender) : null;
+  // '함께한 순간' 보기 — 연인과의 칸(고백 수락·만남·졸업 약속)만 겪은 순서로 한 줄에 모은다.
+  // 칸 정의·판본·위의 합계는 그대로다(보기 전환일 뿐). 연애 칸이 없는 판본이면 버튼도 없다.
+  const [romanceView, setRomanceView] = useState(false);
+  const romanceSlots = romanceSlotsFor(npcId, gender);
+  const showRomance = romanceView && romanceSlots.length > 0;
+  const shownBuckets: AlbumBucket[] = showRomance
+    ? [{ key: 'romance', label: '함께한 순간', slots: romanceSlots }]
+    : buckets;
 
   // 이 화면의 두 수는 **다른 축**이다. 이야기는 겪은 장면 수라 판본과 무관하고, 그림은
   // 이 탭에서 모은 칸 수다. 한 이벤트가 학교급·그림서명마다 칸이 되고 CG 없는 이벤트는
@@ -167,7 +177,8 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
               key={t.gender}
               role="tab"
               aria-selected={on}
-              onClick={() => setGender(t.gender)}
+              // 판본을 바꾸면 전체 보기로 — 연애 칸이 없는 판본을 거쳐 돌아왔을 때 보기가 저절로 켜져 있지 않게.
+              onClick={() => { setGender(t.gender); setRomanceView(false); }}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '6px 8px', borderRadius: 9, cursor: 'pointer', font: 'inherit',
@@ -215,9 +226,31 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
         </div>
       )}
 
-      {buckets.length === 0 ? (
+      {romanceSlots.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+          {([[false, '전체'], [true, '💞 함께한 순간']] as const).map(([v, label]) => {
+            const on = showRomance === v;
+            return (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setRomanceView(v)}
+                style={{
+                  padding: '4px 11px', borderRadius: 14, cursor: 'pointer', font: 'inherit', fontSize: '0.74rem',
+                  border: `1px solid ${on ? 'var(--accent-soft)' : 'rgba(255,255,255,0.15)'}`,
+                  background: on ? chipSurface('rgba(224,138,91,0.18)') : 'transparent',
+                  color: on ? 'var(--accent-soft)' : 'var(--text-muted)',
+                }}
+              >{label}</button>
+            );
+          })}
+        </div>
+      )}
+
+      {shownBuckets.length === 0 ? (
         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>남은 장면이 없다.</div>
-      ) : buckets.map(b => {
+      ) : shownBuckets.map(b => {
         const filled = b.slots.filter(s => isSlotFilled(s, seenCgFiles, gender)).length;
         const done = filled === b.slots.length;
         return (
@@ -299,6 +332,13 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
           </button>
           <LightboxImage key={openPath} path={openPath} title={open.title} />
           <div style={{ fontSize: '0.9rem', fontWeight: 600, textAlign: 'center' }}>{open.title}</div>
+          {/* 그 칸이 선택지 하나만 대표할 때만 — 여러 선택이 한 그림을 나눠 쓰면 어느 쪽이었는지 모른다. */}
+          {openRecall && (
+            <div data-testid="album-recall" style={{
+              fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic',
+              textAlign: 'center', lineHeight: 1.6, maxWidth: 420, marginTop: -4,
+            }}>{openRecall}</div>
+          )}
         </div>
       )}
     </div>

@@ -30,6 +30,7 @@ import { ScreenChunkFallback } from './ScreenChunkFallback';
 import { SystemMenu } from './SystemMenu';
 import { goalRecordForWeekLog } from '../engine/semesterGoal';
 import { goalMomentForWeekLog } from '../engine/semesterGoalMoments';
+import { recallSlots } from '../engine/romanceMoments';
 
 // 비-부팅 화면만 lazy — MainWeekScreen / WeeklyResultScreen / TitleScreen 은 첫 페인트·고빈도라 eager 유지.
 const EventScene = lazy(() =>
@@ -260,7 +261,7 @@ export function GameScreen() {
         <YearEndScreen
           year={albumYear}
           gender={state.gender}
-          memorySlots={state.memorySlots ?? []}
+          memorySlots={recallSlots(state)}
           milestoneScenes={state.milestoneScenes ?? []}
           stats={state.stats}
           lowMentalWeeksByYear={state.lowMentalWeeksByYear}
@@ -319,7 +320,7 @@ export function GameScreen() {
       <YearEndScreen
         year={state.year}
         gender={state.gender}
-        memorySlots={state.memorySlots}
+        memorySlots={recallSlots(state)}
         milestoneScenes={state.milestoneScenes}
         stats={state.stats}
         lowMentalWeeksByYear={state.lowMentalWeeksByYear}
