@@ -56,7 +56,14 @@ describe.each(ROUTES)('$npc', r => {
     expect(resolveEventCgRelPaths(moments[0].sourceEventId, moments[0].choiceIndex, r.gender, 6)[0])
       .toBe(r.npc === 'subin' ? 'high/subin-hs-confess_c0_m.png' : 'high/jihun-hs-unsaid_c3_f.png');
     // 표시 전용 — state의 기억 슬롯은 그대로다(엔딩 층이 읽는 값).
-    expect(recallSlots(s).slice(0, s.memorySlots.length)).toEqual(s.memorySlots);
+    // 원본을 건드리지 않는다 — 호출 전 스냅샷과 비교해야 push로 원본을 늘리는 회귀가 잡힌다.
+    const snapshot = JSON.stringify(s.memorySlots);
+    const before = s.memorySlots;
+    const shown = recallSlots(s);
+    expect(JSON.stringify(s.memorySlots)).toBe(snapshot);
+    expect(s.memorySlots).toBe(before);
+    expect(shown).not.toBe(s.memorySlots);
+    expect(shown).toHaveLength(s.memorySlots.length + 1);
   });
 
   it('고백을 미루면 장면이 없고, 4주 뒤 재고백을 받아들이면 그 재고백이 나온다', () => {
@@ -91,6 +98,9 @@ describe.each(ROUTES)('$npc', r => {
     const outing = romanceMomentSlots(cur()).find(m => m.sourceEventId === ROMANCE_OUTING_IDS[r.npc])!;
     expect(outing, '만남 장면').toBeDefined();
     expect([outing.year, outing.week, outing.choiceIndex]).toEqual([6, 33, 1]);
+    // 만남 기록은 그 자체가 겪은 증거 — 관계 값이 손상돼도 만남은 남고, 관계로 판정하는 고백은 빠진다.
+    const broken = romanceMomentSlots({ ...cur(), relationship: undefined }).map(m => m.sourceEventId);
+    expect(broken).toEqual([ROMANCE_OUTING_IDS[r.npc]]);
     expect(resolveEventCgRelPaths(outing.sourceEventId, 1, r.gender, 6)[0])
       .toBe(`high/${ROMANCE_OUTING_IDS[r.npc]}_${r.gender === 'male' ? 'm' : 'f'}.png`);
   });

@@ -99,6 +99,29 @@ describe('인물 앨범', () => {
     expect(screen.queryByRole('button', { name: '💞 함께한 순간' })).toBeNull();
   });
 
+  it("판본 탭을 오가면 전체 보기로 돌아온다 — '함께한 순간'이 저절로 다시 켜지지 않는다", () => {
+    renderAlbum(subinPaths);
+    const total = document.querySelectorAll('section').length;
+    fireEvent.click(screen.getByRole('button', { name: '💞 함께한 순간' }));
+    expect(document.querySelectorAll('section')).toHaveLength(1);
+    fireEvent.click(screen.getByRole('tab', { name: /여자 주인공/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /남자 주인공/ }));
+    expect(screen.getByRole('button', { name: '전체' }).getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelectorAll('section').length).toBe(total);
+  });
+
+  it('지훈 여주판 확대 화면 — 졸업 칸은 여주 문장, 고백 칸은 제목만', () => {
+    const paths = romanceSlotsFor('jihun', 'female').map(s => slotPath(s, 'female')!);
+    render(<NpcAlbumScreen npcId="jihun" story={{ seen: 1, total: 10 }} seenCgFiles={paths} onBack={() => {}} />);
+    expect(screen.getByRole('tab', { name: /여자 주인공/ }).getAttribute('aria-selected'), '전제: 여주판으로 열린다').toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: '💞 함께한 순간' }));
+    fireEvent.click(screen.getByTitle('다음 사진도 너와'));
+    expect(screen.getByTestId('album-recall').textContent).toBe('지훈이와 사진을 찍으며 졸업 뒤의 만남을 약속했다.');
+    fireEvent.click(screen.getByRole('button', { name: '닫기' }));
+    fireEvent.click(screen.getByTitle('지훈과 마음이 통한 순간'));
+    expect(screen.queryByTestId('album-recall')).toBeNull();
+  });
+
   it('확대 화면 — 선택지 하나뿐인 졸업 칸은 추억 한 줄, 재고백과 그림을 나눠 쓰는 고백 칸은 제목만', () => {
     renderAlbum(subinPaths);
     fireEvent.click(screen.getByRole('button', { name: '💞 함께한 순간' }));

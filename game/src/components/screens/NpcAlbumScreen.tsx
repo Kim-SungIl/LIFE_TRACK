@@ -177,7 +177,8 @@ export function NpcAlbumScreen({ npcId, story, seenCgFiles, onBack }: {
               key={t.gender}
               role="tab"
               aria-selected={on}
-              onClick={() => setGender(t.gender)}
+              // 판본을 바꾸면 전체 보기로 — 연애 칸이 없는 판본을 거쳐 돌아왔을 때 보기가 저절로 켜져 있지 않게.
+              onClick={() => { setGender(t.gender); setRomanceView(false); }}
               style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 padding: '6px 8px', borderRadius: 9, cursor: 'pointer', font: 'inherit',
