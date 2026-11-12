@@ -105,7 +105,7 @@ describe.each(ROUTES)('$npc', r => {
     expect(resolveEventCgRelPaths(ROMANCE_OUTING2_IDS[r.npc], choice, r.gender, 6)[0]).toBe(file);
     expect(loadArchive().cgFiles.filter(f => f === file)).toHaveLength(1);
     // 인사말
-    const greet = r.npc === 'subin' ? '그 언덕 또 가자' : '그날 이긴 사람 없었잖아';
+    const greet = r.npc === 'subin' ? '그 언덕 또 가자' : '그날 높게만 보내느라';
     expect(NPC_DIALOGUES[r.npc].filter(p => p.condition(95, done)).flatMap(p => p.lines).some(l => l.startsWith(greet))).toBe(true);
     expect(done.memorySlots.some(m => ALL_ROMANCE_OUTING_IDS.has(m.sourceEventId)), '전제: 만남 기억은 칸에서 밀렸다').toBe(false);
     // 회고 — 칸에서 밀린 첫·두 번째 만남이 겪은 순서로 한 번씩(이벤트 기록 파생)
@@ -116,11 +116,58 @@ describe.each(ROUTES)('$npc', r => {
     const choices = r.gender === 'female' && closing.femaleChoices ? closing.femaleChoices : closing.choices;
     const together = choices.find(c => c.relationshipSelect?.decision === 'together')!.message;
     expect(together.endsWith(romanceOutingRecall(done, r.npc))).toBe(true);
-    const second = r.npc === 'subin' ? (choice === 1 ? '멀리 가도' : '언덕에서처럼') : (choice === 1 ? '이긴 사람 없는' : '랠리 기록');
+    const second = r.npc === 'subin' ? (choice === 1 ? '멀리 가도' : '먼저 말해 줘') : (choice === 1 ? '받기 좋은 공만' : '더 빠른 공');
     expect(together).toContain(second);
     expect(together).not.toContain(r.npc === 'subin' ? '예약 유효' : '공동 우승');
     // 다시 안 열린다
     expect(hangOut(done, 30 + ROMANCE_OUTING2_GAP * 2, r).currentEvent?.id).not.toBe(ROMANCE_OUTING2_IDS[r.npc]);
+  });
+});
+
+describe('경계·손상·연쇄 (3자 검수 보강)', () => {
+  const r = ROUTES[1];
+  const cond = (id: string) => ROMANCE_OUTING_EVENTS.find(e => e.id === id)!.condition!;
+
+  it('간격은 4주로 못박는다 — 상수를 고쳐도 테스트가 따라가지 않게', () => {
+    expect(ROMANCE_OUTING2_GAP).toBe(4);
+  });
+
+  it('고2 끝 첫 만남 → 학년을 넘겨 고3 2주에 열린다(1주는 간격 3)', () => {
+    const s = afterFirstOuting(r, 0);
+    const first = s.events.find(e => e.id === ROMANCE_OUTING_IDS[r.npc])!;
+    // 첫 만남 기록을 고2 46주로 옮긴다(기록은 동결 — 새 객체로 교체).
+    const moved = { ...s, events: s.events.map(e => e === first ? { ...e, week: 46 } : e) };
+    const y7 = (week: number) => processWeek({ ...moved, year: 7, week, phase: 'weekday', currentEvent: null,
+      weekendChoices: ['hang-out', 'rest'] }, { 'hang-out:0': r.npc });
+    expect(y7(1).currentEvent?.id).not.toBe(ROMANCE_OUTING2_IDS[r.npc]);
+    expect(y7(2).currentEvent?.id).toBe(ROMANCE_OUTING2_IDS[r.npc]);
+  });
+
+  it('48주(학년 전환 주)엔 열지 않는다 — 47주가 양성 대조', () => {
+    const s = afterFirstOuting(r, 0);
+    const c = cond(ROMANCE_OUTING2_IDS[r.npc]);
+    expect(c({ ...s, year: 7, week: 47 })).toBe(true);
+    expect(c({ ...s, year: 7, week: 48 })).toBe(false);
+  });
+
+  it('첫 만남 기록의 선택이 0·1이 아니면(손상) 열지 않는다', () => {
+    const s = afterFirstOuting(r, 0);
+    const c = cond(ROMANCE_OUTING2_IDS[r.npc]);
+    const withFirst = (resolvedChoice: number) => ({ ...s, week: 40,
+      events: s.events.map(e => e.id === ROMANCE_OUTING_IDS[r.npc] ? { ...e, resolvedChoice } : e) });
+    expect(c(withFirst(1)), '양성 대조').toBe(true);
+    expect(c(withFirst(2))).toBe(false);
+  });
+
+  it('해결 뒤 같은 주에 사건을 덧붙이지 않는다 — 연쇄가 고를 후보가 남은 판에서도', () => {
+    const opened = hangOut(afterFirstOuting(r, 0), 30 + ROMANCE_OUTING2_GAP, r);
+    // 다 본 판이면 연쇄가 고를 게 없어 공허하게 통과한다 — 만남 기록만 남기고 지쳐 있는 판으로 바꾼다.
+    const romanceOnly = opened.events.filter(e => ALL_ROMANCE_OUTING_IDS.has(e.id));
+    useGameStore.setState({ state: { ...opened, events: romanceOnly, fatigue: 95,
+      stats: { ...opened.stats, mental: 5 } } });
+    useGameStore.getState().resolveEvent(0);
+    expect(cur().currentEvent).toBeNull();
+    expect(cur().phase).toBe('result');
   });
 });
 

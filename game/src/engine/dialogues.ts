@@ -163,7 +163,7 @@ export const NPC_DIALOGUES: Record<string, NpcDialoguePool[]> = {
       '공원에서 기록 안 재고 걷던 날 생각나. 그날 걸음이 제일 느렸는데, 제일 좋았어.',
     ]},
     { additive: true, priority: 102, condition: (_, s) => hasRomanceOuting2(s, 'jihun'), lines: [
-      '그날 이긴 사람 없었잖아. 그게 제일 재밌었어.',
+      '그날 높게만 보내느라 팔이 다 아팠어. 근데 또 그렇게 치고 싶다.',
     ]},
     { priority: 100, condition: (int) => int >= 80, lines: [
       '야, 너 오늘 뭐해? 같이 놀자!',

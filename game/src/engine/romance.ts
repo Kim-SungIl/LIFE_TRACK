@@ -34,8 +34,8 @@ export function romanceOutingRecall(state: RomanceContext, npc: RomanceNpc): str
   if (hasRomanceOuting2(state, npc)) {
     const quiet = romanceOutingChoice(state, ROMANCE_OUTING2_IDS[npc]) === 1;
     return npc === 'subin'
-      ? quiet ? ' "말 안 해도 옆에 있던 그날처럼, 멀리 가도 그렇게 있자."' : ' "그날 언덕에서처럼, 이제 내 차례도 계속 올 거야."'
-      : quiet ? ' "이긴 사람 없는 한 판, 계속 같이 치자."' : ' "랠리 기록은 졸업하고도 같이 갱신하자."';
+      ? quiet ? ' "말 안 해도 옆에 있던 그날처럼, 멀리 가도 그렇게 있자."' : ' "그날 언덕에서처럼, 힘든 날엔 나한테 먼저 말해 줘."'
+      : quiet ? ' "졸업해도 네 쪽으로는 받기 좋은 공만 보낼게."' : ' "다음엔 더 빠른 공 보낸다. 받아 줄 거지?"';
   }
   if (!hasRomanceOuting(state, npc)) return '';
   const playful = romanceOutingChoice(state, ROMANCE_OUTING_IDS[npc]) === 1;
@@ -47,15 +47,15 @@ export function romanceOutingRecall(state: RomanceContext, npc: RomanceNpc): str
 // 빠진 판(head+tail)이고, 화면에 낼 때 presentRomanceEvent가 기록을 읽어 끼운다(기록이 없으면 원문 그대로).
 export const ROMANCE_OUTING2_TEXT: Record<RomanceNpc, { head: string; tail: string; callback: readonly [string, string] }> = {
   subin: {
-    head: '비행기가 낮게 지나가는 강변 언덕. 수빈이가 캔음료 두 개를 잔디에 내려놓는다.\n"네가 예전에 내 비행기 사진 봐 줬잖아. 그때부터 나만 계속 얘기한 것 같아서."',
+    head: '비행기가 낮게 지나가는 강변 언덕. 수빈이가 캔음료 두 개를 잔디에 내려놓는다.\n"내 꿈 얘기는 네가 제일 많이 들어 줬잖아. 오늘은 그 반대 하자."',
     tail: '수빈이가 무릎을 끌어안는다. "무슨 얘기든 괜찮아. 없으면 없는 대로 괜찮고."',
-    callback: ['"지난번에 이런 얘기 계속하자고 했지? 그래서 오늘은 내가 먼저 물을게."',
+    callback: ['"지난번엔 앞날 얘기였지? 오늘은 그런 거 말고, 그냥 요즘 네 얘기."',
       '"맞은편 자리 예약했다며. 오늘은 맞은편 말고 옆자리야."'],
   },
   jihun: {
-    head: '공원 공터. 네트도 선도 없다. 지훈이가 셔틀콕을 건넨다.\n"오늘은 이기는 사람 없음. 떨어뜨리면 줍는 사람이 다음 서브."',
-    tail: '지훈이가 라켓을 한 번 휘둘러 보더니 웃는다.',
-    callback: ['"그날처럼 천천히 치자. 끝나면 또 걷고."', '"걷기는 공동 우승이었지? 오늘은 둘이서 랠리 기록 하나 세우자."'],
+    head: '공원 공터. 지훈이가 셔틀콕을 건네더니 라켓을 짧게 고쳐 잡는다.\n"오늘은 내가 받기 좋게만 보낼게. 너는 마음대로 쳐."',
+    tail: '첫 공이 높고 느리게 떠올랐다. 늘 있는 힘껏 치던 지훈이다.',
+    callback: ['"그날처럼 천천히 하자. 끝나면 또 걷고."', '"오늘은 대회 없음. 공동 우승은 지난번 걸로 충분하잖아."'],
   },
 };
 export const SUBIN_CONVERSATION_ENTRY = 'subin-hs-studyboard';
