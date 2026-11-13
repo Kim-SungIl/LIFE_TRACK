@@ -13,6 +13,7 @@ import { STAT_BAR_HEIGHT, STAT_ICON_SIZE } from './main/StatsPanel';
 import { RunArchiveSummary } from './RunArchiveSummary';
 import { CgItem, catOf } from './memoryTokens';
 import { HeroGallery, MemoryThumb } from './memoryVisuals';
+import { josa } from '../../engine/korean';
 import type { RunDelta } from '../../engine/archive';
 
 interface EndingScreenProps {
@@ -107,6 +108,11 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
   // 갤러리에 안 들어간 회상 = CG 없는 슬롯 + 슬롯 자체가 없는 항목(milestone 승격·폴백 시드).
   // 슬롯이 있으면 초상/엠블럼이라도 붙어 그림 0장인 엔딩이 나오지 않는다.
   const restRecalls = recalls.filter(h => !(h.slot && galleryIds.has(h.slot.id)));
+  // 연인 갤러리 — 엔진이 회상과 겹치지 않게 골라 둔 연애 순간. 회상과 같은 이유로 **슬롯의 year**로 해석한다.
+  const romance = ending.romanceGallery ?? null;
+  const romanceItems: CgItem[] = (romance?.moments ?? [])
+    .map(slot => ({ slot, cg: resolveEventCgUrl(slot.sourceEventId, slot.choiceIndex, gender, slot.year) }))
+    .filter((x): x is CgItem => !!x.cg);
 
   // 엔딩 진입음 — 7년의 끝. 가장 길고 낮은 소리로, 화면이 뜨는 순간 한 번만.
   // ref 가드는 StrictMode 이중 호출로 화음이 겹쳐 울리는 것을 막는다(2.2초짜리라 특히 티가 난다).
@@ -254,6 +260,16 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 연인과 함께한 순간 — 고3 순간(두 번째 만남·졸업 약속)은 학년말 회고가 없어 여기서만 보인다. */}
+        {romance && romanceItems.length > 0 && (
+          <div data-testid="ending-romance-gallery" style={{ maxWidth: 420, margin: '0 auto 16px' }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>
+              {`${josa(romance.npcName, '와/과')} 함께한 순간`}
+            </div>
+            <HeroGallery items={romanceItems} caption={slot => YEAR_LABELS[slot.year - 1] ?? `Y${slot.year}`} />
           </div>
         )}
 
