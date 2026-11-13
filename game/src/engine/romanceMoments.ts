@@ -16,8 +16,8 @@
 // 묻지 않는다(관계 값이 손상돼도 열린 만남은 남는다 — 만남은 사귀는 동안에만 열리므로 추정이 아니다).
 //
 // 보이는 범위: 학년말 회고는 Y1~Y6만 있고(고3은 회고 없이 곧장 엔딩), 기록장은 지난 학년까지만 연다.
-// 그래서 **고3에 생긴 순간(졸업 약속·고3 만남·고3 재고백)은 지금 어느 화면에도 닿지 않는다** — 고3의
-// 연애는 엔딩의 romanceClosure 문장이 맡는다. 파생은 학년과 무관하게 하되, 엔딩에 노출할지는 별건.
+// 그래서 고3에 생긴 순간(졸업 약속·고3 만남·고3 재고백)은 회고에 닿지 않는다 — 대신 **엔딩의 연인
+// 갤러리**(ending.ts romanceGallery)가 판 전체의 연애 순간을 한 번에 보여 준다.
 import { yearToPhaseTag } from './memorySystem';
 import { ALL_ROMANCE_OUTING_IDS, sanitizeRelationship } from './romance';
 import type { EventChoice, GameEvent, GameState, MemorySlot } from './types';
@@ -33,13 +33,12 @@ function chosenChoice(e: GameEvent): EventChoice | undefined {
 
 type MomentSource = Pick<GameState, 'events' | 'relationship' | 'gender'> & Partial<Pick<GameState, 'memorySlots'>>;
 
-/** 이번 판에서 겪은 연애 순간 중 기억 슬롯에 없는 것 — 발생 순서. */
-export function romanceMomentSlots(state: MomentSource): MemorySlot[] {
+/** 이번 판에서 겪은 연애 순간 전부 — 발생 순서. 엔딩의 연인 갤러리가 쓴다(기억 칸과 무관). */
+export function livedRomanceMoments(state: MomentSource): MemorySlot[] {
   const r = sanitizeRelationship(state.relationship, state.gender);
-  const kept = new Set((state.memorySlots ?? []).map(m => m.sourceEventId));
   const out: MemorySlot[] = [];
   for (const e of state.events ?? []) {
-    if (e.year === undefined || e.week === undefined || kept.has(e.id)) continue;
+    if (e.year === undefined || e.week === undefined) continue;
     const choice = chosenChoice(e);
     const draft = choice?.memorySlotDraft;
     if (!choice || !draft) continue;
@@ -63,6 +62,12 @@ export function romanceMomentSlots(state: MomentSource): MemorySlot[] {
     });
   }
   return out;
+}
+
+/** 이번 판에서 겪은 연애 순간 중 기억 슬롯에 없는 것 — 회고·기록장이 덧붙인다. */
+export function romanceMomentSlots(state: MomentSource): MemorySlot[] {
+  const kept = new Set((state.memorySlots ?? []).map(m => m.sourceEventId));
+  return livedRomanceMoments(state).filter(m => !kept.has(m.sourceEventId));
 }
 
 /** 회고 화면에 넘길 기억 — 저장된 슬롯 + 슬롯에서 밀린 연애 순간. 엔딩 층은 이걸 읽지 않는다. */

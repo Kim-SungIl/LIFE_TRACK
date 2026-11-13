@@ -1,6 +1,8 @@
 // 엔딩 산정 — 7년 종료 후의 진로/회상/행복도 결정.
 // gameEngine.ts 에서 추출 (P2-6). 학년말 카드(YearEndScreen)도 calculateHappinessGrade 를 공유.
-import { romanceClosure, hasSuccessfulRomanceRetry, ROMANCE_ROUTES } from './romance';
+import { romanceClosure, hasSuccessfulRomanceRetry, ROMANCE_ROUTES, sanitizeRelationship } from './romance';
+import { livedRomanceMoments } from './romanceMoments';
+import type { MemorialHighlight } from './memorySystem';
 import { getParentIntimacyTone, type ParentIntimacyTone } from './parentIntimacy';
 import { CareerBranch, GameState, NpcState, ParentStrength, Stats } from './types';
 import { selectMemorialHighlights, selectRegretHighlights } from './memorySystem';
@@ -910,6 +912,7 @@ export function calculateEnding(state: GameState) {
   const memorialHighlights = selectMemorialHighlights(memoryState, regretUsedTexts);
   // NPC 근황도 후회 본문을 제외(차선 기억 폴백) — 이중노출 0을 엔딩 전체 레이어로 완결.
   const npcStories = getTopNpcStories(state, regretUsedTexts);
+  const romanceGallery = buildRomanceGallery(state, memorialHighlights);
   const yearClosings = [...(state.milestoneScenes || [])]
     .sort((a, b) => a.year - b.year)
     .map(ms => ms.summaryText || `${ms.year}학년의 기억.`);
@@ -934,7 +937,24 @@ export function calculateEnding(state: GameState) {
     memorialHighlights,
     regretHighlights,
     yearClosings,
+    // 연인이 없던 판엔 키 자체를 두지 않는다 — null 키 하나도 엔딩 지문을 바꿔, 비연애 판이 "바이트 불변"
+    // 계약(romanceInvariance.test.ts)을 이유 없이 깬다.
+    ...(romanceGallery ? { romanceGallery } : {}),
   };
+}
+
+// 연인 갤러리 — 판 전체의 연애 순간(고백·재고백 수락·만남·졸업 약속)을 한 번에 보여 준다.
+// 고3 순간은 학년말 회고가 없어(곧장 엔딩) 여기서만 보인다. 연애 기억은 growth 2칸 경쟁에서 거의
+// 탈락하므로 memorySlots가 아니라 이벤트 기록에서 파생한다(romanceMoments.ts) — 그래서 회상·후회·근황의
+// 선정은 하나도 바뀌지 않는다. 회상 갤러리에 이미 나온 장면만 빼서 같은 그림이 두 번 나오지 않게 한다.
+// 헤어진 판(apart)도 겪은 순간은 남긴다. 관계 값이 없거나 손상이면 그리지 않는다(이름을 부를 근거가 없다).
+function buildRomanceGallery(state: GameState, memorial: readonly MemorialHighlight[]) {
+  const r = sanitizeRelationship(state.relationship, state.gender);
+  if (!r) return null;
+  const shown = new Set(memorial.map(h => h.slot?.sourceEventId).filter((id): id is string => !!id));
+  const moments = livedRomanceMoments(state).filter(m => !shown.has(m.sourceEventId));
+  if (moments.length === 0) return null;
+  return { npcName: state.npcs.find(n => n.id === r.npcId)?.name ?? r.npcId, moments };
 }
 
 // 엔딩 페이로드 — EndingScreen 의 prop 타입 (이전엔 EndingScreen 내부에 정의돼 있었음).

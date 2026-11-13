@@ -29,6 +29,8 @@ import { YearEndScreen } from '../screens/YearEndScreen';
 import { EndingScreen } from '../screens/EndingScreen';
 import { calculateEnding } from '../../engine/ending';
 import { makeState, makeEvent } from '../../test/fixtures';
+import { GAME_EVENTS } from '../../engine/events';
+import { ROMANCE_OUTING_IDS } from '../../engine/romance';
 
 vi.mock('../../audio/bgm', () => ({ setBgmTrack: vi.fn(), getBgmTrackId: vi.fn(() => 'main') }));
 vi.mock('../../audio/sfx', () => ({ playSfx: vi.fn() }));
@@ -238,6 +240,23 @@ describe('EndingScreen — 회상 갤러리와 썸네일', () => {
     const { container } = renderEnding();
 
     expect(imgSrcs(container).length).toBeGreaterThan(1);
+    expectNoUnwrappedImage(container);
+  });
+
+  // 연인 갤러리는 회상과 **따로** resolveEventCgUrl을 부른다 — 연인 없는 판만 보면 이 호출부의 래핑 누락이 안 보인다.
+  it('연인 판 — 연인 갤러리의 그림도 WEBP:: 를 거친다', () => {
+    const outing = GAME_EVENTS.find(e => e.id === ROMANCE_OUTING_IDS.jihun)!;
+    const state = makeState({ gender: 'female', year: 8, week: 1, memorySlots: [cgSlot(), emblemSlot()],
+      relationship: { npcId: 'jihun', status: 'dating', year: 6, week: 26 },
+      events: [{ ...outing, year: 6, week: 30, resolvedChoice: 0 }] });
+    const { container } = render(
+      <EndingScreen ending={calculateEnding(state)} track={state.track} stats={state.stats} parents={state.parents}
+        burnoutCount={0} money={0} bgProps={{ bg: getBackground(1, false, 'normal', 8), bgImgError: true, onImgError: () => {} }}
+        runDelta={null} gender="female" onRestartSameHome={null} onExitToTitle={() => {}} />,
+    );
+    const block = container.querySelector('[data-testid="ending-romance-gallery"]') as HTMLElement;
+    expect(block, '전제: 연인 갤러리가 그려졌다').not.toBeNull();
+    expect(imgSrcs(block)).toContain(`WEBP::${BASE}images/events/high/jihun-romance-outing_f.png`);
     expectNoUnwrappedImage(container);
   });
 });

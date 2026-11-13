@@ -284,5 +284,8 @@ export function romanceClosure(state: GameState, npcId: string): { text: string;
       : r.graduation === 'together' ? '지훈이와는 연인으로도 계속 만나며, 운동과 각자의 일상 사이에 둘의 사진을 더하고 있다.'
       : '지훈이와는 머뭇거리던 말의 끝에서 서로의 마음을 확인하고 연인이 되었다.';
   const retrySources = hasSuccessfulRomanceRetry(state, r.npcId) ? [ROMANCE_RETRY_IDS[r.npcId]] : [];
-  return { text, excludeEventIds: new Set([ROMANCE_ROUTES[r.npcId].opening, ROMANCE_ROUTES[r.npcId].closing, ...retrySources]) };
+  // 만남은 엔딩 연인 갤러리(buildRomanceGallery)가 캡션으로 낸다 — 근황 끝에 같은 문장을 또 붙이지 않는다.
+  const outings = [ROMANCE_OUTING_IDS[r.npcId], ROMANCE_OUTING2_IDS[r.npcId]];
+  return { text, excludeEventIds: new Set([ROMANCE_ROUTES[r.npcId].opening, ROMANCE_ROUTES[r.npcId].closing,
+    ...retrySources, ...outings]) };
 }
