@@ -19,10 +19,10 @@
 // 그래서 **고3에 생긴 순간(졸업 약속·고3 만남·고3 재고백)은 지금 어느 화면에도 닿지 않는다** — 고3의
 // 연애는 엔딩의 romanceClosure 문장이 맡는다. 파생은 학년과 무관하게 하되, 엔딩에 노출할지는 별건.
 import { yearToPhaseTag } from './memorySystem';
-import { ROMANCE_OUTING_IDS, sanitizeRelationship } from './romance';
+import { ALL_ROMANCE_OUTING_IDS, sanitizeRelationship } from './romance';
 import type { EventChoice, GameEvent, GameState, MemorySlot } from './types';
 
-const OUTING_IDS = new Set<string>(Object.values(ROMANCE_OUTING_IDS));
+const OUTING_IDS = ALL_ROMANCE_OUTING_IDS;
 
 /** 기록 레코드에서 실제로 고른 선택지 — 여주 경로로 해결됐으면 femaleChoices를 본다. */
 function chosenChoice(e: GameEvent): EventChoice | undefined {

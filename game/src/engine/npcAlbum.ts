@@ -20,7 +20,7 @@ import { INITIAL_NPCS } from './npcRoster';
 import { getSchoolLevel } from './backgrounds';
 import { resolveEventCgRelPaths } from './eventCg';
 import { SOLO_ROOT, storyOwners } from './npcStoryPool';
-import { presentRomanceEvent, ROMANCE_OUTING_IDS, ROMANCE_ROUTES } from './romance';
+import { ALL_ROMANCE_OUTING_IDS, presentRomanceEvent, ROMANCE_OUTING2_IDS, ROMANCE_ROUTES } from './romance';
 import type { EventChoice, GameEvent, Gender } from './types';
 
 /** 학교급별 대표 학년 — resolver는 학년을 학교급으로만 쓰므로(eventCg의 getSchoolLevel) 이걸로 충분하다. */
@@ -54,7 +54,8 @@ function draftRecall(e: GameEvent, ci: number, gender: Gender): string | undefin
   const list: EventChoice[] = gender === 'female' && e.femaleChoices ? e.femaleChoices : e.choices;
   return list?.[ci]?.memorySlotDraft?.recallText || undefined;
 }
-const OUTING_IDS = new Set<string>(Object.values(ROMANCE_OUTING_IDS));
+const OUTING_IDS = ALL_ROMANCE_OUTING_IDS;
+const OUTING2_IDS = new Set<string>(Object.values(ROMANCE_OUTING2_IDS));
 const CLOSING_IDS = new Set<string>(Object.values(ROMANCE_ROUTES).map(r => r.closing));
 
 export interface AlbumBucket {
@@ -230,7 +231,7 @@ export function slotRecall(slot: AlbumSlot, gender: Gender): string | null {
  */
 export function romanceSlotsFor(npcId: string, gender: Gender): AlbumSlot[] {
   // 학년 행 순서대로면 고3 졸업이 고등학교 시절 행(고백·만남)보다 먼저 온다 — 겪은 순서로 놓는다.
-  const rank = (s: AlbumSlot) => OUTING_IDS.has(s.eventId) ? 1 : CLOSING_IDS.has(s.eventId) ? 2 : 0;
+  const rank = (s: AlbumSlot) => OUTING2_IDS.has(s.eventId) ? 2 : OUTING_IDS.has(s.eventId) ? 1 : CLOSING_IDS.has(s.eventId) ? 3 : 0;
   return albumFor(npcId, gender).flatMap(b => b.slots).filter(s => s.romance).sort((a, b) => rank(a) - rank(b));
 }
 
