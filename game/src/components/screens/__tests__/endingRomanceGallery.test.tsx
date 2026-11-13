@@ -95,8 +95,8 @@ describe('엔딩 연인 갤러리', () => {
       ({ id, category, week: 5, year, sourceEventId: id, choiceIndex: 0, recallText, npcIds: [], importance,
         phaseTag: yearToPhaseTag(year), toneTag: 'warm' });
     const strong = [slot('s1', 'growth', 7, 9, '강한 기억 하나'), slot('s2', 'discovery', 1, 9, '강한 기억 둘'),
-      slot('s3', 'failure', 3, 9, '강한 기억 셋'), slot('s4', 'relationship', 5, 9, '강한 기억 넷'),
-      slot('s5', 'relationship', 2, 9, '강한 기억 다섯'), slot('s6', 'growth', 4, 9, '강한 기억 여섯')];
+      slot('s3', 'failure', 3, 9, '강한 기억 셋'), slot('s4', 'courage', 5, 9, '강한 기억 넷'),
+      slot('s5', 'courage', 2, 9, '강한 기억 다섯'), slot('s6', 'growth', 4, 9, '강한 기억 여섯')];
     // 후회 층이 하나를 먼저 가져가도(실패 기억) 회상 5칸은 강한 기억으로 찬다.
     const outing: MemorySlot = { ...slot('growth_6_30_0', 'growth', 6, 6, lived.recallText), week: 30,
       sourceEventId: ROMANCE_OUTING_IDS.jihun, npcIds: ['jihun'] };
