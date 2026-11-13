@@ -62,12 +62,16 @@ describe('엔딩 연인 갤러리', () => {
       ['jihun-hs-unsaid', 6], [ROMANCE_OUTING_IDS.jihun, 6], [ROMANCE_OUTING2_IDS.jihun, 7], ['jihun-hs-graduation', 7]]);
   });
 
-  it('화면 — 고2·고3 순간 네 장을 여주판 그림으로(엔딩 year=8이 아니라 슬롯의 year로) 보인다', () => {
+  it('화면 — 고2·고3 순간 네 장을 여주판 그림으로, 전부 큰 갤러리 안에 보인다', () => {
     renderEnding(endingState());
     const block = screen.getByTestId('ending-romance-gallery');
     expect(within(block).getByText('지훈과 함께한 순간')).toBeTruthy();
-    const srcs = [...block.querySelectorAll('img')].map(i => i.getAttribute('src') ?? '');
+    const imgs = [...block.querySelectorAll('img')];
+    const srcs = imgs.map(i => i.getAttribute('src') ?? '');
     for (const f of FILES) expect(srcs.some(s => s.includes(f)), f).toBe(true);
+    // 작은 칸엔 CG 금지 — 이 섹션의 그림은 모두 큰 갤러리(.ye-gallery) 안에만 있다.
+    expect(imgs).toHaveLength(FILES.length);
+    for (const img of imgs) expect(img.closest('.ye-gallery'), img.getAttribute('src') ?? '').not.toBeNull();
     expect(within(block).getAllByText('고3').length).toBeGreaterThan(0);
     expect(within(block).getAllByText('고2').length).toBeGreaterThan(0);
   });
@@ -83,6 +87,38 @@ describe('엔딩 연인 갤러리', () => {
     renderEnding(state);
     const srcs = [...document.querySelectorAll('img')].map(i => i.getAttribute('src') ?? '');
     expect(srcs.filter(s => s.includes(FILES[1]))).toHaveLength(1);
+  });
+
+  it('기억 칸엔 있지만 회상 5장에 못 든 만남은 갤러리에 남고, 근황 끝에는 같은 문장을 붙이지 않는다', () => {
+    const lived = calculateEnding(endingState()).romanceGallery!.moments.find(m => m.sourceEventId === ROMANCE_OUTING_IDS.jihun)!;
+    const slot = (id: string, category: MemorySlot['category'], year: number, importance: number, recallText: string): MemorySlot =>
+      ({ id, category, week: 5, year, sourceEventId: id, choiceIndex: 0, recallText, npcIds: [], importance,
+        phaseTag: yearToPhaseTag(year), toneTag: 'warm' });
+    const strong = [slot('s1', 'growth', 7, 9, '강한 기억 하나'), slot('s2', 'discovery', 1, 9, '강한 기억 둘'),
+      slot('s3', 'failure', 3, 9, '강한 기억 셋'), slot('s4', 'relationship', 5, 9, '강한 기억 넷'),
+      slot('s5', 'relationship', 2, 9, '강한 기억 다섯'), slot('s6', 'growth', 4, 9, '강한 기억 여섯')];
+    // 후회 층이 하나를 먼저 가져가도(실패 기억) 회상 5칸은 강한 기억으로 찬다.
+    const outing: MemorySlot = { ...slot('growth_6_30_0', 'growth', 6, 6, lived.recallText), week: 30,
+      sourceEventId: ROMANCE_OUTING_IDS.jihun, npcIds: ['jihun'] };
+    const ending = calculateEnding(endingState({ memorySlots: [...strong, outing] }));
+    expect(ending.memorialHighlights.some(h => h.slot?.sourceEventId === ROMANCE_OUTING_IDS.jihun), '전제: 회상엔 못 들었다').toBe(false);
+    expect(ending.romanceGallery!.moments.map(m => m.sourceEventId), '회상에 없으면 갤러리가 보인다').toContain(ROMANCE_OUTING_IDS.jihun);
+    const story = ending.npcStories.find(t => t.startsWith('지훈'))!;
+    expect(story, '전제: 지훈 근황').toBeDefined();
+    expect(story).not.toContain(lived.recallText);
+  });
+
+  it('남주 수빈판 — 만남 두 장이 남주판 그림으로 보인다', () => {
+    const subin: RomanceRelationship = { npcId: 'subin', status: 'dating', year: 6, week: 26 };
+    const s = makeState({ gender: 'male', year: 8, week: 1, memorySlots: [], relationship: subin,
+      events: [record(event(ROMANCE_OUTING_IDS.subin), 6, 30, 0), record(event(ROMANCE_OUTING2_IDS.subin), 7, 10, 1)] });
+    s.npcs = s.npcs.map(n => n.id === 'subin' ? { ...n, met: true, intimacy: 95 } : n);
+    renderEnding(s);
+    const block = screen.getByTestId('ending-romance-gallery');
+    expect(within(block).getByText('수빈과 함께한 순간')).toBeTruthy();
+    const srcs = [...block.querySelectorAll('img')].map(i => i.getAttribute('src') ?? '');
+    expect(srcs.map(x => x.split('images/events/')[1]?.replace(/\.webp$/, '.png')))
+      .toEqual(['high/subin-romance-outing_m.png', 'high/subin-romance-outing2_m.png']);
   });
 
   it('재고백으로 사귄 판 — 재고백 수락이 고백 수락 그림으로 뜬다(그 매핑은 고2~고3 학년에만 있어 슬롯 year가 필수)', () => {
