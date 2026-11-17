@@ -25,7 +25,8 @@ const head2 = (npc: RomanceNpc) => `${ROMANCE_OUTING2_TEXT[npc].head}\n${ROMANCE
 export const ROMANCE_OUTING_EVENTS: GameEvent[] = [
   {
     id: ROMANCE_OUTING_IDS.subin, title: '단어장을 덮은 뒤', speakers: ['subin'],
-    location: 'cafe', background: 'cafe', condition: s => available(s, 'subin'),
+    // 'cafe.png'는 없다 — 다른 카페 장면들이 쓰는 cafe_study로(없는 키는 그림 없이 그라데이션만 남는다).
+    location: 'cafe', background: 'cafe_study', condition: s => available(s, 'subin'),
     description: '함께 놀기로 한 날, 카페에서 수빈이의 영어 연습을 잠깐 도왔다. 수빈이가 단어장을 덮고 컵을 두 손으로 감싼다.\n"오늘은 내 얘기만 했네. 너는 요즘 어떤 앞날을 생각해? 아직 잘 모르겠다는 답도 괜찮아."\n발음을 따라 읽던 때와 달리, 이번에는 답을 재촉하지 않고 기다린다.',
     choices: [
       { text: '"아직 찾는 중이지만, 너랑 이런 얘기는 계속하고 싶어."', effects: {}, npcEffects: [{ npcId: 'subin', intimacyChange: 0 }],

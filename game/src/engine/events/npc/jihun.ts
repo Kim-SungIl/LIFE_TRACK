@@ -1,4 +1,5 @@
 import { GameEvent } from '../../types';
+import { isDating } from '../../romance';
 
 export const JIHUN_EVENTS = [
   // ===== 지훈 이벤트 체인 =====
@@ -172,7 +173,10 @@ export const JIHUN_EVENTS = [
     // 어차피 닿지 않지만, 의도를 코드에 남긴다.
     condition: (s) => {
       const jihun = s.npcs.find(n => n.id === 'jihun');
-      return !!jihun?.met && jihun.intimacy >= 70 && s.year >= 2 && s.week >= 40 && !s.isVacation;
+      // 연인 사이엔 열지 않는다 — "계속 친구하자"가 학년말 회고·엔딩 근황에 남아 관계와 어긋난다.
+      // 보통 중1에 소진되지만 친밀도 70에 늦게 닿은 판은 고2 연애 중에 열릴 수 있다(2026-11-17 인게임 검증).
+      // 헤어진 뒤엔 오히려 맞는 말이라 막지 않는다.
+      return !!jihun?.met && jihun.intimacy >= 70 && s.year >= 2 && s.week >= 40 && !s.isVacation && !isDating(s, 'jihun');
     },
     choices: [
       {
