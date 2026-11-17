@@ -110,7 +110,7 @@ it('연애는 친밀도와 별개로 기존 라벨 자리에 표시한다', () =
   expect(screen.queryByText(/💗/), '헤어진 판엔 하트를 걸어 두지 않는다').not.toBeInTheDocument();
 });
 
-it('연인은 하트 라벨·전용 테두리로, 있는 친구 중 맨 앞에 — 부재 친구보다는 뒤로 가지 않는다', () => {
+it('연인은 하트 라벨·전용 테두리로, 있는 친구 중 맨 앞에, 떠난 친구는 그대로 맨 뒤', () => {
   const state = makeState({ gender: 'female', year: 7, week: 10,
     relationship: { npcId: 'jihun', status: 'dating', year: 6, week: 26 } });
   // 지훈이 원래 순서상 뒤에 있도록 다른 친구를 앞세운다.
