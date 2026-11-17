@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialState } from '../gameEngine';
-import { relationshipSignal } from '../relationshipSignals';
+import { nextIntimacyThreshold, relationshipSignal, ROMANCE_IMMINENT_TEXT } from '../relationshipSignals';
 import { absWeek } from '../weekMath';
 import type { GameState, NpcState, ParentStrength } from '../types';
 
@@ -96,5 +96,28 @@ describe('relationshipSignal', () => {
   it('returns null without lastInteractionWeek when not imminent', () => {
     const state = fixture({ year, week });
     expect(relationshipSignal(jihunAt(state, 40), state)).toBeNull();
+  });
+});
+
+describe('relationshipSignal — 연인', () => {
+  // 고2 여주판 지훈: 연인인데 아직 안 연 장면이 남은 친밀도에서 임박 신호가 뜬다.
+  function datingJihun(relationship: GameState['relationship']) {
+    const state = Object.assign(createInitialState('female', PARENTS, { rngSeed: RNG_SEED }),
+      { year: 6, week: 30, isVacation: false, relationship });
+    const npc = jihunAt(state, 0);
+    const th = nextIntimacyThreshold(npc, state);
+    expect(th, '전제: 고2 지훈에게 아직 열 장면이 있다').not.toBeNull();
+    npc.intimacy = th! - 1;
+    return { state, npc };
+  }
+
+  it('연인에겐 같은 임박 판정을 "더 가까워질 듯" 대신 연인 말로 한다', () => {
+    const { state, npc } = datingJihun({ npcId: 'jihun', status: 'dating', year: 6, week: 26 });
+    expect(relationshipSignal(npc, state)).toEqual({ text: ROMANCE_IMMINENT_TEXT, tone: 'good' });
+  });
+
+  it('헤어진 뒤엔 일반 문구로 돌아간다', () => {
+    const { state, npc } = datingJihun({ npcId: 'jihun', status: 'ended', year: 6, week: 26, graduation: 'apart' });
+    expect(relationshipSignal(npc, state)).toEqual({ text: '✨ 곧 더 가까워질 듯', tone: 'good' });
   });
 });

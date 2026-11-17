@@ -4,6 +4,14 @@ export function absWeek(year: number, week: number): number {
   return (year - 1) * 48 + week;
 }
 
+// ===== 학년 이름 SSOT =====
+// 7년 = 초6(Y1) · 중1~3(Y2~4) · 고1~3(Y5~7). 여러 층(앨범·결산·연인 줄)이 같은 표를 쓰도록 leaf에 둔다.
+export const SCHOOL_YEAR_LABELS = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'] as const;
+/** year(1~7) → '고2' 같은 이름. 범위 밖이면 undefined. */
+export function schoolYearLabel(year: number): string | undefined {
+  return SCHOOL_YEAR_LABELS[year - 1];
+}
+
 // ===== 학기 구조 SSOT =====
 // 1학기: W1~W19, 여름방학: W20~W24, 2학기: W25~W42, 겨울방학: W43~W48.
 // gameEngine에 있던 것을 leaf로 내렸다 — 계절을 읽어야 하는 층(말걸기·관계 신호)이

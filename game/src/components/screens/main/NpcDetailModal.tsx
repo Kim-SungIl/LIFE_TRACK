@@ -1,4 +1,4 @@
-import { isDating, canStartRomanceRetry, romanceProfileLines } from '../../../engine/romance';
+import { isDating, canStartRomanceRetry, romanceProfileLines, ROMANCE_PARTNER_LABEL } from '../../../engine/romance';
 import { GameState, NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { Dialog } from '../../Dialog';
@@ -30,7 +30,7 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
   const tier = intimacyTier(npc.intimacy);
   const dating = isDating(state, npc.id);
   const intimacyColor = dating ? 'var(--rose)' : tier === 'best' ? 'var(--accent-soft)' : tier === 'friend' ? 'var(--yellow)' : 'var(--text-muted)';
-  const intimacyLabel = dating ? '💗 연인' : INTIMACY_TIER_LABEL[tier];
+  const intimacyLabel = dating ? ROMANCE_PARTNER_LABEL : INTIMACY_TIER_LABEL[tier];
   const romanceLines = romanceProfileLines(state, npc.id);
   const signal = relationshipSignal(npc, state);
   return (

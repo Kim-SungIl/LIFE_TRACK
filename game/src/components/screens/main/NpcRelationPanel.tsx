@@ -1,4 +1,4 @@
-import { canStartRomanceRetry, isDating } from '../../../engine/romance';
+import { canStartRomanceRetry, isDating, ROMANCE_PARTNER_LABEL } from '../../../engine/romance';
 import { GameState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { relationshipSignal, npcAbsence } from '../../../engine/relationshipSignals';
@@ -38,7 +38,7 @@ export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = fals
           const dating = isDating(state, n.id);
           // 연인은 친밀도 단계 색 대신 전용 색 — 절친 금색과 섞이면 '연인' 글자가 안 보인다.
           const intimacyColor = dating ? 'var(--rose)' : tier === 'best' ? '#e5c07b' : tier === 'friend' ? '#8fb573' : '#8a8078';
-          const intimacyLabel = dating ? '💗 연인' : INTIMACY_TIER_LABEL[tier];
+          const intimacyLabel = dating ? ROMANCE_PARTNER_LABEL : INTIMACY_TIER_LABEL[tier];
           const signal = relationshipSignal(n, state);
           return (
             <button
@@ -46,7 +46,7 @@ export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = fals
               type="button"
               className="btn-reset"
               onClick={() => onSelect(n.id)}
-              aria-label={`${n.name} 상세 보기`}
+              aria-label={`${n.name}${dating ? ' (연인)' : ''} 상세 보기`}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',

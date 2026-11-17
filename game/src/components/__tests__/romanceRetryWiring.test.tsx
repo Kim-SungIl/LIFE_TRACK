@@ -62,9 +62,9 @@ it.each([false, true])('재대화 왕복/새로고침(%s) 후 계획과 연인 �
   expect(useGameStore.getState().state!.week).toBe(34);
   expect(useGameStore.getState().state!.relationship?.status).toBe('dating');
   fireEvent.click(screen.getByRole('button', { name: /친구 1명/ }));
-  expect(screen.getByRole('button', { name: '지훈 상세 보기' })).toHaveTextContent('연인');
+  expect(screen.getByRole('button', { name: '지훈 (연인) 상세 보기' })).toHaveTextContent('연인');
   // 관계 시트는 바깥 닫기 대신 상세로 들어간 뒤 닫는다.
-  fireEvent.click(screen.getByRole('button', { name: '지훈 상세 보기' }));
+  fireEvent.click(screen.getByRole('button', { name: '지훈 (연인) 상세 보기' }));
   fireEvent.click(screen.getByRole('button', { name: '닫기' }));
   for (const id of ['reading', 'library']) {
     expect(screen.getAllByText(ACTIVITIES.find(a => a.id === id)!.name).length).toBeGreaterThan(0);

@@ -104,10 +104,12 @@ it('연애는 친밀도와 별개로 기존 라벨 자리에 표시한다', () =
     relationship: { npcId: 'subin', status: 'dating', year: 6, week: 10 } });
   state.npcs = withNpc(state.npcs, 'subin', { met: true, intimacy: 20 });
   const view = render(<NpcRelationPanel state={state} onSelect={() => {}} />);
-  expect(screen.getByRole('button', { name: '수빈 상세 보기' })).toHaveTextContent('연인');
+  expect(screen.getByRole('button', { name: '수빈 (연인) 상세 보기' })).toHaveTextContent('연인');
   view.rerender(<NpcRelationPanel state={{ ...state, relationship: { ...state.relationship!, status: 'ended', graduation: 'apart' } }} onSelect={() => {}} />);
   expect(screen.queryByText(/연인/)).not.toBeInTheDocument();
-  expect(screen.queryByText(/💗/), '헤어진 판엔 하트를 걸어 두지 않는다').not.toBeInTheDocument();
+  expect(screen.queryByText(/💞/), '헤어진 판엔 하트를 걸어 두지 않는다').not.toBeInTheDocument();
+  const card = screen.getByRole('button', { name: '수빈 상세 보기' });
+  expect(card.getAttribute('style') ?? '', '헤어지면 연인 테두리도 빠진다').not.toContain('inset');
 });
 
 it('연인은 하트 라벨·전용 테두리로, 있는 친구 중 맨 앞에, 떠난 친구는 그대로 맨 뒤', () => {
@@ -121,10 +123,18 @@ it('연인은 하트 라벨·전용 테두리로, 있는 친구 중 맨 앞에, 
   state.events = [...state.events, makeEvent({ id: 'doyun-school-split' })];
   render(<NpcRelationPanel state={state} onSelect={() => {}} />);
   const cards = screen.getAllByRole('button', { name: /상세 보기$/ });
-  expect(cards.map(c => c.getAttribute('aria-label')))
-    .toEqual(['지훈 상세 보기', '가나 상세 보기', '다라 상세 보기', '도윤 상세 보기']);
-  expect(cards[0]).toHaveTextContent('💗 연인');
+  expect(cards.map(c => c.getAttribute('aria-label')), '연인은 화면 낭독기에도 연인으로')
+    .toEqual(['지훈 (연인) 상세 보기', '가나 상세 보기', '다라 상세 보기', '도윤 상세 보기']);
+  expect(cards[0]).toHaveTextContent('💞 연인');
+  // 색·테두리 — jsdom CSSOM은 값을 정규화하므로 원시 style 속성을 읽는다.
+  const raw = cards[0].getAttribute('style') ?? '';
+  expect(raw).toMatch(/box-shadow:\s*inset 0 0 0 1px rgba\(232,\s*145,\s*168,\s*0\.45\)/);
+  const label = [...cards[0].querySelectorAll('span')].find(s => s.textContent === '💞 연인')!;
+  expect(label.getAttribute('style') ?? '').toContain('var(--rose)');
+  expect((cards[0].querySelector('div[style*="height: 100%"]') as HTMLElement | null)?.getAttribute('style') ?? '',
+    '게이지도 연인 색').toContain('var(--rose)');
+  expect(cards[1].getAttribute('style') ?? '').not.toContain('inset');
   expect(cards[0].getAttribute('data-dating')).toBe('true');
   expect(cards[1].getAttribute('data-dating')).toBeNull();
-  expect(cards[1]).not.toHaveTextContent('💗');
+  expect(cards[1]).not.toHaveTextContent('💞');
 });

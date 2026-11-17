@@ -20,14 +20,14 @@ describe('romanceProfileLines', () => {
     expect(romanceProfileLines(ctx({ relationship: rel({ year: 7, week: 2 }) }), 'jihun')).toEqual(['고3 3월부터 만나는 중']);
   });
 
-  it('최근 만남은 두 번째가 있으면 두 번째, 없으면 첫 번째 — 미해결 기록은 세지 않는다', () => {
+  it('기억에 남은 만남은 두 번째가 있으면 두 번째, 없으면 첫 번째 — 미해결 기록은 세지 않는다', () => {
     const first = ev(ROMANCE_OUTING_IDS.jihun, '기록을 재지 않는 산책', 0);
     const second = ev(ROMANCE_OUTING2_IDS.jihun, '받기 좋은 공', 1);
-    expect(romanceProfileLines(ctx({ events: [first] }), 'jihun')[1]).toBe('최근 만남 「기록을 재지 않는 산책」');
-    expect(romanceProfileLines(ctx({ events: [first, second] }), 'jihun')[1]).toBe('최근 만남 「받기 좋은 공」');
-    expect(romanceProfileLines(ctx({ events: [second, first] }), 'jihun')[1], '기록 순서와 무관').toBe('최근 만남 「받기 좋은 공」');
+    expect(romanceProfileLines(ctx({ events: [first] }), 'jihun')[1]).toBe('기억에 남은 만남 「기록을 재지 않는 산책」');
+    expect(romanceProfileLines(ctx({ events: [first, second] }), 'jihun')[1]).toBe('기억에 남은 만남 「받기 좋은 공」');
+    expect(romanceProfileLines(ctx({ events: [second, first] }), 'jihun')[1], '기록 순서와 무관').toBe('기억에 남은 만남 「받기 좋은 공」');
     expect(romanceProfileLines(ctx({ events: [first, ev(ROMANCE_OUTING2_IDS.jihun, '받기 좋은 공')] }), 'jihun')[1])
-      .toBe('최근 만남 「기록을 재지 않는 산책」');
+      .toBe('기억에 남은 만남 「기록을 재지 않는 산책」');
     expect(romanceProfileLines(ctx({ events: [ev(ROMANCE_OUTING_IDS.subin, '단어장을 덮은 뒤', 0)] }), 'jihun'), '다른 사람의 만남')
       .toEqual(['고2 9월부터 만나는 중']);
   });

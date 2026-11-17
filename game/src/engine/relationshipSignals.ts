@@ -2,7 +2,7 @@
 // 친밀도 바(숫자)만으로 안 보이는 관계의 온도(방치/최근/임박)를 한 줄 신호로 노출한다.
 // 밸런스 불변: 읽기만 하고 seededRandom 미호출. 설계: docs/strategy-signals-design.md (#4),
 // 신호-2(정밀판): docs/cast-restoration-master-plan.md Wave 5.
-import { romanceEventEligibility } from './romance';
+import { isDating, romanceEventEligibility } from './romance';
 import { GameState, NpcState } from './types';
 import { GAME_EVENTS } from './events/data';
 import { consumedReachIds } from './events/selection';
@@ -111,6 +111,9 @@ export function isNpcInteractable(npc: NpcState, state: GameState): boolean {
   return npc.met && !npcAbsence(npc, state);
 }
 
+/** 연인에게 쓰는 임박 신호 — 판정은 같고 말만 바뀐다. */
+export const ROMANCE_IMMINENT_TEXT = '✨ 둘 사이에 무언가 다가오는 듯';
+
 // 우선순위: 임박 > 방치 > 최근 (하나만 노출).
 // 임박: 다음 실제 도달 임계(nextIntimacyThreshold) 5점 이내 아래 → 곧 더 깊은 무언가가 열림.
 // 방치/최근: lastInteractionWeek가 있을 때만. 감쇠 하한 20·약함이라 "잃는다"가 아니라 "멀어지는 중" 톤.
@@ -121,7 +124,8 @@ export function relationshipSignal(npc: NpcState, state: GameState): RelationSig
   if (npcAbsence(npc, state)) return null;
   const th = nextIntimacyThreshold(npc, state);
   if (th !== null && npc.intimacy >= th - 5 && npc.intimacy < th) {
-    return { text: '✨ 곧 더 가까워질 듯', tone: 'good' };
+    // 이미 연인인 사람에게 "더 가까워진다"는 어색하다 — 같은 임박 신호를 다른 말로 한다.
+    return { text: isDating(state, npc.id) ? ROMANCE_IMMINENT_TEXT : '✨ 곧 더 가까워질 듯', tone: 'good' };
   }
   if (npc.lastInteractionWeek !== undefined) {
     const weeksSince = absWeek(state.year, state.week) - npc.lastInteractionWeek;

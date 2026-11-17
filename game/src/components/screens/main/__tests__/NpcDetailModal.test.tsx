@@ -99,9 +99,10 @@ describe('NpcDetailModal — 연인', () => {
     renderModal(dating({ events: [
       makeEvent({ id: ROMANCE_OUTING_IDS.jihun, title: '기록을 재지 않는 산책', resolvedChoice: 0, year: 6, week: 30 }),
       makeEvent({ id: ROMANCE_OUTING2_IDS.jihun, title: '받기 좋은 공', resolvedChoice: 1, year: 7, week: 10 })] }), 'jihun');
-    expect(screen.getByText('💗 연인')).toBeTruthy();
+    const label = screen.getByText('💞 연인');
+    expect(label.getAttribute('style') ?? '', '연인 색').toContain('var(--rose)');
     const lines = [...screen.getByTestId('npc-romance-profile').children].map(c => c.textContent);
-    expect(lines).toEqual(['고2 9월부터 만나는 중', '최근 만남 「받기 좋은 공」']);
+    expect(lines).toEqual(['고2 9월부터 만나는 중', '기억에 남은 만남 「받기 좋은 공」']);
   });
 
   it('연인이 아닌 친구에겐 줄이 없다', () => {
@@ -109,6 +110,6 @@ describe('NpcDetailModal — 연인', () => {
     state.npcs = withNpc(state.npcs, 'subin', { met: true, intimacy: 95 });
     renderModal(state, 'subin');
     expect(screen.queryByTestId('npc-romance-profile')).toBeNull();
-    expect(screen.queryByText(/💗/)).toBeNull();
+    expect(screen.queryByText(/💞/)).toBeNull();
   });
 });
