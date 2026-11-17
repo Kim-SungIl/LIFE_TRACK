@@ -95,7 +95,7 @@ describe('NpcDetailModal — 연인', () => {
     return state;
   };
 
-  it('하트 라벨과 언제부터·최근 만남 줄을 숫자 없이 보인다', () => {
+  it('하트 라벨·연인 색과 언제부터·기억에 남은 만남 줄을 숫자 없이 보인다', () => {
     renderModal(dating({ events: [
       makeEvent({ id: ROMANCE_OUTING_IDS.jihun, title: '기록을 재지 않는 산책', resolvedChoice: 0, year: 6, week: 30 }),
       makeEvent({ id: ROMANCE_OUTING2_IDS.jihun, title: '받기 좋은 공', resolvedChoice: 1, year: 7, week: 10 })] }), 'jihun');
