@@ -1,5 +1,5 @@
 // 명시적인 선택만 관계로 저장한다. 기존 이야기와 선택 번호는 보존한다.
-import { absWeek } from './weekMath';
+import { absWeek, getMonthBlock } from './weekMath';
 import type { EventChoice, GameEvent, GameState, Gender } from './types';
 
 export type RomanceNpc = 'subin' | 'jihun';
@@ -80,6 +80,22 @@ export function sanitizeRelationship(value: unknown, gender: Gender): RomanceRel
 export function isDating(state: RomanceContext, npcId: string): boolean {
   const r = sanitizeRelationship(state.relationship, state.gender);
   return !!r && r.npcId === npcId && r.status === 'dating' && state.year >= r.year;
+}
+
+// 친구 상세 창의 연인 한 줄들 — 저장 필드를 늘리지 않고 관계 값·이벤트 기록에서 파생한다.
+// 숫자(주차·친밀도)는 내지 않는다: 학년·달 이름과 겪은 만남의 제목만(hide-numbers).
+// 헤어졌거나 아직 시작 전이면 빈 배열 — 지난 관계를 친구 창에 계속 걸어 두지 않는다.
+const ROMANCE_YEAR_LABEL: Record<number, string> = { 6: '고2', 7: '고3' };
+export function romanceProfileLines(state: RomanceContext, npcId: string): string[] {
+  if (!isDating(state, npcId)) return [];
+  const r = sanitizeRelationship(state.relationship, state.gender)!;
+  const lines = [`${ROMANCE_YEAR_LABEL[r.year]} ${getMonthBlock(r.week).label}부터 만나는 중`];
+  const latest = [ROMANCE_OUTING2_IDS[r.npcId], ROMANCE_OUTING_IDS[r.npcId]]
+    .filter(id => romanceOutingChoice(state, id) !== undefined)
+    .map(id => state.events!.find(e => e.id === id)!)[0];
+  if (latest?.title) lines.push(`최근 만남 「${latest.title}」`);
+  if (r.graduation === 'together') lines.push('졸업 뒤에도 계속 만나기로 했다');
+  return lines;
 }
 
 // 연인의 졸업 장면만 친밀도를 우회한다. 주차·방학·만남·학년 조건은 원본이 판단한다.

@@ -106,5 +106,21 @@ it('연애는 친밀도와 별개로 기존 라벨 자리에 표시한다', () =
   const view = render(<NpcRelationPanel state={state} onSelect={() => {}} />);
   expect(screen.getByRole('button', { name: '수빈 상세 보기' })).toHaveTextContent('연인');
   view.rerender(<NpcRelationPanel state={{ ...state, relationship: { ...state.relationship!, status: 'ended', graduation: 'apart' } }} onSelect={() => {}} />);
-  expect(screen.queryByText('연인')).not.toBeInTheDocument();
+  expect(screen.queryByText(/연인/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/💗/), '헤어진 판엔 하트를 걸어 두지 않는다').not.toBeInTheDocument();
+});
+
+it('연인은 하트 라벨·전용 테두리로, 있는 친구 중 맨 앞에 — 부재 친구보다는 뒤로 가지 않는다', () => {
+  const state = makeState({ gender: 'female', year: 7, week: 10,
+    relationship: { npcId: 'jihun', status: 'dating', year: 6, week: 26 } });
+  // 지훈이 원래 순서상 뒤에 있도록 다른 친구를 앞세운다.
+  state.npcs = [testNpc({ id: 't-a', name: '가나', intimacy: 90 }), testNpc({ id: 't-b', name: '다라', intimacy: 50 }),
+    ...state.npcs.filter(n => n.id === 'jihun').map(n => ({ ...n, met: true, intimacy: 40 }))];
+  render(<NpcRelationPanel state={state} onSelect={() => {}} />);
+  const cards = screen.getAllByRole('button', { name: /상세 보기$/ });
+  expect(cards.map(c => c.getAttribute('aria-label'))).toEqual(['지훈 상세 보기', '가나 상세 보기', '다라 상세 보기']);
+  expect(cards[0]).toHaveTextContent('💗 연인');
+  expect(cards[0].getAttribute('data-dating')).toBe('true');
+  expect(cards[1].getAttribute('data-dating')).toBeNull();
+  expect(cards[1]).not.toHaveTextContent('💗');
 });
