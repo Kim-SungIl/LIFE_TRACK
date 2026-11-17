@@ -24,7 +24,7 @@ import {
 } from './monthlyMoney';
 import { settlePromisesForWeek } from './monthInvites';
 import { absWeek } from './relationshipSignals';
-import { getMonthBlock, getWeekInfo } from './weekMath';
+import { getMonthBlock, getWeekInfo, SCHOOL_YEAR_LABELS } from './weekMath';
 import { recordGrowthDrag, pickGrowthReason, advanceGrowthReasonMemo, type GrowthMultipliers } from './growthDrag';
 import { createInitialNpcs } from './npcRoster';
 import { markSemesterGoalWeek, settleSemesterGoalIfDue, settleStaleSemesterGoal } from './semesterGoal';
@@ -137,7 +137,7 @@ export function createInitialState(
 // SSOT는 ./weekMath로 이전(leaf) — 기존 import 경로 유지 위해 재노출. absWeek과 같은 방식.
 export { getWeekInfo };
 
-const YEAR_NAMES = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
+const YEAR_NAMES = SCHOOL_YEAR_LABELS;
 
 /** 좌표를 직접 받는 라벨. 결산 화면처럼 **현재 좌표가 아닌 주**를 말해야 하는 자리가 쓴다. */
 export function getWeekLabelAt(year: number, week: number): string {

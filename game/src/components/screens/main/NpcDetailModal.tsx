@@ -1,4 +1,4 @@
-import { isDating, canStartRomanceRetry } from '../../../engine/romance';
+import { isDating, canStartRomanceRetry, romanceProfileLines, ROMANCE_PARTNER_LABEL } from '../../../engine/romance';
 import { GameState, NpcState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { Dialog } from '../../Dialog';
@@ -28,8 +28,10 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
   const absent = npcAbsence(npc, state);
   const recall = absent ? bestNpcRecall(state, npc.id) : null;
   const tier = intimacyTier(npc.intimacy);
-  const intimacyColor = tier === 'best' ? 'var(--accent-soft)' : tier === 'friend' ? 'var(--yellow)' : 'var(--text-muted)';
-  const intimacyLabel = isDating(state, npc.id) ? '연인' : INTIMACY_TIER_LABEL[tier];
+  const dating = isDating(state, npc.id);
+  const intimacyColor = dating ? 'var(--rose)' : tier === 'best' ? 'var(--accent-soft)' : tier === 'friend' ? 'var(--yellow)' : 'var(--text-muted)';
+  const intimacyLabel = dating ? ROMANCE_PARTNER_LABEL : INTIMACY_TIER_LABEL[tier];
+  const romanceLines = romanceProfileLines(state, npc.id);
   const signal = relationshipSignal(npc, state);
   return (
     <Dialog onClose={onClose} labelledBy="npc-detail-name" maxWidth={340}
@@ -80,6 +82,14 @@ export function NpcDetailModal({ npc, state, dialogue, smalltalk, onTalk, onClos
               <div style={{ height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 3, marginTop: 6, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${npc.intimacy}%`, background: intimacyColor, borderRadius: 3 }} />
               </div>
+              {/* 연인 — 언제부터·최근 만남·졸업 약속(기록 파생, 숫자 없음) */}
+              {romanceLines.length > 0 && (
+                <div data-testid="npc-romance-profile" style={{ marginTop: 8 }}>
+                  {romanceLines.map(line => (
+                    <div key={line} style={{ fontSize: '0.7rem', color: 'var(--rose)', lineHeight: 1.6 }}>{line}</div>
+                  ))}
+                </div>
+              )}
               {/* 관계 신호 — 방치/최근/임박 */}
               {signal && (
                 <div style={{ fontSize: '0.7rem', color: SIGNAL_COLOR[signal.tone], marginTop: 8 }}>

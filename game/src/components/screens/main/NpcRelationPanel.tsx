@@ -1,4 +1,4 @@
-import { canStartRomanceRetry, isDating } from '../../../engine/romance';
+import { canStartRomanceRetry, isDating, ROMANCE_PARTNER_LABEL } from '../../../engine/romance';
 import { GameState } from '../../../engine/types';
 import { Portrait } from '../../Portrait';
 import { relationshipSignal, npcAbsence } from '../../../engine/relationshipSignals';
@@ -20,8 +20,10 @@ export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = fals
   if (metNpcs.length === 0) return null;
 
   // 부재(전출·졸업) 친구는 흐린 "잔상"으로 아래에 모아 표시 — 있는 친구가 먼저.
+  // 연인은 있는 친구 중 맨 앞 — 관계 상태가 바뀐 걸 목록 위치로도 말한다.
   const ordered = [...metNpcs].sort((a, b) =>
-    (npcAbsence(a, state) ? 1 : 0) - (npcAbsence(b, state) ? 1 : 0));
+    ((npcAbsence(a, state) ? 1 : 0) - (npcAbsence(b, state) ? 1 : 0))
+    || ((isDating(state, b.id) ? 1 : 0) - (isDating(state, a.id) ? 1 : 0)));
   // 지난달 못 다한 이야기를 이어서 할 수 있는 친구(UX 재확인 U2) — 주간 화면 띠·친구 카드와 같은 판정.
   const continueIds = new Set(npcsToContinueTalk(state).map(n => n.id));
 
@@ -33,8 +35,10 @@ export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = fals
           const absent = npcAbsence(n, state);
           // 친구 게이지 색 = 능력치 등급 색 언어(STAT_GRADES)와 통일 — 아는 사이(E 회색) → 친구(B 우수=초록) → 절친(A 최상=골드)
           const tier = intimacyTier(n.intimacy);
-          const intimacyColor = tier === 'best' ? '#e5c07b' : tier === 'friend' ? '#8fb573' : '#8a8078';
-          const intimacyLabel = isDating(state, n.id) ? '연인' : INTIMACY_TIER_LABEL[tier];
+          const dating = isDating(state, n.id);
+          // 연인은 친밀도 단계 색 대신 전용 색 — 절친 금색과 섞이면 '연인' 글자가 안 보인다.
+          const intimacyColor = dating ? 'var(--rose)' : tier === 'best' ? '#e5c07b' : tier === 'friend' ? '#8fb573' : '#8a8078';
+          const intimacyLabel = dating ? ROMANCE_PARTNER_LABEL : INTIMACY_TIER_LABEL[tier];
           const signal = relationshipSignal(n, state);
           return (
             <button
@@ -42,7 +46,7 @@ export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = fals
               type="button"
               className="btn-reset"
               onClick={() => onSelect(n.id)}
-              aria-label={`${n.name} 상세 보기`}
+              aria-label={`${n.name}${dating ? ' (연인)' : ''} 상세 보기`}
               style={{
                 display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                 background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '8px 10px',
@@ -50,7 +54,9 @@ export function NpcRelationPanel({ state, onSelect, romanceRetryAvailable = fals
                 // 잔상: 카드 전체를 살짝 가라앉힌다(조용한 변화는 포트레이트/카드 톤으로만).
                 // 흑백(초상)과 겹치므로 opacity는 0.6으로 — note 가독성 확보.
                 opacity: absent ? 0.6 : 1,
+                boxShadow: dating && !absent ? 'inset 0 0 0 1px rgba(232,145,168,0.45)' : undefined,
               }}
+              data-dating={dating && !absent ? 'true' : undefined}
             >
               {/* 부재 친구는 초상을 흑백 + 부재 시점 학교급으로 — "그때 그대로 멈춘" 잔상 */}
               <div style={{ filter: absent ? 'grayscale(1)' : 'none', flexShrink: 0, display: 'flex' }}>

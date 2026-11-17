@@ -18,6 +18,7 @@
 import { GAME_EVENTS } from './events';
 import { INITIAL_NPCS } from './npcRoster';
 import { getSchoolLevel } from './backgrounds';
+import { SCHOOL_YEAR_LABELS } from './weekMath';
 import { resolveEventCgRelPaths } from './eventCg';
 import { SOLO_ROOT, storyOwners } from './npcStoryPool';
 import { ALL_ROMANCE_OUTING_IDS, presentRomanceEvent, ROMANCE_OUTING2_IDS, ROMANCE_ROUTES } from './romance';
@@ -66,9 +67,7 @@ export interface AlbumBucket {
 }
 
 // 이 게임의 7년은 초6(Y1) · 중1~3(Y2~4) · 고1~3(Y5~7)이다. 학교급 경계 SSOT는 backgrounds.ts.
-const YEAR_LABEL: Record<number, string> = {
-  1: '초6', 2: '중1', 3: '중2', 4: '중3', 5: '고1', 6: '고2', 7: '고3',
-};
+const YEAR_LABEL: Record<number, string> = Object.fromEntries(SCHOOL_YEAR_LABELS.map((l, i) => [i + 1, l]));
 const LEVEL_LABEL: Record<Level, string> = {
   elementary: '초등학교 시절', middle: '중학교 시절', high: '고등학교 시절',
 };
