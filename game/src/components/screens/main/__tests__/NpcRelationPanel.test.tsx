@@ -114,11 +114,15 @@ it('연인은 하트 라벨·전용 테두리로, 있는 친구 중 맨 앞에 �
   const state = makeState({ gender: 'female', year: 7, week: 10,
     relationship: { npcId: 'jihun', status: 'dating', year: 6, week: 26 } });
   // 지훈이 원래 순서상 뒤에 있도록 다른 친구를 앞세운다.
-  state.npcs = [testNpc({ id: 't-a', name: '가나', intimacy: 90 }), testNpc({ id: 't-b', name: '다라', intimacy: 50 }),
+  // 떠난 도윤을 배열 맨 앞에 둬서, 원래 순서로는 부재 정렬이 안 보이게 한다.
+  state.npcs = [...state.npcs.filter(n => n.id === 'doyun').map(n => ({ ...n, met: true, intimacy: 60 })),
+    testNpc({ id: 't-a', name: '가나', intimacy: 90 }), testNpc({ id: 't-b', name: '다라', intimacy: 50 }),
     ...state.npcs.filter(n => n.id === 'jihun').map(n => ({ ...n, met: true, intimacy: 40 }))];
+  state.events = [...state.events, makeEvent({ id: 'doyun-school-split' })];
   render(<NpcRelationPanel state={state} onSelect={() => {}} />);
   const cards = screen.getAllByRole('button', { name: /상세 보기$/ });
-  expect(cards.map(c => c.getAttribute('aria-label'))).toEqual(['지훈 상세 보기', '가나 상세 보기', '다라 상세 보기']);
+  expect(cards.map(c => c.getAttribute('aria-label')))
+    .toEqual(['지훈 상세 보기', '가나 상세 보기', '다라 상세 보기', '도윤 상세 보기']);
   expect(cards[0]).toHaveTextContent('💗 연인');
   expect(cards[0].getAttribute('data-dating')).toBe('true');
   expect(cards[1].getAttribute('data-dating')).toBeNull();
