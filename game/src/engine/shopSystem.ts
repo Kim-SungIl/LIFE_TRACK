@@ -6,6 +6,7 @@ import { applyGrindIntimacyGain } from './intimacyScaling';
 import { josa } from './korean';
 import { GAME_EVENTS } from './events/data';
 import { recordMoneySpent } from './moneyTrajectory';
+import { schoolYearLabel } from './weekMath';
 
 // ===== 생일 주차 맵 (npcId → week) =====
 // '*-birthday' 이벤트에서 파생 — 이벤트 주차가 바뀌면 자동 추종(드리프트 방지).
@@ -206,8 +207,7 @@ export function limitKey(item: ShopItem): string {
 export function canBuyItem(item: ShopItem, state: GameState, weekPurchases: Record<string, number>): { ok: boolean; reason?: string } {
   if (!canSpend(state, item.price)) return { ok: false, reason: '돈이 부족해요' };
   if (item.requireYear && state.year < item.requireYear) {
-    const yearNames = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
-    return { ok: false, reason: `${yearNames[item.requireYear - 1]}부터 구매 가능` };
+    return { ok: false, reason: `${schoolYearLabel(item.requireYear) ?? `Y${item.requireYear}`}부터 구매 가능` };
   }
   if (item.requireStat) {
     const val = state.stats[item.requireStat.stat];
