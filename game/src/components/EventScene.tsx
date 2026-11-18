@@ -606,9 +606,11 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
       img.src = bgCandidates[idx];
     };
     tryLoad(0);
-    // bgCandidates는 매 렌더 새 배열이라 deps에서 의도적 제외 — 실제 입력인 location/event.background만 추적
+    // bgCandidates는 매 렌더 새 배열이라 deps에서 의도적 제외 — 실제 입력인 location과 **해석된** 배경 경로를 추적한다.
+    // 키 문자열(event.background)을 보면 `park_{season}`처럼 자리표시자 키는 계절·학교급이 바뀌어도 같은 문자열이라
+    // 마운트된 채 사건만 바뀌면 이전 그림이 남는다(2026-11-18 인게임 실측: W22 만남에 겨울 공원).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, event.background]);
+  }, [location, resolvedEventBg]);
 
   // Character positions
   const getCharacterPositions = (count: number): string[] => {
