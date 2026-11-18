@@ -39,7 +39,7 @@ export const ROMANCE_OUTING_EVENTS: GameEvent[] = [
   },
   {
     id: ROMANCE_OUTING_IDS.jihun, title: '기록을 재지 않는 산책', speakers: ['jihun'],
-    location: 'park', background: 'park', condition: s => available(s, 'jihun'),
+    location: 'park', background: 'park_{season}', condition: s => available(s, 'jihun'),
     description: '함께 놀러 나온 공원에서 지훈이와 한참 배드민턴을 쳤다. 라켓을 가방에 넣고 나서자 늘 성큼성큼 걷던 지훈이가 보폭을 줄인다.\n"오늘은 기록 안 잰다. 걷는 것도 그냥 걷자."\n라켓 가방을 어깨에 고쳐 메던 지훈이가 덧붙인다. "앞으로 바빠져도, 가끔 이렇게 걷고 싶다."',
     choices: [
       { text: '"나도. 멀리 안 가도 같이 걸으면 좋더라."', effects: {}, npcEffects: [{ npcId: 'jihun', intimacyChange: 0 }],
@@ -52,7 +52,7 @@ export const ROMANCE_OUTING_EVENTS: GameEvent[] = [
   },
   {
     id: ROMANCE_OUTING2_IDS.subin, title: '이번에는 내가 들어줄게', speakers: ['subin'],
-    location: 'park', background: 'park', condition: s => available2(s, 'subin'),
+    location: 'park', background: 'riverside_hill', condition: s => available2(s, 'subin'),
     description: head2('subin'),
     choices: [
       { text: '"사실 요즘…" 마음에 걸리던 걸 꺼낸다', effects: {}, npcEffects: [{ npcId: 'subin', intimacyChange: 0 }],
@@ -65,7 +65,7 @@ export const ROMANCE_OUTING_EVENTS: GameEvent[] = [
   },
   {
     id: ROMANCE_OUTING2_IDS.jihun, title: '받기 좋은 공', speakers: ['jihun'],
-    location: 'park', background: 'park', condition: s => available2(s, 'jihun'),
+    location: 'park', background: 'park_{season}', condition: s => available2(s, 'jihun'),
     description: head2('jihun'),
     choices: [
       { text: '"제대로 쳐 봐. 나도 받아 볼게."', effects: {}, npcEffects: [{ npcId: 'jihun', intimacyChange: 0 }],

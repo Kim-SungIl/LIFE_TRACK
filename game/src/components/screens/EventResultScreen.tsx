@@ -10,6 +10,8 @@ import { breakSentences, EventResultData } from './shared';
 interface EventResultScreenProps {
   gender: GameState['gender'];
   year: number;
+  /** 사건이 열린 주 — `{season}` 배경 해석용. 없으면 봄(W1)으로 본다. */
+  week?: number;
   eventResultData: EventResultData;
   cgLoaded: boolean;
   cgError: boolean;
@@ -20,7 +22,7 @@ interface EventResultScreenProps {
 
 // 이벤트 선택 직후 결과 화면 — CG/배경/효과 배지 + "계속 →"
 export function EventResultScreen({
-  gender, year, eventResultData, cgLoaded, cgError,
+  gender, year, week, eventResultData, cgLoaded, cgError,
   onCgLoaded, onCgError, onContinue,
 }: EventResultScreenProps) {
   const resultEvent = eventResultData.event;
@@ -43,7 +45,7 @@ export function EventResultScreen({
   const BASE = import.meta.env.BASE_URL;
   const bgGradient = resultLocation ? (LOCATION_GRADIENTS[resultLocation] || DEFAULT_GRADIENT) : DEFAULT_GRADIENT;
   // 배경 이미지: event.background 우선, 없으면 location 기반 폴백
-  const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, year) : undefined;
+  const resolvedEventBg = resultEvent?.background ? getEventBackground(resultEvent.background, year, resultEvent.week ?? week ?? 1) : undefined;
   const bgImgCandidates = (resolvedEventBg
     ? [`${BASE}${resolvedEventBg.replace(/^\//, '')}`]
     : resultLocation ? [

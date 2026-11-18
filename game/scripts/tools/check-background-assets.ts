@@ -26,11 +26,13 @@ const BG_DIR = path.join(ROOT, 'public/images/backgrounds');
 
 const LEVELS = ['elementary', 'middle', 'high'] as const;
 
+const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
+
 function expandKey(bgKey: string): string[] {
-  if (bgKey.includes('{school}')) {
-    return LEVELS.map((l) => `${bgKey.replace(/\{school\}/g, l)}.png`);
-  }
-  return [`${bgKey}.png`];
+  let keys = [bgKey];
+  if (bgKey.includes('{school}')) keys = keys.flatMap((k) => LEVELS.map((l) => k.replace(/\{school\}/g, l)));
+  if (bgKey.includes('{season}')) keys = keys.flatMap((k) => SEASONS.map((x) => k.replace(/\{season\}/g, x)));
+  return keys.map((k) => `${k}.png`);
 }
 
 function extractFromEvents(text: string): Set<string> {

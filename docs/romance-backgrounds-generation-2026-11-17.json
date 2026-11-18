@@ -1,0 +1,23 @@
+{
+  "tool": "built-in image_gen",
+  "date": "2026-11-17",
+  "reference": "game/public/images/backgrounds/park_spring.png",
+  "assets": [
+    {
+      "file": "game/public/images/backgrounds/park_summer.png",
+      "prompt": "Use case: lighting-weather / season edit. Edit attached park_spring background into SUMMER of exactly the SAME neighborhood park for Korean visual novel. Preserve camera, 16:9 landscape composition, broad empty foreground brick walking path, left bench and big tree trunk, lamps, left gazebo, right playground, pond and wooden railing, distant apartment silhouettes. Replace ALL pink cherry blossoms and falling petals with lush deep and fresh GREEN summer leaves; no pink blossoms or petals anywhere. Bright warm summer daylight, clear blue sky, full green bushes, season-appropriate subtle ground vegetation. Same polished painterly anime background style. Absolutely no people or characters, no badminton net/court markings, no added objects, no readable text or watermarks. Keep foreground path unobstructed for character sprites. Output at least 1672x940, preferably 1792x1024 or larger landscape preserving approximately 16:9. Return saved local path."
+    },
+    {
+      "file": "game/public/images/backgrounds/park_autumn.png",
+      "prompt": "Use case: lighting-weather / season edit. Transform the attached park_spring background into AUTUMN of the EXACT SAME neighborhood park. Preserve camera and 16:9 composition, empty broad foreground brick path, bench and tree trunk at left, lamps, gazebo, playground at right, pond and wooden railing, distant apartments. Replace every pink cherry blossom with natural autumn gold, amber, russet and orange leaves, some bare small branches, a light scattering of fallen autumn leaves along path edges. No pink blossoms or petals. Warm clear afternoon, autumn blue sky, restrained painterly anime style matching reference; seasonal bushes and grass. Central walking path open and usable, no people, no characters, no net, no court lines, no added text or watermark. 16:9 landscape at least approximately1672x940. Return saved local path."
+    },
+    {
+      "file": "game/public/images/backgrounds/park_winter.png",
+      "prompt": "Use case: lighting-weather / season edit. Edit attached park_spring image into WINTER of the exact same neighborhood park. Preserve all layout and perspective: broad empty foreground brick walking path, left wooden bench and large tree trunk, lamps, gazebo at middle left, playground at middle right, right pond and wooden railing, distant apartments. All cherry trees are leafless with fine bare winter branches, absolutely no cherry blossoms, pink petals, spring flowers or lush deciduous foliage. Dry straw-colored dormant grass and subdued evergreen shrubs, tiny patches of old snow only in shaded planting edges if any. Main brick path completely clear and dry, usable for walking and casual badminton, no slippery snow sheet. Crisp pale blue winter sky, gentle low golden afternoon sun, quiet clean chilly atmosphere. Match original polished painterly anime background, 16:9 landscape approximately1672x940 or larger. NO people, characters, nets, court lines, readable text or watermarks. Return local saved path."
+    },
+    {
+      "file": "game/public/images/backgrounds/riverside_hill.png",
+      "prompt": "Use case: illustration-story. Create new empty landscape16:9 background for Korean school-life visual novel LIFE_TRACK. Attached park_spring is STYLE REFERENCE ONLY: match its polished detailed painterly anime environmental art and natural soft light, do not copy playground/pond layout. Scene: peaceful grassy hill overlooking a broad urban river, a gently sloping open lawn in foreground large enough for two characters to sit (but DRAW NO PEOPLE), river clearly visible through midground, modest distant riverside buildings and low hills, perhaps a small distant bridge. Open clear sky occupies upper third to half. One realistic civilian passenger airplane recently taken off passes relatively low across the sky, clearly visible but plausibly sized, no oversized plane or airport/runway. Warm calm late-afternoon sunlight, gentle green and straw grass, quiet intimate atmosphere suitable for sharing worries or sitting silently. Character sprites will overlay the center so keep center foreground uncluttered, no benches/cans/bags/characters or animals, no text/logos/UI/watermark. No cherry blossoms, avoid highly specific seasonal cues. At least approximately1672x940, 16:9 wide opaque finished background. Return saved local path."
+    }
+  ]
+}
