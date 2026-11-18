@@ -115,6 +115,8 @@ describe('한 달 계획 화면 — 짜고, 예산이 움직이고, 시작하면
     Object.assign(s, { year: 2, week: 17, phase: 'weekday' as const, currentEvent: null, isVacation: false, routineSlot2: 'self-study', money: 30 });
     render(<MonthPlanScreen state={s} onSetRoutine={vi.fn()} onStart={vi.fn(() => null)} />);
     expect(screen.getByText(/방학 부분 · 하루 5칸/)).toBeTruthy();
+    // 머리줄 학년 이름 = weekMath.schoolYearLabel(Y2 → 중1). 학년 표를 따로 들고 있던 시절의 회귀 방지.
+    expect(screen.getByTestId('month-plan').textContent).toContain('중1 · 학기 + 방학');
     fireEvent.click(screen.getAllByRole('button', { expanded: false }).find(b => b.textContent?.startsWith('4주'))!);
     expect(within(screen.getByTestId('month-plan')).getByTestId('slot-20-4')).toBeTruthy();
     expect(screen.queryByTestId('slot-17-2'), '학기 주는 2칸').toBeNull();
