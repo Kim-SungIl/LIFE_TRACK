@@ -15,6 +15,7 @@ import { CgItem, catOf } from './memoryTokens';
 import { HeroGallery, MemoryThumb } from './memoryVisuals';
 import { josa } from '../../engine/korean';
 import type { RunDelta } from '../../engine/archive';
+import { schoolYearLabel } from '../../engine/weekMath';
 
 interface EndingScreenProps {
   ending: EndingData;
@@ -57,11 +58,10 @@ interface EndingScreenProps {
   saveFailed?: boolean;
 }
 
-const YEAR_LABELS = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
 // 7년을 가로지르는 회상이라 주차만으론 어느 해인지 알 수 없다 — 학년 라벨을 앞에 붙인다.
 // (학년말 화면은 한 해 안이라 "W12 · 성장"으로 충분했다.)
 const recallCaption = (slot: MemorySlot): string =>
-  `${YEAR_LABELS[slot.year - 1] ?? `Y${slot.year}`} · ${catOf(slot.category).label}`;
+  `${schoolYearLabel(slot.year) ?? `Y${slot.year}`} · ${catOf(slot.category).label}`;
 
 const PARENT_RECALL_MAP: Record<string, { icon: string; label: string; recall: string }> = {
   emotional:  { icon: '🫂', label: '정서적 지지', recall: '엄마가 현관에서 기다리던 노란 불빛.' },
@@ -269,7 +269,7 @@ export function EndingScreen({ ending, track, stats, parents, burnoutCount, mone
             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10, textAlign: 'center', letterSpacing: '0.15em' }}>
               {`${josa(romance.npcName, '와/과')} 함께한 순간`}
             </div>
-            <HeroGallery items={romanceItems} caption={slot => YEAR_LABELS[slot.year - 1] ?? `Y${slot.year}`} />
+            <HeroGallery items={romanceItems} caption={slot => schoolYearLabel(slot.year) ?? `Y${slot.year}`} />
           </div>
         )}
 

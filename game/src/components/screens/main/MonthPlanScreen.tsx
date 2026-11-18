@@ -22,7 +22,7 @@ import { josa } from '../../../engine/korean';
 import { isNpcEnrolled } from '../../../engine/relationshipSignals';
 import { EXAM_TYPE_LABELS, type GameState, type MonthInvite, type MonthPlan } from '../../../engine/types';
 import { assignSlot, pinCompanionSlot } from '../../../engine/weekendPlan';
-import { getMonthBlock, getWeekInfo, getWeekOfMonth } from '../../../engine/weekMath';
+import { getMonthBlock, getWeekInfo, getWeekOfMonth, schoolYearLabel } from '../../../engine/weekMath';
 import { NpcSelectModal } from './NpcSelectModal';
 import { chipSurface } from '../surface';
 import { SlotEditPopup } from './SlotEditPopup';
@@ -53,7 +53,6 @@ type Props = {
 
 type Draft = { activities: string[]; npcChoices: Record<string, string> };
 
-const YEAR_NAMES = ['초6', '중1', '중2', '중3', '고1', '고2', '고3'];
 const nameOf = (id: string) => ACTIVITIES.find(a => a.id === id)?.name ?? id;
 const won = (n: number) => `${Number.isInteger(n) ? n : n.toFixed(1)}만`;
 
@@ -293,7 +292,7 @@ export function MonthPlanScreen({ state, onSetRoutine, onStart, existing, onCanc
         <div>
           <h1 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>{block.label}</h1>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-            {replan ? '남은 주 다시 짜기 · ' : ''}{YEAR_NAMES[state.year - 1]} · {block.kind === 'mixed' ? '학기 + 방학' : block.kind === 'vacation' ? '방학' : `${state.semester}학기`} · {state.week}~{block.endWeek}주차
+            {replan ? '남은 주 다시 짜기 · ' : ''}{schoolYearLabel(state.year)} · {block.kind === 'mixed' ? '학기 + 방학' : block.kind === 'vacation' ? '방학' : `${state.semester}학기`} · {state.week}~{block.endWeek}주차
           </div>
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right', lineHeight: 1.5 }}>
