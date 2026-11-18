@@ -574,7 +574,7 @@ export function EventScene({ event, gender, year, npcs, onChoice, state }: Event
   // location 후보에도 학교급 변형을 포함 (hallway/library 등 실물 에셋은 _elementary/_middle/_high로만 존재).
   const location = event.location;
   const bgSchoolLevel = getSchoolLevel(year);
-  const resolvedEventBg = event.background ? getEventBackground(event.background, year) : undefined;
+  const resolvedEventBg = event.background ? getEventBackground(event.background, year, event.week ?? state?.week ?? 1) : undefined;
   const bgCandidates = [
     ...(resolvedEventBg ? [`${BASE_URL}${resolvedEventBg.replace(/^\//, '')}`] : []),
     ...(location ? [

@@ -23,10 +23,27 @@ function getLevelTint(level: 'elementary' | 'middle' | 'high'): string {
   }
 }
 
-export function getEventBackground(bgKey: string | undefined, year: number): string | undefined {
+export type BgSeason = 'spring' | 'summer' | 'autumn' | 'winter';
+
+/**
+ * 주차(1~48) → 그림의 계절. 학년은 3월에 시작하고 한 달은 4주(weekMath 월 블록)다:
+ * 3~5월(W1~12) 봄 · 6~8월(W13~24) 여름 · 9~11월(W25~36) 가을 · 12~2월(W37~48) 겨울.
+ * 범위 밖(학년 전환 대기 W49 등)은 가장 가까운 끝으로 접는다 — 배경 고르기에서 throw할 이유가 없다.
+ */
+export function getBgSeason(week: number): BgSeason {
+  const w = Math.min(48, Math.max(1, Math.floor(Number.isFinite(week) ? week : 1)));
+  return (['spring', 'summer', 'autumn', 'winter'] as const)[Math.floor((w - 1) / 12)];
+}
+
+/**
+ * 이벤트 배경 키 → 파일 경로. 자리표시자 둘을 런타임에 치환한다:
+ * `{school}` = 학교급(getSchoolLevel) · `{season}` = 계절(getBgSeason, 사건이 열린 주 기준).
+ * 계절 키는 week를 안 넘기면 봄으로 떨어진다 — 호출처는 반드시 주차를 넘길 것.
+ */
+export function getEventBackground(bgKey: string | undefined, year: number, week: number = 1): string | undefined {
   if (!bgKey) return undefined;
   const level = getSchoolLevel(year);
-  return `/images/backgrounds/${bgKey.replace('{school}', level)}.png`;
+  return `/images/backgrounds/${bgKey.replace('{school}', level).replace('{season}', getBgSeason(week))}.png`;
 }
 
 export function getBackground(week: number, isVacation: boolean, mentalState: string, year: number = 1): BgInfo {

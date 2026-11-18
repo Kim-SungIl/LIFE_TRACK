@@ -54,6 +54,9 @@ export type EventResultData = {
   // 이벤트는 4개뿐이고 전부 고정주차라, 못 찾으면 후보 0개 → 그라데이션 폴백).
   // 그 전제는 engine 테스트가 잠근다(applyYearTransition이 학교급을 바꾸지 않는다).
   year?: number;
+  // 이벤트가 열린 주 — `{season}` 배경(공원 계절 그림) 해석용. year와 같은 이유로 선택 시점 값을 담는다:
+  // W48 사건은 resolveEvent 뒤 week가 49(학년 전환 대기)로 넘어가 있다.
+  week?: number;
 };
 
 /**
